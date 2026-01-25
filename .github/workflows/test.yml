@@ -1,0 +1,93 @@
+name: Test
+
+on:
+  pull_request:
+    branches: [main]
+  push:
+    branches: [main]
+
+jobs:
+  detect-changes:
+    runs-on: ubuntu-latest
+    outputs:
+      products: ${{ steps.filter.outputs.changes }}
+    steps:
+      - uses: actions/checkout@v4
+
+      - uses: dorny/paths-filter@v2
+        id: filter
+        with:
+          filters: |
+            shared:
+              - 'shared/**'
+            infrastructure:
+              - 'infrastructure/**'
+              - '.github/workflows/**'
+
+  test-shared:
+    needs: detect-changes
+    if: contains(needs.detect-changes.outputs.products, 'shared')
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v4
+
+      - name: Setup Node.js
+        uses: actions/setup-node@v4
+        with:
+          node-version: '20'
+          cache: 'npm'
+
+      - name: Install dependencies
+        run: npm ci
+        working-directory: shared
+
+      - name: Run tests
+        run: npm test
+        working-directory: shared
+
+  # Template job for product testing
+  # Each product will have its own workflow file
+  # This is a fallback for shared code
+
+  lint:
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v4
+
+      - name: Setup Node.js
+        uses: actions/setup-node@v4
+        with:
+          node-version: '20'
+          cache: 'npm'
+
+      - name: Check for package.json
+        id: check
+        run: |
+          if [ -f "package.json" ]; then
+            echo "exists=true" >> $GITHUB_OUTPUT
+          else
+            echo "exists=false" >> $GITHUB_OUTPUT
+          fi
+
+      - name: Install dependencies
+        if: steps.check.outputs.exists == 'true'
+        run: npm ci
+
+      - name: Run lint
+        if: steps.check.outputs.exists == 'true'
+        run: npm run lint --if-present
+
+      - name: Run typecheck
+        if: steps.check.outputs.exists == 'true'
+        run: npm run typecheck --if-present
+
+  security:
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v4
+
+      - name: Run security audit
+        run: |
+          if [ -f "package-lock.json" ]; then
+            npm audit --audit-level=high || true
+          fi
