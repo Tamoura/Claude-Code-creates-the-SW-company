@@ -1,4 +1,4 @@
-import type { TrainingConfig, ProviderResult, GPUType } from '../types';
+import type { TrainingConfig, ProviderResult } from '../types';
 import { providers, gpuOfferings } from '../data';
 import { calculateStorageCost } from './storageCalculator';
 

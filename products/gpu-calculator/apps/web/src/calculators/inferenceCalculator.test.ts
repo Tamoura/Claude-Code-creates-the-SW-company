@@ -141,8 +141,7 @@ describe('inferenceCalculator', () => {
 
       results.forEach((result) => {
         if (result.available) {
-          const expectedEgressGb =
-            (10 * 60 * 60 * 24 * 30 * 100) / 1024 / 1024; // ~250GB
+          // Expected: (10 req/s * 60s * 60m * 24h * 30d * 100KB) / 1024 / 1024 = ~250GB
           expect(result.configuration.egressGb).toBeGreaterThan(100);
         }
       });

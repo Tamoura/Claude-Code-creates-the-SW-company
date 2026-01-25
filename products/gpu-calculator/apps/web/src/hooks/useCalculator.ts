@@ -6,8 +6,6 @@ import type {
 } from '../types';
 import { calculateTrainingTCO, calculateInferenceTCO } from '../calculators';
 
-type CalculatorMode = 'training' | 'inference';
-
 interface UseCalculatorReturn {
   results: CalculationSummary | null;
   isCalculating: boolean;

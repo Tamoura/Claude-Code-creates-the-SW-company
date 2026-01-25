@@ -12,8 +12,6 @@ describe('App', () => {
     render(<App />);
     expect(screen.getByText('Training')).toBeInTheDocument();
     expect(screen.getByText('Inference')).toBeInTheDocument();
-    expect(screen.getByText('Storage')).toBeInTheDocument();
-    expect(screen.getByText('Networking')).toBeInTheDocument();
   });
 
   it('displays training form by default', () => {

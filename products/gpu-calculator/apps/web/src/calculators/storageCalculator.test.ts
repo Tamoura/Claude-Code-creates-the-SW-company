@@ -1,6 +1,5 @@
 import { describe, it, expect } from 'vitest';
 import { calculateStorageCost } from './storageCalculator';
-import type { ProviderId } from '../types';
 
 describe('storageCalculator', () => {
   describe('calculateStorageCost', () => {
