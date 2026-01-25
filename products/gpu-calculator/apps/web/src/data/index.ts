@@ -2,6 +2,10 @@
  * Central export point for all pricing data
  */
 export { providers } from './providers';
+export { gpuOfferings } from './gpus';
+export { storageRates } from './storage';
+export { egressRates } from './egress';
+export { pricingMetadata } from './metadata';
 
 // Re-export types for convenience
 export type {
