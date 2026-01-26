@@ -1,45 +1,88 @@
+'use client';
+
+import { useAuth } from '@/contexts/auth-context';
+
 /**
  * Header Component
  *
- * Top navigation bar with user menu and actions
+ * Top navigation bar with user info and logout
  */
 export default function Header() {
+  const { user, logout } = useAuth();
+
+  if (!user) {
+    return null;
+  }
+
+  // Get initials from name
+  const getInitials = (name: string) => {
+    const parts = name.split(' ');
+    if (parts.length >= 2) {
+      return `${parts[0][0]}${parts[1][0]}`.toUpperCase();
+    }
+    return name.substring(0, 2).toUpperCase();
+  };
+
+  // Get role badge color
+  const getRoleBadgeColor = (role: string) => {
+    switch (role) {
+      case 'ADMIN':
+        return 'bg-red-100 text-red-800';
+      case 'MANAGER':
+        return 'bg-blue-100 text-blue-800';
+      case 'ANALYST':
+        return 'bg-green-100 text-green-800';
+      case 'VIEWER':
+        return 'bg-gray-100 text-gray-800';
+      default:
+        return 'bg-gray-100 text-gray-800';
+    }
+  };
+
   return (
     <header className="bg-white border-b border-gray-200 h-16 flex items-center px-6">
       <div className="flex items-center justify-between w-full">
-        {/* Search or Page Title */}
+        {/* Page Title */}
         <div className="flex-1">
           <h2 className="text-xl font-semibold text-gray-900">
-            Dashboard
+            Tech Management Helper
           </h2>
         </div>
 
         {/* User Menu */}
         <div className="flex items-center gap-4">
-          {/* Notifications */}
-          <button
-            className="p-2 text-gray-400 hover:text-gray-600 rounded-md hover:bg-gray-100"
-            aria-label="Notifications"
-          >
-            <svg className="w-6 h-6" fill="none" stroke="currentColor" viewBox="0 0 24 24">
-              <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M15 17h5l-1.405-1.405A2.032 2.032 0 0118 14.158V11a6.002 6.002 0 00-4-5.659V5a2 2 0 10-4 0v.341C7.67 6.165 6 8.388 6 11v3.159c0 .538-.214 1.055-.595 1.436L4 17h5m6 0v1a3 3 0 11-6 0v-1m6 0H9" />
-            </svg>
-          </button>
-
-          {/* User Avatar */}
+          {/* User Info */}
           <div className="flex items-center gap-3">
-            <div className="w-8 h-8 bg-primary rounded-full flex items-center justify-center">
-              <span className="text-sm font-semibold text-primary-foreground">
-                U
+            <div className="w-10 h-10 bg-indigo-600 rounded-full flex items-center justify-center">
+              <span className="text-sm font-semibold text-white">
+                {getInitials(user.name)}
               </span>
             </div>
             <div className="hidden md:block">
-              <p className="text-sm font-medium text-gray-900">User Name</p>
-              <p className="text-xs text-gray-500">user@example.com</p>
+              <div className="flex items-center gap-2">
+                <p className="text-sm font-medium text-gray-900">{user.name}</p>
+                <span
+                  className={`text-xs px-2 py-0.5 rounded-full ${getRoleBadgeColor(
+                    user.role
+                  )}`}
+                >
+                  {user.role}
+                </span>
+              </div>
+              <p className="text-xs text-gray-500">{user.email}</p>
             </div>
           </div>
+
+          {/* Logout Button */}
+          <button
+            onClick={logout}
+            className="px-4 py-2 text-sm font-medium text-gray-700 hover:text-gray-900 hover:bg-gray-100 rounded-md transition-colors"
+            aria-label="Logout"
+          >
+            Logout
+          </button>
         </div>
       </div>
     </header>
-  )
+  );
 }
