@@ -1,10 +1,12 @@
 # Workflow: Bug Fix
 
-This workflow guides the Orchestrator through fixing a bug from report to verified resolution.
+This workflow ensures every bug fix includes comprehensive testing. **The CEO should NEVER have to ask for user stories or test coverage - it's automatic.**
 
 ## Trigger
 
 - CEO reports a bug: "There's a bug in [product] where..."
+- "X is not working"
+- "When I do Y, nothing happens"
 - GitHub issue created with bug label
 - Support Engineer escalates an issue
 
@@ -12,6 +14,17 @@ This workflow guides the Orchestrator through fixing a bug from report to verifi
 
 - Product exists
 - Bug is reproducible (or investigation needed)
+
+## KEY PRINCIPLE
+
+**For EVERY bug fix, these are created AUTOMATICALLY:**
+
+| Artifact | Description | Created By |
+|----------|-------------|------------|
+| User Stories | For ALL related functionality, not just the bug | Support Engineer |
+| Unit Tests | Failing test for bug + tests for related features | Support/Dev Engineer |
+| E2E Tests | Browser tests for the scenario | QA Engineer |
+| Test Plan | Document in `docs/TEST-PLAN.md` | Support Engineer |
 
 ## Workflow Steps
 
@@ -24,7 +37,8 @@ Step 1.1: Initial Assessment
 │   ├── Attempt to reproduce
 │   ├── Identify affected component
 │   ├── Assess severity
-│   └── Document findings
+│   ├── Document findings
+│   └── IDENTIFY ALL RELATED FUNCTIONALITY
 └── Output: Bug investigation report
 
 Step 1.2: Prioritize
@@ -43,47 +57,62 @@ Step 1.3: Route
 └── Create/update GitHub issue
 ```
 
-### Phase 2: Investigation (if needed)
+### Phase 2: Document User Stories (MANDATORY)
 
 ```
-Step 2.1: Deep Dive
-├── If component unclear:
-│   ├── Check logs
-│   ├── Review recent changes
-│   ├── Test in different environments
-│   └── Narrow down to specific code
-└── Update issue with findings
+Step 2.1: Create User Stories for ALL Affected Functionality
+├── NOT just the reported bug - ALL related features
+├── Example: If bug is "GPU count doesn't update":
+│   ├── User story for GPU count field
+│   ├── User story for ALL other form fields
+│   ├── User story for calculation behavior
+│   └── User story for results display
+├── Document in: products/[product]/docs/TEST-PLAN.md
+└── Format for each:
+    ├── As a [user], when I [action], I expect [result]
+    └── Acceptance criteria with Given/When/Then
 
 Step 2.2: Root Cause Analysis
 ├── Why did this happen?
 ├── When was it introduced?
 ├── What's the fix scope?
+├── What else could be affected?
 └── Are there related issues?
 ```
 
-### Phase 3: Fix
+### Phase 3: Write Tests FIRST (TDD - MANDATORY)
 
 ```
 Step 3.1: Create Fix Branch
 ├── Branch from main: fix/[product]/[issue-id]
 └── Update state with active task
 
-Step 3.2: Implement Fix (TDD)
-├── Invoke appropriate agent (Backend/Frontend)
-├── Requirements:
-│   ├── First: Write failing test that reproduces bug
-│   ├── Second: Fix the code
-│   ├── Third: Verify test passes
-│   └── Fourth: Check for regressions
-├── Agent commits:
-│   ├── test: add failing test for #[issue]
-│   └── fix: resolve [bug description] #[issue]
-└── Push to fix branch
+Step 3.2: Write Failing Unit Tests (BEFORE fixing)
+├── Test that reproduces the EXACT bug (MUST FAIL)
+├── Tests for ALL related parameters/fields
+├── Edge case tests (0, negative, max values)
+├── Run tests → Verify they FAIL
+└── Commit: "test: add failing tests for #[issue]"
 
-Step 3.3: Regression Check
-├── Run full test suite
-├── Run E2E tests
-└── All must pass before proceeding
+Step 3.3: Write E2E Tests (BEFORE fixing)
+├── Playwright test for the bug scenario
+├── Tests for related user interactions
+├── Visual verification tests
+├── Run tests → Verify they FAIL
+└── Commit: "test: add E2E tests for #[issue]"
+
+Step 3.4: Implement Fix
+├── Invoke appropriate agent (Backend/Frontend)
+├── ONLY write code to make failing tests pass
+├── Minimal changes - no extra refactoring
+├── Run tests → Verify they PASS
+└── Commit: "fix: resolve [bug description] #[issue]"
+
+Step 3.5: Full Regression Check
+├── Run ALL unit tests: npm run test:run
+├── Run ALL E2E tests: npm run test:e2e
+├── ALL tests must pass (not just new ones)
+└── If any fail → fix before proceeding
 ```
 
 ### Phase 4: Verification
