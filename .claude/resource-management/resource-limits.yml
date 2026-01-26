@@ -1,0 +1,265 @@
+# Resource Management Configuration
+# Phase 2 Enhancement: Control costs and resource allocation
+
+version: "1.0.0"
+updated_at: "2026-01-26T12:00:00Z"
+
+# =============================================================================
+# AGENT RESOURCE LIMITS
+# =============================================================================
+
+agents:
+  # Maximum concurrent agents of each type
+  max_concurrent:
+    total: 5                    # Total agents running simultaneously
+    per_type:
+      product-manager: 1        # One PM at a time
+      architect: 1              # One architect at a time
+      backend-engineer: 2       # Up to 2 backend engineers in parallel
+      frontend-engineer: 2      # Up to 2 frontend engineers in parallel
+      qa-engineer: 2            # Up to 2 QA engineers in parallel
+      devops-engineer: 1        # One DevOps at a time
+      technical-writer: 1       # One writer at a time
+      support-engineer: 1       # One support at a time
+
+  # Token budget per agent invocation
+  token_budgets:
+    product-manager: 100000     # PRDs can be long
+    architect: 150000           # Architecture needs thorough analysis
+    backend-engineer: 80000     # Standard implementation
+    frontend-engineer: 80000    # Standard implementation
+    qa-engineer: 60000          # Testing is more straightforward
+    devops-engineer: 70000      # Infrastructure setup
+    technical-writer: 50000     # Documentation writing
+    support-engineer: 50000     # Bug triage and investigation
+
+  # Priority queue for agent scheduling
+  priority_levels:
+    critical:
+      description: "Production issues, security vulnerabilities"
+      max_wait_time_minutes: 0  # Start immediately
+      preempt_lower: true        # Can interrupt normal/low tasks
+
+    high:
+      description: "New products, major features, high-severity bugs"
+      max_wait_time_minutes: 15
+      preempt_lower: false
+
+    normal:
+      description: "Standard features, medium-severity bugs"
+      max_wait_time_minutes: 60
+      preempt_lower: false
+
+    low:
+      description: "Nice-to-haves, documentation updates"
+      max_wait_time_minutes: 240  # 4 hours
+      preempt_lower: false
+
+# =============================================================================
+# PRODUCT RESOURCE ALLOCATION
+# =============================================================================
+
+products:
+  # Default allocation for new products
+  default:
+    priority: "normal"
+    max_concurrent_agents: 3
+    token_budget_daily: 500000
+    can_use_premium_models: false
+
+  # Product-specific allocations (CEO can override)
+  # Example:
+  # gpu-calculator:
+  #   priority: "high"
+  #   max_concurrent_agents: 5
+  #   token_budget_daily: 1000000
+  #   can_use_premium_models: true
+
+# =============================================================================
+# COST CONTROL
+# =============================================================================
+
+cost_control:
+  # Daily limits
+  daily_limits:
+    max_agent_invocations: 50        # Total agent runs per day
+    max_tokens_total: 2000000         # 2M tokens per day
+    max_cost_usd: 100                 # $100 per day
+    alert_at_percent: 80              # Alert at 80% of limits
+
+  # Per-task limits
+  per_task_limits:
+    max_retries: 3                    # Maximum retry attempts
+    max_duration_minutes: 120         # 2 hours max per task
+    token_budget_multiplier: 1.5      # Can use 1.5x agent budget if needed
+
+  # Model selection
+  model_costs:
+    haiku:
+      input_per_1m: 0.25
+      output_per_1m: 1.25
+      use_for: ["quick tasks", "simple implementations"]
+
+    sonnet:
+      input_per_1m: 3.00
+      output_per_1m: 15.00
+      use_for: ["standard tasks", "most development work"]
+
+    opus:
+      input_per_1m: 15.00
+      output_per_1m: 75.00
+      use_for: ["complex architecture", "critical production issues"]
+
+  # Auto model selection
+  auto_model_selection:
+    enabled: true
+    rules:
+      - condition: "task.priority == critical"
+        model: "opus"
+
+      - condition: "task.agent in [product-manager, architect]"
+        model: "sonnet"
+
+      - condition: "task.type == bug-fix AND task.severity == low"
+        model: "haiku"
+
+      - condition: "task.estimated_minutes < 30"
+        model: "haiku"
+
+      - condition: "default"
+        model: "sonnet"
+
+# =============================================================================
+# QUEUE MANAGEMENT
+# =============================================================================
+
+queue:
+  # Queue processing
+  processing:
+    batch_size: 3                    # Process 3 tasks at a time
+    check_interval_seconds: 30       # Check queue every 30 seconds
+    starvation_prevention: true      # Ensure low priority tasks eventually run
+
+  # Queue limits
+  limits:
+    max_queue_size: 20               # Maximum pending tasks
+    max_wait_time_hours: 24          # Cancel if waiting > 24 hours
+
+  # Prioritization algorithm
+  scheduling:
+    algorithm: "weighted_priority"
+    weights:
+      priority: 0.5                  # 50% based on priority level
+      wait_time: 0.3                 # 30% based on how long waiting
+      dependencies: 0.2              # 20% based on blocking other tasks
+
+# =============================================================================
+# MONITORING & ALERTS
+# =============================================================================
+
+monitoring:
+  # What to track
+  metrics:
+    - agent_utilization_percent      # % of time agents are busy
+    - queue_length                   # Tasks waiting
+    - average_wait_time_minutes      # How long tasks wait
+    - task_completion_rate           # Tasks/hour
+    - token_usage_daily              # Tokens used today
+    - cost_daily_usd                 # Cost today
+    - failed_task_rate               # % of tasks that fail
+
+  # Alert thresholds
+  alerts:
+    - condition: "token_usage_daily > daily_limits.max_tokens_total * 0.8"
+      severity: "warning"
+      message: "Approaching daily token limit (80%)"
+      notify: "ceo"
+
+    - condition: "cost_daily_usd > daily_limits.max_cost_usd * 0.9"
+      severity: "critical"
+      message: "Approaching daily cost limit (90%)"
+      notify: "ceo"
+      action: "pause_new_tasks"
+
+    - condition: "queue_length > 10"
+      severity: "warning"
+      message: "Queue is backing up (>10 tasks)"
+      notify: "orchestrator"
+
+    - condition: "average_wait_time_minutes > 60"
+      severity: "warning"
+      message: "Tasks waiting too long (>1 hour average)"
+      notify: "orchestrator"
+
+    - condition: "failed_task_rate > 0.3"
+      severity: "critical"
+      message: "High failure rate (>30%)"
+      notify: "ceo"
+
+# =============================================================================
+# EMERGENCY CONTROLS
+# =============================================================================
+
+emergency:
+  # Circuit breaker
+  circuit_breaker:
+    enabled: true
+    trip_conditions:
+      - "cost_daily_usd > daily_limits.max_cost_usd"
+      - "failed_task_rate > 0.5"
+      - "token_usage_daily > daily_limits.max_tokens_total"
+
+    when_tripped:
+      action: "pause_all"            # Stop all new work
+      notify: "ceo"
+      message: "Emergency stop: Circuit breaker tripped"
+      allow_override: true           # CEO can override
+
+  # Manual controls
+  manual_override:
+    pause_all_agents: false          # CEO can set to true
+    priority_override:               # CEO can boost specific products
+      # product-name: "critical"
+
+  # Rate limiting
+  rate_limiting:
+    enabled: true
+    requests_per_minute: 10          # Max agent invocations per minute
+    burst_size: 5                    # Allow bursts up to 5 simultaneous
+
+# =============================================================================
+# USAGE EXAMPLES
+# =============================================================================
+
+examples:
+  normal_day:
+    description: "Typical development day"
+    agent_invocations: 20
+    tokens_used: 800000
+    cost_usd: 40
+    products_active: 2
+    priority_distribution:
+      high: 4
+      normal: 14
+      low: 2
+
+  busy_day:
+    description: "Multiple products in active development"
+    agent_invocations: 45
+    tokens_used: 1800000
+    cost_usd: 90
+    products_active: 4
+    priority_distribution:
+      critical: 2
+      high: 10
+      normal: 28
+      low: 5
+
+  emergency:
+    description: "Production issue requiring immediate attention"
+    agent_invocations: 8
+    tokens_used: 600000
+    cost_usd: 60
+    priority_distribution:
+      critical: 8
+    notes: "All critical tasks use Opus model for speed/quality"
