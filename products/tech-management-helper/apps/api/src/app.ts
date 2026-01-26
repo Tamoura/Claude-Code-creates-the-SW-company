@@ -3,6 +3,7 @@ import cors from '@fastify/cors';
 import helmet from '@fastify/helmet';
 import { errorHandler } from './middleware/error-handler.js';
 import { healthRoutes } from './routes/health.js';
+import { authRoutes } from './routes/auth.js';
 import prisma from './lib/prisma.js';
 
 export interface BuildAppOptions {
@@ -37,6 +38,7 @@ export async function buildApp(
 
   // Register routes with /api/v1 prefix
   await fastify.register(healthRoutes, { prefix: '/api/v1' });
+  await fastify.register(authRoutes, { prefix: '/api/v1/auth' });
 
   // Graceful shutdown
   fastify.addHook('onClose', async () => {
