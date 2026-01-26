@@ -1,15 +1,30 @@
 # Agent-Specific MCP Tools Configuration
 # Phase 3 Enhancement: Specialized tools per agent type
+#
+# ╔═══════════════════════════════════════════════════════════════════════════╗
+# ║  STATUS: FUTURE / ASPIRATIONAL                                            ║
+# ║                                                                           ║
+# ║  These MCP tools are PLANNED but NOT YET IMPLEMENTED.                    ║
+# ║  Do NOT reference these tools in agent prompts until implemented.        ║
+# ║                                                                           ║
+# ║  Current agents should use standard Claude Code capabilities:            ║
+# ║  - File reading/writing                                                  ║
+# ║  - Shell command execution                                               ║
+# ║  - Git operations                                                        ║
+# ║  - Web browsing (for research)                                          ║
+# ╚═══════════════════════════════════════════════════════════════════════════╝
 
 version: "1.0.0"
 updated_at: "2026-01-26T16:00:00Z"
+status: "planned"  # NOT "active" - tools are not yet implemented
 
 # =============================================================================
-# BACKEND ENGINEER TOOLS
+# BACKEND ENGINEER TOOLS (PLANNED)
 # =============================================================================
 
 backend-engineer:
-  description: "Specialized tools for backend API development"
+  status: "planned"  # NOT IMPLEMENTED YET
+  description: "Specialized tools for backend API development (FUTURE)"
 
   tools:
     # Database query analyzer
