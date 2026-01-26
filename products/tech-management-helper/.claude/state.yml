@@ -46,6 +46,26 @@ checkpoints:
     raised_at: "2026-01-26T19:50:00Z"
     approved: true
     approved_at: "2026-01-26T20:20:00Z"
+  - id: 4
+    type: feature_progress
+    title: "Sprint 1 - Authentication APIs Complete"
+    message: "User registration and login endpoints implemented with comprehensive tests. Ready to proceed with middleware and UI."
+    artifacts:
+      - "products/tech-management-helper/apps/api/src/routes/auth.ts"
+      - "products/tech-management-helper/apps/api/src/lib/jwt.ts"
+      - "products/tech-management-helper/apps/api/src/lib/password.ts"
+      - "products/tech-management-helper/apps/api/src/schemas/auth.schema.ts"
+    test_results: "API: 18/18 tests passing (4 health + 14 auth)"
+    completed_tasks:
+      - "User registration API endpoint"
+      - "User login API endpoint"
+    remaining_tasks:
+      - "Authentication middleware"
+      - "RBAC authorization middleware"
+      - "Login page UI"
+      - "Client-side session management"
+    raised_at: "2026-01-26T20:30:00Z"
+    approved: false
 
 # Active tasks for this product
 active_tasks: []
@@ -74,4 +94,4 @@ pending_decisions: []
 # Error log
 error_log: []
 
-last_updated: "2026-01-26T19:50:00Z"
+last_updated: "2026-01-26T20:30:00Z"
