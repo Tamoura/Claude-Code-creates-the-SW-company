@@ -13,8 +13,7 @@ import { calculateStorageCost } from './storageCalculator';
 export function calculateTrainingHours(config: TrainingConfig): number {
   const {
     modelSizeB,
-    sampleCount,
-    tokensPerSample,
+    datasetSizeGb,
     epochs,
     gpuType,
     gpuCount,
@@ -25,8 +24,12 @@ export function calculateTrainingHours(config: TrainingConfig): number {
   const gpuOffering = gpuOfferings.find((g) => g.gpuType === gpuType);
   if (!gpuOffering) return 0;
 
-  // Calculate total tokens
-  const totalTokens = sampleCount * tokensPerSample * epochs;
+  // Derive token count from dataset size
+  // Assumption: ~4 bytes per token (typical for tokenized text)
+  const bytesPerToken = 4;
+  const datasetBytes = datasetSizeGb * 1e9;
+  const estimatedTokens = datasetBytes / bytesPerToken;
+  const totalTokens = estimatedTokens * epochs;
 
   // Calculate model parameters
   const modelParams = modelSizeB * 1e9;

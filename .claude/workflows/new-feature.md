@@ -95,10 +95,10 @@ Step 3.3: Merge Parallel Work (if applicable)
 └── Resolve any conflicts
 ```
 
-### Phase 4: Quality Assurance
+### Phase 4: Quality Assurance (MANDATORY BEFORE CEO REVIEW)
 
 ```
-Step 4.1: E2E Tests
+Step 4.1: E2E Tests with Playwright
 ├── Invoke QA Engineer agent
 ├── Context:
 │   ├── Feature acceptance criteria
@@ -106,11 +106,29 @@ Step 4.1: E2E Tests
 │   └── Feature branch
 ├── Agent deliverables:
 │   ├── E2E tests covering acceptance criteria
-│   ├── All tests passing
+│   ├── Visual regression tests (screenshots)
+│   ├── All tests passing IN BROWSER
 │   └── Commits pushed to branch
-└── Verify: Full test suite passes
+├── MANDATORY CHECKS:
+│   ├── Run `npm run test:e2e` - must pass
+│   ├── Verify UI renders correctly (not just unit tests)
+│   ├── Test all buttons, forms, and interactions
+│   ├── Check styling loads properly (colors, borders, layout)
+│   └── Test on both desktop and mobile viewports
+└── Verify: Full test suite passes AND visual verification complete
 
-Step 4.2: Documentation
+Step 4.2: Visual Verification (MANDATORY)
+├── QA Engineer must:
+│   ├── Start the dev server
+│   ├── Navigate through all new UI
+│   ├── Verify all elements are visible and styled
+│   ├── Test all user interactions work
+│   └── Take screenshots as evidence
+├── If ANY visual issues found:
+│   └── Route back to Frontend Engineer to fix
+└── Only proceed when visually verified
+
+Step 4.3: Documentation
 ├── Invoke Technical Writer agent (if user-facing)
 ├── Update:
 │   ├── API docs (if new endpoints)
@@ -118,6 +136,12 @@ Step 4.2: Documentation
 │   └── README (if needed)
 └── Commit updates to feature branch
 ```
+
+**CRITICAL: Never send to CEO checkpoint without:**
+1. All unit tests passing
+2. All E2E/Playwright tests passing
+3. Visual verification that UI renders correctly
+4. Manual verification that all interactions work
 
 ### Phase 5: Review
 

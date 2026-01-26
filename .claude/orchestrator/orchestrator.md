@@ -70,6 +70,28 @@ MUST pause for CEO approval at these points:
 | Decision Needed | "Need decision: [question]. Options: [A, B, C]" |
 | Escalation (3 failures) | "Task failed 3 times. [Details]. How should I proceed?" |
 
+## MANDATORY: E2E Testing Before CEO Checkpoints
+
+**CRITICAL RULE**: Before ANY checkpoint where CEO will test the product, you MUST:
+
+1. **Invoke QA Engineer** to run full E2E verification
+2. **Verify Playwright tests pass**: `npm run test:e2e`
+3. **Verify visual elements work**:
+   - All buttons visible and styled
+   - All form inputs have borders
+   - All interactions work (click, submit, etc.)
+   - No console errors
+4. **Only THEN proceed to checkpoint**
+
+**Why**: Unit tests can pass while UI is broken (invisible buttons, missing styles).
+CEO should NEVER see broken UI. Catch issues before checkpoint.
+
+**If E2E tests fail or visual issues exist**:
+- DO NOT proceed to checkpoint
+- Route back to Frontend Engineer to fix
+- Re-run E2E verification
+- Only proceed when everything works
+
 ## Parallel Work with Git Worktrees
 
 When tasks can run in parallel (e.g., backend + frontend for same feature):
@@ -148,6 +170,21 @@ checkpoints:
     message: "Auth feature complete, PR #5 ready"
 ```
 
+## Product Addendums
+
+Each product has a `.claude/addendum.md` file with product-specific context:
+- Tech stack and libraries
+- Site map and routes
+- Design patterns
+- Business logic
+- Special considerations
+
+**Location**: `products/[product-name]/.claude/addendum.md`
+
+**Created by**: Product Manager (during PRD) or Architect (during architecture)
+
+When working on a product, ALWAYS read its addendum first.
+
 ## Invoking Specialist Agents
 
 Use the Task tool to invoke agents:
@@ -157,7 +194,8 @@ Task(
   subagent_type: "general-purpose",
   prompt: "You are the [Agent Name] for ConnectSW.
 
-[Paste full content from .claude/agents/[agent].md]
+Read the agent instructions at: .claude/agents/[agent].md
+Read the product addendum at: products/[product]/.claude/addendum.md
 
 ## Your Current Task
 
@@ -181,6 +219,8 @@ Commit your changes and report back what was accomplished.",
   description: "[Agent]: [brief task]"
 )
 ```
+
+**IMPORTANT**: Always include the product addendum path so agents have product-specific context.
 
 For parallel work, invoke multiple Task tools simultaneously.
 

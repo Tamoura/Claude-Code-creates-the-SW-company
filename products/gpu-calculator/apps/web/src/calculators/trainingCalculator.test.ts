@@ -88,6 +88,28 @@ describe('trainingCalculator', () => {
       // H100 is faster, should take less time
       expect(h100Hours).toBeLessThan(a100Hours);
     });
+
+    it('should scale training hours with datasetSizeGb', () => {
+      const baseConfig: TrainingConfig = {
+        modelSizeB: 7,
+        datasetSizeGb: 100,
+        epochs: 1,
+        tokensPerSample: 512,
+        sampleCount: 1000000,
+        gpuType: 'A100-80GB',
+        gpuCount: 8,
+        nodeCount: 1,
+        includeStorage: false,
+        storageDurationMonths: 1,
+        checkpointFrequency: 'none',
+      };
+
+      const smallDataset = calculateTrainingHours(baseConfig);
+      const largeDataset = calculateTrainingHours({ ...baseConfig, datasetSizeGb: 200 });
+
+      // Doubling dataset size should double training hours
+      expect(largeDataset).toBeCloseTo(smallDataset * 2, 1);
+    });
   });
 
   describe('calculateTrainingCost', () => {
