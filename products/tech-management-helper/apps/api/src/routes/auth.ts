@@ -1,21 +1,8 @@
 import { FastifyInstance, FastifyRequest, FastifyReply } from 'fastify';
-import bcrypt from 'bcrypt';
-import jwt from 'jsonwebtoken';
-import { z } from 'zod';
 import { prisma } from '../lib/prisma.js';
-
-const SALT_ROUNDS = 10;
-const JWT_SECRET = process.env.JWT_SECRET || 'development-secret-key';
-
-// Validation schemas
-const registerSchema = z.object({
-  email: z.string().email('Invalid email format'),
-  password: z.string().min(8, 'Password must be at least 8 characters'),
-  name: z.string().min(1, 'Name is required'),
-  organizationId: z.string().uuid('Invalid organization ID'),
-});
-
-type RegisterBody = z.infer<typeof registerSchema>;
+import { hashPassword } from '../lib/password.js';
+import { generateToken } from '../lib/jwt.js';
+import { registerSchema, RegisterBody } from '../schemas/auth.schema.js';
 
 export async function authRoutes(fastify: FastifyInstance): Promise<void> {
   // POST /api/v1/auth/register
@@ -49,7 +36,7 @@ export async function authRoutes(fastify: FastifyInstance): Promise<void> {
         }
 
         // Hash password
-        const passwordHash = await bcrypt.hash(password, SALT_ROUNDS);
+        const passwordHash = await hashPassword(password);
 
         // Create user
         const user = await prisma.user.create({
@@ -73,16 +60,12 @@ export async function authRoutes(fastify: FastifyInstance): Promise<void> {
         });
 
         // Generate JWT token
-        const token = jwt.sign(
-          {
-            userId: user.id,
-            email: user.email,
-            role: user.role,
-            organizationId: user.organizationId,
-          },
-          JWT_SECRET,
-          { expiresIn: '7d' }
-        );
+        const token = generateToken({
+          userId: user.id,
+          email: user.email,
+          role: user.role,
+          organizationId: user.organizationId,
+        });
 
         return reply.status(201).send({
           token,
