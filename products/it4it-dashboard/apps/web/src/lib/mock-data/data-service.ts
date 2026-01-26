@@ -1,0 +1,171 @@
+import { faker } from "@faker-js/faker";
+import { generateIncidents, generateEvents, generateChanges } from "./generators/d2c-generator";
+import { generateDemands, generatePortfolioItems, generateInvestments } from "./generators/s2p-generator";
+import type { Incident, Event, Change } from "@/types/d2c";
+import type { Demand, PortfolioItem, Investment } from "@/types/s2p";
+
+/**
+ * Mock Data Service
+ *
+ * Provides centralized access to mock data for all IT4IT value streams.
+ * Data is generated once on initialization using a fixed seed for consistency.
+ */
+
+export interface DashboardMetrics {
+  s2p: {
+    totalDemands: number;
+    activeDemands: number;
+    portfolioItems: number;
+    totalInvestment: number;
+  };
+  r2d: {
+    activePipelines: number;
+    failedBuilds: number;
+    pendingReleases: number;
+  };
+  r2f: {
+    pendingRequests: number;
+    avgFulfillmentTime: number;
+    activeSubscriptions: number;
+  };
+  d2c: {
+    openIncidents: number;
+    criticalIncidents: number;
+    openChanges: number;
+    totalEvents: number;
+  };
+}
+
+class MockDataService {
+  private incidents: Incident[] = [];
+  private events: Event[] = [];
+  private changes: Change[] = [];
+  private demands: Demand[] = [];
+  private portfolioItems: PortfolioItem[] = [];
+  private investments: Investment[] = [];
+  private initialized = false;
+
+  constructor() {
+    this.initialize();
+  }
+
+  private initialize() {
+    if (this.initialized) return;
+
+    // Use a fixed seed for consistent data across sessions
+    faker.seed(12345);
+
+    // Generate D2C data
+    this.incidents = generateIncidents(50);
+    this.events = generateEvents(100);
+    this.changes = generateChanges(30);
+
+    // Generate S2P data
+    this.demands = generateDemands(40);
+    this.portfolioItems = generatePortfolioItems(25);
+    this.investments = generateInvestments(15);
+
+    this.initialized = true;
+  }
+
+  // D2C Methods
+  getIncidents(): Incident[] {
+    return this.incidents;
+  }
+
+  getIncidentById(id: string): Incident | undefined {
+    return this.incidents.find((inc) => inc.id === id);
+  }
+
+  getEvents(): Event[] {
+    return this.events;
+  }
+
+  getEventById(id: string): Event | undefined {
+    return this.events.find((evt) => evt.id === id);
+  }
+
+  getChanges(): Change[] {
+    return this.changes;
+  }
+
+  getChangeById(id: string): Change | undefined {
+    return this.changes.find((chg) => chg.id === id);
+  }
+
+  // S2P Methods
+  getDemands(): Demand[] {
+    return this.demands;
+  }
+
+  getDemandById(id: string): Demand | undefined {
+    return this.demands.find((dmd) => dmd.id === id);
+  }
+
+  getPortfolioItems(): PortfolioItem[] {
+    return this.portfolioItems;
+  }
+
+  getPortfolioItemById(id: string): PortfolioItem | undefined {
+    return this.portfolioItems.find((item) => item.id === id);
+  }
+
+  getInvestments(): Investment[] {
+    return this.investments;
+  }
+
+  getInvestmentById(id: string): Investment | undefined {
+    return this.investments.find((inv) => inv.id === id);
+  }
+
+  // Dashboard Metrics
+  getDashboardMetrics(): DashboardMetrics {
+    const openIncidents = this.incidents.filter(
+      (inc) => inc.status !== "resolved" && inc.status !== "closed"
+    ).length;
+
+    const criticalIncidents = this.incidents.filter(
+      (inc) => inc.severity === 1 && inc.status !== "resolved" && inc.status !== "closed"
+    ).length;
+
+    const activeDemands = this.demands.filter(
+      (dmd) => dmd.status === "new" || dmd.status === "assessing"
+    ).length;
+
+    const totalInvestment = this.investments
+      .filter((inv) => inv.status === "active")
+      .reduce((sum, inv) => sum + inv.allocatedBudget, 0);
+
+    const openChanges = this.changes.filter(
+      (chg) => chg.status !== "completed" && chg.status !== "cancelled"
+    ).length;
+
+    return {
+      s2p: {
+        totalDemands: this.demands.length,
+        activeDemands,
+        portfolioItems: this.portfolioItems.length,
+        totalInvestment,
+      },
+      r2d: {
+        activePipelines: 8,
+        failedBuilds: 3,
+        pendingReleases: 5,
+      },
+      r2f: {
+        pendingRequests: 45,
+        avgFulfillmentTime: 4.2,
+        activeSubscriptions: 128,
+      },
+      d2c: {
+        openIncidents,
+        criticalIncidents,
+        openChanges,
+        totalEvents: this.events.length,
+      },
+    };
+  }
+}
+
+// Export singleton instance
+export const dataService = new MockDataService();
