@@ -29,7 +29,7 @@ pnpm db:seed
 pnpm dev
 ```
 
-Then visit: http://localhost:3101
+Then visit: http://localhost:3102
 
 **Login**: admin@itil.dev / Admin123!
 
@@ -38,11 +38,11 @@ Then visit: http://localhost:3101
 ```
 /
 ├── apps/
-│   ├── api/           # Backend (Fastify :5001)
+│   ├── api/           # Backend (Fastify :5002)
 │   │   ├── src/       # Services, routes, plugins
 │   │   ├── prisma/    # Schema, migrations, seeds
 │   │   └── tests/     # Vitest tests (80%+ coverage)
-│   └── web/           # Frontend (Next.js :3101)
+│   └── web/           # Frontend (Next.js :3102)
 │       ├── src/app/   # Pages (App Router)
 │       ├── src/components/  # React components
 │       └── src/hooks/ # TanStack Query hooks
@@ -108,8 +108,8 @@ DELETE /api/v1/incidents/:id      # Soft delete
 ```bash
 # Development
 pnpm dev          # Start API + Web
-pnpm dev:api      # API only (:5001)
-pnpm dev:web      # Web only (:3101)
+pnpm dev:api      # API only (:5002)
+pnpm dev:web      # Web only (:3102)
 
 # Database
 pnpm db:migrate   # Run migrations
@@ -173,14 +173,14 @@ pnpm db:generate
 Backend (`apps/api/.env`):
 ```bash
 DATABASE_URL="postgresql://postgres:postgres@localhost:5432/itil_dashboard_dev"
-PORT=5001
+PORT=5002
 JWT_SECRET="dev-secret-change-in-production"
-FRONTEND_URL="http://localhost:3101"
+FRONTEND_URL="http://localhost:3102"
 ```
 
 Frontend (`apps/web/.env.local`):
 ```bash
-NEXT_PUBLIC_API_URL=http://localhost:5001/api/v1
+NEXT_PUBLIC_API_URL=http://localhost:5002/api/v1
 ```
 
 ## 🏗 Foundation Checklist
