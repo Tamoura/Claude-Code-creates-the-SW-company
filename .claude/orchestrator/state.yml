@@ -17,6 +17,10 @@ products:
     path: "products/it4it-dashboard"
     state_file: "products/it4it-dashboard/.claude/state.yml"
     worktree: ".trees/IT4IT_dashboard_product"
+  tech-management-helper:
+    path: "products/tech-management-helper"
+    state_file: "products/tech-management-helper/.claude/state.yml"
+    worktree: ".trees/Tech_Management_helper"
 
 # Active worktrees (for parallel product development)
 worktrees:
@@ -31,7 +35,7 @@ worktrees:
   Tech_Management_helper:
     path: ".trees/Tech_Management_helper"
     branch: "Tech_Management_helper"
-    product: null
+    product: "tech-management-helper"
 
 # Company-wide pending decisions (cross-product)
 pending_decisions: []
@@ -40,4 +44,4 @@ pending_decisions: []
 checkpoints: []
 
 # Last updated
-last_updated: "2025-01-26T00:00:00Z"
+last_updated: "2026-01-26T10:30:00Z"

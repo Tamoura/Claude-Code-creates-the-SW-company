@@ -1,0 +1,2128 @@
+openapi: 3.0.3
+info:
+  title: Tech Management Helper API
+  description: |
+    GRC Platform API for Technology Managers in regulated industries.
+    Supports compliance dashboards, risk management, control tracking,
+    asset inventory, and framework mapping.
+  version: 1.0.0
+  contact:
+    name: ConnectSW
+    email: support@connectsw.com
+  license:
+    name: MIT
+    url: https://opensource.org/licenses/MIT
+
+servers:
+  - url: http://localhost:5001/api/v1
+    description: Development server
+  - url: https://api.tech-mgmt-helper.connectsw.com/api/v1
+    description: Production server
+
+tags:
+  - name: Authentication
+    description: User authentication and session management
+  - name: Users
+    description: User management (Admin only)
+  - name: Risks
+    description: Risk register management
+  - name: Controls
+    description: Control catalog management
+  - name: Assets
+    description: Asset inventory management
+  - name: Assessments
+    description: Control assessment workflow
+  - name: Frameworks
+    description: Compliance framework library
+  - name: Reports
+    description: PDF report generation
+  - name: Dashboard
+    description: Dashboard data aggregations
+  - name: Audit
+    description: Audit log queries
+
+security:
+  - bearerAuth: []
+
+paths:
+  # ========== AUTHENTICATION ==========
+  /auth/login:
+    post:
+      tags: [Authentication]
+      summary: User login
+      security: []
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              type: object
+              required: [email, password]
+              properties:
+                email:
+                  type: string
+                  format: email
+                  example: admin@company.com
+                password:
+                  type: string
+                  format: password
+                  minLength: 8
+      responses:
+        '200':
+          description: Login successful
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/AuthResponse'
+        '401':
+          $ref: '#/components/responses/Unauthorized'
+
+  /auth/logout:
+    post:
+      tags: [Authentication]
+      summary: User logout
+      responses:
+        '200':
+          description: Logout successful
+        '401':
+          $ref: '#/components/responses/Unauthorized'
+
+  /auth/me:
+    get:
+      tags: [Authentication]
+      summary: Get current user
+      responses:
+        '200':
+          description: Current user details
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/User'
+        '401':
+          $ref: '#/components/responses/Unauthorized'
+
+  /auth/refresh:
+    post:
+      tags: [Authentication]
+      summary: Refresh access token
+      responses:
+        '200':
+          description: Token refreshed
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/AuthResponse'
+        '401':
+          $ref: '#/components/responses/Unauthorized'
+
+  # ========== USERS ==========
+  /users:
+    get:
+      tags: [Users]
+      summary: List users
+      description: Admin only - list all users in the organization
+      parameters:
+        - $ref: '#/components/parameters/page'
+        - $ref: '#/components/parameters/limit'
+        - name: role
+          in: query
+          schema:
+            $ref: '#/components/schemas/Role'
+        - name: search
+          in: query
+          schema:
+            type: string
+          description: Search by name or email
+      responses:
+        '200':
+          description: List of users
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/UserList'
+        '401':
+          $ref: '#/components/responses/Unauthorized'
+        '403':
+          $ref: '#/components/responses/Forbidden'
+
+    post:
+      tags: [Users]
+      summary: Create user
+      description: Admin only - create a new user
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              $ref: '#/components/schemas/CreateUser'
+      responses:
+        '201':
+          description: User created
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/User'
+        '400':
+          $ref: '#/components/responses/BadRequest'
+        '401':
+          $ref: '#/components/responses/Unauthorized'
+        '403':
+          $ref: '#/components/responses/Forbidden'
+
+  /users/{userId}:
+    get:
+      tags: [Users]
+      summary: Get user by ID
+      parameters:
+        - $ref: '#/components/parameters/userId'
+      responses:
+        '200':
+          description: User details
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/User'
+        '401':
+          $ref: '#/components/responses/Unauthorized'
+        '404':
+          $ref: '#/components/responses/NotFound'
+
+    put:
+      tags: [Users]
+      summary: Update user
+      parameters:
+        - $ref: '#/components/parameters/userId'
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              $ref: '#/components/schemas/UpdateUser'
+      responses:
+        '200':
+          description: User updated
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/User'
+        '401':
+          $ref: '#/components/responses/Unauthorized'
+        '403':
+          $ref: '#/components/responses/Forbidden'
+        '404':
+          $ref: '#/components/responses/NotFound'
+
+    delete:
+      tags: [Users]
+      summary: Delete user
+      description: Admin only - soft delete user
+      parameters:
+        - $ref: '#/components/parameters/userId'
+      responses:
+        '204':
+          description: User deleted
+        '401':
+          $ref: '#/components/responses/Unauthorized'
+        '403':
+          $ref: '#/components/responses/Forbidden'
+        '404':
+          $ref: '#/components/responses/NotFound'
+
+  # ========== RISKS ==========
+  /risks:
+    get:
+      tags: [Risks]
+      summary: List risks
+      parameters:
+        - $ref: '#/components/parameters/page'
+        - $ref: '#/components/parameters/limit'
+        - name: status
+          in: query
+          schema:
+            $ref: '#/components/schemas/RiskStatus'
+        - name: category
+          in: query
+          schema:
+            type: string
+        - name: minScore
+          in: query
+          schema:
+            type: integer
+            minimum: 1
+            maximum: 25
+        - name: maxScore
+          in: query
+          schema:
+            type: integer
+            minimum: 1
+            maximum: 25
+        - name: search
+          in: query
+          schema:
+            type: string
+        - name: sortBy
+          in: query
+          schema:
+            type: string
+            enum: [score, createdAt, updatedAt, title]
+            default: createdAt
+        - name: sortOrder
+          in: query
+          schema:
+            type: string
+            enum: [asc, desc]
+            default: desc
+      responses:
+        '200':
+          description: List of risks
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/RiskList'
+        '401':
+          $ref: '#/components/responses/Unauthorized'
+
+    post:
+      tags: [Risks]
+      summary: Create risk
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              $ref: '#/components/schemas/CreateRisk'
+      responses:
+        '201':
+          description: Risk created
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/Risk'
+        '400':
+          $ref: '#/components/responses/BadRequest'
+        '401':
+          $ref: '#/components/responses/Unauthorized'
+        '403':
+          $ref: '#/components/responses/Forbidden'
+
+  /risks/{riskId}:
+    get:
+      tags: [Risks]
+      summary: Get risk by ID
+      parameters:
+        - $ref: '#/components/parameters/riskId'
+      responses:
+        '200':
+          description: Risk details with linked controls and assets
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/RiskDetail'
+        '401':
+          $ref: '#/components/responses/Unauthorized'
+        '404':
+          $ref: '#/components/responses/NotFound'
+
+    put:
+      tags: [Risks]
+      summary: Update risk
+      parameters:
+        - $ref: '#/components/parameters/riskId'
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              $ref: '#/components/schemas/UpdateRisk'
+      responses:
+        '200':
+          description: Risk updated
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/Risk'
+        '401':
+          $ref: '#/components/responses/Unauthorized'
+        '403':
+          $ref: '#/components/responses/Forbidden'
+        '404':
+          $ref: '#/components/responses/NotFound'
+
+    delete:
+      tags: [Risks]
+      summary: Delete risk
+      parameters:
+        - $ref: '#/components/parameters/riskId'
+      responses:
+        '204':
+          description: Risk deleted
+        '401':
+          $ref: '#/components/responses/Unauthorized'
+        '403':
+          $ref: '#/components/responses/Forbidden'
+        '404':
+          $ref: '#/components/responses/NotFound'
+
+  /risks/{riskId}/controls:
+    post:
+      tags: [Risks]
+      summary: Link controls to risk
+      parameters:
+        - $ref: '#/components/parameters/riskId'
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              type: object
+              required: [controlIds]
+              properties:
+                controlIds:
+                  type: array
+                  items:
+                    type: string
+                    format: uuid
+      responses:
+        '200':
+          description: Controls linked
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/Risk'
+        '401':
+          $ref: '#/components/responses/Unauthorized'
+        '404':
+          $ref: '#/components/responses/NotFound'
+
+  /risks/{riskId}/assets:
+    post:
+      tags: [Risks]
+      summary: Link assets to risk
+      parameters:
+        - $ref: '#/components/parameters/riskId'
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              type: object
+              required: [assetIds]
+              properties:
+                assetIds:
+                  type: array
+                  items:
+                    type: string
+                    format: uuid
+      responses:
+        '200':
+          description: Assets linked
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/Risk'
+        '401':
+          $ref: '#/components/responses/Unauthorized'
+        '404':
+          $ref: '#/components/responses/NotFound'
+
+  # ========== CONTROLS ==========
+  /controls:
+    get:
+      tags: [Controls]
+      summary: List controls
+      parameters:
+        - $ref: '#/components/parameters/page'
+        - $ref: '#/components/parameters/limit'
+        - name: frameworkId
+          in: query
+          schema:
+            type: string
+            format: uuid
+        - name: status
+          in: query
+          schema:
+            $ref: '#/components/schemas/ControlStatus'
+        - name: category
+          in: query
+          schema:
+            type: string
+        - name: search
+          in: query
+          schema:
+            type: string
+      responses:
+        '200':
+          description: List of controls
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/ControlList'
+        '401':
+          $ref: '#/components/responses/Unauthorized'
+
+    post:
+      tags: [Controls]
+      summary: Create control
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              $ref: '#/components/schemas/CreateControl'
+      responses:
+        '201':
+          description: Control created
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/Control'
+        '400':
+          $ref: '#/components/responses/BadRequest'
+        '401':
+          $ref: '#/components/responses/Unauthorized'
+        '403':
+          $ref: '#/components/responses/Forbidden'
+
+  /controls/{controlId}:
+    get:
+      tags: [Controls]
+      summary: Get control by ID
+      parameters:
+        - $ref: '#/components/parameters/controlId'
+      responses:
+        '200':
+          description: Control details with framework mappings
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/ControlDetail'
+        '401':
+          $ref: '#/components/responses/Unauthorized'
+        '404':
+          $ref: '#/components/responses/NotFound'
+
+    put:
+      tags: [Controls]
+      summary: Update control
+      parameters:
+        - $ref: '#/components/parameters/controlId'
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              $ref: '#/components/schemas/UpdateControl'
+      responses:
+        '200':
+          description: Control updated
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/Control'
+        '401':
+          $ref: '#/components/responses/Unauthorized'
+        '403':
+          $ref: '#/components/responses/Forbidden'
+        '404':
+          $ref: '#/components/responses/NotFound'
+
+    delete:
+      tags: [Controls]
+      summary: Delete control
+      parameters:
+        - $ref: '#/components/parameters/controlId'
+      responses:
+        '204':
+          description: Control deleted
+        '401':
+          $ref: '#/components/responses/Unauthorized'
+        '403':
+          $ref: '#/components/responses/Forbidden'
+        '404':
+          $ref: '#/components/responses/NotFound'
+
+  /controls/{controlId}/frameworks:
+    post:
+      tags: [Controls]
+      summary: Map control to frameworks
+      parameters:
+        - $ref: '#/components/parameters/controlId'
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              type: object
+              required: [mappings]
+              properties:
+                mappings:
+                  type: array
+                  items:
+                    type: object
+                    required: [frameworkId, referenceId]
+                    properties:
+                      frameworkId:
+                        type: string
+                        format: uuid
+                      referenceId:
+                        type: string
+                        description: Framework-specific control ID (e.g., "PR.AC-1")
+      responses:
+        '200':
+          description: Frameworks mapped
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/Control'
+        '401':
+          $ref: '#/components/responses/Unauthorized'
+        '404':
+          $ref: '#/components/responses/NotFound'
+
+  # ========== ASSETS ==========
+  /assets:
+    get:
+      tags: [Assets]
+      summary: List assets
+      parameters:
+        - $ref: '#/components/parameters/page'
+        - $ref: '#/components/parameters/limit'
+        - name: type
+          in: query
+          schema:
+            $ref: '#/components/schemas/AssetType'
+        - name: criticality
+          in: query
+          schema:
+            $ref: '#/components/schemas/Criticality'
+        - name: status
+          in: query
+          schema:
+            $ref: '#/components/schemas/AssetStatus'
+        - name: search
+          in: query
+          schema:
+            type: string
+      responses:
+        '200':
+          description: List of assets
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/AssetList'
+        '401':
+          $ref: '#/components/responses/Unauthorized'
+
+    post:
+      tags: [Assets]
+      summary: Create asset
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              $ref: '#/components/schemas/CreateAsset'
+      responses:
+        '201':
+          description: Asset created
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/Asset'
+        '400':
+          $ref: '#/components/responses/BadRequest'
+        '401':
+          $ref: '#/components/responses/Unauthorized'
+        '403':
+          $ref: '#/components/responses/Forbidden'
+
+  /assets/import:
+    post:
+      tags: [Assets]
+      summary: Import assets from CSV
+      requestBody:
+        required: true
+        content:
+          multipart/form-data:
+            schema:
+              type: object
+              required: [file]
+              properties:
+                file:
+                  type: string
+                  format: binary
+                  description: CSV file with asset data
+                updateExisting:
+                  type: boolean
+                  default: false
+                  description: Update existing assets by name
+      responses:
+        '200':
+          description: Import results
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/ImportResult'
+        '400':
+          $ref: '#/components/responses/BadRequest'
+        '401':
+          $ref: '#/components/responses/Unauthorized'
+        '403':
+          $ref: '#/components/responses/Forbidden'
+
+  /assets/{assetId}:
+    get:
+      tags: [Assets]
+      summary: Get asset by ID
+      parameters:
+        - $ref: '#/components/parameters/assetId'
+      responses:
+        '200':
+          description: Asset details with linked risks
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/AssetDetail'
+        '401':
+          $ref: '#/components/responses/Unauthorized'
+        '404':
+          $ref: '#/components/responses/NotFound'
+
+    put:
+      tags: [Assets]
+      summary: Update asset
+      parameters:
+        - $ref: '#/components/parameters/assetId'
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              $ref: '#/components/schemas/UpdateAsset'
+      responses:
+        '200':
+          description: Asset updated
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/Asset'
+        '401':
+          $ref: '#/components/responses/Unauthorized'
+        '403':
+          $ref: '#/components/responses/Forbidden'
+        '404':
+          $ref: '#/components/responses/NotFound'
+
+    delete:
+      tags: [Assets]
+      summary: Delete asset
+      parameters:
+        - $ref: '#/components/parameters/assetId'
+      responses:
+        '204':
+          description: Asset deleted
+        '401':
+          $ref: '#/components/responses/Unauthorized'
+        '403':
+          $ref: '#/components/responses/Forbidden'
+        '404':
+          $ref: '#/components/responses/NotFound'
+
+  # ========== ASSESSMENTS ==========
+  /assessments:
+    get:
+      tags: [Assessments]
+      summary: List assessments
+      parameters:
+        - $ref: '#/components/parameters/page'
+        - $ref: '#/components/parameters/limit'
+        - name: controlId
+          in: query
+          schema:
+            type: string
+            format: uuid
+        - name: status
+          in: query
+          schema:
+            $ref: '#/components/schemas/AssessmentStatus'
+        - name: assessorId
+          in: query
+          schema:
+            type: string
+            format: uuid
+        - name: fromDate
+          in: query
+          schema:
+            type: string
+            format: date
+        - name: toDate
+          in: query
+          schema:
+            type: string
+            format: date
+      responses:
+        '200':
+          description: List of assessments
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/AssessmentList'
+        '401':
+          $ref: '#/components/responses/Unauthorized'
+
+    post:
+      tags: [Assessments]
+      summary: Create assessment
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              $ref: '#/components/schemas/CreateAssessment'
+      responses:
+        '201':
+          description: Assessment created
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/Assessment'
+        '400':
+          $ref: '#/components/responses/BadRequest'
+        '401':
+          $ref: '#/components/responses/Unauthorized'
+        '403':
+          $ref: '#/components/responses/Forbidden'
+
+  /assessments/{assessmentId}:
+    get:
+      tags: [Assessments]
+      summary: Get assessment by ID
+      parameters:
+        - $ref: '#/components/parameters/assessmentId'
+      responses:
+        '200':
+          description: Assessment details
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/AssessmentDetail'
+        '401':
+          $ref: '#/components/responses/Unauthorized'
+        '404':
+          $ref: '#/components/responses/NotFound'
+
+    put:
+      tags: [Assessments]
+      summary: Update assessment
+      parameters:
+        - $ref: '#/components/parameters/assessmentId'
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              $ref: '#/components/schemas/UpdateAssessment'
+      responses:
+        '200':
+          description: Assessment updated
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/Assessment'
+        '401':
+          $ref: '#/components/responses/Unauthorized'
+        '403':
+          $ref: '#/components/responses/Forbidden'
+        '404':
+          $ref: '#/components/responses/NotFound'
+
+  /assessments/{assessmentId}/submit:
+    post:
+      tags: [Assessments]
+      summary: Submit assessment for review
+      parameters:
+        - $ref: '#/components/parameters/assessmentId'
+      responses:
+        '200':
+          description: Assessment submitted
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/Assessment'
+        '401':
+          $ref: '#/components/responses/Unauthorized'
+        '403':
+          $ref: '#/components/responses/Forbidden'
+        '404':
+          $ref: '#/components/responses/NotFound'
+
+  /assessments/{assessmentId}/approve:
+    post:
+      tags: [Assessments]
+      summary: Approve assessment
+      description: Manager/Admin only
+      parameters:
+        - $ref: '#/components/parameters/assessmentId'
+      requestBody:
+        content:
+          application/json:
+            schema:
+              type: object
+              properties:
+                comments:
+                  type: string
+      responses:
+        '200':
+          description: Assessment approved
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/Assessment'
+        '401':
+          $ref: '#/components/responses/Unauthorized'
+        '403':
+          $ref: '#/components/responses/Forbidden'
+        '404':
+          $ref: '#/components/responses/NotFound'
+
+  /assessments/{assessmentId}/reject:
+    post:
+      tags: [Assessments]
+      summary: Reject assessment
+      description: Manager/Admin only
+      parameters:
+        - $ref: '#/components/parameters/assessmentId'
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              type: object
+              required: [reason]
+              properties:
+                reason:
+                  type: string
+      responses:
+        '200':
+          description: Assessment rejected
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/Assessment'
+        '401':
+          $ref: '#/components/responses/Unauthorized'
+        '403':
+          $ref: '#/components/responses/Forbidden'
+        '404':
+          $ref: '#/components/responses/NotFound'
+
+  # ========== FRAMEWORKS ==========
+  /frameworks:
+    get:
+      tags: [Frameworks]
+      summary: List frameworks
+      parameters:
+        - name: type
+          in: query
+          schema:
+            type: string
+            enum: [NIST_CSF, ISO_27001, COBIT, IT4IT]
+      responses:
+        '200':
+          description: List of frameworks
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/FrameworkList'
+        '401':
+          $ref: '#/components/responses/Unauthorized'
+
+  /frameworks/{frameworkId}:
+    get:
+      tags: [Frameworks]
+      summary: Get framework by ID
+      parameters:
+        - $ref: '#/components/parameters/frameworkId'
+      responses:
+        '200':
+          description: Framework details with categories and controls
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/FrameworkDetail'
+        '401':
+          $ref: '#/components/responses/Unauthorized'
+        '404':
+          $ref: '#/components/responses/NotFound'
+
+  /frameworks/{frameworkId}/compliance:
+    get:
+      tags: [Frameworks]
+      summary: Get compliance status for framework
+      parameters:
+        - $ref: '#/components/parameters/frameworkId'
+      responses:
+        '200':
+          description: Compliance metrics for the framework
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/ComplianceStatus'
+        '401':
+          $ref: '#/components/responses/Unauthorized'
+        '404':
+          $ref: '#/components/responses/NotFound'
+
+  # ========== DASHBOARD ==========
+  /dashboard/summary:
+    get:
+      tags: [Dashboard]
+      summary: Get dashboard summary
+      responses:
+        '200':
+          description: Dashboard summary data
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/DashboardSummary'
+        '401':
+          $ref: '#/components/responses/Unauthorized'
+
+  /dashboard/risk-matrix:
+    get:
+      tags: [Dashboard]
+      summary: Get risk matrix data
+      responses:
+        '200':
+          description: Risk matrix data for visualization
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/RiskMatrix'
+        '401':
+          $ref: '#/components/responses/Unauthorized'
+
+  /dashboard/value-streams:
+    get:
+      tags: [Dashboard]
+      summary: Get IT4IT value stream data
+      responses:
+        '200':
+          description: IT4IT value stream metrics
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/ValueStreams'
+        '401':
+          $ref: '#/components/responses/Unauthorized'
+
+  /dashboard/compliance-trends:
+    get:
+      tags: [Dashboard]
+      summary: Get compliance trends over time
+      parameters:
+        - name: months
+          in: query
+          schema:
+            type: integer
+            default: 12
+            minimum: 1
+            maximum: 24
+      responses:
+        '200':
+          description: Compliance trend data
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/ComplianceTrends'
+        '401':
+          $ref: '#/components/responses/Unauthorized'
+
+  # ========== REPORTS ==========
+  /reports/risk-register:
+    post:
+      tags: [Reports]
+      summary: Generate risk register PDF
+      requestBody:
+        content:
+          application/json:
+            schema:
+              type: object
+              properties:
+                filters:
+                  type: object
+                  properties:
+                    status:
+                      $ref: '#/components/schemas/RiskStatus'
+                    minScore:
+                      type: integer
+                    category:
+                      type: string
+      responses:
+        '200':
+          description: PDF report
+          content:
+            application/pdf:
+              schema:
+                type: string
+                format: binary
+        '401':
+          $ref: '#/components/responses/Unauthorized'
+        '403':
+          $ref: '#/components/responses/Forbidden'
+
+  /reports/compliance-summary:
+    post:
+      tags: [Reports]
+      summary: Generate compliance summary PDF
+      requestBody:
+        content:
+          application/json:
+            schema:
+              type: object
+              properties:
+                frameworkIds:
+                  type: array
+                  items:
+                    type: string
+                    format: uuid
+      responses:
+        '200':
+          description: PDF report
+          content:
+            application/pdf:
+              schema:
+                type: string
+                format: binary
+        '401':
+          $ref: '#/components/responses/Unauthorized'
+        '403':
+          $ref: '#/components/responses/Forbidden'
+
+  /reports/asset-inventory:
+    post:
+      tags: [Reports]
+      summary: Generate asset inventory PDF
+      requestBody:
+        content:
+          application/json:
+            schema:
+              type: object
+              properties:
+                filters:
+                  type: object
+                  properties:
+                    type:
+                      $ref: '#/components/schemas/AssetType'
+                    criticality:
+                      $ref: '#/components/schemas/Criticality'
+      responses:
+        '200':
+          description: PDF report
+          content:
+            application/pdf:
+              schema:
+                type: string
+                format: binary
+        '401':
+          $ref: '#/components/responses/Unauthorized'
+        '403':
+          $ref: '#/components/responses/Forbidden'
+
+  # ========== AUDIT ==========
+  /audit/logs:
+    get:
+      tags: [Audit]
+      summary: Query audit logs
+      description: Admin/Manager only
+      parameters:
+        - $ref: '#/components/parameters/page'
+        - $ref: '#/components/parameters/limit'
+        - name: userId
+          in: query
+          schema:
+            type: string
+            format: uuid
+        - name: entityType
+          in: query
+          schema:
+            type: string
+            enum: [Risk, Control, Asset, Assessment, User]
+        - name: entityId
+          in: query
+          schema:
+            type: string
+            format: uuid
+        - name: action
+          in: query
+          schema:
+            type: string
+            enum: [CREATE, UPDATE, DELETE, READ, EXPORT]
+        - name: fromDate
+          in: query
+          schema:
+            type: string
+            format: date-time
+        - name: toDate
+          in: query
+          schema:
+            type: string
+            format: date-time
+      responses:
+        '200':
+          description: Audit log entries
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/AuditLogList'
+        '401':
+          $ref: '#/components/responses/Unauthorized'
+        '403':
+          $ref: '#/components/responses/Forbidden'
+
+  /audit/export:
+    post:
+      tags: [Audit]
+      summary: Export audit logs
+      description: Admin only - export to CSV
+      requestBody:
+        content:
+          application/json:
+            schema:
+              type: object
+              properties:
+                fromDate:
+                  type: string
+                  format: date-time
+                toDate:
+                  type: string
+                  format: date-time
+                entityType:
+                  type: string
+      responses:
+        '200':
+          description: CSV export
+          content:
+            text/csv:
+              schema:
+                type: string
+        '401':
+          $ref: '#/components/responses/Unauthorized'
+        '403':
+          $ref: '#/components/responses/Forbidden'
+
+components:
+  securitySchemes:
+    bearerAuth:
+      type: http
+      scheme: bearer
+      bearerFormat: JWT
+
+  parameters:
+    page:
+      name: page
+      in: query
+      schema:
+        type: integer
+        minimum: 1
+        default: 1
+    limit:
+      name: limit
+      in: query
+      schema:
+        type: integer
+        minimum: 1
+        maximum: 100
+        default: 20
+    userId:
+      name: userId
+      in: path
+      required: true
+      schema:
+        type: string
+        format: uuid
+    riskId:
+      name: riskId
+      in: path
+      required: true
+      schema:
+        type: string
+        format: uuid
+    controlId:
+      name: controlId
+      in: path
+      required: true
+      schema:
+        type: string
+        format: uuid
+    assetId:
+      name: assetId
+      in: path
+      required: true
+      schema:
+        type: string
+        format: uuid
+    assessmentId:
+      name: assessmentId
+      in: path
+      required: true
+      schema:
+        type: string
+        format: uuid
+    frameworkId:
+      name: frameworkId
+      in: path
+      required: true
+      schema:
+        type: string
+        format: uuid
+
+  responses:
+    BadRequest:
+      description: Bad request - validation error
+      content:
+        application/json:
+          schema:
+            $ref: '#/components/schemas/Error'
+    Unauthorized:
+      description: Unauthorized - authentication required
+      content:
+        application/json:
+          schema:
+            $ref: '#/components/schemas/Error'
+    Forbidden:
+      description: Forbidden - insufficient permissions
+      content:
+        application/json:
+          schema:
+            $ref: '#/components/schemas/Error'
+    NotFound:
+      description: Not found
+      content:
+        application/json:
+          schema:
+            $ref: '#/components/schemas/Error'
+
+  schemas:
+    # ========== ENUMS ==========
+    Role:
+      type: string
+      enum: [ADMIN, MANAGER, ANALYST, VIEWER]
+
+    RiskStatus:
+      type: string
+      enum: [IDENTIFIED, ASSESSED, MITIGATING, ACCEPTED, CLOSED]
+
+    ControlStatus:
+      type: string
+      enum: [NOT_IMPLEMENTED, PARTIALLY_IMPLEMENTED, IMPLEMENTED, NOT_APPLICABLE]
+
+    AssetType:
+      type: string
+      enum: [HARDWARE, SOFTWARE, DATA, NETWORK, PERSONNEL, FACILITY]
+
+    AssetStatus:
+      type: string
+      enum: [ACTIVE, INACTIVE, DECOMMISSIONED]
+
+    Criticality:
+      type: string
+      enum: [LOW, MEDIUM, HIGH, CRITICAL]
+
+    AssessmentStatus:
+      type: string
+      enum: [DRAFT, SUBMITTED, APPROVED, REJECTED]
+
+    # ========== COMMON ==========
+    Error:
+      type: object
+      required: [code, message]
+      properties:
+        code:
+          type: string
+        message:
+          type: string
+        details:
+          type: object
+
+    Pagination:
+      type: object
+      properties:
+        page:
+          type: integer
+        limit:
+          type: integer
+        total:
+          type: integer
+        totalPages:
+          type: integer
+
+    # ========== AUTH ==========
+    AuthResponse:
+      type: object
+      properties:
+        accessToken:
+          type: string
+        refreshToken:
+          type: string
+        expiresIn:
+          type: integer
+        user:
+          $ref: '#/components/schemas/User'
+
+    # ========== USER ==========
+    User:
+      type: object
+      properties:
+        id:
+          type: string
+          format: uuid
+        email:
+          type: string
+          format: email
+        name:
+          type: string
+        role:
+          $ref: '#/components/schemas/Role'
+        createdAt:
+          type: string
+          format: date-time
+        updatedAt:
+          type: string
+          format: date-time
+
+    CreateUser:
+      type: object
+      required: [email, name, password, role]
+      properties:
+        email:
+          type: string
+          format: email
+        name:
+          type: string
+        password:
+          type: string
+          minLength: 8
+        role:
+          $ref: '#/components/schemas/Role'
+
+    UpdateUser:
+      type: object
+      properties:
+        name:
+          type: string
+        role:
+          $ref: '#/components/schemas/Role'
+
+    UserList:
+      type: object
+      properties:
+        data:
+          type: array
+          items:
+            $ref: '#/components/schemas/User'
+        pagination:
+          $ref: '#/components/schemas/Pagination'
+
+    # ========== RISK ==========
+    Risk:
+      type: object
+      properties:
+        id:
+          type: string
+          format: uuid
+        title:
+          type: string
+        description:
+          type: string
+        category:
+          type: string
+        likelihood:
+          type: integer
+          minimum: 1
+          maximum: 5
+        impact:
+          type: integer
+          minimum: 1
+          maximum: 5
+        score:
+          type: integer
+          description: Calculated as likelihood x impact
+        status:
+          $ref: '#/components/schemas/RiskStatus'
+        owner:
+          $ref: '#/components/schemas/User'
+        mitigationPlan:
+          type: string
+        createdAt:
+          type: string
+          format: date-time
+        updatedAt:
+          type: string
+          format: date-time
+
+    RiskDetail:
+      allOf:
+        - $ref: '#/components/schemas/Risk'
+        - type: object
+          properties:
+            controls:
+              type: array
+              items:
+                $ref: '#/components/schemas/Control'
+            assets:
+              type: array
+              items:
+                $ref: '#/components/schemas/Asset'
+
+    CreateRisk:
+      type: object
+      required: [title, description, category, likelihood, impact]
+      properties:
+        title:
+          type: string
+        description:
+          type: string
+        category:
+          type: string
+        likelihood:
+          type: integer
+          minimum: 1
+          maximum: 5
+        impact:
+          type: integer
+          minimum: 1
+          maximum: 5
+        ownerId:
+          type: string
+          format: uuid
+        mitigationPlan:
+          type: string
+
+    UpdateRisk:
+      type: object
+      properties:
+        title:
+          type: string
+        description:
+          type: string
+        category:
+          type: string
+        likelihood:
+          type: integer
+          minimum: 1
+          maximum: 5
+        impact:
+          type: integer
+          minimum: 1
+          maximum: 5
+        status:
+          $ref: '#/components/schemas/RiskStatus'
+        ownerId:
+          type: string
+          format: uuid
+        mitigationPlan:
+          type: string
+
+    RiskList:
+      type: object
+      properties:
+        data:
+          type: array
+          items:
+            $ref: '#/components/schemas/Risk'
+        pagination:
+          $ref: '#/components/schemas/Pagination'
+
+    # ========== CONTROL ==========
+    Control:
+      type: object
+      properties:
+        id:
+          type: string
+          format: uuid
+        code:
+          type: string
+          description: Unique control identifier
+        title:
+          type: string
+        description:
+          type: string
+        category:
+          type: string
+        status:
+          $ref: '#/components/schemas/ControlStatus'
+        implementationNotes:
+          type: string
+        owner:
+          $ref: '#/components/schemas/User'
+        createdAt:
+          type: string
+          format: date-time
+        updatedAt:
+          type: string
+          format: date-time
+
+    ControlDetail:
+      allOf:
+        - $ref: '#/components/schemas/Control'
+        - type: object
+          properties:
+            frameworkMappings:
+              type: array
+              items:
+                type: object
+                properties:
+                  framework:
+                    $ref: '#/components/schemas/Framework'
+                  referenceId:
+                    type: string
+            risks:
+              type: array
+              items:
+                $ref: '#/components/schemas/Risk'
+            assessments:
+              type: array
+              items:
+                $ref: '#/components/schemas/Assessment'
+
+    CreateControl:
+      type: object
+      required: [code, title, description, category]
+      properties:
+        code:
+          type: string
+        title:
+          type: string
+        description:
+          type: string
+        category:
+          type: string
+        status:
+          $ref: '#/components/schemas/ControlStatus'
+        implementationNotes:
+          type: string
+        ownerId:
+          type: string
+          format: uuid
+
+    UpdateControl:
+      type: object
+      properties:
+        title:
+          type: string
+        description:
+          type: string
+        category:
+          type: string
+        status:
+          $ref: '#/components/schemas/ControlStatus'
+        implementationNotes:
+          type: string
+        ownerId:
+          type: string
+          format: uuid
+
+    ControlList:
+      type: object
+      properties:
+        data:
+          type: array
+          items:
+            $ref: '#/components/schemas/Control'
+        pagination:
+          $ref: '#/components/schemas/Pagination'
+
+    # ========== ASSET ==========
+    Asset:
+      type: object
+      properties:
+        id:
+          type: string
+          format: uuid
+        name:
+          type: string
+        description:
+          type: string
+        type:
+          $ref: '#/components/schemas/AssetType'
+        status:
+          $ref: '#/components/schemas/AssetStatus'
+        criticality:
+          $ref: '#/components/schemas/Criticality'
+        location:
+          type: string
+        owner:
+          $ref: '#/components/schemas/User'
+        metadata:
+          type: object
+          additionalProperties: true
+        createdAt:
+          type: string
+          format: date-time
+        updatedAt:
+          type: string
+          format: date-time
+
+    AssetDetail:
+      allOf:
+        - $ref: '#/components/schemas/Asset'
+        - type: object
+          properties:
+            risks:
+              type: array
+              items:
+                $ref: '#/components/schemas/Risk'
+
+    CreateAsset:
+      type: object
+      required: [name, type, criticality]
+      properties:
+        name:
+          type: string
+        description:
+          type: string
+        type:
+          $ref: '#/components/schemas/AssetType'
+        criticality:
+          $ref: '#/components/schemas/Criticality'
+        location:
+          type: string
+        ownerId:
+          type: string
+          format: uuid
+        metadata:
+          type: object
+          additionalProperties: true
+
+    UpdateAsset:
+      type: object
+      properties:
+        name:
+          type: string
+        description:
+          type: string
+        type:
+          $ref: '#/components/schemas/AssetType'
+        status:
+          $ref: '#/components/schemas/AssetStatus'
+        criticality:
+          $ref: '#/components/schemas/Criticality'
+        location:
+          type: string
+        ownerId:
+          type: string
+          format: uuid
+        metadata:
+          type: object
+          additionalProperties: true
+
+    AssetList:
+      type: object
+      properties:
+        data:
+          type: array
+          items:
+            $ref: '#/components/schemas/Asset'
+        pagination:
+          $ref: '#/components/schemas/Pagination'
+
+    ImportResult:
+      type: object
+      properties:
+        totalRows:
+          type: integer
+        imported:
+          type: integer
+        updated:
+          type: integer
+        skipped:
+          type: integer
+        errors:
+          type: array
+          items:
+            type: object
+            properties:
+              row:
+                type: integer
+              message:
+                type: string
+
+    # ========== ASSESSMENT ==========
+    Assessment:
+      type: object
+      properties:
+        id:
+          type: string
+          format: uuid
+        control:
+          $ref: '#/components/schemas/Control'
+        assessor:
+          $ref: '#/components/schemas/User'
+        status:
+          $ref: '#/components/schemas/AssessmentStatus'
+        effectivenessRating:
+          type: integer
+          minimum: 1
+          maximum: 5
+        findings:
+          type: string
+        recommendations:
+          type: string
+        evidence:
+          type: array
+          items:
+            type: string
+            description: File URLs
+        assessmentDate:
+          type: string
+          format: date
+        nextReviewDate:
+          type: string
+          format: date
+        approver:
+          $ref: '#/components/schemas/User'
+        approvalDate:
+          type: string
+          format: date-time
+        approvalComments:
+          type: string
+        createdAt:
+          type: string
+          format: date-time
+        updatedAt:
+          type: string
+          format: date-time
+
+    AssessmentDetail:
+      allOf:
+        - $ref: '#/components/schemas/Assessment'
+        - type: object
+          properties:
+            auditHistory:
+              type: array
+              items:
+                $ref: '#/components/schemas/AuditLog'
+
+    CreateAssessment:
+      type: object
+      required: [controlId, effectivenessRating, findings, assessmentDate]
+      properties:
+        controlId:
+          type: string
+          format: uuid
+        effectivenessRating:
+          type: integer
+          minimum: 1
+          maximum: 5
+        findings:
+          type: string
+        recommendations:
+          type: string
+        evidence:
+          type: array
+          items:
+            type: string
+        assessmentDate:
+          type: string
+          format: date
+        nextReviewDate:
+          type: string
+          format: date
+
+    UpdateAssessment:
+      type: object
+      properties:
+        effectivenessRating:
+          type: integer
+          minimum: 1
+          maximum: 5
+        findings:
+          type: string
+        recommendations:
+          type: string
+        evidence:
+          type: array
+          items:
+            type: string
+        assessmentDate:
+          type: string
+          format: date
+        nextReviewDate:
+          type: string
+          format: date
+
+    AssessmentList:
+      type: object
+      properties:
+        data:
+          type: array
+          items:
+            $ref: '#/components/schemas/Assessment'
+        pagination:
+          $ref: '#/components/schemas/Pagination'
+
+    # ========== FRAMEWORK ==========
+    Framework:
+      type: object
+      properties:
+        id:
+          type: string
+          format: uuid
+        name:
+          type: string
+        version:
+          type: string
+        description:
+          type: string
+        type:
+          type: string
+          enum: [NIST_CSF, ISO_27001, COBIT, IT4IT]
+        publishedDate:
+          type: string
+          format: date
+
+    FrameworkDetail:
+      allOf:
+        - $ref: '#/components/schemas/Framework'
+        - type: object
+          properties:
+            categories:
+              type: array
+              items:
+                type: object
+                properties:
+                  id:
+                    type: string
+                  name:
+                    type: string
+                  description:
+                    type: string
+                  subcategories:
+                    type: array
+                    items:
+                      type: object
+                      properties:
+                        id:
+                          type: string
+                        name:
+                          type: string
+                        description:
+                          type: string
+
+    FrameworkList:
+      type: object
+      properties:
+        data:
+          type: array
+          items:
+            $ref: '#/components/schemas/Framework'
+
+    ComplianceStatus:
+      type: object
+      properties:
+        frameworkId:
+          type: string
+          format: uuid
+        frameworkName:
+          type: string
+        totalControls:
+          type: integer
+        implementedControls:
+          type: integer
+        partialControls:
+          type: integer
+        notImplementedControls:
+          type: integer
+        notApplicableControls:
+          type: integer
+        compliancePercentage:
+          type: number
+          format: float
+        byCategory:
+          type: array
+          items:
+            type: object
+            properties:
+              categoryId:
+                type: string
+              categoryName:
+                type: string
+              compliancePercentage:
+                type: number
+
+    # ========== DASHBOARD ==========
+    DashboardSummary:
+      type: object
+      properties:
+        riskSummary:
+          type: object
+          properties:
+            totalRisks:
+              type: integer
+            highRisks:
+              type: integer
+            mediumRisks:
+              type: integer
+            lowRisks:
+              type: integer
+            averageScore:
+              type: number
+        controlSummary:
+          type: object
+          properties:
+            totalControls:
+              type: integer
+            implemented:
+              type: integer
+            partiallyImplemented:
+              type: integer
+            notImplemented:
+              type: integer
+        assetSummary:
+          type: object
+          properties:
+            totalAssets:
+              type: integer
+            byType:
+              type: object
+              additionalProperties:
+                type: integer
+            byCriticality:
+              type: object
+              additionalProperties:
+                type: integer
+        complianceSummary:
+          type: array
+          items:
+            type: object
+            properties:
+              frameworkName:
+                type: string
+              compliancePercentage:
+                type: number
+        pendingAssessments:
+          type: integer
+        upcomingReviews:
+          type: integer
+
+    RiskMatrix:
+      type: object
+      properties:
+        matrix:
+          type: array
+          description: 5x5 matrix of risk counts
+          items:
+            type: array
+            items:
+              type: integer
+        risks:
+          type: array
+          items:
+            type: object
+            properties:
+              id:
+                type: string
+                format: uuid
+              title:
+                type: string
+              likelihood:
+                type: integer
+              impact:
+                type: integer
+              score:
+                type: integer
+
+    ValueStreams:
+      type: object
+      properties:
+        streams:
+          type: array
+          items:
+            type: object
+            properties:
+              id:
+                type: string
+                enum: [S2P, R2D, R2F, D2C]
+              name:
+                type: string
+              description:
+                type: string
+              controlCount:
+                type: integer
+              compliancePercentage:
+                type: number
+              riskCount:
+                type: integer
+              phases:
+                type: array
+                items:
+                  type: object
+                  properties:
+                    id:
+                      type: string
+                    name:
+                      type: string
+                    controlCount:
+                      type: integer
+                    compliancePercentage:
+                      type: number
+
+    ComplianceTrends:
+      type: object
+      properties:
+        periods:
+          type: array
+          items:
+            type: string
+            format: date
+        frameworks:
+          type: array
+          items:
+            type: object
+            properties:
+              frameworkName:
+                type: string
+              values:
+                type: array
+                items:
+                  type: number
+
+    # ========== AUDIT ==========
+    AuditLog:
+      type: object
+      properties:
+        id:
+          type: string
+          format: uuid
+        timestamp:
+          type: string
+          format: date-time
+        user:
+          $ref: '#/components/schemas/User'
+        action:
+          type: string
+          enum: [CREATE, UPDATE, DELETE, READ, EXPORT]
+        entityType:
+          type: string
+        entityId:
+          type: string
+          format: uuid
+        oldValue:
+          type: object
+        newValue:
+          type: object
+        ipAddress:
+          type: string
+        userAgent:
+          type: string
+
+    AuditLogList:
+      type: object
+      properties:
+        data:
+          type: array
+          items:
+            $ref: '#/components/schemas/AuditLog'
+        pagination:
+          $ref: '#/components/schemas/Pagination'
