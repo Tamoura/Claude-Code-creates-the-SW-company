@@ -1,0 +1,258 @@
+# Agent Communication Protocol Schema
+# Version: 1.0.0
+# Purpose: Standardized message format for all agent-to-agent and agent-to-orchestrator communication
+
+AgentMessage:
+  metadata:
+    from:
+      type: string
+      description: "Agent ID (e.g., backend-engineer, frontend-engineer, qa-engineer)"
+      required: true
+
+    to:
+      type: string
+      description: "Recipient agent ID or 'orchestrator'"
+      required: true
+
+    timestamp:
+      type: string
+      format: ISO-8601
+      description: "When message was created"
+      required: true
+
+    message_type:
+      type: enum
+      values:
+        - task_complete
+        - task_failed
+        - needs_input
+        - needs_decision
+        - error
+        - checkpoint_ready
+        - handoff
+        - status_update
+      required: true
+
+    product:
+      type: string
+      description: "Product name this message relates to"
+      required: false
+
+    task_id:
+      type: string
+      description: "Reference to task in task graph"
+      required: false
+
+  payload:
+    status:
+      type: enum
+      values:
+        - success
+        - failure
+        - blocked
+        - in_progress
+        - needs_review
+      required: true
+
+    summary:
+      type: string
+      description: "Brief summary of what was accomplished or what's needed"
+      required: true
+
+    artifacts:
+      type: array
+      description: "Deliverables produced (file paths, PR numbers, URLs)"
+      items:
+        - path: string
+        - type: enum [file, pr, branch, url, document]
+        - description: string
+      required: false
+
+    context:
+      type: object
+      description: "Key insights or information for next agent"
+      properties:
+        decisions_made: array of strings
+        assumptions: array of strings
+        risks: array of strings
+        notes: array of strings
+      required: false
+
+    blockers:
+      type: array
+      description: "What's preventing progress"
+      items:
+        - description: string
+        - severity: enum [critical, high, medium, low]
+        - requires: enum [ceo_decision, other_agent, external, investigation]
+      required: false
+
+    metrics:
+      type: object
+      description: "Performance and quality metrics"
+      properties:
+        time_spent_minutes: number
+        files_changed: number
+        tests_added: number
+        tests_passing: boolean
+        coverage_percent: number
+      required: false
+
+  handoff:
+    next_agent:
+      type: string
+      description: "Suggested next agent (orchestrator makes final decision)"
+      required: false
+
+    required_context:
+      type: array
+      description: "What the next agent needs to know"
+      items: string
+      required: false
+
+    suggested_task:
+      type: string
+      description: "What the next agent should do"
+      required: false
+
+  error_details:
+    error_type:
+      type: enum
+      values:
+        - test_failure
+        - build_failure
+        - dependency_issue
+        - logic_error
+        - configuration_error
+        - external_service_error
+      required: false
+
+    error_message:
+      type: string
+      required: false
+
+    stack_trace:
+      type: string
+      required: false
+
+    attempted_solutions:
+      type: array
+      description: "What was tried to fix the error"
+      items: string
+      required: false
+
+    retry_count:
+      type: number
+      description: "How many times this has been retried"
+      required: false
+
+# Example Usage:
+
+example_task_complete:
+  metadata:
+    from: "backend-engineer"
+    to: "orchestrator"
+    timestamp: "2025-01-26T10:30:00Z"
+    message_type: "task_complete"
+    product: "gpu-calculator"
+    task_id: "TASK-042"
+
+  payload:
+    status: "success"
+    summary: "Implemented API endpoint for GPU pricing with comprehensive tests"
+    artifacts:
+      - path: "products/gpu-calculator/apps/api/src/routes/pricing.ts"
+        type: "file"
+        description: "Main API endpoint implementation"
+      - path: "products/gpu-calculator/apps/api/tests/pricing.test.ts"
+        type: "file"
+        description: "Unit tests for pricing endpoint"
+      - path: "#42"
+        type: "pr"
+        description: "Pull request ready for review"
+    context:
+      decisions_made:
+        - "Used in-memory caching with 5-minute TTL for pricing data"
+        - "Added rate limiting at 100 requests/minute per IP"
+      assumptions:
+        - "Pricing data updates at most once per hour"
+        - "Frontend will handle currency conversion"
+      risks:
+        - "Cache could get stale if pricing updates more frequently"
+      notes:
+        - "Left TODO comment for future Redis integration"
+    metrics:
+      time_spent_minutes: 90
+      files_changed: 3
+      tests_added: 12
+      tests_passing: true
+      coverage_percent: 95
+
+  handoff:
+    next_agent: "qa-engineer"
+    required_context:
+      - "API endpoint is at POST /api/pricing"
+      - "Test user credentials in products/gpu-calculator/docs/TEST-USERS.md"
+      - "Pricing data is cached for 5 minutes"
+    suggested_task: "Create E2E tests for pricing flow and verify caching behavior"
+
+example_needs_decision:
+  metadata:
+    from: "architect"
+    to: "orchestrator"
+    timestamp: "2025-01-26T11:00:00Z"
+    message_type: "needs_decision"
+    product: "user-portal"
+    task_id: "TASK-055"
+
+  payload:
+    status: "blocked"
+    summary: "Need decision on authentication approach"
+    context:
+      decisions_made: []
+      assumptions: []
+      risks:
+        - "Option 1 is faster to implement but less secure"
+        - "Option 2 requires additional infrastructure"
+      notes:
+        - "Option 1: JWT tokens with 24hr expiration"
+        - "Option 2: Session-based with Redis store"
+        - "Option 3: OAuth2 with third-party provider"
+
+  blockers:
+    - description: "Cannot proceed with API design until auth approach is decided"
+      severity: "high"
+      requires: "ceo_decision"
+
+example_task_failed:
+  metadata:
+    from: "frontend-engineer"
+    to: "orchestrator"
+    timestamp: "2025-01-26T12:00:00Z"
+    message_type: "task_failed"
+    product: "dashboard-app"
+    task_id: "TASK-078"
+
+  payload:
+    status: "failure"
+    summary: "E2E tests failing due to Tailwind CSS not loading"
+    blockers:
+      - description: "Tailwind classes not being applied in production build"
+        severity: "critical"
+        requires: "investigation"
+
+  error_details:
+    error_type: "build_failure"
+    error_message: "PostCSS processing failed - cannot find tailwind.config.js"
+    attempted_solutions:
+      - "Verified tailwind.config.js exists in project root"
+      - "Ran npm install to refresh dependencies"
+      - "Checked Next.js configuration for PostCSS setup"
+    retry_count: 2
+
+  handoff:
+    next_agent: "devops-engineer"
+    required_context:
+      - "Build works locally but fails in CI"
+      - "Issue appeared after updating Next.js from 14.0 to 14.2"
+    suggested_task: "Review CI build environment and Next.js configuration"

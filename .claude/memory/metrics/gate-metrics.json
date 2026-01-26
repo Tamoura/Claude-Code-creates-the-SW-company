@@ -1,0 +1,39 @@
+{
+  "version": "1.0.0",
+  "updated_at": "2026-01-26T00:00:00Z",
+  "security_gate": {
+    "runs": 0,
+    "passes": 0,
+    "failures": 0,
+    "warnings": 0,
+    "failure_rate": 0,
+    "issues_caught": []
+  },
+  "performance_gate": {
+    "runs": 0,
+    "passes": 0,
+    "failures": 0,
+    "warnings": 0,
+    "failure_rate": 0,
+    "avg_lighthouse_score": 0,
+    "avg_bundle_size_kb": 0,
+    "issues_caught": []
+  },
+  "testing_gate": {
+    "runs": 0,
+    "passes": 0,
+    "failures": 0,
+    "failure_rate": 0,
+    "avg_test_count": 0,
+    "avg_coverage_percent": 0,
+    "issues_caught": []
+  },
+  "production_gate": {
+    "runs": 0,
+    "passes": 0,
+    "failures": 0,
+    "failure_rate": 0,
+    "issues_caught": []
+  },
+  "total_issues_prevented": 0
+}

@@ -1,0 +1,32 @@
+{
+  "version": "1.0.0",
+  "updated_at": "2026-01-26T00:00:00Z",
+  "current_usage": {
+    "active_agents": 0,
+    "agent_slots_used": 0,
+    "agent_slots_total": 5,
+    "queue_length": 0,
+    "blocked_tasks": 0
+  },
+  "agent_utilization": {
+    "product-manager": 0,
+    "architect": 0,
+    "backend-engineer": 0,
+    "frontend-engineer": 0,
+    "qa-engineer": 0,
+    "devops-engineer": 0,
+    "technical-writer": 0,
+    "support-engineer": 0
+  },
+  "queue_stats": {
+    "avg_wait_time_minutes": 0,
+    "max_wait_time_minutes": 0,
+    "tasks_that_waited_percent": 0
+  },
+  "efficiency": {
+    "cost_per_task": 0,
+    "tokens_per_task": 0,
+    "tasks_per_dollar": 0
+  },
+  "recommendations": []
+}

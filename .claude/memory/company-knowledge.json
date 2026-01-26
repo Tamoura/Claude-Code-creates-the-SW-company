@@ -1,0 +1,48 @@
+{
+  "version": "1.0.0",
+  "updated_at": "2025-01-26T10:00:00Z",
+  "patterns": [],
+  "anti_patterns": [],
+  "tech_stack_decisions": [
+    {
+      "decision": "Use PostgreSQL as default database",
+      "rationale": "ACID compliance, proven at scale, excellent Prisma support",
+      "alternatives_considered": ["MongoDB", "MySQL"],
+      "date": "2025-01-10",
+      "applies_to": "All products unless specific reason otherwise"
+    },
+    {
+      "decision": "Use Playwright for E2E testing",
+      "rationale": "Cross-browser support, excellent developer experience, auto-wait",
+      "alternatives_considered": ["Cypress", "Selenium"],
+      "date": "2025-01-10",
+      "applies_to": "All frontend testing"
+    },
+    {
+      "decision": "Use Fastify for backend APIs",
+      "rationale": "Fast, TypeScript-first, plugin ecosystem",
+      "alternatives_considered": ["Express", "NestJS"],
+      "date": "2025-01-10",
+      "applies_to": "All backend services"
+    },
+    {
+      "decision": "Use Next.js 14+ for frontend applications",
+      "rationale": "React framework with SSR, excellent DX, App Router",
+      "alternatives_considered": ["Vite + React", "Remix"],
+      "date": "2025-01-10",
+      "applies_to": "All web frontends"
+    }
+  ],
+  "common_gotchas": [
+    {
+      "issue": "Next.js port conflicts in development",
+      "solution": "Use ports 3100+ for frontend apps (configured in company standards)",
+      "category": "configuration"
+    },
+    {
+      "issue": "Prisma migrations fail in CI",
+      "solution": "Always run 'prisma generate' before 'prisma migrate'",
+      "category": "backend"
+    }
+  ]
+}
