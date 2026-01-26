@@ -102,9 +102,33 @@ Step 3.4: Merge Foundation
 ├── Run all tests
 └── Create PR for foundation
 
+Step 3.5: E2E Verification (MANDATORY BEFORE CEO REVIEW)
+├── Invoke QA Engineer agent
+├── Tasks:
+│   ├── Set up Playwright if not exists
+│   ├── Write basic E2E smoke tests
+│   ├── Test that app loads and renders correctly
+│   ├── Test all visible UI elements are styled
+│   ├── Test basic navigation works
+│   └── Take screenshots as evidence
+├── MANDATORY CHECKS:
+│   ├── Dev server starts without errors
+│   ├── App loads in browser
+│   ├── All UI elements visible and styled correctly
+│   ├── No console errors
+│   ├── Forms have visible inputs and buttons
+│   └── Basic interactions work (clicks, form submission)
+├── If ANY issues found:
+│   └── Route back to Frontend Engineer to fix
+└── Only proceed to checkpoint when verified
+
 CHECKPOINT: Foundation Review
 ├── Notify CEO: "Foundation ready for review"
-├── Provide: What was set up, how to run locally
+├── Provide:
+│   ├── What was set up
+│   ├── How to run locally
+│   ├── E2E test results
+│   └── Screenshots of working UI
 ├── Wait for: CEO approval
 └── On approval: Merge foundation branch
 ```

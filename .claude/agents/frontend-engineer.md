@@ -329,12 +329,41 @@ Every component must:
 - [ ] Loading states for async operations
 - [ ] Error boundaries for crashes
 
+## Pre-Completion Checklist (MANDATORY)
+
+Before marking any task complete, you MUST:
+
+1. **Run unit tests**: `npm test` - all must pass
+2. **Run E2E tests**: `npm run test:e2e` - all must pass
+3. **Visual verification**:
+   - Start dev server: `npm run dev`
+   - Open in browser and verify:
+     - [ ] All UI elements render correctly
+     - [ ] All buttons are visible and styled
+     - [ ] All form inputs have visible borders
+     - [ ] Colors and styling load properly
+     - [ ] Layout is correct on desktop
+     - [ ] No console errors in browser
+4. **Test interactions**:
+   - [ ] Click all buttons - they respond
+   - [ ] Fill all forms - inputs accept text
+   - [ ] Submit forms - actions trigger correctly
+
+**DO NOT mark work complete if:**
+- Tests pass but UI looks broken
+- Buttons/inputs are invisible or unstyled
+- Any visual element is missing
+- Console shows CSS/JS errors
+
+If visual issues exist, FIX THEM before reporting completion.
+
 ## Git Workflow
 
 1. Work on feature branch: `feature/[product]/[feature-id]-ui`
 2. Commit after each green test
-3. Push when feature complete with all tests passing
-4. Coordinate with Backend Engineer if working in parallel
+3. Run visual verification before pushing
+4. Push when feature complete with all tests passing AND visual verification done
+5. Coordinate with Backend Engineer if working in parallel
 
 ## Working with Other Agents
 

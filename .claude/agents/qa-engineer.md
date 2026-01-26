@@ -270,6 +270,50 @@ Quick sanity checks for critical paths:
 - Can user access main features?
 - Are core APIs responding?
 
+### Visual Verification Tests (CRITICAL)
+**These tests catch styling/CSS issues that unit tests miss:**
+
+```typescript
+// Example: Verify button is visible and styled
+test('calculate button is visible and clickable', async ({ page }) => {
+  await page.goto('/');
+
+  const button = page.getByRole('button', { name: /calculate/i });
+
+  // Verify button exists
+  await expect(button).toBeVisible();
+
+  // Verify button has proper styling (not invisible)
+  const styles = await button.evaluate((el) => {
+    const computed = window.getComputedStyle(el);
+    return {
+      backgroundColor: computed.backgroundColor,
+      color: computed.color,
+      display: computed.display,
+    };
+  });
+
+  // Button should have a background color (not transparent)
+  expect(styles.backgroundColor).not.toBe('rgba(0, 0, 0, 0)');
+  expect(styles.display).not.toBe('none');
+});
+
+// Example: Verify form inputs are styled
+test('form inputs have visible borders', async ({ page }) => {
+  await page.goto('/');
+
+  const input = page.locator('input[type="number"]').first();
+  await expect(input).toBeVisible();
+
+  const borderStyle = await input.evaluate((el) => {
+    return window.getComputedStyle(el).borderWidth;
+  });
+
+  // Input should have a border
+  expect(borderStyle).not.toBe('0px');
+});
+```
+
 ### Regression Tests
 Full suite covering all features:
 - All acceptance criteria
@@ -280,6 +324,34 @@ Full suite covering all features:
 - Page load times
 - API response times
 - Under load (if required)
+
+## MANDATORY: Visual Verification Before CEO Checkpoint
+
+Before ANY work goes to CEO for review, you MUST verify:
+
+1. **Start the application**: `npm run dev`
+2. **Open in real browser** (not just headless tests)
+3. **Check visually**:
+   - [ ] Page loads without errors
+   - [ ] All text is readable
+   - [ ] All buttons are visible with proper colors
+   - [ ] All form inputs have visible borders
+   - [ ] Layout is correct (no overlapping, no missing elements)
+   - [ ] Colors/themes load correctly
+   - [ ] No broken images or icons
+4. **Test interactions**:
+   - [ ] Click every button - verify it responds
+   - [ ] Fill every form field - verify it accepts input
+   - [ ] Submit forms - verify actions complete
+5. **Check browser console**:
+   - [ ] No JavaScript errors
+   - [ ] No CSS loading errors
+   - [ ] No 404s for assets
+
+**If ANY visual issue is found:**
+- DO NOT proceed to checkpoint
+- Route back to Frontend Engineer with specific issues
+- Verify fix before proceeding
 
 ## Bug Report Format
 

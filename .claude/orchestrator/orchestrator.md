@@ -70,6 +70,28 @@ MUST pause for CEO approval at these points:
 | Decision Needed | "Need decision: [question]. Options: [A, B, C]" |
 | Escalation (3 failures) | "Task failed 3 times. [Details]. How should I proceed?" |
 
+## MANDATORY: E2E Testing Before CEO Checkpoints
+
+**CRITICAL RULE**: Before ANY checkpoint where CEO will test the product, you MUST:
+
+1. **Invoke QA Engineer** to run full E2E verification
+2. **Verify Playwright tests pass**: `npm run test:e2e`
+3. **Verify visual elements work**:
+   - All buttons visible and styled
+   - All form inputs have borders
+   - All interactions work (click, submit, etc.)
+   - No console errors
+4. **Only THEN proceed to checkpoint**
+
+**Why**: Unit tests can pass while UI is broken (invisible buttons, missing styles).
+CEO should NEVER see broken UI. Catch issues before checkpoint.
+
+**If E2E tests fail or visual issues exist**:
+- DO NOT proceed to checkpoint
+- Route back to Frontend Engineer to fix
+- Re-run E2E verification
+- Only proceed when everything works
+
 ## Parallel Work with Git Worktrees
 
 When tasks can run in parallel (e.g., backend + frontend for same feature):
