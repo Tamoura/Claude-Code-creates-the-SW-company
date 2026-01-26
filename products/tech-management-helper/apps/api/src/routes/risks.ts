@@ -489,4 +489,131 @@ export async function riskRoutes(fastify: FastifyInstance): Promise<void> {
       });
     }
   );
+
+  // POST /api/v1/risks/:id/assets - Link an asset to a risk
+  fastify.post<{ Params: { id: string }; Body: { assetId: string } }>(
+    '/:id/assets',
+    {
+      preHandler: [authenticate, authorize('update', 'Risk')],
+    },
+    async (request: FastifyRequest<{ Params: { id: string }; Body: { assetId: string } }>, reply: FastifyReply) => {
+      const { id: riskId } = request.params;
+      const { assetId } = request.body;
+
+      // Validate assetId
+      if (!assetId) {
+        return reply.status(400).send({
+          error: 'Validation Error',
+          message: 'assetId is required',
+        });
+      }
+
+      // Verify risk exists and belongs to organization
+      const risk = await prisma.risk.findUnique({
+        where: { id: riskId },
+      });
+
+      if (!risk || risk.organizationId !== request.user!.organizationId) {
+        return reply.status(404).send({
+          error: 'Not Found',
+          message: 'Risk not found',
+        });
+      }
+
+      // Verify asset exists and belongs to organization
+      const asset = await prisma.asset.findUnique({
+        where: { id: assetId },
+      });
+
+      if (!asset || asset.organizationId !== request.user!.organizationId) {
+        return reply.status(404).send({
+          error: 'Not Found',
+          message: 'Asset not found',
+        });
+      }
+
+      // Check if link already exists
+      const existingLink = await prisma.riskAsset.findUnique({
+        where: {
+          riskId_assetId: {
+            riskId,
+            assetId,
+          },
+        },
+      });
+
+      if (existingLink) {
+        return reply.status(409).send({
+          error: 'Conflict',
+          message: 'Asset is already linked to this risk',
+        });
+      }
+
+      // Create the link
+      await prisma.riskAsset.create({
+        data: {
+          riskId,
+          assetId,
+        },
+      });
+
+      return reply.status(201).send({
+        message: 'Asset linked to risk successfully',
+      });
+    }
+  );
+
+  // DELETE /api/v1/risks/:id/assets/:assetId - Unlink an asset from a risk
+  fastify.delete<{ Params: { id: string; assetId: string } }>(
+    '/:id/assets/:assetId',
+    {
+      preHandler: [authenticate, authorize('update', 'Risk')],
+    },
+    async (request: FastifyRequest<{ Params: { id: string; assetId: string } }>, reply: FastifyReply) => {
+      const { id: riskId, assetId } = request.params;
+
+      // Verify risk exists and belongs to organization
+      const risk = await prisma.risk.findUnique({
+        where: { id: riskId },
+      });
+
+      if (!risk || risk.organizationId !== request.user!.organizationId) {
+        return reply.status(404).send({
+          error: 'Not Found',
+          message: 'Risk not found',
+        });
+      }
+
+      // Check if link exists
+      const link = await prisma.riskAsset.findUnique({
+        where: {
+          riskId_assetId: {
+            riskId,
+            assetId,
+          },
+        },
+      });
+
+      if (!link) {
+        return reply.status(404).send({
+          error: 'Not Found',
+          message: 'Link not found',
+        });
+      }
+
+      // Delete the link
+      await prisma.riskAsset.delete({
+        where: {
+          riskId_assetId: {
+            riskId,
+            assetId,
+          },
+        },
+      });
+
+      return reply.status(200).send({
+        message: 'Asset unlinked from risk successfully',
+      });
+    }
+  );
 }
