@@ -1,0 +1,66 @@
+# Tech Management Helper - Product State
+# Product-specific state tracking
+
+product:
+  name: "tech-management-helper"
+  phase: architecture  # inception | architecture | development | testing | production
+  status: active       # active | paused | completed | cancelled
+  current_sprint: null
+
+tech_stack:
+  backend: "fastify"
+  frontend: "nextjs-14"
+  database: "postgresql-15"
+  orm: "prisma"
+  styling: "tailwind-css"
+  ui_components: "shadcn-ui"
+
+# Checkpoints for this product
+checkpoints:
+  - id: 1
+    type: prd_complete
+    title: "PRD Approved"
+    approved: true
+    approved_at: "2026-01-26T10:15:00Z"
+  - id: 2
+    type: architecture_complete
+    title: "Architecture Ready for Review"
+    message: "System architecture, API contracts, and data models are complete."
+    artifacts:
+      - "products/tech-management-helper/docs/architecture.md"
+      - "products/tech-management-helper/docs/api-contract.yml"
+      - "products/tech-management-helper/docs/data-model.md"
+      - "products/tech-management-helper/docs/ADRs/ADR-001-open-source-research.md"
+      - "products/tech-management-helper/docs/ADRs/ADR-002-tech-stack.md"
+    raised_at: "2026-01-26T10:30:00Z"
+    approved: false
+    approved_at: null
+
+# Active tasks for this product
+active_tasks: []
+
+# Agent activity on this product
+agent_history:
+  product-manager:
+    last_task: "Create PRD"
+    last_activity: "2026-01-26T10:00:00Z"
+  architect:
+    last_task: "Design system architecture"
+    last_activity: "2026-01-26T10:30:00Z"
+  backend-engineer:
+    last_task: null
+    last_activity: null
+  frontend-engineer:
+    last_task: null
+    last_activity: null
+  qa-engineer:
+    last_task: null
+    last_activity: null
+
+# Product-specific decisions
+pending_decisions: []
+
+# Error log
+error_log: []
+
+last_updated: "2026-01-26T10:30:00Z"

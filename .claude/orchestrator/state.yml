@@ -12,12 +12,11 @@ products:
   gpu-calculator:
     path: "products/gpu-calculator"
     state_file: "products/gpu-calculator/.claude/state.yml"
-    worktree: ".trees/gpu-calculator"  # if using worktree
-  # Add more products as created:
-  # product-name:
-  #   path: "products/product-name"
-  #   state_file: "products/product-name/.claude/state.yml"
-  #   worktree: ".trees/product-name"
+    worktree: ".trees/gpu-calculator"
+  tech-management-helper:
+    path: "products/tech-management-helper"
+    state_file: "products/tech-management-helper/.claude/state.yml"
+    worktree: ".trees/Tech_Management_helper"
 
 # Active worktrees (for parallel product development)
 worktrees:
@@ -32,7 +31,7 @@ worktrees:
   Tech_Management_helper:
     path: ".trees/Tech_Management_helper"
     branch: "Tech_Management_helper"
-    product: null
+    product: "tech-management-helper"
 
 # Company-wide pending decisions (cross-product)
 pending_decisions: []
@@ -41,4 +40,4 @@ pending_decisions: []
 checkpoints: []
 
 # Last updated
-last_updated: "2025-01-26T00:00:00Z"
+last_updated: "2026-01-26T10:30:00Z"
