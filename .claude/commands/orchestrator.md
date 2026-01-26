@@ -231,12 +231,18 @@ Pause and report to CEO at these points:
 # Agent memory
 .claude/scripts/update-agent-memory.sh <agent> <task_id> <product> <status> <minutes> "<summary>"
 
+# Task status update
+.claude/scripts/update-task-status.sh <product> <task_id> <status>
+
 # Dashboard and audit
 .claude/scripts/generate-dashboard.sh
 .claude/scripts/audit-log.sh <action> <actor> <target> "<details>"
 
 # System health check
-.claude/commands/check-system.md
+/check-system
+
+# Execute a specific task (used in parallel worktrees)
+/execute-task <product> <task-id>
 ```
 
 ## Task Graph Templates

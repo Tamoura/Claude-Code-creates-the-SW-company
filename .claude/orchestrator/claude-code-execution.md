@@ -131,6 +131,7 @@ When sub-agent completes:
 
 1. **Parse the response** - Extract status, artifacts, time spent
 2. **Update task graph** - Mark task as `completed` or `failed`
+   - Prefer using: `.claude/scripts/update-task-status.sh {product} {task-id} {status}`
 3. **Update agent memory** - If not done by sub-agent, run the script
 4. **Check for checkpoint** - If task has `checkpoint: true`, pause for CEO
 
@@ -190,7 +191,13 @@ See: `.claude/protocols/parallel-execution.md`
 
 ## Task Status Updates
 
-After each task completes, update the task graph:
+After each task completes, update the task graph. Prefer the script:
+
+```bash
+.claude/scripts/update-task-status.sh {product} {task-id} completed
+```
+
+Manual YAML update (if needed):
 
 ```yaml
 # In products/{product}/.claude/task-graph.yml

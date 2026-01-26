@@ -155,6 +155,7 @@ echo "=== Script Permissions ==="
 scripts=(
   ".claude/scripts/instantiate-task-graph.sh"
   ".claude/scripts/update-agent-memory.sh"
+  ".claude/scripts/update-task-status.sh"
   ".claude/scripts/task-graph-status.sh"
   ".claude/scripts/testing-gate-checklist.sh"
   ".claude/scripts/audit-log.sh"

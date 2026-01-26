@@ -57,51 +57,61 @@ The following tasks can run in parallel for faster completion:
 1. **Backend Task** (BACKEND-01)
    - Open a new Claude Code session
    - Navigate to: `../worktrees/backend-work`
-   - Run: `/orchestrator Execute task BACKEND-01`
+   - Run: `/execute-task {product} BACKEND-01`
 
 2. **Frontend Task** (FRONTEND-01)
    - Open another Claude Code session
    - Navigate to: `../worktrees/frontend-work`
-   - Run: `/orchestrator Execute task FRONTEND-01`
+   - Run: `/execute-task {product} FRONTEND-01`
 
 3. **DevOps Task** (DEVOPS-01)
    - Open another Claude Code session
    - Navigate to: `../worktrees/devops-work`
-   - Run: `/orchestrator Execute task DEVOPS-01`
+   - Run: `/execute-task {product} DEVOPS-01`
 
 **Once all three are complete**, return here and let me know so I can merge the work.
 ```
 
-### Step 3: Merge Completed Work
+### Step 3: Open PRs (Required)
 
-After all parallel tasks complete:
+After all parallel tasks complete, open PRs instead of merging directly to `main`:
 
 ```bash
 # Return to main repository
 cd /path/to/main/repo
 
-# Merge each branch
-git checkout main
-git merge feature/{product}/backend-{task-id} --no-ff -m "feat({product}): implement backend foundation"
-git merge feature/{product}/frontend-{task-id} --no-ff -m "feat({product}): implement frontend foundation"
-git merge feature/{product}/devops-{task-id} --no-ff -m "ci({product}): setup CI/CD pipeline"
+# Push branches (if not already)
+git push -u origin feature/{product}/backend-{task-id}
+git push -u origin feature/{product}/frontend-{task-id}
+git push -u origin feature/{product}/devops-{task-id}
 
-# If conflicts occur, resolve them
-# git mergetool
-# git commit
+# Create PRs (requires gh)
+gh pr create --title "feat({product}): backend foundation" --body "Implements BACKEND-01"
+gh pr create --title "feat({product}): frontend foundation" --body "Implements FRONTEND-01"
+gh pr create --title "ci({product}): CI/CD pipeline" --body "Implements DEVOPS-01"
+```
+
+If `gh` isn't available, open PRs manually in GitHub UI.
+
+### Step 4: Merge via PR (Never merge directly to main)
+
+Once PRs are approved:
+
+```bash
+# Merge PRs using GitHub (preferred) or gh
+gh pr merge --merge --delete-branch <PR-number>
+
+# Pull latest main after merges
+git checkout main
+git pull
 
 # Clean up worktrees
 git worktree remove ../worktrees/backend-work
 git worktree remove ../worktrees/frontend-work
 git worktree remove ../worktrees/devops-work
-
-# Delete merged branches
-git branch -d feature/{product}/backend-{task-id}
-git branch -d feature/{product}/frontend-{task-id}
-git branch -d feature/{product}/devops-{task-id}
 ```
 
-### Step 4: Update Task Graph
+### Step 5: Update Task Graph
 
 After merging:
 

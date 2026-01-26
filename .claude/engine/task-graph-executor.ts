@@ -1,7 +1,14 @@
 /**
- * Task Graph Executor
- * Automated execution engine for task graphs
- * Compatible with Claude Code system
+ * Task Graph Executor (Reference-Only)
+ *
+ * This file is a reference implementation for task graph operations.
+ * It does NOT invoke agents or execute tasks end-to-end.
+ * Use it for:
+ * - Validation
+ * - Ready-task detection
+ * - Status updates (internal tooling)
+ *
+ * For real execution, use Claude Code sub-agents via the Orchestrator.
  */
 
 import * as fs from 'fs/promises';
@@ -87,13 +94,24 @@ export class TaskGraphExecutor {
    */
   async loadGraph(): Promise<void> {
     const graphPath = path.join(this.productPath, '.claude', 'task-graph.yml');
+    const jsonPath = graphPath.replace('.yml', '.json');
     try {
       const content = await fs.readFile(graphPath, 'utf-8');
-      // Simple YAML parsing (in production, use a YAML library)
-      // For now, we'll expect JSON format or use yaml parsing library
+      // Expect JSON content (YAML requires conversion)
       this.graph = JSON.parse(content);
+      return;
     } catch (error) {
-      throw new Error(`Failed to load task graph: ${error}`);
+      // Fallback to JSON file if present
+      try {
+        const jsonContent = await fs.readFile(jsonPath, 'utf-8');
+        this.graph = JSON.parse(jsonContent);
+        return;
+      } catch (jsonError) {
+        throw new Error(
+          `Failed to load task graph. Expected JSON at ${graphPath} or ${jsonPath}. ` +
+          `If your graph is YAML, convert it with: yq -o=json ${graphPath} > ${jsonPath}`
+        );
+      }
     }
   }
 
@@ -186,8 +204,8 @@ export class TaskGraphExecutor {
    */
   async saveGraph(): Promise<void> {
     const graphPath = path.join(this.productPath, '.claude', 'task-graph.yml');
-    // In production, use YAML library to write
-    // For now, save as JSON (can be converted)
+    // In production, use a YAML library to write to graphPath
+    // For now, save as JSON alongside the YAML file
     const jsonPath = graphPath.replace('.yml', '.json');
     await fs.writeFile(jsonPath, JSON.stringify(this.graph, null, 2));
   }
