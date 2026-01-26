@@ -148,6 +148,32 @@ Before marking PRD complete:
 - [ ] Out of scope explicitly stated
 - [ ] No ambiguous language ("should", "might", "could")
 - [ ] All terms defined (glossary if needed)
+- [ ] **ALL pages/routes listed** (even "coming soon" pages)
+
+## CRITICAL: Production-Ready MVP Requirements
+
+**For production-ready MVPs, define ALL pages that must exist:**
+
+In your PRD, include a **Site Map** section listing every page/route:
+
+```markdown
+## Site Map
+
+| Route | Status | Description |
+|-------|--------|-------------|
+| / | MVP | Landing/home page |
+| /dashboard | MVP | Main user dashboard |
+| /settings | Coming Soon | User settings (placeholder) |
+| /settings/profile | Coming Soon | Profile settings (placeholder) |
+| /reports | Coming Soon | Reports page (placeholder) |
+| /help | MVP | Help/FAQ page |
+```
+
+**Why this matters:**
+- Users expect all navigation links to work
+- "Coming Soon" pages are better than 404 errors
+- Sets clear expectations for what's implemented vs planned
+- Frontend Engineer knows exactly what pages to create
 
 ## Asking Clarifying Questions
 
