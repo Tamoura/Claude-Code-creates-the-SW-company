@@ -4,7 +4,7 @@
 
 **Name**: IT4IT Dashboard
 **Type**: Web App (Frontend Only)
-**Status**: Architecture Complete
+**Status**: Inception
 
 A comprehensive dashboard providing visibility across all four IT4IT value streams (Strategy to Portfolio, Requirement to Deploy, Request to Fulfill, Detect to Correct). Uses mock data to demonstrate production-ready functionality aligned with The Open Group's IT4IT Reference Architecture.
 
@@ -18,57 +18,34 @@ A comprehensive dashboard providing visibility across all four IT4IT value strea
 
 ## Tech Stack
 
-| Layer | Technology | Version | Notes |
-|-------|------------|---------|-------|
-| Framework | Next.js | 14.x | App Router |
-| Language | TypeScript | 5.x | Strict mode |
-| UI Components | shadcn/ui | latest | CLI-based, copy to project |
-| Styling | Tailwind CSS | 3.x | Default stack |
-| Charts | Recharts | 3.x | SVG-based charts |
-| Tables | @tanstack/react-table | 8.x | Headless tables |
-| Drag & Drop | @dnd-kit/core | 6.x | Kanban boards |
-| State | Zustand | 5.x | Global state |
-| Icons | Lucide React | latest | Default for shadcn |
-| Forms | React Hook Form + Zod | latest | Form handling + validation |
-| Dates | date-fns | 4.x | Date utilities |
-| Mock Data | @faker-js/faker | 10.x | Data generation |
-| Testing | Jest, RTL, Playwright | latest | Unit + E2E |
-| Backend | None | - | Frontend-only MVP |
-| Database | None | - | Mock data service |
+*To be filled by Architect*
+
+| Layer | Technology | Notes |
+|-------|------------|-------|
+| Frontend | Next.js 14, React 18 | Default stack |
+| Backend | None | Frontend-only MVP |
+| Database | None | Mock data service |
+| Styling | Tailwind CSS | Default stack |
+| Testing | Jest, React Testing Library, Playwright | Default stack |
+| Deployment | TBD | |
 
 ---
 
 ## Libraries & Dependencies
 
+*To be filled by Architect*
+
 ### Adopted (Use These)
 
 | Library | Purpose | Why Chosen |
 |---------|---------|------------|
-| shadcn/ui | UI components | Radix primitives, Tailwind native, accessible |
-| Recharts | Charts/graphs | React native, SVG, composable |
-| @tanstack/react-table | Data tables | Headless, TypeScript, feature-rich |
-| @dnd-kit/core | Drag and drop | Modern, accessible, maintained |
-| @faker-js/faker | Mock data | Comprehensive, seeded, TypeScript |
-| date-fns | Date utilities | Tree-shakeable, immutable |
-| Zustand | State management | Minimal, TypeScript, persistent |
-| lucide-react | Icons | Tree-shakeable, shadcn default |
-| react-hook-form | Form handling | Minimal re-renders, small bundle |
-| zod | Validation | TypeScript schemas, composable |
-| next-themes | Theme switching | SSR-safe dark mode |
-| clsx + tailwind-merge | Class utilities | Dynamic class composition |
-| class-variance-authority | Variants | Component variant management |
+| TBD | | |
 
 ### Avoid (Don't Use)
 
 | Library | Reason |
 |---------|--------|
-| Material UI (MUI) | CSS-in-JS conflicts with Tailwind |
-| Ant Design | Large bundle, less flexible styling |
-| Chart.js | Canvas-based (less accessible than SVG) |
-| react-beautiful-dnd | No longer maintained |
-| Moment.js | Deprecated, large bundle |
-| Redux | Overkill for frontend-only app |
-| React Query/SWR | No backend API to cache |
+| TBD | |
 
 ---
 
@@ -175,103 +152,19 @@ A comprehensive dashboard providing visibility across all four IT4IT value strea
 
 ## Design Patterns
 
+*To be filled by Architect*
+
 ### Component Patterns
 
-#### File Structure
-
-```
-src/
-├── app/                      # Next.js App Router pages
-├── components/
-│   ├── ui/                   # shadcn/ui base components
-│   ├── layout/               # Layout components (sidebar, header)
-│   ├── dashboard/            # Dashboard-specific (KPI cards, charts)
-│   ├── data-display/         # Tables, badges, empty states
-│   ├── boards/               # Kanban components
-│   ├── calendar/             # Calendar views
-│   └── shared/               # Coming Soon, loading, errors
-├── lib/
-│   ├── mock-data/            # Mock data service & generators
-│   ├── utils/                # Utility functions
-│   └── hooks/                # Custom React hooks
-├── stores/                   # Zustand stores
-└── types/                    # TypeScript type definitions
-```
-
-#### Component Composition
-
-- **Primitives**: shadcn/ui components (`Button`, `Card`, `Table`)
-- **Composites**: Domain components built from primitives (`KPICard`, `DataTable`)
-- **Features**: Page-level feature components
-- **Pages**: Next.js route handlers
-
-#### Naming Conventions
-
-- Components: `PascalCase` (e.g., `KPICard.tsx`)
-- Hooks: `camelCase` with `use` prefix (e.g., `useIncidents.ts`)
-- Utils: `camelCase` (e.g., `formatDate.ts`)
-- Types: `PascalCase` (e.g., `Incident`, `IncidentStatus`)
+TBD
 
 ### State Management
 
-| State Type | Storage | Example |
-|------------|---------|---------|
-| UI preferences | Zustand + localStorage | Theme, sidebar |
-| Filters | URL searchParams | Status, priority |
-| Mock data | Zustand (memory) | All entities |
-| Modal state | useState | Open/closed |
-| Form data | react-hook-form | Input values |
+TBD
 
 ### API Patterns
 
-N/A - Frontend only with mock data. However, the mock data service is designed with a service interface that can be swapped for real API calls later.
-
-```typescript
-// Mock data service interface
-interface DataService {
-  getIncidents(filters?: Filters): Promise<PaginatedResult<Incident>>;
-  getIncidentById(id: string): Promise<Incident | null>;
-  // ...
-}
-```
-
----
-
-## Data Models
-
-See [data-model.md](../docs/data-model.md) for complete TypeScript interfaces.
-
-### Key Entities by Value Stream
-
-**S2P Entities**
-- Demand - Business requests for IT capabilities
-- PortfolioItem - Prioritized work in the portfolio
-- Proposal - Business cases for investment
-- Investment - Approved and funded initiatives
-- RoadmapMilestone - Strategic plan checkpoints
-
-**R2D Entities**
-- Requirement - Specifications for IT capabilities
-- Pipeline / PipelineRun - CI/CD pipelines
-- Build - Development artifacts
-- TestCase / TestRun - QA records
-- Release - Deployable packages
-- Environment - Deployment targets
-
-**R2F Entities**
-- CatalogEntry - Available services
-- OfferItem - Purchasable/requestable items
-- ServiceRequest - User requests
-- FulfillmentRequest - Backend fulfillment
-- Subscription - Ongoing subscriptions
-
-**D2C Entities**
-- Event - System notifications
-- Incident - Service disruptions
-- Problem - Root cause investigations
-- Change - Planned modifications
-- KnownError - Documented issues
-- ConfigurationItem - IT assets (CMDB)
+N/A - Frontend only with mock data
 
 ---
 
@@ -370,6 +263,44 @@ Average(Portfolio Approval Date - Demand Submit Date)
 
 ---
 
+## Data Models
+
+*To be filled by Architect - schemas for mock data*
+
+### Key Entities
+
+**S2P Entities**
+- Demand
+- PortfolioItem
+- Proposal
+- Investment
+- RoadmapMilestone
+
+**R2D Entities**
+- Requirement
+- Build
+- Pipeline
+- TestCase / TestRun
+- Release
+- Environment
+
+**R2F Entities**
+- CatalogEntry
+- OfferItem
+- ServiceRequest
+- FulfillmentRequest
+- Subscription
+
+**D2C Entities**
+- Event
+- Incident
+- Problem
+- Change
+- KnownError
+- ConfigurationItem
+
+---
+
 ## External Integrations
 
 None - this is a standalone application with mock data only.
@@ -384,14 +315,6 @@ None - this is a standalone application with mock data only.
 - Scroll performance: 60fps
 - Bundle size: < 500KB (initial load)
 
-### Performance Strategies
-
-- Code splitting with dynamic imports
-- Lazy-loaded routes for Coming Soon pages
-- Virtual scrolling for large lists (events, builds)
-- Tree-shaking for icons and utilities
-- Image optimization with next/image
-
 ---
 
 ## Special Considerations
@@ -403,7 +326,6 @@ None - this is a standalone application with mock data only.
 3. **Volume**: Sufficient data to demonstrate pagination and filtering
 4. **Scenarios**: Include various statuses to show different workflow states
 5. **Time-based**: Include historical data for trend charts (30+ days)
-6. **Reproducibility**: Use seeded random for consistent demo experience
 
 ### UI/UX Guidelines
 
@@ -444,17 +366,5 @@ All "Coming Soon" routes must:
 
 ---
 
-## Related Documents
-
-- [Architecture](../docs/architecture.md)
-- [Data Model](../docs/data-model.md)
-- [PRD](../docs/PRD.md)
-- [ADR-001: Tech Stack Research](../docs/ADRs/ADR-001-tech-stack-research.md)
-- [ADR-002: Component Library](../docs/ADRs/ADR-002-component-library.md)
-- [ADR-003: State Management](../docs/ADRs/ADR-003-state-management.md)
-- [ADR-004: Mock Data Strategy](../docs/ADRs/ADR-004-mock-data-strategy.md)
-
----
-
-*Created by*: Architect Agent
+*Created by*: Product Manager Agent
 *Last Updated*: 2025-01-26
