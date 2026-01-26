@@ -1,0 +1,382 @@
+# Task Dependency Graph Schema
+# Version: 1.0.0
+# Purpose: Define tasks, dependencies, and execution flow for automatic parallelization
+
+TaskGraph:
+  metadata:
+    product:
+      type: string
+      description: "Product this task graph belongs to"
+      required: true
+
+    version:
+      type: string
+      description: "Semantic version of task graph (bumped on changes)"
+      required: true
+
+    created_at:
+      type: string
+      format: ISO-8601
+      required: true
+
+    updated_at:
+      type: string
+      format: ISO-8601
+      required: true
+
+  tasks:
+    - id:
+        type: string
+        description: "Unique task ID (e.g., TASK-001, PRD-01, API-05)"
+        pattern: "^[A-Z]+-[0-9]+$"
+        required: true
+
+      name:
+        type: string
+        description: "Human-readable task name"
+        required: true
+
+      description:
+        type: string
+        description: "Detailed description of what needs to be done"
+        required: true
+
+      agent:
+        type: enum
+        values:
+          - product-manager
+          - architect
+          - backend-engineer
+          - frontend-engineer
+          - qa-engineer
+          - devops-engineer
+          - technical-writer
+          - support-engineer
+        required: true
+
+      depends_on:
+        type: array
+        description: "Task IDs that must complete before this task can start"
+        items: string
+        default: []
+        required: false
+
+      produces:
+        type: array
+        description: "Artifacts this task will create"
+        items:
+          - name: string
+          - type: enum [file, directory, pr, branch, document, decision]
+          - path: string
+        required: false
+
+      consumes:
+        type: array
+        description: "Artifacts this task requires (from depends_on tasks)"
+        items:
+          - name: string
+          - required_from_task: string
+        required: false
+
+      parallel_ok:
+        type: boolean
+        description: "Can this task run in parallel with siblings (same dependencies)?"
+        default: false
+        required: false
+
+      checkpoint:
+        type: boolean
+        description: "Pause for CEO approval after this task?"
+        default: false
+        required: false
+
+      priority:
+        type: enum
+        values:
+          - critical
+          - high
+          - normal
+          - low
+        default: normal
+        required: false
+
+      estimated_time_minutes:
+        type: number
+        description: "Rough estimate for planning (not enforced)"
+        required: false
+
+      acceptance_criteria:
+        type: array
+        description: "Criteria that must be met for task to be considered complete"
+        items: string
+        required: false
+
+      status:
+        type: enum
+        values:
+          - pending      # Not started, waiting for dependencies
+          - ready        # Dependencies met, can start
+          - in_progress  # Agent currently working on it
+          - completed    # Successfully finished
+          - failed       # Failed after retries
+          - blocked      # Waiting for external input
+          - skipped      # Intentionally skipped
+        default: pending
+        required: true
+
+      assigned_to:
+        type: string
+        description: "Agent instance ID if task is in progress"
+        required: false
+
+      started_at:
+        type: string
+        format: ISO-8601
+        required: false
+
+      completed_at:
+        type: string
+        format: ISO-8601
+        required: false
+
+      retry_count:
+        type: number
+        default: 0
+        required: false
+
+      result:
+        type: object
+        description: "Task execution result (populated on completion)"
+        properties:
+          status: enum [success, failure]
+          artifacts_created: array
+          message: string
+          metrics: object
+        required: false
+
+# Example Task Graph - New Product Workflow
+
+example_new_product:
+  metadata:
+    product: "analytics-dashboard"
+    version: "1.0.0"
+    created_at: "2025-01-26T10:00:00Z"
+    updated_at: "2025-01-26T10:00:00Z"
+
+  tasks:
+    # Phase 1: Planning
+    - id: "PRD-01"
+      name: "Create Product Requirements Document"
+      description: "Analyze CEO brief and create comprehensive PRD with user stories, features, and success metrics"
+      agent: "product-manager"
+      depends_on: []
+      produces:
+        - name: "PRD"
+          type: "document"
+          path: "products/analytics-dashboard/docs/PRD.md"
+        - name: "Product Addendum"
+          type: "document"
+          path: "products/analytics-dashboard/.claude/addendum.md"
+      parallel_ok: false
+      checkpoint: true
+      priority: "critical"
+      estimated_time_minutes: 120
+      acceptance_criteria:
+        - "PRD includes all sections from template"
+        - "User stories have acceptance criteria"
+        - "Success metrics are measurable"
+      status: "pending"
+
+    # Phase 2: Architecture
+    - id: "ARCH-01"
+      name: "Design System Architecture"
+      description: "Create system design, API contracts, database schema, and ADRs"
+      agent: "architect"
+      depends_on: ["PRD-01"]
+      consumes:
+        - name: "PRD"
+          required_from_task: "PRD-01"
+      produces:
+        - name: "Architecture Document"
+          type: "document"
+          path: "products/analytics-dashboard/docs/architecture.md"
+        - name: "API Schema"
+          type: "file"
+          path: "products/analytics-dashboard/docs/api-schema.yml"
+        - name: "Database Schema"
+          type: "file"
+          path: "products/analytics-dashboard/docs/db-schema.sql"
+      parallel_ok: false
+      checkpoint: true
+      priority: "critical"
+      estimated_time_minutes: 180
+      acceptance_criteria:
+        - "API contracts define all endpoints"
+        - "Database schema normalized to 3NF"
+        - "At least 2 ADRs documenting key decisions"
+      status: "pending"
+
+    # Phase 3: Foundation (can be partially parallel)
+    - id: "DEVOPS-01"
+      name: "Setup CI/CD Pipeline"
+      description: "Configure GitHub Actions, Docker, and deployment infrastructure"
+      agent: "devops-engineer"
+      depends_on: ["ARCH-01"]
+      consumes:
+        - name: "Architecture Document"
+          required_from_task: "ARCH-01"
+      produces:
+        - name: "GitHub Actions Workflow"
+          type: "file"
+          path: ".github/workflows/analytics-dashboard-ci.yml"
+        - name: "Dockerfile"
+          type: "file"
+          path: "products/analytics-dashboard/Dockerfile"
+      parallel_ok: true
+      checkpoint: false
+      priority: "high"
+      estimated_time_minutes: 90
+      status: "pending"
+
+    - id: "BACKEND-01"
+      name: "Implement Backend Foundation"
+      description: "Setup Fastify app, Prisma, database connection, basic middleware"
+      agent: "backend-engineer"
+      depends_on: ["ARCH-01"]
+      consumes:
+        - name: "API Schema"
+          required_from_task: "ARCH-01"
+        - name: "Database Schema"
+          required_from_task: "ARCH-01"
+      produces:
+        - name: "Backend App"
+          type: "directory"
+          path: "products/analytics-dashboard/apps/api"
+        - name: "Prisma Schema"
+          type: "file"
+          path: "products/analytics-dashboard/apps/api/prisma/schema.prisma"
+      parallel_ok: true
+      checkpoint: false
+      priority: "high"
+      estimated_time_minutes: 120
+      status: "pending"
+
+    - id: "FRONTEND-01"
+      name: "Implement Frontend Foundation"
+      description: "Setup Next.js app, routing, layout, Tailwind configuration"
+      agent: "frontend-engineer"
+      depends_on: ["ARCH-01"]
+      consumes:
+        - name: "Architecture Document"
+          required_from_task: "ARCH-01"
+      produces:
+        - name: "Frontend App"
+          type: "directory"
+          path: "products/analytics-dashboard/apps/web"
+        - name: "Layout Components"
+          type: "directory"
+          path: "products/analytics-dashboard/apps/web/src/components/layout"
+      parallel_ok: true
+      checkpoint: false
+      priority: "high"
+      estimated_time_minutes: 90
+      status: "pending"
+
+    # Phase 4: Integration & Testing
+    - id: "QA-01"
+      name: "Setup E2E Test Framework"
+      description: "Configure Playwright, create test utilities and base page objects"
+      agent: "qa-engineer"
+      depends_on: ["FRONTEND-01"]
+      consumes:
+        - name: "Frontend App"
+          required_from_task: "FRONTEND-01"
+      produces:
+        - name: "E2E Test Setup"
+          type: "directory"
+          path: "products/analytics-dashboard/e2e"
+        - name: "Playwright Config"
+          type: "file"
+          path: "products/analytics-dashboard/e2e/playwright.config.ts"
+      parallel_ok: false
+      checkpoint: false
+      priority: "high"
+      estimated_time_minutes: 60
+      status: "pending"
+
+    - id: "QA-02"
+      name: "Run Testing Gate - Foundation"
+      description: "Execute full testing gate before CEO checkpoint"
+      agent: "qa-engineer"
+      depends_on: ["BACKEND-01", "FRONTEND-01", "DEVOPS-01", "QA-01"]
+      consumes:
+        - name: "Backend App"
+          required_from_task: "BACKEND-01"
+        - name: "Frontend App"
+          required_from_task: "FRONTEND-01"
+      produces:
+        - name: "Test Report"
+          type: "document"
+          path: "products/analytics-dashboard/docs/test-reports/foundation.md"
+      parallel_ok: false
+      checkpoint: false
+      priority: "critical"
+      estimated_time_minutes: 30
+      acceptance_criteria:
+        - "All unit tests pass"
+        - "E2E tests pass"
+        - "App loads without errors"
+        - "Visual verification complete"
+      status: "pending"
+
+    - id: "CHECKPOINT-FOUNDATION"
+      name: "Foundation Complete Checkpoint"
+      description: "CEO review of foundation before feature development"
+      agent: "orchestrator"
+      depends_on: ["QA-02"]
+      parallel_ok: false
+      checkpoint: true
+      priority: "critical"
+      status: "pending"
+
+# Execution Rules
+
+execution_rules:
+  - name: "Dependency Resolution"
+    description: "Task can only start when all depends_on tasks are completed"
+
+  - name: "Parallel Execution"
+    description: "Tasks with same dependencies and parallel_ok=true can run simultaneously"
+
+  - name: "Checkpoint Blocking"
+    description: "When checkpoint=true task completes, all subsequent tasks wait for CEO approval"
+
+  - name: "Failure Propagation"
+    description: "If task fails, all dependent tasks are blocked until retry succeeds"
+
+  - name: "Priority Scheduling"
+    description: "When multiple tasks are ready, higher priority tasks start first"
+
+  - name: "Retry Policy"
+    description: "Failed tasks retry up to 3 times before escalating to CEO"
+
+# Graph Analysis Functions
+
+graph_operations:
+  - name: "get_ready_tasks"
+    description: "Returns all tasks with status=ready (dependencies met, not started)"
+
+  - name: "get_parallel_tasks"
+    description: "Returns tasks that can run in parallel (same dependencies, parallel_ok=true)"
+
+  - name: "get_critical_path"
+    description: "Returns longest dependency chain (bottleneck analysis)"
+
+  - name: "get_blocked_tasks"
+    description: "Returns tasks waiting on blockers"
+
+  - name: "calculate_total_time"
+    description: "Sum estimated times along critical path"
+
+  - name: "validate_graph"
+    description: "Check for circular dependencies, missing tasks, etc."
