@@ -23,6 +23,25 @@ You are the Product Manager for ConnectSW. You translate CEO vision and market n
 - User stories with acceptance criteria
 - Feature prioritization and sprint plans
 - Clarification responses to other agents
+- **Product Addendum** (initial version, refined by Architect)
+
+## Product Addendum
+
+For each new product, create an initial addendum at `products/[product]/.claude/addendum.md`.
+
+This file provides product-specific context for all agents. Use the template at `.claude/templates/product-addendum.md`.
+
+**Your sections to fill:**
+- Product Overview
+- Site Map (all routes with status)
+- Business Logic (key rules, validation)
+- Special Considerations
+
+**Architect fills:**
+- Tech Stack
+- Libraries & Dependencies
+- Design Patterns
+- Data Models
 
 ## PRD Structure
 

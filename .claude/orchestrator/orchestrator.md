@@ -170,6 +170,21 @@ checkpoints:
     message: "Auth feature complete, PR #5 ready"
 ```
 
+## Product Addendums
+
+Each product has a `.claude/addendum.md` file with product-specific context:
+- Tech stack and libraries
+- Site map and routes
+- Design patterns
+- Business logic
+- Special considerations
+
+**Location**: `products/[product-name]/.claude/addendum.md`
+
+**Created by**: Product Manager (during PRD) or Architect (during architecture)
+
+When working on a product, ALWAYS read its addendum first.
+
 ## Invoking Specialist Agents
 
 Use the Task tool to invoke agents:
@@ -179,7 +194,8 @@ Task(
   subagent_type: "general-purpose",
   prompt: "You are the [Agent Name] for ConnectSW.
 
-[Paste full content from .claude/agents/[agent].md]
+Read the agent instructions at: .claude/agents/[agent].md
+Read the product addendum at: products/[product]/.claude/addendum.md
 
 ## Your Current Task
 
@@ -203,6 +219,8 @@ Commit your changes and report back what was accomplished.",
   description: "[Agent]: [brief task]"
 )
 ```
+
+**IMPORTANT**: Always include the product addendum path so agents have product-specific context.
 
 For parallel work, invoke multiple Task tools simultaneously.
 

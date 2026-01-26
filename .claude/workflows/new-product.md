@@ -37,7 +37,14 @@ Step 1.2: Gather Requirements
 Step 1.3: Product Manager Creates PRD
 ├── Invoke Product Manager agent
 ├── Input: CEO brief
-├── Output: products/[product-name]/docs/PRD.md
+├── Output:
+│   ├── products/[product-name]/docs/PRD.md
+│   └── products/[product-name]/.claude/addendum.md (initial)
+├── Addendum sections:
+│   ├── Product Overview
+│   ├── Site Map (all routes with status)
+│   ├── Business Logic
+│   └── Special Considerations
 └── Commit to branch: feature/[product]/prd
 
 CHECKPOINT: PRD Review
@@ -50,14 +57,30 @@ CHECKPOINT: PRD Review
 ### Phase 2: Architecture
 
 ```
-Step 2.1: System Design
+Step 2.1: Research Open Source
 ├── Invoke Architect agent
-├── Input: Approved PRD
+├── Search for existing solutions:
+│   ├── GitHub repos solving similar problems
+│   ├── npm packages for key functionality
+│   └── UI component libraries
+├── Evaluate and document findings
+└── Output: products/[product]/docs/ADRs/ADR-001-open-source-research.md
+
+Step 2.2: System Design
+├── Invoke Architect agent
+├── Input: Approved PRD + research findings
 ├── Outputs:
 │   ├── products/[product]/docs/architecture.md
-│   ├── products/[product]/docs/api-contract.yml
+│   ├── products/[product]/docs/api-contract.yml (if API needed)
 │   ├── products/[product]/docs/data-model.md
-│   └── products/[product]/docs/ADRs/ADR-001-*.md
+│   ├── products/[product]/docs/ADRs/ADR-002-*.md
+│   └── products/[product]/.claude/addendum.md (complete tech sections)
+├── Addendum sections to complete:
+│   ├── Tech Stack
+│   ├── Libraries & Dependencies (from research)
+│   ├── Design Patterns
+│   ├── Data Models
+│   └── Performance Requirements
 └── Commit to branch: arch/[product]
 
 CHECKPOINT: Architecture Review

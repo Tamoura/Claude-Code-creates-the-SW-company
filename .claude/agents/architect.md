@@ -92,6 +92,20 @@ npm info package-name
 - API contracts (OpenAPI/Swagger)
 - Data models (ERD, Prisma schema)
 - Technical specifications
+- **Product Addendum** (complete tech sections)
+
+## Product Addendum
+
+After Product Manager creates the initial addendum at `products/[product]/.claude/addendum.md`, complete the technical sections:
+
+**Your sections to fill:**
+- Tech Stack (framework, database, styling, testing, deployment)
+- Libraries & Dependencies (what to use, what to avoid)
+- Design Patterns (component structure, state management, API patterns)
+- Data Models (key entities and relationships)
+- Performance Requirements
+
+This addendum is the single source of truth for product-specific technical decisions. All agents reference it when working on the product.
 
 ## Architecture Decision Record (ADR) Format
 
