@@ -4,38 +4,70 @@
 
 **Name**: ITIL Dashboard
 **Type**: Web Application
-**Status**: Inception
+**Status**: Architecture Complete
 
 A comprehensive IT Service Management (ITSM) dashboard covering the five core ITIL processes with role-based views for executives, managers, and operators.
 
 ## Tech Stack
 
-*To be completed by Architect*
+| Layer | Technology | Version | Notes |
+|-------|------------|---------|-------|
+| Frontend Framework | Next.js | 14.x | App Router, Server Components |
+| UI Library | React | 18.x | Concurrent features |
+| Language | TypeScript | 5.x | Full stack type safety |
+| Styling | Tailwind CSS | 3.x | Utility-first |
+| Components | shadcn/ui | Latest | Accessible, customizable |
+| Charts | Tremor | 3.x | Dashboard visualizations |
+| Backend | Fastify | 4.x | High performance |
+| Database | PostgreSQL | 15+ | Primary data store |
+| ORM | Prisma | 5.x | Type-safe queries |
+| Testing (Unit) | Vitest | 1.x | Fast, ESM-native |
+| Testing (E2E) | Playwright | 1.x | Cross-browser |
+| Package Manager | pnpm | 8.x | Fast, efficient |
+| Deployment | Vercel + Render | - | Frontend + Backend |
 
-| Layer | Technology | Notes |
-|-------|------------|-------|
-| Frontend | Next.js 14, React 18 | |
-| Backend | Fastify | |
-| Database | PostgreSQL 15+ | |
-| Styling | Tailwind CSS, shadcn/ui | |
-| Testing | Vitest, Playwright | |
-| Deployment | TBD | |
+### Port Assignments
+
+| Service | Port |
+|---------|------|
+| Frontend (Next.js) | 3101 |
+| Backend (Fastify) | 5001 |
+| PostgreSQL | 5432 |
 
 ## Libraries & Dependencies
 
-*To be completed by Architect*
-
 ### Adopted (Use These)
 
-| Library | Purpose | Why Chosen |
-|---------|---------|------------|
-| TBD | TBD | TBD |
+| Library | Version | Purpose | Why Chosen |
+|---------|---------|---------|------------|
+| @tanstack/react-query | 5.x | Server state management | Caching, optimistic updates, great DX |
+| @tanstack/react-table | 8.x | Data tables | Headless, flexible, TypeScript-first |
+| react-hook-form | 7.x | Form handling | Performant, minimal re-renders |
+| zod | 3.x | Validation | TypeScript-first, shared schemas |
+| zustand | 4.x | Client state | Simple, minimal boilerplate |
+| date-fns | 4.x | Date utilities | Tree-shakeable, modern |
+| date-fns-tz | 3.x | Timezone handling | Integrates with date-fns |
+| react-big-calendar | 1.x | Change calendar | Full-featured, proven |
+| lucide-react | Latest | Icons | Consistent, comprehensive |
+| @fastify/jwt | Latest | Authentication | Official plugin, secure |
+| @fastify/cors | Latest | CORS | Official plugin |
+| @fastify/cookie | Latest | Cookies | Session management |
+| bcrypt | Latest | Password hashing | Industry standard |
+| recharts | 2.x | Custom charts | React-native, composable |
 
 ### Avoid (Don't Use)
 
 | Library | Reason |
 |---------|--------|
-| TBD | TBD |
+| Redux / Redux Toolkit | Overkill - use TanStack Query + Zustand instead |
+| Moment.js | Deprecated, not tree-shakeable - use date-fns |
+| Formik | Older, more verbose - use react-hook-form |
+| Yup | Less TypeScript-native - use Zod |
+| ag-grid | Commercial license, overkill |
+| Chart.js | Less React-native - use Recharts/Tremor |
+| Axios | fetch() is sufficient with TanStack Query |
+| styled-components | Use Tailwind CSS instead |
+| Material UI | Use shadcn/ui for consistency |
 
 ## Site Map
 
@@ -91,19 +123,95 @@ A comprehensive IT Service Management (ITSM) dashboard covering the five core IT
 
 ## Design Patterns
 
-*To be completed by Architect*
-
 ### Component Patterns
 
-TBD
+**Component Structure:**
+```
+components/
+├── ui/              # shadcn/ui primitives (Button, Input, Dialog)
+├── features/        # Feature components (IncidentForm, SLABadge)
+└── layouts/         # Layout components (AppShell, Sidebar)
+```
+
+**Component Guidelines:**
+- Use Server Components by default
+- Add `"use client"` only when needed (hooks, events)
+- Keep components under 200 lines
+- Extract reusable logic into custom hooks
+- Use composition over inheritance
+
+**Naming Conventions:**
+- Components: PascalCase (`IncidentForm.tsx`)
+- Hooks: camelCase with `use` prefix (`useIncidents.ts`)
+- Utils: camelCase (`formatDate.ts`)
+- Types: PascalCase with descriptive names (`CreateIncidentInput`)
 
 ### State Management
 
-TBD
+| State Type | Solution | Example |
+|------------|----------|---------|
+| Server State | TanStack Query | Incidents, users, API data |
+| UI State | Zustand | Sidebar open, theme, modals |
+| Form State | react-hook-form | Create/edit forms |
+| URL State | Next.js router | Filters, pagination, search |
+
+**TanStack Query Patterns:**
+```typescript
+// Query keys follow [entity, filters] pattern
+queryKey: ['incidents', { status, priority, page }]
+
+// Stale time by data freshness need
+staleTime: 30_000  // List views
+staleTime: 10_000  // Detail views
+
+// Optimistic updates for better UX
+onMutate: async (newData) => {
+  await queryClient.cancelQueries(['incidents']);
+  const previous = queryClient.getQueryData(['incidents']);
+  queryClient.setQueryData(['incidents'], (old) => [...old, newData]);
+  return { previous };
+},
+```
+
+**Zustand Store Pattern:**
+```typescript
+// Minimal, focused stores
+interface UIStore {
+  sidebarOpen: boolean;
+  toggleSidebar: () => void;
+}
+
+// No async logic in stores - use TanStack Query
+```
 
 ### API Patterns
 
-TBD
+**REST Conventions:**
+- `GET /api/v1/{resource}` - List with pagination
+- `POST /api/v1/{resource}` - Create
+- `GET /api/v1/{resource}/{id}` - Get single
+- `PATCH /api/v1/{resource}/{id}` - Partial update
+- `DELETE /api/v1/{resource}/{id}` - Soft delete
+
+**Response Format:**
+```typescript
+// Success
+{ data: T, meta?: { pagination } }
+
+// Error
+{ error: { code: string, message: string, details?: {} } }
+```
+
+**Authentication:**
+- JWT in HTTP-only cookies
+- Access token: 15 minutes
+- Refresh token: 7 days
+- Auto-refresh on 401
+
+**Pagination:**
+- Default page size: 20
+- Max page size: 100
+- Use cursor for infinite scroll (future)
 
 ## Business Logic
 
@@ -153,9 +261,11 @@ Submitted → Pending Approval → Approved → Fulfilling → Completed → Clo
 | P4 - Low | 8 hours | 24 hours | Minor issues |
 
 SLA breach indicators:
-- Green: > 20% time remaining
-- Yellow: < 20% time remaining
-- Red: SLA breached
+- Green (ON_TRACK): > 20% time remaining
+- Yellow (AT_RISK): < 20% time remaining
+- Red (BREACHED): SLA breached
+- Blue (MET): Completed within SLA
+- Gray (PAUSED): On Hold
 
 ### Change Types
 
@@ -209,19 +319,47 @@ SLA breach indicators:
 
 ## Data Models
 
-*To be completed by Architect*
-
 ### Key Entities
 
-- User
-- Incident
-- Problem
-- Change
-- ServiceRequest
-- KnowledgeArticle
-- Category
-- SLAConfig
-- AuditLog
+| Entity | Display ID | Purpose |
+|--------|------------|---------|
+| User | - | System users with roles |
+| Role | - | Permission groups |
+| Incident | INC-XXXXX | Service disruptions |
+| Problem | PRB-XXXXX | Root cause investigations |
+| Change | CHG-XXXXX | Controlled changes |
+| ServiceRequest | REQ-XXXXX | Service requests |
+| KnowledgeArticle | KB-XXXXX | Knowledge base articles |
+| Category | - | Hierarchical categorization |
+| SLAConfig | - | SLA timing configuration |
+| AuditLog | - | Change audit trail |
+
+### Entity Relationships
+
+```
+User ─────┬──── Role
+          │
+          ├──── Incident (reporter, assignee, affected)
+          ├──── Problem (creator, assignee)
+          ├──── Change (requester, assignee, approver)
+          ├──── ServiceRequest (requester, fulfiller)
+          └──── KnowledgeArticle (author)
+
+Incident ───── Category
+          │
+          ├──── SLAConfig
+          ├──── Problem (via ProblemIncident)
+          └──── IncidentHistory
+
+Change ───── Category
+         │
+         ├──── ChangeApproval
+         └──── Problem (optional link)
+
+Category ───── Category (parent-child hierarchy)
+```
+
+Full schema: See `docs/data-model.md`
 
 ## External Integrations
 
@@ -229,10 +367,23 @@ None for MVP (standalone application)
 
 ## Performance Requirements
 
-- Page load: < 2 seconds
-- Dashboard refresh: < 5 seconds
-- Search results: < 1 second
-- Bundle size: < 500KB initial load
+| Metric | Target | Measurement |
+|--------|--------|-------------|
+| Page load | < 2 seconds | Time to interactive |
+| Dashboard refresh | < 5 seconds | Data fetch + render |
+| Search results | < 1 second | Query to display |
+| Bundle size | < 500KB | Initial JS load |
+| Database queries | < 100ms | Average query time |
+| API response | < 200ms | P95 latency |
+
+### Performance Strategies
+
+- Server Components for static content
+- TanStack Query caching (stale-while-revalidate)
+- Database indexes on frequently queried columns
+- Pagination for all list endpoints
+- Lazy loading for charts and tables
+- Image optimization via Next.js
 
 ## Special Considerations
 
@@ -257,6 +408,7 @@ All entities must maintain full audit trail:
 - All dates stored in UTC
 - Display in user's local timezone
 - SLA calculations in business hours (configurable)
+- Use `date-fns-tz` for timezone conversions
 
 ### Accessibility
 
@@ -264,8 +416,30 @@ All entities must maintain full audit trail:
 - Keyboard navigation for all functions
 - Screen reader support
 - Color contrast ratios met
+- Focus indicators visible
+
+### Security
+
+- HTTP-only cookies for JWT
+- CSRF protection via SameSite cookies
+- Rate limiting on auth endpoints
+- Password hashed with bcrypt (cost 12)
+- Soft delete only (no data destruction)
+
+## Architecture Documents
+
+| Document | Path | Purpose |
+|----------|------|---------|
+| Architecture | `docs/architecture.md` | System design |
+| Data Model | `docs/data-model.md` | Prisma schema, ERD |
+| API Contract | `docs/api-contract.yml` | OpenAPI 3.0 spec |
+| ADR-001 | `docs/ADRs/ADR-001-open-source-research.md` | Library research |
+| ADR-002 | `docs/ADRs/ADR-002-tech-stack-selection.md` | Tech stack decisions |
+| ADR-003 | `docs/ADRs/ADR-003-authentication-authorization.md` | Auth approach |
+| ADR-004 | `docs/ADRs/ADR-004-sla-calculation-strategy.md` | SLA logic |
 
 ---
 
 *Created by*: Product Manager Agent
-*Last Updated*: 2025-01-26
+*Architecture by*: Architect Agent
+*Last Updated*: 2026-01-26
