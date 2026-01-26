@@ -362,4 +362,131 @@ export async function riskRoutes(fastify: FastifyInstance): Promise<void> {
       });
     }
   );
+
+  // POST /api/v1/risks/:id/controls - Link a control to a risk
+  fastify.post<{ Params: { id: string }; Body: { controlId: string } }>(
+    '/:id/controls',
+    {
+      preHandler: [authenticate, authorize('update', 'Risk')],
+    },
+    async (request: FastifyRequest<{ Params: { id: string }; Body: { controlId: string } }>, reply: FastifyReply) => {
+      const { id: riskId } = request.params;
+      const { controlId } = request.body;
+
+      // Validate controlId
+      if (!controlId) {
+        return reply.status(400).send({
+          error: 'Validation Error',
+          message: 'controlId is required',
+        });
+      }
+
+      // Verify risk exists and belongs to organization
+      const risk = await prisma.risk.findUnique({
+        where: { id: riskId },
+      });
+
+      if (!risk || risk.organizationId !== request.user!.organizationId) {
+        return reply.status(404).send({
+          error: 'Not Found',
+          message: 'Risk not found',
+        });
+      }
+
+      // Verify control exists and belongs to organization
+      const control = await prisma.control.findUnique({
+        where: { id: controlId },
+      });
+
+      if (!control || control.organizationId !== request.user!.organizationId) {
+        return reply.status(404).send({
+          error: 'Not Found',
+          message: 'Control not found',
+        });
+      }
+
+      // Check if link already exists
+      const existingLink = await prisma.riskControl.findUnique({
+        where: {
+          riskId_controlId: {
+            riskId,
+            controlId,
+          },
+        },
+      });
+
+      if (existingLink) {
+        return reply.status(409).send({
+          error: 'Conflict',
+          message: 'Control is already linked to this risk',
+        });
+      }
+
+      // Create the link
+      await prisma.riskControl.create({
+        data: {
+          riskId,
+          controlId,
+        },
+      });
+
+      return reply.status(201).send({
+        message: 'Control linked to risk successfully',
+      });
+    }
+  );
+
+  // DELETE /api/v1/risks/:id/controls/:controlId - Unlink a control from a risk
+  fastify.delete<{ Params: { id: string; controlId: string } }>(
+    '/:id/controls/:controlId',
+    {
+      preHandler: [authenticate, authorize('update', 'Risk')],
+    },
+    async (request: FastifyRequest<{ Params: { id: string; controlId: string } }>, reply: FastifyReply) => {
+      const { id: riskId, controlId } = request.params;
+
+      // Verify risk exists and belongs to organization
+      const risk = await prisma.risk.findUnique({
+        where: { id: riskId },
+      });
+
+      if (!risk || risk.organizationId !== request.user!.organizationId) {
+        return reply.status(404).send({
+          error: 'Not Found',
+          message: 'Risk not found',
+        });
+      }
+
+      // Check if link exists
+      const link = await prisma.riskControl.findUnique({
+        where: {
+          riskId_controlId: {
+            riskId,
+            controlId,
+          },
+        },
+      });
+
+      if (!link) {
+        return reply.status(404).send({
+          error: 'Not Found',
+          message: 'Link not found',
+        });
+      }
+
+      // Delete the link
+      await prisma.riskControl.delete({
+        where: {
+          riskId_controlId: {
+            riskId,
+            controlId,
+          },
+        },
+      });
+
+      return reply.status(200).send({
+        message: 'Control unlinked from risk successfully',
+      });
+    }
+  );
 }
