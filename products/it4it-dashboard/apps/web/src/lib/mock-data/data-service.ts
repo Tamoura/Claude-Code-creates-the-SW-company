@@ -7,9 +7,17 @@ import {
   generateSubscriptions,
   generateFulfillmentRequests,
 } from "./generators/r2f-generator";
+import {
+  generateRequirements,
+  generateBuilds,
+  generateDeployments,
+  generateReleases,
+  generatePipelines,
+} from "./generators/r2d-generator";
 import type { Incident, Event, Change } from "@/types/d2c";
 import type { Demand, PortfolioItem, Investment } from "@/types/s2p";
 import type { ServiceCatalogEntry, ServiceRequest, Subscription, FulfillmentRequest } from "@/types/r2f";
+import type { Requirement, Build, Deployment, Release, Pipeline } from "@/types/r2d";
 
 /**
  * Mock Data Service
@@ -54,6 +62,11 @@ class MockDataService {
   private serviceRequests: ServiceRequest[] = [];
   private subscriptions: Subscription[] = [];
   private fulfillmentRequests: FulfillmentRequest[] = [];
+  private requirements: Requirement[] = [];
+  private builds: Build[] = [];
+  private deployments: Deployment[] = [];
+  private releases: Release[] = [];
+  private pipelines: Pipeline[] = [];
   private initialized = false;
 
   constructor() {
@@ -81,6 +94,13 @@ class MockDataService {
     this.serviceRequests = generateServiceRequests(60);
     this.subscriptions = generateSubscriptions(45);
     this.fulfillmentRequests = generateFulfillmentRequests(35);
+
+    // Generate R2D data
+    this.requirements = generateRequirements(50);
+    this.builds = generateBuilds(80);
+    this.deployments = generateDeployments(60);
+    this.releases = generateReleases(20);
+    this.pipelines = generatePipelines(15);
 
     this.initialized = true;
   }
@@ -168,6 +188,47 @@ class MockDataService {
     return this.fulfillmentRequests.find((ful) => ful.id === id);
   }
 
+  // R2D Methods
+  getRequirements(): Requirement[] {
+    return this.requirements;
+  }
+
+  getRequirementById(id: string): Requirement | undefined {
+    return this.requirements.find((req) => req.id === id);
+  }
+
+  getBuilds(): Build[] {
+    return this.builds;
+  }
+
+  getBuildById(id: string): Build | undefined {
+    return this.builds.find((build) => build.id === id);
+  }
+
+  getDeployments(): Deployment[] {
+    return this.deployments;
+  }
+
+  getDeploymentById(id: string): Deployment | undefined {
+    return this.deployments.find((dep) => dep.id === id);
+  }
+
+  getReleases(): Release[] {
+    return this.releases;
+  }
+
+  getReleaseById(id: string): Release | undefined {
+    return this.releases.find((rel) => rel.id === id);
+  }
+
+  getPipelines(): Pipeline[] {
+    return this.pipelines;
+  }
+
+  getPipelineById(id: string): Pipeline | undefined {
+    return this.pipelines.find((pipe) => pipe.id === id);
+  }
+
   // Dashboard Metrics
   getDashboardMetrics(): DashboardMetrics {
     const openIncidents = this.incidents.filter(
@@ -219,9 +280,9 @@ class MockDataService {
         totalInvestment,
       },
       r2d: {
-        activePipelines: 8,
-        failedBuilds: 3,
-        pendingReleases: 5,
+        activePipelines: this.pipelines.filter((pipe) => pipe.status === "active").length,
+        failedBuilds: this.builds.filter((build) => build.status === "failed").length,
+        pendingReleases: this.releases.filter((rel) => rel.status === "scheduled" || rel.status === "in_progress").length,
       },
       r2f: {
         pendingRequests,
