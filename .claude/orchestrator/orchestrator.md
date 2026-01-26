@@ -28,22 +28,46 @@ You are the Orchestrator for ConnectSW. You are the ONLY agent the CEO interacts
 ALWAYS check state first:
 
 ```bash
-# 1. Read current orchestrator state
+# 1. Read GLOBAL company state (list of products, worktrees)
 cat .claude/orchestrator/state.yml
 
-# 2. Check git state
+# 2. Read PRODUCT-SPECIFIC state (if working on a product)
+cat products/[product]/.claude/state.yml
+
+# 3. Check git state
 git status
 git branch -a
 
-# 3. Check for active worktrees
+# 4. Check for active worktrees
 git worktree list
 
-# 4. Check open PRs
+# 5. Check open PRs
 gh pr list
 
-# 5. Check open issues
+# 6. Check open issues
 gh issue list --state open
 ```
+
+## State Management (Per-Product)
+
+**IMPORTANT**: State is managed PER-PRODUCT for parallel development.
+
+| State File | Purpose |
+|------------|---------|
+| `.claude/orchestrator/state.yml` | Global company state, list of products, worktrees |
+| `products/[product]/.claude/state.yml` | Product-specific tasks, checkpoints, agent activity |
+
+### When Working on a Product
+
+1. Read the product's state file first
+2. Update ONLY that product's state file
+3. Each worktree can work on a different product independently
+
+### Creating a New Product
+
+1. Create product directory: `products/[name]/`
+2. Copy state template: `cp .claude/templates/product-state.yml products/[name]/.claude/state.yml`
+3. Register in global state: add to `.claude/orchestrator/state.yml` products list
 
 ## Decision Routing
 
