@@ -40,6 +40,8 @@ export type RequestStatus =
   | 'COMPLETED'
   | 'CLOSED';
 
+export type KBStatus = 'DRAFT' | 'IN_REVIEW' | 'PUBLISHED' | 'ARCHIVED';
+
 export interface User {
   id: string;
   email: string;
@@ -299,6 +301,48 @@ export interface UpdateCatalogItemInput {
   requiresApproval?: boolean;
   formSchema?: Record<string, any>;
   isActive?: boolean;
+}
+
+export interface KnowledgeArticle {
+  id: string;
+  displayId: string;
+  title: string;
+  content: string;
+  summary?: string;
+  status: KBStatus;
+  categoryId: string;
+  category?: Category;
+  authorId: string;
+  author?: User;
+  keywords: string[];
+  viewCount: number;
+  version: number;
+  publishedAt?: string;
+  createdAt: string;
+  updatedAt: string;
+  _count?: {
+    ratings: number;
+    versions: number;
+  };
+}
+
+export interface CreateKnowledgeArticleInput {
+  title: string;
+  content: string;
+  summary?: string;
+  categoryId: string;
+  authorId: string;
+  keywords: string[];
+}
+
+export interface UpdateKnowledgeArticleInput {
+  title?: string;
+  content?: string;
+  summary?: string;
+  status?: KBStatus;
+  categoryId?: string;
+  keywords?: string[];
+  changeNotes?: string;
 }
 
 export interface PaginatedResponse<T> {
