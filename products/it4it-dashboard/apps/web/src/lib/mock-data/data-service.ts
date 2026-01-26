@@ -1,8 +1,15 @@
 import { faker } from "@faker-js/faker";
 import { generateIncidents, generateEvents, generateChanges } from "./generators/d2c-generator";
 import { generateDemands, generatePortfolioItems, generateInvestments } from "./generators/s2p-generator";
+import {
+  generateServiceCatalogEntries,
+  generateServiceRequests,
+  generateSubscriptions,
+  generateFulfillmentRequests,
+} from "./generators/r2f-generator";
 import type { Incident, Event, Change } from "@/types/d2c";
 import type { Demand, PortfolioItem, Investment } from "@/types/s2p";
+import type { ServiceCatalogEntry, ServiceRequest, Subscription, FulfillmentRequest } from "@/types/r2f";
 
 /**
  * Mock Data Service
@@ -43,6 +50,10 @@ class MockDataService {
   private demands: Demand[] = [];
   private portfolioItems: PortfolioItem[] = [];
   private investments: Investment[] = [];
+  private serviceCatalog: ServiceCatalogEntry[] = [];
+  private serviceRequests: ServiceRequest[] = [];
+  private subscriptions: Subscription[] = [];
+  private fulfillmentRequests: FulfillmentRequest[] = [];
   private initialized = false;
 
   constructor() {
@@ -64,6 +75,12 @@ class MockDataService {
     this.demands = generateDemands(40);
     this.portfolioItems = generatePortfolioItems(25);
     this.investments = generateInvestments(15);
+
+    // Generate R2F data
+    this.serviceCatalog = generateServiceCatalogEntries(30);
+    this.serviceRequests = generateServiceRequests(60);
+    this.subscriptions = generateSubscriptions(45);
+    this.fulfillmentRequests = generateFulfillmentRequests(35);
 
     this.initialized = true;
   }
@@ -118,6 +135,39 @@ class MockDataService {
     return this.investments.find((inv) => inv.id === id);
   }
 
+  // R2F Methods
+  getServiceCatalog(): ServiceCatalogEntry[] {
+    return this.serviceCatalog;
+  }
+
+  getServiceCatalogEntryById(id: string): ServiceCatalogEntry | undefined {
+    return this.serviceCatalog.find((svc) => svc.id === id);
+  }
+
+  getServiceRequests(): ServiceRequest[] {
+    return this.serviceRequests;
+  }
+
+  getServiceRequestById(id: string): ServiceRequest | undefined {
+    return this.serviceRequests.find((req) => req.id === id);
+  }
+
+  getSubscriptions(): Subscription[] {
+    return this.subscriptions;
+  }
+
+  getSubscriptionById(id: string): Subscription | undefined {
+    return this.subscriptions.find((sub) => sub.id === id);
+  }
+
+  getFulfillmentRequests(): FulfillmentRequest[] {
+    return this.fulfillmentRequests;
+  }
+
+  getFulfillmentRequestById(id: string): FulfillmentRequest | undefined {
+    return this.fulfillmentRequests.find((ful) => ful.id === id);
+  }
+
   // Dashboard Metrics
   getDashboardMetrics(): DashboardMetrics {
     const openIncidents = this.incidents.filter(
@@ -140,6 +190,27 @@ class MockDataService {
       (chg) => chg.status !== "completed" && chg.status !== "cancelled"
     ).length;
 
+    const pendingRequests = this.serviceRequests.filter(
+      (req) => req.status === "submitted" || req.status === "approved" || req.status === "fulfilling"
+    ).length;
+
+    const activeSubscriptions = this.subscriptions.filter(
+      (sub) => sub.status === "active"
+    ).length;
+
+    // Calculate average fulfillment time (in days)
+    const fulfilledRequests = this.serviceRequests.filter(
+      (req) => req.status === "fulfilled" && req.actualDelivery
+    );
+    const avgFulfillmentTime = fulfilledRequests.length > 0
+      ? fulfilledRequests.reduce((sum, req) => {
+          const days = Math.floor(
+            (req.actualDelivery!.getTime() - req.createdAt.getTime()) / (1000 * 60 * 60 * 24)
+          );
+          return sum + days;
+        }, 0) / fulfilledRequests.length
+      : 0;
+
     return {
       s2p: {
         totalDemands: this.demands.length,
@@ -153,9 +224,9 @@ class MockDataService {
         pendingReleases: 5,
       },
       r2f: {
-        pendingRequests: 45,
-        avgFulfillmentTime: 4.2,
-        activeSubscriptions: 128,
+        pendingRequests,
+        avgFulfillmentTime: Number(avgFulfillmentTime.toFixed(1)),
+        activeSubscriptions,
       },
       d2c: {
         openIncidents,

@@ -63,6 +63,69 @@ describe("MockDataService", () => {
     });
   });
 
+  describe("R2F Data", () => {
+    it("provides service catalog", () => {
+      const catalog = dataService.getServiceCatalog();
+      expect(Array.isArray(catalog)).toBe(true);
+      expect(catalog.length).toBeGreaterThan(0);
+    });
+
+    it("retrieves service catalog entry by ID", () => {
+      const catalog = dataService.getServiceCatalog();
+      const firstEntry = catalog[0];
+      const retrieved = dataService.getServiceCatalogEntryById(firstEntry.id);
+
+      expect(retrieved).toEqual(firstEntry);
+    });
+
+    it("returns undefined for non-existent catalog entry ID", () => {
+      const retrieved = dataService.getServiceCatalogEntryById("NON-EXISTENT");
+      expect(retrieved).toBeUndefined();
+    });
+
+    it("provides service requests", () => {
+      const requests = dataService.getServiceRequests();
+      expect(Array.isArray(requests)).toBe(true);
+      expect(requests.length).toBeGreaterThan(0);
+    });
+
+    it("retrieves service request by ID", () => {
+      const requests = dataService.getServiceRequests();
+      const firstRequest = requests[0];
+      const retrieved = dataService.getServiceRequestById(firstRequest.id);
+
+      expect(retrieved).toEqual(firstRequest);
+    });
+
+    it("provides subscriptions", () => {
+      const subscriptions = dataService.getSubscriptions();
+      expect(Array.isArray(subscriptions)).toBe(true);
+      expect(subscriptions.length).toBeGreaterThan(0);
+    });
+
+    it("retrieves subscription by ID", () => {
+      const subscriptions = dataService.getSubscriptions();
+      const firstSubscription = subscriptions[0];
+      const retrieved = dataService.getSubscriptionById(firstSubscription.id);
+
+      expect(retrieved).toEqual(firstSubscription);
+    });
+
+    it("provides fulfillment requests", () => {
+      const fulfillments = dataService.getFulfillmentRequests();
+      expect(Array.isArray(fulfillments)).toBe(true);
+      expect(fulfillments.length).toBeGreaterThan(0);
+    });
+
+    it("retrieves fulfillment request by ID", () => {
+      const fulfillments = dataService.getFulfillmentRequests();
+      const firstFulfillment = fulfillments[0];
+      const retrieved = dataService.getFulfillmentRequestById(firstFulfillment.id);
+
+      expect(retrieved).toEqual(firstFulfillment);
+    });
+  });
+
   describe("Dashboard Metrics", () => {
     it("provides complete dashboard metrics", () => {
       const metrics = dataService.getDashboardMetrics();
@@ -100,6 +163,25 @@ describe("MockDataService", () => {
       ).length;
 
       expect(metrics.d2c.openIncidents).toBe(openIncidents);
+    });
+
+    it("calculates R2F metrics correctly", () => {
+      const metrics = dataService.getDashboardMetrics();
+      const requests = dataService.getServiceRequests();
+      const subscriptions = dataService.getSubscriptions();
+
+      const pendingRequests = requests.filter(
+        (req) => req.status === "submitted" || req.status === "approved" || req.status === "fulfilling"
+      ).length;
+
+      const activeSubscriptions = subscriptions.filter(
+        (sub) => sub.status === "active"
+      ).length;
+
+      expect(metrics.r2f.pendingRequests).toBe(pendingRequests);
+      expect(metrics.r2f.activeSubscriptions).toBe(activeSubscriptions);
+      expect(typeof metrics.r2f.avgFulfillmentTime).toBe("number");
+      expect(metrics.r2f.avgFulfillmentTime).toBeGreaterThanOrEqual(0);
     });
   });
 
