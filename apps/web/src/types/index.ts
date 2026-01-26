@@ -9,6 +9,12 @@ export type IncidentStatus =
   | 'RESOLVED'
   | 'CLOSED';
 export type SLAStatus = 'ON_TRACK' | 'AT_RISK' | 'BREACHED' | 'MET' | 'PAUSED';
+export type ProblemStatus =
+  | 'NEW'
+  | 'UNDER_INVESTIGATION'
+  | 'KNOWN_ERROR'
+  | 'RESOLVED'
+  | 'CLOSED';
 
 export interface User {
   id: string;
@@ -75,6 +81,55 @@ export interface UpdateIncidentInput {
   categoryId?: string;
   assigneeId?: string;
   resolutionNotes?: string;
+}
+
+export interface Problem {
+  id: string;
+  displayId: string;
+  title: string;
+  description: string;
+  status: ProblemStatus;
+  priority: Priority;
+  categoryId: string;
+  category?: Category;
+  createdById: string;
+  createdBy?: User;
+  assigneeId?: string;
+  assignee?: User;
+  rootCause?: string;
+  workaround?: string;
+  permanentFix?: string;
+  resolvedAt?: string;
+  closedAt?: string;
+  createdAt: string;
+  updatedAt: string;
+  _count?: {
+    problemIncidents: number;
+  };
+}
+
+export interface CreateProblemInput {
+  title: string;
+  description: string;
+  priority: Priority;
+  categoryId: string;
+  createdById: string;
+  assigneeId?: string;
+  rootCause?: string;
+  workaround?: string;
+  permanentFix?: string;
+}
+
+export interface UpdateProblemInput {
+  title?: string;
+  description?: string;
+  status?: ProblemStatus;
+  priority?: Priority;
+  categoryId?: string;
+  assigneeId?: string;
+  rootCause?: string;
+  workaround?: string;
+  permanentFix?: string;
 }
 
 export interface PaginatedResponse<T> {

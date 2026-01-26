@@ -5,6 +5,7 @@ import authPlugin from './plugins/auth.js';
 import errorHandlerPlugin from './plugins/error-handler.js';
 import healthRoute from './routes/health.js';
 import incidentsRoutes from './routes/incidents/index.js';
+import problemsRoutes from './routes/problems/index.js';
 
 export function buildApp(opts: FastifyServerOptions = {}) {
   const fastify = Fastify({
@@ -23,6 +24,7 @@ export function buildApp(opts: FastifyServerOptions = {}) {
   // Register routes
   fastify.register(healthRoute);
   fastify.register(incidentsRoutes, { prefix: '/api/v1' });
+  fastify.register(problemsRoutes, { prefix: '/api/v1' });
 
   return fastify;
 }
