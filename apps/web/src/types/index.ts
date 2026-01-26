@@ -31,6 +31,15 @@ export type ChangeStatus =
 export type ChangeType = 'STANDARD' | 'NORMAL' | 'EMERGENCY';
 export type RiskLevel = 'LOW' | 'MEDIUM' | 'HIGH';
 
+export type RequestStatus =
+  | 'SUBMITTED'
+  | 'PENDING_APPROVAL'
+  | 'APPROVED'
+  | 'REJECTED'
+  | 'FULFILLING'
+  | 'COMPLETED'
+  | 'CLOSED';
+
 export interface User {
   id: string;
   email: string;
@@ -215,6 +224,81 @@ export interface UpdateChangeInput {
   scheduledEndAt?: string;
   reviewNotes?: string;
   linkedProblemId?: string;
+}
+
+export interface ServiceCatalogItem {
+  id: string;
+  name: string;
+  description: string;
+  categoryId: string;
+  category?: Category;
+  fulfillmentTime: number;
+  requiresApproval: boolean;
+  formSchema: Record<string, any>;
+  isActive: boolean;
+  createdAt: string;
+  updatedAt: string;
+  _count?: {
+    requests: number;
+  };
+}
+
+export interface ServiceRequest {
+  id: string;
+  displayId: string;
+  catalogItemId: string;
+  catalogItem?: ServiceCatalogItem;
+  requesterId: string;
+  requester?: User;
+  status: RequestStatus;
+  priority: Priority;
+  fulfillerId?: string;
+  fulfiller?: User;
+  formData: Record<string, any>;
+  notes?: string;
+  fulfilledAt?: string;
+  closedAt?: string;
+  createdAt: string;
+  updatedAt: string;
+  _count?: {
+    approvals: number;
+  };
+}
+
+export interface CreateServiceRequestInput {
+  catalogItemId: string;
+  requesterId: string;
+  priority: Priority;
+  formData: Record<string, any>;
+  notes?: string;
+}
+
+export interface UpdateServiceRequestInput {
+  status?: RequestStatus;
+  priority?: Priority;
+  fulfillerId?: string;
+  formData?: Record<string, any>;
+  notes?: string;
+}
+
+export interface CreateCatalogItemInput {
+  name: string;
+  description: string;
+  categoryId: string;
+  fulfillmentTime: number;
+  requiresApproval: boolean;
+  formSchema: Record<string, any>;
+  isActive: boolean;
+}
+
+export interface UpdateCatalogItemInput {
+  name?: string;
+  description?: string;
+  categoryId?: string;
+  fulfillmentTime?: number;
+  requiresApproval?: boolean;
+  formSchema?: Record<string, any>;
+  isActive?: boolean;
 }
 
 export interface PaginatedResponse<T> {
