@@ -16,6 +16,21 @@ export type ProblemStatus =
   | 'RESOLVED'
   | 'CLOSED';
 
+export type ChangeStatus =
+  | 'DRAFT'
+  | 'SUBMITTED'
+  | 'PENDING_APPROVAL'
+  | 'APPROVED'
+  | 'REJECTED'
+  | 'SCHEDULED'
+  | 'IMPLEMENTING'
+  | 'COMPLETED'
+  | 'FAILED'
+  | 'CLOSED';
+
+export type ChangeType = 'STANDARD' | 'NORMAL' | 'EMERGENCY';
+export type RiskLevel = 'LOW' | 'MEDIUM' | 'HIGH';
+
 export interface User {
   id: string;
   email: string;
@@ -130,6 +145,76 @@ export interface UpdateProblemInput {
   rootCause?: string;
   workaround?: string;
   permanentFix?: string;
+}
+
+export interface Change {
+  id: string;
+  displayId: string;
+  title: string;
+  description: string;
+  status: ChangeStatus;
+  type: ChangeType;
+  priority: Priority;
+  risk: RiskLevel;
+  impact: string;
+  categoryId: string;
+  category?: Category;
+  requesterId: string;
+  requester?: User;
+  assigneeId?: string;
+  assignee?: User;
+  implementationPlan?: string;
+  rollbackPlan?: string;
+  testPlan?: string;
+  scheduledStartAt?: string;
+  scheduledEndAt?: string;
+  actualStartAt?: string;
+  actualEndAt?: string;
+  reviewNotes?: string;
+  linkedProblemId?: string;
+  linkedProblem?: Problem;
+  createdAt: string;
+  updatedAt: string;
+  _count?: {
+    approvals: number;
+  };
+}
+
+export interface CreateChangeInput {
+  title: string;
+  description: string;
+  type: ChangeType;
+  priority: Priority;
+  risk: RiskLevel;
+  impact: string;
+  categoryId: string;
+  requesterId: string;
+  assigneeId?: string;
+  implementationPlan?: string;
+  rollbackPlan?: string;
+  testPlan?: string;
+  scheduledStartAt?: string;
+  scheduledEndAt?: string;
+  linkedProblemId?: string;
+}
+
+export interface UpdateChangeInput {
+  title?: string;
+  description?: string;
+  status?: ChangeStatus;
+  type?: ChangeType;
+  priority?: Priority;
+  risk?: RiskLevel;
+  impact?: string;
+  categoryId?: string;
+  assigneeId?: string;
+  implementationPlan?: string;
+  rollbackPlan?: string;
+  testPlan?: string;
+  scheduledStartAt?: string;
+  scheduledEndAt?: string;
+  reviewNotes?: string;
+  linkedProblemId?: string;
 }
 
 export interface PaginatedResponse<T> {
