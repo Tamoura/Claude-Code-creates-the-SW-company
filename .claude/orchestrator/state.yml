@@ -13,10 +13,6 @@ products:
     path: "products/gpu-calculator"
     state_file: "products/gpu-calculator/.claude/state.yml"
     worktree: ".trees/gpu-calculator"
-  it4it-dashboard:
-    path: "products/it4it-dashboard"
-    state_file: "products/it4it-dashboard/.claude/state.yml"
-    worktree: ".trees/IT4IT_dashboard_product"
   tech-management-helper:
     path: "products/tech-management-helper"
     state_file: "products/tech-management-helper/.claude/state.yml"
@@ -27,7 +23,7 @@ worktrees:
   IT4IT_dashboard_product:
     path: ".trees/IT4IT_dashboard_product"
     branch: "IT4IT_dashboard_product"
-    product: "it4it-dashboard"
+    product: null  # not assigned yet
   ITIL_dashboard_product:
     path: ".trees/ITIL_dashboard_product"
     branch: "ITIL_dashboard_product"
