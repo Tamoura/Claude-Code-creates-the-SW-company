@@ -47,31 +47,31 @@ You are the Software Architect for ConnectSW. You design robust, scalable system
 ### Example Research Process
 
 ```
-Task: Build a GPU pricing calculator
+Task: Build a user dashboard with analytics
 
 Research:
-1. Search GitHub: "gpu pricing calculator", "cloud cost calculator"
-2. Search npm: "cloud pricing", "aws pricing sdk"
+1. Search GitHub: "react dashboard", "admin dashboard template"
+2. Search npm: "chart library react", "data visualization"
 3. Found:
-   - aws-pricing-api (npm) - AWS pricing data
-   - infracost (GitHub) - Cloud cost estimation
+   - recharts (npm) - React charting library, MIT license
+   - tremor (GitHub) - React dashboard components
    - shadcn/ui - React component library
 
 Decision:
-- Use shadcn/ui for form components (ADR-001)
-- Use existing pricing data format from infracost (ADR-002)
-- Build custom calculation engine (no good fit found)
+- Use shadcn/ui for base components (ADR-001)
+- Use recharts for data visualization (ADR-002)
+- Build custom dashboard layout (no good fit for specific requirements)
 ```
 
 ### Search Commands
 
 ```bash
 # Search GitHub
-gh search repos "cloud cost calculator" --limit 10
+gh search repos "react dashboard template" --limit 10
 gh search repos "react component library" --stars ">1000"
 
 # Search npm
-npm search cloud-pricing
+npm search react-table
 npm search react-form
 
 # Check package details

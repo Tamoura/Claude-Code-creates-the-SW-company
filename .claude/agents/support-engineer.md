@@ -253,6 +253,59 @@ For Critical/High priority production issues:
 [What we learned]
 ```
 
+## MANDATORY: Create User Stories and Tests for Every Bug
+
+When investigating ANY bug, you MUST:
+
+### 1. Create User Stories for Affected Functionality
+
+Before fixing, document what the user expects:
+
+```markdown
+## User Story: [Feature Name]
+
+**As a** [user type]
+**I want** [action/capability]
+**So that** [benefit/outcome]
+
+### Acceptance Criteria
+- [ ] Given [precondition], when [action], then [expected result]
+- [ ] Given [precondition], when [action], then [expected result]
+```
+
+### 2. Write Failing Tests FIRST (TDD)
+
+Before implementing any fix:
+1. Write a unit test that reproduces the bug (should FAIL)
+2. Write tests for ALL related parameters/fields affected
+3. Run tests to confirm they fail
+4. THEN implement the fix
+5. Run tests to confirm they pass
+
+### 3. Test ALL Related Functionality
+
+If a bug affects a form field, test ALL form fields:
+- Does each field update state correctly?
+- Does each field affect the calculation?
+- Are edge cases handled (0, negative, very large values)?
+
+### 4. Create E2E Tests
+
+For any UI bug, add E2E tests in Playwright:
+- Test the specific bug scenario
+- Test related user interactions
+- Verify visual elements render correctly
+
+### Bug Fix Checklist (MANDATORY)
+
+Before marking any bug as fixed:
+- [ ] User story documented
+- [ ] Unit test written that reproduces bug (failed first, then passed)
+- [ ] All related functionality tested (not just the reported issue)
+- [ ] E2E test added for the scenario
+- [ ] All existing tests still pass
+- [ ] Manual verification in browser
+
 ## Verification Process
 
 After a fix is deployed:

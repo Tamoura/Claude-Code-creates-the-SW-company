@@ -532,13 +532,66 @@ async function addToCart(formData: FormData) {
 
 Full documentation: https://github.com/vercel-labs/agent-skills/tree/main/skills/react-best-practices
 
+## MANDATORY: E2E Tests for Every Feature
+
+**You are responsible for writing E2E tests, not just unit tests.**
+
+For every feature you implement, you MUST write Playwright E2E tests that:
+
+1. **Test visual appearance** (not just functionality):
+   ```typescript
+   // Verify button is visible AND styled
+   test('submit button is visible and styled', async ({ page }) => {
+     const button = page.getByRole('button', { name: /submit/i });
+     await expect(button).toBeVisible();
+
+     // Check button has background color (not transparent/invisible)
+     const bgColor = await button.evaluate((el) =>
+       window.getComputedStyle(el).backgroundColor
+     );
+     expect(bgColor).not.toBe('rgba(0, 0, 0, 0)');
+   });
+   ```
+
+2. **Test form inputs are styled**:
+   ```typescript
+   test('form inputs have visible borders', async ({ page }) => {
+     const input = page.locator('input[type="text"]').first();
+     await expect(input).toBeVisible();
+
+     const border = await input.evaluate((el) =>
+       window.getComputedStyle(el).borderWidth
+     );
+     expect(border).not.toBe('0px');
+   });
+   ```
+
+3. **Test interactions work**:
+   ```typescript
+   test('form submission works', async ({ page }) => {
+     await page.fill('input[name="email"]', 'test@example.com');
+     await page.click('button[type="submit"]');
+     await expect(page.getByText(/success/i)).toBeVisible();
+   });
+   ```
+
+**Where to put E2E tests:**
+- `apps/web/e2e/[feature].spec.ts` or `e2e/tests/[feature]/`
+
 ## Pre-Completion Checklist (MANDATORY)
 
 Before marking any task complete, you MUST:
 
-1. **Run unit tests**: `npm test` - all must pass
-2. **Run E2E tests**: `npm run test:e2e` - all must pass
-3. **Visual verification**:
+1. **Write E2E tests**: Create Playwright tests covering:
+   - [ ] Visual verification (elements visible and styled)
+   - [ ] User interactions (clicks, form fills, navigation)
+   - [ ] Expected outcomes (success states, error handling)
+
+2. **Run unit tests**: `npm run test:run` - all must pass
+
+3. **Run E2E tests**: `npm run test:e2e` - all must pass
+
+4. **Visual verification** (manual):
    - Start dev server: `npm run dev`
    - Open in browser and verify:
      - [ ] All UI elements render correctly
@@ -547,7 +600,8 @@ Before marking any task complete, you MUST:
      - [ ] Colors and styling load properly
      - [ ] Layout is correct on desktop
      - [ ] No console errors in browser
-4. **Test interactions**:
+
+5. **Test interactions** (manual):
    - [ ] Click all buttons - they respond
    - [ ] Fill all forms - inputs accept text
    - [ ] Submit forms - actions trigger correctly
@@ -557,6 +611,7 @@ Before marking any task complete, you MUST:
 - Buttons/inputs are invisible or unstyled
 - Any visual element is missing
 - Console shows CSS/JS errors
+- E2E tests don't exist for the feature
 
 If visual issues exist, FIX THEM before reporting completion.
 

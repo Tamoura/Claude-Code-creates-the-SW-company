@@ -1,3 +1,5 @@
+import { Link } from 'react-router-dom';
+
 /**
  * Footer component for the GPU Calculator
  * Shows last updated date and methodology link
@@ -13,12 +15,12 @@ export function Footer() {
             </p>
           </div>
           <div className="flex space-x-4">
-            <a
-              href="#methodology"
+            <Link
+              to="/methodology"
               className="hover:text-gray-900 transition-colors"
             >
               Methodology
-            </a>
+            </Link>
             <span className="text-gray-400">|</span>
             <a
               href="https://github.com/connectsw"
