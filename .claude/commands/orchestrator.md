@@ -34,11 +34,13 @@ cat .claude/orchestrator/state.yml 2>/dev/null || echo "No state file"
 
 | CEO Request Pattern | Workflow |
 |---------------------|----------|
+| "Prototype: [idea]" | prototype-first |
 | "New product: [idea]" | new-product |
 | "Add feature: [X] to [product]" | new-feature |
 | "Fix bug: [description]" | bug-fix |
 | "Ship/deploy [product]" | release |
 | "Status update" | Compile report from state |
+| "Convert [product] to full product" | prototype-to-product conversion |
 
 ### 3. For New Work: Instantiate Task Graph
 
@@ -249,7 +251,8 @@ Pause and report to CEO at these points:
 
 | Template | Use For | Key Parameters |
 |----------|---------|----------------|
-| `new-product` | Create new product | PRODUCT, DESCRIPTION |
+| `prototype-first` | Quick concept validation (3 hours) | PRODUCT, CONCEPT |
+| `new-product` | Create new product (full development) | PRODUCT, DESCRIPTION |
 | `new-feature` | Add feature | PRODUCT, FEATURE, FEATURE_ID |
 | `bug-fix` | Fix a bug | PRODUCT, BUG_ID, DESCRIPTION |
 | `release` | Release to production | PRODUCT, VERSION |
