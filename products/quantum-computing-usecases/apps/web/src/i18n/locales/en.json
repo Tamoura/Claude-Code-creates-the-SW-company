@@ -15,12 +15,27 @@
   },
   "home": {
     "hero": {
-      "title": "Discover Practical Quantum Computing Applications",
-      "subtitle": "Explore real-world use cases, compare quantum solutions, and find the right applications for your industry",
-      "cta": "Explore Use Cases"
+      "title": "Discover Practical Quantum Computing Use Cases",
+      "subtitle": "Explore real-world quantum computing applications for your industry. Understand what's ready today and what's coming tomorrow.",
+      "cta": "Browse Use Cases"
     },
     "featured": {
-      "title": "Featured Use Cases"
+      "title": "Featured Use Cases",
+      "viewAll": "View all {{count}} use cases"
+    },
+    "features": {
+      "discover": {
+        "title": "Discover",
+        "description": "Find quantum computing applications relevant to your industry and business challenges"
+      },
+      "compare": {
+        "title": "Compare",
+        "description": "Evaluate multiple use cases side-by-side to understand maturity and requirements"
+      },
+      "learn": {
+        "title": "Learn",
+        "description": "Follow curated learning paths to build your quantum computing knowledge"
+      }
     }
   },
   "useCases": {

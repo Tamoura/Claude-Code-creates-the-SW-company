@@ -23,8 +23,8 @@ export default function Layout({ children }: LayoutProps) {
             <Link to="/" className="text-xl font-bold text-blue-600 hover:text-blue-700">
               {t('header.title')}
             </Link>
-            <div className="flex items-center space-x-4">
-              <nav className="flex space-x-8">
+            <div className="flex items-center gap-4">
+              <nav className="flex gap-8">
                 <Link
                   to="/use-cases"
                   className={`${
