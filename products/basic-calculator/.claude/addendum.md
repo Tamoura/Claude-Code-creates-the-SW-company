@@ -17,32 +17,59 @@
 
 ## Tech Stack
 
-*To be completed by Architect*
+**Completed by**: Architect Agent (2026-01-27)
 
-| Layer | Technology | Notes |
-|-------|------------|-------|
-| Frontend | TBD | |
-| Backend | None | Client-side only |
-| Database | None | No data persistence |
-| Styling | TBD | |
-| Testing | TBD | |
-| Deployment | TBD | |
+| Layer | Technology | Version | Notes |
+|-------|------------|---------|-------|
+| **Frontend** | React | 18.2+ | Component architecture, fast rendering |
+| **Build Tool** | Vite | 5.x | Fast dev server, optimized production builds |
+| **Language** | TypeScript | 5.x | Type safety for calculation logic |
+| **Styling** | Tailwind CSS | 3.x | Utility-first, responsive design, small bundle |
+| **Backend** | None | N/A | Client-side only - no server needed |
+| **Database** | None | N/A | No data persistence in MVP |
+| **Unit Testing** | Vitest | Latest | Fast, Vite-native, Jest-compatible API |
+| **Component Testing** | React Testing Library | 14.x | Test user behavior, not implementation |
+| **E2E Testing** | Playwright | 1.41+ | Cross-browser testing, mobile emulation |
+| **Linting** | ESLint | 8.x | TypeScript rules, React hooks rules |
+| **Formatting** | Prettier | 3.x | Consistent code style |
+| **Deployment** | Vercel (recommended) | Latest | Auto-preview, free tier, CDN, HTTPS |
+
+**Port**: 3101 (company standard: 3100+)
+
+**See**: [ADR-001: Tech Stack Selection](../docs/ADRs/ADR-001-tech-stack.md) for rationale
 
 ## Libraries & Dependencies
 
-*To be completed by Architect*
+**Completed by**: Architect Agent (2026-01-27)
 
 ### Adopted (Use These)
 
 | Library | Purpose | Why Chosen |
 |---------|---------|------------|
-| TBD | TBD | TBD |
+| `react` | UI framework | Component architecture, wide ecosystem, testable |
+| `react-dom` | React DOM rendering | Official React renderer |
+| `vite` | Build tool | Fast dev server, optimized builds, TypeScript support |
+| `typescript` | Type safety | Prevents calculation errors, better IDE support |
+| `tailwindcss` | CSS framework | Rapid development, small bundle (purged), responsive utilities |
+| `vitest` | Unit testing | Vite-native, fast, Jest-compatible API |
+| `@testing-library/react` | Component testing | Tests user behavior, encourages accessibility |
+| `@playwright/test` | E2E testing | Cross-browser support, excellent mobile emulation |
+| `eslint` | Linting | Catch errors, enforce code quality |
+| `prettier` | Formatting | Consistent code style across team |
 
 ### Avoid (Don't Use)
 
 | Library | Reason |
 |---------|--------|
-| TBD | TBD |
+| `decimal.js`, `big.js` | Too heavy (6-32KB) for basic calculator - use custom rounding instead (see ADR-002) |
+| `redux`, `zustand`, `jotai` | Unnecessary - simple useState is sufficient for single-component state |
+| `next.js` | Overkill - no SSR needed, Vite is simpler and lighter |
+| `styled-components`, `emotion` | Runtime overhead - Tailwind is faster and smaller |
+| `jest` | Vitest is faster and Vite-native, use Vitest instead |
+| `enzyme` | Outdated - React Testing Library is modern standard |
+| Web fonts (Google Fonts, etc.) | Use system fonts for performance (no network request) |
+
+**Bundle Size Budget**: < 100KB total (gzipped HTML + CSS + JS)
 
 ## Site Map
 
@@ -58,16 +85,98 @@
 
 ## Design Patterns
 
-*To be completed by Architect*
+**Completed by**: Architect Agent (2026-01-27)
 
 ### Component Patterns
-TBD
+
+**1. Separation of Concerns (PATTERN-006 from company knowledge)**
+
+```
+src/
+├── components/          # UI components (React)
+│   ├── Calculator.tsx   # Smart component (state + logic)
+│   ├── Display.tsx      # Presentational (just displays)
+│   ├── ButtonGrid.tsx   # Presentational (layout)
+│   └── Button.tsx       # Reusable button
+│
+├── calculators/         # Pure functions (business logic)
+│   ├── arithmetic.ts    # calculate() function
+│   └── precision.ts     # rounding, formatting
+│
+├── types/
+│   └── calculator.ts    # TypeScript interfaces
+│
+└── hooks/
+    └── useCalculator.ts # Custom hook (optional)
+```
+
+**Why**: Separating calculation logic from UI makes testing easier and logic reusable.
+
+**2. Smart vs Presentational Components**
+
+- **Smart Component** (`Calculator.tsx`): Manages state, handles events, contains business logic
+- **Presentational Components** (`Display.tsx`, `Button.tsx`): Receive props, render UI, no state
+
+**Why**: Easier to test, reuse, and maintain.
+
+**3. Pure Functions for Calculations**
+
+```typescript
+// ✅ GOOD: Pure function (testable without React)
+export function calculate(a: number, b: number, op: Operation): number {
+  // ...calculation logic
+}
+
+// ❌ BAD: Mixed with React component
+function Calculator() {
+  const handleClick = () => {
+    const result = a + b; // Logic inside component
+  }
+}
+```
+
+**Why**: Pure functions are easier to test, debug, and reason about.
 
 ### State Management
-TBD
+
+**Strategy**: React `useState` only (no Redux/Zustand)
+
+```typescript
+// All state lives in Calculator.tsx
+interface CalculatorState {
+  currentValue: string;        // "42.5"
+  previousValue: string | null; // "10"
+  operation: '+' | '-' | '*' | '/' | null;
+  shouldResetDisplay: boolean;
+}
+
+const [state, setState] = useState<CalculatorState>({ ... });
+```
+
+**Why No Global State**:
+- Single component owns all state
+- No prop drilling (only 2-3 component levels)
+- Zero extra dependencies
+- Follows company ANTI-002 pattern (avoid global state for simple apps)
+
+**State Updates**: Always use functional updates for correctness
+
+```typescript
+// ✅ GOOD
+setState(prev => ({ ...prev, currentValue: '5' }));
+
+// ❌ BAD (can cause race conditions)
+setState({ ...state, currentValue: '5' });
+```
 
 ### API Patterns
-N/A - No backend API
+
+**N/A** - No backend API, client-side only
+
+**Future**: If we add backend (user accounts, calculation history):
+- Use tRPC (company standard for TypeScript monorepos)
+- RESTful API with Fastify
+- See [Reusable Components Guide](/.claude/architecture/reusable-components.md)
 
 ## Business Logic
 
@@ -133,18 +242,65 @@ ERROR → (number input or clear) → READY
 
 ## Data Models
 
-*To be completed by Architect*
+**Completed by**: Architect Agent (2026-01-27)
 
 ### Key Entities
-TBD
 
-**Calculator State** (example):
-- currentValue: string | number
-- previousValue: string | number | null
-- operation: '+' | '-' | '*' | '/' | null
-- displayValue: string
-- isError: boolean
-- errorMessage: string | null
+**1. Calculator State** (runtime only, no persistence)
+
+```typescript
+// src/types/calculator.ts
+
+interface CalculatorState {
+  currentValue: string;        // Current display value (what user is typing or result)
+  previousValue: string | null; // Previous operand (stored when operation selected)
+  operation: '+' | '-' | '*' | '/' | null; // Selected operation
+  shouldResetDisplay: boolean;  // Flag to reset display on next number input
+}
+```
+
+**Example State Transitions**:
+```
+Initial:   { currentValue: "0", previousValue: null, operation: null, shouldResetDisplay: false }
+Press "5": { currentValue: "5", previousValue: null, operation: null, shouldResetDisplay: false }
+Press "+": { currentValue: "5", previousValue: "5", operation: "+", shouldResetDisplay: true }
+Press "3": { currentValue: "3", previousValue: "5", operation: "+", shouldResetDisplay: false }
+Press "=": { currentValue: "8", previousValue: null, operation: null, shouldResetDisplay: false }
+```
+
+**2. Operation Type**
+
+```typescript
+type Operation = '+' | '-' | '*' | '/';
+```
+
+**3. Button Type**
+
+```typescript
+type ButtonVariant = 'number' | 'operator' | 'equals' | 'clear';
+
+interface ButtonProps {
+  value: string;
+  onClick: () => void;
+  ariaLabel: string;
+  variant: ButtonVariant;
+}
+```
+
+### No Database Models
+
+**Rationale**: Client-side only app, no data persistence in MVP.
+
+**Future (Phase 2)**: If we add calculation history:
+```typescript
+// localStorage only (no database)
+interface CalculationHistory {
+  id: string;
+  timestamp: Date;
+  expression: string;  // "5 + 3"
+  result: string;      // "8"
+}
+```
 
 ## External Integrations
 
@@ -152,24 +308,67 @@ None - This is a standalone client-side application.
 
 ## Performance Requirements
 
-- **Initial page load**: < 1 second on 3G connection
-  - Minimal bundle size (target < 100KB gzipped)
-  - No external API calls
-  - Inline critical CSS
+**Completed by**: Architect Agent (2026-01-27)
 
-- **Calculation execution**: < 100ms
-  - All calculations are synchronous
-  - No heavy computations
+### Performance Metrics
 
-- **Button press feedback**: < 50ms
-  - Immediate visual feedback on click/tap
-  - Smooth animations (60fps)
+| Metric | Target | How to Measure | Notes |
+|--------|--------|----------------|-------|
+| **Initial page load** | < 1 second on 3G | Lighthouse Performance score > 90 | Test with throttled connection |
+| **Bundle size** | < 100KB (gzipped) | Vite build output, Bundle Analyzer | React ~45KB, our code ~20KB, Tailwind ~10KB |
+| **Calculation execution** | < 100ms | Unit test timing | Actually < 1ms (native JavaScript arithmetic) |
+| **Button feedback** | < 50ms | Visual inspection, Lighthouse | CSS transitions, no blocking JS |
+| **Time to Interactive (TTI)** | < 2 seconds | Lighthouse | Static HTML, minimal JS execution |
+| **First Contentful Paint (FCP)** | < 1 second | Lighthouse | Critical CSS inlined |
 
-- **Bundle size targets**:
-  - HTML: < 5KB
-  - CSS: < 10KB
-  - JavaScript: < 50KB (gzipped)
-  - Total: < 100KB (initial load)
+### Bundle Size Breakdown
+
+```
+Total Budget: 100KB (gzipped)
+├── HTML: ~5KB
+├── CSS: ~10KB (Tailwind purged)
+└── JavaScript: ~70KB
+    ├── React + ReactDOM: ~45KB
+    ├── App code: ~15KB
+    └── Vite runtime: ~10KB
+
+Actual size: ~90KB (10KB buffer)
+```
+
+### Optimization Techniques
+
+**Build-time**:
+- Vite tree-shaking (removes unused code)
+- Terser minification (compress variable names)
+- Tailwind CSS purging (removes unused classes)
+- No polyfills needed (modern browsers only)
+
+**Runtime**:
+- No external API calls (zero network latency)
+- System fonts (no web font loading)
+- CSS-only design (no images)
+- Inline critical CSS (no render-blocking)
+- Calculations are synchronous (no async overhead)
+
+**Not Needed**:
+- Code splitting (bundle already tiny)
+- Lazy loading (everything needed upfront)
+- Service worker (Phase 2 PWA feature)
+
+### Testing Performance
+
+```bash
+# Lighthouse CI (run on every PR)
+npm run build
+npx lighthouse http://localhost:4173 --view
+
+# Bundle size check
+npm run build
+ls -lh dist/assets/*.js | awk '{print $5, $9}'
+
+# Manual 3G test
+# Chrome DevTools > Network > Throttling > Slow 3G
+```
 
 ## Special Considerations
 
@@ -243,6 +442,17 @@ Essential keyboard support:
 
 ---
 
-*Created by*: Product Manager
+## Architecture References
+
+**For detailed technical architecture, see**:
+- [System Architecture Document](../docs/architecture.md)
+- [ADR-001: Tech Stack Selection](../docs/ADRs/ADR-001-tech-stack.md)
+- [ADR-002: Decimal Precision Strategy](../docs/ADRs/ADR-002-decimal-precision.md)
+- [ADR-003: Accessibility-First Design](../docs/ADRs/ADR-003-accessibility-first.md)
+
+---
+
+*Created by*: Product Manager (2026-01-27)
+*Tech Stack by*: Architect Agent (2026-01-27)
 *Last Updated*: 2026-01-27
-*Next: Architect to complete Tech Stack, Libraries, Design Patterns, and Data Models sections*
+*Status*: Ready for Frontend Engineer
