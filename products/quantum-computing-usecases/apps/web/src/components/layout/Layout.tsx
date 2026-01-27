@@ -55,6 +55,16 @@ export default function Layout({ children }: LayoutProps) {
                 >
                   {t('common.learningPath')}
                 </Link>
+                <Link
+                  to="/quantum-sovereignty-arab-world"
+                  className={`${
+                    isActive('/quantum-sovereignty-arab-world')
+                      ? 'text-blue-600 border-b-2 border-blue-600'
+                      : 'text-gray-600 hover:text-gray-900'
+                  } px-3 py-2 text-sm font-medium transition-colors`}
+                >
+                  {t('common.arabSovereignty')}
+                </Link>
               </nav>
               <LanguageSwitcher />
             </div>

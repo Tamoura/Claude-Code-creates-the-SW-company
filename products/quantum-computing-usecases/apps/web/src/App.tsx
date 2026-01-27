@@ -5,6 +5,7 @@ import UseCases from './pages/UseCases';
 import UseCaseDetail from './pages/UseCaseDetail';
 import Compare from './pages/Compare';
 import LearningPath from './pages/LearningPath';
+import QuantumSovereigntyArab from './pages/QuantumSovereigntyArab';
 
 function App() {
   return (
@@ -15,6 +16,7 @@ function App() {
         <Route path="/use-cases/:slug" element={<UseCaseDetail />} />
         <Route path="/compare" element={<Compare />} />
         <Route path="/learning-path" element={<LearningPath />} />
+        <Route path="/quantum-sovereignty-arab-world" element={<QuantumSovereigntyArab />} />
       </Routes>
     </Layout>
   );

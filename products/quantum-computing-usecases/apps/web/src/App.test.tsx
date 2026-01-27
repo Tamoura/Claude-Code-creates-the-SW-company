@@ -32,5 +32,6 @@ describe('App', () => {
     expect(navTexts.some(text => text?.match(/browse/i))).toBe(true);
     expect(navTexts.some(text => text?.match(/compare/i))).toBe(true);
     expect(navTexts.some(text => text?.match(/learning path/i))).toBe(true);
+    expect(navTexts.some(text => text?.match(/arab sovereignty/i))).toBe(true);
   });
 });
