@@ -1,0 +1,74 @@
+{
+  "common": {
+    "browse": "Browse",
+    "compare": "Compare",
+    "learningPath": "Learning Path",
+    "home": "Home",
+    "about": "About"
+  },
+  "header": {
+    "title": "Quantum Use Cases",
+    "language": "Language"
+  },
+  "footer": {
+    "copyright": "Quantum Computing Use Cases Platform - Prototype v0.1"
+  },
+  "home": {
+    "hero": {
+      "title": "Discover Practical Quantum Computing Applications",
+      "subtitle": "Explore real-world use cases, compare quantum solutions, and find the right applications for your industry",
+      "cta": "Explore Use Cases"
+    },
+    "featured": {
+      "title": "Featured Use Cases"
+    }
+  },
+  "useCases": {
+    "title": "Quantum Computing Use Cases",
+    "subtitle": "Browse and filter quantum computing applications by industry, problem type, and maturity level",
+    "filters": {
+      "title": "Filters",
+      "industry": "Industry",
+      "problemType": "Problem Type",
+      "maturityLevel": "Maturity Level",
+      "clear": "Clear Filters",
+      "search": "Search use cases..."
+    },
+    "noResults": "No use cases found matching your filters",
+    "loading": "Loading use cases..."
+  },
+  "compare": {
+    "title": "Compare Use Cases",
+    "subtitle": "Select up to 3 use cases to compare side-by-side",
+    "select": "Select Use Cases",
+    "noSelection": "No use cases selected for comparison",
+    "clear": "Clear Selection"
+  },
+  "learningPath": {
+    "title": "Learning Path",
+    "subtitle": "Follow a curated progression of quantum computing use cases from beginner to advanced",
+    "comingSoon": "Learning paths coming soon!"
+  },
+  "maturity": {
+    "theoretical": "Theoretical",
+    "experimental": "Experimental",
+    "pre-production": "Pre-Production",
+    "production-ready": "Production Ready"
+  },
+  "industry": {
+    "finance": "Finance",
+    "pharmaceuticals": "Pharmaceuticals",
+    "logistics": "Logistics",
+    "materials-science": "Materials Science",
+    "ai-ml": "AI/ML",
+    "security": "Security",
+    "environmental": "Environmental",
+    "chemistry": "Chemistry"
+  },
+  "problemType": {
+    "optimization": "Optimization",
+    "simulation": "Simulation",
+    "machine-learning": "Machine Learning",
+    "cryptography": "Cryptography"
+  }
+}
