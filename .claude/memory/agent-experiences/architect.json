@@ -1,21 +1,35 @@
 {
   "agent": "architect",
-  "version": "1.1.0",
-  "updated_at": "2026-01-26T12:00:00Z",
+  "version": "1.2.0",
+  "updated_at": "2026-01-27T12:00:00Z",
   "learned_patterns": [
     {
       "pattern_id": "PATTERN-006",
       "description": "Calculation Module Separation",
       "first_applied": "2026-01-25",
-      "products_applied": ["gpu-calculator"],
-      "notes": "Pure functions in calculators/ directory, easy to test"
+      "products_applied": ["gpu-calculator", "basic-calculator"],
+      "notes": "Pure functions in calculators/ directory, easy to test, reusable"
     },
     {
       "pattern_id": "DECISION-VITE-VS-NEXTJS",
       "description": "Choose Vite for client-side only apps, Next.js for SSR",
       "first_applied": "2026-01-25",
-      "products_applied": ["gpu-calculator"],
-      "notes": "Documented in ADR-001"
+      "products_applied": ["gpu-calculator", "basic-calculator"],
+      "notes": "Documented in ADR-001 for both products"
+    },
+    {
+      "pattern_id": "PATTERN-009",
+      "description": "Bundle Size vs Library Trade-off",
+      "first_applied": "2026-01-27",
+      "products_applied": ["basic-calculator"],
+      "notes": "For basic arithmetic, custom rounding (20 LOC) can replace decimal.js (32KB). Only use heavy libraries when precision requirements justify the bundle cost."
+    },
+    {
+      "pattern_id": "PATTERN-010",
+      "description": "Accessibility as Architecture",
+      "first_applied": "2026-01-27",
+      "products_applied": ["basic-calculator"],
+      "notes": "Design accessibility from start (semantic HTML, ARIA, keyboard nav) rather than retrofitting. 10x easier upfront. Create ADR for accessibility strategy."
     }
   ],
   "task_history": [
@@ -45,6 +59,35 @@
       ],
       "tests_added": 0,
       "coverage_percent": 0
+    },
+    {
+      "task_id": "ARCH-01",
+      "product": "basic-calculator",
+      "task_type": "architecture",
+      "started_at": "2026-01-27T10:00:00Z",
+      "completed_at": "2026-01-27T12:00:00Z",
+      "estimated_minutes": 120,
+      "actual_minutes": 120,
+      "status": "success",
+      "challenges": [
+        "Deciding on decimal precision strategy (library vs custom)",
+        "Balancing bundle size with accuracy requirements"
+      ],
+      "solutions": [
+        "Chose custom rounding over decimal.js to save 32KB (30% of budget)",
+        "Created comprehensive accessibility ADR as part of architecture",
+        "Reused patterns from gpu-calculator where applicable"
+      ],
+      "artifacts": [
+        "products/basic-calculator/docs/architecture.md",
+        "products/basic-calculator/docs/ADRs/ADR-001-tech-stack.md",
+        "products/basic-calculator/docs/ADRs/ADR-002-decimal-precision.md",
+        "products/basic-calculator/docs/ADRs/ADR-003-accessibility-first.md",
+        "products/basic-calculator/docs/api-contract.md",
+        "products/basic-calculator/.claude/addendum.md"
+      ],
+      "tests_added": 0,
+      "coverage_percent": 0
     }
   ],
   "common_mistakes": [
@@ -55,6 +98,22 @@
       "impact": "Wasted development time, unnecessary complexity",
       "prevention": "Start with simplest solution that meets requirements, add complexity only when needed",
       "checklist_item": "Question: Does this need SSR? Global state? Backend API?"
+    },
+    {
+      "mistake": "Adding heavy libraries without considering bundle size",
+      "occurred": 0,
+      "last_occurrence": null,
+      "impact": "Slow page loads, poor performance on mobile",
+      "prevention": "Always check bundle size impact. For < 100KB budget, 32KB library is 30% of total. Consider custom solution for simple use cases.",
+      "checklist_item": "Question: What's the bundle size? Can we achieve 80% of functionality with 10% of the code?"
+    },
+    {
+      "mistake": "Retrofitting accessibility after UI is built",
+      "occurred": 0,
+      "last_occurrence": null,
+      "impact": "10x more work, often incomplete, fails WCAG compliance",
+      "prevention": "Design accessibility from start. Include ARIA labels, keyboard nav, semantic HTML in initial component design.",
+      "checklist_item": "Question: Does this have proper ARIA labels? Keyboard nav? Focus indicators?"
     }
   ],
   "preferred_approaches": [
@@ -62,25 +121,37 @@
       "scenario": "Choosing frontend framework",
       "approach": "Decision tree: SSR needed? -> Next.js. Otherwise -> Vite + React",
       "reason": "Next.js adds complexity; only worth it for SSR/SSG benefits",
-      "example": "gpu-calculator uses Vite since it's purely client-side"
+      "example": "gpu-calculator and basic-calculator use Vite since they're purely client-side"
     },
     {
       "scenario": "State management decision",
       "approach": "Start with React useState, add Zustand only if cross-component state needed",
       "reason": "Avoid premature complexity",
-      "example": "gpu-calculator uses useState only"
+      "example": "basic-calculator uses useState only for single-component state"
     },
     {
       "scenario": "Architecture documentation",
       "approach": "ADRs for significant decisions, addendum.md for product-specific guidance",
       "reason": "Future agents need to understand why decisions were made",
-      "example": "gpu-calculator has 3 ADRs"
+      "example": "basic-calculator has 3 ADRs (tech stack, precision, accessibility)"
     },
     {
       "scenario": "Open source research",
       "approach": "Always search for existing solutions before designing custom",
       "reason": "Save development time, benefit from community testing",
       "example": "ADR-003 documents research for gpu-calculator libraries"
+    },
+    {
+      "scenario": "Bundle size optimization",
+      "approach": "Set budget upfront, evaluate libraries against budget, consider custom solutions for simple needs",
+      "reason": "Performance is a feature; small bundles = fast load times",
+      "example": "basic-calculator rejected decimal.js (32KB) for custom rounding (< 1KB)"
+    },
+    {
+      "scenario": "Accessibility strategy",
+      "approach": "Create dedicated ADR for accessibility, design it in from start, include in architecture review",
+      "reason": "Accessibility is architectural concern, not just implementation detail",
+      "example": "basic-calculator ADR-003 covers WCAG 2.1 AA strategy comprehensively"
     }
   ],
   "decision_patterns": [
@@ -101,6 +172,16 @@
         "moderate": "Zustand",
         "complex": "Redux Toolkit (rarely needed)"
       }
+    },
+    {
+      "decision_type": "Library vs Custom Code",
+      "factors": ["Bundle size budget", "Complexity of need", "Maintenance burden", "Performance"],
+      "common_choices": {
+        "simple_need_tight_budget": "Custom code (20-50 LOC)",
+        "complex_need_loose_budget": "Well-maintained library",
+        "security_critical": "Battle-tested library (crypto, auth)",
+        "performance_critical": "Custom optimized code"
+      }
     }
   ],
   "efficiency_improvements": [
@@ -117,15 +198,22 @@
       "new_approach": "Consult .claude/architecture/reusable-components.md first",
       "time_saved_minutes": 60,
       "first_used": "2026-01-25"
+    },
+    {
+      "area": "ADR creation",
+      "old_approach": "Write each ADR independently",
+      "new_approach": "Reuse structure and alternatives analysis from similar products",
+      "time_saved_minutes": 20,
+      "first_used": "2026-01-27"
     }
   ],
   "performance_metrics": {
-    "tasks_completed": 1,
+    "tasks_completed": 2,
     "success_rate": 1.0,
     "average_time_minutes": 120,
     "median_time_minutes": 120,
     "on_time_delivery": 1.0,
-    "checkpoints_passed_first_try": 1,
+    "checkpoints_passed_first_try": 2,
     "ceo_revisions_requested": 0
   }
 }
