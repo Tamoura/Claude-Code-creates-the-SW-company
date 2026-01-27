@@ -119,6 +119,14 @@ Then explore:
 | [Troubleshooting Guide](TROUBLESHOOTING.md) | Common issues and solutions |
 | [FAQ](FAQ.md) | Frequently asked questions |
 
+### 6. Enhancement & Improvement
+
+| Document | Description |
+|----------|-------------|
+| [Enhancements](ENHANCEMENTS.md) | Comprehensive enhancement recommendations |
+| [Enhancements Summary](ENHANCEMENTS-SUMMARY.md) | Quick reference guide for improvements |
+| [Quick Wins Implementation](QUICK-WINS-IMPLEMENTATION.md) | Ready-to-use code for immediate improvements |
+
 ---
 
 ## 🎯 Documentation by Topic

@@ -1,0 +1,12 @@
+{
+  "version": "1.0.0",
+  "daily_limit": 100,
+  "weekly_limit": 600,
+  "monthly_limit": 2500,
+  "currency": "USD",
+  "alerts": {
+    "warning_threshold": 0.8,
+    "critical_threshold": 0.95
+  },
+  "updated_at": "2026-01-26T00:00:00Z"
+}

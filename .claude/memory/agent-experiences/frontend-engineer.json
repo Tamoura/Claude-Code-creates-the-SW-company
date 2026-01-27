@@ -1,17 +1,171 @@
 {
   "agent": "frontend-engineer",
-  "version": "1.0.0",
-  "updated_at": "2025-01-26T10:00:00Z",
-  "learned_patterns": [],
-  "task_history": [],
-  "common_mistakes": [],
-  "preferred_approaches": [],
-  "efficiency_improvements": [],
+  "version": "1.1.0",
+  "updated_at": "2026-01-27T05:09:19Z",
+  "learned_patterns": [
+    {
+      "pattern_id": "PATTERN-001",
+      "description": "Vite + React + TypeScript Setup",
+      "first_applied": "2026-01-25",
+      "products_applied": [
+        "gpu-calculator"
+      ],
+      "notes": "Always configure port to 3100+ to avoid conflicts"
+    },
+    {
+      "pattern_id": "PATTERN-002",
+      "description": "Tailwind CSS Content Paths",
+      "first_applied": "2026-01-25",
+      "products_applied": [
+        "gpu-calculator"
+      ],
+      "notes": "Must include index.html for Vite projects"
+    },
+    {
+      "pattern_id": "PATTERN-005",
+      "description": "Custom Hook Pattern for Business Logic",
+      "first_applied": "2026-01-25",
+      "products_applied": [
+        "gpu-calculator"
+      ],
+      "notes": "useCalculator hook pattern works well for stateful operations"
+    },
+    {
+      "pattern_id": "PATTERN-008",
+      "description": "Component Folder Structure",
+      "first_applied": "2026-01-25",
+      "products_applied": [
+        "gpu-calculator"
+      ],
+      "notes": "layout/, forms/, results/, common/ organization"
+    }
+  ],
+  "task_history": [
+    {
+      "task_id": "FRONTEND-01",
+      "product": "gpu-calculator",
+      "task_type": "foundation",
+      "started_at": "2026-01-25T09:00:00Z",
+      "completed_at": "2026-01-25T11:00:00Z",
+      "estimated_minutes": 120,
+      "actual_minutes": 120,
+      "status": "success",
+      "challenges": [
+        "Needed to choose between Vite and Next.js",
+        "Tailwind classes not appearing initially"
+      ],
+      "solutions": [
+        "Chose Vite since app is client-side only (no SSR needed)",
+        "Fixed tailwind.config.js content paths to include index.html"
+      ],
+      "artifacts": [
+        "products/gpu-calculator/apps/web/vite.config.ts",
+        "products/gpu-calculator/apps/web/tailwind.config.js",
+        "products/gpu-calculator/apps/web/src/App.tsx"
+      ],
+      "tests_added": 5,
+      "coverage_percent": 85
+    },
+    {
+      "task_id": "FRONTEND-02",
+      "product": "gpu-calculator",
+      "task_type": "feature",
+      "started_at": "2026-01-25T13:00:00Z",
+      "completed_at": "2026-01-25T16:00:00Z",
+      "estimated_minutes": 180,
+      "actual_minutes": 180,
+      "status": "success",
+      "challenges": [
+        "Complex calculation logic mixed with UI",
+        "Form state management"
+      ],
+      "solutions": [
+        "Created useCalculator hook to encapsulate business logic",
+        "Separated pure calculation functions to calculators/ directory"
+      ],
+      "artifacts": [
+        "products/gpu-calculator/apps/web/src/hooks/useCalculator.ts",
+        "products/gpu-calculator/apps/web/src/calculators/trainingCalculator.ts",
+        "products/gpu-calculator/apps/web/src/components/forms/TrainingForm.tsx"
+      ],
+      "tests_added": 12,
+      "coverage_percent": 90
+    },
+    {
+      "task_id": "FRONTEND-01",
+      "product": "basic-calculator",
+      "timestamp": "2026-01-27T05:09:19Z",
+      "status": "success",
+      "time_minutes": 90,
+      "summary": "Built complete calculator with Vite+React+TypeScript, 69 tests passing, 100% coverage on calculation logic"
+    }
+  ],
+  "common_mistakes": [
+    {
+      "mistake": "Forgot to include index.html in Tailwind content paths",
+      "occurred": 1,
+      "last_occurrence": "2026-01-25",
+      "impact": "Tailwind classes not working",
+      "prevention": "Always check tailwind.config.js content array includes index.html and all src paths",
+      "checklist_item": "Verify Tailwind content paths after initial setup"
+    },
+    {
+      "mistake": "Put calculation logic directly in components",
+      "occurred": 1,
+      "last_occurrence": "2026-01-25",
+      "impact": "Hard to test, components too large",
+      "prevention": "Always extract business logic to custom hooks or pure functions",
+      "checklist_item": "Create calculators/ or utils/ for complex logic"
+    }
+  ],
+  "preferred_approaches": [
+    {
+      "scenario": "Form state management",
+      "approach": "Use React useState for simple forms, React Hook Form for complex forms",
+      "reason": "useState is simpler for basic cases, RHF handles validation better",
+      "example": "gpu-calculator uses useState for the training form"
+    },
+    {
+      "scenario": "Business logic separation",
+      "approach": "Extract to custom hooks with loading/error states",
+      "reason": "Keeps components clean, makes testing easier",
+      "example": "useCalculator hook in gpu-calculator"
+    },
+    {
+      "scenario": "Component organization",
+      "approach": "Group by purpose: layout/, forms/, results/, common/",
+      "reason": "Easy to find components, scales well",
+      "example": "gpu-calculator component structure"
+    },
+    {
+      "scenario": "Styling approach",
+      "approach": "Tailwind utility classes + custom color palette in theme",
+      "reason": "Consistent design, fast development, small bundle",
+      "example": "gpu-calculator uses primary color palette"
+    }
+  ],
+  "efficiency_improvements": [
+    {
+      "area": "Vite project setup",
+      "old_approach": "Manual configuration of TypeScript, Tailwind, testing",
+      "new_approach": "npm create vite@latest with template, then add Tailwind and Vitest configs from patterns",
+      "time_saved_minutes": 30,
+      "first_used": "2026-01-25"
+    },
+    {
+      "area": "Component testing",
+      "old_approach": "Jest with complex configuration",
+      "new_approach": "Vitest with jsdom - same API, faster, simpler config",
+      "time_saved_minutes": 20,
+      "first_used": "2026-01-25"
+    }
+  ],
   "performance_metrics": {
-    "tasks_completed": 0,
-    "success_rate": 0,
-    "average_time_minutes": 0,
-    "median_time_minutes": 0,
-    "on_time_delivery": 0
+    "tasks_completed": 3,
+    "success_rate": 1.00,
+    "average_time_minutes": 30,
+    "median_time_minutes": 150,
+    "on_time_delivery": 1.0,
+    "test_coverage_average": 87.5
   }
 }
