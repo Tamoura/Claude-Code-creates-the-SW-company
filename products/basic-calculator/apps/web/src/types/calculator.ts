@@ -1,4 +1,4 @@
-import { Operation } from '../calculators/arithmetic';
+import type { Operation } from '../calculators/arithmetic';
 
 /**
  * Calculator state interface

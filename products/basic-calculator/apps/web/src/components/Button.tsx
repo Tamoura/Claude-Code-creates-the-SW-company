@@ -1,4 +1,4 @@
-import { ButtonProps } from '../types/calculator';
+import type { ButtonProps } from '../types/calculator';
 
 /**
  * Button component for calculator

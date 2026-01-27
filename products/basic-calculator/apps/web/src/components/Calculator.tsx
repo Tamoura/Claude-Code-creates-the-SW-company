@@ -1,7 +1,8 @@
 import { useState, useEffect, useCallback } from 'react';
-import { calculate, Operation } from '../calculators/arithmetic';
+import { calculate } from '../calculators/arithmetic';
+import type { Operation } from '../calculators/arithmetic';
 import { formatDisplay } from '../calculators/precision';
-import { CalculatorState } from '../types/calculator';
+import type { CalculatorState } from '../types/calculator';
 import { Display } from './Display';
 import { Button } from './Button';
 
