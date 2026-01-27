@@ -21,6 +21,10 @@ products:
     path: "products/tech-management-helper"
     state_file: "products/tech-management-helper/.claude/state.yml"
     worktree: ".trees/Tech_Management_helper"
+  basic-calculator:
+    path: "products/basic-calculator"
+    state_file: "products/basic-calculator/.claude/state.yml"
+    worktree: null  # developed in main branch
 
 # Active worktrees (for parallel product development)
 worktrees:
@@ -44,4 +48,4 @@ pending_decisions: []
 checkpoints: []
 
 # Last updated
-last_updated: "2026-01-27T04:21:59Z"
+last_updated: "2026-01-27T08:35:00Z"
