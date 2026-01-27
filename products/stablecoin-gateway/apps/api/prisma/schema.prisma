@@ -1,0 +1,207 @@
+generator client {
+  provider = "prisma-client-js"
+}
+
+datasource db {
+  provider = "postgresql"
+  url      = env("DATABASE_URL")
+}
+
+// ==================== User Management ====================
+
+model User {
+  id           String   @id @default(cuid())
+  email        String   @unique
+  passwordHash String   @map("password_hash")
+
+  // Timestamps
+  createdAt DateTime @default(now()) @map("created_at")
+  updatedAt DateTime @updatedAt @map("updated_at")
+
+  // Relations
+  apiKeys          ApiKey[]
+  paymentSessions  PaymentSession[]
+  webhookEndpoints WebhookEndpoint[]
+
+  @@map("users")
+}
+
+// ==================== Payments ====================
+
+model PaymentSession {
+  id     String @id @default(cuid())
+  userId String @map("user_id")
+
+  // Payment details
+  amount      Decimal @db.Decimal(10, 2)
+  currency    String  @default("USD")
+  description String?
+
+  // Payment state
+  status PaymentStatus @default(PENDING)
+
+  // Blockchain details
+  network       String  @default("polygon")
+  token         String  @default("USDC")
+  txHash        String? @unique @map("tx_hash")
+  blockNumber   Int?    @map("block_number")
+  confirmations Int     @default(0)
+
+  // Wallet addresses
+  customerAddress String? @map("customer_address")
+  merchantAddress String  @map("merchant_address")
+
+  // URLs for redirects
+  successUrl String? @map("success_url")
+  cancelUrl  String? @map("cancel_url")
+
+  // Flexible metadata
+  metadata Json?
+
+  // Timestamps
+  createdAt   DateTime  @default(now()) @map("created_at")
+  expiresAt   DateTime  @map("expires_at")
+  completedAt DateTime? @map("completed_at")
+
+  // Relations
+  user    User     @relation(fields: [userId], references: [id], onDelete: Cascade)
+  refunds Refund[]
+
+  // Indexes for fast queries
+  @@index([userId, status])
+  @@index([status, createdAt])
+  @@index([txHash])
+  @@map("payment_sessions")
+}
+
+enum PaymentStatus {
+  PENDING
+  CONFIRMING
+  COMPLETED
+  FAILED
+  REFUNDED
+}
+
+// ==================== Refunds ====================
+
+model Refund {
+  id               String @id @default(cuid())
+  paymentSessionId String @map("payment_session_id")
+
+  // Refund details
+  amount Decimal @db.Decimal(10, 2)
+  reason String?
+
+  // Refund state
+  status RefundStatus @default(PENDING)
+
+  // Blockchain details
+  txHash      String? @unique @map("tx_hash")
+  blockNumber Int?    @map("block_number")
+
+  // Timestamps
+  createdAt   DateTime  @default(now()) @map("created_at")
+  completedAt DateTime? @map("completed_at")
+
+  // Relations
+  paymentSession PaymentSession @relation(fields: [paymentSessionId], references: [id], onDelete: Cascade)
+
+  @@index([paymentSessionId])
+  @@index([status, createdAt])
+  @@map("refunds")
+}
+
+enum RefundStatus {
+  PENDING
+  PROCESSING
+  COMPLETED
+  FAILED
+}
+
+// ==================== API Keys ====================
+
+model ApiKey {
+  id     String @id @default(cuid())
+  userId String @map("user_id")
+
+  // Key details
+  name        String
+  keyHash     String @unique @map("key_hash")
+  keyPrefix   String @map("key_prefix")
+  permissions Json   @default("{\"read\":true,\"write\":true,\"refund\":false}")
+
+  // Usage tracking
+  lastUsedAt DateTime? @map("last_used_at")
+
+  // Timestamps
+  createdAt DateTime @default(now()) @map("created_at")
+
+  // Relations
+  user User @relation(fields: [userId], references: [id], onDelete: Cascade)
+
+  @@index([userId])
+  @@index([keyHash])
+  @@map("api_keys")
+}
+
+// ==================== Webhooks ====================
+
+model WebhookEndpoint {
+  id     String @id @default(cuid())
+  userId String @map("user_id")
+
+  // Webhook details
+  url         String
+  secret      String
+  events      String[]
+  enabled     Boolean  @default(true)
+  description String?
+
+  // Timestamps
+  createdAt DateTime @default(now()) @map("created_at")
+  updatedAt DateTime @updatedAt @map("updated_at")
+
+  // Relations
+  user       User              @relation(fields: [userId], references: [id], onDelete: Cascade)
+  deliveries WebhookDelivery[]
+
+  @@index([userId])
+  @@map("webhook_endpoints")
+}
+
+model WebhookDelivery {
+  id         String @id @default(cuid())
+  endpointId String @map("endpoint_id")
+
+  // Event details
+  eventType String @map("event_type")
+  payload   Json
+
+  // Delivery state
+  attempts Int           @default(0)
+  status   WebhookStatus @default(PENDING)
+
+  // Retry timing
+  lastAttemptAt DateTime? @map("last_attempt_at")
+  nextAttemptAt DateTime? @map("next_attempt_at")
+  succeededAt   DateTime? @map("succeeded_at")
+
+  // Response tracking
+  responseCode Int?    @map("response_code")
+  responseBody String? @map("response_body") @db.Text
+  errorMessage String? @map("error_message") @db.Text
+
+  // Relations
+  endpoint WebhookEndpoint @relation(fields: [endpointId], references: [id], onDelete: Cascade)
+
+  @@index([endpointId, status])
+  @@index([status, nextAttemptAt])
+  @@map("webhook_deliveries")
+}
+
+enum WebhookStatus {
+  PENDING
+  DELIVERING
+  SUCCEEDED
+  FAILED
+}

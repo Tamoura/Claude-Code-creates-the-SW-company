@@ -1,0 +1,228 @@
+/**
+ * API Client for Stablecoin Gateway
+ *
+ * This client interfaces with the backend API.
+ * For development/testing, it can use mock responses when API is unavailable.
+ */
+
+const API_BASE_URL = import.meta.env.VITE_API_URL || 'http://localhost:5000';
+const USE_MOCK_API = import.meta.env.VITE_USE_MOCK_API === 'true';
+
+export interface PaymentSession {
+  id: string;
+  amount: number;
+  currency: 'USD';
+  description?: string;
+  status: 'pending' | 'confirming' | 'completed' | 'failed' | 'refunded';
+  network: 'polygon' | 'ethereum';
+  token: 'USDC' | 'USDT';
+  merchant_address: string;
+  customer_address?: string;
+  tx_hash?: string;
+  block_number?: number;
+  confirmations?: number;
+  checkout_url: string;
+  success_url?: string;
+  cancel_url?: string;
+  metadata?: Record<string, unknown>;
+  created_at: string;
+  expires_at: string;
+  completed_at?: string;
+}
+
+export interface CreatePaymentSessionRequest {
+  amount: number;
+  currency?: 'USD';
+  description?: string;
+  network?: 'polygon' | 'ethereum';
+  token?: 'USDC' | 'USDT';
+  merchant_address: string;
+  success_url?: string;
+  cancel_url?: string;
+  metadata?: Record<string, unknown>;
+}
+
+export interface ApiError {
+  type: string;
+  title: string;
+  status: number;
+  detail: string;
+  instance?: string;
+  request_id?: string;
+}
+
+class ApiClient {
+  private baseUrl: string;
+  private useMock: boolean;
+
+  constructor(baseUrl: string, useMock: boolean) {
+    this.baseUrl = baseUrl;
+    this.useMock = useMock;
+  }
+
+  private async request<T>(
+    endpoint: string,
+    options: RequestInit = {}
+  ): Promise<T> {
+    // If mock mode, use localStorage-based mock
+    if (this.useMock) {
+      return this.mockRequest<T>(endpoint, options);
+    }
+
+    const url = `${this.baseUrl}${endpoint}`;
+    const headers = {
+      'Content-Type': 'application/json',
+      ...options.headers,
+    };
+
+    try {
+      const response = await fetch(url, { ...options, headers });
+
+      if (!response.ok) {
+        const error: ApiError = await response.json();
+        throw new ApiClientError(
+          error.status,
+          error.title,
+          error.detail,
+          error
+        );
+      }
+
+      return response.json();
+    } catch (error) {
+      if (error instanceof ApiClientError) {
+        throw error;
+      }
+      throw new ApiClientError(500, 'Network Error', 'Failed to connect to API');
+    }
+  }
+
+  private async mockRequest<T>(
+    endpoint: string,
+    options: RequestInit = {}
+  ): Promise<T> {
+    // Mock implementation using localStorage (for testing until backend is ready)
+    await new Promise(resolve => setTimeout(resolve, 300)); // Simulate network delay
+
+    if (endpoint.startsWith('/v1/payment-sessions') && options.method === 'POST') {
+      const body = JSON.parse(options.body as string) as CreatePaymentSessionRequest;
+      const id = 'ps_' + crypto.randomUUID().substring(0, 8);
+
+      const session: PaymentSession = {
+        id,
+        amount: body.amount,
+        currency: body.currency || 'USD',
+        description: body.description,
+        status: 'pending',
+        network: body.network || 'polygon',
+        token: body.token || 'USDC',
+        merchant_address: body.merchant_address,
+        checkout_url: `${window.location.origin}/pay/${id}`,
+        success_url: body.success_url,
+        cancel_url: body.cancel_url,
+        metadata: body.metadata,
+        created_at: new Date().toISOString(),
+        expires_at: new Date(Date.now() + 7 * 24 * 60 * 60 * 1000).toISOString(),
+      };
+
+      // Store in localStorage
+      localStorage.setItem(`payment_${id}`, JSON.stringify(session));
+
+      return session as T;
+    }
+
+    if (endpoint.match(/\/v1\/payment-sessions\/ps_[a-zA-Z0-9]+$/)) {
+      const id = endpoint.split('/').pop();
+      const stored = localStorage.getItem(`payment_${id}`);
+
+      if (!stored) {
+        throw new ApiClientError(404, 'Not Found', 'Payment session not found');
+      }
+
+      return JSON.parse(stored) as T;
+    }
+
+    throw new ApiClientError(501, 'Not Implemented', 'Mock endpoint not implemented');
+  }
+
+  async createPaymentSession(
+    data: CreatePaymentSessionRequest
+  ): Promise<PaymentSession> {
+    return this.request<PaymentSession>('/v1/payment-sessions', {
+      method: 'POST',
+      body: JSON.stringify(data),
+    });
+  }
+
+  async getPaymentSession(id: string): Promise<PaymentSession> {
+    return this.request<PaymentSession>(`/v1/payment-sessions/${id}`);
+  }
+
+  async updatePaymentSession(
+    id: string,
+    data: Partial<PaymentSession>
+  ): Promise<PaymentSession> {
+    // For mock mode, update localStorage
+    if (this.useMock) {
+      const stored = localStorage.getItem(`payment_${id}`);
+      if (!stored) {
+        throw new ApiClientError(404, 'Not Found', 'Payment session not found');
+      }
+
+      const session = JSON.parse(stored) as PaymentSession;
+      const updated = { ...session, ...data };
+      localStorage.setItem(`payment_${id}`, JSON.stringify(updated));
+
+      return updated;
+    }
+
+    return this.request<PaymentSession>(`/v1/payment-sessions/${id}`, {
+      method: 'PATCH',
+      body: JSON.stringify(data),
+    });
+  }
+
+  async listPaymentSessions(params?: {
+    limit?: number;
+    offset?: number;
+    status?: string;
+  }): Promise<{ data: PaymentSession[]; pagination: { total: number; has_more: boolean } }> {
+    const query = new URLSearchParams(params as Record<string, string>).toString();
+    return this.request<{ data: PaymentSession[]; pagination: { total: number; has_more: boolean } }>(
+      `/v1/payment-sessions${query ? `?${query}` : ''}`
+    );
+  }
+
+  // SSE connection for real-time updates
+  createEventSource(paymentId: string): EventSource {
+    if (this.useMock) {
+      // Mock SSE not implemented - would need a more complex mock
+      throw new Error('SSE not available in mock mode');
+    }
+
+    return new EventSource(`${this.baseUrl}/v1/payment-sessions/${paymentId}/events`);
+  }
+}
+
+export class ApiClientError extends Error {
+  status: number;
+  title: string;
+  detail: string;
+  rawError?: ApiError;
+
+  constructor(
+    status: number,
+    title: string,
+    detail: string,
+    rawError?: ApiError
+  ) {
+    super(detail);
+    this.status = status;
+    this.title = title;
+    this.detail = detail;
+    this.rawError = rawError;
+    this.name = 'ApiClientError';
+  }
+}
+
+export const apiClient = new ApiClient(API_BASE_URL, USE_MOCK_API);
