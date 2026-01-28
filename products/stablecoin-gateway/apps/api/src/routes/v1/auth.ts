@@ -6,8 +6,18 @@ import { AppError } from '../../types/index.js';
 import { logger } from '../../utils/logger.js';
 
 const authRoutes: FastifyPluginAsync = async (fastify) => {
+  // Auth-specific rate limiting config (5 requests per 15 minutes)
+  const authRateLimit = {
+    config: {
+      rateLimit: {
+        max: 5,
+        timeWindow: 15 * 60 * 1000, // 15 minutes in ms
+      },
+    },
+  };
+
   // POST /v1/auth/signup
-  fastify.post('/signup', async (request, reply) => {
+  fastify.post('/signup', authRateLimit, async (request, reply) => {
     try {
       const body = validateBody(signupSchema, request.body);
 
@@ -66,7 +76,7 @@ const authRoutes: FastifyPluginAsync = async (fastify) => {
   });
 
   // POST /v1/auth/login
-  fastify.post('/login', async (request, reply) => {
+  fastify.post('/login', authRateLimit, async (request, reply) => {
     const body = validateBody(loginSchema, request.body);
 
     try {
@@ -122,7 +132,7 @@ const authRoutes: FastifyPluginAsync = async (fastify) => {
   });
 
   // POST /v1/auth/refresh
-  fastify.post('/refresh', async (request, reply) => {
+  fastify.post('/refresh', authRateLimit, async (request, reply) => {
     try {
       const { refresh_token } = request.body as { refresh_token: string };
 
