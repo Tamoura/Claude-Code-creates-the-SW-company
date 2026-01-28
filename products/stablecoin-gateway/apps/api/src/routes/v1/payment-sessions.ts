@@ -126,7 +126,25 @@ const paymentSessionRoutes: FastifyPluginAsync = async (fastify) => {
   // GET /v1/payment-sessions/:id/events (SSE)
   fastify.get('/:id/events', async (request, reply) => {
     try {
+      // Require authentication
+      await request.jwtVerify();
+      const userId = (request.user as { userId: string }).userId;
+
       const { id } = request.params as { id: string };
+
+      // Get payment session and verify ownership
+      const session = await fastify.prisma.paymentSession.findUnique({
+        where: { id },
+      });
+
+      if (!session) {
+        throw new AppError(404, 'payment-not-found', 'Payment session not found');
+      }
+
+      // Verify user owns this payment session
+      if (session.userId !== userId) {
+        throw new AppError(403, 'forbidden', 'Access denied to this payment session');
+      }
 
       // Set up SSE headers
       reply.raw.writeHead(200, {
@@ -134,17 +152,6 @@ const paymentSessionRoutes: FastifyPluginAsync = async (fastify) => {
         'Cache-Control': 'no-cache',
         'Connection': 'keep-alive',
       });
-
-      // Send initial payment status
-      const session = await fastify.prisma.paymentSession.findUnique({
-        where: { id },
-      });
-
-      if (!session) {
-        reply.raw.write(`data: ${JSON.stringify({ error: 'Payment session not found' })}\n\n`);
-        reply.raw.end();
-        return;
-      }
 
       const data = {
         status: session.status,
