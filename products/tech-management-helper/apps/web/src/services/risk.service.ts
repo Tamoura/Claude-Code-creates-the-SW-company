@@ -49,7 +49,7 @@ export class RiskService {
    * Update an existing risk
    */
   async updateRisk(id: string, data: UpdateRiskInput): Promise<RiskDetailResponse> {
-    return apiClient.put<RiskDetailResponse>(`/api/v1/risks/${id}`, data);
+    return apiClient.patch<RiskDetailResponse>(`/api/v1/risks/${id}`, data);
   }
 
   /**
