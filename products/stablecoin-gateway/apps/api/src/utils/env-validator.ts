@@ -93,8 +93,12 @@ function validateJWT(): ValidationResult {
 
   if (!jwtSecret) {
     errors.push('JWT_SECRET environment variable is required');
-  } else if (jwtSecret === 'your-jwt-secret-change-in-production') {
-    errors.push('JWT_SECRET is still set to default value - change it immediately');
+  } else if (jwtSecret === 'your-jwt-secret-change-in-production' ||
+             jwtSecret === 'change-this-secret-in-production') {
+    errors.push('JWT_SECRET must not be the default value');
+    errors.push(
+      'Generate a strong secret: openssl rand -base64 64 | tr -d "\n" | head -c 64'
+    );
   } else if (jwtSecret.length < 32) {
     errors.push('JWT_SECRET must be at least 32 characters long');
     errors.push(

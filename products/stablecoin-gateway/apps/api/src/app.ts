@@ -39,8 +39,9 @@ export async function buildApp(): Promise<FastifyInstance> {
   });
 
   // Register JWT
+  // JWT_SECRET is validated in env-validator.ts on startup
   await fastify.register(jwt, {
-    secret: process.env.JWT_SECRET || 'change-this-secret-in-production',
+    secret: process.env.JWT_SECRET!,
   });
 
   // Register rate limiting
