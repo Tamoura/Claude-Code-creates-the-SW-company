@@ -22,8 +22,33 @@ model User {
   apiKeys          ApiKey[]
   paymentSessions  PaymentSession[]
   webhookEndpoints WebhookEndpoint[]
+  refreshTokens    RefreshToken[]
 
   @@map("users")
+}
+
+model RefreshToken {
+  id     String @id @default(cuid())
+  userId String @map("user_id")
+
+  // Token details
+  tokenHash String   @unique @map("token_hash")
+  expiresAt DateTime @map("expires_at")
+
+  // Revocation
+  revokedAt DateTime? @map("revoked_at")
+  revoked   Boolean   @default(false)
+
+  // Timestamps
+  createdAt DateTime @default(now()) @map("created_at")
+
+  // Relations
+  user User @relation(fields: [userId], references: [id], onDelete: Cascade)
+
+  @@index([userId])
+  @@index([tokenHash])
+  @@index([revokedAt])
+  @@map("refresh_tokens")
 }
 
 // ==================== Payments ====================

@@ -4,6 +4,7 @@ import { signupSchema, loginSchema, validateBody } from '../../utils/validation.
 import { hashPassword, verifyPassword } from '../../utils/crypto.js';
 import { AppError } from '../../types/index.js';
 import { logger } from '../../utils/logger.js';
+import { createHash } from 'crypto';
 
 const authRoutes: FastifyPluginAsync = async (fastify) => {
   // Auth-specific rate limiting config (5 requests per 15 minutes)
@@ -46,9 +47,20 @@ const authRoutes: FastifyPluginAsync = async (fastify) => {
       );
 
       const refreshToken = fastify.jwt.sign(
-        { userId: user.id, type: 'refresh' },
+        { userId: user.id, type: 'refresh', jti: Math.random().toString(36) },
         { expiresIn: process.env.REFRESH_TOKEN_EXPIRES_IN || '7d' }
       );
+
+      // Store refresh token in database
+      const tokenHash = createHash('sha256').update(refreshToken).digest('hex');
+      const expiresIn = 7 * 24 * 60 * 60 * 1000; // 7 days in ms
+      await fastify.prisma.refreshToken.create({
+        data: {
+          userId: user.id,
+          tokenHash,
+          expiresAt: new Date(Date.now() + expiresIn),
+        },
+      });
 
       logger.info('User signed up', { userId: user.id, email: user.email });
 
@@ -103,9 +115,20 @@ const authRoutes: FastifyPluginAsync = async (fastify) => {
       );
 
       const refreshToken = fastify.jwt.sign(
-        { userId: user.id, type: 'refresh' },
+        { userId: user.id, type: 'refresh', jti: Math.random().toString(36) },
         { expiresIn: process.env.REFRESH_TOKEN_EXPIRES_IN || '7d' }
       );
+
+      // Store refresh token in database
+      const tokenHash = createHash('sha256').update(refreshToken).digest('hex');
+      const expiresIn = 7 * 24 * 60 * 60 * 1000; // 7 days in ms
+      await fastify.prisma.refreshToken.create({
+        data: {
+          userId: user.id,
+          tokenHash,
+          expiresAt: new Date(Date.now() + expiresIn),
+        },
+      });
 
       logger.info('User logged in', { userId: user.id, email: user.email });
 
@@ -147,6 +170,24 @@ const authRoutes: FastifyPluginAsync = async (fastify) => {
         throw new AppError(401, 'invalid-token', 'Invalid refresh token');
       }
 
+      // Check if token is revoked
+      const tokenHash = createHash('sha256').update(refresh_token).digest('hex');
+      const storedToken = await fastify.prisma.refreshToken.findUnique({
+        where: { tokenHash },
+      });
+
+      if (!storedToken) {
+        throw new AppError(401, 'invalid-token', 'Refresh token not found');
+      }
+
+      if (storedToken.revoked) {
+        throw new AppError(401, 'invalid-token', 'Refresh token has been revoked');
+      }
+
+      if (storedToken.expiresAt < new Date()) {
+        throw new AppError(401, 'invalid-token', 'Refresh token has expired');
+      }
+
       // Generate new access token
       const accessToken = fastify.jwt.sign(
         { userId: decoded.userId },
@@ -154,9 +195,20 @@ const authRoutes: FastifyPluginAsync = async (fastify) => {
       );
 
       const newRefreshToken = fastify.jwt.sign(
-        { userId: decoded.userId, type: 'refresh' },
+        { userId: decoded.userId, type: 'refresh', jti: Math.random().toString(36) },
         { expiresIn: process.env.REFRESH_TOKEN_EXPIRES_IN || '7d' }
       );
+
+      // Store new refresh token
+      const newTokenHash = createHash('sha256').update(newRefreshToken).digest('hex');
+      const expiresIn = 7 * 24 * 60 * 60 * 1000; // 7 days in ms
+      await fastify.prisma.refreshToken.create({
+        data: {
+          userId: decoded.userId,
+          tokenHash: newTokenHash,
+          expiresAt: new Date(Date.now() + expiresIn),
+        },
+      });
 
       return reply.send({
         access_token: accessToken,
@@ -167,6 +219,50 @@ const authRoutes: FastifyPluginAsync = async (fastify) => {
         return reply.code(error.statusCode).send(error.toJSON());
       }
       throw new AppError(401, 'invalid-token', 'Invalid or expired refresh token');
+    }
+  });
+
+  // DELETE /v1/auth/logout
+  fastify.delete('/logout', async (request, reply) => {
+    try {
+      // Verify user is authenticated
+      await request.jwtVerify();
+      const userId = (request.user as { userId: string }).userId;
+
+      const { refresh_token } = request.body as { refresh_token: string };
+
+      if (!refresh_token) {
+        throw new AppError(400, 'missing-token', 'Refresh token is required');
+      }
+
+      // Revoke the refresh token
+      const tokenHash = createHash('sha256').update(refresh_token).digest('hex');
+      const result = await fastify.prisma.refreshToken.updateMany({
+        where: {
+          tokenHash,
+          userId,
+          revoked: false,
+        },
+        data: {
+          revoked: true,
+          revokedAt: new Date(),
+        },
+      });
+
+      if (result.count === 0) {
+        throw new AppError(404, 'token-not-found', 'Refresh token not found or already revoked');
+      }
+
+      logger.info('User logged out', { userId });
+
+      return reply.send({
+        message: 'Logged out successfully',
+      });
+    } catch (error) {
+      if (error instanceof AppError) {
+        return reply.code(error.statusCode).send(error.toJSON());
+      }
+      throw error;
     }
   });
 };
