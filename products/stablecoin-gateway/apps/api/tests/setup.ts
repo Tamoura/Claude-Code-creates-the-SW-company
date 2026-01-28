@@ -2,8 +2,8 @@ import { PrismaClient } from '@prisma/client';
 
 const prisma = new PrismaClient();
 
-// Clean database before each test
-beforeEach(async () => {
+// Clean database before all tests (not before each)
+beforeAll(async () => {
   // Delete in correct order for FK constraints
   await prisma.webhookDelivery.deleteMany();
   await prisma.webhookEndpoint.deleteMany();

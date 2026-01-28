@@ -1,4 +1,5 @@
 import { FastifyPluginAsync } from 'fastify';
+import { ZodError } from 'zod';
 import { signupSchema, loginSchema, validateBody } from '../../utils/validation.js';
 import { hashPassword, verifyPassword } from '../../utils/crypto.js';
 import { AppError } from '../../types/index.js';
@@ -52,14 +53,23 @@ const authRoutes: FastifyPluginAsync = async (fastify) => {
       if (error instanceof AppError) {
         return reply.code(error.statusCode).send(error.toJSON());
       }
+      if (error instanceof ZodError) {
+        return reply.code(400).send({
+          type: 'https://gateway.io/errors/validation-error',
+          title: 'Validation Error',
+          status: 400,
+          detail: error.message,
+        });
+      }
       throw error;
     }
   });
 
   // POST /v1/auth/login
   fastify.post('/login', async (request, reply) => {
+    const body = validateBody(loginSchema, request.body);
+
     try {
-      const body = validateBody(loginSchema, request.body);
 
       // Find user
       const user = await fastify.prisma.user.findUnique({
@@ -98,6 +108,14 @@ const authRoutes: FastifyPluginAsync = async (fastify) => {
     } catch (error) {
       if (error instanceof AppError) {
         return reply.code(error.statusCode).send(error.toJSON());
+      }
+      if (error instanceof ZodError) {
+        return reply.code(400).send({
+          type: 'https://gateway.io/errors/validation-error',
+          title: 'Validation Error',
+          status: 400,
+          detail: error.message,
+        });
       }
       throw error;
     }

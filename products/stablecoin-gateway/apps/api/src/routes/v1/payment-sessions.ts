@@ -1,4 +1,5 @@
 import { FastifyPluginAsync } from 'fastify';
+import { ZodError } from 'zod';
 import { createPaymentSessionSchema, listPaymentSessionsQuerySchema, validateBody, validateQuery } from '../../utils/validation.js';
 import { PaymentService } from '../../services/payment.service.js';
 import { AppError } from '../../types/index.js';
@@ -29,6 +30,14 @@ const paymentSessionRoutes: FastifyPluginAsync = async (fastify) => {
     } catch (error) {
       if (error instanceof AppError) {
         return reply.code(error.statusCode).send(error.toJSON());
+      }
+      if (error instanceof ZodError) {
+        return reply.code(400).send({
+          type: 'https://gateway.io/errors/validation-error',
+          title: 'Validation Error',
+          status: 400,
+          detail: error.message,
+        });
       }
       logger.error('Error creating payment session', error);
       throw error;
@@ -69,6 +78,14 @@ const paymentSessionRoutes: FastifyPluginAsync = async (fastify) => {
       if (error instanceof AppError) {
         return reply.code(error.statusCode).send(error.toJSON());
       }
+      if (error instanceof ZodError) {
+        return reply.code(400).send({
+          type: 'https://gateway.io/errors/validation-error',
+          title: 'Validation Error',
+          status: 400,
+          detail: error.message,
+        });
+      }
       logger.error('Error listing payment sessions', error);
       throw error;
     }
@@ -92,6 +109,14 @@ const paymentSessionRoutes: FastifyPluginAsync = async (fastify) => {
     } catch (error) {
       if (error instanceof AppError) {
         return reply.code(error.statusCode).send(error.toJSON());
+      }
+      if (error instanceof ZodError) {
+        return reply.code(400).send({
+          type: 'https://gateway.io/errors/validation-error',
+          title: 'Validation Error',
+          status: 400,
+          detail: error.message,
+        });
       }
       logger.error('Error getting payment session', error);
       throw error;

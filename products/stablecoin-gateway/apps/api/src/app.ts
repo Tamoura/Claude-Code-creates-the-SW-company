@@ -2,6 +2,7 @@ import Fastify, { FastifyInstance } from 'fastify';
 import cors from '@fastify/cors';
 import jwt from '@fastify/jwt';
 import rateLimit from '@fastify/rate-limit';
+import { ZodError } from 'zod';
 
 // Plugins
 import prismaPlugin from './plugins/prisma.js';
@@ -68,7 +69,7 @@ export async function buildApp(): Promise<FastifyInstance> {
     }
 
     // Validation errors from Zod
-    if (error.validation) {
+    if (error instanceof ZodError || error.name === 'ZodError' || error.validation) {
       return reply.code(400).send({
         type: 'https://gateway.io/errors/validation-error',
         title: 'Validation Error',

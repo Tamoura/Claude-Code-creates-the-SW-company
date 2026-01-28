@@ -78,7 +78,7 @@ const authPlugin: FastifyPluginAsync = async (fastify) => {
 
 export default fp(authPlugin, {
   name: 'auth',
-  dependencies: ['jwt', 'prisma'],
+  dependencies: ['@fastify/jwt', 'prisma'],
 });
 
 // Type augmentation
