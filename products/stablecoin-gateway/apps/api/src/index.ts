@@ -1,8 +1,12 @@
 import { buildApp } from './app.js';
 import { logger } from './utils/logger.js';
+import { validateEnvironment } from './utils/env-validator.js';
 
 async function start() {
   try {
+    // Validate environment variables before starting
+    validateEnvironment();
+
     const app = await buildApp();
 
     const port = parseInt(process.env.PORT || '5001');
