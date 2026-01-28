@@ -226,6 +226,7 @@ Pause and report to CEO at these points:
 | Architect | `.claude/agents/architect.md` | System design, ADRs, API contracts, technical decisions |
 | Backend Engineer | `.claude/agents/backend-engineer.md` | APIs, database, server logic, business logic |
 | Frontend Engineer | `.claude/agents/frontend-engineer.md` | UI implementation, components, pages, client-side logic |
+| Mobile Developer | `.claude/agents/mobile-developer.md` | iOS/Android apps, React Native, Expo, mobile UX |
 | Security Engineer | `.claude/agents/security-engineer.md` | DevSecOps, security reviews, vulnerability management, compliance |
 
 ### Quality & Operations Layer

@@ -117,10 +117,15 @@ All product manuals are located in their respective product folders under `produ
 | Agent | Location | Role |
 |-------|----------|------|
 | **Orchestrator** | `../.claude/orchestrator/orchestrator-enhanced.md` | Coordinates all work |
+| **Product Strategist** | `../.claude/agents/product-strategist.md` | Market research, product portfolio strategy |
+| **Innovation Specialist** | `../.claude/agents/innovation-specialist.md` | Technology exploration, rapid prototypes |
 | **Product Manager** | `../.claude/agents/product-manager.md` | Creates PRDs and requirements |
+| **UI/UX Designer** | `../.claude/agents/ui-ux-designer.md` | User research, wireframes, mockups, design systems |
 | **Architect** | `../.claude/agents/architect.md` | Designs systems and architecture |
 | **Backend Engineer** | `../.claude/agents/backend-engineer.md` | Implements APIs and databases |
 | **Frontend Engineer** | `../.claude/agents/frontend-engineer.md` | Builds UIs and user experiences |
+| **Mobile Developer** | `../.claude/agents/mobile-developer.md` | Builds iOS/Android apps with Expo/React Native |
+| **Security Engineer** | `../.claude/agents/security-engineer.md` | DevSecOps, security reviews, vulnerability management |
 | **QA Engineer** | `../.claude/agents/qa-engineer.md` | Tests and quality assurance |
 | **DevOps Engineer** | `../.claude/agents/devops-engineer.md` | CI/CD and infrastructure |
 | **Technical Writer** | `../.claude/agents/technical-writer.md` | Documentation |
