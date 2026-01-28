@@ -2,11 +2,13 @@
 
 import Link from 'next/link'
 import { usePathname } from 'next/navigation'
+import { useAuth } from '@/contexts/auth-context'
 import { cn } from '@/lib/utils'
+import type { Route } from 'next'
 
 interface NavItem {
   label: string
-  href: string
+  href: Route
   icon: React.ReactNode
   badge?: string
 }
@@ -85,6 +87,7 @@ const navItems: NavItem[] = [
  */
 export default function Sidebar() {
   const pathname = usePathname()
+  const { logout } = useAuth()
 
   return (
     <aside className="w-64 bg-white border-r border-gray-200 flex flex-col h-screen">
@@ -130,15 +133,15 @@ export default function Sidebar() {
 
       {/* Footer */}
       <div className="p-4 border-t border-gray-200">
-        <Link
-          href="/logout"
-          className="flex items-center gap-3 px-3 py-2 text-sm font-medium text-gray-700 hover:bg-gray-100 rounded-md transition-colors"
+        <button
+          onClick={logout}
+          className="flex items-center gap-3 px-3 py-2 text-sm font-medium text-gray-700 hover:bg-gray-100 rounded-md transition-colors w-full"
         >
           <svg className="w-5 h-5" fill="none" stroke="currentColor" viewBox="0 0 24 24">
             <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M17 16l4-4m0 0l-4-4m4 4H7m6 4v1a3 3 0 01-3 3H6a3 3 0 01-3-3V7a3 3 0 013-3h4a3 3 0 013 3v1" />
           </svg>
           <span>Logout</span>
-        </Link>
+        </button>
       </div>
     </aside>
   )

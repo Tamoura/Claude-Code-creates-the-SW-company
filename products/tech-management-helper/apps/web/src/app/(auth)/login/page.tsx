@@ -148,6 +148,7 @@ export default function LoginPage() {
               </label>
             </div>
 
+            {/* TODO: Add forgot password functionality in future sprint
             <div className="text-sm">
               <Link
                 href="/forgot-password"
@@ -156,6 +157,7 @@ export default function LoginPage() {
                 Forgot your password?
               </Link>
             </div>
+            */}
           </div>
 
           <div>
@@ -194,6 +196,7 @@ export default function LoginPage() {
             </button>
           </div>
 
+          {/* TODO: Add registration functionality in future sprint
           <div className="text-center">
             <p className="text-sm text-gray-600">
               Don&apos;t have an account?{' '}
@@ -205,6 +208,7 @@ export default function LoginPage() {
               </Link>
             </p>
           </div>
+          */}
         </form>
       </div>
     </div>

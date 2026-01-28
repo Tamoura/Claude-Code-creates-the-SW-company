@@ -1,6 +1,6 @@
 'use client';
 
-import { useState, useEffect } from 'react';
+import { useState, useEffect, useCallback } from 'react';
 import { useRouter, useParams } from 'next/navigation';
 import { riskService } from '@/services/risk.service';
 import type { Risk, UpdateRiskInput, RiskStatus } from '@/types/risk';
@@ -29,12 +29,7 @@ export default function RiskDetailPage() {
   // Edit form state
   const [editData, setEditData] = useState<UpdateRiskInput>({});
 
-  // Fetch risk on mount
-  useEffect(() => {
-    fetchRisk();
-  }, [riskId]);
-
-  const fetchRisk = async () => {
+  const fetchRisk = useCallback(async () => {
     try {
       setLoading(true);
       setError(null);
@@ -63,7 +58,12 @@ export default function RiskDetailPage() {
     } finally {
       setLoading(false);
     }
-  };
+  }, [riskId]);
+
+  // Fetch risk on mount
+  useEffect(() => {
+    fetchRisk();
+  }, [fetchRisk]);
 
   const handleEdit = () => {
     setIsEditing(true);
