@@ -50,6 +50,13 @@ checkpoints:
     type: sprint_complete
     title: "Sprint 1 - Authentication Complete"
     message: "Full-stack authentication system complete with backend APIs, middleware, RBAC, frontend UI, and session management. All 6 tasks completed with 39 passing tests."
+    raised_at: "2026-01-26T21:00:00Z"
+    approved: true
+    approved_at: "2026-01-26T21:30:00Z"
+  - id: 5
+    type: sprint_complete
+    title: "Sprint 2 - Risk Management Complete"
+    message: "Complete Risk Management system with backend APIs (CRUD, Asset linking, Control linking), frontend UI (list, create, edit pages), and comprehensive test coverage. PR #18 ready for review."
     artifacts:
       # Backend
       - "products/tech-management-helper/apps/api/src/routes/auth.ts"
