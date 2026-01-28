@@ -114,7 +114,7 @@
       "title": "Current State in Arab Nations",
       "uae": {
         "title": "United Arab Emirates",
-        "description": "Leading the region with quantum computing centers, partnerships with IBM and other vendors, and significant investments in quantum education. Dubai aims to be a global quantum hub by 2030."
+        "description": "Leading the region with quantum computing centers, partnerships with IBM and other vendors, and significant investments in quantum education. The UAE is positioning itself as a regional quantum hub."
       },
       "saudi": {
         "title": "Saudi Arabia (Vision 2030)",
@@ -122,7 +122,7 @@
       },
       "egypt": {
         "title": "Egypt",
-        "description": "Establishing quantum research centers at Cairo University and other institutions. Focus on quantum cryptography and fundamental research with growing collaboration with international partners."
+        "description": "Quantum research at Cairo University and other institutions including Alexandria University. Focus on quantum cryptography and fundamental research with growing collaboration with international partners."
       },
       "qatar": {
         "title": "Qatar",
@@ -130,7 +130,7 @@
       },
       "regional": {
         "title": "Regional Collaboration",
-        "description": "Arab nations are beginning to coordinate quantum research efforts through initiatives like the Arab Science and Technology Foundation, recognizing that regional cooperation can accelerate capabilities while maintaining collective sovereignty."
+        "description": "Arab nations are beginning to coordinate quantum research efforts, recognizing that regional cooperation can accelerate capabilities while maintaining collective sovereignty."
       }
     },
     "investments": {
@@ -164,7 +164,7 @@
       },
       "finance": {
         "title": "Financial Services & Islamic Banking",
-        "description": "Quantum-secure encryption for financial transactions, portfolio optimization for sovereign wealth funds, and risk analysis for Islamic financial instruments. Quantum computing can revolutionize Sharia-compliant financial modeling."
+        "description": "Quantum-secure encryption for financial transactions, portfolio optimization for sovereign wealth funds, and risk analysis for Islamic financial instruments. Quantum computing has potential to enhance Sharia-compliant financial modeling in the future."
       },
       "smartCities": {
         "title": "Smart City Infrastructure",
@@ -233,6 +233,10 @@
     "cta": {
       "title": "The Time to Act is Now",
       "description": "The quantum revolution is unfolding today. Nations that invest now will shape the quantum future. Those that wait will be left behind."
+    },
+    "references": {
+      "title": "References",
+      "note": "All references were verified and accessed on the date indicated. External links open in new windows."
     }
   }
 }

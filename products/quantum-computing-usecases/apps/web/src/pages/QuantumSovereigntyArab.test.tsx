@@ -126,4 +126,38 @@ describe('QuantumSovereigntyArab', () => {
     // Check for Arabic title
     expect(screen.getByText(/السيادة الكمومية في العالم العربي/i)).toBeInTheDocument();
   });
+
+  it('renders references section with citations', () => {
+    render(
+      <BrowserRouter>
+        <QuantumSovereigntyArab />
+      </BrowserRouter>
+    );
+
+    // Check References section exists
+    expect(screen.getByRole('heading', { name: /References/i })).toBeInTheDocument();
+
+    // Check that some key references are present (using getAllByText since they appear multiple times)
+    expect(screen.getAllByText(/National Institute of Standards and Technology/i).length).toBeGreaterThan(0);
+    expect(screen.getAllByText(/Technology Innovation Institute/i).length).toBeGreaterThan(0);
+
+    // Check that reference links are present and open in new tab
+    const referenceLinks = screen.getAllByRole('link').filter(link =>
+      link.getAttribute('target') === '_blank' &&
+      link.getAttribute('rel') === 'noopener noreferrer'
+    );
+    expect(referenceLinks.length).toBeGreaterThan(0);
+  });
+
+  it('contains inline citations in content', () => {
+    render(
+      <BrowserRouter>
+        <QuantumSovereigntyArab />
+      </BrowserRouter>
+    );
+
+    // Check that citation superscripts are present
+    const citations = screen.getAllByText(/\[\d+\]/);
+    expect(citations.length).toBeGreaterThan(0);
+  });
 });

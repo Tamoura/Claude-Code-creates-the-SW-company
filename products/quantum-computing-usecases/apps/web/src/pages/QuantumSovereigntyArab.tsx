@@ -1,8 +1,166 @@
 import { useTranslation } from 'react-i18next';
 import Card from '../components/ui/Card';
+import References, { Reference } from '../components/references/References';
+import Citation from '../components/references/Citation';
 
 export default function QuantumSovereigntyArab() {
   const { t } = useTranslation();
+
+  // References based on fact-checking research conducted on 2026-01-27
+  const references: Reference[] = [
+    {
+      id: 1,
+      title: "What Is Post-Quantum Cryptography?",
+      source: "National Institute of Standards and Technology (NIST)",
+      url: "https://www.nist.gov/cybersecurity/what-post-quantum-cryptography",
+      accessDate: "2026-01-27"
+    },
+    {
+      id: 2,
+      title: "How Quantum Computing Will Upend Cybersecurity",
+      source: "Boston Consulting Group (BCG)",
+      date: "2025",
+      url: "https://www.bcg.com/publications/2025/how-quantum-computing-will-upend-cybersecurity",
+      accessDate: "2026-01-27"
+    },
+    {
+      id: 3,
+      title: "Quantum computing in the UAE",
+      source: "The Official Platform of the UAE Government",
+      url: "https://u.ae/en/about-the-uae/science-and-technology/quantum-computing-in-the-uae",
+      accessDate: "2026-01-27"
+    },
+    {
+      id: 4,
+      title: "Quantum Research Center",
+      source: "Technology Innovation Institute (TII)",
+      url: "https://www.tii.ae/quantum",
+      accessDate: "2026-01-27"
+    },
+    {
+      id: 5,
+      title: "TII to Build UAE's First Quantum Computer",
+      source: "Technology Innovation Institute",
+      url: "https://www.tii.ae/news/tii-build-uaes-first-quantum-computer",
+      accessDate: "2026-01-27"
+    },
+    {
+      id: 6,
+      title: "Saudi Arabia Lays Out Its Strategic Vision For The Quantum Era",
+      source: "The Quantum Insider",
+      date: "January 6, 2025",
+      url: "https://thequantuminsider.com/2025/01/06/saudi-arabia-lays-out-its-strategic-vision-for-the-quantum-era/",
+      accessDate: "2026-01-27"
+    },
+    {
+      id: 7,
+      title: "How Saudi Arabia is moving towards a quantum economy",
+      source: "World Economic Forum",
+      date: "January 2025",
+      url: "https://www.weforum.org/stories/2025/01/how-saudi-arabia-is-moving-towards-a-quantum-economy/",
+      accessDate: "2026-01-27"
+    },
+    {
+      id: 8,
+      title: "KAUST to Pioneer Quantum Computing in the Middle East",
+      source: "KAUST Innovation",
+      url: "https://innovation.kaust.edu.sa/kaust-pioneering-new-quantum-computing-modeling/",
+      accessDate: "2026-01-27"
+    },
+    {
+      id: 9,
+      title: "Quantum Computing Reading Group at KAUST",
+      source: "King Abdullah University of Science and Technology",
+      url: "https://qcrg.kaust.edu.sa/",
+      accessDate: "2026-01-27"
+    },
+    {
+      id: 10,
+      title: "Quantum Computing Research in the Arab World",
+      source: "Communications of the ACM",
+      url: "https://cacm.acm.org/arab-world-regional-special-section/quantum-computing-research-in-the-arab-world/",
+      accessDate: "2026-01-27"
+    },
+    {
+      id: 11,
+      title: "Enhancing Performance of Continuous-Variable Quantum Key Distribution (CV-QKD)",
+      source: "MDPI Sensors, National Institute of Laser Enhanced Sciences, Cairo University",
+      date: "August 2024",
+      url: "https://www.mdpi.com/1424-8220/24/16/5201",
+      accessDate: "2026-01-27"
+    },
+    {
+      id: 12,
+      title: "QEgypt - Quantum Computing in Egypt",
+      source: "QWorld",
+      url: "https://qworld.net/qegypt/",
+      accessDate: "2026-01-27"
+    },
+    {
+      id: 13,
+      title: "Qatar Center for Quantum Computing (QC2)",
+      source: "Hamad Bin Khalifa University (HBKU)",
+      url: "https://www.hbku.edu.qa/en/cse/qc2",
+      accessDate: "2026-01-27"
+    },
+    {
+      id: 14,
+      title: "Invest Qatar partners with Quantinuum to accelerate expansion",
+      source: "Quantinuum",
+      url: "https://www.quantinuum.com/press-releases/invest-qatar-partners-with-quantinuum-to-accelerate-expansion-and-advance-the-regions-quantum-computing-ecosystem",
+      accessDate: "2026-01-27"
+    },
+    {
+      id: 15,
+      title: "Quantum.Tech Qatar 2026",
+      source: "Alpha Events",
+      url: "https://www.alphaevents.com/events-quantumtechqatar/about-us",
+      accessDate: "2026-01-27"
+    },
+    {
+      id: 16,
+      title: "THE LINE: a revolution in urban living",
+      source: "NEOM Official",
+      url: "https://www.neom.com/en-us/regions/theline",
+      accessDate: "2026-01-27"
+    },
+    {
+      id: 17,
+      title: "Quantum Technologies and Quantum Computing in the Middle East",
+      source: "Post Quantum",
+      url: "https://postquantum.com/quantum-computing/quantum-middle-east/",
+      accessDate: "2026-01-27"
+    },
+    {
+      id: 18,
+      title: "Chevron invests in quantum computing development for oil and gas market",
+      source: "World Oil",
+      date: "March 5, 2024",
+      url: "https://worldoil.com/news/2024/3/5/chevron-invests-in-quantum-computing-development-for-oil-and-gas-market",
+      accessDate: "2026-01-27"
+    },
+    {
+      id: 19,
+      title: "Quantum Computing: The Next Big Thing for Oil Exploration?",
+      source: "TGS",
+      url: "https://www.tgs.com/technical-library/quantum-computing-the-next-big-thing-for-oil-exploration",
+      accessDate: "2026-01-27"
+    },
+    {
+      id: 20,
+      title: "Quantum Computing, Technology of the Future",
+      source: "Egypt Oil & Gas",
+      url: "https://egyptoil-gas.com/features/quantum-commuting-technology-of-the-future/",
+      accessDate: "2026-01-27"
+    },
+    {
+      id: 21,
+      title: "Quantum Computing and Islamic Finance: Pioneering Ethical Innovation",
+      source: "MSN Technology",
+      url: "https://msntechnology.com/quantum-computing-and-islamic-finance-pioneering-ethical-innovation/amp/",
+      accessDate: "2026-01-27"
+    }
+  ];
 
   return (
     <div className="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8 py-12">
@@ -32,7 +190,7 @@ export default function QuantumSovereigntyArab() {
                   {t('sovereignty.overview.nationalSecurity.title')}
                 </h3>
                 <p className="text-gray-700">
-                  {t('sovereignty.overview.nationalSecurity.description')}
+                  {t('sovereignty.overview.nationalSecurity.description')}<Citation refId={[1, 2]} />
                 </p>
               </div>
               <div className="bg-green-50 p-4 rounded-lg">
@@ -82,7 +240,7 @@ export default function QuantumSovereigntyArab() {
                   {t('sovereignty.currentState.uae.title')}
                 </h3>
                 <p className="text-gray-700">
-                  {t('sovereignty.currentState.uae.description')}
+                  {t('sovereignty.currentState.uae.description')}<Citation refId={[3, 4, 5]} />
                 </p>
               </div>
             </div>
@@ -100,7 +258,7 @@ export default function QuantumSovereigntyArab() {
                   {t('sovereignty.currentState.saudi.title')}
                 </h3>
                 <p className="text-gray-700">
-                  {t('sovereignty.currentState.saudi.description')}
+                  {t('sovereignty.currentState.saudi.description')}<Citation refId={[6, 7, 8, 9]} />
                 </p>
               </div>
             </div>
@@ -118,7 +276,7 @@ export default function QuantumSovereigntyArab() {
                   {t('sovereignty.currentState.egypt.title')}
                 </h3>
                 <p className="text-gray-700">
-                  {t('sovereignty.currentState.egypt.description')}
+                  {t('sovereignty.currentState.egypt.description')}<Citation refId={[10, 11, 12]} />
                 </p>
               </div>
             </div>
@@ -136,7 +294,7 @@ export default function QuantumSovereigntyArab() {
                   {t('sovereignty.currentState.qatar.title')}
                 </h3>
                 <p className="text-gray-700">
-                  {t('sovereignty.currentState.qatar.description')}
+                  {t('sovereignty.currentState.qatar.description')}<Citation refId={[13, 14, 15]} />
                 </p>
               </div>
             </div>
@@ -252,7 +410,7 @@ export default function QuantumSovereigntyArab() {
               {t('sovereignty.useCases.oilGas.title')}
             </h3>
             <p className="text-gray-700">
-              {t('sovereignty.useCases.oilGas.description')}
+              {t('sovereignty.useCases.oilGas.description')}<Citation refId={[17, 18, 19, 20]} />
             </p>
           </Card>
 
@@ -261,7 +419,7 @@ export default function QuantumSovereigntyArab() {
               {t('sovereignty.useCases.finance.title')}
             </h3>
             <p className="text-gray-700">
-              {t('sovereignty.useCases.finance.description')}
+              {t('sovereignty.useCases.finance.description')}<Citation refId={21} />
             </p>
           </Card>
 
@@ -270,7 +428,7 @@ export default function QuantumSovereigntyArab() {
               {t('sovereignty.useCases.smartCities.title')}
             </h3>
             <p className="text-gray-700">
-              {t('sovereignty.useCases.smartCities.description')}
+              {t('sovereignty.useCases.smartCities.description')}<Citation refId={[16, 17]} />
             </p>
           </Card>
 
@@ -516,6 +674,9 @@ export default function QuantumSovereigntyArab() {
           </p>
         </div>
       </Card>
+
+      {/* References Section */}
+      <References references={references} />
     </div>
   );
 }
