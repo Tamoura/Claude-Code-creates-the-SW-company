@@ -59,17 +59,42 @@ The Orchestrator handles everything else.
 
 ## Agents
 
+### Strategic & Innovation
 | Agent | Role |
 |-------|------|
-| **Orchestrator** | Routes work, coordinates agents |
-| **Product Manager** | Creates PRDs, defines requirements |
-| **Architect** | System design, technical decisions |
+| **Product Strategist** | Market research, portfolio strategy, long-term roadmaps |
+| **Innovation Specialist** | Technology exploration, rapid prototypes, R&D |
+
+### Product & Design
+| Agent | Role |
+|-------|------|
+| **Product Manager** | PRDs, requirements, feature prioritization |
+| **UI/UX Designer** | User research, wireframes, mockups, design systems |
+
+### Architecture & Engineering
+| Agent | Role |
+|-------|------|
+| **Architect** | System design, technical decisions, API contracts |
 | **Backend Engineer** | APIs, database, server logic |
-| **Frontend Engineer** | UI, user experience |
+| **Frontend Engineer** | UI implementation, components, pages |
+| **Security Engineer** | DevSecOps, security reviews, compliance |
+
+### Quality & Operations
+| Agent | Role |
+|-------|------|
 | **QA Engineer** | Testing, quality assurance |
-| **DevOps Engineer** | CI/CD, deployment |
-| **Technical Writer** | Documentation |
+| **DevOps Engineer** | CI/CD, deployment, infrastructure |
+
+### Support
+| Agent | Role |
+|-------|------|
+| **Technical Writer** | Documentation, user guides |
 | **Support Engineer** | Bug triage, production support |
+
+### Management
+| Agent | Role |
+|-------|------|
+| **Orchestrator** | Routes work, coordinates all agents |
 
 ## Checkpoints
 
