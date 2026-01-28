@@ -2,6 +2,7 @@ import Fastify, { FastifyInstance } from 'fastify';
 import cors from '@fastify/cors';
 import jwt from '@fastify/jwt';
 import rateLimit from '@fastify/rate-limit';
+import helmet from '@fastify/helmet';
 import { ZodError } from 'zod';
 
 // Plugins
@@ -30,6 +31,23 @@ export async function buildApp(): Promise<FastifyInstance> {
     } : false,
     requestIdHeader: 'x-request-id',
     requestIdLogLabel: 'request_id',
+  });
+
+  // Register security headers (helmet)
+  await fastify.register(helmet, {
+    contentSecurityPolicy: {
+      directives: {
+        defaultSrc: ["'self'"],
+        styleSrc: ["'self'", "'unsafe-inline'"],
+        scriptSrc: ["'self'"],
+        imgSrc: ["'self'", 'data:', 'https:'],
+      },
+    },
+    hsts: {
+      maxAge: 31536000, // 1 year
+      includeSubDomains: true,
+      preload: true,
+    },
   });
 
   // Register CORS
