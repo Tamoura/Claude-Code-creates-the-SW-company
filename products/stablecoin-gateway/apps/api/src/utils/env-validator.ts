@@ -1,0 +1,226 @@
+/**
+ * Environment variable validation
+ *
+ * Validates required environment variables on application startup
+ * to fail fast and provide clear error messages.
+ */
+
+import { logger } from './logger.js';
+
+interface ValidationResult {
+  valid: boolean;
+  errors: string[];
+  warnings: string[];
+}
+
+/**
+ * Validate KMS configuration
+ */
+function validateKMS(): ValidationResult {
+  const errors: string[] = [];
+  const warnings: string[] = [];
+
+  // Check if KMS is configured
+  const kmsKeyId = process.env.KMS_KEY_ID || process.env.AWS_KMS_KEY_ID;
+  const privateKey = process.env.HOT_WALLET_PRIVATE_KEY;
+  const allowFallback = process.env.ALLOW_PRIVATE_KEY_FALLBACK === 'true';
+
+  if (!kmsKeyId && !privateKey) {
+    errors.push(
+      'KMS_KEY_ID or AWS_KMS_KEY_ID environment variable is required for secure wallet management'
+    );
+    errors.push(
+      'Alternative: Set HOT_WALLET_PRIVATE_KEY (development only) with ALLOW_PRIVATE_KEY_FALLBACK=true'
+    );
+  }
+
+  if (privateKey) {
+    if (!allowFallback) {
+      errors.push(
+        'HOT_WALLET_PRIVATE_KEY is set but ALLOW_PRIVATE_KEY_FALLBACK is not enabled'
+      );
+      errors.push(
+        'For development: Set ALLOW_PRIVATE_KEY_FALLBACK=true (NOT for production)'
+      );
+    }
+
+    if (process.env.NODE_ENV === 'production') {
+      errors.push(
+        'HOT_WALLET_PRIVATE_KEY detected in production environment - use KMS instead'
+      );
+      errors.push('Set KMS_KEY_ID and remove HOT_WALLET_PRIVATE_KEY');
+    } else {
+      warnings.push(
+        'Using HOT_WALLET_PRIVATE_KEY fallback - not recommended for production'
+      );
+    }
+  }
+
+  if (kmsKeyId) {
+    // Validate KMS key format
+    const isArn = kmsKeyId.startsWith('arn:aws:kms:');
+    const isKeyId =
+      /^[0-9a-f]{8}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{12}$/i.test(kmsKeyId);
+    const isAlias = kmsKeyId.startsWith('alias/');
+
+    if (!isArn && !isKeyId && !isAlias) {
+      errors.push(
+        `Invalid KMS_KEY_ID format: ${kmsKeyId}. Must be ARN, Key ID (UUID), or alias`
+      );
+    }
+
+    // Check AWS region
+    if (!process.env.AWS_REGION) {
+      warnings.push('AWS_REGION not set - will use default region (us-east-1)');
+    }
+  }
+
+  return {
+    valid: errors.length === 0,
+    errors,
+    warnings,
+  };
+}
+
+/**
+ * Validate JWT configuration
+ */
+function validateJWT(): ValidationResult {
+  const errors: string[] = [];
+  const warnings: string[] = [];
+
+  const jwtSecret = process.env.JWT_SECRET;
+
+  if (!jwtSecret) {
+    errors.push('JWT_SECRET environment variable is required');
+  } else if (jwtSecret === 'your-jwt-secret-change-in-production' ||
+             jwtSecret === 'change-this-secret-in-production') {
+    errors.push('JWT_SECRET must not be the default value');
+    errors.push(
+      'Generate a strong secret: openssl rand -base64 64 | tr -d "\n" | head -c 64'
+    );
+  } else if (jwtSecret.length < 32) {
+    errors.push('JWT_SECRET must be at least 32 characters long');
+    errors.push(
+      'Generate a strong secret: openssl rand -base64 64 | tr -d "\n" | head -c 64'
+    );
+  } else if (jwtSecret.length < 64) {
+    warnings.push('JWT_SECRET should be at least 64 characters for optimal security');
+  }
+
+  return {
+    valid: errors.length === 0,
+    errors,
+    warnings,
+  };
+}
+
+/**
+ * Validate database configuration
+ */
+function validateDatabase(): ValidationResult {
+  const errors: string[] = [];
+  const warnings: string[] = [];
+
+  if (!process.env.DATABASE_URL) {
+    errors.push('DATABASE_URL environment variable is required');
+  }
+
+  return {
+    valid: errors.length === 0,
+    errors,
+    warnings,
+  };
+}
+
+/**
+ * Validate Redis configuration
+ */
+function validateRedis(): ValidationResult {
+  const errors: string[] = [];
+  const warnings: string[] = [];
+
+  if (!process.env.REDIS_URL) {
+    warnings.push('REDIS_URL not set - some features may not work correctly');
+  }
+
+  return {
+    valid: errors.length === 0,
+    errors,
+    warnings,
+  };
+}
+
+/**
+ * Validate blockchain configuration
+ */
+function validateBlockchain(): ValidationResult {
+  const errors: string[] = [];
+  const warnings: string[] = [];
+
+  const hasAlchemy = !!process.env.ALCHEMY_API_KEY;
+  const hasInfura = !!process.env.INFURA_PROJECT_ID;
+  const hasQuicknode = !!process.env.QUICKNODE_ENDPOINT;
+
+  if (!hasAlchemy && !hasInfura && !hasQuicknode) {
+    warnings.push(
+      'No blockchain RPC provider configured (ALCHEMY_API_KEY, INFURA_PROJECT_ID, or QUICKNODE_ENDPOINT)'
+    );
+    warnings.push('Blockchain monitoring features will not work');
+  }
+
+  return {
+    valid: errors.length === 0,
+    errors,
+    warnings,
+  };
+}
+
+/**
+ * Validate all environment variables
+ */
+export function validateEnvironment(): void {
+  logger.info('Validating environment configuration...');
+
+  const validations = [
+    { name: 'KMS Configuration', result: validateKMS() },
+    { name: 'JWT Configuration', result: validateJWT() },
+    { name: 'Database Configuration', result: validateDatabase() },
+    { name: 'Redis Configuration', result: validateRedis() },
+    { name: 'Blockchain Configuration', result: validateBlockchain() },
+  ];
+
+  let hasErrors = false;
+  let hasWarnings = false;
+
+  for (const { name, result } of validations) {
+    if (result.errors.length > 0) {
+      hasErrors = true;
+      logger.error(`❌ ${name} validation failed:`);
+      result.errors.forEach((error) => logger.error(`   - ${error}`));
+    }
+
+    if (result.warnings.length > 0) {
+      hasWarnings = true;
+      logger.warn(`⚠️  ${name} warnings:`);
+      result.warnings.forEach((warning) => logger.warn(`   - ${warning}`));
+    }
+  }
+
+  if (hasErrors) {
+    logger.error('');
+    logger.error('❌ Environment validation failed - server cannot start');
+    logger.error('   Fix the errors above and restart the server');
+    logger.error('');
+    process.exit(1);
+  }
+
+  if (hasWarnings) {
+    logger.warn('');
+    logger.warn('⚠️  Environment validation completed with warnings');
+    logger.warn('   Review warnings above - some features may not work correctly');
+    logger.warn('');
+  } else {
+    logger.info('✅ Environment validation successful');
+  }
+}

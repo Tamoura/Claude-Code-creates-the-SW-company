@@ -1,4 +1,20 @@
 import { z } from 'zod';
+import { isAddress, getAddress } from 'ethers';
+
+// ==================== Ethereum Address Validation ====================
+
+export const ethereumAddressSchema = z
+  .string()
+  .refine((addr) => addr.startsWith('0x'), {
+    message: 'Ethereum address must start with 0x',
+  })
+  .refine((addr) => isAddress(addr), {
+    message: 'Invalid Ethereum address format',
+  })
+  .refine((addr) => addr !== '0x0000000000000000000000000000000000000000', {
+    message: 'Zero address is not allowed',
+  })
+  .transform((addr) => getAddress(addr)); // Convert to checksummed address
 
 // ==================== Auth Schemas ====================
 
@@ -27,9 +43,7 @@ export const createPaymentSessionSchema = z.object({
   description: z.string().max(500).optional(),
   network: z.enum(['polygon', 'ethereum']).default('polygon'),
   token: z.enum(['USDC', 'USDT']).default('USDC'),
-  merchant_address: z
-    .string()
-    .regex(/^0x[a-fA-F0-9]{40}$/, 'Invalid Ethereum address'),
+  merchant_address: ethereumAddressSchema,
   success_url: z.string().url().optional(),
   cancel_url: z.string().url().optional(),
   metadata: z.record(z.unknown()).optional(),

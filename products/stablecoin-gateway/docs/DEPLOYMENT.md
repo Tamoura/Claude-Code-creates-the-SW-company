@@ -54,6 +54,173 @@ Before deploying, ensure the following AWS resources are created:
    - `stablecoin-gateway/staging/*`
    - `stablecoin-gateway/production/*`
 
+7. **KMS Keys** (for secure wallet management):
+   - Staging: `stablecoin-gateway-staging-wallet-key`
+   - Production: `stablecoin-gateway-production-wallet-key`
+   - **Key Spec**: `ECC_SECG_P256K1` (SECP256K1 curve for Ethereum)
+   - **Key Usage**: `SIGN_VERIFY`
+
+---
+
+## AWS KMS Setup for Secure Wallet Management
+
+### Overview
+
+Stablecoin Gateway uses AWS Key Management Service (KMS) to securely manage private keys for the hot wallet. Private keys **never** exist in application memory or environment variables.
+
+### Creating a KMS Key
+
+#### For Development/Staging
+
+```bash
+# Create KMS key with SECP256K1 curve (Ethereum-compatible)
+aws kms create-key \
+  --key-spec ECC_SECG_P256K1 \
+  --key-usage SIGN_VERIFY \
+  --description "Stablecoin Gateway Staging Wallet Key" \
+  --tags TagKey=Environment,TagValue=staging TagKey=Application,TagValue=stablecoin-gateway
+
+# Get the Key ID from response
+# Example: "KeyId": "12345678-1234-1234-1234-123456789012"
+
+# Create alias for easy reference
+aws kms create-alias \
+  --alias-name alias/stablecoin-gateway-staging-wallet \
+  --target-key-id 12345678-1234-1234-1234-123456789012
+```
+
+#### For Production
+
+```bash
+# Create production KMS key
+aws kms create-key \
+  --key-spec ECC_SECG_P256K1 \
+  --key-usage SIGN_VERIFY \
+  --description "Stablecoin Gateway Production Wallet Key" \
+  --tags TagKey=Environment,TagValue=production TagKey=Application,TagValue=stablecoin-gateway
+
+# Create alias
+aws kms create-alias \
+  --alias-name alias/stablecoin-gateway-production-wallet \
+  --target-key-id <PRODUCTION-KEY-ID>
+```
+
+### Importing an Existing Private Key (Optional)
+
+If you need to import an existing Ethereum private key:
+
+```bash
+# 1. Get the public key from KMS to use for wrapping
+aws kms get-parameters-for-import \
+  --key-id <KEY-ID> \
+  --wrapping-algorithm RSAES_OAEP_SHA_256 \
+  --wrapping-key-spec RSA_2048
+
+# 2. Wrap your private key using the public key
+# (Use OpenSSL or a script - see AWS documentation)
+
+# 3. Import the wrapped key
+aws kms import-key-material \
+  --key-id <KEY-ID> \
+  --encrypted-key-material fileb://wrapped-key.bin \
+  --import-token fileb://import-token.bin \
+  --expiration-model KEY_MATERIAL_DOES_NOT_EXPIRE
+```
+
+**Note**: For production, it's recommended to generate the key directly in KMS rather than importing.
+
+### IAM Permissions
+
+The ECS task execution role needs these permissions:
+
+```json
+{
+  "Version": "2012-10-17",
+  "Statement": [
+    {
+      "Effect": "Allow",
+      "Action": [
+        "kms:GetPublicKey",
+        "kms:Sign"
+      ],
+      "Resource": "arn:aws:kms:us-east-1:123456789012:key/*",
+      "Condition": {
+        "StringEquals": {
+          "kms:RequestAlias": "alias/stablecoin-gateway-*-wallet"
+        }
+      }
+    }
+  ]
+}
+```
+
+### Getting the Ethereum Address
+
+After creating the KMS key, derive the Ethereum address:
+
+```bash
+# Install dependencies
+npm install
+
+# Run derivation script
+node scripts/derive-kms-address.js arn:aws:kms:us-east-1:123456789012:key/...
+
+# Output:
+# KMS Key ID: arn:aws:kms:us-east-1:123456789012:key/12345678...
+# Ethereum Address: 0x742d35Cc6634C0532925a3b844Bc9e7595f0bEb
+#
+# IMPORTANT: Fund this address with gas tokens (MATIC for Polygon)
+```
+
+**CRITICAL**: Fund the derived address with native tokens (ETH/MATIC) for gas fees before deploying.
+
+### Local Development Without KMS
+
+For local development, you can use a test private key:
+
+```bash
+# Option 1: Use KMS LocalStack (recommended)
+docker-compose up -d localstack
+
+# LocalStack creates a mock KMS endpoint at http://localhost:4566
+export AWS_ENDPOINT_URL=http://localhost:4566
+export KMS_KEY_ID="test-key-id"
+
+# Option 2: Use fallback to private key (NOT for production)
+# Set ALLOW_PRIVATE_KEY_FALLBACK=true in .env (only for dev)
+export HOT_WALLET_PRIVATE_KEY="0x..."
+export ALLOW_PRIVATE_KEY_FALLBACK="true"
+```
+
+### Security Best Practices
+
+1. **Key Rotation**: Rotate KMS keys annually
+2. **Access Logging**: Enable CloudTrail logging for all KMS operations
+3. **Least Privilege**: Grant only `kms:Sign` and `kms:GetPublicKey` permissions
+4. **Multi-Region**: Use KMS multi-region keys for disaster recovery
+5. **Monitoring**: Set up CloudWatch alarms for unusual KMS activity
+6. **Backup**: Export and securely store the public key (address derivation)
+
+### Testing KMS Integration
+
+```bash
+# Test KMS connectivity
+npm run test:kms
+
+# Test transaction signing
+npm run test:kms-signing
+
+# View KMS metrics
+aws cloudwatch get-metric-statistics \
+  --namespace AWS/KMS \
+  --metric-name SignCount \
+  --dimensions Name=KeyId,Value=<KEY-ID> \
+  --start-time $(date -u -d '1 hour ago' +%Y-%m-%dT%H:%M:%S) \
+  --end-time $(date -u +%Y-%m-%dT%H:%M:%S) \
+  --period 300 \
+  --statistics Sum
+```
+
 ---
 
 ## Local Development with Docker
