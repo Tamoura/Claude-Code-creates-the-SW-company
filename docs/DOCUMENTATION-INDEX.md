@@ -84,7 +84,21 @@ Then explore:
 | [Phase 2](PHASE-2.md) | Technical | 20 min | Quality Gates, Resources, Dashboard |
 | [Phase 3](PHASE-3.md) | Technical | 20 min | Smart Checkpointing, Rollback, A/B |
 
-### 3. Reference Guides
+### 3. Product Manuals
+
+All product manuals are located in their respective product folders under `products/[product]/docs/`.
+
+| Document | Location | Description |
+|----------|----------|-------------|
+| **Product Manuals Index** | `manuals/README.md` | Quick reference to all product manuals |
+| **Stablecoin Gateway** | `../products/stablecoin-gateway/docs/` | User & Technical manuals, PRD, Architecture |
+| **GPU Calculator** | `../products/gpu-calculator/docs/` | User & Technical manuals, PRD, Architecture |
+| **Basic Calculator** | `../products/basic-calculator/docs/` | User & Technical manuals, PRD, Architecture |
+| **Tech Management Helper** | `../products/tech-management-helper/docs/` | User & Technical manuals, PRD, Architecture |
+| **IT4IT Dashboard** | `../products/it4it-dashboard/docs/` | User & Technical manuals, PRD, Architecture |
+| **Quantum Computing Usecases** | `../products/quantum-computing-usecases/docs/` | User & Technical manuals, PRD |
+
+### 4. Reference Guides
 
 | Document | Location | Description |
 |----------|----------|-------------|
@@ -98,7 +112,7 @@ Then explore:
 | **A/B Testing** | `../.claude/advanced-features/ab-testing-architecture.md` | Architecture experimentation |
 | **Knowledge Graph** | `../.claude/advanced-features/knowledge-graph.md` | Knowledge capture system |
 
-### 4. Agent Documentation
+### 5. Agent Documentation
 
 | Agent | Location | Role |
 |-------|----------|------|
@@ -112,14 +126,14 @@ Then explore:
 | **Technical Writer** | `../.claude/agents/technical-writer.md` | Documentation |
 | **Support Engineer** | `../.claude/agents/support-engineer.md` | Bug triage and support |
 
-### 5. Troubleshooting & Support
+### 6. Troubleshooting & Support
 
 | Document | Description |
 |----------|-------------|
 | [Troubleshooting Guide](TROUBLESHOOTING.md) | Common issues and solutions |
 | [FAQ](FAQ.md) | Frequently asked questions |
 
-### 6. Enhancement & Improvement
+### 7. Enhancement & Improvement
 
 | Document | Description |
 |----------|-------------|
