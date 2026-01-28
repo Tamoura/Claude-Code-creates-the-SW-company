@@ -6,23 +6,29 @@ import { prisma } from '../src/lib/prisma.js';
 describe('Authentication Endpoints', () => {
   let app: FastifyInstance;
 
-  const TEST_ORG_ID = '550e8400-e29b-41d4-a716-446655440000';
+  const TEST_ORG_ID = '550e8400-e29b-41d4-a716-446655440010'; // Unique ID for auth tests
 
   beforeAll(async () => {
     app = await buildApp({ logger: false });
+
+    // Clean up any existing test data
+    await prisma.session.deleteMany({ where: { user: { organizationId: TEST_ORG_ID } } }).catch(() => {});
+    await prisma.user.deleteMany({ where: { organizationId: TEST_ORG_ID } }).catch(() => {});
+    await prisma.organization.delete({ where: { id: TEST_ORG_ID } }).catch(() => {});
 
     // Create test organization
     await prisma.organization.create({
       data: {
         id: TEST_ORG_ID,
-        name: 'Test Organization',
-        slug: 'test-org',
+        name: 'Test Organization Auth',
+        slug: 'test-org-auth',
       },
     });
   });
 
   afterAll(async () => {
     // Cleanup
+    await prisma.session.deleteMany({ where: { user: { organizationId: TEST_ORG_ID } } });
     await prisma.user.deleteMany({ where: { organizationId: TEST_ORG_ID } });
     await prisma.organization.delete({ where: { id: TEST_ORG_ID } });
     await prisma.$disconnect();

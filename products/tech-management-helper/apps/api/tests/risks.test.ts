@@ -5,11 +5,11 @@ import { generateToken } from '../src/lib/jwt.js';
 import { hashPassword } from '../src/lib/password.js';
 import { FastifyInstance } from 'fastify';
 
-// Test data constants
-const TEST_ORG_ID = '550e8400-e29b-41d4-a716-446655440000';
-const TEST_USER_ID = '650e8400-e29b-41d4-a716-446655440001';
-const TEST_MANAGER_ID = '650e8400-e29b-41d4-a716-446655440002';
-const TEST_VIEWER_ID = '650e8400-e29b-41d4-a716-446655440003';
+// Test data constants - Unique IDs for risks test file
+const TEST_ORG_ID = '550e8400-e29b-41d4-a716-446655440020';
+const TEST_USER_ID = '650e8400-e29b-41d4-a716-446655440021';
+const TEST_MANAGER_ID = '650e8400-e29b-41d4-a716-446655440022';
+const TEST_VIEWER_ID = '650e8400-e29b-41d4-a716-446655440023';
 
 let app: FastifyInstance;
 let analystToken: string;
@@ -27,8 +27,8 @@ beforeAll(async () => {
   await prisma.organization.create({
     data: {
       id: TEST_ORG_ID,
-      name: 'Test Organization',
-      slug: 'test-org',
+      name: 'Test Organization Risks',
+      slug: 'test-org-risks',
     },
   });
 
@@ -38,9 +38,9 @@ beforeAll(async () => {
   const analyst = await prisma.user.create({
     data: {
       id: TEST_USER_ID,
-      email: 'analyst@test.com',
+      email: 'analyst-risks@test.com',
       passwordHash: hashedPassword,
-      name: 'Test Analyst',
+      name: 'Test Analyst Risks',
       role: 'ANALYST',
       organizationId: TEST_ORG_ID,
     },
@@ -49,9 +49,9 @@ beforeAll(async () => {
   const manager = await prisma.user.create({
     data: {
       id: TEST_MANAGER_ID,
-      email: 'manager@test.com',
+      email: 'manager-risks@test.com',
       passwordHash: hashedPassword,
-      name: 'Test Manager',
+      name: 'Test Manager Risks',
       role: 'MANAGER',
       organizationId: TEST_ORG_ID,
     },
@@ -60,9 +60,9 @@ beforeAll(async () => {
   const viewer = await prisma.user.create({
     data: {
       id: TEST_VIEWER_ID,
-      email: 'viewer@test.com',
+      email: 'viewer-risks@test.com',
       passwordHash: hashedPassword,
-      name: 'Test Viewer',
+      name: 'Test Viewer Risks',
       role: 'VIEWER',
       organizationId: TEST_ORG_ID,
     },
@@ -440,7 +440,7 @@ describe('Risk CRUD API', () => {
       const body = JSON.parse(response.body);
       expect(body.risk.owner).toBeDefined();
       expect(body.risk.owner.id).toBe(TEST_USER_ID);
-      expect(body.risk.owner.name).toBe('Test Analyst');
+      expect(body.risk.owner.name).toBe('Test Analyst Risks');
     });
 
     it('should return 404 for non-existent risk', async () => {

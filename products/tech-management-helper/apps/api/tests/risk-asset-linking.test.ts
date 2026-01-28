@@ -5,10 +5,10 @@ import { generateToken } from '../src/lib/jwt.js';
 import { hashPassword } from '../src/lib/password.js';
 import { FastifyInstance } from 'fastify';
 
-// Test data constants
-const TEST_ORG_ID = '550e8400-e29b-41d4-a716-446655440000';
-const TEST_USER_ID = '650e8400-e29b-41d4-a716-446655440001';
-const TEST_VIEWER_ID = '650e8400-e29b-41d4-a716-446655440003';
+// Test data constants - Unique IDs for risk-asset linking test file
+const TEST_ORG_ID = '550e8400-e29b-41d4-a716-446655440030';
+const TEST_USER_ID = '650e8400-e29b-41d4-a716-446655440031';
+const TEST_VIEWER_ID = '650e8400-e29b-41d4-a716-446655440033';
 
 let app: FastifyInstance;
 let analystToken: string;
@@ -30,8 +30,8 @@ beforeAll(async () => {
   await prisma.organization.create({
     data: {
       id: TEST_ORG_ID,
-      name: 'Test Organization',
-      slug: 'test-org',
+      name: 'Test Organization Risk Asset',
+      slug: 'test-org-risk-asset',
     },
   });
 
@@ -41,9 +41,9 @@ beforeAll(async () => {
   const analyst = await prisma.user.create({
     data: {
       id: TEST_USER_ID,
-      email: 'analyst@test.com',
+      email: 'analyst-asset@test.com',
       passwordHash: hashedPassword,
-      name: 'Test Analyst',
+      name: 'Test Analyst Asset',
       role: 'ANALYST',
       organizationId: TEST_ORG_ID,
     },
@@ -52,9 +52,9 @@ beforeAll(async () => {
   const viewer = await prisma.user.create({
     data: {
       id: TEST_VIEWER_ID,
-      email: 'viewer@test.com',
+      email: 'viewer-asset@test.com',
       passwordHash: hashedPassword,
-      name: 'Test Viewer',
+      name: 'Test Viewer Asset',
       role: 'VIEWER',
       organizationId: TEST_ORG_ID,
     },
