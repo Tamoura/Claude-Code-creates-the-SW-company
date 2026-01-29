@@ -176,7 +176,7 @@ nano .env
 
 # Start development server
 npm run dev
-# Frontend running at http://localhost:3101
+# Frontend running at http://localhost:3104
 ```
 
 ### Running Tests

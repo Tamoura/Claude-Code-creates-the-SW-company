@@ -5,7 +5,9 @@
  * For development/testing, it can use mock responses when API is unavailable.
  */
 
-const API_BASE_URL = import.meta.env.VITE_API_URL || 'http://localhost:5000';
+import { TokenManager } from './token-manager';
+
+const API_BASE_URL = import.meta.env.VITE_API_URL || 'http://localhost:5001';
 const USE_MOCK_API = import.meta.env.VITE_USE_MOCK_API === 'true';
 
 export interface PaymentSession {
@@ -51,7 +53,7 @@ export interface ApiError {
   request_id?: string;
 }
 
-class ApiClient {
+export class ApiClient {
   private baseUrl: string;
   private useMock: boolean;
 
@@ -70,15 +72,26 @@ class ApiClient {
     }
 
     const url = `${this.baseUrl}${endpoint}`;
-    const headers = {
+    const headers: Record<string, string> = {
       'Content-Type': 'application/json',
-      ...options.headers,
+      ...(options.headers as Record<string, string>),
     };
+
+    // Inject Authorization header if token exists
+    const token = TokenManager.getToken();
+    if (token) {
+      headers['Authorization'] = `Bearer ${token}`;
+    }
 
     try {
       const response = await fetch(url, { ...options, headers });
 
       if (!response.ok) {
+        // Handle 401 Unauthorized - clear token and throw error
+        if (response.status === 401) {
+          TokenManager.clearToken();
+        }
+
         const error: ApiError = await response.json();
         throw new ApiClientError(
           error.status,

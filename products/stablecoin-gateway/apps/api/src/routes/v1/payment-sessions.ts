@@ -1,6 +1,6 @@
 import { FastifyPluginAsync } from 'fastify';
 import { ZodError } from 'zod';
-import { createPaymentSessionSchema, listPaymentSessionsQuerySchema, validateBody, validateQuery } from '../../utils/validation.js';
+import { createPaymentSessionSchema, listPaymentSessionsQuerySchema, updatePaymentSessionSchema, validateBody, validateQuery } from '../../utils/validation.js';
 import { PaymentService } from '../../services/payment.service.js';
 import { AppError } from '../../types/index.js';
 import { logger } from '../../utils/logger.js';
@@ -119,6 +119,83 @@ const paymentSessionRoutes: FastifyPluginAsync = async (fastify) => {
         });
       }
       logger.error('Error getting payment session', error);
+      throw error;
+    }
+  });
+
+  // PATCH /v1/payment-sessions/:id
+  fastify.patch('/:id', {
+    onRequest: [fastify.authenticate],
+  }, async (request, reply) => {
+    try {
+      const { id } = request.params as { id: string };
+      const userId = request.currentUser!.id;
+
+      // Validate request body
+      const updates = validateBody(updatePaymentSessionSchema, request.body);
+
+      const paymentService = new PaymentService(fastify.prisma);
+
+      // Get existing session and verify ownership (this will throw 404 if not found or not owned)
+      await paymentService.getPaymentSession(id, userId);
+
+      // Build update data with only allowed fields (security: whitelist prevents mass assignment)
+      const updateData: any = {};
+
+      if (updates.customer_address !== undefined) {
+        updateData.customerAddress = updates.customer_address;
+      }
+
+      if (updates.tx_hash !== undefined) {
+        updateData.txHash = updates.tx_hash;
+      }
+
+      if (updates.block_number !== undefined) {
+        updateData.blockNumber = updates.block_number;
+      }
+
+      if (updates.confirmations !== undefined) {
+        updateData.confirmations = updates.confirmations;
+      }
+
+      if (updates.status !== undefined) {
+        updateData.status = updates.status;
+
+        // Auto-set completedAt when status changes to COMPLETED
+        if (updates.status === 'COMPLETED') {
+          updateData.completedAt = new Date();
+        }
+      }
+
+      // Update payment session
+      const updatedSession = await fastify.prisma.paymentSession.update({
+        where: { id },
+        data: updateData,
+      });
+
+      const baseUrl = process.env.FRONTEND_URL || 'http://localhost:3101';
+      const response = paymentService.toResponse(updatedSession, baseUrl);
+
+      logger.info('Payment session updated', {
+        userId,
+        paymentSessionId: id,
+        updatedFields: Object.keys(updateData),
+      });
+
+      return reply.send(response);
+    } catch (error) {
+      if (error instanceof AppError) {
+        return reply.code(error.statusCode).send(error.toJSON());
+      }
+      if (error instanceof ZodError) {
+        return reply.code(400).send({
+          type: 'https://gateway.io/errors/validation-error',
+          title: 'Validation Error',
+          status: 400,
+          detail: error.message,
+        });
+      }
+      logger.error('Error updating payment session', error);
       throw error;
     }
   });

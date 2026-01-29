@@ -58,6 +58,14 @@ export const listPaymentSessionsQuerySchema = z.object({
   created_before: z.string().datetime().optional(),
 });
 
+export const updatePaymentSessionSchema = z.object({
+  customer_address: ethereumAddressSchema.optional(),
+  tx_hash: z.string().regex(/^0x[a-fA-F0-9]{64}$/, 'Transaction hash must be 64 hex characters with 0x prefix').optional(),
+  block_number: z.number().int().positive('Block number must be positive').optional(),
+  confirmations: z.number().int().min(0, 'Confirmations must be non-negative').optional(),
+  status: z.enum(['PENDING', 'CONFIRMING', 'COMPLETED', 'FAILED', 'REFUNDED']).optional(),
+});
+
 // ==================== Refund Schemas ====================
 
 export const createRefundSchema = z.object({
