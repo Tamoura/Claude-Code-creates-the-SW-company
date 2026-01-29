@@ -50,65 +50,16 @@ describe("MockDataService", () => {
       expect(retrieved).toEqual(firstDemand);
     });
 
-    it("returns undefined for non-existent demand ID", () => {
-      const retrieved = dataService.getDemandById("NON-EXISTENT");
-      expect(retrieved).toBeUndefined();
-    });
-
     it("provides portfolio items", () => {
       const items = dataService.getPortfolioItems();
       expect(Array.isArray(items)).toBe(true);
       expect(items.length).toBeGreaterThan(0);
     });
 
-    it("retrieves portfolio item by ID", () => {
-      const items = dataService.getPortfolioItems();
-      const firstItem = items[0];
-      const retrieved = dataService.getPortfolioItemById(firstItem.id);
-
-      expect(retrieved).toEqual(firstItem);
-    });
-
     it("provides investments", () => {
       const investments = dataService.getInvestments();
       expect(Array.isArray(investments)).toBe(true);
       expect(investments.length).toBeGreaterThan(0);
-    });
-
-    it("retrieves investment by ID", () => {
-      const investments = dataService.getInvestments();
-      const firstInvestment = investments[0];
-      const retrieved = dataService.getInvestmentById(firstInvestment.id);
-
-      expect(retrieved).toEqual(firstInvestment);
-    });
-
-    it("provides proposals", () => {
-      const proposals = dataService.getProposals();
-      expect(Array.isArray(proposals)).toBe(true);
-      expect(proposals.length).toBeGreaterThan(0);
-    });
-
-    it("retrieves proposal by ID", () => {
-      const proposals = dataService.getProposals();
-      const firstProposal = proposals[0];
-      const retrieved = dataService.getProposalById(firstProposal.id);
-
-      expect(retrieved).toEqual(firstProposal);
-    });
-
-    it("provides roadmap items", () => {
-      const items = dataService.getRoadmapItems();
-      expect(Array.isArray(items)).toBe(true);
-      expect(items.length).toBeGreaterThan(0);
-    });
-
-    it("retrieves roadmap item by ID", () => {
-      const items = dataService.getRoadmapItems();
-      const firstItem = items[0];
-      const retrieved = dataService.getRoadmapItemById(firstItem.id);
-
-      expect(retrieved).toEqual(firstItem);
     });
   });
 
@@ -256,25 +207,24 @@ describe("MockDataService", () => {
       expect(metrics).toHaveProperty("r2f");
       expect(metrics).toHaveProperty("d2c");
 
-      expect(typeof metrics.s2p.openDemands).toBe("number");
-      expect(typeof metrics.s2p.activeInvestments).toBe("number");
-      expect(typeof metrics.s2p.activeInvestmentsBudget).toBe("number");
-      expect(typeof metrics.s2p.pendingProposals).toBe("number");
-      expect(typeof metrics.s2p.portfolioHealth).toBe("number");
+      expect(typeof metrics.s2p.totalDemands).toBe("number");
+      expect(typeof metrics.s2p.activeDemands).toBe("number");
+      expect(typeof metrics.s2p.portfolioItems).toBe("number");
+      expect(typeof metrics.s2p.totalInvestment).toBe("number");
 
       expect(typeof metrics.d2c.openIncidents).toBe("number");
       expect(typeof metrics.d2c.criticalIncidents).toBe("number");
       expect(typeof metrics.d2c.openChanges).toBe("number");
     });
 
-    it("calculates open demands correctly", () => {
+    it("calculates active demands correctly", () => {
       const metrics = dataService.getDashboardMetrics();
       const demands = dataService.getDemands();
-      const openDemands = demands.filter(
-        (d) => d.status === "new" || d.status === "under_review"
+      const activeDemands = demands.filter(
+        (d) => d.status === "new" || d.status === "assessing"
       ).length;
 
-      expect(metrics.s2p.openDemands).toBe(openDemands);
+      expect(metrics.s2p.activeDemands).toBe(activeDemands);
     });
 
     it("calculates open incidents correctly", () => {

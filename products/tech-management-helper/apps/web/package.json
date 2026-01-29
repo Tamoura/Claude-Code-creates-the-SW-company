@@ -1,11 +1,11 @@
 {
   "name": "@tech-management-helper/web",
-  "version": "1.0.0",
+  "version": "0.1.0",
   "private": true,
   "scripts": {
-    "dev": "next dev -p 3100",
+    "dev": "next dev -p 3103",
     "build": "next build",
-    "start": "next start -p 3100",
+    "start": "next start -p 3103",
     "lint": "next lint",
     "test": "vitest run",
     "test:watch": "vitest"

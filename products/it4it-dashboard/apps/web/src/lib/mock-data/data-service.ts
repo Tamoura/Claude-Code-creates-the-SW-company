@@ -1,6 +1,6 @@
 import { faker } from "@faker-js/faker";
 import { generateIncidents, generateEvents, generateChanges } from "./generators/d2c-generator";
-import { generateDemands, generatePortfolioItems, generateInvestments, generateProposals, generateRoadmapItems } from "./generators/s2p-generator";
+import { generateDemands, generatePortfolioItems, generateInvestments } from "./generators/s2p-generator";
 import {
   generateServiceCatalogEntries,
   generateServiceRequests,
@@ -15,7 +15,7 @@ import {
   generatePipelines,
 } from "./generators/r2d-generator";
 import type { Incident, Event, Change } from "@/types/d2c";
-import type { Demand, PortfolioItem, Investment, Proposal, RoadmapItem } from "@/types/s2p";
+import type { Demand, PortfolioItem, Investment } from "@/types/s2p";
 import type { ServiceCatalogEntry, ServiceRequest, Subscription, FulfillmentRequest } from "@/types/r2f";
 import type { Requirement, Build, Deployment, Release, Pipeline } from "@/types/r2d";
 
@@ -28,11 +28,10 @@ import type { Requirement, Build, Deployment, Release, Pipeline } from "@/types/
 
 export interface DashboardMetrics {
   s2p: {
-    openDemands: number;
-    activeInvestments: number;
-    activeInvestmentsBudget: number;
-    pendingProposals: number;
-    portfolioHealth: number;
+    totalDemands: number;
+    activeDemands: number;
+    portfolioItems: number;
+    totalInvestment: number;
   };
   r2d: {
     activePipelines: number;
@@ -59,8 +58,6 @@ class MockDataService {
   private demands: Demand[] = [];
   private portfolioItems: PortfolioItem[] = [];
   private investments: Investment[] = [];
-  private proposals: Proposal[] = [];
-  private roadmapItems: RoadmapItem[] = [];
   private serviceCatalog: ServiceCatalogEntry[] = [];
   private serviceRequests: ServiceRequest[] = [];
   private subscriptions: Subscription[] = [];
@@ -88,11 +85,9 @@ class MockDataService {
     this.changes = generateChanges(30);
 
     // Generate S2P data
-    this.demands = generateDemands(50);
-    this.portfolioItems = generatePortfolioItems(30);
+    this.demands = generateDemands(40);
+    this.portfolioItems = generatePortfolioItems(25);
     this.investments = generateInvestments(15);
-    this.proposals = generateProposals(20);
-    this.roadmapItems = generateRoadmapItems(25);
 
     // Generate R2F data
     this.serviceCatalog = generateServiceCatalogEntries(30);
@@ -158,22 +153,6 @@ class MockDataService {
 
   getInvestmentById(id: string): Investment | undefined {
     return this.investments.find((inv) => inv.id === id);
-  }
-
-  getProposals(): Proposal[] {
-    return this.proposals;
-  }
-
-  getProposalById(id: string): Proposal | undefined {
-    return this.proposals.find((prop) => prop.id === id);
-  }
-
-  getRoadmapItems(): RoadmapItem[] {
-    return this.roadmapItems;
-  }
-
-  getRoadmapItemById(id: string): RoadmapItem | undefined {
-    return this.roadmapItems.find((item) => item.id === id);
   }
 
   // R2F Methods
@@ -260,27 +239,13 @@ class MockDataService {
       (inc) => inc.severity === 1 && inc.status !== "resolved" && inc.status !== "closed"
     ).length;
 
-    const openDemands = this.demands.filter(
-      (dmd) => dmd.status === "new" || dmd.status === "under_review"
+    const activeDemands = this.demands.filter(
+      (dmd) => dmd.status === "new" || dmd.status === "assessing"
     ).length;
 
-    const activeInvestments = this.investments.filter((inv) => inv.status === "active").length;
-
-    const activeInvestmentsBudget = this.investments
+    const totalInvestment = this.investments
       .filter((inv) => inv.status === "active")
-      .reduce((sum, inv) => sum + inv.budget, 0);
-
-    const pendingProposals = this.proposals.filter(
-      (prop) => prop.status === "submitted" || prop.status === "under_review"
-    ).length;
-
-    // Calculate portfolio health (percentage of portfolio items on track)
-    const onTrackItems = this.portfolioItems.filter(
-      (item) => item.status === "active" || item.status === "completed"
-    ).length;
-    const portfolioHealth = this.portfolioItems.length > 0
-      ? Math.round((onTrackItems / this.portfolioItems.length) * 100)
-      : 100;
+      .reduce((sum, inv) => sum + inv.allocatedBudget, 0);
 
     const openChanges = this.changes.filter(
       (chg) => chg.status !== "completed" && chg.status !== "cancelled"
@@ -309,11 +274,10 @@ class MockDataService {
 
     return {
       s2p: {
-        openDemands,
-        activeInvestments,
-        activeInvestmentsBudget,
-        pendingProposals,
-        portfolioHealth,
+        totalDemands: this.demands.length,
+        activeDemands,
+        portfolioItems: this.portfolioItems.length,
+        totalInvestment,
       },
       r2d: {
         activePipelines: this.pipelines.filter((pipe) => pipe.status === "active").length,

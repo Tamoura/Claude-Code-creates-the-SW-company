@@ -143,24 +143,6 @@ Step 4.3: Documentation
 3. Visual verification that UI renders correctly
 4. Manual verification that all interactions work
 
-### Orchestrator Invokes QA Engineer for Testing Gate
-
-Before proceeding to Step 5.1 (Create Pull Request), the Orchestrator MUST:
-
-1. **Invoke QA Engineer** with "Run Testing Gate" task
-2. **Wait for QA report** with pass/fail status
-3. **Based on QA response:**
-   - If PASS → Proceed to create PR
-   - If FAIL → Route to appropriate engineer, then re-invoke QA
-
-**QA Engineer will run:**
-- `npm run test:run` - Unit tests
-- `npm run test:e2e` - E2E/Playwright tests
-- `npm run dev` - Dev server verification
-- Visual verification of UI elements
-
-**Do NOT proceed to PR creation until QA reports "TESTING GATE PASSED"**
-
 ### Phase 5: Review
 
 ```

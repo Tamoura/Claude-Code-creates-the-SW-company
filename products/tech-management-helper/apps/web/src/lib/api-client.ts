@@ -19,9 +19,9 @@ export class ApiClient {
   ): Promise<T> {
     const token = this.getAuthToken();
 
-    const headers: Record<string, string> = {
+    const headers: HeadersInit = {
       'Content-Type': 'application/json',
-      ...(options.headers as Record<string, string>),
+      ...options.headers,
     };
 
     if (token) {

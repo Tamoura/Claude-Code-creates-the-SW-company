@@ -1,6 +1,6 @@
 {
   "name": "@tech-management-helper/api",
-  "version": "1.0.0",
+  "version": "0.1.0",
   "description": "Tech Management Helper API - GRC platform backend",
   "private": true,
   "type": "module",

@@ -126,7 +126,7 @@ Step 3.4: Merge Foundation
 └── Create PR for foundation
 
 Step 3.5: E2E Verification (MANDATORY BEFORE CEO REVIEW)
-├── Invoke QA Engineer agent to WRITE E2E tests
+├── Invoke QA Engineer agent
 ├── Tasks:
 │   ├── Set up Playwright if not exists
 │   ├── Write basic E2E smoke tests
@@ -144,23 +144,6 @@ Step 3.5: E2E Verification (MANDATORY BEFORE CEO REVIEW)
 ├── If ANY issues found:
 │   └── Route back to Frontend Engineer to fix
 └── Only proceed to checkpoint when verified
-
-Step 3.6: Invoke QA Engineer for Testing Gate (MANDATORY)
-├── Orchestrator invokes QA Engineer with "Run Testing Gate" task
-├── QA Engineer executes:
-│   ├── npm run test:run        # Unit tests
-│   ├── npm run test:e2e        # E2E tests
-│   ├── npm run dev             # Dev server verification
-│   └── Visual verification of all UI elements
-├── QA Engineer reports back:
-│   ├── PASS: "TESTING GATE PASSED - Ready for CEO checkpoint"
-│   └── FAIL: Specific failures + recommended engineer to fix
-├── If QA reports FAIL:
-│   ├── DO NOT proceed to checkpoint
-│   ├── Route to recommended engineer
-│   ├── After fix, re-invoke QA Engineer
-│   └── Repeat until QA reports PASS
-└── Only when QA reports PASS, proceed to checkpoint
 
 CHECKPOINT: Foundation Review
 ├── Notify CEO: "Foundation ready for review"

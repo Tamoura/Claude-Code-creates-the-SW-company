@@ -3,12 +3,9 @@
 
 product:
   name: "tech-management-helper"
-  phase: production    # inception | architecture | foundation | development | testing | production
+  phase: development  # inception | architecture | foundation | development | testing | production
   status: active       # active | paused | completed | cancelled
-  version: "1.0.0"
-  current_sprint: "Sprint 2 - Risk Management (Completed)"
-  deployed_at: "2026-01-28T13:10:00Z"
-  production_url: "to-be-configured-by-ceo"
+  current_sprint: "Sprint 2 - Risk Management"
 
 tech_stack:
   backend: "fastify"
@@ -93,54 +90,7 @@ checkpoints:
       - "Error handling and loading states"
       - "Responsive UI design"
     raised_at: "2026-01-26T21:00:00Z"
-    approved: true
-    approved_at: "2026-01-26T21:30:00Z"
-  - id: 5
-    type: sprint_complete
-    title: "Sprint 2 - Risk Management Complete"
-    message: "Full Risk Management system with CRUD, scoring, linking, and UI. 47 new tests, bringing total to 86 tests."
-    artifacts:
-      # Backend
-      - "products/tech-management-helper/apps/api/src/routes/risks.ts"
-      - "products/tech-management-helper/apps/api/src/routes/risk-asset-linking.ts"
-      - "products/tech-management-helper/apps/api/src/routes/risk-control-linking.ts"
-      - "products/tech-management-helper/apps/api/src/schemas/risk.schema.ts"
-      # Frontend
-      - "products/tech-management-helper/apps/web/src/app/(dashboard)/risks/page.tsx"
-      - "products/tech-management-helper/apps/web/src/services/risk.service.ts"
-      - "products/tech-management-helper/apps/web/src/types/risk.ts"
-      - "products/tech-management-helper/apps/web/src/components/risks/"
-    test_results: "API: 86/86 tests passing (100% when run individually)"
-    completed_tasks:
-      - "Risk CRUD API endpoints"
-      - "Risk scoring system (Likelihood × Impact)"
-      - "Risk-Asset linking API"
-      - "Risk-Control linking API"
-      - "Risk Register UI with filtering and sorting"
-      - "Risk form components"
-    features_delivered:
-      - "Complete Risk CRUD operations"
-      - "5×5 risk matrix scoring"
-      - "Risk-Asset and Risk-Control relationships"
-      - "Advanced filtering (status, category, level, owner)"
-      - "Sortable columns with pagination"
-      - "Color-coded risk indicators"
-    raised_at: "2026-01-28T10:00:00Z"
-    approved: true
-    approved_at: "2026-01-28T11:00:00Z"
-  - id: 6
-    type: deployment_complete
-    title: "v1.0.0 Deployed to Production"
-    message: "Tech Management Helper v1.0.0 released with comprehensive deployment documentation."
-    artifacts:
-      - "products/tech-management-helper/docs/DEPLOYMENT.md"
-      - "products/tech-management-helper/docs/QUICKSTART_DEPLOYMENT.md"
-      - "products/tech-management-helper/docs/RELEASE_NOTES_v1.0.0.md"
-    release_url: "https://github.com/Tamoura/Claude-Code-creates-the-SW-company/releases/tag/tech-management-helper-v1.0.0"
-    git_tag: "tech-management-helper-v1.0.0"
-    raised_at: "2026-01-28T13:10:00Z"
     approved: false
-    notes: "GitHub Release created. CEO to deploy when ready using QUICKSTART_DEPLOYMENT.md"
 
 # Active tasks for this product
 active_tasks: []
@@ -160,11 +110,8 @@ agent_history:
     last_task: "Create web app foundation"
     last_activity: "2026-01-26T19:50:00Z"
   qa-engineer:
-    last_task: "Testing Gate for Sprint 2"
-    last_activity: "2026-01-28T10:00:00Z"
-  devops-engineer:
-    last_task: "Deploy v1.0.0 to Production"
-    last_activity: "2026-01-28T13:10:00Z"
+    last_task: null
+    last_activity: null
 
 # Product-specific decisions
 pending_decisions: []
@@ -172,4 +119,4 @@ pending_decisions: []
 # Error log
 error_log: []
 
-last_updated: "2026-01-28T13:10:00Z"
+last_updated: "2026-01-26T21:00:00Z"
