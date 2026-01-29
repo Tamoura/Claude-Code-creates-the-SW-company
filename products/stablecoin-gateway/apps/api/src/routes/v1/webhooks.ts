@@ -10,7 +10,7 @@
  *
  * Security:
  * - All endpoints require authentication (JWT or API key)
- * - Webhook secrets are hashed before storage (bcrypt)
+ * - Webhook secrets stored in plaintext (needed for HMAC signing)
  * - Secrets only shown once during creation
  * - HTTPS-only URLs enforced
  * - Ownership verified on all operations
@@ -23,7 +23,6 @@ import { createWebhookSchema, updateWebhookSchema, validateBody } from '../../ut
 import { AppError } from '../../types/index.js';
 import { logger } from '../../utils/logger.js';
 import crypto from 'crypto';
-import bcrypt from 'bcrypt';
 
 /**
  * Generate a webhook secret with whsec_ prefix (Stripe-style)
@@ -37,14 +36,24 @@ function generateWebhookSecret(): string {
 }
 
 /**
- * Hash webhook secret using bcrypt for secure storage
+ * SECURITY NOTE: Webhook Secrets Storage
  *
- * SECURITY: Never store plaintext secrets in database.
- * Bcrypt provides one-way hashing resistant to rainbow tables.
+ * Unlike passwords and API keys, webhook secrets are stored in PLAINTEXT.
+ *
+ * Why the difference?
+ * - Passwords: Never need to be recovered → one-way hash (bcrypt)
+ * - API keys: Verify incoming requests → one-way hash (SHA-256) + compare
+ * - Webhook secrets: Sign outgoing payloads → must be recoverable (plaintext)
+ *
+ * We need the plaintext secret to compute HMAC signatures when sending
+ * webhooks to merchant endpoints. One-way hashing would make signing impossible.
+ *
+ * Industry standard: Stripe, GitHub, and other webhook providers all store
+ * webhook secrets in a recoverable format (plaintext or encrypted at rest).
+ *
+ * Database-level encryption at rest (if enabled) provides protection for
+ * secrets stored in the database.
  */
-async function hashWebhookSecret(secret: string): Promise<string> {
-  return bcrypt.hash(secret, 10);
-}
 
 /**
  * Format webhook response (exclude secret from output)
@@ -94,16 +103,15 @@ const webhookRoutes: FastifyPluginAsync = async (fastify) => {
       const body = validateBody(createWebhookSchema, request.body);
       const userId = request.currentUser!.id;
 
-      // Generate webhook secret
+      // Generate webhook secret (stored in plaintext for HMAC signing)
       const secret = generateWebhookSecret();
-      const hashedSecret = await hashWebhookSecret(secret);
 
       // Create webhook endpoint
       const webhook = await fastify.prisma.webhookEndpoint.create({
         data: {
           userId,
           url: body.url,
-          secret: hashedSecret,
+          secret: secret, // Plaintext - needed for signing outgoing webhooks
           events: body.events,
           enabled: body.enabled ?? true,
           description: body.description,

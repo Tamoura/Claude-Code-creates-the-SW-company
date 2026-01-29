@@ -181,7 +181,7 @@ describe('Webhook CRUD API', () => {
       expect(response.statusCode).toBe(401);
     });
 
-    it('should hash webhook secret before storing', async () => {
+    it('should store webhook secret in plaintext for HMAC signing', async () => {
       const response = await app.inject({
         method: 'POST',
         url: '/v1/webhooks',
@@ -201,12 +201,14 @@ describe('Webhook CRUD API', () => {
       // Verify secret is returned
       expect(returnedSecret).toMatch(/^whsec_/);
 
-      // Check database - secret should be hashed
+      // Check database - secret should be stored in PLAINTEXT
+      // Unlike passwords/API keys, webhook secrets need to be recoverable
+      // for HMAC signing when sending webhooks to merchant endpoints
       const webhook = await prisma.webhookEndpoint.findUnique({
         where: { id: body.id },
       });
-      expect(webhook?.secret).not.toBe(returnedSecret);
-      expect(webhook?.secret).toMatch(/^\$2[aby]\$/); // bcrypt hash pattern
+      expect(webhook?.secret).toBe(returnedSecret); // Should match exactly (plaintext)
+      expect(webhook?.secret).toMatch(/^whsec_[a-f0-9]{64}$/); // whsec_ + 64 hex chars
     });
   });
 
