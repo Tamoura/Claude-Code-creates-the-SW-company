@@ -29,9 +29,15 @@ const webhookWorkerRoutes: FastifyPluginAsync = async (fastify) => {
     }
 
     if (!authHeader || authHeader !== `Bearer ${expectedKey}`) {
+      // Log unauthorized access without sensitive headers
+      // SECURITY: Never log Authorization, API keys, or other credentials
       logger.warn('Unauthorized webhook worker access attempt', {
         ip: request.ip,
-        headers: request.headers,
+        requestId: request.id,
+        userAgent: request.headers['user-agent'],
+        method: request.method,
+        url: request.url,
+        // DO NOT log request.headers - contains Authorization
       });
       return reply.code(401).send({
         error: 'Unauthorized',
