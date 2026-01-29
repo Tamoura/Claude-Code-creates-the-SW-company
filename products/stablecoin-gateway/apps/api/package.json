@@ -36,7 +36,7 @@
     "@fastify/rate-limit": "^10.3.0",
     "@prisma/client": "^5.8.1",
     "asn1.js": "^5.4.1",
-    "bcrypt": "^5.1.1",
+    "bcrypt": "^6.0.0",
     "bullmq": "^5.1.7",
     "ethers": "^6.10.0",
     "fastify": "^5.7.2",
