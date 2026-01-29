@@ -1,40 +1,51 @@
 /**
  * Token Manager
  *
- * Manages JWT authentication tokens in localStorage.
- * Provides a centralized interface for token storage and retrieval.
+ * Manages JWT access tokens in memory only.
+ *
+ * SECURITY: Access tokens are stored in a private variable and
+ * are never persisted to localStorage or sessionStorage. This
+ * prevents XSS attacks from stealing user session tokens.
+ *
+ * The refresh token is handled via httpOnly cookies set by the
+ * server, which are also not accessible to JavaScript.
+ *
+ * Trade-off: Tokens are lost on page refresh, requiring a
+ * silent re-authentication via the httpOnly refresh cookie.
  */
 
-const TOKEN_KEY = 'auth_token';
+/** In-memory token store -- never exposed to JS-accessible storage */
+let accessToken: string | null = null;
 
 export const TokenManager = {
   /**
-   * Store JWT token in localStorage
+   * Store JWT access token in memory
+   * Does NOT use localStorage (XSS protection)
    */
   setToken(token: string): void {
-    localStorage.setItem(TOKEN_KEY, token);
+    accessToken = token;
   },
 
   /**
-   * Retrieve JWT token from localStorage
+   * Retrieve JWT access token from memory
    * @returns Token string or null if not found
    */
   getToken(): string | null {
-    return localStorage.getItem(TOKEN_KEY);
+    return accessToken;
   },
 
   /**
-   * Remove JWT token from localStorage
+   * Remove JWT access token from memory
    */
   clearToken(): void {
-    localStorage.removeItem(TOKEN_KEY);
+    accessToken = null;
   },
 
   /**
-   * Check if token exists
+   * Check if access token exists in memory
    * @returns true if token exists, false otherwise
    */
   hasToken(): boolean {
-    return this.getToken() !== null;
+    return accessToken !== null;
   },
 };

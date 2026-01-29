@@ -19,9 +19,8 @@ describe('Auth Lifecycle', () => {
   const testPassword = 'SecurePass123';
 
   beforeEach(async () => {
-    // Clear any existing tokens
+    // Clear any existing tokens (memory-only, no localStorage)
     TokenManager.clearToken();
-    localStorage.clear();
 
     // Create client pointing to real backend (will be running in test mode)
     apiClient = new ApiClient('http://localhost:5001', false);

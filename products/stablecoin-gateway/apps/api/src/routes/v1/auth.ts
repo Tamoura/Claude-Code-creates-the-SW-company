@@ -1,10 +1,34 @@
-import { FastifyPluginAsync } from 'fastify';
+import { FastifyPluginAsync, FastifyReply } from 'fastify';
 import { ZodError } from 'zod';
 import { signupSchema, loginSchema, sseTokenSchema, validateBody } from '../../utils/validation.js';
 import { hashPassword, verifyPassword } from '../../utils/crypto.js';
 import { AppError } from '../../types/index.js';
 import { logger } from '../../utils/logger.js';
 import { createHash } from 'crypto';
+
+/** Cookie options for httpOnly refresh token */
+const REFRESH_COOKIE_OPTIONS = {
+  httpOnly: true,
+  secure: process.env.NODE_ENV === 'production',
+  sameSite: 'strict' as const,
+  path: '/v1/auth',
+  maxAge: 7 * 24 * 60 * 60, // 7 days in seconds
+};
+
+/** Set the refresh token as an httpOnly cookie on the reply */
+function setRefreshCookie(reply: FastifyReply, refreshToken: string): void {
+  reply.setCookie('refresh_token', refreshToken, REFRESH_COOKIE_OPTIONS);
+}
+
+/** Clear the refresh token cookie on the reply */
+function clearRefreshCookie(reply: FastifyReply): void {
+  reply.clearCookie('refresh_token', {
+    httpOnly: true,
+    secure: process.env.NODE_ENV === 'production',
+    sameSite: 'strict' as const,
+    path: '/v1/auth',
+  });
+}
 
 const authRoutes: FastifyPluginAsync = async (fastify) => {
   // Auth-specific rate limiting config (5 requests per 15 minutes)
@@ -63,6 +87,9 @@ const authRoutes: FastifyPluginAsync = async (fastify) => {
       });
 
       logger.info('User signed up', { userId: user.id, email: user.email });
+
+      // Set refresh token as httpOnly cookie (not accessible to JS)
+      setRefreshCookie(reply, refreshToken);
 
       return reply.code(201).send({
         id: user.id,
@@ -132,6 +159,9 @@ const authRoutes: FastifyPluginAsync = async (fastify) => {
 
       logger.info('User logged in', { userId: user.id, email: user.email });
 
+      // Set refresh token as httpOnly cookie (not accessible to JS)
+      setRefreshCookie(reply, refreshToken);
+
       return reply.send({
         id: user.id,
         email: user.email,
@@ -157,7 +187,10 @@ const authRoutes: FastifyPluginAsync = async (fastify) => {
   // POST /v1/auth/refresh
   fastify.post('/refresh', authRateLimit, async (request, reply) => {
     try {
-      const { refresh_token } = request.body as { refresh_token: string };
+      // Read refresh token from body first, then fall back to httpOnly cookie
+      const bodyToken = (request.body as { refresh_token?: string })?.refresh_token;
+      const cookieToken = request.cookies?.refresh_token;
+      const refresh_token = bodyToken || cookieToken;
 
       if (!refresh_token) {
         throw new AppError(400, 'missing-token', 'Refresh token is required');
@@ -223,6 +256,9 @@ const authRoutes: FastifyPluginAsync = async (fastify) => {
         }),
       ]);
 
+      // Set new refresh token as httpOnly cookie
+      setRefreshCookie(reply, newRefreshToken);
+
       return reply.send({
         access_token: accessToken,
         refresh_token: newRefreshToken,
@@ -242,7 +278,10 @@ const authRoutes: FastifyPluginAsync = async (fastify) => {
       await request.jwtVerify();
       const userId = (request.user as { userId: string }).userId;
 
-      const { refresh_token } = request.body as { refresh_token: string };
+      // Read refresh token from body first, then fall back to httpOnly cookie
+      const bodyToken = (request.body as { refresh_token?: string })?.refresh_token;
+      const cookieToken = request.cookies?.refresh_token;
+      const refresh_token = bodyToken || cookieToken;
 
       if (!refresh_token) {
         throw new AppError(400, 'missing-token', 'Refresh token is required');
@@ -265,6 +304,9 @@ const authRoutes: FastifyPluginAsync = async (fastify) => {
       if (result.count === 0) {
         throw new AppError(404, 'token-not-found', 'Refresh token not found or already revoked');
       }
+
+      // Clear the httpOnly refresh token cookie
+      clearRefreshCookie(reply);
 
       logger.info('User logged out', { userId });
 

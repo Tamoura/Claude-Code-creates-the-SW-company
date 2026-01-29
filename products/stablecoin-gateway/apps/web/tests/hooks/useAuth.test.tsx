@@ -14,9 +14,8 @@ import { TokenManager } from '../../src/lib/token-manager';
 
 describe('useAuth Hook', () => {
   beforeEach(() => {
-    // Clear tokens before each test
+    // Clear tokens before each test (memory-only, no localStorage)
     TokenManager.clearToken();
-    localStorage.clear();
   });
 
   describe('Initial State', () => {

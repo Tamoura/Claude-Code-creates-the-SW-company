@@ -1,5 +1,6 @@
 import Fastify, { FastifyInstance } from 'fastify';
 import cors from '@fastify/cors';
+import cookie from '@fastify/cookie';
 import jwt from '@fastify/jwt';
 import rateLimit from '@fastify/rate-limit';
 import helmet from '@fastify/helmet';
@@ -80,6 +81,12 @@ export async function buildApp(): Promise<FastifyInstance> {
       callback(new Error('Not allowed by CORS'), false);
     },
     credentials: true,
+  });
+
+  // Register cookie plugin for httpOnly refresh token cookies
+  await fastify.register(cookie, {
+    secret: process.env.COOKIE_SECRET || process.env.JWT_SECRET!,
+    parseOptions: {},
   });
 
   // Register JWT
