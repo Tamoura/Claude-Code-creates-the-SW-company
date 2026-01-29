@@ -1,0 +1,82 @@
+{
+  "segments": [
+    {
+      "timestamp": "00:00:15",
+      "speaker": "Sarah Chen",
+      "text": "Good morning everyone! Let's dive into our Q1 API architecture review. We have a lot to cover today."
+    },
+    {
+      "timestamp": "00:00:32",
+      "speaker": "Sarah Chen",
+      "text": "First up, we need to decide between GraphQL and REST for our new microservices. Marcus, can you share your research?"
+    },
+    {
+      "timestamp": "00:02:34",
+      "speaker": "Marcus Johnson",
+      "text": "Sure! I've been evaluating both approaches. GraphQL gives us more flexibility with data fetching, but it adds complexity to our backend."
+    },
+    {
+      "timestamp": "00:04:15",
+      "speaker": "Priya Patel",
+      "text": "From the frontend perspective, GraphQL would significantly reduce the number of API calls we make. That's a huge win for performance."
+    },
+    {
+      "timestamp": "00:06:22",
+      "speaker": "Chen Wei",
+      "text": "We need to consider the infrastructure implications. GraphQL servers require different caching strategies."
+    },
+    {
+      "timestamp": "00:08:12",
+      "speaker": "Marcus Johnson",
+      "text": "I propose we go with GraphQL Federation. It gives us the benefits of GraphQL while allowing teams to own their own schemas."
+    },
+    {
+      "timestamp": "00:09:45",
+      "speaker": "Sarah Chen",
+      "text": "That sounds promising. Let's see a quick diagram of how that would work. Marcus, can you share your screen?"
+    },
+    {
+      "timestamp": "00:10:02",
+      "speaker": "Marcus Johnson",
+      "text": "Sure, sharing now..."
+    },
+    {
+      "timestamp": "00:12:45",
+      "speaker": "Elena Rodriguez",
+      "text": "Wait, I'm not clear on how service boundaries would work in this model. Can we zoom in on that part?"
+    },
+    {
+      "timestamp": "00:13:20",
+      "speaker": "Marcus Johnson",
+      "text": "Good question. Each service would expose its own GraphQL schema, and the gateway federates them. Let me explain more..."
+    },
+    {
+      "timestamp": "00:15:23",
+      "speaker": "Sarah Chen",
+      "text": "This makes sense. I'll create an RFC for the GraphQL schema design approach. Can I get that done by next week?"
+    },
+    {
+      "timestamp": "00:16:10",
+      "speaker": "Sarah Chen",
+      "text": "Everyone agrees? Great, let's move forward with GraphQL Federation as our architecture choice."
+    },
+    {
+      "timestamp": "00:17:05",
+      "speaker": "David Kim",
+      "text": "I'll need to update our testing strategy to handle GraphQL queries. That should take about a week."
+    },
+    {
+      "timestamp": "00:17:45",
+      "speaker": "Sarah Chen",
+      "text": "Perfect. Thanks everyone, great discussion today. Let's reconvene next Monday to review the RFC."
+    }
+  ],
+  "speakerStats": {
+    "Sarah Chen": { "timeSpoken": 245, "segments": 6 },
+    "Marcus Johnson": { "timeSpoken": 312, "segments": 4 },
+    "Priya Patel": { "timeSpoken": 78, "segments": 1 },
+    "Chen Wei": { "timeSpoken": 54, "segments": 1 },
+    "Elena Rodriguez": { "timeSpoken": 62, "segments": 1 },
+    "David Kim": { "timeSpoken": 48, "segments": 1 }
+  }
+}
