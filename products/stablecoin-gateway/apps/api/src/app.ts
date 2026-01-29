@@ -22,6 +22,7 @@ import webhookWorkerRoutes from './routes/internal/webhook-worker.js';
 // Utils
 import { logger } from './utils/logger.js';
 import { AppError } from './types/index.js';
+import { RedisRateLimitStore } from './utils/redis-rate-limit-store.js';
 
 export async function buildApp(): Promise<FastifyInstance> {
   const fastify = Fastify({
@@ -92,22 +93,28 @@ export async function buildApp(): Promise<FastifyInstance> {
   await fastify.register(prismaPlugin);
   await fastify.register(redisPlugin);
 
-  // Register rate limiting
-  // Note: Redis is available via fastify.redis for custom distributed rate limiting
-  // Current implementation uses in-memory store for simplicity
-  // Production deployments can implement Redis-backed rate limiting using:
-  // - Custom store implementing the rate-limit store interface
-  // - Third-party packages like @fastify/rate-limit-redis
-  await fastify.register(rateLimit, {
+  // Register rate limiting with Redis-backed distributed store
+  const rateLimitConfig: any = {
     max: parseInt(process.env.RATE_LIMIT_MAX || '100'),
     timeWindow: parseInt(process.env.RATE_LIMIT_WINDOW || '60000'),
-  });
+  };
 
   if (fastify.redis) {
-    logger.info('Redis available for distributed rate limiting (custom store needed)');
+    // Use Redis for distributed rate limiting across multiple instances
+    const redisStore = new RedisRateLimitStore({
+      redis: fastify.redis,
+      keyPrefix: 'ratelimit:',
+    });
+    rateLimitConfig.store = redisStore;
+    logger.info('Rate limiting configured with Redis distributed store', {
+      max: rateLimitConfig.max,
+      timeWindow: rateLimitConfig.timeWindow,
+    });
   } else {
-    logger.warn('Redis not configured - rate limiting uses in-memory store');
+    logger.warn('Redis not configured - rate limiting uses in-memory store (not suitable for production)');
   }
+
+  await fastify.register(rateLimit, rateLimitConfig);
 
   await fastify.register(authPlugin);
 

@@ -203,7 +203,7 @@ declare module 'fastify' {
 
   interface FastifyInstance {
     prisma: import('@prisma/client').PrismaClient;
-    redis: import('ioredis').Redis;
+    redis: import('ioredis').Redis | null;
     authenticate: (request: FastifyRequest) => Promise<void>;
     optionalAuth: (request: FastifyRequest) => Promise<void>;
     requirePermission: (permission: 'read' | 'write' | 'refund') => (request: FastifyRequest) => Promise<void>;
