@@ -54,8 +54,9 @@ model RefreshToken {
 // ==================== Payments ====================
 
 model PaymentSession {
-  id     String @id @default(cuid())
-  userId String @map("user_id")
+  id              String  @id @default(cuid())
+  userId          String  @map("user_id")
+  idempotencyKey  String? @unique @map("idempotency_key")
 
   // Payment details
   amount      Decimal @db.Decimal(10, 2)

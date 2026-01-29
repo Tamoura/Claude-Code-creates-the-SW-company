@@ -32,6 +32,7 @@ export class PaymentService {
         successUrl: data.success_url,
         cancelUrl: data.cancel_url,
         metadata: data.metadata as any,
+        idempotencyKey: data.idempotency_key,
         expiresAt,
         status: 'PENDING',
       },

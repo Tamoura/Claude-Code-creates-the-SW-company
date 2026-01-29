@@ -81,6 +81,7 @@ export const createPaymentSessionSchema = z.object({
   success_url: z.string().url().optional(),
   cancel_url: z.string().url().optional(),
   metadata: metadataSchema,
+  idempotency_key: z.string().min(1).max(255).optional(),
 });
 
 export const listPaymentSessionsQuerySchema = z.object({

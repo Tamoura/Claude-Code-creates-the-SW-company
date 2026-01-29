@@ -17,6 +17,39 @@ const paymentSessionRoutes: FastifyPluginAsync = async (fastify) => {
       const userId = request.currentUser!.id;
 
       const paymentService = new PaymentService(fastify.prisma);
+
+      // IDEMPOTENCY: Check if payment already exists with this idempotency key
+      // Prevents duplicate payments from network retries
+      if (body.idempotency_key) {
+        const existingSession = await fastify.prisma.paymentSession.findUnique({
+          where: { idempotencyKey: body.idempotency_key },
+        });
+
+        if (existingSession) {
+          // Verify the existing session belongs to the same user
+          if (existingSession.userId !== userId) {
+            throw new AppError(
+              409,
+              'idempotency-key-conflict',
+              'Idempotency key already used by another user'
+            );
+          }
+
+          // Return existing payment session (idempotent behavior)
+          const baseUrl = process.env.FRONTEND_URL || 'http://localhost:3101';
+          const response = paymentService.toResponse(existingSession, baseUrl);
+
+          logger.info('Payment session returned (idempotent)', {
+            userId,
+            paymentSessionId: existingSession.id,
+            idempotencyKey: body.idempotency_key,
+          });
+
+          // Return 200 (not 201) to indicate this is an existing resource
+          return reply.code(200).send(response);
+        }
+      }
+
       const session = await paymentService.createPaymentSession(userId, body);
 
       const baseUrl = process.env.FRONTEND_URL || 'http://localhost:3101';
@@ -26,6 +59,7 @@ const paymentSessionRoutes: FastifyPluginAsync = async (fastify) => {
         userId,
         paymentSessionId: session.id,
         amount: session.amount,
+        idempotencyKey: body.idempotency_key,
       });
 
       return reply.code(201).send(response);

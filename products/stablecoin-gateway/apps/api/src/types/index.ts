@@ -12,6 +12,7 @@ export interface CreatePaymentSessionRequest {
   success_url?: string;
   cancel_url?: string;
   metadata?: Record<string, unknown>;
+  idempotency_key?: string;
 }
 
 export interface PaymentSessionResponse {
