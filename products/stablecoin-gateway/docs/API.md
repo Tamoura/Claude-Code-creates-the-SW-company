@@ -26,6 +26,36 @@ Get your API key from [Dashboard → API Keys](https://gateway.io/dashboard/api-
 | `sk_live_` | Production | Real payments with real money |
 | `sk_test_` | Sandbox | Test payments on Mumbai testnet |
 
+### API Key Permissions
+
+Each API key has granular permissions that are enforced on all operations:
+
+| Permission | Allows | Example Operations |
+|------------|--------|-------------------|
+| `read` | View payment sessions, transactions | GET /v1/payment-sessions |
+| `write` | Create and update payments | POST /v1/payment-sessions, PATCH /v1/payment-sessions/:id |
+| `refund` | Issue refunds | POST /v1/refunds |
+
+**Permission Enforcement**:
+- Read-only keys (`{read: true, write: false, refund: false}`) can only GET resources
+- Write keys require explicit permission to POST or PATCH
+- Refund operations require dedicated permission for security
+
+**Example**: Creating a read-only API key
+```bash
+curl -X POST https://api.gateway.io/v1/api-keys \
+  -H "Authorization: Bearer <your-session-token>" \
+  -H "Content-Type: application/json" \
+  -d '{
+    "name": "Analytics Dashboard",
+    "permissions": {
+      "read": true,
+      "write": false,
+      "refund": false
+    }
+  }'
+```
+
 **Important**: Never commit API keys to version control. Use environment variables.
 
 ---
@@ -525,14 +555,96 @@ Authorization: Bearer sk_live_abc123
 
 ---
 
+#### PATCH /v1/payment-sessions/:id
+
+Update a payment session (field whitelisting enforced).
+
+**Security Note**: Only safe fields can be updated. Critical fields (amount, merchant_address) are protected.
+
+**Request**:
+```http
+PATCH /v1/payment-sessions/ps_abc123
+Authorization: Bearer sk_live_abc123
+Content-Type: application/json
+
+{
+  "customer_address": "0x123...",
+  "tx_hash": "0xabc...",
+  "status": "confirming"
+}
+```
+
+**Allowed Fields**:
+- `customer_address` - Customer's wallet address
+- `tx_hash` - Transaction hash
+- `status` - Payment status (pending, confirming, completed, failed, expired)
+- `metadata` - Custom metadata (max 16KB)
+
+**Protected Fields** (cannot be updated):
+- `amount` - Payment amount (immutable)
+- `merchant_address` - Merchant's wallet (immutable)
+- `currency` - Currency type (immutable)
+- `network` - Blockchain network (immutable)
+- `token` - Token type (immutable)
+
+**Response**: `200 OK`
+```json
+{
+  "id": "ps_abc123",
+  "status": "confirming",
+  "customer_address": "0x123...",
+  "tx_hash": "0xabc...",
+  "updated_at": "2026-01-27T10:01:30Z"
+}
+```
+
+**Code Examples**:
+
+<details>
+<summary>Node.js</summary>
+
+```typescript
+const response = await fetch(
+  `https://api.gateway.io/v1/payment-sessions/${paymentId}`,
+  {
+    method: 'PATCH',
+    headers: {
+      'Authorization': `Bearer ${process.env.STABLECOIN_GATEWAY_API_KEY}`,
+      'Content-Type': 'application/json',
+    },
+    body: JSON.stringify({
+      customer_address: customerWalletAddress,
+      tx_hash: transactionHash,
+      status: 'confirming',
+    }),
+  }
+);
+
+const payment = await response.json();
+console.log('Payment updated:', payment.id);
+```
+</details>
+
+**Error Responses**:
+
+| Status | Code | Description |
+|--------|------|-------------|
+| 400 | VALIDATION_ERROR | Invalid field value |
+| 403 | AUTHORIZATION_ERROR | Not the payment owner |
+| 404 | NOT_FOUND | Payment session not found |
+| 422 | IMMUTABLE_FIELD | Attempted to update protected field |
+
+---
+
 #### GET /v1/payment-sessions/:id/events
 
 Server-Sent Events (SSE) stream for real-time payment status updates.
 
+**Authentication**: Query parameter token required (EventSource doesn't support headers).
+
 **Request**:
 ```http
-GET /v1/payment-sessions/ps_abc123/events
-Authorization: Bearer sk_live_abc123
+GET /v1/payment-sessions/ps_abc123/events?token=<jwt_token>
 Accept: text/event-stream
 ```
 
@@ -550,13 +662,10 @@ data: {"status": "completed", "confirmed_at": "2026-01-27T10:02:15Z"}
 **Code Example (Node.js)**:
 
 ```typescript
+// Frontend: Use query token for SSE authentication
+const token = localStorage.getItem('access_token');
 const eventSource = new EventSource(
-  `https://api.gateway.io/v1/payment-sessions/${paymentId}/events`,
-  {
-    headers: {
-      'Authorization': `Bearer ${apiKey}`,
-    },
-  }
+  `https://api.gateway.io/v1/payment-sessions/${paymentId}/events?token=${token}`
 );
 
 eventSource.addEventListener('status-update', (event) => {
@@ -574,6 +683,11 @@ eventSource.addEventListener('error', (error) => {
   eventSource.close();
 });
 ```
+
+**Security Note**:
+- The query token approach is used because EventSource doesn't support custom headers
+- Token is validated on the backend before opening SSE connection
+- Only the payment owner can subscribe to updates
 
 ---
 

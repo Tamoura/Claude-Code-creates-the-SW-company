@@ -70,27 +70,98 @@ MUST pause for CEO approval at these points:
 | Decision Needed | "Need decision: [question]. Options: [A, B, C]" |
 | Escalation (3 failures) | "Task failed 3 times. [Details]. How should I proceed?" |
 
-## MANDATORY: E2E Testing Before CEO Checkpoints
+## MANDATORY: Zero Errors on First Run
 
-**CRITICAL RULE**: Before ANY checkpoint where CEO will test the product, you MUST:
+**IRON-CLAD RULE**: CEO must NEVER see errors on first run.
 
-1. **Invoke QA Engineer** to run full E2E verification
-2. **Verify Playwright tests pass**: `npm run test:e2e`
-3. **Verify visual elements work**:
-   - All buttons visible and styled
-   - All form inputs have borders
-   - All interactions work (click, submit, etc.)
-   - No console errors
-4. **Only THEN proceed to checkpoint**
+See `.claude/standards/TESTING-STANDARDS.md` for complete requirements.
 
-**Why**: Unit tests can pass while UI is broken (invisible buttons, missing styles).
-CEO should NEVER see broken UI. Catch issues before checkpoint.
+### Before EVERY CEO Checkpoint - Run All 4 Gates
 
-**If E2E tests fail or visual issues exist**:
-- DO NOT proceed to checkpoint
-- Route back to Frontend Engineer to fix
-- Re-run E2E verification
-- Only proceed when everything works
+#### Gate 1: Build Test
+```bash
+cd products/[product]/apps/[app]
+npm run build
+```
+**MUST PASS**:
+- ✅ No TypeScript errors
+- ✅ No dependency issues
+- ✅ No Tailwind/PostCSS config errors
+- ✅ Build completes successfully
+
+**IF FAILS**: STOP. Route to engineer. Do NOT proceed.
+
+#### Gate 2: Server Start Test
+```bash
+npm run dev &
+sleep 5
+curl -f http://localhost:[PORT] || exit 1
+```
+**MUST PASS**:
+- ✅ Server starts without errors
+- ✅ Correct port from PORT-REGISTRY.md
+- ✅ Server responds to requests
+- ✅ No errors in console/logs
+
+**IF FAILS**: STOP. Route to engineer. Do NOT proceed.
+
+#### Gate 3: Smoke Test
+```bash
+npm run test:smoke
+```
+**MUST PASS**:
+- ✅ Playwright tests pass
+- ✅ Homepage loads
+- ✅ No console errors
+- ✅ No network failures
+- ✅ Interactive elements visible
+
+**IF FAILS**: STOP. Route to QA/Frontend Engineer. Do NOT proceed.
+
+#### Gate 4: Visual Verification
+```bash
+# Open browser, take screenshot, verify
+open http://localhost:[PORT]
+```
+**MUST VERIFY**:
+- ✅ Page loads visually
+- ✅ Buttons/links visible and styled
+- ✅ No layout issues
+- ✅ Branding/colors correct
+
+**IF FAILS**: STOP. Route to Frontend Engineer. Do NOT proceed.
+
+### Only After ALL Gates Pass
+
+✅ **THEN and ONLY THEN** proceed to CEO checkpoint
+
+### Why This is Non-Negotiable
+
+- CEO time is valuable - don't waste it with broken demos
+- First impressions matter - errors damage confidence
+- Testing catches 99% of issues before CEO sees them
+- Professional delivery requires professional QA
+
+### Enforcement
+
+**Orchestrator MUST**:
+1. Run all 4 gates automatically
+2. Block checkpoint if ANY gate fails
+3. Route back to appropriate engineer
+4. Re-run ALL gates after fixes
+5. Document test results in checkpoint report
+
+**QA Engineer MUST**:
+1. Verify all gates passed
+2. Create test report
+3. Block checkpoint if issues found
+4. Provide fix recommendations
+
+**Engineers MUST**:
+1. Self-test before marking complete
+2. Ensure smoke tests exist and pass
+3. Fix issues when routed from Orchestrator
+4. Re-run tests after fixes
 
 ## Parallel Work with Git Worktrees
 
@@ -184,6 +255,64 @@ Each product has a `.claude/addendum.md` file with product-specific context:
 **Created by**: Product Manager (during PRD) or Architect (during architecture)
 
 When working on a product, ALWAYS read its addendum first.
+
+## Port Registry Management
+
+**CRITICAL**: All products must run simultaneously without port conflicts.
+
+### Before Creating Any New Product
+
+1. **Read the port registry**: `.claude/PORT-REGISTRY.md`
+2. **Assign unique ports**:
+   - Frontend: Next available in 3100-3199 range
+   - Backend API: Next available in 5000-5099 range
+   - Mobile dev server: Next available in 8081-8099 range
+3. **Pass ports to agents** in task instructions
+4. **Update registry** immediately after assignment
+5. **Commit registry** with product code
+
+### Port Assignment Example
+
+```markdown
+## Your Current Task
+
+Create new product "[product-name]"
+
+## Assigned Ports
+
+- Frontend: 3107 (verified available in PORT-REGISTRY.md)
+- Backend API: 5003 (verified available in PORT-REGISTRY.md)
+
+## Requirements
+
+- Configure Vite/Next.js to use port 3107
+- Configure Fastify/Express to use port 5003
+- Add comment in configs: "// See .claude/PORT-REGISTRY.md"
+- Update PORT-REGISTRY.md with these assignments before completing
+```
+
+### Sanity Testing After Product Creation
+
+Before completing any product workflow, **ALWAYS run sanity test**:
+
+1. **Start the product** on its assigned port
+2. **Verify** it loads without errors
+3. **Check** for configuration issues (Tailwind, TypeScript, etc.)
+4. **Test** basic functionality (homepage loads, buttons work)
+5. **Only THEN** proceed to checkpoint
+
+**Common issues to catch**:
+- Port conflicts (check with `lsof -i :[port]`)
+- Tailwind CSS PostCSS plugin conflicts
+- Missing dependencies
+- TypeScript compilation errors
+- Broken imports
+
+If sanity test fails:
+- DO NOT proceed to checkpoint
+- Route back to relevant engineer (Frontend/Backend/DevOps)
+- Fix issue and re-run sanity test
+- Only proceed when product runs cleanly
 
 ## Invoking Specialist Agents
 

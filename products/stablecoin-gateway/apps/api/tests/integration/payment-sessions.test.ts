@@ -37,7 +37,7 @@ describe('POST /v1/payment-sessions', () => {
         description: 'Test payment',
         network: 'polygon',
         token: 'USDC',
-        merchant_address: '0x742d35Cc6634C0532925a3b844Bc9e7595f0bEb0',
+        merchant_address: '0x742D35CC6634c0532925A3b844BC9E7595F0BEb0',
       },
     });
 
@@ -50,7 +50,7 @@ describe('POST /v1/payment-sessions', () => {
       status: 'PENDING',
       network: 'polygon',
       token: 'USDC',
-      merchant_address: '0x742d35Cc6634C0532925a3b844Bc9e7595f0bEb0',
+      merchant_address: '0x742D35CC6634c0532925A3b844BC9E7595F0BEb0',
     });
     expect(body.id).toMatch(/^ps_/);
     expect(body.checkout_url).toContain(body.id);
@@ -62,7 +62,7 @@ describe('POST /v1/payment-sessions', () => {
       url: '/v1/payment-sessions',
       payload: {
         amount: 100,
-        merchant_address: '0x742d35Cc6634C0532925a3b844Bc9e7595f0bEb0',
+        merchant_address: '0x742D35CC6634c0532925A3b844BC9E7595F0BEb0',
       },
     });
 
@@ -78,7 +78,7 @@ describe('POST /v1/payment-sessions', () => {
       },
       payload: {
         amount: 0.5,
-        merchant_address: '0x742d35Cc6634C0532925a3b844Bc9e7595f0bEb0',
+        merchant_address: '0x742D35CC6634c0532925A3b844BC9E7595F0BEb0',
       },
     });
 
@@ -110,7 +110,7 @@ describe('POST /v1/payment-sessions', () => {
       },
       payload: {
         amount: 100,
-        merchant_address: '0x742d35Cc6634C0532925a3b844Bc9e7595f0bEb0',
+        merchant_address: '0x742D35CC6634c0532925A3b844BC9E7595F0BEb0',
         success_url: 'https://example.com/success',
         cancel_url: 'https://example.com/cancel',
       },
@@ -151,7 +151,7 @@ describe('GET /v1/payment-sessions', () => {
         },
         payload: {
           amount: 100 + i * 10,
-          merchant_address: '0x742d35Cc6634C0532925a3b844Bc9e7595f0bEb0',
+          merchant_address: '0x742D35CC6634c0532925A3b844BC9E7595F0BEb0',
         },
       });
     }
@@ -244,7 +244,7 @@ describe('GET /v1/payment-sessions/:id', () => {
       },
       payload: {
         amount: 100,
-        merchant_address: '0x742d35Cc6634C0532925a3b844Bc9e7595f0bEb0',
+        merchant_address: '0x742D35CC6634c0532925A3b844BC9E7595F0BEb0',
       },
     });
     paymentId = createResponse.json().id;

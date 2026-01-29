@@ -1,0 +1,50 @@
+{
+  "dataPoints": [
+    { "time": 0, "score": 0.45, "emotion": "neutral", "note": "Meeting starting" },
+    { "time": 30, "score": 0.62, "emotion": "engaged", "note": "Introduction" },
+    { "time": 60, "score": 0.68, "emotion": "engaged", "note": "Agenda overview" },
+    { "time": 90, "score": 0.75, "emotion": "engaged", "note": "Topic introduction" },
+    { "time": 120, "score": 0.82, "emotion": "engaged", "note": "Active listening" },
+    { "time": 154, "score": 0.89, "emotion": "highly_engaged", "note": "Active discussion about GraphQL vs REST" },
+    { "time": 180, "score": 0.91, "emotion": "highly_engaged", "note": "Team members leaning in, nodding" },
+    { "time": 210, "score": 0.88, "emotion": "highly_engaged", "note": "Multiple participants taking notes" },
+    { "time": 255, "score": 0.85, "emotion": "engaged", "note": "Discussion continues" },
+    { "time": 300, "score": 0.78, "emotion": "engaged", "note": "Priya contributing frontend perspective" },
+    { "time": 330, "score": 0.72, "emotion": "engaged", "note": "Team processing information" },
+    { "time": 360, "score": 0.68, "emotion": "engaged", "note": "Chen discussing infrastructure" },
+    { "time": 390, "score": 0.71, "emotion": "engaged", "note": "Technical deep dive" },
+    { "time": 420, "score": 0.76, "emotion": "engaged", "note": "Architecture proposal discussion" },
+    { "time": 450, "score": 0.79, "emotion": "engaged", "note": "Team showing interest" },
+    { "time": 492, "score": 0.81, "emotion": "engaged", "note": "GraphQL Federation proposal" },
+    { "time": 520, "score": 0.73, "emotion": "engaged", "note": "Transitioning to screen share" },
+    { "time": 545, "score": 0.68, "emotion": "neutral", "note": "Waiting for screen share to load" },
+    { "time": 585, "score": 0.72, "emotion": "engaged", "note": "Viewing architecture diagram" },
+    { "time": 620, "score": 0.75, "emotion": "engaged", "note": "Analyzing diagram details" },
+    { "time": 660, "score": 0.58, "emotion": "confused", "note": "Some participants showing confused body language" },
+    { "time": 690, "score": 0.42, "emotion": "confused", "note": "Multiple team members furrowing brows" },
+    { "time": 720, "score": 0.38, "emotion": "confused", "note": "Elena asking clarifying question" },
+    { "time": 765, "score": 0.52, "emotion": "neutral", "note": "Marcus explaining service boundaries" },
+    { "time": 800, "score": 0.67, "emotion": "engaged", "note": "Understanding improving, nodding" },
+    { "time": 835, "score": 0.74, "emotion": "engaged", "note": "Team members showing comprehension" },
+    { "time": 870, "score": 0.79, "emotion": "engaged", "note": "Discussion of next steps" },
+    { "time": 900, "score": 0.82, "emotion": "engaged", "note": "Action items being assigned" },
+    { "time": 923, "score": 0.85, "emotion": "engaged", "note": "Sarah creating RFC action item" },
+    { "time": 960, "score": 0.81, "emotion": "positive", "note": "Team showing agreement" },
+    { "time": 990, "score": 0.78, "emotion": "positive", "note": "Decision finalized" },
+    { "time": 1020, "score": 0.72, "emotion": "neutral", "note": "Testing discussion" },
+    { "time": 1050, "score": 0.68, "emotion": "neutral", "note": "Wrapping up meeting" },
+    { "time": 1080, "score": 0.65, "emotion": "neutral", "note": "Meeting ending" }
+  ],
+  "summary": {
+    "averageEngagement": 0.72,
+    "peakEngagement": 0.91,
+    "lowestEngagement": 0.38,
+    "highEngagementPeriods": [
+      { "start": 154, "end": 255, "reason": "Active GraphQL vs REST discussion" },
+      { "start": 800, "end": 960, "reason": "Clarity achieved, decision making" }
+    ],
+    "lowEngagementPeriods": [
+      { "start": 660, "end": 765, "reason": "Confusion about service boundaries" }
+    ]
+  }
+}

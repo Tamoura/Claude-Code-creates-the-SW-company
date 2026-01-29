@@ -3,9 +3,12 @@
  *
  * Handles webhook delivery with HMAC signature verification
  * and replay attack prevention via timestamp validation.
+ *
+ * SECURITY: Uses crypto.ts for timing-safe signature comparison
+ * to prevent timing attacks (CWE-208).
  */
 
-import { createHmac } from 'crypto';
+import { signWebhookPayload, verifyWebhookSignature } from '../utils/crypto.js';
 
 export interface WebhookPayload {
   [key: string]: any;
@@ -31,20 +34,39 @@ export class WebhookService {
 
   /**
    * Generate HMAC-SHA256 signature for webhook payload
+   *
+   * Uses crypto.ts signWebhookPayload() which implements Stripe-style
+   * signature scheme: HMAC-SHA256(timestamp.payload, secret)
+   *
+   * @param payload - Webhook payload (must include timestamp field)
+   * @returns Hex-encoded signature
    */
   generateSignature(payload: Record<string, any>): string {
+    if (!payload.timestamp) {
+      throw new Error('Payload must include timestamp for signature generation');
+    }
+
     const payloadString = JSON.stringify(payload);
-    const hmac = createHmac('sha256', this.secret);
-    hmac.update(payloadString);
-    return hmac.digest('hex');
+    return signWebhookPayload(payloadString, this.secret, payload.timestamp);
   }
 
   /**
-   * Verify webhook signature
+   * Verify webhook signature using timing-safe comparison
+   *
+   * Uses crypto.ts verifyWebhookSignature() which uses crypto.timingSafeEqual
+   * to prevent timing attacks (CWE-208: Observable Timing Discrepancy).
+   *
+   * @param payload - Webhook payload (must include timestamp field)
+   * @param signature - Signature to verify
+   * @returns true if signature is valid, false otherwise
    */
   verifySignature(payload: Record<string, any>, signature: string): boolean {
-    const expectedSignature = this.generateSignature(payload);
-    return expectedSignature === signature;
+    if (!payload.timestamp) {
+      return false;
+    }
+
+    const payloadString = JSON.stringify(payload);
+    return verifyWebhookSignature(payloadString, signature, this.secret, payload.timestamp);
   }
 
   /**

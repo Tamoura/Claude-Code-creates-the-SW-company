@@ -141,11 +141,28 @@ if __name__ == '__main__':
 
 **Always verify signatures** to ensure webhooks are from Stablecoin Gateway.
 
-### Signature Format
+### Signature Scheme (Stripe-Style)
+
+Our webhook signature scheme prevents timing attacks using **constant-time comparison**:
 
 ```
-HMAC-SHA256(webhook_secret, timestamp + "." + body)
+signature = HMAC-SHA256(secret, timestamp + "." + payload)
 ```
+
+**Security Features**:
+- ✅ **Timing-safe comparison** - Uses `crypto.timingSafeEqual()` (Node.js) or `hmac.compare_digest()` (Python) to prevent timing attacks (CWE-208)
+- ✅ **Timestamp validation** - Prevents replay attacks (5-minute window)
+- ✅ **Raw body signing** - Signs exact bytes received to prevent tampering
+
+**Critical**: Always use constant-time comparison functions. Regular string comparison (`===` or `==`) leaks timing information that attackers can exploit to forge signatures.
+
+**Attack scenario without constant-time comparison**:
+1. Attacker tries signature starting with `aXXXXXX...` → Fast rejection (first char wrong)
+2. Attacker tries signature starting with `bXXXXXX...` → Slightly slower
+3. By measuring response times, attacker identifies correct first character
+4. Repeat for all 64 hex characters → Signature forged in ~256 attempts per character
+
+**With constant-time comparison**, all attempts take the same time regardless of how many characters match.
 
 ### Verification Code (Node.js)
 
@@ -176,7 +193,13 @@ function verifySignature(
     .update(payload)
     .digest('hex');
 
-  // Compare signatures (constant-time to prevent timing attacks)
+  // SECURITY: Use constant-time comparison to prevent timing attacks
+  // crypto.timingSafeEqual compares all bytes even if first byte differs,
+  // preventing attackers from using timing analysis to forge signatures.
+  if (signature.length !== expectedSignature.length) {
+    return false; // timingSafeEqual requires equal-length buffers
+  }
+
   return crypto.timingSafeEqual(
     Buffer.from(signature),
     Buffer.from(expectedSignature)
@@ -211,7 +234,9 @@ def verify_signature(raw_body: bytes, signature: str, timestamp: str) -> bool:
         hashlib.sha256
     ).hexdigest()
 
-    # Compare signatures
+    # SECURITY: Use constant-time comparison (hmac.compare_digest)
+    # This prevents timing attacks by comparing all characters
+    # even if the first character doesn't match.
     return hmac.compare_digest(signature, expected_signature)
 ```
 
@@ -604,6 +629,11 @@ function verifySignature(
     .update(payload)
     .digest('hex');
 
+  // Length check required for timingSafeEqual
+  if (signature.length !== expectedSignature.length) {
+    return false;
+  }
+
   return crypto.timingSafeEqual(
     Buffer.from(signature),
     Buffer.from(expectedSignature)
@@ -666,4 +696,4 @@ app.listen(3000, () => {
 
 ---
 
-**Last Updated**: 2026-01-27
+**Last Updated**: 2026-01-29 (FIX-06: Added timing-safe comparison documentation)

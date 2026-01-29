@@ -74,17 +74,30 @@ const authPlugin: FastifyPluginAsync = async (fastify) => {
       // Silently fail for optional auth
     }
   });
+
+  // Permission enforcement decorator
+  fastify.decorate('requirePermission', (permission: 'read' | 'write' | 'refund') => {
+    return async (request: FastifyRequest) => {
+      // If authenticated via JWT (user session), allow all permissions
+      if (!request.apiKey) {
+        return; // JWT users have full permissions
+      }
+
+      // If authenticated via API key, check permissions
+      const permissions = request.apiKey.permissions as { read: boolean; write: boolean; refund: boolean };
+
+      if (!permissions[permission]) {
+        throw new AppError(
+          403,
+          'insufficient-permissions',
+          `This API key does not have '${permission}' permission`
+        );
+      }
+    };
+  });
 };
 
 export default fp(authPlugin, {
   name: 'auth',
   dependencies: ['@fastify/jwt', 'prisma'],
 });
-
-// Type augmentation
-declare module 'fastify' {
-  interface FastifyInstance {
-    authenticate: (request: FastifyRequest) => Promise<void>;
-    optionalAuth: (request: FastifyRequest) => Promise<void>;
-  }
-}
