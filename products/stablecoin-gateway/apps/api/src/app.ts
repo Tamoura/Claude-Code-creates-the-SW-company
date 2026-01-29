@@ -109,12 +109,14 @@ export async function buildApp(): Promise<FastifyInstance> {
     }
 
     // Validation errors from Zod
-    if (error instanceof ZodError || error.name === 'ZodError' || error.validation) {
+    if (error instanceof ZodError ||
+        (error as any).name === 'ZodError' ||
+        (error as any).validation) {
       return reply.code(400).send({
         type: 'https://gateway.io/errors/validation-error',
         title: 'Validation Error',
         status: 400,
-        detail: error.message,
+        detail: error instanceof Error ? error.message : 'Validation failed',
         request_id: request.id,
       });
     }
@@ -141,9 +143,9 @@ export async function buildApp(): Promise<FastifyInstance> {
       type: 'https://gateway.io/errors/internal-error',
       title: 'Internal Server Error',
       status: 500,
-      detail: error.message,
+      detail: error instanceof Error ? error.message : 'Unknown error',
       request_id: request.id,
-      stack: error.stack,
+      stack: error instanceof Error ? error.stack : undefined,
     });
   });
 
