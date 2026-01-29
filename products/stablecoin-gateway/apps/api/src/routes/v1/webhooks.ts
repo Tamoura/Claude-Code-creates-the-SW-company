@@ -7,11 +7,12 @@
  * - Get individual webhook details
  * - Update webhook configuration
  * - Delete webhook endpoints
+ * - Rotate webhook secrets (without losing delivery history)
  *
  * Security:
  * - All endpoints require authentication (JWT or API key)
- * - Webhook secrets stored in plaintext (needed for HMAC signing)
- * - Secrets only shown once during creation
+ * - Webhook secrets encrypted at rest (AES-256-GCM) when key is configured
+ * - Secrets only shown once during creation or rotation
  * - HTTPS-only URLs enforced
  * - Ownership verified on all operations
  */
@@ -316,6 +317,63 @@ const webhookRoutes: FastifyPluginAsync = async (fastify) => {
         return reply.code(error.statusCode).send(error.toJSON());
       }
       logger.error('Error deleting webhook', error);
+      throw error;
+    }
+  });
+
+  // POST /v1/webhooks/:id/rotate-secret - Rotate webhook secret
+  fastify.post('/:id/rotate-secret', {
+    onRequest: [fastify.authenticate, fastify.requirePermission('write')],
+  }, async (request, reply) => {
+    try {
+      const { id } = request.params as { id: string };
+      const userId = request.currentUser!.id;
+
+      // Verify webhook exists and user owns it
+      const webhook = await fastify.prisma.webhookEndpoint.findFirst({
+        where: {
+          id,
+          userId, // Enforce ownership
+        },
+      });
+
+      if (!webhook) {
+        throw new AppError(404, 'webhook-not-found', 'Webhook not found');
+      }
+
+      // Generate new cryptographically secure secret
+      const newSecret = generateWebhookSecret();
+
+      // Encrypt if encryption key is available, otherwise store plaintext
+      const secretToStore = process.env.WEBHOOK_ENCRYPTION_KEY
+        ? encryptSecret(newSecret)
+        : newSecret;
+
+      // Update the webhook with the new secret
+      await fastify.prisma.webhookEndpoint.update({
+        where: { id },
+        data: {
+          secret: secretToStore,
+          updatedAt: new Date(),
+        },
+      });
+
+      logger.info('Webhook secret rotated', {
+        userId,
+        webhookId: id,
+      });
+
+      // Return new secret in plaintext (ONLY TIME IT'S SHOWN)
+      return reply.send({
+        id,
+        secret: newSecret,
+        rotatedAt: new Date().toISOString(),
+      });
+    } catch (error) {
+      if (error instanceof AppError) {
+        return reply.code(error.statusCode).send(error.toJSON());
+      }
+      logger.error('Error rotating webhook secret', error);
       throw error;
     }
   });
