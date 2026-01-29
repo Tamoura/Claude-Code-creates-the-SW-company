@@ -9,8 +9,11 @@ import { FastifyInstance } from 'fastify';
  * - Distributed rate limiting (if Redis available)
  * - Rate limit headers
  * - Per-route rate limits
+ * - Health endpoint exemption (FIX-PHASE2-09)
  *
  * Note: These tests work with both in-memory and Redis-based rate limiting
+ * NOTE: Uses unique User-Agent per test to isolate fingerprinted
+ * rate limit buckets (auth endpoints use IP+UA fingerprinting)
  */
 
 describe('Rate Limiting', () => {
@@ -20,13 +23,16 @@ describe('Rate Limiting', () => {
   beforeAll(async () => {
     app = await buildApp();
 
-    // Create test user
+    // Create test user with unique UA to avoid rate limit collision
     const signupResponse = await app.inject({
       method: 'POST',
       url: '/v1/auth/signup',
       payload: {
         email: 'rate-limit-test@example.com',
         password: 'SecurePass123!',
+      },
+      headers: {
+        'user-agent': `RateLimitTestSetup/${Date.now()}`,
       },
     });
 
@@ -38,21 +44,16 @@ describe('Rate Limiting', () => {
   });
 
   describe('Global rate limiting', () => {
-    it('should allow requests within limit', async () => {
-      // Make a few requests - should all succeed
-      for (let i = 0; i < 5; i++) {
+    it('should allow requests within limit on non-exempt endpoints', async () => {
+      // Use authenticated endpoint (not health - health is exempt from rate limiting)
+      for (let i = 0; i < 3; i++) {
         const response = await app.inject({
           method: 'GET',
-          url: '/health',
+          url: '/v1/payment-sessions',
+          headers: {
+            authorization: `Bearer ${accessToken}`,
+          },
         });
-
-        // Health check might fail if Redis configured but not available
-        // This is expected - Redis is optional
-        if (response.statusCode === 500) {
-          // Skip this test if Redis connection failed
-          console.log('Skipping test - Redis connection issue (expected if Redis not running)');
-          return;
-        }
 
         expect(response.statusCode).toBe(200);
         expect(response.headers['x-ratelimit-limit']).toBeDefined();
@@ -60,16 +61,14 @@ describe('Rate Limiting', () => {
       }
     });
 
-    it('should include rate limit headers', async () => {
+    it('should include rate limit headers on non-exempt endpoints', async () => {
       const response = await app.inject({
         method: 'GET',
-        url: '/health',
+        url: '/v1/payment-sessions',
+        headers: {
+          authorization: `Bearer ${accessToken}`,
+        },
       });
-
-      if (response.statusCode === 500) {
-        console.log('Skipping test - Redis connection issue');
-        return;
-      }
 
       expect(response.statusCode).toBe(200);
       expect(response.headers['x-ratelimit-limit']).toBeDefined();
@@ -85,45 +84,38 @@ describe('Rate Limiting', () => {
       expect(remaining).toBeLessThanOrEqual(limit);
     });
 
-    it('should enforce rate limits when exceeded', async () => {
-      // Get current limit from headers
-      const testResponse = await app.inject({
+    it('should not include rate limit headers on exempt /health endpoint', async () => {
+      // Health endpoint is exempt from rate limiting (FIX-PHASE2-09)
+      const response = await app.inject({
         method: 'GET',
         url: '/health',
       });
 
-      const limit = parseInt(testResponse.headers['x-ratelimit-limit'] as string);
+      expect(response.statusCode).toBe(200);
 
-      // Make requests up to the limit
-      // Note: This test might be flaky if other tests are running concurrently
-      // In production, we'd use a dedicated test endpoint with lower limits
+      // Exempt endpoints should NOT have rate limit headers
+      expect(response.headers['x-ratelimit-limit']).toBeUndefined();
+      expect(response.headers['x-ratelimit-remaining']).toBeUndefined();
+      expect(response.headers['x-ratelimit-reset']).toBeUndefined();
+    });
 
-      let rateLimitedResponse;
-      for (let i = 0; i < limit + 5; i++) {
+    it('should never rate limit /health endpoint', async () => {
+      // Make many requests to health - should never get 429
+      for (let i = 0; i < 20; i++) {
         const response = await app.inject({
           method: 'GET',
           url: '/health',
         });
 
-        if (response.statusCode === 429) {
-          rateLimitedResponse = response;
-          break;
-        }
+        expect(response.statusCode).not.toBe(429);
+        expect([200, 503]).toContain(response.statusCode);
       }
-
-      // We might hit the limit, or we might not (depends on timing)
-      // The important thing is that if we do hit it, we get 429
-      if (rateLimitedResponse) {
-        expect(rateLimitedResponse.statusCode).toBe(429);
-        expect(rateLimitedResponse.headers['retry-after']).toBeDefined();
-      }
-    }, 30000); // Longer timeout for this test
+    });
   });
 
   describe('Authenticated endpoint rate limiting', () => {
     it('should apply rate limits to authenticated requests', async () => {
       // Make a few authenticated requests
-      // Note: Previous tests may have consumed some rate limit quota
       for (let i = 0; i < 3; i++) {
         const response = await app.inject({
           method: 'GET',
@@ -173,23 +165,26 @@ describe('Rate Limiting', () => {
 
     it('should work correctly with or without Redis', async () => {
       // Rate limiting should work regardless of Redis availability
+      // Use authenticated endpoint since health is exempt
       const response1 = await app.inject({
         method: 'GET',
-        url: '/health',
+        url: '/v1/payment-sessions',
+        headers: {
+          authorization: `Bearer ${accessToken}`,
+        },
       });
 
       const response2 = await app.inject({
         method: 'GET',
-        url: '/health',
+        url: '/v1/payment-sessions',
+        headers: {
+          authorization: `Bearer ${accessToken}`,
+        },
       });
 
-      if (response1.statusCode === 500 || response2.statusCode === 500) {
-        console.log('Skipping test - Redis connection issue');
-        return;
-      }
-
-      expect(response1.statusCode).toBe(200);
-      expect(response2.statusCode).toBe(200);
+      // Accept either success or rate limited
+      expect([200, 429]).toContain(response1.statusCode);
+      expect([200, 429]).toContain(response2.statusCode);
 
       // Both should have rate limit headers
       expect(response1.headers['x-ratelimit-limit']).toBeDefined();

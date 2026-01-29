@@ -1,6 +1,9 @@
 /**
  * Isolated rate limiting tests
  * Each test file gets its own app instance, preventing rate limit carryover
+ *
+ * NOTE: Uses unique User-Agent per test suite to isolate fingerprinted
+ * rate limit buckets (auth endpoints use IP+UA fingerprinting)
  */
 
 import { FastifyInstance } from 'fastify';
@@ -8,6 +11,8 @@ import { buildApp } from '../../src/app';
 
 describe('Auth Endpoint Rate Limiting - Signup', () => {
   let app: FastifyInstance;
+  // Unique User-Agent to isolate this test's rate limit bucket
+  const testUA = `SignupRateLimitTest/${Date.now()}`;
 
   beforeAll(async () => {
     app = await buildApp();
@@ -30,6 +35,9 @@ describe('Auth Endpoint Rate Limiting - Signup', () => {
           email: `user${i}@example.com`,
           password: 'SecurePassword123!',
         },
+        headers: {
+          'user-agent': testUA,
+        },
       });
 
       expect(response.statusCode).toBe(201);
@@ -42,6 +50,9 @@ describe('Auth Endpoint Rate Limiting - Signup', () => {
       payload: {
         email: 'user5@example.com',
         password: 'SecurePassword123!',
+      },
+      headers: {
+        'user-agent': testUA,
       },
     });
 
@@ -59,6 +70,9 @@ describe('Auth Endpoint Rate Limiting - Signup', () => {
       payload: {
         email: 'headers-test@example.com',
         password: 'SecurePassword123!',
+      },
+      headers: {
+        'user-agent': `SignupHeaderTest/${Date.now()}`,
       },
     });
 
