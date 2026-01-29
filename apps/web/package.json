@@ -4,9 +4,9 @@
   "private": true,
   "description": "ITIL Dashboard Web - Frontend application",
   "scripts": {
-    "dev": "next dev -p 3102",
+    "dev": "next dev -p 3107",
     "build": "next build",
-    "start": "next start -p 3102",
+    "start": "next start -p 3107",
     "lint": "next lint",
     "test": "vitest run",
     "test:watch": "vitest"

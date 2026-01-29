@@ -38,14 +38,14 @@ pnpm dev
 ```
 
 ### 5. Access
-- **Frontend**: http://localhost:3102
+- **Frontend**: http://localhost:3107
 - **API**: http://localhost:5002
 - **Login**: admin@itil.dev / Admin123!
 
 ## Tech Stack
 
 - **Backend**: Fastify + Prisma + PostgreSQL (:5002)
-- **Frontend**: Next.js 14 + React 18 + Tailwind (:3102)
+- **Frontend**: Next.js 14 + React 18 + Tailwind (:3107)
 - **Database**: PostgreSQL 15 (:5432)
 - **Testing**: Vitest + Playwright
 
