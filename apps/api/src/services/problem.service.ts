@@ -1,4 +1,4 @@
-import { PrismaClient, Problem, ProblemStatus, AuditAction, ProblemIncident, KnownError } from '@prisma/client';
+import { PrismaClient, Problem, ProblemStatus, AuditAction, ProblemIncident, KnownError, Priority } from '@prisma/client';
 import { generateDisplayId } from './id-generator.service.js';
 import { logAudit } from './audit.service.js';
 import { CreateProblemInput, UpdateProblemInput, CreateKnownErrorInput } from '../schemas/problem.schema.js';
@@ -83,7 +83,7 @@ export interface ListProblemsFilters {
   page: number;
   limit: number;
   status?: ProblemStatus;
-  priority?: string;
+  priority?: Priority;
   assigneeId?: string;
 }
 

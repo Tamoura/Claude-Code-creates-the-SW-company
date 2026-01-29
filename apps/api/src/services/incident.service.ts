@@ -1,4 +1,4 @@
-import { PrismaClient, Incident, AuditAction, IncidentStatus } from '@prisma/client';
+import { PrismaClient, Incident, AuditAction, IncidentStatus, Priority } from '@prisma/client';
 import { generateDisplayId } from './id-generator.service.js';
 import { logAudit } from './audit.service.js';
 import { calculateSLADeadlines } from './sla.service.js';
@@ -88,7 +88,7 @@ export interface ListIncidentsFilters {
   page: number;
   limit: number;
   status?: IncidentStatus;
-  priority?: string;
+  priority?: Priority;
   assigneeId?: string;
 }
 
