@@ -1,0 +1,119 @@
+{
+  "summary": [
+    "Team reviewed Q1 API architecture strategy, focusing on microservices communication patterns",
+    "Decided to adopt GraphQL Federation approach over traditional REST APIs for better flexibility",
+    "Identified confusion around service boundaries that was resolved through detailed diagram walkthrough",
+    "Assigned 3 action items with clear owners and deadlines for next sprint"
+  ],
+  "actionItems": [
+    {
+      "id": "ai-1",
+      "text": "Create RFC document for GraphQL schema design patterns and federation strategy",
+      "owner": "Sarah Chen",
+      "dueDate": "2026-02-05",
+      "timestamp": "00:15:23",
+      "timeInSeconds": 923,
+      "priority": "high",
+      "source": "verbal_commitment"
+    },
+    {
+      "id": "ai-2",
+      "text": "Update testing strategy documentation to include GraphQL query testing approach",
+      "owner": "David Kim",
+      "dueDate": "2026-02-05",
+      "timestamp": "00:17:05",
+      "timeInSeconds": 1025,
+      "priority": "medium",
+      "source": "verbal_commitment"
+    },
+    {
+      "id": "ai-3",
+      "text": "Research and propose caching strategy for GraphQL Federation gateway",
+      "owner": "Chen Wei",
+      "dueDate": "2026-02-12",
+      "timestamp": "00:06:22",
+      "timeInSeconds": 382,
+      "priority": "medium",
+      "source": "inferred_from_discussion"
+    }
+  ],
+  "keyMoments": [
+    {
+      "id": "km-1",
+      "timestamp": "00:02:34",
+      "timeInSeconds": 154,
+      "type": "high_engagement",
+      "title": "Active Discussion: GraphQL vs REST",
+      "description": "Team shows high engagement discussing technical trade-offs between GraphQL and REST approaches. Multiple participants leaning forward, taking notes.",
+      "participants": ["Marcus Johnson", "Priya Patel", "Chen Wei"],
+      "significance": "high"
+    },
+    {
+      "id": "km-2",
+      "timestamp": "00:08:12",
+      "timeInSeconds": 492,
+      "type": "decision",
+      "title": "Decision: GraphQL Federation Proposed",
+      "description": "Marcus proposes GraphQL Federation as the solution, addressing concerns from both frontend and infrastructure teams.",
+      "participants": ["Marcus Johnson", "Sarah Chen"],
+      "significance": "critical"
+    },
+    {
+      "id": "km-3",
+      "timestamp": "00:10:02",
+      "timeInSeconds": 602,
+      "type": "screen_share",
+      "title": "Architecture Diagram Shared",
+      "description": "Marcus shares comprehensive architecture diagram showing service boundaries and federation strategy.",
+      "participants": ["Marcus Johnson"],
+      "significance": "high"
+    },
+    {
+      "id": "km-4",
+      "timestamp": "00:12:45",
+      "timeInSeconds": 765,
+      "type": "confusion",
+      "title": "Confusion Detected: Service Boundaries",
+      "description": "Multiple team members showing confused body language. Elena asks clarifying question about service boundary definitions. Engagement drops to 38%.",
+      "participants": ["Elena Rodriguez", "Priya Patel", "David Kim"],
+      "significance": "medium",
+      "resolution": "Marcus provided detailed explanation, engagement recovered to 74%"
+    },
+    {
+      "id": "km-5",
+      "timestamp": "00:15:23",
+      "timeInSeconds": 923,
+      "type": "action_item",
+      "title": "Action Item: RFC Creation",
+      "description": "Sarah commits to creating RFC for GraphQL schema design by next week.",
+      "participants": ["Sarah Chen"],
+      "significance": "high"
+    },
+    {
+      "id": "km-6",
+      "timestamp": "00:16:10",
+      "timeInSeconds": 970,
+      "type": "decision",
+      "title": "Final Decision: GraphQL Federation Approved",
+      "description": "Team reaches consensus on GraphQL Federation as the architecture choice. Visible agreement signals from all participants.",
+      "participants": ["All"],
+      "significance": "critical"
+    }
+  ],
+  "sentimentAnalysis": {
+    "overall": "positive",
+    "breakdown": {
+      "positive": 65,
+      "neutral": 28,
+      "negative": 7
+    },
+    "trajectory": "improving",
+    "notes": "Meeting started neutral, built positive momentum during discussion, brief dip during confusion phase, ended strongly positive after decision"
+  },
+  "participationBalance": {
+    "balanced": false,
+    "dominantSpeakers": ["Marcus Johnson", "Sarah Chen"],
+    "quietParticipants": ["David Kim", "Chen Wei"],
+    "recommendation": "Consider checking in with quieter team members in 1-on-1s to ensure their perspectives are heard"
+  }
+}

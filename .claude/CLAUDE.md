@@ -61,9 +61,12 @@ release/[product]/v[X.Y.Z]       # Releases
 
 ### Ports
 
-- Frontend apps: 3100+
-- Backend APIs: 5000+
-- Databases: default ports in Docker
+**IMPORTANT**: See `.claude/PORT-REGISTRY.md` for port assignments. All products must use unique ports to run simultaneously.
+
+- Frontend apps: 3100-3199 (assigned per product)
+- Backend APIs: 5000-5099 (assigned per product)
+- Mobile dev servers: 8081-8099 (assigned per product)
+- Databases: default ports in Docker (shared via containers)
 
 ### Testing
 

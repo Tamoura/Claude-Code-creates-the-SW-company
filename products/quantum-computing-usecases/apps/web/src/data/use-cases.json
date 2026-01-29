@@ -1,0 +1,343 @@
+[
+  {
+    "id": "1",
+    "slug": "drug-discovery-simulation",
+    "title": "Drug Discovery & Molecular Simulation",
+    "shortDescription": "Simulate molecular interactions to accelerate pharmaceutical research and reduce drug development costs",
+    "fullDescription": "Quantum computers can simulate molecular and chemical interactions at a level of detail impossible for classical computers. This enables pharmaceutical companies to model drug-protein interactions, predict drug efficacy, and identify promising candidates much faster than traditional methods. Current classical simulations are limited to small molecules due to computational complexity that grows exponentially with molecule size.",
+    "industry": ["pharmaceuticals", "chemistry"],
+    "problemType": "simulation",
+    "maturityLevel": "experimental",
+    "quantumAdvantage": "Quantum systems naturally model quantum mechanical behavior of molecules. Classical computers must approximate these interactions, requiring exponential resources as molecule size grows. Quantum advantage appears for molecules with >50 atoms.",
+    "timeline": {
+      "current": "IBM, Google, and pharma companies running proof-of-concept simulations on small molecules (5-10 atoms)",
+      "nearTerm": "1-3 years: Simulations of drug-like molecules (20-30 atoms) with error mitigation",
+      "longTerm": "5+ years: Full protein-drug interaction simulations with fault-tolerant quantum computers"
+    },
+    "requirements": {
+      "qubits": 100,
+      "gateDepth": 1000,
+      "errorRate": 0.001,
+      "coherenceTime": "100 microseconds"
+    },
+    "examples": [
+      {
+        "company": "IBM & Daimler",
+        "description": "Simulating lithium compounds for next-generation batteries",
+        "link": "https://www.ibm.com/quantum"
+      },
+      {
+        "company": "Google Quantum AI",
+        "description": "Modeling chemical reactions for materials discovery"
+      }
+    ],
+    "relatedUseCases": ["8", "4"],
+    "lastUpdated": "2026-01-15"
+  },
+  {
+    "id": "2",
+    "slug": "portfolio-optimization",
+    "title": "Financial Portfolio Optimization",
+    "shortDescription": "Optimize investment portfolios with complex constraints to maximize returns while minimizing risk",
+    "fullDescription": "Portfolio optimization involves selecting the best combination of assets to maximize expected returns while minimizing risk, subject to numerous constraints (regulatory, liquidity, sector limits). This becomes exponentially complex with more assets and constraints. Quantum algorithms like QAOA (Quantum Approximate Optimization Algorithm) can explore solution spaces more efficiently than classical methods.",
+    "industry": ["finance"],
+    "problemType": "optimization",
+    "maturityLevel": "pre-production",
+    "quantumAdvantage": "Classical portfolio optimization struggles with >1000 assets and complex constraints. Quantum algorithms can evaluate exponentially more portfolio combinations simultaneously through superposition, potentially finding better solutions faster.",
+    "timeline": {
+      "current": "Major banks (JPMorgan, Goldman Sachs) testing quantum algorithms on small portfolios (50-100 assets)",
+      "nearTerm": "1-3 years: Production pilots for mid-size portfolios (500+ assets) with hybrid quantum-classical approaches",
+      "longTerm": "5+ years: Real-time optimization of large institutional portfolios with thousands of assets"
+    },
+    "requirements": {
+      "qubits": 200,
+      "gateDepth": 500,
+      "errorRate": 0.005,
+      "coherenceTime": "50 microseconds"
+    },
+    "examples": [
+      {
+        "company": "JPMorgan Chase",
+        "description": "Testing QAOA for portfolio optimization on IBM quantum computers"
+      },
+      {
+        "company": "Goldman Sachs",
+        "description": "Developing quantum algorithms for derivative pricing and risk analysis"
+      }
+    ],
+    "relatedUseCases": ["3", "7"],
+    "lastUpdated": "2026-01-20"
+  },
+  {
+    "id": "3",
+    "slug": "supply-chain-optimization",
+    "title": "Supply Chain & Logistics Optimization",
+    "shortDescription": "Optimize complex routing, scheduling, and inventory decisions across global supply networks",
+    "fullDescription": "Modern supply chains involve thousands of variables: routing decisions, inventory levels, production schedules, shipping constraints, and demand forecasts. Finding optimal solutions is NP-hard and becomes intractable for classical computers as the network grows. Quantum optimization algorithms can explore solution spaces more efficiently, potentially saving millions in logistics costs.",
+    "industry": ["logistics"],
+    "problemType": "optimization",
+    "maturityLevel": "experimental",
+    "quantumAdvantage": "Routing problems grow exponentially with network size (traveling salesman problem). Quantum algorithms like QAOA and quantum annealing can explore multiple routes simultaneously, potentially finding near-optimal solutions faster for large networks (>1000 nodes).",
+    "timeline": {
+      "current": "DHL, Volkswagen, and others running small-scale proofs-of-concept (10-50 nodes)",
+      "nearTerm": "1-3 years: Pilot deployments for regional supply chains (100-500 nodes)",
+      "longTerm": "5+ years: Global supply chain optimization in real-time"
+    },
+    "requirements": {
+      "qubits": 300,
+      "gateDepth": 400,
+      "errorRate": 0.01,
+      "coherenceTime": "30 microseconds"
+    },
+    "examples": [
+      {
+        "company": "Volkswagen",
+        "description": "Optimizing traffic flow and bus routing in Lisbon using D-Wave quantum annealer"
+      },
+      {
+        "company": "DHL",
+        "description": "Testing quantum algorithms for parcel route optimization"
+      }
+    ],
+    "relatedUseCases": ["2", "7"],
+    "lastUpdated": "2026-01-18"
+  },
+  {
+    "id": "4",
+    "slug": "materials-discovery",
+    "title": "Advanced Materials Discovery",
+    "shortDescription": "Discover new materials with specific properties for batteries, superconductors, and industrial applications",
+    "fullDescription": "Designing new materials (superconductors, catalysts, battery materials) requires understanding quantum mechanical properties and interactions. Classical simulations are limited to simple structures. Quantum computers can simulate material properties at the atomic level, accelerating discovery of materials with desired characteristics like higher energy density, better conductivity, or specific optical properties.",
+    "industry": ["materials-science", "chemistry"],
+    "problemType": "simulation",
+    "maturityLevel": "experimental",
+    "quantumAdvantage": "Material properties emerge from quantum interactions between atoms. Classical methods use approximations that break down for strongly correlated systems. Quantum simulation provides accurate predictions for materials where classical methods fail, potentially discovering materials years faster.",
+    "timeline": {
+      "current": "Research labs simulating simple crystal structures and chemical bonds",
+      "nearTerm": "1-3 years: Predict properties of candidate materials for batteries and catalysts",
+      "longTerm": "5+ years: Design custom materials with specific properties on-demand"
+    },
+    "requirements": {
+      "qubits": 150,
+      "gateDepth": 800,
+      "errorRate": 0.001,
+      "coherenceTime": "80 microseconds"
+    },
+    "examples": [
+      {
+        "company": "IBM & ExxonMobil",
+        "description": "Simulating molecules for carbon capture materials"
+      },
+      {
+        "company": "Microsoft & Case Western",
+        "description": "Discovering new catalysts for chemical manufacturing"
+      }
+    ],
+    "relatedUseCases": ["1", "8"],
+    "lastUpdated": "2026-01-12"
+  },
+  {
+    "id": "5",
+    "slug": "post-quantum-cryptography",
+    "title": "Post-Quantum Cryptography",
+    "shortDescription": "Develop encryption methods resistant to quantum computer attacks to secure future communications",
+    "fullDescription": "Today's encryption (RSA, ECC) relies on the computational difficulty of factoring large numbers or solving discrete logarithm problems. Quantum computers running Shor's algorithm can break these in polynomial time, threatening all current encrypted communications. Post-quantum cryptography develops new encryption schemes based on mathematical problems that remain hard even for quantum computers (lattice-based, hash-based, code-based cryptography).",
+    "industry": ["security"],
+    "problemType": "cryptography",
+    "maturityLevel": "pre-production",
+    "quantumAdvantage": "This is actually a quantum threat, not advantage. Quantum computers will break current encryption. The advantage is in developing quantum-resistant algorithms now, before large-scale quantum computers exist. NIST has already standardized several post-quantum algorithms.",
+    "timeline": {
+      "current": "NIST has standardized 4 post-quantum algorithms (CRYSTALS-Kyber, CRYSTALS-Dilithium, FALCON, SPHINCS+)",
+      "nearTerm": "1-3 years: Major tech companies migrating to post-quantum encryption",
+      "longTerm": "5+ years: Complete transition of internet infrastructure to quantum-resistant encryption"
+    },
+    "requirements": {
+      "qubits": 0,
+      "gateDepth": 0,
+      "errorRate": 0,
+      "coherenceTime": "N/A - Classical algorithm design"
+    },
+    "examples": [
+      {
+        "company": "Google",
+        "description": "Testing post-quantum TLS in Chrome browser"
+      },
+      {
+        "company": "Cloudflare",
+        "description": "Deploying post-quantum cryptography for internet infrastructure"
+      }
+    ],
+    "relatedUseCases": [],
+    "lastUpdated": "2026-01-25"
+  },
+  {
+    "id": "6",
+    "slug": "quantum-machine-learning",
+    "title": "Quantum Machine Learning",
+    "shortDescription": "Enhance machine learning models with quantum algorithms for pattern recognition and classification",
+    "fullDescription": "Quantum machine learning explores quantum algorithms for tasks like classification, clustering, and pattern recognition. Quantum computers might process high-dimensional data more efficiently through quantum feature spaces. Applications include image recognition, fraud detection, and recommendation systems. The field is still theoretical with active research on where quantum advantage might emerge.",
+    "industry": ["ai-ml"],
+    "problemType": "machine-learning",
+    "maturityLevel": "theoretical",
+    "quantumAdvantage": "Quantum algorithms may provide speedups for specific ML tasks like kernel methods, where data is mapped to high-dimensional quantum feature spaces. Advantage is unproven for general ML tasks. Most current 'quantum ML' experiments show no speedup over classical methods.",
+    "timeline": {
+      "current": "Academic research on quantum ML algorithms; no practical advantage demonstrated",
+      "nearTerm": "1-3 years: Identify specific ML tasks where quantum advantage might appear",
+      "longTerm": "5+ years: Possible quantum-enhanced ML for specific applications if advantage is proven"
+    },
+    "requirements": {
+      "qubits": 500,
+      "gateDepth": 2000,
+      "errorRate": 0.0001,
+      "coherenceTime": "200 microseconds"
+    },
+    "examples": [
+      {
+        "company": "Google Quantum AI",
+        "description": "Research on quantum neural networks and variational quantum classifiers"
+      },
+      {
+        "company": "IBM Research",
+        "description": "Exploring quantum kernel methods for classification"
+      }
+    ],
+    "relatedUseCases": [],
+    "lastUpdated": "2026-01-10"
+  },
+  {
+    "id": "7",
+    "slug": "traffic-flow-optimization",
+    "title": "Traffic Flow & Urban Mobility Optimization",
+    "shortDescription": "Optimize traffic light timing and routing to reduce congestion in smart cities",
+    "fullDescription": "Urban traffic management involves coordinating thousands of traffic lights, predicting traffic patterns, and optimizing routing in real-time. The problem space grows exponentially with city size. Quantum optimization algorithms can evaluate multiple traffic scenarios simultaneously, potentially reducing congestion, emissions, and commute times. Applications extend to autonomous vehicle coordination and public transit scheduling.",
+    "industry": ["logistics"],
+    "problemType": "optimization",
+    "maturityLevel": "experimental",
+    "quantumAdvantage": "Traffic optimization is a combinatorial problem with exponential solution space. Quantum algorithms can explore multiple timing and routing combinations in parallel, potentially finding better solutions faster than classical heuristics for networks with >1000 intersections.",
+    "timeline": {
+      "current": "City pilots (Lisbon, Beijing) testing quantum algorithms on limited road networks",
+      "nearTerm": "1-3 years: Smart city deployments for traffic signal optimization in real-time",
+      "longTerm": "5+ years: Coordinated autonomous vehicle routing across entire metropolitan areas"
+    },
+    "requirements": {
+      "qubits": 250,
+      "gateDepth": 300,
+      "errorRate": 0.01,
+      "coherenceTime": "40 microseconds"
+    },
+    "examples": [
+      {
+        "company": "Volkswagen & D-Wave",
+        "description": "Optimizing bus routing in Lisbon to reduce travel time"
+      },
+      {
+        "company": "Beijing Academy of Quantum Information",
+        "description": "Testing quantum algorithms for traffic light coordination"
+      }
+    ],
+    "relatedUseCases": ["3", "2"],
+    "lastUpdated": "2026-01-22"
+  },
+  {
+    "id": "8",
+    "slug": "climate-modeling",
+    "title": "Climate & Weather Modeling",
+    "shortDescription": "Improve climate predictions by simulating complex atmospheric and ocean interactions",
+    "fullDescription": "Climate modeling requires simulating interactions between atmosphere, oceans, ice sheets, and ecosystems at multiple scales. Current models make approximations due to computational limits. Quantum computers could simulate molecular-level processes (cloud formation, chemical reactions in atmosphere) that affect macro-scale climate, improving prediction accuracy for weather, hurricanes, and long-term climate change.",
+    "industry": ["environmental"],
+    "problemType": "simulation",
+    "maturityLevel": "theoretical",
+    "quantumAdvantage": "Climate involves quantum processes (molecular reactions, energy transfer) and chaotic dynamics. Quantum simulation could model these processes accurately without classical approximations. Advantage expected for micro-scale processes that aggregate to macro effects, but requires fault-tolerant quantum computers.",
+    "timeline": {
+      "current": "Early research on quantum algorithms for fluid dynamics and chemical reactions",
+      "nearTerm": "1-3 years: Small-scale quantum simulations of atmospheric chemistry",
+      "longTerm": "5+ years: Quantum-enhanced climate models integrated with classical supercomputers"
+    },
+    "requirements": {
+      "qubits": 1000,
+      "gateDepth": 5000,
+      "errorRate": 0.0001,
+      "coherenceTime": "500 microseconds"
+    },
+    "examples": [
+      {
+        "company": "IBM & CSIRO",
+        "description": "Research on quantum algorithms for climate modeling"
+      },
+      {
+        "company": "Microsoft",
+        "description": "Exploring quantum simulation for atmospheric chemistry"
+      }
+    ],
+    "relatedUseCases": ["1", "4"],
+    "lastUpdated": "2026-01-08"
+  },
+  {
+    "id": "9",
+    "slug": "financial-risk-modeling",
+    "title": "Financial Risk Analysis & Monte Carlo Simulation",
+    "shortDescription": "Accelerate risk calculations using quantum amplitude estimation for faster Monte Carlo simulations",
+    "fullDescription": "Financial institutions use Monte Carlo simulations to estimate risk, price derivatives, and stress-test portfolios. These simulations require thousands of random samples, making them computationally expensive. Quantum amplitude estimation (QAE) can provide quadratic speedup over classical Monte Carlo methods, potentially calculating risk metrics 100x faster for the same accuracy.",
+    "industry": ["finance"],
+    "problemType": "simulation",
+    "maturityLevel": "experimental",
+    "quantumAdvantage": "Classical Monte Carlo requires O(1/ε²) samples for accuracy ε. Quantum amplitude estimation achieves O(1/ε) scaling, providing quadratic speedup. For complex derivatives and large portfolios, this could reduce calculation time from hours to minutes.",
+    "timeline": {
+      "current": "Banks testing quantum Monte Carlo algorithms on small option portfolios",
+      "nearTerm": "1-3 years: Hybrid quantum-classical risk engines for derivatives pricing",
+      "longTerm": "5+ years: Real-time risk calculation for entire trading books"
+    },
+    "requirements": {
+      "qubits": 180,
+      "gateDepth": 600,
+      "errorRate": 0.002,
+      "coherenceTime": "70 microseconds"
+    },
+    "examples": [
+      {
+        "company": "JPMorgan & IBM",
+        "description": "Quantum Monte Carlo for option pricing and credit risk"
+      },
+      {
+        "company": "Citigroup",
+        "description": "Testing quantum algorithms for value-at-risk calculations"
+      }
+    ],
+    "relatedUseCases": ["2"],
+    "lastUpdated": "2026-01-17"
+  },
+  {
+    "id": "10",
+    "slug": "protein-folding",
+    "title": "Protein Folding Prediction",
+    "shortDescription": "Predict 3D protein structures to understand diseases and design targeted therapies",
+    "fullDescription": "Proteins fold into complex 3D shapes that determine their function. Predicting how a protein will fold from its amino acid sequence is critical for understanding diseases and designing drugs. Classical methods (like AlphaFold) use machine learning on known structures, but quantum simulation could predict folding for novel proteins by directly simulating quantum interactions between atoms, potentially revealing new therapeutic targets.",
+    "industry": ["pharmaceuticals", "chemistry"],
+    "problemType": "simulation",
+    "maturityLevel": "theoretical",
+    "quantumAdvantage": "Protein folding involves quantum mechanical interactions between atoms. Classical ML models learn patterns from existing data but cannot simulate the underlying physics. Quantum computers could simulate the folding process directly, potentially predicting structures for proteins unlike any in training data.",
+    "timeline": {
+      "current": "Early research on quantum algorithms for small peptide chains (5-10 amino acids)",
+      "nearTerm": "1-3 years: Quantum simulation of protein fragments to validate approaches",
+      "longTerm": "5+ years: Full protein folding simulation competing with classical ML methods"
+    },
+    "requirements": {
+      "qubits": 800,
+      "gateDepth": 3000,
+      "errorRate": 0.0001,
+      "coherenceTime": "300 microseconds"
+    },
+    "examples": [
+      {
+        "company": "IBM Research",
+        "description": "Quantum simulation of small peptide bonds"
+      },
+      {
+        "company": "Google Quantum AI",
+        "description": "Research on quantum algorithms for molecular dynamics"
+      }
+    ],
+    "relatedUseCases": ["1"],
+    "lastUpdated": "2026-01-05"
+  }
+]

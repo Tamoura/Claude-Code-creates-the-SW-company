@@ -1,0 +1,506 @@
+# Add Mobile Version to Existing Product Workflow
+# Placeholders: {PRODUCT}, {PLATFORMS}
+# PLATFORMS can be: "ios", "android", or "both"
+# Use this when adding mobile app to existing web product
+
+metadata:
+  product: "{PRODUCT}"
+  version: "1.0.0"
+  workflow_type: "add-mobile-version"
+  platforms: "{PLATFORMS}"
+  created_at: "{TIMESTAMP}"
+  updated_at: "{TIMESTAMP}"
+
+tasks:
+  # ============================================================================
+  # PHASE 1: ANALYSIS & PLANNING
+  # ============================================================================
+
+  - id: "ANALYZE-01"
+    name: "Analyze Existing Product for Mobile"
+    description: |
+      Review existing {PRODUCT} for mobile version:
+      - Read existing PRD and architecture docs
+      - Identify features suitable for mobile
+      - Identify features to defer/omit for mobile MVP
+      - Analyze existing API for mobile compatibility
+      - Identify mobile-specific features to add
+      - Create mobile feature priority list
+    agent: "product-manager"
+    depends_on: []
+    produces:
+      - name: "Mobile Feature Analysis"
+        type: "document"
+        path: "products/{PRODUCT}/docs/mobile-feature-analysis.md"
+    parallel_ok: false
+    checkpoint: false
+    priority: "critical"
+    estimated_time_minutes: 90
+    acceptance_criteria:
+      - "Existing features categorized (must-have, nice-to-have, defer)"
+      - "Mobile-specific features identified"
+      - "MVP scope defined"
+      - "API gaps identified"
+    status: "pending"
+
+  - id: "DESIGN-01"
+    name: "Adapt UI/UX for Mobile"
+    description: |
+      Create mobile-specific design:
+      - Adapt existing web screens for mobile
+      - Design mobile navigation (tabs, stack)
+      - Create mobile-specific screens (if any)
+      - Design touch-friendly interactions
+      - Platform-specific patterns (iOS vs Android)
+      - Simplified forms for mobile input
+    agent: "ui-ux-designer"
+    depends_on: ["ANALYZE-01"]
+    consumes:
+      - name: "Mobile Feature Analysis"
+        required_from_task: "ANALYZE-01"
+    produces:
+      - name: "Mobile Design"
+        type: "document"
+        path: "products/{PRODUCT}/docs/mobile-design.md"
+      - name: "Wireframes"
+        type: "directory"
+        path: "products/{PRODUCT}/docs/wireframes/mobile"
+    parallel_ok: false
+    checkpoint: true
+    priority: "critical"
+    estimated_time_minutes: 150
+    acceptance_criteria:
+      - "All mobile screens designed"
+      - "Navigation structure clear"
+      - "Designs follow platform guidelines"
+      - "Touch targets appropriate size"
+    status: "pending"
+
+  - id: "ARCH-01"
+    name: "Design Mobile Architecture"
+    description: |
+      Plan mobile app architecture:
+      - Mobile navigation structure
+      - State management approach
+      - API integration (reuse existing APIs)
+      - Authentication flow (match web)
+      - Offline capabilities
+      - Data sync strategy
+      - Push notifications architecture
+      - ADRs for mobile decisions
+    agent: "architect"
+    depends_on: ["ANALYZE-01", "DESIGN-01"]
+    consumes:
+      - name: "Mobile Feature Analysis"
+        required_from_task: "ANALYZE-01"
+      - name: "Mobile Design"
+        required_from_task: "DESIGN-01"
+    produces:
+      - name: "Mobile Architecture"
+        type: "document"
+        path: "products/{PRODUCT}/docs/mobile-architecture.md"
+      - name: "Mobile ADRs"
+        type: "directory"
+        path: "products/{PRODUCT}/docs/ADRs/mobile"
+    parallel_ok: false
+    checkpoint: true
+    priority: "critical"
+    estimated_time_minutes: 120
+    acceptance_criteria:
+      - "Architecture aligns with existing backend"
+      - "Auth flow compatible with web"
+      - "Data sync strategy defined"
+      - "At least 2 ADRs created"
+    status: "pending"
+
+  # ============================================================================
+  # PHASE 2: BACKEND UPDATES (if needed)
+  # ============================================================================
+
+  - id: "BACKEND-01"
+    name: "Update Backend for Mobile"
+    description: |
+      Adapt backend APIs for mobile (if needed):
+      - Add mobile-specific endpoints (if needed)
+      - Optimize API responses for mobile (pagination, field selection)
+      - Add push notification infrastructure
+      - Add device registration endpoints
+      - Update authentication for mobile tokens
+      - Update CORS for mobile
+      - Document API changes
+    agent: "backend-engineer"
+    depends_on: ["ARCH-01"]
+    consumes:
+      - name: "Mobile Architecture"
+        required_from_task: "ARCH-01"
+    produces:
+      - name: "Updated Backend"
+        type: "directory"
+        path: "products/{PRODUCT}/apps/api"
+      - name: "API Updates Doc"
+        type: "document"
+        path: "products/{PRODUCT}/docs/api-mobile-updates.md"
+    parallel_ok: false
+    checkpoint: false
+    priority: "high"
+    estimated_time_minutes: 120
+    acceptance_criteria:
+      - "Mobile-specific endpoints added"
+      - "Push notification infrastructure ready"
+      - "API documented"
+      - "Tests updated"
+    status: "pending"
+
+  # ============================================================================
+  # PHASE 3: MOBILE APP DEVELOPMENT
+  # ============================================================================
+
+  - id: "MOBILE-01"
+    name: "Setup Mobile App Foundation"
+    description: |
+      Create Expo app in existing product:
+      - Initialize Expo app at products/{PRODUCT}/apps/mobile
+      - Configure app.json (match brand identity)
+      - Setup Expo Router
+      - Configure NativeWind
+      - Setup folder structure
+      - Install dependencies
+      - Link to existing shared code (if any)
+    agent: "mobile-developer"
+    depends_on: ["ARCH-01"]
+    consumes:
+      - name: "Mobile Architecture"
+        required_from_task: "ARCH-01"
+    produces:
+      - name: "Mobile App"
+        type: "directory"
+        path: "products/{PRODUCT}/apps/mobile"
+    parallel_ok: false
+    checkpoint: false
+    priority: "critical"
+    estimated_time_minutes: 60
+    acceptance_criteria:
+      - "Expo app runs on iOS simulator"
+      - "Expo app runs on Android emulator"
+      - "TypeScript configured"
+      - "Basic navigation works"
+    status: "pending"
+
+  - id: "MOBILE-02"
+    name: "Implement Mobile UI Components"
+    description: |
+      Build reusable mobile components:
+      - Adapt design system for mobile
+      - Core UI components (Button, Input, Card, etc.)
+      - Loading states
+      - Error states
+      - Empty states
+      - Platform-specific components
+      - Component tests
+    agent: "mobile-developer"
+    depends_on: ["MOBILE-01"]
+    consumes:
+      - name: "Mobile App"
+        required_from_task: "MOBILE-01"
+      - name: "Mobile Design"
+        required_from_task: "DESIGN-01"
+    produces:
+      - name: "Mobile Components"
+        type: "directory"
+        path: "products/{PRODUCT}/apps/mobile/components"
+    parallel_ok: false
+    checkpoint: false
+    priority: "high"
+    estimated_time_minutes: 120
+    acceptance_criteria:
+      - "All core components implemented"
+      - "Components match design"
+      - "Components tested"
+      - "Works on both platforms"
+    status: "pending"
+
+  - id: "MOBILE-03"
+    name: "Implement Authentication"
+    description: |
+      Add authentication matching web:
+      - Login screen
+      - Signup screen (if applicable)
+      - Password reset flow
+      - Auth state management
+      - Token storage (SecureStore)
+      - Biometric auth (if applicable)
+      - Session management
+    agent: "mobile-developer"
+    depends_on: ["MOBILE-02", "BACKEND-01"]
+    consumes:
+      - name: "Mobile App"
+        required_from_task: "MOBILE-01"
+      - name: "Updated Backend"
+        required_from_task: "BACKEND-01"
+    produces:
+      - name: "Auth Screens"
+        type: "directory"
+        path: "products/{PRODUCT}/apps/mobile/app/(auth)"
+      - name: "Auth Store"
+        type: "file"
+        path: "products/{PRODUCT}/apps/mobile/stores/useAuthStore.ts"
+    parallel_ok: false
+    checkpoint: false
+    priority: "critical"
+    estimated_time_minutes: 150
+    acceptance_criteria:
+      - "Login works with existing backend"
+      - "Tokens stored securely"
+      - "Auth persists across app restarts"
+      - "Biometric auth works (if implemented)"
+    status: "pending"
+
+  - id: "MOBILE-04"
+    name: "Implement Core Features"
+    description: |
+      Build mobile versions of core web features:
+      - Main screens from mobile design
+      - Feature-specific components
+      - Forms with validation
+      - API integration using existing endpoints
+      - Offline support (if required)
+      - Pull-to-refresh
+      - Proper loading and error handling
+    agent: "mobile-developer"
+    depends_on: ["MOBILE-03"]
+    consumes:
+      - name: "Mobile App"
+        required_from_task: "MOBILE-01"
+      - name: "Mobile Feature Analysis"
+        required_from_task: "ANALYZE-01"
+      - name: "Mobile Design"
+        required_from_task: "DESIGN-01"
+    produces:
+      - name: "Feature Screens"
+        type: "directory"
+        path: "products/{PRODUCT}/apps/mobile/app/(app)"
+    parallel_ok: false
+    checkpoint: false
+    priority: "critical"
+    estimated_time_minutes: 300
+    acceptance_criteria:
+      - "All MVP features implemented"
+      - "Features work with existing API"
+      - "Forms validate correctly"
+      - "Loading states display"
+      - "Errors handled gracefully"
+    status: "pending"
+
+  - id: "MOBILE-05"
+    name: "Implement Mobile-Specific Features"
+    description: |
+      Add mobile-specific functionality:
+      - Push notifications
+      - Camera/Image picker (if needed)
+      - Location services (if needed)
+      - Offline mode
+      - App settings screen
+      - Profile/account management
+      - Deep linking
+    agent: "mobile-developer"
+    depends_on: ["MOBILE-04", "BACKEND-01"]
+    consumes:
+      - name: "Mobile App"
+        required_from_task: "MOBILE-01"
+      - name: "Mobile Architecture"
+        required_from_task: "ARCH-01"
+    produces:
+      - name: "Mobile Features"
+        type: "directory"
+        path: "products/{PRODUCT}/apps/mobile/features"
+    parallel_ok: false
+    checkpoint: false
+    priority: "high"
+    estimated_time_minutes: 180
+    acceptance_criteria:
+      - "Push notifications work"
+      - "Native features functional"
+      - "Offline mode works (if applicable)"
+      - "Deep linking configured"
+    status: "pending"
+
+  # ============================================================================
+  # PHASE 4: BUILD & DEPLOYMENT
+  # ============================================================================
+
+  - id: "DEVOPS-01"
+    name: "Configure EAS Build"
+    description: |
+      Setup build and deployment:
+      - Create eas.json with profiles
+      - Configure credentials
+      - Setup environment variables
+      - Configure app icons and splash screens
+      - Document build process
+    agent: "devops-engineer"
+    depends_on: ["MOBILE-05"]
+    consumes:
+      - name: "Mobile App"
+        required_from_task: "MOBILE-01"
+    produces:
+      - name: "EAS Config"
+        type: "file"
+        path: "products/{PRODUCT}/apps/mobile/eas.json"
+      - name: "Build Guide"
+        type: "document"
+        path: "products/{PRODUCT}/docs/mobile-build-guide.md"
+    parallel_ok: false
+    checkpoint: false
+    priority: "high"
+    estimated_time_minutes: 90
+    acceptance_criteria:
+      - "EAS config complete"
+      - "Development builds succeed"
+      - "Build guide documented"
+    status: "pending"
+
+  - id: "DEVOPS-02"
+    name: "Create Development Builds"
+    description: |
+      Build apps for testing:
+      - Build iOS development version
+      - Build Android development version
+      - Distribute to team
+      - Document installation
+    agent: "devops-engineer"
+    depends_on: ["DEVOPS-01"]
+    consumes:
+      - name: "Mobile App"
+        required_from_task: "MOBILE-01"
+      - name: "EAS Config"
+        required_from_task: "DEVOPS-01"
+    produces:
+      - name: "Development Builds"
+        type: "artifact"
+        path: "EAS Cloud"
+    parallel_ok: false
+    checkpoint: false
+    priority: "high"
+    estimated_time_minutes: 60
+    acceptance_criteria:
+      - "iOS build available"
+      - "Android build available"
+      - "Builds install on devices"
+    status: "pending"
+
+  # ============================================================================
+  # PHASE 5: TESTING
+  # ============================================================================
+
+  - id: "QA-01"
+    name: "Mobile Testing"
+    description: |
+      Test mobile app thoroughly:
+      - Unit tests for components and screens
+      - Integration tests for features
+      - Device testing on iOS (multiple models)
+      - Device testing on Android (multiple devices/versions)
+      - Test all user flows
+      - Test offline mode
+      - Test push notifications
+      - Performance testing
+      - Generate test report
+    agent: "qa-engineer"
+    depends_on: ["DEVOPS-02"]
+    consumes:
+      - name: "Mobile App"
+        required_from_task: "MOBILE-01"
+      - name: "Development Builds"
+        required_from_task: "DEVOPS-02"
+    produces:
+      - name: "Test Suite"
+        type: "directory"
+        path: "products/{PRODUCT}/apps/mobile/__tests__"
+      - name: "Test Report"
+        type: "document"
+        path: "products/{PRODUCT}/docs/test-reports/mobile-testing.md"
+    parallel_ok: false
+    checkpoint: false
+    priority: "critical"
+    estimated_time_minutes: 240
+    acceptance_criteria:
+      - "All tests pass"
+      - "Test coverage > 80%"
+      - "Tested on real iOS devices"
+      - "Tested on real Android devices"
+      - "No critical bugs"
+      - "Test report generated"
+    status: "pending"
+
+  # ============================================================================
+  # PHASE 6: DOCUMENTATION
+  # ============================================================================
+
+  - id: "DOCS-01"
+    name: "Update Documentation for Mobile"
+    description: |
+      Update product documentation:
+      - Update main README with mobile info
+      - Create mobile user manual
+      - Create mobile technical manual
+      - Update API docs (if changed)
+      - App store listing preparation
+      - Update product addendum
+    agent: "technical-writer"
+    depends_on: ["MOBILE-05"]
+    consumes:
+      - name: "Mobile App"
+        required_from_task: "MOBILE-01"
+      - name: "Mobile Architecture"
+        required_from_task: "ARCH-01"
+    produces:
+      - name: "Updated README"
+        type: "file"
+        path: "products/{PRODUCT}/README.md"
+      - name: "Mobile User Manual"
+        type: "document"
+        path: "products/{PRODUCT}/docs/{PRODUCT}-mobile-user-manual.md"
+      - name: "Mobile Technical Manual"
+        type: "document"
+        path: "products/{PRODUCT}/docs/{PRODUCT}-mobile-technical-manual.md"
+    parallel_ok: true
+    checkpoint: false
+    priority: "normal"
+    estimated_time_minutes: 120
+    acceptance_criteria:
+      - "README updated with mobile info"
+      - "User manual complete"
+      - "Technical manual complete"
+      - "App store listing ready"
+    status: "pending"
+
+  # ============================================================================
+  # CHECKPOINT: MOBILE VERSION COMPLETE
+  # ============================================================================
+
+  - id: "CHECKPOINT-MOBILE"
+    name: "Mobile Version Complete - CEO Review"
+    description: |
+      Mobile version of {PRODUCT} is complete and ready for review:
+      - Mobile app works on iOS (if applicable)
+      - Mobile app works on Android (if applicable)
+      - All MVP features implemented
+      - API integration complete
+      - Push notifications working
+      - All tests passing
+      - Documentation updated
+
+      CEO can test the mobile app before app store submission.
+      Next steps: Beta testing → App store submission
+    agent: "orchestrator"
+    depends_on: ["QA-01", "DOCS-01"]
+    parallel_ok: false
+    checkpoint: true
+    priority: "critical"
+    estimated_time_minutes: 0
+    status: "pending"
+
+# Execution estimates:
+# - Sequential time: ~1,650 minutes (~27.5 hours)
+# - Parallel optimized: ~1,100 minutes (~18.5 hours)
+# - Savings from parallelization: ~33%
