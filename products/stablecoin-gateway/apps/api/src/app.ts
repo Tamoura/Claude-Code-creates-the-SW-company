@@ -97,6 +97,24 @@ export async function buildApp(): Promise<FastifyInstance> {
   const rateLimitConfig: any = {
     max: parseInt(process.env.RATE_LIMIT_MAX || '100'),
     timeWindow: parseInt(process.env.RATE_LIMIT_WINDOW || '60000'),
+    // Key by authenticated user/API key instead of IP to prevent:
+    // 1. Shared IP throttling (corporate NAT, VPNs)
+    // 2. IP-based abuse (attacker rotating IPs)
+    keyGenerator: (request: any) => {
+      // Priority 1: Use authenticated user ID
+      if (request.currentUser?.id) {
+        return `user:${request.currentUser.id}`;
+      }
+
+      // Priority 2: Use API key ID
+      if (request.apiKey?.id) {
+        return `apikey:${request.apiKey.id}`;
+      }
+
+      // Fallback: Use IP (for unauthenticated endpoints like health checks)
+      // Note: This is a fallback only - authenticated endpoints will use user/API key
+      return `ip:${request.ip}`;
+    },
   };
 
   if (fastify.redis) {
@@ -109,6 +127,7 @@ export async function buildApp(): Promise<FastifyInstance> {
     logger.info('Rate limiting configured with Redis distributed store', {
       max: rateLimitConfig.max,
       timeWindow: rateLimitConfig.timeWindow,
+      keyStrategy: 'user/apikey with IP fallback',
     });
   } else {
     logger.warn('Redis not configured - rate limiting uses in-memory store (not suitable for production)');
