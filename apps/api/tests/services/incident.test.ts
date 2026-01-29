@@ -12,6 +12,7 @@ describe('Incident Service', () => {
 
   beforeEach(async () => {
     // Clean up test data in correct order (FK constraints)
+    // Children first, then parents
     // Note: We don't delete categories or roles as they might be referenced by seed data
     // Delete by displayId to catch any orphaned records from previous runs
     await prisma.incident.deleteMany({
@@ -20,9 +21,7 @@ describe('Incident Service', () => {
     await prisma.sLAConfig.deleteMany({
       where: { name: 'Test SLA' },
     });
-    await prisma.category.deleteMany({
-      where: { name: 'Test Hardware' },
-    });
+    // Clean up test user AFTER incidents are deleted
     await prisma.user.deleteMany({
       where: { email: 'test@incident-test.com' },
     });
@@ -60,13 +59,13 @@ describe('Incident Service', () => {
     });
     testUserId = user.id;
 
-    // Create test category
-    const category = await prisma.category.create({
-      data: {
-        name: 'Test Hardware',
-        type: 'INCIDENT',
-      },
+    // Reuse existing category from seed data (don't create/delete to avoid FK issues)
+    const category = await prisma.category.findFirst({
+      where: { name: 'Hardware', type: 'INCIDENT' },
     });
+    if (!category) {
+      throw new Error('Seed data missing: Hardware category not found. Run: npm run db:seed');
+    }
     testCategoryId = category.id;
 
     // Create test SLA config
@@ -80,18 +79,17 @@ describe('Incident Service', () => {
 
   afterAll(async () => {
     // Clean up all test data after all tests complete
+    // Delete in correct order: children first, parents last
     await prisma.incident.deleteMany({
       where: { title: { contains: 'Test Incident' } },
-    });
-    await prisma.sLAConfig.deleteMany({
-      where: { name: 'Test SLA' },
-    });
-    await prisma.category.deleteMany({
-      where: { name: 'Test Hardware' },
     });
     await prisma.user.deleteMany({
       where: { email: 'test@incident-test.com' },
     });
+    await prisma.sLAConfig.deleteMany({
+      where: { name: 'Test SLA' },
+    });
+    // Don't delete category as it's shared seed data
     // Don't delete role as seed users might reference it
   });
 

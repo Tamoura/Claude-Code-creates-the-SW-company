@@ -19,7 +19,7 @@ describe('Problem Service', () => {
   let testIncidentId: string;
 
   beforeEach(async () => {
-    // Clean up test data in correct order
+    // Clean up test data in correct order: children first, parents last
     // Delete by displayId to catch any orphaned records from previous runs
     await prisma.knownError.deleteMany({
       where: { problem: { displayId: { gte: 'PRB-00003' } } },
@@ -33,9 +33,7 @@ describe('Problem Service', () => {
     await prisma.incident.deleteMany({
       where: { title: { contains: 'Test Problem Incident' } },
     });
-    await prisma.category.deleteMany({
-      where: { name: { contains: 'Problem Test' } },
-    });
+    // Clean up test user and role AFTER all entities that reference them are deleted
     await prisma.user.deleteMany({
       where: { email: { contains: 'problemtest@' } },
     });
@@ -67,13 +65,13 @@ describe('Problem Service', () => {
     });
     testUserId = user.id;
 
-    // Create test category
-    const category = await prisma.category.create({
-      data: {
-        name: 'Problem Test Category',
-        type: 'PROBLEM',
-      },
+    // Reuse existing category from seed data (don't create/delete to avoid FK issues)
+    const category = await prisma.category.findFirst({
+      where: { name: 'Hardware', type: 'INCIDENT' }, // Reuse incident category for problems
     });
+    if (!category) {
+      throw new Error('Seed data missing: Hardware category not found. Run: npm run db:seed');
+    }
     testCategoryId = category.id;
 
     // Create test incident
@@ -95,6 +93,7 @@ describe('Problem Service', () => {
 
   afterAll(async () => {
     // Clean up all test data after all tests complete
+    // Delete in correct order: children first, parents last
     await prisma.knownError.deleteMany({
       where: { problem: { title: { contains: 'Test Problem' } } },
     });
@@ -107,15 +106,13 @@ describe('Problem Service', () => {
     await prisma.incident.deleteMany({
       where: { displayId: 'INC-TEST-001' },
     });
-    await prisma.category.deleteMany({
-      where: { name: 'Problem Test Category' },
-    });
     await prisma.user.deleteMany({
       where: { email: 'problemtest@example.com' },
     });
     await prisma.role.deleteMany({
       where: { name: 'Problem Test Role' },
     });
+    // Don't delete category as it's shared seed data
   });
 
   describe('createProblem', () => {
