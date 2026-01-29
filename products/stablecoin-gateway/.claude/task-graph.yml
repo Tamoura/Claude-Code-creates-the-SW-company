@@ -4,7 +4,7 @@ metadata:
   workflow_type: security-audit-fix
   issue_id: SECURITY-AUDIT-2026-01
   created_at: '2026-01-29T06:18:22Z'
-  updated_at: '2026-01-29T06:57:07Z'
+  updated_at: '2026-01-29T07:09:43Z'
   description: Fix critical auth, security, and integration gaps from CEO security
     audit
 tasks:
@@ -321,7 +321,8 @@ tasks:
   - All routes protected
   - Tests prove enforcement
   - Unauthorized access blocked
-  status: pending
+  status: completed
+  completed_at: '2026-01-29T07:09:43Z'
 - id: FIX-06
   name: Unify Webhook Signature Verification
   description: 'ISSUE #6: Webhook signature verification has two competing schemes.
@@ -397,7 +398,8 @@ tasks:
   - Timing-safe verification
   - Tests prove security
   - Merchant docs updated
-  status: pending
+  status: completed
+  completed_at: '2026-01-29T07:09:43Z'
 - id: FIX-07
   name: Implement On-Chain Verification
   description: "ISSUE #7: No on-chain verification logic exists.\n\nRoot cause:\n\
@@ -494,7 +496,8 @@ tasks:
   - Metadata size limited
   - Tests prove enforcement
   - Error messages helpful
-  status: pending
+  status: completed
+  completed_at: '2026-01-29T07:09:43Z'
 - id: FIX-09
   name: Remove Duplicate Address Validation
   description: 'ISSUE #9: Merchant address validation duplicated and weaker in service.
@@ -542,7 +545,8 @@ tasks:
   - Duplicate validation removed
   - All tests still pass
   - Code cleaner
-  status: pending
+  status: completed
+  completed_at: '2026-01-29T07:09:43Z'
 - id: FIX-10
   name: Fix CORS Configuration
   description: 'ISSUE #10: CORS uses single origin string.
@@ -605,7 +609,8 @@ tasks:
   - CORS uses allowlist
   - Environment-based config
   - Tests prove functionality
-  status: pending
+  status: completed
+  completed_at: '2026-01-29T07:09:43Z'
 - id: QA-01
   name: End-to-End Integration Testing
   description: "Test all fixes together:\n\n1. Run all unit tests\n2. Run all integration\
