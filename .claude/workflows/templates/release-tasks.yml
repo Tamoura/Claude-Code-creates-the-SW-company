@@ -1,0 +1,310 @@
+# Release Workflow Task Graph Template
+# Placeholders: {PRODUCT}, {VERSION}, {TIMESTAMP}
+
+metadata:
+  product: "{PRODUCT}"
+  version: "{VERSION}"
+  workflow_type: "release"
+  created_at: "{TIMESTAMP}"
+  updated_at: "{TIMESTAMP}"
+
+tasks:
+  # ============================================================================
+  # PHASE 1: PREPARATION
+  # ============================================================================
+
+  - id: "RELEASE-PREP-{VERSION}"
+    name: "Prepare Release {VERSION}"
+    description: |
+      Prepare release {VERSION} for {PRODUCT}:
+      - Update version in package.json files
+      - Generate CHANGELOG from commits
+      - Update documentation version references
+      - Create release branch
+    agent: "devops-engineer"
+    depends_on: []
+    produces:
+      - name: "Version Bump"
+        type: "file"
+        path: "products/{PRODUCT}/package.json"
+      - name: "Changelog"
+        type: "file"
+        path: "products/{PRODUCT}/CHANGELOG.md"
+    parallel_ok: false
+    checkpoint: false
+    priority: "high"
+    estimated_time_minutes: 30
+    acceptance_criteria:
+      - "Version bumped to {VERSION}"
+      - "CHANGELOG updated with all changes"
+      - "Release branch created: release/{PRODUCT}/v{VERSION}"
+    status: "pending"
+
+  # ============================================================================
+  # PHASE 2: QUALITY GATES (Sequential - must all pass)
+  # ============================================================================
+
+  - id: "GATE-SECURITY-{VERSION}"
+    name: "Security Gate for {VERSION}"
+    description: |
+      Run security checks:
+      - npm audit (backend and frontend)
+      - Secret scanning
+      - Dependency vulnerability check
+      
+      Command: .claude/quality-gates/executor.sh security {PRODUCT}
+    agent: "backend-engineer"
+    depends_on: ["RELEASE-PREP-{VERSION}"]
+    produces:
+      - name: "Security Report"
+        type: "document"
+        path: "products/{PRODUCT}/docs/quality-reports/security-{VERSION}.md"
+    parallel_ok: false
+    checkpoint: false
+    priority: "critical"
+    estimated_time_minutes: 20
+    acceptance_criteria:
+      - "No HIGH or CRITICAL vulnerabilities"
+      - "No secrets in codebase"
+      - "All security checks pass"
+    status: "pending"
+
+  - id: "GATE-PERFORMANCE-{VERSION}"
+    name: "Performance Gate for {VERSION}"
+    description: |
+      Run performance checks:
+      - Lighthouse audit
+      - Bundle size analysis
+      - API response time benchmarks
+      
+      Command: .claude/quality-gates/executor.sh performance {PRODUCT}
+    agent: "devops-engineer"
+    depends_on: ["GATE-SECURITY-{VERSION}"]
+    produces:
+      - name: "Performance Report"
+        type: "document"
+        path: "products/{PRODUCT}/docs/quality-reports/performance-{VERSION}.md"
+    parallel_ok: false
+    checkpoint: false
+    priority: "critical"
+    estimated_time_minutes: 30
+    acceptance_criteria:
+      - "Lighthouse Performance >= 90"
+      - "Lighthouse Accessibility >= 90"
+      - "Bundle size < 500KB gzipped"
+      - "API P95 latency < 200ms"
+    status: "pending"
+
+  - id: "GATE-TESTING-{VERSION}"
+    name: "Testing Gate for {VERSION}"
+    description: |
+      Run comprehensive tests:
+      - All unit tests
+      - All integration tests
+      - All E2E tests
+      - Coverage verification
+      
+      Command: .claude/scripts/testing-gate-checklist.sh {PRODUCT}
+    agent: "qa-engineer"
+    depends_on: ["GATE-PERFORMANCE-{VERSION}"]
+    produces:
+      - name: "Testing Report"
+        type: "document"
+        path: "products/{PRODUCT}/docs/quality-reports/testing-{VERSION}.md"
+    parallel_ok: false
+    checkpoint: false
+    priority: "critical"
+    estimated_time_minutes: 45
+    acceptance_criteria:
+      - "All unit tests pass"
+      - "All E2E tests pass"
+      - "Coverage >= 80%"
+      - "No console errors"
+    status: "pending"
+
+  # ============================================================================
+  # PHASE 3: STAGING DEPLOYMENT
+  # ============================================================================
+
+  - id: "DEPLOY-STAGING-{VERSION}"
+    name: "Deploy {VERSION} to Staging"
+    description: |
+      Deploy to staging environment:
+      - Build production artifacts
+      - Deploy to staging environment
+      - Verify deployment success
+      - Run smoke tests on staging
+    agent: "devops-engineer"
+    depends_on: ["GATE-TESTING-{VERSION}"]
+    produces:
+      - name: "Staging Deployment"
+        type: "decision"
+        path: "products/{PRODUCT}/docs/deployments/staging-{VERSION}.md"
+    parallel_ok: false
+    checkpoint: false
+    priority: "high"
+    estimated_time_minutes: 30
+    acceptance_criteria:
+      - "Staging deployment successful"
+      - "Application accessible on staging URL"
+      - "Smoke tests pass on staging"
+    status: "pending"
+
+  - id: "VERIFY-STAGING-{VERSION}"
+    name: "Verify Staging Deployment"
+    description: |
+      Verify staging deployment:
+      - Run E2E tests against staging
+      - Manual smoke test of critical paths
+      - Verify all features work correctly
+    agent: "qa-engineer"
+    depends_on: ["DEPLOY-STAGING-{VERSION}"]
+    produces:
+      - name: "Staging Verification"
+        type: "document"
+        path: "products/{PRODUCT}/docs/deployments/staging-verification-{VERSION}.md"
+    parallel_ok: false
+    checkpoint: false
+    priority: "critical"
+    estimated_time_minutes: 30
+    acceptance_criteria:
+      - "E2E tests pass on staging"
+      - "Critical paths verified"
+      - "No regressions found"
+    status: "pending"
+
+  # ============================================================================
+  # PHASE 4: CEO APPROVAL
+  # ============================================================================
+
+  - id: "CHECKPOINT-STAGING-{VERSION}"
+    name: "Staging Complete - CEO Review"
+    description: |
+      Release {VERSION} is deployed to staging and verified.
+      
+      Quality Gates Passed:
+      - ✅ Security Gate
+      - ✅ Performance Gate
+      - ✅ Testing Gate
+      
+      Staging Status:
+      - ✅ Deployed successfully
+      - ✅ Verified working
+      
+      Ready for CEO approval to proceed to production.
+    agent: "orchestrator"
+    depends_on: ["VERIFY-STAGING-{VERSION}"]
+    parallel_ok: false
+    checkpoint: true
+    priority: "critical"
+    estimated_time_minutes: 0
+    status: "pending"
+
+  # ============================================================================
+  # PHASE 5: PRODUCTION DEPLOYMENT
+  # ============================================================================
+
+  - id: "GATE-PRODUCTION-{VERSION}"
+    name: "Production Readiness Gate"
+    description: |
+      Verify production readiness:
+      - Health check endpoint configured
+      - Monitoring and alerting setup
+      - Rollback plan documented
+      - Database migrations tested
+      
+      Command: .claude/quality-gates/executor.sh production {PRODUCT}
+    agent: "devops-engineer"
+    depends_on: ["CHECKPOINT-STAGING-{VERSION}"]
+    produces:
+      - name: "Production Readiness Report"
+        type: "document"
+        path: "products/{PRODUCT}/docs/quality-reports/production-{VERSION}.md"
+    parallel_ok: false
+    checkpoint: false
+    priority: "critical"
+    estimated_time_minutes: 30
+    acceptance_criteria:
+      - "Health check endpoint responds"
+      - "Monitoring configured"
+      - "Rollback plan documented"
+      - "All production checks pass"
+    status: "pending"
+
+  - id: "DEPLOY-PRODUCTION-{VERSION}"
+    name: "Deploy {VERSION} to Production"
+    description: |
+      Deploy to production:
+      - Deploy to production environment
+      - Verify deployment success
+      - Run production smoke tests
+      - Monitor for issues
+    agent: "devops-engineer"
+    depends_on: ["GATE-PRODUCTION-{VERSION}"]
+    produces:
+      - name: "Production Deployment"
+        type: "decision"
+        path: "products/{PRODUCT}/docs/deployments/production-{VERSION}.md"
+    parallel_ok: false
+    checkpoint: false
+    priority: "critical"
+    estimated_time_minutes: 30
+    acceptance_criteria:
+      - "Production deployment successful"
+      - "Application accessible"
+      - "Smoke tests pass"
+      - "No errors in logs"
+    status: "pending"
+
+  # ============================================================================
+  # PHASE 6: POST-DEPLOYMENT
+  # ============================================================================
+
+  - id: "POST-DEPLOY-{VERSION}"
+    name: "Post-Deployment Tasks"
+    description: |
+      Complete post-deployment tasks:
+      - Create GitHub release
+      - Tag version in git
+      - Merge release branch to main
+      - Update documentation
+      - Notify stakeholders
+    agent: "devops-engineer"
+    depends_on: ["DEPLOY-PRODUCTION-{VERSION}"]
+    produces:
+      - name: "GitHub Release"
+        type: "pr"
+        path: "https://github.com/[org]/{PRODUCT}/releases/tag/v{VERSION}"
+    parallel_ok: false
+    checkpoint: false
+    priority: "high"
+    estimated_time_minutes: 20
+    acceptance_criteria:
+      - "GitHub release created"
+      - "Version tag created"
+      - "Release branch merged"
+    status: "pending"
+
+  - id: "CHECKPOINT-RELEASE-{VERSION}"
+    name: "Release {VERSION} Complete"
+    description: |
+      Release {VERSION} of {PRODUCT} is now live in production!
+      
+      Summary:
+      - All quality gates passed
+      - Staging verification passed
+      - Production deployment successful
+      - GitHub release created
+      
+      Monitoring active for any issues.
+    agent: "orchestrator"
+    depends_on: ["POST-DEPLOY-{VERSION}"]
+    parallel_ok: false
+    checkpoint: true
+    priority: "critical"
+    estimated_time_minutes: 0
+    status: "pending"
+
+# Execution estimates:
+# - Total time: ~265 minutes (~4.5 hours)
+# - CEO approval points: 2 (staging, final)

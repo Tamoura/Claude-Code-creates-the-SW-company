@@ -1,0 +1,31 @@
+{
+  "version": "1.0.0",
+  "date": "2026-01-26",
+  "tokens_used": 0,
+  "cost_usd": 0,
+  "limits": {
+    "tokens_daily": 2000000,
+    "cost_daily_usd": 100
+  },
+  "by_model": {
+    "haiku": {
+      "tasks": 0,
+      "tokens": 0,
+      "cost_usd": 0
+    },
+    "sonnet": {
+      "tasks": 0,
+      "tokens": 0,
+      "cost_usd": 0
+    },
+    "opus": {
+      "tasks": 0,
+      "tokens": 0,
+      "cost_usd": 0
+    }
+  },
+  "by_product": {},
+  "by_agent": {},
+  "alerts_triggered": [],
+  "historical": []
+}

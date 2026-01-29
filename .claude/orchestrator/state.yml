@@ -17,21 +17,33 @@ products:
     path: "products/itil-dashboard"
     state_file: "products/itil-dashboard/.claude/state.yml"
     worktree: ".trees/ITIL_dashboard_product"
+  it4it-dashboard:
+    path: "products/it4it-dashboard"
+    state_file: "products/it4it-dashboard/.claude/state.yml"
+    worktree: ".trees/IT4IT_dashboard_product"
+  tech-management-helper:
+    path: "products/tech-management-helper"
+    state_file: "products/tech-management-helper/.claude/state.yml"
+    worktree: ".trees/Tech_Management_helper"
+  basic-calculator:
+    path: "products/basic-calculator"
+    state_file: "products/basic-calculator/.claude/state.yml"
+    worktree: null  # developed in main branch
 
 # Active worktrees (for parallel product development)
 worktrees:
   IT4IT_dashboard_product:
     path: ".trees/IT4IT_dashboard_product"
-    branch: "IT4IT_dashboard_product"
-    product: null  # not assigned yet
+    branch: "feature/it4it-dashboard/r2d"
+    product: "it4it-dashboard"
   ITIL_dashboard_product:
     path: ".trees/ITIL_dashboard_product"
-    branch: "ITIL_dashboard_product"
+    branch: "foundation/itil-dashboard"
     product: "itil-dashboard"
   Tech_Management_helper:
     path: ".trees/Tech_Management_helper"
-    branch: "Tech_Management_helper"
-    product: null
+    branch: "feature/tech-management-helper/risk-management"
+    product: "tech-management-helper"
 
 # Company-wide pending decisions (cross-product)
 pending_decisions: []
@@ -40,4 +52,4 @@ pending_decisions: []
 checkpoints: []
 
 # Last updated
-last_updated: "2025-01-26T08:55:00Z"
+last_updated: "2026-01-29T00:00:00Z"
