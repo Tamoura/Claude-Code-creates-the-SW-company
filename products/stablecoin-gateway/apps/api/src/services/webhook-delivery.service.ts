@@ -18,6 +18,7 @@
 import { PrismaClient, WebhookStatus } from '@prisma/client';
 import { signWebhookPayload } from '../utils/crypto.js';
 import { logger } from '../utils/logger.js';
+import { validateWebhookUrl } from '../utils/url-validator.js';
 
 export type WebhookEventType =
   | 'payment.created'
@@ -177,6 +178,28 @@ export class WebhookDeliveryService {
           attempts: { increment: 1 },
         },
       });
+
+      // Validate URL before delivery (defense in depth - should already be validated on creation)
+      try {
+        validateWebhookUrl(endpoint.url);
+      } catch (error) {
+        // URL validation failed - mark delivery as permanently failed
+        await this.prisma.webhookDelivery.update({
+          where: { id },
+          data: {
+            status: WebhookStatus.FAILED,
+            errorMessage: `Invalid webhook URL: ${error instanceof Error ? error.message : 'Unknown error'}`,
+            nextAttemptAt: null, // Don't retry invalid URLs
+          },
+        });
+        logger.error('Webhook delivery blocked - invalid URL', {
+          deliveryId: id,
+          endpointId: endpoint.id,
+          url: endpoint.url,
+          error: error instanceof Error ? error.message : 'Unknown error',
+        });
+        return;
+      }
 
       // Generate signature
       const timestamp = Math.floor(Date.now() / 1000);

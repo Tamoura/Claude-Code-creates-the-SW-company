@@ -22,6 +22,7 @@ import { Prisma } from '@prisma/client';
 import { createWebhookSchema, updateWebhookSchema, validateBody } from '../../utils/validation.js';
 import { AppError } from '../../types/index.js';
 import { logger } from '../../utils/logger.js';
+import { validateWebhookUrl } from '../../utils/url-validator.js';
 import crypto from 'crypto';
 
 /**
@@ -102,6 +103,9 @@ const webhookRoutes: FastifyPluginAsync = async (fastify) => {
     try {
       const body = validateBody(createWebhookSchema, request.body);
       const userId = request.currentUser!.id;
+
+      // Validate webhook URL for SSRF protection
+      validateWebhookUrl(body.url);
 
       // Generate webhook secret (stored in plaintext for HMAC signing)
       const secret = generateWebhookSecret();
@@ -223,6 +227,8 @@ const webhookRoutes: FastifyPluginAsync = async (fastify) => {
       // Build update data (whitelist - prevent updating secret)
       const updateData: Prisma.WebhookEndpointUpdateInput = {};
       if (updates.url !== undefined) {
+        // Validate new URL for SSRF protection
+        validateWebhookUrl(updates.url);
         updateData.url = updates.url;
       }
       if (updates.events !== undefined) {
