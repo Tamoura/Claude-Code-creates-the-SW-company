@@ -347,6 +347,9 @@ export class RefundService {
         }
       );
 
+      // Check if payment should be marked as REFUNDED
+      await this.updatePaymentStatusIfFullyRefunded(completedRefund.paymentSessionId);
+
       return completedRefund;
     } catch (error) {
       // If it's already an AppError, rethrow it (webhook already sent if applicable)
@@ -438,6 +441,9 @@ export class RefundService {
       }
     );
 
+    // Check if payment should be marked as REFUNDED
+    await this.updatePaymentStatusIfFullyRefunded(updatedRefund.paymentSessionId);
+
     return updatedRefund;
   }
 
@@ -471,6 +477,70 @@ export class RefundService {
     );
 
     return refund;
+  }
+
+  /**
+   * Check if payment should be marked as REFUNDED and update if so
+   *
+   * Called after a refund completes to check if the total refunded amount
+   * equals the original payment amount. If so, updates the payment status
+   * to REFUNDED and emits payment.refunded webhook.
+   */
+  private async updatePaymentStatusIfFullyRefunded(paymentSessionId: string): Promise<void> {
+    // Get payment with all refunds
+    const payment = await this.prisma.paymentSession.findUnique({
+      where: { id: paymentSessionId },
+      include: {
+        refunds: {
+          where: {
+            status: RefundStatus.COMPLETED,
+          },
+        },
+      },
+    });
+
+    if (!payment) {
+      return; // Payment not found, nothing to do
+    }
+
+    // Calculate total refunded amount
+    const totalRefunded = payment.refunds.reduce((sum, refund) => {
+      return sum + Number(refund.amount);
+    }, 0);
+
+    const paymentAmount = Number(payment.amount);
+
+    // Check if fully refunded (with small tolerance for floating point errors)
+    const TOLERANCE = 0.01; // 1 cent
+    if (Math.abs(totalRefunded - paymentAmount) < TOLERANCE) {
+      // Update payment status to REFUNDED
+      const updatedPayment = await this.prisma.paymentSession.update({
+        where: { id: paymentSessionId },
+        data: {
+          status: PaymentStatus.REFUNDED,
+        },
+      });
+
+      // Queue webhook for payment.refunded event
+      await this.webhookService.queueWebhook(
+        payment.userId,
+        'payment.refunded',
+        {
+          id: updatedPayment.id,
+          payment_session_id: updatedPayment.id,
+          amount: Number(updatedPayment.amount),
+          currency: updatedPayment.currency,
+          status: updatedPayment.status,
+          network: updatedPayment.network,
+          token: updatedPayment.token,
+          merchant_address: updatedPayment.merchantAddress,
+          customer_address: updatedPayment.customerAddress,
+          created_at: updatedPayment.createdAt.toISOString(),
+          refunded_amount: totalRefunded,
+          metadata: updatedPayment.metadata,
+        }
+      );
+    }
   }
 
   /**
