@@ -171,8 +171,24 @@ const observabilityPlugin: FastifyPluginAsync = async (fastify) => {
     throw error;
   });
 
-  // Metrics endpoint (internal only - should be protected in production)
-  fastify.get('/internal/metrics', async (_request, reply) => {
+  // Metrics endpoint (internal only - requires INTERNAL_API_KEY authentication)
+  fastify.get('/internal/metrics', async (request, reply) => {
+    const authHeader = request.headers.authorization;
+    const expectedKey = process.env.INTERNAL_API_KEY;
+
+    // In production, INTERNAL_API_KEY must be configured
+    if (!expectedKey) {
+      if (process.env.NODE_ENV === 'production') {
+        return reply.code(500).send({ error: 'INTERNAL_API_KEY not configured' });
+      }
+      // In development without key configured, allow access for convenience
+    } else {
+      // Key is configured - require valid authorization
+      if (!authHeader || authHeader !== `Bearer ${expectedKey}`) {
+        return reply.code(401).send({ error: 'Unauthorized' });
+      }
+    }
+
     // Calculate percentiles
     const p50 = calculatePercentile(metrics.performance.p99, 50);
     const p95 = calculatePercentile(metrics.performance.p99, 95);
