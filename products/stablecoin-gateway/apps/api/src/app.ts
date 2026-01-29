@@ -50,9 +50,28 @@ export async function buildApp(): Promise<FastifyInstance> {
     },
   });
 
-  // Register CORS
+  // Register CORS with multiple allowed origins
+  const allowedOrigins = (process.env.ALLOWED_ORIGINS || 'http://localhost:3101')
+    .split(',')
+    .map((origin) => origin.trim());
+
   await fastify.register(cors, {
-    origin: process.env.FRONTEND_URL || 'http://localhost:3101',
+    origin: (origin, callback) => {
+      // Allow requests with no origin (e.g., mobile apps, Postman, server-to-server)
+      if (!origin) {
+        callback(null, true);
+        return;
+      }
+
+      // Check if origin is in whitelist
+      if (allowedOrigins.includes(origin)) {
+        callback(null, true);
+        return;
+      }
+
+      // Reject origin
+      callback(new Error('Not allowed by CORS'), false);
+    },
     credentials: true,
   });
 
