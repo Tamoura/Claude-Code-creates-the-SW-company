@@ -1,0 +1,2706 @@
+openapi: 3.0.3
+info:
+  title: ITIL Dashboard API
+  description: |
+    REST API for the ITIL Dashboard - a comprehensive IT Service Management platform
+    covering Incident, Problem, Change, Service Request, and Knowledge Management.
+  version: 1.0.0
+  contact:
+    name: ConnectSW
+    email: support@connectsw.dev
+
+servers:
+  - url: http://localhost:5001/api/v1
+    description: Development server
+  - url: https://api.itil-dashboard.connectsw.dev/api/v1
+    description: Production server
+
+tags:
+  - name: Authentication
+    description: User authentication and session management
+  - name: Incidents
+    description: Incident management endpoints
+  - name: Problems
+    description: Problem management endpoints
+  - name: Changes
+    description: Change management endpoints
+  - name: Requests
+    description: Service request management endpoints
+  - name: Knowledge
+    description: Knowledge base management endpoints
+  - name: Reports
+    description: Reporting and analytics endpoints
+  - name: Admin
+    description: Administrative endpoints
+
+security:
+  - cookieAuth: []
+
+paths:
+  # ============================================================================
+  # AUTHENTICATION
+  # ============================================================================
+  /auth/login:
+    post:
+      tags: [Authentication]
+      summary: Login with email and password
+      security: []
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              $ref: '#/components/schemas/LoginRequest'
+      responses:
+        '200':
+          description: Login successful
+          headers:
+            Set-Cookie:
+              description: Access and refresh tokens
+              schema:
+                type: string
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/AuthResponse'
+        '401':
+          $ref: '#/components/responses/Unauthorized'
+        '429':
+          $ref: '#/components/responses/TooManyRequests'
+
+  /auth/logout:
+    post:
+      tags: [Authentication]
+      summary: Logout and invalidate tokens
+      responses:
+        '200':
+          description: Logout successful
+        '401':
+          $ref: '#/components/responses/Unauthorized'
+
+  /auth/refresh:
+    post:
+      tags: [Authentication]
+      summary: Refresh access token
+      responses:
+        '200':
+          description: Token refreshed
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/AuthResponse'
+        '401':
+          $ref: '#/components/responses/Unauthorized'
+
+  /auth/me:
+    get:
+      tags: [Authentication]
+      summary: Get current user info
+      responses:
+        '200':
+          description: Current user
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/UserResponse'
+        '401':
+          $ref: '#/components/responses/Unauthorized'
+
+  /auth/password-reset/request:
+    post:
+      tags: [Authentication]
+      summary: Request password reset
+      security: []
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              type: object
+              required: [email]
+              properties:
+                email:
+                  type: string
+                  format: email
+      responses:
+        '200':
+          description: Reset email sent (or user not found - same response for security)
+
+  /auth/password-reset/complete:
+    post:
+      tags: [Authentication]
+      summary: Complete password reset
+      security: []
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              type: object
+              required: [token, newPassword]
+              properties:
+                token:
+                  type: string
+                newPassword:
+                  type: string
+                  minLength: 8
+      responses:
+        '200':
+          description: Password reset successful
+        '400':
+          $ref: '#/components/responses/BadRequest'
+
+  # ============================================================================
+  # INCIDENTS
+  # ============================================================================
+  /incidents:
+    get:
+      tags: [Incidents]
+      summary: List incidents with pagination and filters
+      parameters:
+        - $ref: '#/components/parameters/PageParam'
+        - $ref: '#/components/parameters/PageSizeParam'
+        - $ref: '#/components/parameters/SortParam'
+        - $ref: '#/components/parameters/OrderParam'
+        - name: status
+          in: query
+          schema:
+            $ref: '#/components/schemas/IncidentStatus'
+        - name: priority
+          in: query
+          schema:
+            $ref: '#/components/schemas/Priority'
+        - name: assigneeId
+          in: query
+          schema:
+            type: string
+            format: uuid
+        - name: categoryId
+          in: query
+          schema:
+            type: string
+            format: uuid
+        - name: slaStatus
+          in: query
+          schema:
+            $ref: '#/components/schemas/SLAStatus'
+        - name: search
+          in: query
+          description: Search in title and description
+          schema:
+            type: string
+        - name: createdFrom
+          in: query
+          schema:
+            type: string
+            format: date-time
+        - name: createdTo
+          in: query
+          schema:
+            type: string
+            format: date-time
+      responses:
+        '200':
+          description: List of incidents
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/IncidentListResponse'
+        '401':
+          $ref: '#/components/responses/Unauthorized'
+
+    post:
+      tags: [Incidents]
+      summary: Create new incident
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              $ref: '#/components/schemas/CreateIncidentRequest'
+      responses:
+        '201':
+          description: Incident created
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/IncidentResponse'
+        '400':
+          $ref: '#/components/responses/BadRequest'
+        '401':
+          $ref: '#/components/responses/Unauthorized'
+
+  /incidents/{id}:
+    get:
+      tags: [Incidents]
+      summary: Get incident by ID
+      parameters:
+        - $ref: '#/components/parameters/IdParam'
+      responses:
+        '200':
+          description: Incident details
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/IncidentResponse'
+        '404':
+          $ref: '#/components/responses/NotFound'
+
+    patch:
+      tags: [Incidents]
+      summary: Update incident
+      parameters:
+        - $ref: '#/components/parameters/IdParam'
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              $ref: '#/components/schemas/UpdateIncidentRequest'
+      responses:
+        '200':
+          description: Incident updated
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/IncidentResponse'
+        '400':
+          $ref: '#/components/responses/BadRequest'
+        '404':
+          $ref: '#/components/responses/NotFound'
+
+    delete:
+      tags: [Incidents]
+      summary: Soft delete incident
+      parameters:
+        - $ref: '#/components/parameters/IdParam'
+      responses:
+        '204':
+          description: Incident deleted
+        '403':
+          $ref: '#/components/responses/Forbidden'
+        '404':
+          $ref: '#/components/responses/NotFound'
+
+  /incidents/{id}/history:
+    get:
+      tags: [Incidents]
+      summary: Get incident audit history
+      parameters:
+        - $ref: '#/components/parameters/IdParam'
+        - $ref: '#/components/parameters/PageParam'
+        - $ref: '#/components/parameters/PageSizeParam'
+      responses:
+        '200':
+          description: Incident history
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/HistoryListResponse'
+        '404':
+          $ref: '#/components/responses/NotFound'
+
+  /incidents/{id}/sla:
+    get:
+      tags: [Incidents]
+      summary: Get current SLA status
+      parameters:
+        - $ref: '#/components/parameters/IdParam'
+      responses:
+        '200':
+          description: SLA status
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/SLAStatusResponse'
+        '404':
+          $ref: '#/components/responses/NotFound'
+
+  /incidents/{id}/pause:
+    post:
+      tags: [Incidents]
+      summary: Pause SLA timer (put on hold)
+      parameters:
+        - $ref: '#/components/parameters/IdParam'
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              type: object
+              required: [reason]
+              properties:
+                reason:
+                  type: string
+      responses:
+        '200':
+          description: SLA paused
+        '400':
+          $ref: '#/components/responses/BadRequest'
+        '404':
+          $ref: '#/components/responses/NotFound'
+
+  /incidents/{id}/resume:
+    post:
+      tags: [Incidents]
+      summary: Resume SLA timer
+      parameters:
+        - $ref: '#/components/parameters/IdParam'
+      responses:
+        '200':
+          description: SLA resumed
+        '400':
+          $ref: '#/components/responses/BadRequest'
+        '404':
+          $ref: '#/components/responses/NotFound'
+
+  # ============================================================================
+  # PROBLEMS
+  # ============================================================================
+  /problems:
+    get:
+      tags: [Problems]
+      summary: List problems with pagination and filters
+      parameters:
+        - $ref: '#/components/parameters/PageParam'
+        - $ref: '#/components/parameters/PageSizeParam'
+        - $ref: '#/components/parameters/SortParam'
+        - $ref: '#/components/parameters/OrderParam'
+        - name: status
+          in: query
+          schema:
+            $ref: '#/components/schemas/ProblemStatus'
+        - name: priority
+          in: query
+          schema:
+            $ref: '#/components/schemas/Priority'
+        - name: assigneeId
+          in: query
+          schema:
+            type: string
+            format: uuid
+        - name: search
+          in: query
+          schema:
+            type: string
+      responses:
+        '200':
+          description: List of problems
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/ProblemListResponse'
+
+    post:
+      tags: [Problems]
+      summary: Create new problem
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              $ref: '#/components/schemas/CreateProblemRequest'
+      responses:
+        '201':
+          description: Problem created
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/ProblemResponse'
+        '400':
+          $ref: '#/components/responses/BadRequest'
+        '403':
+          $ref: '#/components/responses/Forbidden'
+
+  /problems/{id}:
+    get:
+      tags: [Problems]
+      summary: Get problem by ID
+      parameters:
+        - $ref: '#/components/parameters/IdParam'
+      responses:
+        '200':
+          description: Problem details
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/ProblemResponse'
+        '404':
+          $ref: '#/components/responses/NotFound'
+
+    patch:
+      tags: [Problems]
+      summary: Update problem
+      parameters:
+        - $ref: '#/components/parameters/IdParam'
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              $ref: '#/components/schemas/UpdateProblemRequest'
+      responses:
+        '200':
+          description: Problem updated
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/ProblemResponse'
+
+    delete:
+      tags: [Problems]
+      summary: Soft delete problem
+      parameters:
+        - $ref: '#/components/parameters/IdParam'
+      responses:
+        '204':
+          description: Problem deleted
+
+  /problems/{id}/incidents:
+    get:
+      tags: [Problems]
+      summary: Get linked incidents
+      parameters:
+        - $ref: '#/components/parameters/IdParam'
+      responses:
+        '200':
+          description: Linked incidents
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/IncidentListResponse'
+
+    post:
+      tags: [Problems]
+      summary: Link incident to problem
+      parameters:
+        - $ref: '#/components/parameters/IdParam'
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              type: object
+              required: [incidentId]
+              properties:
+                incidentId:
+                  type: string
+                  format: uuid
+      responses:
+        '200':
+          description: Incident linked
+        '400':
+          $ref: '#/components/responses/BadRequest'
+
+  /problems/{id}/incidents/{incidentId}:
+    delete:
+      tags: [Problems]
+      summary: Unlink incident from problem
+      parameters:
+        - $ref: '#/components/parameters/IdParam'
+        - name: incidentId
+          in: path
+          required: true
+          schema:
+            type: string
+            format: uuid
+      responses:
+        '204':
+          description: Incident unlinked
+
+  /problems/known-errors:
+    get:
+      tags: [Problems]
+      summary: List known errors
+      parameters:
+        - $ref: '#/components/parameters/PageParam'
+        - $ref: '#/components/parameters/PageSizeParam'
+        - name: search
+          in: query
+          schema:
+            type: string
+      responses:
+        '200':
+          description: Known errors list
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/KnownErrorListResponse'
+
+  # ============================================================================
+  # CHANGES
+  # ============================================================================
+  /changes:
+    get:
+      tags: [Changes]
+      summary: List changes with pagination and filters
+      parameters:
+        - $ref: '#/components/parameters/PageParam'
+        - $ref: '#/components/parameters/PageSizeParam'
+        - $ref: '#/components/parameters/SortParam'
+        - $ref: '#/components/parameters/OrderParam'
+        - name: status
+          in: query
+          schema:
+            $ref: '#/components/schemas/ChangeStatus'
+        - name: type
+          in: query
+          schema:
+            $ref: '#/components/schemas/ChangeType'
+        - name: priority
+          in: query
+          schema:
+            $ref: '#/components/schemas/Priority'
+        - name: scheduledFrom
+          in: query
+          schema:
+            type: string
+            format: date-time
+        - name: scheduledTo
+          in: query
+          schema:
+            type: string
+            format: date-time
+        - name: search
+          in: query
+          schema:
+            type: string
+      responses:
+        '200':
+          description: List of changes
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/ChangeListResponse'
+
+    post:
+      tags: [Changes]
+      summary: Create new change request
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              $ref: '#/components/schemas/CreateChangeRequest'
+      responses:
+        '201':
+          description: Change created
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/ChangeResponse'
+
+  /changes/{id}:
+    get:
+      tags: [Changes]
+      summary: Get change by ID
+      parameters:
+        - $ref: '#/components/parameters/IdParam'
+      responses:
+        '200':
+          description: Change details
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/ChangeResponse'
+
+    patch:
+      tags: [Changes]
+      summary: Update change
+      parameters:
+        - $ref: '#/components/parameters/IdParam'
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              $ref: '#/components/schemas/UpdateChangeRequest'
+      responses:
+        '200':
+          description: Change updated
+
+    delete:
+      tags: [Changes]
+      summary: Soft delete change
+      parameters:
+        - $ref: '#/components/parameters/IdParam'
+      responses:
+        '204':
+          description: Change deleted
+
+  /changes/{id}/submit:
+    post:
+      tags: [Changes]
+      summary: Submit change for approval
+      parameters:
+        - $ref: '#/components/parameters/IdParam'
+      responses:
+        '200':
+          description: Change submitted
+
+  /changes/{id}/approve:
+    post:
+      tags: [Changes]
+      summary: Approve change (CAB member)
+      parameters:
+        - $ref: '#/components/parameters/IdParam'
+      requestBody:
+        content:
+          application/json:
+            schema:
+              type: object
+              properties:
+                comments:
+                  type: string
+      responses:
+        '200':
+          description: Change approved
+        '403':
+          $ref: '#/components/responses/Forbidden'
+
+  /changes/{id}/reject:
+    post:
+      tags: [Changes]
+      summary: Reject change (CAB member)
+      parameters:
+        - $ref: '#/components/parameters/IdParam'
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              type: object
+              required: [reason]
+              properties:
+                reason:
+                  type: string
+      responses:
+        '200':
+          description: Change rejected
+        '403':
+          $ref: '#/components/responses/Forbidden'
+
+  /changes/{id}/implement:
+    post:
+      tags: [Changes]
+      summary: Start implementation
+      parameters:
+        - $ref: '#/components/parameters/IdParam'
+      responses:
+        '200':
+          description: Implementation started
+
+  /changes/{id}/complete:
+    post:
+      tags: [Changes]
+      summary: Complete implementation
+      parameters:
+        - $ref: '#/components/parameters/IdParam'
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              type: object
+              required: [success]
+              properties:
+                success:
+                  type: boolean
+                reviewNotes:
+                  type: string
+      responses:
+        '200':
+          description: Implementation completed
+
+  /changes/calendar:
+    get:
+      tags: [Changes]
+      summary: Get changes for calendar view
+      parameters:
+        - name: startDate
+          in: query
+          required: true
+          schema:
+            type: string
+            format: date
+        - name: endDate
+          in: query
+          required: true
+          schema:
+            type: string
+            format: date
+      responses:
+        '200':
+          description: Calendar events
+          content:
+            application/json:
+              schema:
+                type: object
+                properties:
+                  data:
+                    type: array
+                    items:
+                      $ref: '#/components/schemas/CalendarEvent'
+
+  # ============================================================================
+  # SERVICE REQUESTS
+  # ============================================================================
+  /requests:
+    get:
+      tags: [Requests]
+      summary: List service requests
+      parameters:
+        - $ref: '#/components/parameters/PageParam'
+        - $ref: '#/components/parameters/PageSizeParam'
+        - name: status
+          in: query
+          schema:
+            $ref: '#/components/schemas/RequestStatus'
+        - name: requesterId
+          in: query
+          schema:
+            type: string
+            format: uuid
+      responses:
+        '200':
+          description: List of requests
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/RequestListResponse'
+
+    post:
+      tags: [Requests]
+      summary: Create service request
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              $ref: '#/components/schemas/CreateRequestInput'
+      responses:
+        '201':
+          description: Request created
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/RequestResponse'
+
+  /requests/{id}:
+    get:
+      tags: [Requests]
+      summary: Get request by ID
+      parameters:
+        - $ref: '#/components/parameters/IdParam'
+      responses:
+        '200':
+          description: Request details
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/RequestResponse'
+
+    patch:
+      tags: [Requests]
+      summary: Update request
+      parameters:
+        - $ref: '#/components/parameters/IdParam'
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              $ref: '#/components/schemas/UpdateRequestInput'
+      responses:
+        '200':
+          description: Request updated
+
+  /requests/{id}/approve:
+    post:
+      tags: [Requests]
+      summary: Approve request
+      parameters:
+        - $ref: '#/components/parameters/IdParam'
+      responses:
+        '200':
+          description: Request approved
+
+  /requests/{id}/reject:
+    post:
+      tags: [Requests]
+      summary: Reject request
+      parameters:
+        - $ref: '#/components/parameters/IdParam'
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              type: object
+              required: [reason]
+              properties:
+                reason:
+                  type: string
+      responses:
+        '200':
+          description: Request rejected
+
+  /requests/{id}/fulfill:
+    post:
+      tags: [Requests]
+      summary: Mark request as fulfilled
+      parameters:
+        - $ref: '#/components/parameters/IdParam'
+      requestBody:
+        content:
+          application/json:
+            schema:
+              type: object
+              properties:
+                notes:
+                  type: string
+      responses:
+        '200':
+          description: Request fulfilled
+
+  /requests/catalog:
+    get:
+      tags: [Requests]
+      summary: Get service catalog
+      parameters:
+        - name: categoryId
+          in: query
+          schema:
+            type: string
+            format: uuid
+        - name: search
+          in: query
+          schema:
+            type: string
+      responses:
+        '200':
+          description: Service catalog items
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/CatalogListResponse'
+
+  # ============================================================================
+  # KNOWLEDGE BASE
+  # ============================================================================
+  /knowledge:
+    get:
+      tags: [Knowledge]
+      summary: List knowledge articles
+      parameters:
+        - $ref: '#/components/parameters/PageParam'
+        - $ref: '#/components/parameters/PageSizeParam'
+        - name: status
+          in: query
+          schema:
+            $ref: '#/components/schemas/KBStatus'
+        - name: categoryId
+          in: query
+          schema:
+            type: string
+            format: uuid
+        - name: authorId
+          in: query
+          schema:
+            type: string
+            format: uuid
+      responses:
+        '200':
+          description: List of articles
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/ArticleListResponse'
+
+    post:
+      tags: [Knowledge]
+      summary: Create article
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              $ref: '#/components/schemas/CreateArticleRequest'
+      responses:
+        '201':
+          description: Article created
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/ArticleResponse'
+
+  /knowledge/search:
+    get:
+      tags: [Knowledge]
+      summary: Search knowledge base
+      parameters:
+        - name: q
+          in: query
+          required: true
+          schema:
+            type: string
+        - $ref: '#/components/parameters/PageParam'
+        - $ref: '#/components/parameters/PageSizeParam'
+      responses:
+        '200':
+          description: Search results
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/ArticleListResponse'
+
+  /knowledge/{id}:
+    get:
+      tags: [Knowledge]
+      summary: Get article by ID
+      parameters:
+        - $ref: '#/components/parameters/IdParam'
+      responses:
+        '200':
+          description: Article details
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/ArticleResponse'
+
+    patch:
+      tags: [Knowledge]
+      summary: Update article
+      parameters:
+        - $ref: '#/components/parameters/IdParam'
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              $ref: '#/components/schemas/UpdateArticleRequest'
+      responses:
+        '200':
+          description: Article updated
+
+    delete:
+      tags: [Knowledge]
+      summary: Archive article
+      parameters:
+        - $ref: '#/components/parameters/IdParam'
+      responses:
+        '204':
+          description: Article archived
+
+  /knowledge/{id}/publish:
+    post:
+      tags: [Knowledge]
+      summary: Publish article
+      parameters:
+        - $ref: '#/components/parameters/IdParam'
+      responses:
+        '200':
+          description: Article published
+
+  /knowledge/{id}/versions:
+    get:
+      tags: [Knowledge]
+      summary: Get article versions
+      parameters:
+        - $ref: '#/components/parameters/IdParam'
+      responses:
+        '200':
+          description: Article versions
+          content:
+            application/json:
+              schema:
+                type: object
+                properties:
+                  data:
+                    type: array
+                    items:
+                      $ref: '#/components/schemas/ArticleVersion'
+
+  /knowledge/{id}/rate:
+    post:
+      tags: [Knowledge]
+      summary: Rate article
+      parameters:
+        - $ref: '#/components/parameters/IdParam'
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              type: object
+              required: [rating]
+              properties:
+                rating:
+                  type: integer
+                  minimum: 1
+                  maximum: 5
+                comment:
+                  type: string
+      responses:
+        '200':
+          description: Rating submitted
+
+  # ============================================================================
+  # REPORTS
+  # ============================================================================
+  /reports/incidents:
+    get:
+      tags: [Reports]
+      summary: Incident reports
+      parameters:
+        - $ref: '#/components/parameters/DateFromParam'
+        - $ref: '#/components/parameters/DateToParam'
+        - name: groupBy
+          in: query
+          schema:
+            type: string
+            enum: [day, week, month, category, priority, status]
+      responses:
+        '200':
+          description: Incident report data
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/ReportResponse'
+
+  /reports/sla:
+    get:
+      tags: [Reports]
+      summary: SLA compliance reports
+      parameters:
+        - $ref: '#/components/parameters/DateFromParam'
+        - $ref: '#/components/parameters/DateToParam'
+      responses:
+        '200':
+          description: SLA report data
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/SLAReportResponse'
+
+  /reports/changes:
+    get:
+      tags: [Reports]
+      summary: Change success rate reports
+      parameters:
+        - $ref: '#/components/parameters/DateFromParam'
+        - $ref: '#/components/parameters/DateToParam'
+      responses:
+        '200':
+          description: Change report data
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/ReportResponse'
+
+  /reports/trends:
+    get:
+      tags: [Reports]
+      summary: Trend analysis
+      parameters:
+        - $ref: '#/components/parameters/DateFromParam'
+        - $ref: '#/components/parameters/DateToParam'
+        - name: metric
+          in: query
+          required: true
+          schema:
+            type: string
+            enum: [incidents, problems, changes, requests, sla]
+      responses:
+        '200':
+          description: Trend data
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/TrendResponse'
+
+  /reports/export:
+    get:
+      tags: [Reports]
+      summary: Export report data
+      parameters:
+        - name: type
+          in: query
+          required: true
+          schema:
+            type: string
+            enum: [incidents, problems, changes, requests]
+        - name: format
+          in: query
+          schema:
+            type: string
+            enum: [csv, xlsx]
+            default: csv
+        - $ref: '#/components/parameters/DateFromParam'
+        - $ref: '#/components/parameters/DateToParam'
+      responses:
+        '200':
+          description: Export file
+          content:
+            text/csv:
+              schema:
+                type: string
+                format: binary
+
+  # ============================================================================
+  # ADMIN
+  # ============================================================================
+  /admin/users:
+    get:
+      tags: [Admin]
+      summary: List users
+      parameters:
+        - $ref: '#/components/parameters/PageParam'
+        - $ref: '#/components/parameters/PageSizeParam'
+        - name: status
+          in: query
+          schema:
+            $ref: '#/components/schemas/UserStatus'
+        - name: roleId
+          in: query
+          schema:
+            type: string
+            format: uuid
+      responses:
+        '200':
+          description: List of users
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/UserListResponse'
+        '403':
+          $ref: '#/components/responses/Forbidden'
+
+    post:
+      tags: [Admin]
+      summary: Create user
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              $ref: '#/components/schemas/CreateUserRequest'
+      responses:
+        '201':
+          description: User created
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/UserResponse'
+        '403':
+          $ref: '#/components/responses/Forbidden'
+
+  /admin/users/{id}:
+    get:
+      tags: [Admin]
+      summary: Get user by ID
+      parameters:
+        - $ref: '#/components/parameters/IdParam'
+      responses:
+        '200':
+          description: User details
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/UserResponse'
+
+    patch:
+      tags: [Admin]
+      summary: Update user
+      parameters:
+        - $ref: '#/components/parameters/IdParam'
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              $ref: '#/components/schemas/UpdateUserRequest'
+      responses:
+        '200':
+          description: User updated
+
+    delete:
+      tags: [Admin]
+      summary: Deactivate user
+      parameters:
+        - $ref: '#/components/parameters/IdParam'
+      responses:
+        '204':
+          description: User deactivated
+
+  /admin/roles:
+    get:
+      tags: [Admin]
+      summary: List roles
+      responses:
+        '200':
+          description: List of roles
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/RoleListResponse'
+
+  /admin/categories:
+    get:
+      tags: [Admin]
+      summary: List categories
+      parameters:
+        - name: type
+          in: query
+          schema:
+            $ref: '#/components/schemas/CategoryType'
+      responses:
+        '200':
+          description: List of categories
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/CategoryListResponse'
+
+    post:
+      tags: [Admin]
+      summary: Create category
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              $ref: '#/components/schemas/CreateCategoryRequest'
+      responses:
+        '201':
+          description: Category created
+
+  /admin/categories/{id}:
+    patch:
+      tags: [Admin]
+      summary: Update category
+      parameters:
+        - $ref: '#/components/parameters/IdParam'
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              $ref: '#/components/schemas/UpdateCategoryRequest'
+      responses:
+        '200':
+          description: Category updated
+
+    delete:
+      tags: [Admin]
+      summary: Deactivate category
+      parameters:
+        - $ref: '#/components/parameters/IdParam'
+      responses:
+        '204':
+          description: Category deactivated
+
+  /admin/sla:
+    get:
+      tags: [Admin]
+      summary: Get SLA configurations
+      responses:
+        '200':
+          description: SLA configurations
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/SLAConfigListResponse'
+
+    post:
+      tags: [Admin]
+      summary: Create SLA configuration
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              $ref: '#/components/schemas/CreateSLAConfigRequest'
+      responses:
+        '201':
+          description: SLA config created
+
+  /admin/sla/{id}:
+    patch:
+      tags: [Admin]
+      summary: Update SLA configuration
+      parameters:
+        - $ref: '#/components/parameters/IdParam'
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              $ref: '#/components/schemas/UpdateSLAConfigRequest'
+      responses:
+        '200':
+          description: SLA config updated
+
+  /admin/import:
+    post:
+      tags: [Admin]
+      summary: Import data from CSV
+      requestBody:
+        required: true
+        content:
+          multipart/form-data:
+            schema:
+              type: object
+              required: [file, type]
+              properties:
+                file:
+                  type: string
+                  format: binary
+                type:
+                  type: string
+                  enum: [incidents, problems, changes, users]
+      responses:
+        '200':
+          description: Import results
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/ImportResponse'
+
+  /admin/export:
+    get:
+      tags: [Admin]
+      summary: Export data to CSV
+      parameters:
+        - name: type
+          in: query
+          required: true
+          schema:
+            type: string
+            enum: [incidents, problems, changes, requests, users]
+      responses:
+        '200':
+          description: CSV file
+          content:
+            text/csv:
+              schema:
+                type: string
+                format: binary
+
+  # ============================================================================
+  # DASHBOARD
+  # ============================================================================
+  /dashboard/executive:
+    get:
+      tags: [Reports]
+      summary: Executive dashboard data
+      responses:
+        '200':
+          description: Dashboard data
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/ExecutiveDashboard'
+
+  /dashboard/manager:
+    get:
+      tags: [Reports]
+      summary: Manager dashboard data
+      responses:
+        '200':
+          description: Dashboard data
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/ManagerDashboard'
+
+  /dashboard/operator:
+    get:
+      tags: [Reports]
+      summary: Operator dashboard data
+      responses:
+        '200':
+          description: Dashboard data
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/OperatorDashboard'
+
+# ============================================================================
+# COMPONENTS
+# ============================================================================
+components:
+  securitySchemes:
+    cookieAuth:
+      type: apiKey
+      in: cookie
+      name: access_token
+
+  parameters:
+    IdParam:
+      name: id
+      in: path
+      required: true
+      schema:
+        type: string
+        format: uuid
+
+    PageParam:
+      name: page
+      in: query
+      schema:
+        type: integer
+        minimum: 1
+        default: 1
+
+    PageSizeParam:
+      name: pageSize
+      in: query
+      schema:
+        type: integer
+        minimum: 1
+        maximum: 100
+        default: 20
+
+    SortParam:
+      name: sort
+      in: query
+      schema:
+        type: string
+        default: createdAt
+
+    OrderParam:
+      name: order
+      in: query
+      schema:
+        type: string
+        enum: [asc, desc]
+        default: desc
+
+    DateFromParam:
+      name: from
+      in: query
+      required: true
+      schema:
+        type: string
+        format: date
+
+    DateToParam:
+      name: to
+      in: query
+      required: true
+      schema:
+        type: string
+        format: date
+
+  responses:
+    BadRequest:
+      description: Bad request
+      content:
+        application/json:
+          schema:
+            $ref: '#/components/schemas/ErrorResponse'
+
+    Unauthorized:
+      description: Unauthorized
+      content:
+        application/json:
+          schema:
+            $ref: '#/components/schemas/ErrorResponse'
+
+    Forbidden:
+      description: Forbidden
+      content:
+        application/json:
+          schema:
+            $ref: '#/components/schemas/ErrorResponse'
+
+    NotFound:
+      description: Not found
+      content:
+        application/json:
+          schema:
+            $ref: '#/components/schemas/ErrorResponse'
+
+    TooManyRequests:
+      description: Too many requests
+      content:
+        application/json:
+          schema:
+            $ref: '#/components/schemas/ErrorResponse'
+
+  schemas:
+    # Enums
+    UserStatus:
+      type: string
+      enum: [ACTIVE, INACTIVE, LOCKED]
+
+    IncidentStatus:
+      type: string
+      enum: [NEW, IN_PROGRESS, PENDING, ON_HOLD, RESOLVED, CLOSED]
+
+    ProblemStatus:
+      type: string
+      enum: [NEW, UNDER_INVESTIGATION, KNOWN_ERROR, RESOLVED, CLOSED]
+
+    ChangeStatus:
+      type: string
+      enum: [DRAFT, SUBMITTED, PENDING_APPROVAL, APPROVED, REJECTED, SCHEDULED, IMPLEMENTING, COMPLETED, FAILED, CLOSED]
+
+    ChangeType:
+      type: string
+      enum: [STANDARD, NORMAL, EMERGENCY]
+
+    RequestStatus:
+      type: string
+      enum: [SUBMITTED, PENDING_APPROVAL, APPROVED, REJECTED, FULFILLING, COMPLETED, CLOSED]
+
+    KBStatus:
+      type: string
+      enum: [DRAFT, IN_REVIEW, PUBLISHED, ARCHIVED]
+
+    Priority:
+      type: string
+      enum: [P1, P2, P3, P4]
+
+    Impact:
+      type: string
+      enum: [HIGH, MEDIUM, LOW]
+
+    Urgency:
+      type: string
+      enum: [HIGH, MEDIUM, LOW]
+
+    RiskLevel:
+      type: string
+      enum: [HIGH, MEDIUM, LOW]
+
+    SLAStatus:
+      type: string
+      enum: [ON_TRACK, AT_RISK, BREACHED, MET, PAUSED]
+
+    CategoryType:
+      type: string
+      enum: [INCIDENT, PROBLEM, CHANGE, REQUEST, KNOWLEDGE]
+
+    # Common
+    ErrorResponse:
+      type: object
+      required: [error]
+      properties:
+        error:
+          type: object
+          required: [code, message]
+          properties:
+            code:
+              type: string
+            message:
+              type: string
+            details:
+              type: object
+              additionalProperties:
+                type: array
+                items:
+                  type: string
+
+    Pagination:
+      type: object
+      properties:
+        page:
+          type: integer
+        pageSize:
+          type: integer
+        total:
+          type: integer
+        totalPages:
+          type: integer
+
+    # Auth
+    LoginRequest:
+      type: object
+      required: [email, password]
+      properties:
+        email:
+          type: string
+          format: email
+        password:
+          type: string
+
+    AuthResponse:
+      type: object
+      properties:
+        data:
+          $ref: '#/components/schemas/User'
+
+    # User
+    User:
+      type: object
+      properties:
+        id:
+          type: string
+          format: uuid
+        email:
+          type: string
+          format: email
+        firstName:
+          type: string
+        lastName:
+          type: string
+        role:
+          $ref: '#/components/schemas/Role'
+        status:
+          $ref: '#/components/schemas/UserStatus'
+        createdAt:
+          type: string
+          format: date-time
+
+    UserResponse:
+      type: object
+      properties:
+        data:
+          $ref: '#/components/schemas/User'
+
+    UserListResponse:
+      type: object
+      properties:
+        data:
+          type: array
+          items:
+            $ref: '#/components/schemas/User'
+        meta:
+          type: object
+          properties:
+            pagination:
+              $ref: '#/components/schemas/Pagination'
+
+    CreateUserRequest:
+      type: object
+      required: [email, password, firstName, lastName, roleId]
+      properties:
+        email:
+          type: string
+          format: email
+        password:
+          type: string
+          minLength: 8
+        firstName:
+          type: string
+        lastName:
+          type: string
+        roleId:
+          type: string
+          format: uuid
+
+    UpdateUserRequest:
+      type: object
+      properties:
+        firstName:
+          type: string
+        lastName:
+          type: string
+        roleId:
+          type: string
+          format: uuid
+        status:
+          $ref: '#/components/schemas/UserStatus'
+
+    Role:
+      type: object
+      properties:
+        id:
+          type: string
+          format: uuid
+        name:
+          type: string
+        description:
+          type: string
+        level:
+          type: integer
+        permissions:
+          type: array
+          items:
+            type: string
+
+    RoleListResponse:
+      type: object
+      properties:
+        data:
+          type: array
+          items:
+            $ref: '#/components/schemas/Role'
+
+    # Incident
+    Incident:
+      type: object
+      properties:
+        id:
+          type: string
+          format: uuid
+        displayId:
+          type: string
+        title:
+          type: string
+        description:
+          type: string
+        status:
+          $ref: '#/components/schemas/IncidentStatus'
+        priority:
+          $ref: '#/components/schemas/Priority'
+        impact:
+          $ref: '#/components/schemas/Impact'
+        urgency:
+          $ref: '#/components/schemas/Urgency'
+        category:
+          $ref: '#/components/schemas/Category'
+        reportedBy:
+          $ref: '#/components/schemas/User'
+        assignee:
+          $ref: '#/components/schemas/User'
+        responseSlaStatus:
+          $ref: '#/components/schemas/SLAStatus'
+        resolutionSlaStatus:
+          $ref: '#/components/schemas/SLAStatus'
+        responseSlaDue:
+          type: string
+          format: date-time
+        resolutionSlaDue:
+          type: string
+          format: date-time
+        firstResponseAt:
+          type: string
+          format: date-time
+        resolvedAt:
+          type: string
+          format: date-time
+        createdAt:
+          type: string
+          format: date-time
+        updatedAt:
+          type: string
+          format: date-time
+
+    IncidentResponse:
+      type: object
+      properties:
+        data:
+          $ref: '#/components/schemas/Incident'
+
+    IncidentListResponse:
+      type: object
+      properties:
+        data:
+          type: array
+          items:
+            $ref: '#/components/schemas/Incident'
+        meta:
+          type: object
+          properties:
+            pagination:
+              $ref: '#/components/schemas/Pagination'
+
+    CreateIncidentRequest:
+      type: object
+      required: [title, description, priority, impact, urgency, categoryId]
+      properties:
+        title:
+          type: string
+          minLength: 5
+          maxLength: 200
+        description:
+          type: string
+          minLength: 20
+        priority:
+          $ref: '#/components/schemas/Priority'
+        impact:
+          $ref: '#/components/schemas/Impact'
+        urgency:
+          $ref: '#/components/schemas/Urgency'
+        categoryId:
+          type: string
+          format: uuid
+        affectedUserId:
+          type: string
+          format: uuid
+        assigneeId:
+          type: string
+          format: uuid
+
+    UpdateIncidentRequest:
+      type: object
+      properties:
+        title:
+          type: string
+          minLength: 5
+          maxLength: 200
+        description:
+          type: string
+          minLength: 20
+        status:
+          $ref: '#/components/schemas/IncidentStatus'
+        priority:
+          $ref: '#/components/schemas/Priority'
+        impact:
+          $ref: '#/components/schemas/Impact'
+        urgency:
+          $ref: '#/components/schemas/Urgency'
+        categoryId:
+          type: string
+          format: uuid
+        assigneeId:
+          type: string
+          format: uuid
+        resolutionNotes:
+          type: string
+
+    SLAStatusResponse:
+      type: object
+      properties:
+        data:
+          type: object
+          properties:
+            responseStatus:
+              $ref: '#/components/schemas/SLAStatus'
+            resolutionStatus:
+              $ref: '#/components/schemas/SLAStatus'
+            responseTimeRemaining:
+              type: integer
+              description: Business minutes remaining
+            resolutionTimeRemaining:
+              type: integer
+            responsePercentUsed:
+              type: number
+            resolutionPercentUsed:
+              type: number
+
+    HistoryListResponse:
+      type: object
+      properties:
+        data:
+          type: array
+          items:
+            type: object
+            properties:
+              id:
+                type: string
+              fieldName:
+                type: string
+              oldValue:
+                type: object
+              newValue:
+                type: object
+              changedBy:
+                $ref: '#/components/schemas/User'
+              changedAt:
+                type: string
+                format: date-time
+        meta:
+          type: object
+          properties:
+            pagination:
+              $ref: '#/components/schemas/Pagination'
+
+    # Problem
+    Problem:
+      type: object
+      properties:
+        id:
+          type: string
+          format: uuid
+        displayId:
+          type: string
+        title:
+          type: string
+        description:
+          type: string
+        status:
+          $ref: '#/components/schemas/ProblemStatus'
+        priority:
+          $ref: '#/components/schemas/Priority'
+        category:
+          $ref: '#/components/schemas/Category'
+        rootCause:
+          type: string
+        workaround:
+          type: string
+        assignee:
+          $ref: '#/components/schemas/User'
+        linkedIncidentCount:
+          type: integer
+        createdAt:
+          type: string
+          format: date-time
+
+    ProblemResponse:
+      type: object
+      properties:
+        data:
+          $ref: '#/components/schemas/Problem'
+
+    ProblemListResponse:
+      type: object
+      properties:
+        data:
+          type: array
+          items:
+            $ref: '#/components/schemas/Problem'
+        meta:
+          type: object
+          properties:
+            pagination:
+              $ref: '#/components/schemas/Pagination'
+
+    CreateProblemRequest:
+      type: object
+      required: [title, description, priority, categoryId, incidentIds]
+      properties:
+        title:
+          type: string
+          minLength: 5
+          maxLength: 200
+        description:
+          type: string
+          minLength: 50
+        priority:
+          $ref: '#/components/schemas/Priority'
+        categoryId:
+          type: string
+          format: uuid
+        incidentIds:
+          type: array
+          items:
+            type: string
+            format: uuid
+          minItems: 1
+        assigneeId:
+          type: string
+          format: uuid
+
+    UpdateProblemRequest:
+      type: object
+      properties:
+        title:
+          type: string
+        description:
+          type: string
+        status:
+          $ref: '#/components/schemas/ProblemStatus'
+        priority:
+          $ref: '#/components/schemas/Priority'
+        rootCause:
+          type: string
+        workaround:
+          type: string
+        permanentFix:
+          type: string
+        assigneeId:
+          type: string
+          format: uuid
+
+    KnownError:
+      type: object
+      properties:
+        id:
+          type: string
+        problemId:
+          type: string
+        title:
+          type: string
+        description:
+          type: string
+        workaround:
+          type: string
+        affectedSystems:
+          type: array
+          items:
+            type: string
+        isActive:
+          type: boolean
+
+    KnownErrorListResponse:
+      type: object
+      properties:
+        data:
+          type: array
+          items:
+            $ref: '#/components/schemas/KnownError'
+        meta:
+          type: object
+          properties:
+            pagination:
+              $ref: '#/components/schemas/Pagination'
+
+    # Change
+    Change:
+      type: object
+      properties:
+        id:
+          type: string
+          format: uuid
+        displayId:
+          type: string
+        title:
+          type: string
+        description:
+          type: string
+        status:
+          $ref: '#/components/schemas/ChangeStatus'
+        type:
+          $ref: '#/components/schemas/ChangeType'
+        priority:
+          $ref: '#/components/schemas/Priority'
+        risk:
+          $ref: '#/components/schemas/RiskLevel'
+        category:
+          $ref: '#/components/schemas/Category'
+        requester:
+          $ref: '#/components/schemas/User'
+        assignee:
+          $ref: '#/components/schemas/User'
+        scheduledStartAt:
+          type: string
+          format: date-time
+        scheduledEndAt:
+          type: string
+          format: date-time
+        approvals:
+          type: array
+          items:
+            $ref: '#/components/schemas/ChangeApproval'
+        createdAt:
+          type: string
+          format: date-time
+
+    ChangeResponse:
+      type: object
+      properties:
+        data:
+          $ref: '#/components/schemas/Change'
+
+    ChangeListResponse:
+      type: object
+      properties:
+        data:
+          type: array
+          items:
+            $ref: '#/components/schemas/Change'
+        meta:
+          type: object
+          properties:
+            pagination:
+              $ref: '#/components/schemas/Pagination'
+
+    CreateChangeRequest:
+      type: object
+      required: [title, description, type, priority, risk, impact, categoryId]
+      properties:
+        title:
+          type: string
+          minLength: 5
+          maxLength: 200
+        description:
+          type: string
+          minLength: 100
+        type:
+          $ref: '#/components/schemas/ChangeType'
+        priority:
+          $ref: '#/components/schemas/Priority'
+        risk:
+          $ref: '#/components/schemas/RiskLevel'
+        impact:
+          type: string
+        categoryId:
+          type: string
+          format: uuid
+        implementationPlan:
+          type: string
+        rollbackPlan:
+          type: string
+        testPlan:
+          type: string
+        scheduledStartAt:
+          type: string
+          format: date-time
+        scheduledEndAt:
+          type: string
+          format: date-time
+        linkedProblemId:
+          type: string
+          format: uuid
+
+    UpdateChangeRequest:
+      type: object
+      properties:
+        title:
+          type: string
+        description:
+          type: string
+        type:
+          $ref: '#/components/schemas/ChangeType'
+        priority:
+          $ref: '#/components/schemas/Priority'
+        risk:
+          $ref: '#/components/schemas/RiskLevel'
+        impact:
+          type: string
+        implementationPlan:
+          type: string
+        rollbackPlan:
+          type: string
+        testPlan:
+          type: string
+        scheduledStartAt:
+          type: string
+          format: date-time
+        scheduledEndAt:
+          type: string
+          format: date-time
+        assigneeId:
+          type: string
+          format: uuid
+
+    ChangeApproval:
+      type: object
+      properties:
+        id:
+          type: string
+        approver:
+          $ref: '#/components/schemas/User'
+        decision:
+          type: string
+          enum: [APPROVED, REJECTED, PENDING]
+        comments:
+          type: string
+        decidedAt:
+          type: string
+          format: date-time
+
+    CalendarEvent:
+      type: object
+      properties:
+        id:
+          type: string
+        displayId:
+          type: string
+        title:
+          type: string
+        start:
+          type: string
+          format: date-time
+        end:
+          type: string
+          format: date-time
+        status:
+          $ref: '#/components/schemas/ChangeStatus'
+        type:
+          $ref: '#/components/schemas/ChangeType'
+        risk:
+          $ref: '#/components/schemas/RiskLevel'
+
+    # Service Request
+    ServiceRequest:
+      type: object
+      properties:
+        id:
+          type: string
+        displayId:
+          type: string
+        catalogItem:
+          $ref: '#/components/schemas/CatalogItem'
+        requester:
+          $ref: '#/components/schemas/User'
+        status:
+          $ref: '#/components/schemas/RequestStatus'
+        priority:
+          $ref: '#/components/schemas/Priority'
+        formData:
+          type: object
+        createdAt:
+          type: string
+          format: date-time
+
+    RequestResponse:
+      type: object
+      properties:
+        data:
+          $ref: '#/components/schemas/ServiceRequest'
+
+    RequestListResponse:
+      type: object
+      properties:
+        data:
+          type: array
+          items:
+            $ref: '#/components/schemas/ServiceRequest'
+        meta:
+          type: object
+          properties:
+            pagination:
+              $ref: '#/components/schemas/Pagination'
+
+    CreateRequestInput:
+      type: object
+      required: [catalogItemId, formData]
+      properties:
+        catalogItemId:
+          type: string
+          format: uuid
+        priority:
+          $ref: '#/components/schemas/Priority'
+        formData:
+          type: object
+
+    UpdateRequestInput:
+      type: object
+      properties:
+        priority:
+          $ref: '#/components/schemas/Priority'
+        notes:
+          type: string
+
+    CatalogItem:
+      type: object
+      properties:
+        id:
+          type: string
+        name:
+          type: string
+        description:
+          type: string
+        category:
+          $ref: '#/components/schemas/Category'
+        fulfillmentTime:
+          type: integer
+        requiresApproval:
+          type: boolean
+        formSchema:
+          type: object
+
+    CatalogListResponse:
+      type: object
+      properties:
+        data:
+          type: array
+          items:
+            $ref: '#/components/schemas/CatalogItem'
+
+    # Knowledge
+    Article:
+      type: object
+      properties:
+        id:
+          type: string
+        displayId:
+          type: string
+        title:
+          type: string
+        content:
+          type: string
+        summary:
+          type: string
+        status:
+          $ref: '#/components/schemas/KBStatus'
+        category:
+          $ref: '#/components/schemas/Category'
+        author:
+          $ref: '#/components/schemas/User'
+        keywords:
+          type: array
+          items:
+            type: string
+        viewCount:
+          type: integer
+        version:
+          type: integer
+        averageRating:
+          type: number
+        publishedAt:
+          type: string
+          format: date-time
+        createdAt:
+          type: string
+          format: date-time
+
+    ArticleResponse:
+      type: object
+      properties:
+        data:
+          $ref: '#/components/schemas/Article'
+
+    ArticleListResponse:
+      type: object
+      properties:
+        data:
+          type: array
+          items:
+            $ref: '#/components/schemas/Article'
+        meta:
+          type: object
+          properties:
+            pagination:
+              $ref: '#/components/schemas/Pagination'
+
+    CreateArticleRequest:
+      type: object
+      required: [title, content, categoryId, keywords]
+      properties:
+        title:
+          type: string
+          minLength: 5
+          maxLength: 200
+        content:
+          type: string
+          minLength: 100
+        summary:
+          type: string
+        categoryId:
+          type: string
+          format: uuid
+        keywords:
+          type: array
+          items:
+            type: string
+          minItems: 1
+
+    UpdateArticleRequest:
+      type: object
+      properties:
+        title:
+          type: string
+        content:
+          type: string
+        summary:
+          type: string
+        categoryId:
+          type: string
+          format: uuid
+        keywords:
+          type: array
+          items:
+            type: string
+
+    ArticleVersion:
+      type: object
+      properties:
+        id:
+          type: string
+        versionNumber:
+          type: integer
+        title:
+          type: string
+        changeNotes:
+          type: string
+        createdBy:
+          $ref: '#/components/schemas/User'
+        createdAt:
+          type: string
+          format: date-time
+
+    # Category
+    Category:
+      type: object
+      properties:
+        id:
+          type: string
+        name:
+          type: string
+        description:
+          type: string
+        type:
+          $ref: '#/components/schemas/CategoryType'
+        parentId:
+          type: string
+        isActive:
+          type: boolean
+
+    CategoryListResponse:
+      type: object
+      properties:
+        data:
+          type: array
+          items:
+            $ref: '#/components/schemas/Category'
+
+    CreateCategoryRequest:
+      type: object
+      required: [name, type]
+      properties:
+        name:
+          type: string
+        description:
+          type: string
+        type:
+          $ref: '#/components/schemas/CategoryType'
+        parentId:
+          type: string
+          format: uuid
+
+    UpdateCategoryRequest:
+      type: object
+      properties:
+        name:
+          type: string
+        description:
+          type: string
+        isActive:
+          type: boolean
+
+    # SLA Config
+    SLAConfig:
+      type: object
+      properties:
+        id:
+          type: string
+        name:
+          type: string
+        businessStartMinutes:
+          type: integer
+        businessEndMinutes:
+          type: integer
+        workingDays:
+          type: array
+          items:
+            type: integer
+        timezone:
+          type: string
+        p1ResponseMinutes:
+          type: integer
+        p1ResolutionMinutes:
+          type: integer
+        p2ResponseMinutes:
+          type: integer
+        p2ResolutionMinutes:
+          type: integer
+        p3ResponseMinutes:
+          type: integer
+        p3ResolutionMinutes:
+          type: integer
+        p4ResponseMinutes:
+          type: integer
+        p4ResolutionMinutes:
+          type: integer
+        holidays:
+          type: array
+          items:
+            type: object
+            properties:
+              date:
+                type: string
+                format: date
+              name:
+                type: string
+
+    SLAConfigListResponse:
+      type: object
+      properties:
+        data:
+          type: array
+          items:
+            $ref: '#/components/schemas/SLAConfig'
+
+    CreateSLAConfigRequest:
+      type: object
+      required: [name]
+      properties:
+        name:
+          type: string
+        businessStartMinutes:
+          type: integer
+          default: 540
+        businessEndMinutes:
+          type: integer
+          default: 1020
+        workingDays:
+          type: array
+          items:
+            type: integer
+          default: [1, 2, 3, 4, 5]
+        timezone:
+          type: string
+          default: UTC
+        p1ResponseMinutes:
+          type: integer
+        p1ResolutionMinutes:
+          type: integer
+        p2ResponseMinutes:
+          type: integer
+        p2ResolutionMinutes:
+          type: integer
+        p3ResponseMinutes:
+          type: integer
+        p3ResolutionMinutes:
+          type: integer
+        p4ResponseMinutes:
+          type: integer
+        p4ResolutionMinutes:
+          type: integer
+
+    UpdateSLAConfigRequest:
+      type: object
+      properties:
+        name:
+          type: string
+        businessStartMinutes:
+          type: integer
+        businessEndMinutes:
+          type: integer
+        workingDays:
+          type: array
+          items:
+            type: integer
+        timezone:
+          type: string
+        p1ResponseMinutes:
+          type: integer
+        p1ResolutionMinutes:
+          type: integer
+        p2ResponseMinutes:
+          type: integer
+        p2ResolutionMinutes:
+          type: integer
+        p3ResponseMinutes:
+          type: integer
+        p3ResolutionMinutes:
+          type: integer
+        p4ResponseMinutes:
+          type: integer
+        p4ResolutionMinutes:
+          type: integer
+
+    # Reports & Dashboard
+    ReportResponse:
+      type: object
+      properties:
+        data:
+          type: object
+          properties:
+            summary:
+              type: object
+            breakdown:
+              type: array
+              items:
+                type: object
+
+    SLAReportResponse:
+      type: object
+      properties:
+        data:
+          type: object
+          properties:
+            overall:
+              type: object
+              properties:
+                responseMet:
+                  type: integer
+                responseBreached:
+                  type: integer
+                resolutionMet:
+                  type: integer
+                resolutionBreached:
+                  type: integer
+                complianceRate:
+                  type: number
+            byPriority:
+              type: array
+              items:
+                type: object
+            trend:
+              type: array
+              items:
+                type: object
+
+    TrendResponse:
+      type: object
+      properties:
+        data:
+          type: array
+          items:
+            type: object
+            properties:
+              date:
+                type: string
+                format: date
+              value:
+                type: number
+
+    ImportResponse:
+      type: object
+      properties:
+        data:
+          type: object
+          properties:
+            imported:
+              type: integer
+            failed:
+              type: integer
+            errors:
+              type: array
+              items:
+                type: object
+                properties:
+                  row:
+                    type: integer
+                  error:
+                    type: string
+
+    ExecutiveDashboard:
+      type: object
+      properties:
+        data:
+          type: object
+          properties:
+            slaCompliance:
+              type: number
+            openIncidents:
+              type: integer
+            openProblems:
+              type: integer
+            pendingChanges:
+              type: integer
+            mttr:
+              type: number
+            trendsWeek:
+              type: object
+            topCategories:
+              type: array
+              items:
+                type: object
+
+    ManagerDashboard:
+      type: object
+      properties:
+        data:
+          type: object
+          properties:
+            teamWorkload:
+              type: array
+              items:
+                type: object
+            slaAtRisk:
+              type: integer
+            unassigned:
+              type: integer
+            pendingApprovals:
+              type: integer
+            recentActivity:
+              type: array
+              items:
+                type: object
+
+    OperatorDashboard:
+      type: object
+      properties:
+        data:
+          type: object
+          properties:
+            myIncidents:
+              type: array
+              items:
+                $ref: '#/components/schemas/Incident'
+            myTasks:
+              type: array
+              items:
+                type: object
+            recentKnowledge:
+              type: array
+              items:
+                $ref: '#/components/schemas/Article'

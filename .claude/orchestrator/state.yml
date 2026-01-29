@@ -13,6 +13,10 @@ products:
     path: "products/gpu-calculator"
     state_file: "products/gpu-calculator/.claude/state.yml"
     worktree: ".trees/gpu-calculator"
+  itil-dashboard:
+    path: "products/itil-dashboard"
+    state_file: "products/itil-dashboard/.claude/state.yml"
+    worktree: ".trees/ITIL_dashboard_product"
   it4it-dashboard:
     path: "products/it4it-dashboard"
     state_file: "products/it4it-dashboard/.claude/state.yml"
@@ -35,7 +39,7 @@ worktrees:
   ITIL_dashboard_product:
     path: ".trees/ITIL_dashboard_product"
     branch: "foundation/itil-dashboard"
-    product: "itil-dashboard"  # in progress
+    product: "itil-dashboard"
   Tech_Management_helper:
     path: ".trees/Tech_Management_helper"
     branch: "feature/tech-management-helper/risk-management"
@@ -48,4 +52,4 @@ pending_decisions: []
 checkpoints: []
 
 # Last updated
-last_updated: "2026-01-27T08:35:00Z"
+last_updated: "2026-01-29T00:00:00Z"
