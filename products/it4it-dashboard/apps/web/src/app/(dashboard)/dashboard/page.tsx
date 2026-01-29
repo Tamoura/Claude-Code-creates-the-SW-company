@@ -18,8 +18,8 @@ export default function DashboardPage() {
       {/* Top KPIs */}
       <div className="grid gap-4 md:grid-cols-2 lg:grid-cols-4">
         <KPICard
-          title="Total IT Investment"
-          value={formatCurrency(metrics.s2p.totalInvestment)}
+          title="Active IT Investments"
+          value={`${metrics.s2p.activeInvestments} / ${formatCurrency(metrics.s2p.activeInvestmentsBudget)}`}
           change={8.2}
           trend="up"
           description="vs last quarter"
@@ -57,9 +57,9 @@ export default function DashboardPage() {
             icon={Target}
             color="bg-blue-600"
             metrics={[
-              { label: "Active Demands", value: metrics.s2p.activeDemands },
-              { label: "Portfolio Items", value: metrics.s2p.portfolioItems },
-              { label: "Total Investment", value: formatCurrency(metrics.s2p.totalInvestment) },
+              { label: "Open Demands", value: metrics.s2p.openDemands },
+              { label: "Active Investments", value: metrics.s2p.activeInvestments },
+              { label: "Portfolio Health", value: `${metrics.s2p.portfolioHealth}%` },
             ]}
           />
 

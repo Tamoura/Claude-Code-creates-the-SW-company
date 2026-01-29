@@ -88,57 +88,23 @@ Follow your agent instructions to complete the task.
 
 ## Step 4: Report Results
 
-When complete, create an AgentMessage in JSON format for automatic task graph and memory updates:
+When complete, report:
 
-```json
-{
-  "metadata": {
-    "from": "[agent-name]",
-    "to": "orchestrator",
-    "timestamp": "[ISO-8601 timestamp]",
-    "message_type": "task_complete",
-    "product": "[product]",
-    "task_id": "[task-id]"
-  },
-  "payload": {
-    "status": "success",
-    "summary": "[brief description of what was accomplished]",
-    "artifacts": [
-      {
-        "path": "[file path]",
-        "type": "file",
-        "description": "[what this file does]"
-      }
-    ],
-    "context": {
-      "decisions_made": ["[decision 1]", "[decision 2]"],
-      "assumptions": ["[assumption 1]"],
-      "notes": ["[important note]"]
-    },
-    "metrics": {
-      "time_spent_minutes": 45,
-      "files_changed": 5,
-      "tests_added": 12,
-      "tests_passing": true,
-      "coverage_percent": 85
-    }
-  }
-}
-```
+### Task Complete: [task-id]
 
-Then route the message for automatic processing:
-```bash
-npx tsx .claude/protocols/message-router.ts '[JSON message above]'
-```
+**Status**: success | failure
+**Summary**: [brief description]
 
-**Benefits of AgentMessage format**:
-- ✅ Automatic task graph status updates
-- ✅ Automatic agent memory updates
-- ✅ Structured data for analytics
-- ✅ Easy integration with orchestrator
-- ✅ Checkpoint creation when needed
+**Files Created/Modified**:
+- [file paths]
 
-**Alternative (Legacy)**: If you prefer manual updates:
+**Tests**: [X passing, Y% coverage]
+**Time Spent**: [Z minutes]
+
+**Learned Patterns** (if any):
+- [pattern description]
+
+Then run:
 ```bash
 .claude/scripts/update-agent-memory.sh [agent-name] [task-id] [product] [status] [minutes] "[summary]"
 ```

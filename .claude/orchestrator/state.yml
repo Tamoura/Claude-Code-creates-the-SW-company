@@ -1,134 +1,55 @@
-# ConnectSW Orchestrator State
-# Auto-managed by Orchestrator
-# Last updated: 2025-01-25T00:00:00Z
+# ConnectSW Global Orchestrator State
+# This file tracks COMPANY-LEVEL state only
+# Product-specific state is in: products/[product]/.claude/state.yml
 
 company:
   name: "ConnectSW"
   founded: "2025-01-25"
   ceo: "Tamer"
 
-# Products managed by the company
-# Each product tracks its lifecycle phase and status
-products: {}
-  # Example:
-  # my-product:
-  #   phase: inception | architecture | development | testing | production
-  #   status: active | paused | completed | cancelled
-  #   current_sprint: "1.0"
-  #   repository_path: "products/my-product"
-  #   tech_stack:
-  #     backend: "fastify"
-  #     frontend: "nextjs"
-  #     database: "postgresql"
-  #   open_prs: []
-  #   open_issues: []
-  #   last_activity: "2025-01-25T00:00:00Z"
-  #   created_at: "2025-01-25T00:00:00Z"
+# List of all products (state is per-product)
+products:
+  gpu-calculator:
+    path: "products/gpu-calculator"
+    state_file: "products/gpu-calculator/.claude/state.yml"
+    worktree: ".trees/gpu-calculator"
+  itil-dashboard:
+    path: "products/itil-dashboard"
+    state_file: "products/itil-dashboard/.claude/state.yml"
+    worktree: ".trees/ITIL_dashboard_product"
+  it4it-dashboard:
+    path: "products/it4it-dashboard"
+    state_file: "products/it4it-dashboard/.claude/state.yml"
+    worktree: ".trees/IT4IT_dashboard_product"
+  tech-management-helper:
+    path: "products/tech-management-helper"
+    state_file: "products/tech-management-helper/.claude/state.yml"
+    worktree: ".trees/Tech_Management_helper"
+  basic-calculator:
+    path: "products/basic-calculator"
+    state_file: "products/basic-calculator/.claude/state.yml"
+    worktree: null  # developed in main branch
 
-# Active git worktrees for parallel agent work
-worktrees: {}
-  # Example:
-  # backend-agent:
-  #   path: "../connectsw-worktrees/backend-agent"
-  #   branch: "feature/product/auth-api"
-  #   product: "my-product"
-  #   task: "Implement authentication API"
-  #   agent: "backend-engineer"
-  #   started: "2025-01-25T00:00:00Z"
+# Active worktrees (for parallel product development)
+worktrees:
+  IT4IT_dashboard_product:
+    path: ".trees/IT4IT_dashboard_product"
+    branch: "feature/it4it-dashboard/r2d"
+    product: "it4it-dashboard"
+  ITIL_dashboard_product:
+    path: ".trees/ITIL_dashboard_product"
+    branch: "foundation/itil-dashboard"
+    product: "itil-dashboard"
+  Tech_Management_helper:
+    path: ".trees/Tech_Management_helper"
+    branch: "feature/tech-management-helper/risk-management"
+    product: "tech-management-helper"
 
-# Currently executing tasks
-active_tasks: []
-  # Example:
-  # - id: "TASK-001"
-  #   product: "my-product"
-  #   agent: "backend-engineer"
-  #   description: "Implement user registration endpoint"
-  #   status: pending | in_progress | blocked | completed | failed
-  #   retries: 0
-  #   branch: "feature/my-product/user-registration"
-  #   worktree: "../connectsw-worktrees/backend-agent"
-  #   started: "2025-01-25T00:00:00Z"
-  #   completed: null
-  #   error: null
-
-# Decisions waiting for CEO input
+# Company-wide pending decisions (cross-product)
 pending_decisions: []
-  # Example:
-  # - id: 1
-  #   product: "my-product"
-  #   question: "Which authentication provider should we use?"
-  #   options:
-  #     - "Auth0 - managed, faster setup"
-  #     - "Clerk - modern, good DX"
-  #     - "Custom JWT - full control"
-  #   context: "PRD section 2.1 requires social login"
-  #   raised_by: "architect"
-  #   raised_at: "2025-01-25T00:00:00Z"
-  #   resolved: false
-  #   resolution: null
 
-# Checkpoints awaiting CEO approval
+# Company-wide checkpoints (cross-product releases, etc.)
 checkpoints: []
-  # Example:
-  # - id: 1
-  #   type: prd_complete | architecture_complete | feature_complete | pre_release | escalation
-  #   product: "my-product"
-  #   title: "PRD Ready for Review"
-  #   message: "Product Requirements Document is complete and ready for your review."
-  #   artifact: "products/my-product/docs/PRD.md"
-  #   raised_at: "2025-01-25T00:00:00Z"
-  #   approved: false
-  #   approved_at: null
 
-# Recent agent activity for context continuity
-agent_history:
-  product-manager:
-    last_task: null
-    last_product: null
-    last_activity: null
-    notes: null
-  architect:
-    last_task: null
-    last_product: null
-    last_activity: null
-    notes: null
-  backend-engineer:
-    last_task: null
-    last_product: null
-    last_activity: null
-    notes: null
-  frontend-engineer:
-    last_task: null
-    last_product: null
-    last_activity: null
-    notes: null
-  qa-engineer:
-    last_task: null
-    last_product: null
-    last_activity: null
-    notes: null
-  devops-engineer:
-    last_task: null
-    last_product: null
-    last_activity: null
-    notes: null
-  technical-writer:
-    last_task: null
-    last_product: null
-    last_activity: null
-    notes: null
-  support-engineer:
-    last_task: null
-    last_product: null
-    last_activity: null
-    notes: null
-
-# Error log for debugging
-error_log: []
-  # Example:
-  # - timestamp: "2025-01-25T00:00:00Z"
-  #   task_id: "TASK-001"
-  #   agent: "backend-engineer"
-  #   attempt: 1
-  #   error: "Database connection failed"
-  #   resolution: "Retrying with corrected connection string"
+# Last updated
+last_updated: "2026-01-29T00:00:00Z"

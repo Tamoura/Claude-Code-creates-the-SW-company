@@ -208,38 +208,16 @@ Pause and report to CEO at these points:
 
 ## Available Agents
 
-### Strategic & Innovation Layer
 | Agent | File | Use For |
 |-------|------|---------|
-| Product Strategist | `.claude/agents/product-strategist.md` | Market research, product portfolio strategy, long-term roadmaps, competitive analysis |
-| Innovation Specialist | `.claude/agents/innovation-specialist.md` | Technology exploration, rapid prototypes, innovation opportunities, experimental features |
-
-### Product & Design Layer
-| Agent | File | Use For |
-|-------|------|---------|
-| Product Manager | `.claude/agents/product-manager.md` | PRDs, requirements, user stories, feature prioritization |
-| UI/UX Designer | `.claude/agents/ui-ux-designer.md` | User research, wireframes, mockups, design systems, usability testing |
-
-### Architecture & Engineering Layer
-| Agent | File | Use For |
-|-------|------|---------|
-| Architect | `.claude/agents/architect.md` | System design, ADRs, API contracts, technical decisions |
-| Backend Engineer | `.claude/agents/backend-engineer.md` | APIs, database, server logic, business logic |
-| Frontend Engineer | `.claude/agents/frontend-engineer.md` | UI implementation, components, pages, client-side logic |
-| Mobile Developer | `.claude/agents/mobile-developer.md` | iOS/Android apps, React Native, Expo, mobile UX |
-| Security Engineer | `.claude/agents/security-engineer.md` | DevSecOps, security reviews, vulnerability management, compliance |
-
-### Quality & Operations Layer
-| Agent | File | Use For |
-|-------|------|---------|
-| QA Engineer | `.claude/agents/qa-engineer.md` | E2E tests, testing gate, quality assurance |
-| DevOps Engineer | `.claude/agents/devops-engineer.md` | CI/CD, deployment, infrastructure, monitoring |
-
-### Support Layer
-| Agent | File | Use For |
-|-------|------|---------|
-| Technical Writer | `.claude/agents/technical-writer.md` | Documentation, API docs, user guides |
-| Support Engineer | `.claude/agents/support-engineer.md` | Bug triage, issues, customer support |
+| Product Manager | `.claude/agents/product-manager.md` | PRDs, requirements, user stories |
+| Architect | `.claude/agents/architect.md` | System design, ADRs, API contracts |
+| Backend Engineer | `.claude/agents/backend-engineer.md` | APIs, database, server logic |
+| Frontend Engineer | `.claude/agents/frontend-engineer.md` | UI, components, pages |
+| QA Engineer | `.claude/agents/qa-engineer.md` | E2E tests, testing gate |
+| DevOps Engineer | `.claude/agents/devops-engineer.md` | CI/CD, deployment |
+| Technical Writer | `.claude/agents/technical-writer.md` | Documentation |
+| Support Engineer | `.claude/agents/support-engineer.md` | Bug triage, issues |
 
 ## Utility Scripts
 

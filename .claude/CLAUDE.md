@@ -147,21 +147,53 @@ and expiration handling.
 Closes #42
 ```
 
-## Working with the Orchestrator
+## Invoking the Orchestrator
+
+Use the `/orchestrator` command followed by your request:
+
+```
+/orchestrator New product: task management app for teams
+/orchestrator Add dark mode to gpu-calculator
+/orchestrator Fix the login bug in user-portal
+/orchestrator Status update on all products
+/orchestrator Ship gpu-calculator to production
+```
+
+### Example Requests
+
+| What You Want | Command |
+|---------------|---------|
+| Create new product | `/orchestrator New product: [idea]` |
+| Add feature | `/orchestrator Add [feature] to [product]` |
+| Fix bug | `/orchestrator Fix [description] in [product]` |
+| Deploy | `/orchestrator Ship [product] to production` |
+| Status | `/orchestrator Status update` |
+
+## How the Orchestrator Works
 
 The Orchestrator manages all work. It will:
 
 1. Break down your requests into tasks
-2. Assign tasks to appropriate agents
+2. Assign tasks to appropriate specialist agents
 3. Coordinate parallel work using git worktrees
-4. Pause at checkpoints for your approval
-5. Handle errors with 3 retries before escalating
+4. **Run Testing Gate** (via QA Engineer) before any checkpoint
+5. Pause at checkpoints for your approval
+6. Handle errors with 3 retries before escalating
 
 ### Checkpoints (Orchestrator pauses for CEO approval)
 
 - PRD complete
 - Architecture complete
-- Sprint/feature complete (PR ready)
-- Pre-deployment to production
+- Foundation complete (after Testing Gate PASS)
+- Feature complete (after Testing Gate PASS)
+- Pre-deployment to production (after Testing Gate PASS)
 - Any blocker or decision needed
 - After 3 failed retries on any task
+
+### Testing Gate
+
+Before any checkpoint where you'll review the product, the Orchestrator automatically:
+1. Invokes QA Engineer to run Testing Gate
+2. QA runs: unit tests, E2E tests, visual verification
+3. Only proceeds to checkpoint if QA reports PASS
+4. If FAIL, routes to engineer for fix, then re-runs Testing Gate

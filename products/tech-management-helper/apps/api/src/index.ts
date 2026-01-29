@@ -1,6 +1,6 @@
 import { buildApp } from './app.js';
 
-const PORT = parseInt(process.env.PORT || '5000', 10); // See .claude/PORT-REGISTRY.md
+const PORT = parseInt(process.env.PORT || '5001', 10);
 const HOST = process.env.HOST || '0.0.0.0';
 
 async function start(): Promise<void> {

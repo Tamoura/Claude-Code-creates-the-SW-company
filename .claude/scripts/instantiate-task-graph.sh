@@ -63,16 +63,6 @@ fi
 # Create product directory if needed
 mkdir -p "$REPO_ROOT/products/$PRODUCT/.claude"
 
-# Validate no placeholders remain
-if echo "$OUTPUT" | grep -q '{[A-Z_]*}'; then
-  echo "❌ Error: Unsubstituted placeholders found in task graph:"
-  echo ""
-  echo "$OUTPUT" | grep -o '{[A-Z_]*}' | sort -u
-  echo ""
-  echo "Please provide values for all placeholders via PARAMS argument."
-  exit 1
-fi
-
 # Save task graph
 OUTPUT_FILE="$REPO_ROOT/products/$PRODUCT/.claude/task-graph.yml"
 echo "$OUTPUT" > "$OUTPUT_FILE"
