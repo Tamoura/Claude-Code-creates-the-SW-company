@@ -235,8 +235,9 @@ export class WebhookDeliveryService {
       });
 
       // Validate URL before delivery (defense in depth - should already be validated on creation)
+      // Includes DNS resolution to prevent DNS rebinding attacks
       try {
-        validateWebhookUrl(endpoint.url);
+        await validateWebhookUrl(endpoint.url);
       } catch (error) {
         // URL validation failed - mark delivery as permanently failed
         await this.prisma.webhookDelivery.update({

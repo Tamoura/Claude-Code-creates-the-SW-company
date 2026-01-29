@@ -107,8 +107,8 @@ const webhookRoutes: FastifyPluginAsync = async (fastify) => {
       const body = validateBody(createWebhookSchema, request.body);
       const userId = request.currentUser!.id;
 
-      // Validate webhook URL for SSRF protection
-      validateWebhookUrl(body.url);
+      // Validate webhook URL for SSRF protection (with DNS resolution)
+      await validateWebhookUrl(body.url);
 
       // Generate webhook secret
       const secret = generateWebhookSecret();
@@ -235,8 +235,8 @@ const webhookRoutes: FastifyPluginAsync = async (fastify) => {
       // Build update data (whitelist - prevent updating secret)
       const updateData: Prisma.WebhookEndpointUpdateInput = {};
       if (updates.url !== undefined) {
-        // Validate new URL for SSRF protection
-        validateWebhookUrl(updates.url);
+        // Validate new URL for SSRF protection (with DNS resolution)
+        await validateWebhookUrl(updates.url);
         updateData.url = updates.url;
       }
       if (updates.events !== undefined) {

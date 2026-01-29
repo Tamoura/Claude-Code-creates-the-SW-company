@@ -11,12 +11,21 @@
  * - Non-HTTPS protocols
  * - URLs with credentials
  * - Malformed URLs
+ * - DNS rebinding attacks (resolves hostname to IPs and validates all)
  *
  * Only allows:
  * - HTTPS URLs to public internet addresses
+ *
+ * Security: Performs DNS resolution to prevent DNS rebinding attacks where
+ * a hostname initially resolves to public IPs but later resolves to private IPs.
  */
 
+import { promisify } from 'util';
+import { resolve4, resolve6 } from 'dns';
 import { AppError } from '../types/index.js';
+
+const resolve4Async = promisify(resolve4);
+const resolve6Async = promisify(resolve6);
 
 /**
  * Check if an IP address is in a private range
@@ -91,11 +100,14 @@ function isPrivateIP(hostname: string): boolean {
 }
 
 /**
- * Validate webhook URL for SSRF protection
+ * Validate webhook URL for SSRF protection with DNS resolution
+ *
+ * Performs DNS resolution to prevent DNS rebinding attacks where a hostname
+ * initially resolves to public IPs but could later resolve to private IPs.
  *
  * @throws AppError if URL is invalid or targets internal/private resources
  */
-export function validateWebhookUrl(url: string): void {
+export async function validateWebhookUrl(url: string): Promise<void> {
   // Parse URL
   let parsedUrl: URL;
   try {
@@ -169,15 +181,54 @@ export function validateWebhookUrl(url: string): void {
     );
   }
 
-  // Additional validation: hostname should not be an IP address at all (prevents DNS rebinding)
-  // This is a defense-in-depth measure
+  // DNS Resolution: Resolve hostname to IPs and validate all resolved IPs
+  // This prevents DNS rebinding attacks where DNS can change between validation and request
   const ipv4Pattern = /^(\d{1,3})\.(\d{1,3})\.(\d{1,3})\.(\d{1,3})$/;
   const ipv6Pattern = /^\[?[0-9a-f:]+\]?$/i;
 
-  if (ipv4Pattern.test(parsedUrl.hostname) || ipv6Pattern.test(parsedUrl.hostname)) {
-    // It's an IP address - we already checked if it's private, but we should also
-    // block public IPs to prevent DNS rebinding attacks
-    // Actually, some legitimate webhooks might use public IPs, so we only block private ones
-    // The isPrivateIP check above handles this
+  // If hostname is already an IP, we've already validated it above
+  const isDirectIP = ipv4Pattern.test(parsedUrl.hostname) || ipv6Pattern.test(parsedUrl.hostname);
+
+  if (!isDirectIP) {
+    // Hostname is a domain name - resolve it to IPs
+    const resolvedIPs: string[] = [];
+
+    try {
+      // Try to resolve IPv4 addresses
+      const ipv4Addresses = await resolve4Async(parsedUrl.hostname);
+      resolvedIPs.push(...ipv4Addresses);
+    } catch (error) {
+      // IPv4 resolution failed - might not have A records
+    }
+
+    try {
+      // Try to resolve IPv6 addresses
+      const ipv6Addresses = await resolve6Async(parsedUrl.hostname);
+      resolvedIPs.push(...ipv6Addresses);
+    } catch (error) {
+      // IPv6 resolution failed - might not have AAAA records
+    }
+
+    // If DNS resolution failed completely, reject the URL
+    if (resolvedIPs.length === 0) {
+      throw new AppError(
+        400,
+        'invalid-webhook-url',
+        'Webhook URL hostname could not be resolved via DNS',
+        'Provide a valid hostname that resolves to public IP addresses'
+      );
+    }
+
+    // Check all resolved IPs - reject if ANY resolve to private/internal addresses
+    for (const ip of resolvedIPs) {
+      if (isPrivateIP(ip)) {
+        throw new AppError(
+          400,
+          'invalid-webhook-url',
+          `Webhook URL resolves to private/internal IP address (${ip})`,
+          'Provide a URL that resolves only to public internet addresses'
+        );
+      }
+    }
   }
 }
