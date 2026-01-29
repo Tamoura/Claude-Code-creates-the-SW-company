@@ -5,15 +5,16 @@ import { generatePaymentSessionId } from '../utils/crypto.js';
 export class PaymentService {
   constructor(private prisma: PrismaClient) {}
 
+  /**
+   * Create a new payment session
+   *
+   * Note: Input validation is handled by createPaymentSessionSchema in the route handler.
+   * This ensures all addresses are checksummed and valid before reaching this service.
+   */
   async createPaymentSession(
     userId: string,
     data: CreatePaymentSessionRequest
   ): Promise<PaymentSession> {
-    // Validate merchant address format
-    if (!data.merchant_address.match(/^0x[a-fA-F0-9]{40}$/)) {
-      throw new AppError(400, 'invalid-address', 'Invalid merchant wallet address');
-    }
-
     const id = generatePaymentSessionId();
     const expiresAt = new Date();
     expiresAt.setDate(expiresAt.getDate() + 7); // Expires in 7 days

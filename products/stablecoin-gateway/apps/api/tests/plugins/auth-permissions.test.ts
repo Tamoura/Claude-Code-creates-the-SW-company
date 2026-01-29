@@ -23,33 +23,21 @@ describe('Auth Plugin - Permission Enforcement', () => {
     });
     testUserId = user.id;
 
-    console.log('Test user created:', testUserId);
-
     // Generate JWT token for user
     jwtToken = app.jwt.sign({ userId: testUserId });
 
     // Create API keys with different permissions
     // Read-only key
     readOnlyApiKey = 'sk_test_read_only_' + Math.random().toString(36).substring(2);
-    const readOnlyKeyHash = hashApiKey(readOnlyApiKey);
-    console.log('Creating read-only key:', readOnlyApiKey);
-    console.log('Key hash:', readOnlyKeyHash);
-
     await app.prisma.apiKey.create({
       data: {
         name: 'Read Only Key',
-        keyHash: readOnlyKeyHash,
+        keyHash: hashApiKey(readOnlyApiKey),
         keyPrefix: readOnlyApiKey.substring(0, 12),
         userId: testUserId,
         permissions: { read: true, write: false, refund: false },
       },
     });
-
-    // Verify key was created
-    const createdKey = await app.prisma.apiKey.findUnique({
-      where: { keyHash: readOnlyKeyHash },
-    });
-    console.log('Key created successfully:', createdKey?.id);
 
     // Write key (read + write)
     writeApiKey = 'sk_test_write_' + Math.random().toString(36).substring(2);
@@ -171,15 +159,10 @@ describe('Auth Plugin - Permission Enforcement', () => {
         },
       });
 
-      if (response.statusCode !== 403) {
-        console.error('Expected 403 but got:', response.statusCode);
-        console.error('Response body:', response.body);
-      }
-
       expect(response.statusCode).toBe(403);
       const body = JSON.parse(response.body);
       expect(body.code).toBe('insufficient-permissions');
-      expect(body.detail).toContain("'write' permission");
+      expect(body.message).toContain("'write' permission");
     });
 
     it('should allow write API key', async () => {
@@ -194,11 +177,6 @@ describe('Auth Plugin - Permission Enforcement', () => {
           merchant_address: '0x742D35CC6634c0532925A3b844BC9E7595F0BEb0',
         },
       });
-
-      if (response.statusCode !== 201) {
-        console.error('[POST write key] Expected 201 but got:', response.statusCode);
-        console.error('[POST write key] Response:', response.body);
-      }
 
       expect(response.statusCode).toBe(201);
       const body = JSON.parse(response.body);
@@ -377,7 +355,7 @@ describe('Auth Plugin - Permission Enforcement', () => {
       expect(response.statusCode).toBe(403);
       const body = JSON.parse(response.body);
       expect(body.code).toBe('insufficient-permissions');
-      expect(body.detail).toContain("'write' permission");
+      expect(body.message).toContain("'write' permission");
     });
 
     it('should allow write API key', async () => {
@@ -388,13 +366,13 @@ describe('Auth Plugin - Permission Enforcement', () => {
           authorization: `Bearer ${writeApiKey}`,
         },
         payload: {
-          customer_address: '0x742d35Cc6634C0532925a3b844Bc9e7595f0bEb1',
+          customer_address: '0x742d35cC6634c0532925A3b844bc9E7595F0beB1',
         },
       });
 
       expect(response.statusCode).toBe(200);
       const body = JSON.parse(response.body);
-      expect(body.customer_address).toBe('0x742d35Cc6634C0532925a3b844Bc9e7595f0bEb1');
+      expect(body.customer_address).toBe('0x742d35cC6634c0532925A3b844bc9E7595F0beB1');
     });
 
     it('should allow JWT token', async () => {
