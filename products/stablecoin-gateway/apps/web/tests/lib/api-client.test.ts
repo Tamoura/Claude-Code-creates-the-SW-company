@@ -246,4 +246,46 @@ describe('ApiClient Authentication', () => {
       );
     });
   });
+
+  describe('SSE createEventSource with query token', () => {
+    it('should include token in query parameter when creating EventSource', () => {
+      const token = 'test_jwt_token_12345';
+      TokenManager.setToken(token);
+
+      // Mock EventSource (it doesn't exist in Node.js test environment)
+      const mockEventSource = vi.fn();
+      global.EventSource = mockEventSource as any;
+
+      testApiClient.createEventSource('ps_123');
+
+      // Verify EventSource was created with token in URL
+      expect(mockEventSource).toHaveBeenCalledWith(
+        `http://localhost:5001/v1/payment-sessions/ps_123/events?token=${encodeURIComponent(token)}`
+      );
+    });
+
+    it('should throw error when token does not exist', () => {
+      TokenManager.clearToken();
+
+      expect(() => {
+        testApiClient.createEventSource('ps_123');
+      }).toThrow('Authentication required for event stream');
+    });
+
+    it('should URL-encode the token', () => {
+      // Use a token with special characters
+      const token = 'eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9.test+special/chars=';
+      TokenManager.setToken(token);
+
+      const mockEventSource = vi.fn();
+      global.EventSource = mockEventSource as any;
+
+      testApiClient.createEventSource('ps_123');
+
+      // Verify token was URL-encoded
+      expect(mockEventSource).toHaveBeenCalledWith(
+        expect.stringContaining(encodeURIComponent(token))
+      );
+    });
+  });
 });

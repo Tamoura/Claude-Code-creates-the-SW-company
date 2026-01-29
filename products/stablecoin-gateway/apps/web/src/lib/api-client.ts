@@ -213,7 +213,16 @@ export class ApiClient {
       throw new Error('SSE not available in mock mode');
     }
 
-    return new EventSource(`${this.baseUrl}/v1/payment-sessions/${paymentId}/events`);
+    // Get authentication token
+    const token = TokenManager.getToken();
+    if (!token) {
+      throw new Error('Authentication required for event stream');
+    }
+
+    // EventSource API cannot set custom headers, so we pass the token as a query parameter
+    // This is a standard workaround for SSE authentication
+    const url = `${this.baseUrl}/v1/payment-sessions/${paymentId}/events?token=${encodeURIComponent(token)}`;
+    return new EventSource(url);
   }
 }
 

@@ -203,9 +203,34 @@ const paymentSessionRoutes: FastifyPluginAsync = async (fastify) => {
   // GET /v1/payment-sessions/:id/events (SSE)
   fastify.get('/:id/events', async (request, reply) => {
     try {
-      // Require authentication
-      await request.jwtVerify();
-      const userId = (request.user as { userId: string }).userId;
+      let userId: string;
+
+      // Try to get token from query parameter first (for EventSource compatibility)
+      const { token } = request.query as { token?: string };
+
+      if (token) {
+        // Manually verify JWT from query parameter
+        try {
+          const decoded = fastify.jwt.verify(token) as { userId: string };
+          userId = decoded.userId;
+        } catch (error) {
+          // Invalid token in query parameter
+          reply.raw.writeHead(401, { 'Content-Type': 'text/plain' });
+          reply.raw.end('Unauthorized: Invalid token');
+          return;
+        }
+      } else {
+        // Fall back to Authorization header (for backward compatibility)
+        try {
+          await request.jwtVerify();
+          userId = (request.user as { userId: string }).userId;
+        } catch (error) {
+          // No token provided at all
+          reply.raw.writeHead(401, { 'Content-Type': 'text/plain' });
+          reply.raw.end('Unauthorized: Missing authentication token');
+          return;
+        }
+      }
 
       const { id } = request.params as { id: string };
 
@@ -215,12 +240,16 @@ const paymentSessionRoutes: FastifyPluginAsync = async (fastify) => {
       });
 
       if (!session) {
-        throw new AppError(404, 'payment-not-found', 'Payment session not found');
+        reply.raw.writeHead(404, { 'Content-Type': 'text/plain' });
+        reply.raw.end('Payment session not found');
+        return;
       }
 
       // Verify user owns this payment session
       if (session.userId !== userId) {
-        throw new AppError(403, 'forbidden', 'Access denied to this payment session');
+        reply.raw.writeHead(403, { 'Content-Type': 'text/plain' });
+        reply.raw.end('Access denied to this payment session');
+        return;
       }
 
       // Set up SSE headers
@@ -250,7 +279,8 @@ const paymentSessionRoutes: FastifyPluginAsync = async (fastify) => {
       });
     } catch (error) {
       logger.error('Error in SSE stream', error);
-      reply.raw.end();
+      reply.raw.writeHead(500, { 'Content-Type': 'text/plain' });
+      reply.raw.end('Internal server error');
     }
   });
 };
