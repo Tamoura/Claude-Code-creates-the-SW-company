@@ -26,7 +26,7 @@ describe('SSE Query Token Authentication', () => {
       url: '/v1/auth/signup',
       payload: {
         email: 'sse-query-test@example.com',
-        password: 'SecurePass123',
+        password: 'SecurePass123!',
       },
     });
 
@@ -99,7 +99,7 @@ describe('SSE Query Token Authentication', () => {
       url: '/v1/auth/signup',
       payload: {
         email: 'sse-query-test-user2@example.com',
-        password: 'SecurePass123',
+        password: 'SecurePass123!',
       },
     });
 

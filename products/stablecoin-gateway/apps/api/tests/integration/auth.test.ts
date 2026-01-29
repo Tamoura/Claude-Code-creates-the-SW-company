@@ -18,7 +18,7 @@ describe('POST /v1/auth/signup', () => {
       url: '/v1/auth/signup',
       payload: {
         email: 'test@example.com',
-        password: 'SecurePass123',
+        password: 'SecurePass123!',
       },
     });
 
@@ -39,7 +39,7 @@ describe('POST /v1/auth/signup', () => {
       url: '/v1/auth/signup',
       payload: {
         email: 'not-an-email',
-        password: 'SecurePass123',
+        password: 'SecurePass123!',
       },
     });
 
@@ -68,7 +68,7 @@ describe('POST /v1/auth/signup', () => {
       url: '/v1/auth/signup',
       payload: {
         email: 'test@example.com',
-        password: 'SecurePass123',
+        password: 'SecurePass123!',
       },
     });
 
@@ -78,7 +78,7 @@ describe('POST /v1/auth/signup', () => {
       url: '/v1/auth/signup',
       payload: {
         email: 'test@example.com',
-        password: 'SecurePass123',
+        password: 'SecurePass123!',
       },
     });
 
@@ -106,7 +106,7 @@ describe('POST /v1/auth/login', () => {
       url: '/v1/auth/signup',
       payload: {
         email: 'test@example.com',
-        password: 'SecurePass123',
+        password: 'SecurePass123!',
       },
     });
   });
@@ -117,7 +117,7 @@ describe('POST /v1/auth/login', () => {
       url: '/v1/auth/login',
       payload: {
         email: 'test@example.com',
-        password: 'SecurePass123',
+        password: 'SecurePass123!',
       },
     });
 
@@ -136,7 +136,7 @@ describe('POST /v1/auth/login', () => {
       url: '/v1/auth/login',
       payload: {
         email: 'wrong@example.com',
-        password: 'SecurePass123',
+        password: 'SecurePass123!',
       },
     });
 
@@ -151,7 +151,7 @@ describe('POST /v1/auth/login', () => {
       url: '/v1/auth/login',
       payload: {
         email: 'test@example.com',
-        password: 'WrongPassword123',
+        password: 'WrongPassword123!',
       },
     });
 

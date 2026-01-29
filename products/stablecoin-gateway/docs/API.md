@@ -155,6 +155,36 @@ GET /v1/payment-sessions?limit=50&starting_after=ps_abc123
 
 ---
 
+## Security
+
+### Password Policy
+
+For your account security, passwords must meet the following requirements:
+
+| Requirement | Rule |
+|------------|------|
+| Length | Minimum 12 characters |
+| Uppercase | At least 1 uppercase letter (A-Z) |
+| Lowercase | At least 1 lowercase letter (a-z) |
+| Number | At least 1 number (0-9) |
+| Special Character | At least 1 special character (!@#$%^&*()_+-=[]{}|;:,.<>?) |
+
+**Examples**:
+
+Valid passwords:
+- `MySecure123!`
+- `P@ssw0rd2026`
+- `Tr0ng#Password!`
+
+Invalid passwords:
+- `Short1!` (too short)
+- `nocapitals123!` (no uppercase)
+- `NOCAPS123!` (no lowercase)
+- `NoNumbers!` (no numbers)
+- `NoSpecial123` (no special character)
+
+---
+
 ## Endpoints
 
 ### Authentication
@@ -162,6 +192,13 @@ GET /v1/payment-sessions?limit=50&starting_after=ps_abc123
 #### POST /v1/auth/signup
 
 Create a new user account.
+
+**Password Requirements**:
+- Minimum 12 characters
+- At least 1 uppercase letter (A-Z)
+- At least 1 lowercase letter (a-z)
+- At least 1 number (0-9)
+- At least 1 special character (!@#$%^&*()_+-=[]{}|;:,.<>?)
 
 **Request**:
 ```http

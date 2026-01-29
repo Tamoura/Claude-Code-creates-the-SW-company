@@ -14,7 +14,7 @@ describe('POST /v1/payment-sessions', () => {
       url: '/v1/auth/signup',
       payload: {
         email: 'merchant@example.com',
-        password: 'SecurePass123',
+        password: 'SecurePass123!',
       },
     });
     accessToken = signupResponse.json().access_token;
@@ -136,7 +136,7 @@ describe('GET /v1/payment-sessions', () => {
       url: '/v1/auth/signup',
       payload: {
         email: 'merchant-list@example.com',
-        password: 'SecurePass123',
+        password: 'SecurePass123!',
       },
     });
     accessToken = signupResponse.json().access_token;
@@ -230,7 +230,7 @@ describe('GET /v1/payment-sessions/:id', () => {
       url: '/v1/auth/signup',
       payload: {
         email: 'merchant-get@example.com',
-        password: 'SecurePass123',
+        password: 'SecurePass123!',
       },
     });
     accessToken = signupResponse.json().access_token;

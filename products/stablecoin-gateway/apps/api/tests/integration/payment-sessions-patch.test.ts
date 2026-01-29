@@ -23,7 +23,7 @@ describe('PATCH /v1/payment-sessions/:id', () => {
       url: '/v1/auth/signup',
       payload: {
         email: 'merchant-patch@example.com',
-        password: 'SecurePass123',
+        password: 'SecurePass123!',
       },
     });
     accessToken = signupResponse.json().access_token;
@@ -50,7 +50,7 @@ describe('PATCH /v1/payment-sessions/:id', () => {
       url: '/v1/auth/signup',
       payload: {
         email: 'other-user@example.com',
-        password: 'SecurePass123',
+        password: 'SecurePass123!',
       },
     });
     otherUserToken = otherSignupResponse.json().access_token;
