@@ -48,13 +48,27 @@ export class WebhookDeliveryService {
    * Queue webhook for delivery to all subscribed endpoints
    *
    * Finds all active webhook endpoints subscribed to the event type
-   * and creates delivery records in PENDING status
+   * and creates delivery records in PENDING status.
+   *
+   * IDEMPOTENCY: Prevents duplicate deliveries for the same event on the same resource.
+   * Uses composite key (endpointId, eventType, resourceId) to ensure uniqueness.
    */
   async queueWebhook(
     userId: string,
     eventType: WebhookEventType,
     data: Record<string, any>
   ): Promise<number> {
+    // Extract resource ID for idempotency (payment session ID or refund ID)
+    const resourceId = data.id || data.payment_session_id || data.refund_id;
+    if (!resourceId) {
+      logger.error('Cannot queue webhook - missing resource ID in data', {
+        userId,
+        eventType,
+        data,
+      });
+      throw new Error('Webhook data must contain id, payment_session_id, or refund_id');
+    }
+
     // Find all active webhooks for this user subscribed to this event
     const endpoints = await this.prisma.webhookEndpoint.findMany({
       where: {
@@ -82,30 +96,64 @@ export class WebhookDeliveryService {
       data,
     };
 
-    // Queue delivery for each endpoint
-    const deliveries = await Promise.all(
-      endpoints.map((endpoint) =>
-        this.prisma.webhookDelivery.create({
+    // Queue delivery for each endpoint (with idempotency check)
+    let createdCount = 0;
+    const deliveryIds: string[] = [];
+
+    for (const endpoint of endpoints) {
+      try {
+        // Try to create delivery (will fail if duplicate exists due to unique constraint)
+        const delivery = await this.prisma.webhookDelivery.create({
           data: {
             endpointId: endpoint.id,
             eventType,
+            resourceId,
             payload: payload as any,
             status: WebhookStatus.PENDING,
             attempts: 0,
             nextAttemptAt: new Date(), // Deliver immediately
           },
-        })
-      )
-    );
+        });
 
-    logger.info('Webhooks queued for delivery', {
-      userId,
-      eventType,
-      endpointCount: endpoints.length,
-      deliveryIds: deliveries.map((d) => d.id),
-    });
+        createdCount++;
+        deliveryIds.push(delivery.id);
+      } catch (error: any) {
+        // Check if error is due to unique constraint violation (idempotency)
+        // Prisma P2002 error has meta.target as array of field names
+        if (
+          error.code === 'P2002' &&
+          Array.isArray(error.meta?.target) &&
+          error.meta.target.includes('endpoint_id') &&
+          error.meta.target.includes('event_type') &&
+          error.meta.target.includes('resource_id')
+        ) {
+          logger.debug('Webhook delivery already exists (idempotent)', {
+            userId,
+            eventType,
+            resourceId,
+            endpointId: endpoint.id,
+          });
+          // Skip this delivery - it already exists
+          continue;
+        }
 
-    return deliveries.length;
+        // Re-throw other errors
+        throw error;
+      }
+    }
+
+    if (createdCount > 0) {
+      logger.info('Webhooks queued for delivery', {
+        userId,
+        eventType,
+        resourceId,
+        endpointCount: endpoints.length,
+        createdCount,
+        deliveryIds,
+      });
+    }
+
+    return createdCount;
   }
 
   /**

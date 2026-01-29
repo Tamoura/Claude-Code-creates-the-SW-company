@@ -204,8 +204,9 @@ model WebhookDelivery {
   endpointId String @map("endpoint_id")
 
   // Event details
-  eventType String @map("event_type")
-  payload   Json
+  eventType  String @map("event_type")
+  payload    Json
+  resourceId String @map("resource_id") // Payment session ID or refund ID (for idempotency)
 
   // Delivery state
   attempts Int           @default(0)
@@ -224,6 +225,8 @@ model WebhookDelivery {
   // Relations
   endpoint WebhookEndpoint @relation(fields: [endpointId], references: [id], onDelete: Cascade)
 
+  // Idempotency: Prevent duplicate deliveries for same event on same resource
+  @@unique([endpointId, eventType, resourceId], name: "webhook_delivery_idempotency")
   @@index([endpointId, status])
   @@index([status, nextAttemptAt])
   @@map("webhook_deliveries")

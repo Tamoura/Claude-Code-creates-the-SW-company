@@ -275,6 +275,7 @@ describe('WebhookDeliveryService', () => {
         data: {
           endpointId: testEndpointId,
           eventType: 'payment.created',
+          resourceId: 'ps_max_retries',
           payload: {
             id: 'evt_test',
             type: 'payment.created',
@@ -327,6 +328,185 @@ describe('WebhookDeliveryService', () => {
       // Different payload should produce different signature
       const signature3 = signWebhookPayload('different', secret, timestamp);
       expect(signature).not.toBe(signature3);
+    });
+  });
+
+  describe('Idempotency', () => {
+    beforeEach(async () => {
+      // Clean up deliveries before each test
+      await prisma.webhookDelivery.deleteMany({
+        where: { endpointId: testEndpointId },
+      });
+    });
+
+    it('should prevent duplicate webhook deliveries for same event and resource', async () => {
+      const eventData = {
+        id: 'payment_123',
+        payment_session_id: 'payment_123',
+        amount: 100,
+        status: 'COMPLETED',
+      };
+
+      // Queue webhook first time
+      const count1 = await service.queueWebhook(testUserId, 'payment.completed', eventData);
+      expect(count1).toBe(1);
+
+      // Queue same webhook again (duplicate)
+      const count2 = await service.queueWebhook(testUserId, 'payment.completed', eventData);
+      expect(count2).toBe(0); // Should not create duplicate
+
+      // Verify only one delivery exists
+      const deliveries = await prisma.webhookDelivery.findMany({
+        where: {
+          endpointId: testEndpointId,
+          eventType: 'payment.completed',
+        },
+      });
+
+      expect(deliveries).toHaveLength(1);
+    });
+
+    it('should allow different events for same resource', async () => {
+      const resourceId = 'payment_456';
+
+      // Queue payment.created event
+      const count1 = await service.queueWebhook(testUserId, 'payment.created', {
+        id: resourceId,
+        payment_session_id: resourceId,
+        amount: 100,
+      });
+      expect(count1).toBe(1);
+
+      // Queue payment.completed event for same resource (different event type)
+      const count2 = await service.queueWebhook(testUserId, 'payment.completed', {
+        id: resourceId,
+        payment_session_id: resourceId,
+        amount: 100,
+        status: 'COMPLETED',
+      });
+      expect(count2).toBe(1); // Should create new delivery (different event type)
+
+      // Verify two deliveries exist
+      const deliveries = await prisma.webhookDelivery.findMany({
+        where: {
+          endpointId: testEndpointId,
+        },
+      });
+
+      expect(deliveries).toHaveLength(2);
+      expect(deliveries.map(d => d.eventType).sort()).toEqual([
+        'payment.completed',
+        'payment.created',
+      ]);
+    });
+
+    it('should allow same event for different resources', async () => {
+      // Queue webhook for first payment
+      const count1 = await service.queueWebhook(testUserId, 'payment.completed', {
+        id: 'payment_789',
+        payment_session_id: 'payment_789',
+        amount: 100,
+      });
+      expect(count1).toBe(1);
+
+      // Queue same event for different payment
+      const count2 = await service.queueWebhook(testUserId, 'payment.completed', {
+        id: 'payment_999',
+        payment_session_id: 'payment_999',
+        amount: 200,
+      });
+      expect(count2).toBe(1); // Should create new delivery (different resource)
+
+      // Verify two deliveries exist
+      const deliveries = await prisma.webhookDelivery.findMany({
+        where: {
+          endpointId: testEndpointId,
+          eventType: 'payment.completed',
+        },
+      });
+
+      expect(deliveries).toHaveLength(2);
+    });
+
+    it('should throw error if resource ID is missing', async () => {
+      await expect(
+        service.queueWebhook(testUserId, 'payment.completed', {
+          amount: 100,
+          // Missing id, payment_session_id, and refund_id
+        })
+      ).rejects.toThrow('Webhook data must contain id, payment_session_id, or refund_id');
+    });
+
+    it('should handle race conditions gracefully', async () => {
+      const eventData = {
+        id: 'payment_race',
+        payment_session_id: 'payment_race',
+        amount: 100,
+      };
+
+      // Queue same webhook multiple times concurrently
+      const results = await Promise.all([
+        service.queueWebhook(testUserId, 'payment.created', eventData),
+        service.queueWebhook(testUserId, 'payment.created', eventData),
+        service.queueWebhook(testUserId, 'payment.created', eventData),
+      ]);
+
+      // Only one should succeed, others should return 0
+      const totalCreated = results.reduce((sum, count) => sum + count, 0);
+      expect(totalCreated).toBe(1);
+
+      // Verify only one delivery exists
+      const deliveries = await prisma.webhookDelivery.findMany({
+        where: {
+          endpointId: testEndpointId,
+          eventType: 'payment.created',
+        },
+      });
+
+      expect(deliveries).toHaveLength(1);
+    });
+
+    it('should support refund events with refund_id', async () => {
+      // Create endpoint subscribed to refund events
+      const refundEndpoint = await prisma.webhookEndpoint.create({
+        data: {
+          userId: testUserId,
+          url: 'https://example.com/webhook-refunds',
+          secret: 'whsec_refund123',
+          events: ['refund.created', 'refund.completed'],
+          enabled: true,
+        },
+      });
+
+      const refundData = {
+        id: 'refund_123',
+        refund_id: 'refund_123',
+        payment_session_id: 'payment_original',
+        amount: 50,
+      };
+
+      // Queue refund webhook
+      const count = await service.queueWebhook(testUserId, 'refund.created', refundData);
+      expect(count).toBe(1);
+
+      // Try to queue duplicate
+      const count2 = await service.queueWebhook(testUserId, 'refund.created', refundData);
+      expect(count2).toBe(0);
+
+      const deliveries = await prisma.webhookDelivery.findMany({
+        where: {
+          endpointId: refundEndpoint.id,
+          eventType: 'refund.created',
+        },
+      });
+
+      expect(deliveries).toHaveLength(1);
+
+      // Cleanup
+      await prisma.webhookDelivery.deleteMany({
+        where: { endpointId: refundEndpoint.id },
+      });
+      await prisma.webhookEndpoint.delete({ where: { id: refundEndpoint.id } });
     });
   });
 });
