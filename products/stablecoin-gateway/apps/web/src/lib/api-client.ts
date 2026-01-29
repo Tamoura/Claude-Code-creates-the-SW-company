@@ -218,21 +218,26 @@ export class ApiClient {
     );
   }
 
+  // Request a short-lived SSE token for a specific payment session
+  async requestSseToken(paymentId: string): Promise<{ token: string; expires_at: string }> {
+    return this.request<{ token: string; expires_at: string }>('/v1/auth/sse-token', {
+      method: 'POST',
+      body: JSON.stringify({ payment_session_id: paymentId }),
+    });
+  }
+
   // SSE connection for real-time updates
-  createEventSource(paymentId: string): EventSource {
+  async createEventSource(paymentId: string): Promise<EventSource> {
     if (this.useMock) {
       // Mock SSE not implemented - would need a more complex mock
       throw new Error('SSE not available in mock mode');
     }
 
-    // Get authentication token
-    const token = TokenManager.getToken();
-    if (!token) {
-      throw new Error('Authentication required for event stream');
-    }
+    // Request a short-lived SSE token specific to this payment session
+    const { token } = await this.requestSseToken(paymentId);
 
     // EventSource API cannot set custom headers, so we pass the token as a query parameter
-    // This is a standard workaround for SSE authentication
+    // Using short-lived SSE tokens (15 min) instead of long-lived access tokens improves security
     const url = `${this.baseUrl}/v1/payment-sessions/${paymentId}/events?token=${encodeURIComponent(token)}`;
     return new EventSource(url);
   }
