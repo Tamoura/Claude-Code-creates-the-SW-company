@@ -16,7 +16,7 @@ describe('SSE Endpoint Authentication', () => {
       url: '/v1/auth/signup',
       payload: {
         email: 'sse-user1@example.com',
-        password: 'SecurePass123',
+        password: 'SecurePass123!',
       },
     });
     user1AccessToken = user1Signup.json().access_token;
@@ -27,7 +27,7 @@ describe('SSE Endpoint Authentication', () => {
       url: '/v1/auth/signup',
       payload: {
         email: 'sse-user2@example.com',
-        password: 'SecurePass123',
+        password: 'SecurePass123!',
       },
     });
     user2AccessToken = user2Signup.json().access_token;

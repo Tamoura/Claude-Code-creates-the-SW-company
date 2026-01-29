@@ -1,6 +1,6 @@
 import { FastifyPluginAsync } from 'fastify';
 import { ZodError } from 'zod';
-import { signupSchema, loginSchema, validateBody } from '../../utils/validation.js';
+import { signupSchema, loginSchema, sseTokenSchema, validateBody } from '../../utils/validation.js';
 import { hashPassword, verifyPassword } from '../../utils/crypto.js';
 import { AppError } from '../../types/index.js';
 import { logger } from '../../utils/logger.js';
@@ -261,6 +261,69 @@ const authRoutes: FastifyPluginAsync = async (fastify) => {
     } catch (error) {
       if (error instanceof AppError) {
         return reply.code(error.statusCode).send(error.toJSON());
+      }
+      throw error;
+    }
+  });
+
+  // POST /v1/auth/sse-token
+  fastify.post('/sse-token', async (request, reply) => {
+    try {
+      // Verify user is authenticated
+      await request.jwtVerify();
+      const userId = (request.user as { userId: string }).userId;
+
+      // Validate request body
+      const body = validateBody(sseTokenSchema, request.body);
+
+      // Get payment session and verify ownership
+      const paymentSession = await fastify.prisma.paymentSession.findUnique({
+        where: { id: body.payment_session_id },
+      });
+
+      if (!paymentSession) {
+        throw new AppError(404, 'payment-not-found', 'Payment session not found');
+      }
+
+      // Verify user owns this payment session
+      if (paymentSession.userId !== userId) {
+        throw new AppError(403, 'access-denied', 'You do not have access to this payment session');
+      }
+
+      // Generate short-lived SSE token (15 minutes)
+      const expiresInSeconds = 15 * 60; // 15 minutes
+      const sseToken = fastify.jwt.sign(
+        {
+          userId,
+          paymentSessionId: body.payment_session_id,
+          type: 'sse',
+        },
+        { expiresIn: expiresInSeconds }
+      );
+
+      const expiresAt = new Date(Date.now() + expiresInSeconds * 1000);
+
+      logger.info('SSE token generated', {
+        userId,
+        paymentSessionId: body.payment_session_id,
+        expiresAt: expiresAt.toISOString(),
+      });
+
+      return reply.send({
+        token: sseToken,
+        expires_at: expiresAt.toISOString(),
+      });
+    } catch (error) {
+      if (error instanceof AppError) {
+        return reply.code(error.statusCode).send(error.toJSON());
+      }
+      if (error instanceof ZodError) {
+        return reply.code(400).send({
+          type: 'https://gateway.io/errors/validation-error',
+          title: 'Validation Error',
+          status: 400,
+          detail: error.message,
+        });
       }
       throw error;
     }

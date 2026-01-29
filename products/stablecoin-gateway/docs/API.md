@@ -155,6 +155,38 @@ GET /v1/payment-sessions?limit=50&starting_after=ps_abc123
 
 ---
 
+## Security
+
+### Password Policy
+
+For your account security, passwords must meet the following requirements:
+
+| Requirement | Rule |
+|------------|------|
+| Length | Minimum 12 characters |
+| Uppercase | At least 1 uppercase letter (A-Z) |
+| Lowercase | At least 1 lowercase letter (a-z) |
+| Number | At least 1 number (0-9) |
+| Special Character | At least 1 special character (!@#$%^&*()_+-=[]{}|;:,.<>?) |
+
+**Examples**:
+
+Valid passwords:
+- `MySecurePass123!` (12+ characters with all requirements)
+- `P@ssw0rd2026Now` (12+ characters with all requirements)
+- `Tr0ng#Password!` (12+ characters with all requirements)
+
+Invalid passwords:
+- `MySecure1!` (only 11 characters - too short)
+- `nocapitals123!@` (no uppercase letter)
+- `NOCAPS123!@#$` (no lowercase letter)
+- `NoNumbers!@#$` (no numbers)
+- `NoSpecial123ABC` (no special character)
+
+**Why 12 characters?**: Industry best practice has shifted from 8 to 12 characters minimum to protect against brute-force attacks. A 12-character password with mixed case, numbers, and symbols provides 78 bits of entropy, making it computationally infeasible to crack.
+
+---
+
 ## Endpoints
 
 ### Authentication
@@ -162,6 +194,13 @@ GET /v1/payment-sessions?limit=50&starting_after=ps_abc123
 #### POST /v1/auth/signup
 
 Create a new user account.
+
+**Password Requirements**:
+- Minimum 12 characters
+- At least 1 uppercase letter (A-Z)
+- At least 1 lowercase letter (a-z)
+- At least 1 number (0-9)
+- At least 1 special character (!@#$%^&*()_+-=[]{}|;:,.<>?)
 
 **Request**:
 ```http
@@ -636,15 +675,108 @@ console.log('Payment updated:', payment.id);
 
 ---
 
+#### POST /v1/auth/sse-token
+
+Generate a short-lived token for Server-Sent Events authentication.
+
+**Why this endpoint?**: The W3C EventSource API doesn't support custom headers, so we can't use standard Bearer authentication. This endpoint generates a special token that can be passed as a query parameter.
+
+**Request**:
+```http
+POST /v1/auth/sse-token
+Authorization: Bearer <access_token>
+Content-Type: application/json
+
+{
+  "payment_session_id": "ps_abc123"
+}
+```
+
+**Response**: `200 OK`
+```json
+{
+  "token": "eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9...",
+  "expires_at": "2026-01-29T10:15:00Z",
+  "expires_in": 900
+}
+```
+
+**Token Specifications**:
+- **Lifetime**: 15 minutes (short-lived for security)
+- **Scope**: Limited to specific payment session
+- **One-time generation**: New token needed after expiry
+- **User verification**: Only payment owner can generate token
+
+**Code Examples**:
+
+<details>
+<summary>Node.js</summary>
+
+```typescript
+// Step 1: Generate SSE token
+const response = await fetch('https://api.gateway.io/v1/auth/sse-token', {
+  method: 'POST',
+  headers: {
+    'Authorization': `Bearer ${accessToken}`,
+    'Content-Type': 'application/json',
+  },
+  body: JSON.stringify({
+    payment_session_id: 'ps_abc123',
+  }),
+});
+
+const { token } = await response.json();
+
+// Step 2: Use token with EventSource
+const eventSource = new EventSource(
+  `https://api.gateway.io/v1/payment-sessions/ps_abc123/events?token=${token}`
+);
+```
+</details>
+
+<details>
+<summary>Python</summary>
+
+```python
+import requests
+import sseclient
+
+# Step 1: Generate SSE token
+response = requests.post(
+    'https://api.gateway.io/v1/auth/sse-token',
+    headers={'Authorization': f'Bearer {access_token}'},
+    json={'payment_session_id': 'ps_abc123'}
+)
+sse_token = response.json()['token']
+
+# Step 2: Use token with SSE client
+url = f'https://api.gateway.io/v1/payment-sessions/ps_abc123/events?token={sse_token}'
+messages = sseclient.SSEClient(url)
+
+for msg in messages:
+    print(f'Event: {msg.event}, Data: {msg.data}')
+```
+</details>
+
+**Error Responses**:
+
+| Status | Code | Description |
+|--------|------|-------------|
+| 401 | UNAUTHORIZED | Missing or invalid access token |
+| 403 | ACCESS_DENIED | User doesn't own payment session |
+| 404 | PAYMENT_NOT_FOUND | Payment session doesn't exist |
+
+---
+
 #### GET /v1/payment-sessions/:id/events
 
 Server-Sent Events (SSE) stream for real-time payment status updates.
 
-**Authentication**: Query parameter token required (EventSource doesn't support headers).
+**Authentication**: Requires SSE token from `/v1/auth/sse-token` endpoint.
 
 **Request**:
 ```http
-GET /v1/payment-sessions/ps_abc123/events?token=<jwt_token>
+GET /v1/payment-sessions/ps_abc123/events?token=<sse_token>
 Accept: text/event-stream
 ```
 
@@ -659,11 +791,27 @@ event: status-update
 data: {"status": "completed", "confirmed_at": "2026-01-27T10:02:15Z"}
 ```
 
-**Code Example (Node.js)**:
+**Event Types**:
+- `status-update` - Payment status changed
+- `confirmation-update` - Block confirmations updated
+- `error` - Error occurred during processing
+
+**Code Example (Complete Flow)**:
 
 ```typescript
-// Frontend: Use query token for SSE authentication
-const token = localStorage.getItem('access_token');
+// Step 1: Generate short-lived SSE token (15-minute expiry)
+const tokenResponse = await fetch('https://api.gateway.io/v1/auth/sse-token', {
+  method: 'POST',
+  headers: {
+    'Authorization': `Bearer ${accessToken}`,
+    'Content-Type': 'application/json',
+  },
+  body: JSON.stringify({ payment_session_id: paymentId }),
+});
+
+const { token } = await tokenResponse.json();
+
+// Step 2: Connect to SSE endpoint with token
 const eventSource = new EventSource(
   `https://api.gateway.io/v1/payment-sessions/${paymentId}/events?token=${token}`
 );
@@ -674,28 +822,58 @@ eventSource.addEventListener('status-update', (event) => {
 
   if (data.status === 'completed') {
     console.log('Payment completed!');
+    console.log('Transaction:', data.tx_hash);
     eventSource.close();
   }
+});
+
+eventSource.addEventListener('confirmation-update', (event) => {
+  const data = JSON.parse(event.data);
+  console.log(`Confirmations: ${data.confirmations}/${data.required}`);
 });
 
 eventSource.addEventListener('error', (error) => {
   console.error('SSE error:', error);
   eventSource.close();
 });
+
+// Step 3: Handle token expiry (after 15 minutes)
+setTimeout(() => {
+  eventSource.close();
+  console.log('SSE token expired, generate new token to reconnect');
+}, 15 * 60 * 1000);
 ```
 
-**Security Note**:
-- The query token approach is used because EventSource doesn't support custom headers
-- Token is validated on the backend before opening SSE connection
-- Only the payment owner can subscribe to updates
+**Security Features**:
+- Short-lived tokens (15 minutes) minimize exposure risk
+- Token scoped to specific payment session
+- Only payment owner can subscribe to updates
+- Token validated before opening SSE connection
+
+**Error Responses**:
+
+| Status | Code | Description |
+|--------|------|-------------|
+| 401 | UNAUTHORIZED | Missing or invalid SSE token |
+| 403 | FORBIDDEN | User doesn't own payment session |
+| 404 | NOT_FOUND | Payment session doesn't exist |
 
 ---
 
 ### Webhooks
 
+Webhooks allow your server to receive real-time notifications when events occur (e.g., payment completed).
+
+**Available Events**:
+- `payment.created` - Payment session created
+- `payment.confirming` - Transaction submitted to blockchain
+- `payment.completed` - Payment confirmed on-chain
+- `payment.failed` - Payment failed or timed out
+- `payment.refunded` - Refund issued
+
 #### POST /v1/webhooks
 
-Create a webhook endpoint.
+Create a webhook endpoint to receive events.
 
 **Request**:
 ```http
@@ -706,7 +884,8 @@ Content-Type: application/json
 {
   "url": "https://yourserver.com/webhooks/stablecoin-gateway",
   "events": ["payment.completed", "payment.failed", "payment.refunded"],
-  "description": "Production webhook"
+  "description": "Production webhook",
+  "enabled": true
 }
 ```
 
@@ -714,19 +893,190 @@ Content-Type: application/json
 ```json
 {
   "id": "wh_abc123",
-  "object": "webhook",
   "url": "https://yourserver.com/webhooks/stablecoin-gateway",
   "events": ["payment.completed", "payment.failed", "payment.refunded"],
   "description": "Production webhook",
-  "secret": "whsec_abc123...",
-  "status": "active",
-  "created_at": "2026-01-27T10:00:00Z"
+  "enabled": true,
+  "secret": "whsec_1234567890abcdef...",
+  "created_at": "2026-01-27T10:00:00Z",
+  "updated_at": "2026-01-27T10:00:00Z"
 }
 ```
 
-**Important**: Save the `secret` - you'll need it to verify webhook signatures.
+**Important**:
+- Save the `secret` - it's **only shown once** and needed to verify signatures
+- URLs must use HTTPS (required for security)
+- Secrets are auto-generated and hashed before storage
 
-See [Webhook Integration Guide](./guides/webhook-integration.md) for details.
+---
+
+#### GET /v1/webhooks
+
+List all webhook endpoints for your account.
+
+**Request**:
+```http
+GET /v1/webhooks
+Authorization: Bearer sk_live_abc123
+```
+
+**Response**: `200 OK`
+```json
+{
+  "data": [
+    {
+      "id": "wh_abc123",
+      "url": "https://yourserver.com/webhooks/stablecoin-gateway",
+      "events": ["payment.completed", "payment.failed"],
+      "description": "Production webhook",
+      "enabled": true,
+      "created_at": "2026-01-27T10:00:00Z",
+      "updated_at": "2026-01-27T10:00:00Z"
+    },
+    {
+      "id": "wh_def456",
+      "url": "https://staging.yourserver.com/webhooks",
+      "events": ["payment.created"],
+      "description": "Staging webhook",
+      "enabled": false,
+      "created_at": "2026-01-26T08:30:00Z",
+      "updated_at": "2026-01-27T09:00:00Z"
+    }
+  ]
+}
+```
+
+**Note**: Secrets are never returned in list operations (security measure).
+
+---
+
+#### GET /v1/webhooks/:id
+
+Get details of a specific webhook endpoint.
+
+**Request**:
+```http
+GET /v1/webhooks/wh_abc123
+Authorization: Bearer sk_live_abc123
+```
+
+**Response**: `200 OK`
+```json
+{
+  "id": "wh_abc123",
+  "url": "https://yourserver.com/webhooks/stablecoin-gateway",
+  "events": ["payment.completed", "payment.failed", "payment.refunded"],
+  "description": "Production webhook",
+  "enabled": true,
+  "created_at": "2026-01-27T10:00:00Z",
+  "updated_at": "2026-01-27T10:00:00Z"
+}
+```
+
+**Errors**:
+- `404 Not Found` - Webhook doesn't exist or you don't own it
+
+---
+
+#### PATCH /v1/webhooks/:id
+
+Update a webhook endpoint.
+
+**Request**:
+```http
+PATCH /v1/webhooks/wh_abc123
+Authorization: Bearer sk_live_abc123
+Content-Type: application/json
+
+{
+  "events": ["payment.completed", "payment.failed", "payment.refunded", "payment.created"],
+  "description": "Updated production webhook",
+  "enabled": false
+}
+```
+
+**Response**: `200 OK`
+```json
+{
+  "id": "wh_abc123",
+  "url": "https://yourserver.com/webhooks/stablecoin-gateway",
+  "events": ["payment.completed", "payment.failed", "payment.refunded", "payment.created"],
+  "description": "Updated production webhook",
+  "enabled": false,
+  "created_at": "2026-01-27T10:00:00Z",
+  "updated_at": "2026-01-27T11:30:00Z"
+}
+```
+
+**Updatable Fields**:
+- `url` - Webhook endpoint URL (must be HTTPS)
+- `events` - Array of event types to subscribe to
+- `enabled` - Enable/disable webhook deliveries
+- `description` - Human-readable description
+
+**Not Updatable**:
+- `secret` - Cannot be changed (create new webhook if needed)
+
+---
+
+#### DELETE /v1/webhooks/:id
+
+Delete a webhook endpoint.
+
+**Request**:
+```http
+DELETE /v1/webhooks/wh_abc123
+Authorization: Bearer sk_live_abc123
+```
+
+**Response**: `204 No Content`
+
+**Note**: Deleting a webhook also deletes all associated delivery attempts (cascade delete).
+
+---
+
+#### Webhook Security
+
+All webhook payloads include HMAC-SHA256 signatures for verification:
+
+```json
+{
+  "id": "evt_abc123",
+  "type": "payment.completed",
+  "data": {
+    "id": "ps_abc123",
+    "amount": 100.00,
+    "status": "completed",
+    "tx_hash": "0x1234..."
+  },
+  "timestamp": 1706356800000,
+  "signature": "sha256=a8b7c6d5e4f3..."
+}
+```
+
+**Verify signatures** to prevent spoofed requests:
+
+```javascript
+const crypto = require('crypto');
+
+function verifyWebhook(payload, signature, secret) {
+  const { signature: _, ...dataToVerify } = payload;
+  const payloadString = JSON.stringify(dataToVerify);
+  const signedPayload = `${payload.timestamp}.${payloadString}`;
+
+  const expectedSignature = crypto
+    .createHmac('sha256', secret)
+    .update(signedPayload)
+    .digest('hex');
+
+  return crypto.timingSafeEqual(
+    Buffer.from(signature),
+    Buffer.from(`sha256=${expectedSignature}`)
+  );
+}
+```
+
+See [Webhook Integration Guide](./guides/webhook-integration.md) for complete implementation details.
 
 ---
 

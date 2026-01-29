@@ -254,6 +254,7 @@ const paymentSessionRoutes: FastifyPluginAsync = async (fastify) => {
   fastify.get('/:id/events', async (request, reply) => {
     try {
       let userId: string;
+      const { id } = request.params as { id: string };
 
       // Try to get token from query parameter first (for EventSource compatibility)
       const { token } = request.query as { token?: string };
@@ -261,12 +262,34 @@ const paymentSessionRoutes: FastifyPluginAsync = async (fastify) => {
       if (token) {
         // Manually verify JWT from query parameter
         try {
-          const decoded = fastify.jwt.verify(token) as { userId: string };
+          const decoded = fastify.jwt.verify(token) as {
+            userId: string;
+            type?: string;
+            paymentSessionId?: string;
+          };
           userId = decoded.userId;
+
+          // If this is an SSE token, validate it more strictly
+          if (decoded.type === 'sse') {
+            // Verify token type is correct
+            if (decoded.type !== 'sse') {
+              reply.raw.writeHead(401, { 'Content-Type': 'text/plain' });
+              reply.raw.end('Unauthorized: Invalid token type');
+              return;
+            }
+
+            // Verify token is scoped to this payment session
+            if (decoded.paymentSessionId !== id) {
+              reply.raw.writeHead(403, { 'Content-Type': 'text/plain' });
+              reply.raw.end('Access denied: Token not valid for this payment session');
+              return;
+            }
+          }
+          // If it's not an SSE token (regular access token), allow it for backward compatibility
         } catch (error) {
-          // Invalid token in query parameter
+          // Invalid or expired token in query parameter
           reply.raw.writeHead(401, { 'Content-Type': 'text/plain' });
-          reply.raw.end('Unauthorized: Invalid token');
+          reply.raw.end('Unauthorized: Invalid or expired token');
           return;
         }
       } else {
@@ -281,8 +304,6 @@ const paymentSessionRoutes: FastifyPluginAsync = async (fastify) => {
           return;
         }
       }
-
-      const { id } = request.params as { id: string };
 
       // Get payment session and verify ownership
       const session = await fastify.prisma.paymentSession.findUnique({

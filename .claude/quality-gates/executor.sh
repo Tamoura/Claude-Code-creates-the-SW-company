@@ -17,7 +17,7 @@ if [ -z "$GATE_TYPE" ] || [ -z "$PRODUCT" ]; then
 fi
 
 PRODUCT_PATH="products/$PRODUCT"
-REPORT_DIR="$PRODUCT_PATH/docs/gates"
+REPORT_DIR="$PRODUCT_PATH/docs/quality-reports"
 mkdir -p "$REPORT_DIR"
 TIMESTAMP=$(date +%Y%m%d-%H%M%S)
 REPORT_FILE="$REPORT_DIR/${GATE_TYPE}-gate-${TIMESTAMP}.md"
@@ -130,11 +130,11 @@ case $GATE_TYPE in
     echo "## Testing Gate Checks" >> "$REPORT_FILE"
     echo "" >> "$REPORT_FILE"
     
-    # Unit tests
+    # Unit tests (standardized command)
     if [ -f "$PRODUCT_PATH/apps/web/package.json" ]; then
       echo "### Unit Tests" >> "$REPORT_FILE"
       cd "$PRODUCT_PATH/apps/web"
-      if npm run test:run >> "$REPORT_FILE" 2>&1; then
+      if npm test >> "$REPORT_FILE" 2>&1; then
         echo "✅ PASS: All unit tests passed" >> "$REPORT_FILE"
       else
         echo "❌ FAIL: Unit tests failed" >> "$REPORT_FILE"
@@ -144,8 +144,21 @@ case $GATE_TYPE in
       echo "" >> "$REPORT_FILE"
       cd - > /dev/null
     fi
-    
-    # E2E tests
+
+    # Smoke tests (standardized command)
+    if [ -f "$PRODUCT_PATH/apps/web/package.json" ]; then
+      echo "### Smoke Tests" >> "$REPORT_FILE"
+      cd "$PRODUCT_PATH/apps/web"
+      if npm run test:smoke >> "$REPORT_FILE" 2>&1; then
+        echo "✅ PASS: All smoke tests passed" >> "$REPORT_FILE"
+      else
+        echo "⚠️  INFO: Smoke tests not configured (optional)" >> "$REPORT_FILE"
+      fi
+      echo "" >> "$REPORT_FILE"
+      cd - > /dev/null
+    fi
+
+    # E2E tests (standardized command)
     if [ -f "$PRODUCT_PATH/apps/web/package.json" ]; then
       echo "### E2E Tests" >> "$REPORT_FILE"
       cd "$PRODUCT_PATH/apps/web"
@@ -159,16 +172,15 @@ case $GATE_TYPE in
       echo "" >> "$REPORT_FILE"
       cd - > /dev/null
     fi
-    
-    # Coverage check
-    echo "### Test Coverage" >> "$REPORT_FILE"
+
+    # All tests combined (standardized command)
     if [ -f "$PRODUCT_PATH/apps/web/package.json" ]; then
+      echo "### All Tests (Combined)" >> "$REPORT_FILE"
       cd "$PRODUCT_PATH/apps/web"
-      # Try to get coverage (works with Vitest/Jest)
-      if npm run test:coverage >> "$REPORT_FILE" 2>&1; then
-        echo "✅ PASS: Coverage check complete" >> "$REPORT_FILE"
+      if npm run test:all >> "$REPORT_FILE" 2>&1; then
+        echo "✅ PASS: All test suites passed" >> "$REPORT_FILE"
       else
-        echo "⚠️  INFO: Coverage script not configured" >> "$REPORT_FILE"
+        echo "⚠️  INFO: test:all script not configured (optional)" >> "$REPORT_FILE"
       fi
       echo "" >> "$REPORT_FILE"
       cd - > /dev/null

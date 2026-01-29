@@ -247,44 +247,67 @@ describe('ApiClient Authentication', () => {
     });
   });
 
-  describe('SSE createEventSource with query token', () => {
-    it('should include token in query parameter when creating EventSource', () => {
-      const token = 'test_jwt_token_12345';
-      TokenManager.setToken(token);
+  describe('SSE createEventSource with short-lived token', () => {
+    it('should request SSE token and include it in EventSource URL', async () => {
+      const accessToken = 'test_jwt_access_token_12345';
+      const sseToken = 'short_lived_sse_token_67890';
+      TokenManager.setToken(accessToken);
+
+      // Mock SSE token request
+      mockFetch.mockResolvedValueOnce({
+        ok: true,
+        json: async () => ({
+          token: sseToken,
+          expires_at: new Date(Date.now() + 15 * 60 * 1000).toISOString(),
+        }),
+      });
 
       // Mock EventSource (it doesn't exist in Node.js test environment)
       const mockEventSource = vi.fn();
       global.EventSource = mockEventSource as any;
 
-      testApiClient.createEventSource('ps_123');
+      await testApiClient.createEventSource('ps_123');
 
-      // Verify EventSource was created with token in URL
+      // Verify SSE token was requested with access token
+      expect(mockFetch).toHaveBeenCalledWith(
+        'http://localhost:5001/v1/auth/sse-token',
+        expect.objectContaining({
+          method: 'POST',
+          headers: expect.objectContaining({
+            'Authorization': `Bearer ${accessToken}`,
+          }),
+          body: JSON.stringify({ payment_session_id: 'ps_123' }),
+        })
+      );
+
+      // Verify EventSource was created with SSE token in URL
       expect(mockEventSource).toHaveBeenCalledWith(
-        `http://localhost:5001/v1/payment-sessions/ps_123/events?token=${encodeURIComponent(token)}`
+        `http://localhost:5001/v1/payment-sessions/ps_123/events?token=${encodeURIComponent(sseToken)}`
       );
     });
 
-    it('should throw error when token does not exist', () => {
-      TokenManager.clearToken();
+    it('should URL-encode the SSE token', async () => {
+      const accessToken = 'access_token';
+      const sseToken = 'eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9.test+special/chars=';
+      TokenManager.setToken(accessToken);
 
-      expect(() => {
-        testApiClient.createEventSource('ps_123');
-      }).toThrow('Authentication required for event stream');
-    });
-
-    it('should URL-encode the token', () => {
-      // Use a token with special characters
-      const token = 'eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9.test+special/chars=';
-      TokenManager.setToken(token);
+      // Mock SSE token request
+      mockFetch.mockResolvedValueOnce({
+        ok: true,
+        json: async () => ({
+          token: sseToken,
+          expires_at: new Date(Date.now() + 15 * 60 * 1000).toISOString(),
+        }),
+      });
 
       const mockEventSource = vi.fn();
       global.EventSource = mockEventSource as any;
 
-      testApiClient.createEventSource('ps_123');
+      await testApiClient.createEventSource('ps_123');
 
       // Verify token was URL-encoded
       expect(mockEventSource).toHaveBeenCalledWith(
-        expect.stringContaining(encodeURIComponent(token))
+        expect.stringContaining(encodeURIComponent(sseToken))
       );
     });
   });

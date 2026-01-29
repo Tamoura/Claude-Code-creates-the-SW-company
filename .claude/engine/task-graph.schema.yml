@@ -27,8 +27,8 @@ TaskGraph:
   tasks:
     - id:
         type: string
-        description: "Unique task ID (e.g., TASK-001, PRD-01, API-05)"
-        pattern: "^[A-Z]+-[0-9]+$"
+        description: "Unique task ID (e.g., TASK-001, PRD-01, API-05, CHECKPOINT-..., DESIGN-..., RELEASE-PREP-...)"
+        pattern: "^[A-Z]+(-[A-Z]+)*-[0-9A-Z]+$"
         required: true
 
       name:
@@ -44,11 +44,14 @@ TaskGraph:
       agent:
         type: enum
         values:
+          - orchestrator
           - product-manager
+          - product-strategist
           - architect
           - backend-engineer
           - frontend-engineer
           - qa-engineer
+          - security-engineer
           - devops-engineer
           - technical-writer
           - support-engineer
