@@ -169,32 +169,46 @@ export class WebhookDeliveryService {
    * - PENDING status
    * - FAILED status with nextAttemptAt in the past (retries)
    *
+   * Uses SELECT FOR UPDATE SKIP LOCKED to prevent race conditions
+   * when multiple workers are processing the queue concurrently.
+   *
    * Processes them concurrently with a limit
    */
   async processQueue(concurrencyLimit = 10): Promise<void> {
     const now = new Date();
 
-    // Fetch deliveries ready to be sent
-    const deliveries = await this.prisma.webhookDelivery.findMany({
-      where: {
-        OR: [
-          { status: WebhookStatus.PENDING },
-          {
-            status: WebhookStatus.FAILED,
-            nextAttemptAt: {
-              lte: now,
-            },
-            attempts: {
-              lt: this.maxRetries,
-            },
-          },
-        ],
-      },
-      include: {
-        endpoint: true,
-      },
-      take: concurrencyLimit,
-    });
+    // Use SELECT FOR UPDATE SKIP LOCKED to prevent race conditions
+    // Multiple workers can process the queue concurrently without conflicts
+    // SKIP LOCKED ensures workers don't wait for locked rows
+    const deliveries: any[] = await this.prisma.$queryRaw`
+      SELECT
+        wd.id,
+        wd.endpoint_id as "endpointId",
+        wd.event_type as "eventType",
+        wd.resource_id as "resourceId",
+        wd.payload,
+        wd.attempts,
+        wd.status,
+        wd.last_attempt_at as "lastAttemptAt",
+        wd.next_attempt_at as "nextAttemptAt",
+        we.id as "endpoint.id",
+        we.url as "endpoint.url",
+        we.secret as "endpoint.secret",
+        we.user_id as "endpoint.userId"
+      FROM webhook_deliveries wd
+      INNER JOIN webhook_endpoints we ON wd.endpoint_id = we.id
+      WHERE (
+        wd.status = 'PENDING'
+        OR (
+          wd.status = 'FAILED'
+          AND wd.next_attempt_at <= ${now}
+          AND wd.attempts < ${this.maxRetries}
+        )
+      )
+      ORDER BY wd.next_attempt_at ASC NULLS FIRST
+      LIMIT ${concurrencyLimit}
+      FOR UPDATE SKIP LOCKED
+    `;
 
     if (deliveries.length === 0) {
       return;
@@ -204,9 +218,28 @@ export class WebhookDeliveryService {
       count: deliveries.length,
     });
 
+    // Transform raw query results to match expected format
+    const transformedDeliveries = deliveries.map((d) => ({
+      id: d.id,
+      endpointId: d.endpointId,
+      eventType: d.eventType,
+      resourceId: d.resourceId,
+      payload: d.payload,
+      attempts: d.attempts,
+      status: d.status,
+      lastAttemptAt: d.lastAttemptAt,
+      nextAttemptAt: d.nextAttemptAt,
+      endpoint: {
+        id: d['endpoint.id'],
+        url: d['endpoint.url'],
+        secret: d['endpoint.secret'],
+        userId: d['endpoint.userId'],
+      },
+    }));
+
     // Process deliveries concurrently
     await Promise.allSettled(
-      deliveries.map((delivery) => this.deliverWebhook(delivery))
+      transformedDeliveries.map((delivery) => this.deliverWebhook(delivery))
     );
   }
 
