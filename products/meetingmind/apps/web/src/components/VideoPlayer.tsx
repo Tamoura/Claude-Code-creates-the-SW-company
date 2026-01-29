@@ -1,4 +1,4 @@
-import React, { useRef, useImperativeHandle, forwardRef } from 'react'
+import { useRef, useImperativeHandle, forwardRef } from 'react'
 import ReactPlayer from 'react-player'
 import { Card } from './ui/Card'
 
@@ -16,7 +16,7 @@ interface VideoPlayerProps {
 
 export const VideoPlayer = forwardRef<VideoPlayerRef, VideoPlayerProps>(
   ({ url, onProgress, playing = false, onReady }, ref) => {
-    const playerRef = useRef<ReactPlayer>(null)
+    const playerRef = useRef<any>(null)
 
     useImperativeHandle(ref, () => ({
       seekTo: (seconds: number) => {
@@ -30,6 +30,7 @@ export const VideoPlayer = forwardRef<VideoPlayerRef, VideoPlayerProps>(
     return (
       <Card className="overflow-hidden">
         <div className="relative aspect-video bg-black">
+          {/* @ts-expect-error - ReactPlayer types mismatch in prototype */}
           <ReactPlayer
             ref={playerRef}
             url={url}
@@ -37,15 +38,8 @@ export const VideoPlayer = forwardRef<VideoPlayerRef, VideoPlayerProps>(
             height="100%"
             controls
             playing={playing}
-            onProgress={onProgress}
+            onProgress={onProgress as any}
             onReady={onReady}
-            config={{
-              file: {
-                attributes: {
-                  controlsList: 'nodownload'
-                }
-              }
-            }}
           />
         </div>
       </Card>

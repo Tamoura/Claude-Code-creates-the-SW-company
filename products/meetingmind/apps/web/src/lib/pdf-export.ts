@@ -47,7 +47,7 @@ export function exportMeetingToPDF(data: MeetingData) {
     yPosition += space
   }
 
-  const checkPageBreak = (requiredSpace: number = 20) => {
+  const checkPageBreak = (_requiredSpace: number = 20) => {
     if (yPosition > 270) {
       doc.addPage()
       yPosition = 20

@@ -1,7 +1,6 @@
 import React from 'react'
 import { Card, CardHeader, CardTitle, CardContent } from './ui/Card'
 import { Badge } from './ui/Badge'
-import { formatTimestamp } from '../lib/utils'
 import { CheckCircle, Clock, AlertCircle, Zap } from 'lucide-react'
 
 interface ActionItem {

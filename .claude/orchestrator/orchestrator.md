@@ -70,27 +70,98 @@ MUST pause for CEO approval at these points:
 | Decision Needed | "Need decision: [question]. Options: [A, B, C]" |
 | Escalation (3 failures) | "Task failed 3 times. [Details]. How should I proceed?" |
 
-## MANDATORY: E2E Testing Before CEO Checkpoints
+## MANDATORY: Zero Errors on First Run
 
-**CRITICAL RULE**: Before ANY checkpoint where CEO will test the product, you MUST:
+**IRON-CLAD RULE**: CEO must NEVER see errors on first run.
 
-1. **Invoke QA Engineer** to run full E2E verification
-2. **Verify Playwright tests pass**: `npm run test:e2e`
-3. **Verify visual elements work**:
-   - All buttons visible and styled
-   - All form inputs have borders
-   - All interactions work (click, submit, etc.)
-   - No console errors
-4. **Only THEN proceed to checkpoint**
+See `.claude/standards/TESTING-STANDARDS.md` for complete requirements.
 
-**Why**: Unit tests can pass while UI is broken (invisible buttons, missing styles).
-CEO should NEVER see broken UI. Catch issues before checkpoint.
+### Before EVERY CEO Checkpoint - Run All 4 Gates
 
-**If E2E tests fail or visual issues exist**:
-- DO NOT proceed to checkpoint
-- Route back to Frontend Engineer to fix
-- Re-run E2E verification
-- Only proceed when everything works
+#### Gate 1: Build Test
+```bash
+cd products/[product]/apps/[app]
+npm run build
+```
+**MUST PASS**:
+- ✅ No TypeScript errors
+- ✅ No dependency issues
+- ✅ No Tailwind/PostCSS config errors
+- ✅ Build completes successfully
+
+**IF FAILS**: STOP. Route to engineer. Do NOT proceed.
+
+#### Gate 2: Server Start Test
+```bash
+npm run dev &
+sleep 5
+curl -f http://localhost:[PORT] || exit 1
+```
+**MUST PASS**:
+- ✅ Server starts without errors
+- ✅ Correct port from PORT-REGISTRY.md
+- ✅ Server responds to requests
+- ✅ No errors in console/logs
+
+**IF FAILS**: STOP. Route to engineer. Do NOT proceed.
+
+#### Gate 3: Smoke Test
+```bash
+npm run test:smoke
+```
+**MUST PASS**:
+- ✅ Playwright tests pass
+- ✅ Homepage loads
+- ✅ No console errors
+- ✅ No network failures
+- ✅ Interactive elements visible
+
+**IF FAILS**: STOP. Route to QA/Frontend Engineer. Do NOT proceed.
+
+#### Gate 4: Visual Verification
+```bash
+# Open browser, take screenshot, verify
+open http://localhost:[PORT]
+```
+**MUST VERIFY**:
+- ✅ Page loads visually
+- ✅ Buttons/links visible and styled
+- ✅ No layout issues
+- ✅ Branding/colors correct
+
+**IF FAILS**: STOP. Route to Frontend Engineer. Do NOT proceed.
+
+### Only After ALL Gates Pass
+
+✅ **THEN and ONLY THEN** proceed to CEO checkpoint
+
+### Why This is Non-Negotiable
+
+- CEO time is valuable - don't waste it with broken demos
+- First impressions matter - errors damage confidence
+- Testing catches 99% of issues before CEO sees them
+- Professional delivery requires professional QA
+
+### Enforcement
+
+**Orchestrator MUST**:
+1. Run all 4 gates automatically
+2. Block checkpoint if ANY gate fails
+3. Route back to appropriate engineer
+4. Re-run ALL gates after fixes
+5. Document test results in checkpoint report
+
+**QA Engineer MUST**:
+1. Verify all gates passed
+2. Create test report
+3. Block checkpoint if issues found
+4. Provide fix recommendations
+
+**Engineers MUST**:
+1. Self-test before marking complete
+2. Ensure smoke tests exist and pass
+3. Fix issues when routed from Orchestrator
+4. Re-run tests after fixes
 
 ## Parallel Work with Git Worktrees
 

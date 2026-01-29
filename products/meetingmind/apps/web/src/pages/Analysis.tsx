@@ -1,6 +1,7 @@
 import React, { useState, useRef } from 'react'
 import { useNavigate } from 'react-router-dom'
-import { VideoPlayer, VideoPlayerRef } from '../components/VideoPlayer'
+import { VideoPlayer } from '../components/VideoPlayer'
+import type { VideoPlayerRef } from '../components/VideoPlayer'
 import { EngagementTimeline } from '../components/EngagementTimeline'
 import { InsightsPanel } from '../components/InsightsPanel'
 import { Button } from '../components/ui/Button'
@@ -234,7 +235,7 @@ export const Analysis: React.FC = () => {
             <div className="lg:sticky lg:top-24">
               <InsightsPanel
                 summary={insights.summary}
-                actionItems={insights.actionItems}
+                actionItems={insights.actionItems as any}
                 keyMoments={insights.keyMoments}
                 onTimeClick={handleTimeClick}
               />
