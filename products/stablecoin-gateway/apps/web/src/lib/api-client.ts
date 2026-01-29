@@ -5,6 +5,7 @@
  * For development/testing, it can use mock responses when API is unavailable.
  */
 
+import { EventSourcePolyfill } from 'event-source-polyfill';
 import { TokenManager } from './token-manager';
 
 const API_BASE_URL = import.meta.env.VITE_API_URL || 'http://localhost:5001';
@@ -236,10 +237,14 @@ export class ApiClient {
     // Request a short-lived SSE token specific to this payment session
     const { token } = await this.requestSseToken(paymentId);
 
-    // EventSource API cannot set custom headers, so we pass the token as a query parameter
-    // Using short-lived SSE tokens (15 min) instead of long-lived access tokens improves security
-    const url = `${this.baseUrl}/v1/payment-sessions/${paymentId}/events?token=${encodeURIComponent(token)}`;
-    return new EventSource(url);
+    // Use EventSourcePolyfill to send token in Authorization header
+    // This prevents token leakage in browser history, server logs, and proxy logs
+    const url = `${this.baseUrl}/v1/payment-sessions/${paymentId}/events`;
+    return new EventSourcePolyfill(url, {
+      headers: {
+        'Authorization': `Bearer ${token}`,
+      },
+    }) as unknown as EventSource;
   }
 
   // Authentication methods

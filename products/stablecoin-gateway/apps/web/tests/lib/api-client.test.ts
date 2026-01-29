@@ -7,12 +7,20 @@
 import { describe, it, expect, beforeEach, afterEach, vi } from 'vitest';
 import { TokenManager } from '../../src/lib/token-manager';
 
-// Create a test API client that doesn't use mock mode
-import { ApiClient } from '../../src/lib/api-client';
-
 // Mock fetch globally
 const mockFetch = vi.fn();
 global.fetch = mockFetch;
+
+// Mock the event-source-polyfill module (required by ApiClient)
+vi.mock('event-source-polyfill', () => ({
+  EventSourcePolyfill: class MockEventSourcePolyfill {
+    constructor() {}
+    close() {}
+  },
+}));
+
+// Create a test API client that doesn't use mock mode
+import { ApiClient } from '../../src/lib/api-client';
 
 // Create test client with mock mode disabled
 const testApiClient = new (ApiClient as any)('http://localhost:5001', false);
@@ -247,8 +255,9 @@ describe('ApiClient Authentication', () => {
     });
   });
 
-  describe('SSE createEventSource with short-lived token', () => {
-    it('should request SSE token and include it in EventSource URL', async () => {
+  // Note: SSE security tests (token in Authorization header) are in api-client-sse.test.ts
+  describe('SSE createEventSource authentication', () => {
+    it('should request SSE token with access token in Authorization header', async () => {
       const accessToken = 'test_jwt_access_token_12345';
       const sseToken = 'short_lived_sse_token_67890';
       TokenManager.setToken(accessToken);
@@ -262,10 +271,6 @@ describe('ApiClient Authentication', () => {
         }),
       });
 
-      // Mock EventSource (it doesn't exist in Node.js test environment)
-      const mockEventSource = vi.fn();
-      global.EventSource = mockEventSource as any;
-
       await testApiClient.createEventSource('ps_123');
 
       // Verify SSE token was requested with access token
@@ -278,36 +283,6 @@ describe('ApiClient Authentication', () => {
           }),
           body: JSON.stringify({ payment_session_id: 'ps_123' }),
         })
-      );
-
-      // Verify EventSource was created with SSE token in URL
-      expect(mockEventSource).toHaveBeenCalledWith(
-        `http://localhost:5001/v1/payment-sessions/ps_123/events?token=${encodeURIComponent(sseToken)}`
-      );
-    });
-
-    it('should URL-encode the SSE token', async () => {
-      const accessToken = 'access_token';
-      const sseToken = 'eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9.test+special/chars=';
-      TokenManager.setToken(accessToken);
-
-      // Mock SSE token request
-      mockFetch.mockResolvedValueOnce({
-        ok: true,
-        json: async () => ({
-          token: sseToken,
-          expires_at: new Date(Date.now() + 15 * 60 * 1000).toISOString(),
-        }),
-      });
-
-      const mockEventSource = vi.fn();
-      global.EventSource = mockEventSource as any;
-
-      await testApiClient.createEventSource('ps_123');
-
-      // Verify token was URL-encoded
-      expect(mockEventSource).toHaveBeenCalledWith(
-        expect.stringContaining(encodeURIComponent(sseToken))
       );
     });
   });

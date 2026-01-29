@@ -22,7 +22,7 @@
  * ```
  *
  * Environment Variables:
- * - WEBHOOK_ENCRYPTION_KEY: Master encryption key (min 32 characters)
+ * - WEBHOOK_ENCRYPTION_KEY: Master encryption key (exactly 64 hex characters / 32 bytes)
  *   Generate with: openssl rand -hex 32
  */
 
@@ -54,9 +54,10 @@ export function initializeEncryption(): void {
     );
   }
 
-  if (keyString.length < 32) {
+  // Validate key is exactly 64 hex characters (32 bytes for AES-256)
+  if (keyString.length !== 64 || !/^[0-9a-fA-F]+$/.test(keyString)) {
     throw new Error(
-      'WEBHOOK_ENCRYPTION_KEY must be at least 32 characters long for adequate security'
+      'WEBHOOK_ENCRYPTION_KEY must be exactly 64 hexadecimal characters (32 bytes for AES-256)'
     );
   }
 

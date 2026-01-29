@@ -1,3 +1,13 @@
+# Stablecoin Gateway - Docker Compose Configuration
+#
+# SECURITY NOTE: This file requires environment variables for secrets.
+# Copy .env.example to .env and configure secrets before running.
+#
+# Usage:
+#   cp .env.example .env
+#   # Edit .env with secure values
+#   docker-compose up -d
+
 version: '3.8'
 
 services:
@@ -5,15 +15,17 @@ services:
     image: postgres:15-alpine
     container_name: stablecoin-gateway-postgres
     environment:
-      POSTGRES_USER: dev
-      POSTGRES_PASSWORD: dev
-      POSTGRES_DB: stablecoin_gateway_dev
+      # SECURITY: Database credentials loaded from environment
+      # Set POSTGRES_USER and POSTGRES_PASSWORD in .env file
+      POSTGRES_USER: ${POSTGRES_USER:-postgres}
+      POSTGRES_PASSWORD: ${POSTGRES_PASSWORD:?POSTGRES_PASSWORD is required - see .env.example}
+      POSTGRES_DB: ${POSTGRES_DB:-stablecoin_gateway_dev}
     ports:
       - "5432:5432"
     volumes:
       - postgres_data:/var/lib/postgresql/data
     healthcheck:
-      test: ["CMD-SHELL", "pg_isready -U dev"]
+      test: ["CMD-SHELL", "pg_isready -U ${POSTGRES_USER:-postgres}"]
       interval: 10s
       timeout: 5s
       retries: 5
@@ -39,15 +51,21 @@ services:
     ports:
       - "5001:5001"
     environment:
-      - NODE_ENV=development
+      - NODE_ENV=${NODE_ENV:-development}
       - PORT=5001
-      - DATABASE_URL=postgresql://dev:dev@postgres:5432/stablecoin_gateway_dev
+      # SECURITY: Database URL constructed from environment variables
+      - DATABASE_URL=postgresql://${POSTGRES_USER:-postgres}:${POSTGRES_PASSWORD:?POSTGRES_PASSWORD is required}@postgres:5432/${POSTGRES_DB:-stablecoin_gateway_dev}
       - REDIS_URL=redis://redis:6379
-      - JWT_SECRET=dev-secret-key-change-in-production
-      - JWT_EXPIRES_IN=15m
-      - FRONTEND_URL=http://localhost:3101
-      - ALCHEMY_API_KEY=${ALCHEMY_API_KEY}
-      - INFURA_PROJECT_ID=${INFURA_PROJECT_ID}
+      # SECURITY: JWT secret must be provided via environment
+      # Generate with: openssl rand -hex 32
+      - JWT_SECRET=${JWT_SECRET:?JWT_SECRET is required - generate with: openssl rand -hex 32}
+      - JWT_EXPIRES_IN=${JWT_EXPIRES_IN:-15m}
+      - FRONTEND_URL=${FRONTEND_URL:-http://localhost:3101}
+      # Blockchain provider keys (optional in development)
+      - ALCHEMY_API_KEY=${ALCHEMY_API_KEY:-}
+      - INFURA_PROJECT_ID=${INFURA_PROJECT_ID:-}
+      # Internal API key for metrics endpoint (optional)
+      - INTERNAL_API_KEY=${INTERNAL_API_KEY:-}
     depends_on:
       postgres:
         condition: service_healthy
@@ -63,13 +81,13 @@ services:
       context: .
       dockerfile: apps/web/Dockerfile
       args:
-        - NEXT_PUBLIC_API_URL=http://localhost:5001
+        - NEXT_PUBLIC_API_URL=${NEXT_PUBLIC_API_URL:-http://localhost:5001}
     container_name: stablecoin-gateway-web
     ports:
       - "3101:3101"
     environment:
-      - NODE_ENV=development
-      - NEXT_PUBLIC_API_URL=http://localhost:5001
+      - NODE_ENV=${NODE_ENV:-development}
+      - NEXT_PUBLIC_API_URL=${NEXT_PUBLIC_API_URL:-http://localhost:5001}
     depends_on:
       - api
     volumes:
