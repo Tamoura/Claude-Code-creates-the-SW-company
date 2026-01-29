@@ -259,6 +259,20 @@ export class RefundService {
     });
 
     try {
+      // Validate customer address is available
+      if (!refund.paymentSession.customerAddress) {
+        await this.prisma.refund.update({
+          where: { id },
+          data: { status: RefundStatus.FAILED },
+        });
+
+        throw new AppError(
+          400,
+          'customer-address-missing',
+          'Cannot process refund - customer address not available'
+        );
+      }
+
       // Execute blockchain transaction
       const result = await this.blockchainService.executeRefund({
         network: refund.paymentSession.network as 'polygon' | 'ethereum',

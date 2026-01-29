@@ -7,6 +7,7 @@
 
 import { buildApp } from '../../src/app';
 import { FastifyInstance } from 'fastify';
+import { prisma } from '../setup';
 
 describe('PATCH /v1/payment-sessions/:id', () => {
   let app: FastifyInstance;
@@ -459,6 +460,263 @@ describe('PATCH /v1/payment-sessions/:id', () => {
       // Depending on business logic, this might be 400 or 200
       // For now, let's expect 400 (null address not allowed)
       expect(response.statusCode).toBe(400);
+    });
+  });
+
+  describe('State Machine Validation', () => {
+    it('should reject invalid transition: PENDING → COMPLETED', async () => {
+      // Create payment
+      const createResponse = await app.inject({
+        method: 'POST',
+        url: '/v1/payment-sessions',
+        headers: {
+          authorization: `Bearer ${accessToken}`,
+        },
+        payload: {
+          amount: 100,
+          merchant_address: '0x742d35Cc6634C0532925a3b844Bc9e7595f0bEb6',
+        },
+      });
+
+      const payment = createResponse.json();
+
+      // Try to transition directly from PENDING to COMPLETED (skipping CONFIRMING)
+      const response = await app.inject({
+        method: 'PATCH',
+        url: `/v1/payment-sessions/${payment.id}`,
+        headers: {
+          authorization: `Bearer ${accessToken}`,
+        },
+        payload: {
+          status: 'COMPLETED',
+        },
+      });
+
+      expect(response.statusCode).toBe(400);
+      const body = response.json();
+      expect(body.code).toBe('invalid-status-transition');
+      expect(body.detail).toContain('Invalid status transition from PENDING to COMPLETED');
+    });
+
+    it('should reject invalid transition: PENDING → REFUNDED', async () => {
+      // Create payment
+      const createResponse = await app.inject({
+        method: 'POST',
+        url: '/v1/payment-sessions',
+        headers: {
+          authorization: `Bearer ${accessToken}`,
+        },
+        payload: {
+          amount: 100,
+          merchant_address: '0x742d35Cc6634C0532925a3b844Bc9e7595f0bEb6',
+        },
+      });
+
+      const payment = createResponse.json();
+
+      // Try to transition PENDING → REFUNDED (cannot refund unpaid payment)
+      const response = await app.inject({
+        method: 'PATCH',
+        url: `/v1/payment-sessions/${payment.id}`,
+        headers: {
+          authorization: `Bearer ${accessToken}`,
+        },
+        payload: {
+          status: 'REFUNDED',
+        },
+      });
+
+      expect(response.statusCode).toBe(400);
+      const body = response.json();
+      expect(body.code).toBe('invalid-status-transition');
+      expect(body.detail).toContain('Invalid status transition from PENDING to REFUNDED');
+    });
+
+    it('should reject invalid transition: COMPLETED → PENDING', async () => {
+      // Create and complete payment
+      const createResponse = await app.inject({
+        method: 'POST',
+        url: '/v1/payment-sessions',
+        headers: {
+          authorization: `Bearer ${accessToken}`,
+        },
+        payload: {
+          amount: 100,
+          merchant_address: '0x742d35Cc6634C0532925a3b844Bc9e7595f0bEb6',
+        },
+      });
+
+      const payment = createResponse.json();
+      const paymentId = payment.id;
+
+      // Mark as COMPLETED (via direct DB update for test)
+      await prisma.paymentSession.update({
+        where: { id: paymentId },
+        data: { status: 'COMPLETED' },
+      });
+
+      // Try to transition back to PENDING
+      const response = await app.inject({
+        method: 'PATCH',
+        url: `/v1/payment-sessions/${paymentId}`,
+        headers: {
+          authorization: `Bearer ${accessToken}`,
+        },
+        payload: {
+          status: 'PENDING',
+        },
+      });
+
+      expect(response.statusCode).toBe(400);
+      const body = response.json();
+      expect(body.code).toBe('invalid-status-transition');
+      expect(body.detail).toContain('Invalid status transition from COMPLETED to PENDING');
+    });
+
+    it('should reject invalid transition: COMPLETED → FAILED', async () => {
+      // Create and complete payment
+      const createResponse = await app.inject({
+        method: 'POST',
+        url: '/v1/payment-sessions',
+        headers: {
+          authorization: `Bearer ${accessToken}`,
+        },
+        payload: {
+          amount: 100,
+          merchant_address: '0x742d35Cc6634C0532925a3b844Bc9e7595f0bEb6',
+        },
+      });
+
+      const payment = createResponse.json();
+      const paymentId = payment.id;
+
+      // Mark as COMPLETED
+      await prisma.paymentSession.update({
+        where: { id: paymentId },
+        data: { status: 'COMPLETED' },
+      });
+
+      // Try to mark completed payment as FAILED
+      const response = await app.inject({
+        method: 'PATCH',
+        url: `/v1/payment-sessions/${paymentId}`,
+        headers: {
+          authorization: `Bearer ${accessToken}`,
+        },
+        payload: {
+          status: 'FAILED',
+        },
+      });
+
+      expect(response.statusCode).toBe(400);
+      const body = response.json();
+      expect(body.code).toBe('invalid-status-transition');
+    });
+
+    it('should allow valid transition: PENDING → FAILED', async () => {
+      // Create payment
+      const createResponse = await app.inject({
+        method: 'POST',
+        url: '/v1/payment-sessions',
+        headers: {
+          authorization: `Bearer ${accessToken}`,
+        },
+        payload: {
+          amount: 100,
+          merchant_address: '0x742d35Cc6634C0532925a3b844Bc9e7595f0bEb6',
+        },
+      });
+
+      const payment = createResponse.json();
+
+      // Mark as FAILED (valid transition from PENDING)
+      const response = await app.inject({
+        method: 'PATCH',
+        url: `/v1/payment-sessions/${payment.id}`,
+        headers: {
+          authorization: `Bearer ${accessToken}`,
+        },
+        payload: {
+          status: 'FAILED',
+        },
+      });
+
+      expect(response.statusCode).toBe(200);
+      const body = response.json();
+      expect(body.status).toBe('FAILED');
+    });
+
+    it('should allow valid transition: COMPLETED → REFUNDED', async () => {
+      // Create and complete payment
+      const createResponse = await app.inject({
+        method: 'POST',
+        url: '/v1/payment-sessions',
+        headers: {
+          authorization: `Bearer ${accessToken}`,
+        },
+        payload: {
+          amount: 100,
+          merchant_address: '0x742d35Cc6634C0532925a3b844Bc9e7595f0bEb6',
+        },
+      });
+
+      const payment = createResponse.json();
+      const paymentId = payment.id;
+
+      // Mark as COMPLETED
+      await prisma.paymentSession.update({
+        where: { id: paymentId },
+        data: { status: 'COMPLETED' },
+      });
+
+      // Mark as REFUNDED (valid transition from COMPLETED)
+      const response = await app.inject({
+        method: 'PATCH',
+        url: `/v1/payment-sessions/${paymentId}`,
+        headers: {
+          authorization: `Bearer ${accessToken}`,
+        },
+        payload: {
+          status: 'REFUNDED',
+        },
+      });
+
+      expect(response.statusCode).toBe(200);
+      const body = response.json();
+      expect(body.status).toBe('REFUNDED');
+    });
+
+    it('should allow same-state transitions (idempotent)', async () => {
+      // Create payment
+      const createResponse = await app.inject({
+        method: 'POST',
+        url: '/v1/payment-sessions',
+        headers: {
+          authorization: `Bearer ${accessToken}`,
+        },
+        payload: {
+          amount: 100,
+          merchant_address: '0x742d35Cc6634C0532925a3b844Bc9e7595f0bEb6',
+        },
+      });
+
+      const payment = createResponse.json();
+
+      // Update with same status (should succeed - idempotent)
+      const response = await app.inject({
+        method: 'PATCH',
+        url: `/v1/payment-sessions/${payment.id}`,
+        headers: {
+          authorization: `Bearer ${accessToken}`,
+        },
+        payload: {
+          status: 'PENDING',
+        },
+      });
+
+      expect(response.statusCode).toBe(200);
+      const body = response.json();
+      expect(body.status).toBe('PENDING');
     });
   });
 });

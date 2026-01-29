@@ -1,11 +1,12 @@
 import { FastifyPluginAsync } from 'fastify';
 import { ZodError } from 'zod';
-import { Prisma } from '@prisma/client';
+import { Prisma, PaymentStatus } from '@prisma/client';
 import { createPaymentSessionSchema, listPaymentSessionsQuerySchema, updatePaymentSessionSchema, validateBody, validateQuery } from '../../utils/validation.js';
 import { PaymentService } from '../../services/payment.service.js';
 import { BlockchainMonitorService } from '../../services/blockchain-monitor.service.js';
 import { AppError } from '../../types/index.js';
 import { logger } from '../../utils/logger.js';
+import { validatePaymentStatusTransition } from '../../utils/payment-state-machine.js';
 
 const paymentSessionRoutes: FastifyPluginAsync = async (fastify) => {
   // POST /v1/payment-sessions
@@ -239,9 +240,13 @@ const paymentSessionRoutes: FastifyPluginAsync = async (fastify) => {
           completedAt: row.completed_at,
         };
 
-        // SECURITY: Prevent modifying already-completed payments
-        if (existingSession.status === 'COMPLETED' && updates.status !== 'COMPLETED') {
-          throw new AppError(400, 'payment-completed', 'Cannot modify completed payment');
+        // SECURITY: Validate status transitions using state machine
+        // Prevents unauthorized or invalid state changes (e.g., PENDING → COMPLETED without CONFIRMING)
+        if (updates.status && updates.status !== existingSession.status) {
+          validatePaymentStatusTransition(
+            existingSession.status as PaymentStatus,
+            updates.status as PaymentStatus
+          );
         }
 
       // SECURITY: If status is being updated to CONFIRMING or COMPLETED, verify on blockchain
