@@ -1,5 +1,6 @@
 import { FastifyPluginAsync } from 'fastify';
 import { ZodError } from 'zod';
+import { Prisma } from '@prisma/client';
 import { createPaymentSessionSchema, listPaymentSessionsQuerySchema, updatePaymentSessionSchema, validateBody, validateQuery } from '../../utils/validation.js';
 import { PaymentService } from '../../services/payment.service.js';
 import { BlockchainMonitorService } from '../../services/blockchain-monitor.service.js';
@@ -141,7 +142,7 @@ const paymentSessionRoutes: FastifyPluginAsync = async (fastify) => {
       const existingSession = await paymentService.getPaymentSession(id, userId);
 
       // Build update data with only allowed fields (security: whitelist prevents mass assignment)
-      const updateData: any = {};
+      const updateData: Prisma.PaymentSessionUpdateInput = {};
 
       // SECURITY: If status is being updated to CONFIRMING or COMPLETED, verify on blockchain
       // This prevents payment fraud by ensuring transactions are real and match expected parameters

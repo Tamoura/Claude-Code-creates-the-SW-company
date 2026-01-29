@@ -1,4 +1,4 @@
-import { PrismaClient, PaymentSession, PaymentStatus } from '@prisma/client';
+import { PrismaClient, PaymentSession, PaymentStatus, Prisma } from '@prisma/client';
 import { AppError, CreatePaymentSessionRequest, PaymentSessionResponse } from '../types/index.js';
 import { generatePaymentSessionId } from '../utils/crypto.js';
 
@@ -63,7 +63,7 @@ export class PaymentService {
       created_before?: Date;
     }
   ): Promise<{ data: PaymentSession[]; total: number }> {
-    const where: any = { userId };
+    const where: Prisma.PaymentSessionWhereInput = { userId };
 
     if (filters.status) {
       where.status = filters.status;

@@ -18,6 +18,7 @@
 
 import { FastifyPluginAsync } from 'fastify';
 import { ZodError } from 'zod';
+import { Prisma } from '@prisma/client';
 import { createWebhookSchema, updateWebhookSchema, validateBody } from '../../utils/validation.js';
 import { AppError } from '../../types/index.js';
 import { logger } from '../../utils/logger.js';
@@ -212,7 +213,7 @@ const webhookRoutes: FastifyPluginAsync = async (fastify) => {
       }
 
       // Build update data (whitelist - prevent updating secret)
-      const updateData: any = {};
+      const updateData: Prisma.WebhookEndpointUpdateInput = {};
       if (updates.url !== undefined) {
         updateData.url = updates.url;
       }
