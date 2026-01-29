@@ -167,7 +167,7 @@ describe('Auth Plugin - Permission Enforcement', () => {
         },
         payload: {
           amount: 100,
-          merchant_address: '0x742d35Cc6634C0532925a3b844Bc9e7595f0bEb0',
+          merchant_address: '0x742D35CC6634c0532925A3b844BC9E7595F0BEb0',
         },
       });
 
@@ -191,9 +191,14 @@ describe('Auth Plugin - Permission Enforcement', () => {
         },
         payload: {
           amount: 100,
-          merchant_address: '0x742d35Cc6634C0532925a3b844Bc9e7595f0bEb0',
+          merchant_address: '0x742D35CC6634c0532925A3b844BC9E7595F0BEb0',
         },
       });
+
+      if (response.statusCode !== 201) {
+        console.error('[POST write key] Expected 201 but got:', response.statusCode);
+        console.error('[POST write key] Response:', response.body);
+      }
 
       expect(response.statusCode).toBe(201);
       const body = JSON.parse(response.body);
@@ -209,7 +214,7 @@ describe('Auth Plugin - Permission Enforcement', () => {
         },
         payload: {
           amount: 100,
-          merchant_address: '0x742d35Cc6634C0532925a3b844Bc9e7595f0bEb0',
+          merchant_address: '0x742D35CC6634c0532925A3b844BC9E7595F0BEb0',
         },
       });
 
@@ -227,7 +232,7 @@ describe('Auth Plugin - Permission Enforcement', () => {
         },
         payload: {
           amount: 100,
-          merchant_address: '0x742d35Cc6634C0532925a3b844Bc9e7595f0bEb0',
+          merchant_address: '0x742D35CC6634c0532925A3b844BC9E7595F0BEb0',
         },
       });
 
@@ -290,7 +295,7 @@ describe('Auth Plugin - Permission Enforcement', () => {
           currency: 'USD',
           network: 'polygon',
           token: 'USDC',
-          merchantAddress: '0x742d35Cc6634C0532925a3b844Bc9e7595f0bEb0',
+          merchantAddress: '0x742D35CC6634c0532925A3b844BC9E7595F0BEb0',
           status: 'PENDING',
           expiresAt: new Date(Date.now() + 7 * 24 * 60 * 60 * 1000),
         },
@@ -343,7 +348,7 @@ describe('Auth Plugin - Permission Enforcement', () => {
           currency: 'USD',
           network: 'polygon',
           token: 'USDC',
-          merchantAddress: '0x742d35Cc6634C0532925a3b844Bc9e7595f0bEb0',
+          merchantAddress: '0x742D35CC6634c0532925A3b844BC9E7595F0BEb0',
           status: 'PENDING',
           expiresAt: new Date(Date.now() + 7 * 24 * 60 * 60 * 1000),
         },
@@ -427,7 +432,7 @@ describe('Auth Plugin - Permission Enforcement', () => {
         headers: { authorization: `Bearer ${readOnlyApiKey}` },
         payload: {
           amount: 100,
-          merchant_address: '0x742d35Cc6634C0532925a3b844Bc9e7595f0bEb0',
+          merchant_address: '0x742D35CC6634c0532925A3b844BC9E7595F0BEb0',
         },
       });
       expect(writeResponse.statusCode).toBe(403);
@@ -449,7 +454,7 @@ describe('Auth Plugin - Permission Enforcement', () => {
         headers: { authorization: `Bearer ${writeApiKey}` },
         payload: {
           amount: 100,
-          merchant_address: '0x742d35Cc6634C0532925a3b844Bc9e7595f0bEb0',
+          merchant_address: '0x742D35CC6634c0532925A3b844BC9E7595F0BEb0',
         },
       });
       expect(writeResponse.statusCode).toBe(201);
@@ -473,7 +478,7 @@ describe('Auth Plugin - Permission Enforcement', () => {
         headers: { authorization: `Bearer ${fullAccessApiKey}` },
         payload: {
           amount: 100,
-          merchant_address: '0x742d35Cc6634C0532925a3b844Bc9e7595f0bEb0',
+          merchant_address: '0x742D35CC6634c0532925A3b844BC9E7595F0BEb0',
         },
       });
       expect(writeResponse.statusCode).toBe(201);
