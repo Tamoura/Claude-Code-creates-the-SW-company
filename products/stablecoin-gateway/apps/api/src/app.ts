@@ -14,6 +14,7 @@ import authRoutes from './routes/v1/auth.js';
 import paymentSessionRoutes from './routes/v1/payment-sessions.js';
 import webhookRoutes from './routes/v1/webhooks.js';
 import apiKeyRoutes from './routes/v1/api-keys.js';
+import refundRoutes from './routes/v1/refunds.js';
 import webhookWorkerRoutes from './routes/internal/webhook-worker.js';
 
 // Utils
@@ -99,6 +100,7 @@ export async function buildApp(): Promise<FastifyInstance> {
   await fastify.register(paymentSessionRoutes, { prefix: '/v1/payment-sessions' });
   await fastify.register(webhookRoutes, { prefix: '/v1/webhooks' });
   await fastify.register(apiKeyRoutes, { prefix: '/v1/api-keys' });
+  await fastify.register(refundRoutes, { prefix: '/v1/refunds' });
 
   // Internal routes (for cron jobs, workers, etc.)
   await fastify.register(webhookWorkerRoutes, { prefix: '/internal' });
