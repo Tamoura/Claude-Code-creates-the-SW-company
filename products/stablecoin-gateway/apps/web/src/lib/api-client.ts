@@ -53,6 +53,18 @@ export interface ApiError {
   request_id?: string;
 }
 
+export interface LoginResponse {
+  id: string;
+  email: string;
+  access_token: string;
+  refresh_token: string;
+}
+
+export interface User {
+  id: string;
+  email: string;
+}
+
 export class ApiClient {
   private baseUrl: string;
   private useMock: boolean;
@@ -223,6 +235,50 @@ export class ApiClient {
     // This is a standard workaround for SSE authentication
     const url = `${this.baseUrl}/v1/payment-sessions/${paymentId}/events?token=${encodeURIComponent(token)}`;
     return new EventSource(url);
+  }
+
+  // Authentication methods
+
+  /**
+   * Login with email and password
+   * Stores access token in TokenManager
+   * @returns User object with ID, email, and access token
+   */
+  async login(email: string, password: string): Promise<User & { accessToken: string; refreshToken: string }> {
+    const response = await this.request<LoginResponse>('/v1/auth/login', {
+      method: 'POST',
+      body: JSON.stringify({ email, password }),
+    });
+
+    // Store access token
+    TokenManager.setToken(response.access_token);
+
+    return {
+      id: response.id,
+      email: response.email,
+      accessToken: response.access_token,
+      refreshToken: response.refresh_token,
+    };
+  }
+
+  /**
+   * Logout current user
+   * Clears token and revokes refresh token on backend
+   * @param refreshToken The refresh token to revoke
+   */
+  async logout(refreshToken?: string): Promise<void> {
+    try {
+      if (refreshToken) {
+        // Call logout endpoint to revoke refresh token
+        await this.request('/v1/auth/logout', {
+          method: 'DELETE',
+          body: JSON.stringify({ refresh_token: refreshToken }),
+        });
+      }
+    } finally {
+      // Always clear token, even if request fails
+      TokenManager.clearToken();
+    }
   }
 }
 
