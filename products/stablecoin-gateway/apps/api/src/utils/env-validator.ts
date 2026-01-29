@@ -178,6 +178,48 @@ function validateBlockchain(): ValidationResult {
 }
 
 /**
+ * Validate webhook encryption configuration
+ */
+function validateWebhookEncryption(): ValidationResult {
+  const errors: string[] = [];
+  const warnings: string[] = [];
+
+  const encryptionKey = process.env.WEBHOOK_ENCRYPTION_KEY;
+  const isProduction = process.env.NODE_ENV === 'production';
+
+  if (!encryptionKey) {
+    if (isProduction) {
+      errors.push('WEBHOOK_ENCRYPTION_KEY is required in production');
+      errors.push('Webhook secrets must be encrypted at rest in production environments');
+      errors.push('Generate a key: openssl rand -hex 32');
+    } else {
+      warnings.push('WEBHOOK_ENCRYPTION_KEY not set - webhook secrets will be stored in plaintext');
+      warnings.push('This is acceptable for development, but NOT for production');
+      warnings.push('Generate a key: openssl rand -hex 32');
+    }
+  } else {
+    // Validate key length (should be 32 bytes = 64 hex chars for AES-256)
+    if (encryptionKey.length !== 64) {
+      errors.push(`WEBHOOK_ENCRYPTION_KEY must be 64 hex characters (32 bytes) for AES-256`);
+      errors.push(`Current length: ${encryptionKey.length} characters`);
+      errors.push('Generate a valid key: openssl rand -hex 32');
+    }
+
+    // Validate key is hexadecimal
+    if (!/^[0-9a-fA-F]+$/.test(encryptionKey)) {
+      errors.push('WEBHOOK_ENCRYPTION_KEY must be a hexadecimal string');
+      errors.push('Generate a valid key: openssl rand -hex 32');
+    }
+  }
+
+  return {
+    valid: errors.length === 0,
+    errors,
+    warnings,
+  };
+}
+
+/**
  * Validate all environment variables
  */
 export function validateEnvironment(): void {
@@ -189,6 +231,7 @@ export function validateEnvironment(): void {
     { name: 'Database Configuration', result: validateDatabase() },
     { name: 'Redis Configuration', result: validateRedis() },
     { name: 'Blockchain Configuration', result: validateBlockchain() },
+    { name: 'Webhook Encryption', result: validateWebhookEncryption() },
   ];
 
   let hasErrors = false;
