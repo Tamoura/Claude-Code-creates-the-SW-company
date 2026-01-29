@@ -24,7 +24,8 @@
 | 3104 | stablecoin-gateway | 🟢 Active | http://localhost:3104 |
 | 3105 | quantum-computing-usecases | 🟢 Active | http://localhost:3105 |
 | 3106 | meetingmind | 🟢 Active | http://localhost:3106 |
-| 3107-3199 | *Available* | 🔵 Free | - |
+| 3107 | itil-dashboard | 🟢 Active | http://localhost:3107 |
+| 3108-3199 | *Available* | 🔵 Free | - |
 
 ### Backend APIs (5000-5099)
 
@@ -32,7 +33,8 @@
 |------|---------|--------|-----|
 | 5000 | tech-management-helper | 🟢 Active | http://localhost:5000 |
 | 5001 | stablecoin-gateway | 🟢 Active | http://localhost:5001 |
-| 5002-5099 | *Available* | 🔵 Free | - |
+| 5002 | itil-dashboard | 🟢 Active | http://localhost:5002 |
+| 5003-5099 | *Available* | 🔵 Free | - |
 
 ### Mobile Development (8081-8099)
 
@@ -103,10 +105,12 @@ cd products/tech-management-helper/apps/web && npm run dev &    # :3103
 cd products/stablecoin-gateway/apps/web && npm run dev &        # :3104
 cd products/quantum-computing-usecases/apps/web && npm run dev &# :3105
 cd products/meetingmind/apps/web && npm run dev &               # :3106
+cd products/itil-dashboard/apps/web && npm run dev &            # :3107
 
 # Backend APIs
 cd products/tech-management-helper/apps/api && npm run dev &    # :5000
 cd products/stablecoin-gateway/apps/api && npm run dev &        # :5001
+cd products/itil-dashboard/apps/api && npm run dev &            # :5002
 ```
 
 ### Check Port Availability
