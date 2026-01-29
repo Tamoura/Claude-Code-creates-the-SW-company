@@ -143,7 +143,8 @@ const paymentSessionRoutes: FastifyPluginAsync = async (fastify) => {
       // Build update data with only allowed fields (security: whitelist prevents mass assignment)
       const updateData: any = {};
 
-      // If status is being updated to CONFIRMING or COMPLETED, verify on blockchain
+      // SECURITY: If status is being updated to CONFIRMING or COMPLETED, verify on blockchain
+      // This prevents payment fraud by ensuring transactions are real and match expected parameters
       if (updates.status === 'CONFIRMING' || updates.status === 'COMPLETED') {
         // Require tx_hash when changing to CONFIRMING or COMPLETED
         const txHash = updates.tx_hash || existingSession.txHash;
@@ -166,10 +167,21 @@ const paymentSessionRoutes: FastifyPluginAsync = async (fastify) => {
         );
 
         if (!verification.valid) {
+          logger.warn('Blockchain verification failed', {
+            paymentSessionId: id,
+            txHash,
+            error: verification.error,
+          });
           throw new AppError(400, 'invalid-transaction', verification.error || 'Transaction verification failed');
         }
 
-        // Add verified data to updates
+        logger.info('Blockchain verification succeeded', {
+          paymentSessionId: id,
+          txHash,
+          confirmations: verification.confirmations,
+        });
+
+        // Add verified data to updates (replaces any user-submitted values with verified on-chain data)
         if (updates.tx_hash) {
           updateData.txHash = updates.tx_hash;
         }
