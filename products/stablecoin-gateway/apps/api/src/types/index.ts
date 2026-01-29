@@ -12,7 +12,7 @@ export interface CreatePaymentSessionRequest {
   success_url?: string;
   cancel_url?: string;
   metadata?: Record<string, unknown>;
-  idempotency_key?: string;
+  // NOTE: idempotency_key removed - use Idempotency-Key header instead
 }
 
 export interface PaymentSessionResponse {

@@ -10,10 +10,12 @@ export class PaymentService {
    *
    * Note: Input validation is handled by createPaymentSessionSchema in the route handler.
    * This ensures all addresses are checksummed and valid before reaching this service.
+   * Idempotency key is passed separately from header (not body) per API contract.
    */
   async createPaymentSession(
     userId: string,
-    data: CreatePaymentSessionRequest
+    data: CreatePaymentSessionRequest,
+    idempotencyKey?: string
   ): Promise<PaymentSession> {
     const id = generatePaymentSessionId();
     const expiresAt = new Date();
@@ -32,7 +34,7 @@ export class PaymentService {
         successUrl: data.success_url,
         cancelUrl: data.cancel_url,
         metadata: data.metadata as any,
-        idempotencyKey: data.idempotency_key,
+        idempotencyKey,
         expiresAt,
         status: 'PENDING',
       },

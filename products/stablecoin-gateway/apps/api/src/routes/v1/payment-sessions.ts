@@ -19,22 +19,21 @@ const paymentSessionRoutes: FastifyPluginAsync = async (fastify) => {
       const paymentService = new PaymentService(fastify.prisma);
 
       // IDEMPOTENCY: Check if payment already exists with this idempotency key
-      // Prevents duplicate payments from network retries
-      if (body.idempotency_key) {
+      // Read from Idempotency-Key header per API contract (not body)
+      // Scoped to userId to prevent cross-tenant conflicts
+      const idempotencyKey = request.headers['idempotency-key'] as string | undefined;
+
+      if (idempotencyKey) {
         const existingSession = await fastify.prisma.paymentSession.findUnique({
-          where: { idempotencyKey: body.idempotency_key },
+          where: {
+            userId_idempotencyKey: {
+              userId,
+              idempotencyKey,
+            },
+          },
         });
 
         if (existingSession) {
-          // Verify the existing session belongs to the same user
-          if (existingSession.userId !== userId) {
-            throw new AppError(
-              409,
-              'idempotency-key-conflict',
-              'Idempotency key already used by another user'
-            );
-          }
-
           // Return existing payment session (idempotent behavior)
           const baseUrl = process.env.FRONTEND_URL || 'http://localhost:3101';
           const response = paymentService.toResponse(existingSession, baseUrl);
@@ -42,7 +41,7 @@ const paymentSessionRoutes: FastifyPluginAsync = async (fastify) => {
           logger.info('Payment session returned (idempotent)', {
             userId,
             paymentSessionId: existingSession.id,
-            idempotencyKey: body.idempotency_key,
+            idempotencyKey,
           });
 
           // Return 200 (not 201) to indicate this is an existing resource
@@ -50,7 +49,7 @@ const paymentSessionRoutes: FastifyPluginAsync = async (fastify) => {
         }
       }
 
-      const session = await paymentService.createPaymentSession(userId, body);
+      const session = await paymentService.createPaymentSession(userId, body, idempotencyKey);
 
       const baseUrl = process.env.FRONTEND_URL || 'http://localhost:3101';
       const response = paymentService.toResponse(session, baseUrl);
@@ -59,7 +58,7 @@ const paymentSessionRoutes: FastifyPluginAsync = async (fastify) => {
         userId,
         paymentSessionId: session.id,
         amount: session.amount,
-        idempotencyKey: body.idempotency_key,
+        idempotencyKey,
       });
 
       return reply.code(201).send(response);
@@ -182,13 +181,63 @@ const paymentSessionRoutes: FastifyPluginAsync = async (fastify) => {
       // - Create status conflicts (one marks FAILED, another COMPLETED)
       const updatedSession = await fastify.prisma.$transaction(async (tx) => {
         // Get existing session with FOR UPDATE lock (prevents concurrent modifications)
-        const existingSession = await tx.paymentSession.findFirst({
-          where: { id, userId },
-        });
+        // Prisma doesn't support FOR UPDATE natively, so use raw SQL
+        const existingSessionRows = await tx.$queryRaw<Array<{
+          id: string;
+          user_id: string;
+          status: string;
+          amount: any;
+          currency: string;
+          description: string | null;
+          network: string;
+          token: string;
+          merchant_address: string;
+          customer_address: string | null;
+          tx_hash: string | null;
+          block_number: number | null;
+          confirmations: number;
+          success_url: string | null;
+          cancel_url: string | null;
+          metadata: any;
+          idempotency_key: string | null;
+          created_at: Date;
+          expires_at: Date;
+          completed_at: Date | null;
+        }>>`
+          SELECT * FROM payment_sessions
+          WHERE id = ${id} AND user_id = ${userId}
+          FOR UPDATE
+        `;
 
-        if (!existingSession) {
+        if (existingSessionRows.length === 0) {
           throw new AppError(404, 'payment-not-found', 'Payment session not found');
         }
+
+        const row = existingSessionRows[0];
+
+        // Map snake_case to camelCase for compatibility with rest of code
+        const existingSession = {
+          id: row.id,
+          userId: row.user_id,
+          status: row.status,
+          amount: row.amount,
+          currency: row.currency,
+          description: row.description,
+          network: row.network,
+          token: row.token,
+          merchantAddress: row.merchant_address,
+          customerAddress: row.customer_address,
+          txHash: row.tx_hash,
+          blockNumber: row.block_number,
+          confirmations: row.confirmations,
+          successUrl: row.success_url,
+          cancelUrl: row.cancel_url,
+          metadata: row.metadata,
+          idempotencyKey: row.idempotency_key,
+          createdAt: row.created_at,
+          expiresAt: row.expires_at,
+          completedAt: row.completed_at,
+        };
 
         // SECURITY: Prevent modifying already-completed payments
         if (existingSession.status === 'COMPLETED' && updates.status !== 'COMPLETED') {
@@ -306,57 +355,42 @@ const paymentSessionRoutes: FastifyPluginAsync = async (fastify) => {
   // GET /v1/payment-sessions/:id/events (SSE)
   fastify.get('/:id/events', async (request, reply) => {
     try {
-      let userId: string;
       const { id } = request.params as { id: string };
 
-      // Try to get token from query parameter first (for EventSource compatibility)
-      const { token } = request.query as { token?: string };
-
-      if (token) {
-        // Manually verify JWT from query parameter
-        try {
-          const decoded = fastify.jwt.verify(token) as {
-            userId: string;
-            type?: string;
-            paymentSessionId?: string;
-          };
-          userId = decoded.userId;
-
-          // If this is an SSE token, validate it more strictly
-          if (decoded.type === 'sse') {
-            // Verify token type is correct
-            if (decoded.type !== 'sse') {
-              reply.raw.writeHead(401, { 'Content-Type': 'text/plain' });
-              reply.raw.end('Unauthorized: Invalid token type');
-              return;
-            }
-
-            // Verify token is scoped to this payment session
-            if (decoded.paymentSessionId !== id) {
-              reply.raw.writeHead(403, { 'Content-Type': 'text/plain' });
-              reply.raw.end('Access denied: Token not valid for this payment session');
-              return;
-            }
-          }
-          // If it's not an SSE token (regular access token), allow it for backward compatibility
-        } catch (error) {
-          // Invalid or expired token in query parameter
-          reply.raw.writeHead(401, { 'Content-Type': 'text/plain' });
-          reply.raw.end('Unauthorized: Invalid or expired token');
-          return;
-        }
-      } else {
-        // Fall back to Authorization header (for backward compatibility)
-        try {
-          await request.jwtVerify();
-          userId = (request.user as { userId: string }).userId;
-        } catch (error) {
-          // No token provided at all
-          reply.raw.writeHead(401, { 'Content-Type': 'text/plain' });
-          reply.raw.end('Unauthorized: Missing authentication token');
-          return;
-        }
+      // SECURITY: Only accept Authorization header (no query tokens - they leak in logs/history)
+      // Require short-lived SSE tokens (type='sse'), not regular access tokens
+      const authHeader = request.headers.authorization;
+      if (!authHeader || !authHeader.startsWith('Bearer ')) {
+        reply.raw.writeHead(401, { 'Content-Type': 'text/plain' });
+        reply.raw.end('Unauthorized: Missing or invalid authentication token');
+        return;
       }
+
+      const token = authHeader.substring(7);
+      let decoded: { userId: string; type?: string; paymentSessionId?: string };
+      try {
+        decoded = fastify.jwt.verify(token) as { userId: string; type?: string; paymentSessionId?: string };
+      } catch (error) {
+        reply.raw.writeHead(401, { 'Content-Type': 'text/plain' });
+        reply.raw.end('Unauthorized: Invalid or expired token');
+        return;
+      }
+
+      // Verify this is an SSE token (not a regular access token)
+      if (decoded.type !== 'sse') {
+        reply.raw.writeHead(403, { 'Content-Type': 'text/plain' });
+        reply.raw.end('Access denied: SSE endpoint requires SSE token (use POST /v1/auth/sse-token)');
+        return;
+      }
+
+      // Verify token is scoped to this payment session
+      if (decoded.paymentSessionId !== id) {
+        reply.raw.writeHead(403, { 'Content-Type': 'text/plain' });
+        reply.raw.end('Access denied: Token not valid for this payment session');
+        return;
+      }
+
+      const userId = decoded.userId;
 
       // Get payment session and verify ownership
       const session = await fastify.prisma.paymentSession.findUnique({

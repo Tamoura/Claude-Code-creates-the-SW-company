@@ -56,7 +56,7 @@ model RefreshToken {
 model PaymentSession {
   id              String  @id @default(cuid())
   userId          String  @map("user_id")
-  idempotencyKey  String? @unique @map("idempotency_key")
+  idempotencyKey  String? @map("idempotency_key")
 
   // Payment details
   amount      Decimal @db.Decimal(10, 2)
@@ -97,6 +97,10 @@ model PaymentSession {
   @@index([userId, status])
   @@index([status, createdAt])
   @@index([txHash])
+
+  // Composite unique constraint for idempotency scoped to user
+  @@unique([userId, idempotencyKey], name: "userId_idempotencyKey")
+
   @@map("payment_sessions")
 }
 

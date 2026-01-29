@@ -220,7 +220,10 @@ describe('SSE Token Generation and Validation', () => {
 
       const response = await app.inject({
         method: 'GET',
-        url: `/v1/payment-sessions/${paymentSessionId}/events?token=${encodeURIComponent(expiredToken)}`,
+        url: `/v1/payment-sessions/${paymentSessionId}/events`,
+        headers: {
+          authorization: `Bearer ${expiredToken}`,
+        },
       });
 
       expect(response.statusCode).toBe(401);
@@ -265,7 +268,10 @@ describe('SSE Token Generation and Validation', () => {
       // Try to use token for second payment session (should fail)
       const response = await app.inject({
         method: 'GET',
-        url: `/v1/payment-sessions/${paymentSession2Id}/events?token=${encodeURIComponent(token)}`,
+        url: `/v1/payment-sessions/${paymentSession2Id}/events`,
+        headers: {
+          authorization: `Bearer ${token}`,
+        },
       });
 
       expect(response.statusCode).toBe(403);

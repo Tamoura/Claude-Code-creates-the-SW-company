@@ -109,14 +109,20 @@ export class BlockchainMonitorService {
       // ERC-20 Transfer event signature: Transfer(address,address,uint256)
       const transferEventSignature = ethers.id('Transfer(address,address,uint256)');
 
-      const transferEvent = receipt.logs.find(log => {
+      // FIX: Filter for transfer matching BOTH recipient AND amount
+      // Transactions can have multiple transfers (fees, multi-send), need to find the right one
+      const expectedMerchantAddress = paymentSession.merchantAddress.toLowerCase();
+      const decimals = 6; // USDC and USDT use 6 decimals
+
+      // Find all Transfer events for this token
+      const transferEvents = receipt.logs.filter(log => {
         return (
           log.address.toLowerCase() === expectedTokenAddress.toLowerCase() &&
           log.topics[0] === transferEventSignature
         );
       });
 
-      if (!transferEvent) {
+      if (transferEvents.length === 0) {
         return {
           valid: false,
           confirmations,
@@ -126,33 +132,44 @@ export class BlockchainMonitorService {
         };
       }
 
-      // Decode Transfer event
-      // topics[0] = event signature
-      // topics[1] = from address (indexed, padded to 32 bytes)
-      // topics[2] = to address (indexed, padded to 32 bytes)
-      // data = amount (uint256)
+      // Find the transfer that matches both recipient and amount
+      // Decode Transfer event: topics[1] = from, topics[2] = to, data = amount
+      let matchingTransfer: typeof transferEvents[0] | undefined;
+      let fromAddress = '';
 
-      const fromAddress = '0x' + transferEvent.topics[1].slice(26); // Remove 0x and padding
-      const toAddress = '0x' + transferEvent.topics[2].slice(26); // Remove 0x and padding
-      const amountHex = transferEvent.data;
-      const amountWei = BigInt(amountHex);
+      for (const log of transferEvents) {
+        const toAddress = '0x' + log.topics[2].slice(26); // Remove 0x and padding
+        const amountWei = BigInt(log.data);
+        const amountUsd = Number(amountWei) / Math.pow(10, decimals);
+        const amountDiff = Math.abs(amountUsd - paymentSession.amount);
 
-      // USDC and USDT use 6 decimals (not 18 like ETH)
-      const decimals = 6;
-      const amountUsd = Number(amountWei) / Math.pow(10, decimals);
+        // Check if this transfer matches merchant address AND expected amount (within 0.01 USD tolerance)
+        if (
+          toAddress.toLowerCase() === expectedMerchantAddress &&
+          amountDiff <= 0.01
+        ) {
+          matchingTransfer = log;
+          fromAddress = '0x' + log.topics[1].slice(26);
+          break;
+        }
+      }
 
-      // Verify recipient matches merchant address
-      if (toAddress.toLowerCase() !== paymentSession.merchantAddress.toLowerCase()) {
+      if (!matchingTransfer) {
         return {
           valid: false,
           confirmations,
           blockNumber: receipt.blockNumber,
-          sender: fromAddress,
-          error: `Recipient mismatch (expected ${paymentSession.merchantAddress}, got ${toAddress})`,
+          sender: fromAddress || ('0x' + transferEvents[0].topics[1].slice(26)),
+          error: `No matching transfer found (expected ${paymentSession.amount} ${paymentSession.token} to ${paymentSession.merchantAddress}). Found ${transferEvents.length} transfer(s) but none matched recipient and amount.`,
         };
       }
 
-      // Verify amount matches (within 0.01 USD tolerance for rounding)
+      // Use the matching transfer data
+      const toAddress = '0x' + matchingTransfer.topics[2].slice(26);
+      const amountWei = BigInt(matchingTransfer.data);
+      const amountUsd = Number(amountWei) / Math.pow(10, decimals);
+
+      // Verification already done in the loop above, but keep for clarity
       const amountDiff = Math.abs(amountUsd - paymentSession.amount);
       if (amountDiff > 0.01) {
         return {

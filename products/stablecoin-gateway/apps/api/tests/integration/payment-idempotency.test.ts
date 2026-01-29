@@ -40,11 +40,11 @@ describe('Payment Session Idempotency', () => {
         url: '/v1/payment-sessions',
         headers: {
           authorization: `Bearer ${accessToken}`,
+          'idempotency-key': idempotencyKey,
         },
         payload: {
           amount: 100,
           merchant_address: '0xd8dA6BF26964aF9D7eEd9e03E53415D37aA96045',
-          idempotency_key: idempotencyKey,
         },
       });
 
@@ -64,12 +64,12 @@ describe('Payment Session Idempotency', () => {
         url: '/v1/payment-sessions',
         headers: {
           authorization: `Bearer ${accessToken}`,
+          'idempotency-key': idempotencyKey,
         },
         payload: {
           amount: 200,
           merchant_address: '0xd8dA6BF26964aF9D7eEd9e03E53415D37aA96045',
           description: 'Original payment',
-          idempotency_key: idempotencyKey,
         },
       });
 
@@ -82,12 +82,12 @@ describe('Payment Session Idempotency', () => {
         url: '/v1/payment-sessions',
         headers: {
           authorization: `Bearer ${accessToken}`,
+          'idempotency-key': idempotencyKey,
         },
         payload: {
           amount: 200,
           merchant_address: '0xd8dA6BF26964aF9D7eEd9e03E53415D37aA96045',
           description: 'Duplicate attempt', // Different data
-          idempotency_key: idempotencyKey,
         },
       });
 
@@ -100,22 +100,24 @@ describe('Payment Session Idempotency', () => {
       expect(secondBody.amount).toBe(200);
     });
 
-    it('should reject idempotency key used by different user', async () => {
+    it('should allow idempotency key reuse by different user (scoped to userId)', async () => {
       const idempotencyKey = `test-${Date.now()}-3`;
 
       // First user creates payment
-      await app.inject({
+      const firstResponse = await app.inject({
         method: 'POST',
         url: '/v1/payment-sessions',
         headers: {
           authorization: `Bearer ${accessToken}`,
+          'idempotency-key': idempotencyKey,
         },
         payload: {
           amount: 100,
           merchant_address: '0xd8dA6BF26964aF9D7eEd9e03E53415D37aA96045',
-          idempotency_key: idempotencyKey,
         },
       });
+      expect(firstResponse.statusCode).toBe(201);
+      const firstBody = firstResponse.json();
 
       // Create second user
       const signupResponse = await app.inject({
@@ -128,23 +130,23 @@ describe('Payment Session Idempotency', () => {
       });
       const otherToken = signupResponse.json().access_token;
 
-      // Second user tries to use same idempotency key
+      // Second user can use same idempotency key (scoped to their userId)
       const response = await app.inject({
         method: 'POST',
         url: '/v1/payment-sessions',
         headers: {
           authorization: `Bearer ${otherToken}`,
+          'idempotency-key': idempotencyKey,
         },
         payload: {
           amount: 100,
           merchant_address: '0xd8dA6BF26964aF9D7eEd9e03E53415D37aA96045',
-          idempotency_key: idempotencyKey,
         },
       });
 
-      expect(response.statusCode).toBe(409); // Conflict
+      expect(response.statusCode).toBe(201); // Success - different payment created
       const body = response.json();
-      expect(body.detail).toContain('already used by another user');
+      expect(body.id).not.toBe(firstBody.id); // Different payment ID
     });
 
     it('should allow creating payment without idempotency key', async () => {
@@ -211,12 +213,12 @@ describe('Payment Session Idempotency', () => {
         url: '/v1/payment-sessions',
         headers: {
           authorization: `Bearer ${accessToken}`,
+          'idempotency-key': idempotencyKey,
         },
         payload: {
           amount: 500,
           merchant_address: '0xd8dA6BF26964aF9D7eEd9e03E53415D37aA96045',
           description: 'First request',
-          idempotency_key: idempotencyKey,
         },
       });
 
@@ -229,12 +231,12 @@ describe('Payment Session Idempotency', () => {
         url: '/v1/payment-sessions',
         headers: {
           authorization: `Bearer ${accessToken}`,
+          'idempotency-key': idempotencyKey,
         },
         payload: {
           amount: 300, // Different valid amount
           merchant_address: '0x5aAeb6053F3E94C9b9A09f33669435E7Ef1BeAed', // Different valid checksummed address
           description: 'Retry attempt',
-          idempotency_key: idempotencyKey,
         },
       });
 
