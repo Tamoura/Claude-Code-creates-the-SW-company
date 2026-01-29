@@ -54,8 +54,9 @@ model RefreshToken {
 // ==================== Payments ====================
 
 model PaymentSession {
-  id     String @id @default(cuid())
-  userId String @map("user_id")
+  id              String  @id @default(cuid())
+  userId          String  @map("user_id")
+  idempotencyKey  String? @map("idempotency_key")
 
   // Payment details
   amount      Decimal @db.Decimal(10, 2)
@@ -96,6 +97,10 @@ model PaymentSession {
   @@index([userId, status])
   @@index([status, createdAt])
   @@index([txHash])
+
+  // Composite unique constraint for idempotency scoped to user
+  @@unique([userId, idempotencyKey], name: "userId_idempotencyKey")
+
   @@map("payment_sessions")
 }
 
@@ -199,8 +204,9 @@ model WebhookDelivery {
   endpointId String @map("endpoint_id")
 
   // Event details
-  eventType String @map("event_type")
-  payload   Json
+  eventType  String @map("event_type")
+  payload    Json
+  resourceId String @map("resource_id") // Payment session ID or refund ID (for idempotency)
 
   // Delivery state
   attempts Int           @default(0)
@@ -219,6 +225,8 @@ model WebhookDelivery {
   // Relations
   endpoint WebhookEndpoint @relation(fields: [endpointId], references: [id], onDelete: Cascade)
 
+  // Idempotency: Prevent duplicate deliveries for same event on same resource
+  @@unique([endpointId, eventType, resourceId], name: "webhook_delivery_idempotency")
   @@index([endpointId, status])
   @@index([status, nextAttemptAt])
   @@map("webhook_deliveries")

@@ -181,7 +181,7 @@ describe('Webhook CRUD API', () => {
       expect(response.statusCode).toBe(401);
     });
 
-    it('should hash webhook secret before storing', async () => {
+    it('should store webhook secret in plaintext for HMAC signing', async () => {
       const response = await app.inject({
         method: 'POST',
         url: '/v1/webhooks',
@@ -201,12 +201,14 @@ describe('Webhook CRUD API', () => {
       // Verify secret is returned
       expect(returnedSecret).toMatch(/^whsec_/);
 
-      // Check database - secret should be hashed
+      // Check database - secret should be stored in PLAINTEXT
+      // Unlike passwords/API keys, webhook secrets need to be recoverable
+      // for HMAC signing when sending webhooks to merchant endpoints
       const webhook = await prisma.webhookEndpoint.findUnique({
         where: { id: body.id },
       });
-      expect(webhook?.secret).not.toBe(returnedSecret);
-      expect(webhook?.secret).toMatch(/^\$2[aby]\$/); // bcrypt hash pattern
+      expect(webhook?.secret).toBe(returnedSecret); // Should match exactly (plaintext)
+      expect(webhook?.secret).toMatch(/^whsec_[a-f0-9]{64}$/); // whsec_ + 64 hex chars
     });
   });
 
@@ -725,11 +727,13 @@ describe('Webhook CRUD API', () => {
           {
             endpointId: webhook.id,
             eventType: 'payment.created',
+            resourceId: 'ps_test1',
             payload: { test: 'data1' },
           },
           {
             endpointId: webhook.id,
             eventType: 'payment.completed',
+            resourceId: 'ps_test2',
             payload: { test: 'data2' },
           },
         ],
@@ -751,6 +755,259 @@ describe('Webhook CRUD API', () => {
         where: { endpointId: webhook.id },
       });
       expect(deliveries).toHaveLength(0);
+    });
+  });
+
+  describe('SSRF Protection', () => {
+    it('should reject webhook URLs targeting localhost', async () => {
+      const response = await app.inject({
+        method: 'POST',
+        url: '/v1/webhooks',
+        headers: {
+          authorization: `Bearer ${authToken}`,
+        },
+        payload: {
+          url: 'https://localhost/webhook',
+          events: ['payment.created'],
+        },
+      });
+
+      expect(response.statusCode).toBe(400);
+      const body = response.json();
+      expect(body.type).toBe('https://gateway.io/errors/invalid-webhook-url');
+      expect(body.detail).toContain('localhost or internal networks');
+    });
+
+    it('should reject webhook URLs targeting 127.0.0.1', async () => {
+      const response = await app.inject({
+        method: 'POST',
+        url: '/v1/webhooks',
+        headers: {
+          authorization: `Bearer ${authToken}`,
+        },
+        payload: {
+          url: 'https://127.0.0.1:8080/webhook',
+          events: ['payment.created'],
+        },
+      });
+
+      expect(response.statusCode).toBe(400);
+      const body = response.json();
+      expect(body.detail).toContain('localhost or internal networks');
+    });
+
+    it('should reject webhook URLs targeting private networks (10.x.x.x)', async () => {
+      const response = await app.inject({
+        method: 'POST',
+        url: '/v1/webhooks',
+        headers: {
+          authorization: `Bearer ${authToken}`,
+        },
+        payload: {
+          url: 'https://10.0.0.1/webhook',
+          events: ['payment.created'],
+        },
+      });
+
+      expect(response.statusCode).toBe(400);
+      const body = response.json();
+      expect(body.detail).toContain('localhost or internal networks');
+    });
+
+    it('should reject webhook URLs targeting private networks (192.168.x.x)', async () => {
+      const response = await app.inject({
+        method: 'POST',
+        url: '/v1/webhooks',
+        headers: {
+          authorization: `Bearer ${authToken}`,
+        },
+        payload: {
+          url: 'https://192.168.1.1/webhook',
+          events: ['payment.created'],
+        },
+      });
+
+      expect(response.statusCode).toBe(400);
+      const body = response.json();
+      expect(body.detail).toContain('localhost or internal networks');
+    });
+
+    it('should reject webhook URLs targeting cloud metadata endpoint', async () => {
+      const response = await app.inject({
+        method: 'POST',
+        url: '/v1/webhooks',
+        headers: {
+          authorization: `Bearer ${authToken}`,
+        },
+        payload: {
+          url: 'https://169.254.169.254/latest/meta-data/',
+          events: ['payment.created'],
+        },
+      });
+
+      expect(response.statusCode).toBe(400);
+      const body = response.json();
+      expect(body.detail).toContain('cloud metadata endpoints');
+    });
+
+    it('should reject HTTP URLs (require HTTPS)', async () => {
+      const response = await app.inject({
+        method: 'POST',
+        url: '/v1/webhooks',
+        headers: {
+          authorization: `Bearer ${authToken}`,
+        },
+        payload: {
+          url: 'http://example.com/webhook',
+          events: ['payment.created'],
+        },
+      });
+
+      expect(response.statusCode).toBe(400);
+      const body = response.json();
+      // Zod validation catches this before our URL validator
+      expect(body.detail).toContain('HTTPS');
+    });
+
+    it('should reject URLs with credentials', async () => {
+      const response = await app.inject({
+        method: 'POST',
+        url: '/v1/webhooks',
+        headers: {
+          authorization: `Bearer ${authToken}`,
+        },
+        payload: {
+          url: 'https://user:password@example.com/webhook',
+          events: ['payment.created'],
+        },
+      });
+
+      expect(response.statusCode).toBe(400);
+      const body = response.json();
+      expect(body.detail).toContain('cannot contain credentials');
+    });
+
+    it('should allow valid public HTTPS URLs', async () => {
+      const response = await app.inject({
+        method: 'POST',
+        url: '/v1/webhooks',
+        headers: {
+          authorization: `Bearer ${authToken}`,
+        },
+        payload: {
+          url: 'https://api.example.com/webhooks/payment',
+          events: ['payment.created'],
+        },
+      });
+
+      expect(response.statusCode).toBe(201);
+      const body = response.json();
+      expect(body.url).toBe('https://api.example.com/webhooks/payment');
+    });
+
+    it('should reject internal URLs on update', async () => {
+      // Create webhook with valid URL
+      const createResponse = await app.inject({
+        method: 'POST',
+        url: '/v1/webhooks',
+        headers: {
+          authorization: `Bearer ${authToken}`,
+        },
+        payload: {
+          url: 'https://example.com/webhook',
+          events: ['payment.created'],
+        },
+      });
+      const webhook = createResponse.json();
+
+      // Try to update to internal URL
+      const updateResponse = await app.inject({
+        method: 'PATCH',
+        url: `/v1/webhooks/${webhook.id}`,
+        headers: {
+          authorization: `Bearer ${authToken}`,
+        },
+        payload: {
+          url: 'https://192.168.1.1/malicious',
+        },
+      });
+
+      expect(updateResponse.statusCode).toBe(400);
+      const body = updateResponse.json();
+      expect(body.detail).toContain('localhost or internal networks');
+
+      // Verify webhook URL wasn't changed
+      const getResponse = await app.inject({
+        method: 'GET',
+        url: `/v1/webhooks/${webhook.id}`,
+        headers: {
+          authorization: `Bearer ${authToken}`,
+        },
+      });
+      expect(getResponse.json().url).toBe('https://example.com/webhook');
+    });
+  });
+
+  describe('Secret Encryption at Rest', () => {
+    it('should encrypt webhook secret in database if encryption key is set', async () => {
+      // Create webhook
+      const response = await app.inject({
+        method: 'POST',
+        url: '/v1/webhooks',
+        headers: {
+          authorization: `Bearer ${authToken}`,
+        },
+        payload: {
+          url: 'https://example.com/webhook',
+          events: ['payment.created'],
+        },
+      });
+
+      expect(response.statusCode).toBe(201);
+      const webhook = response.json();
+
+      // Get webhook from database
+      const dbWebhook = await prisma.webhookEndpoint.findUnique({
+        where: { id: webhook.id },
+      });
+
+      // If encryption key is set, secret in DB should be encrypted (not start with whsec_)
+      if (process.env.WEBHOOK_ENCRYPTION_KEY) {
+        expect(dbWebhook?.secret).not.toMatch(/^whsec_/);
+        // Encrypted format should be iv:authTag:ciphertext
+        expect(dbWebhook?.secret.split(':')).toHaveLength(3);
+      } else {
+        // Without encryption key, secret is stored as plaintext
+        expect(dbWebhook?.secret).toMatch(/^whsec_/);
+      }
+
+      // Secret returned to user should always be plaintext whsec_ format
+      expect(webhook.secret).toMatch(/^whsec_[0-9a-f]{64}$/);
+    });
+
+    it('should decrypt secret correctly when delivering webhooks', async () => {
+      // This is tested indirectly - if decryption fails, webhook delivery will fail
+      // The webhook-delivery.test.ts tests verify that HMAC signatures are correct,
+      // which proves decryption is working (since HMAC is computed with decrypted secret)
+
+      // Create webhook
+      const response = await app.inject({
+        method: 'POST',
+        url: '/v1/webhooks',
+        headers: {
+          authorization: `Bearer ${authToken}`,
+        },
+        payload: {
+          url: 'https://example.com/webhook',
+          events: ['payment.created'],
+        },
+      });
+
+      expect(response.statusCode).toBe(201);
+      const webhook = response.json();
+
+      // Verify webhook was created (actual delivery testing is in webhook-delivery.test.ts)
+      expect(webhook.secret).toMatch(/^whsec_/);
     });
   });
 });

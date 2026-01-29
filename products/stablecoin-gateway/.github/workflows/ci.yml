@@ -69,7 +69,7 @@ jobs:
         env:
           DATABASE_URL: postgresql://test:test@localhost:5432/stablecoin_gateway_test
           REDIS_URL: redis://localhost:6379
-          JWT_SECRET: test-secret-key
+          JWT_SECRET: test-secret-key-for-ci-testing-environment-that-meets-64-char-minimum-requirement
           NODE_ENV: test
 
       - name: Upload API coverage

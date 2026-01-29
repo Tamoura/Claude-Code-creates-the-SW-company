@@ -10,7 +10,7 @@
  *
  * Security:
  * - All endpoints require authentication (JWT or API key)
- * - Webhook secrets are hashed before storage (bcrypt)
+ * - Webhook secrets stored in plaintext (needed for HMAC signing)
  * - Secrets only shown once during creation
  * - HTTPS-only URLs enforced
  * - Ownership verified on all operations
@@ -18,11 +18,13 @@
 
 import { FastifyPluginAsync } from 'fastify';
 import { ZodError } from 'zod';
+import { Prisma } from '@prisma/client';
 import { createWebhookSchema, updateWebhookSchema, validateBody } from '../../utils/validation.js';
 import { AppError } from '../../types/index.js';
 import { logger } from '../../utils/logger.js';
+import { validateWebhookUrl } from '../../utils/url-validator.js';
+import { encryptSecret } from '../../utils/encryption.js';
 import crypto from 'crypto';
-import bcrypt from 'bcrypt';
 
 /**
  * Generate a webhook secret with whsec_ prefix (Stripe-style)
@@ -36,14 +38,26 @@ function generateWebhookSecret(): string {
 }
 
 /**
- * Hash webhook secret using bcrypt for secure storage
+ * SECURITY NOTE: Webhook Secrets Storage
  *
- * SECURITY: Never store plaintext secrets in database.
- * Bcrypt provides one-way hashing resistant to rainbow tables.
+ * Unlike passwords and API keys, webhook secrets must be recoverable for HMAC signing.
+ *
+ * Storage approach:
+ * - Passwords: Never need to be recovered → one-way hash (bcrypt)
+ * - API keys: Verify incoming requests → one-way hash (SHA-256) + compare
+ * - Webhook secrets: Sign outgoing payloads → must be recoverable
+ *
+ * We use AES-256-GCM encryption at rest for webhook secrets:
+ * - If WEBHOOK_ENCRYPTION_KEY is set: secrets encrypted before storage
+ * - If not set: secrets stored in plaintext (backwards compatible)
+ *
+ * Why encryption (not hashing)?
+ * We need the plaintext secret to compute HMAC-SHA256 signatures when sending
+ * webhooks to merchant endpoints. One-way hashing would make signing impossible.
+ *
+ * Industry standard: Stripe, GitHub, and other webhook providers all store
+ * webhook secrets in a recoverable format (encrypted at rest or plaintext).
  */
-async function hashWebhookSecret(secret: string): Promise<string> {
-  return bcrypt.hash(secret, 10);
-}
 
 /**
  * Format webhook response (exclude secret from output)
@@ -93,16 +107,23 @@ const webhookRoutes: FastifyPluginAsync = async (fastify) => {
       const body = validateBody(createWebhookSchema, request.body);
       const userId = request.currentUser!.id;
 
+      // Validate webhook URL for SSRF protection
+      validateWebhookUrl(body.url);
+
       // Generate webhook secret
       const secret = generateWebhookSecret();
-      const hashedSecret = await hashWebhookSecret(secret);
+
+      // Encrypt secret if encryption is available, otherwise store plaintext
+      const secretToStore = process.env.WEBHOOK_ENCRYPTION_KEY
+        ? encryptSecret(secret)
+        : secret;
 
       // Create webhook endpoint
       const webhook = await fastify.prisma.webhookEndpoint.create({
         data: {
           userId,
           url: body.url,
-          secret: hashedSecret,
+          secret: secretToStore, // Encrypted (if key available) or plaintext
           events: body.events,
           enabled: body.enabled ?? true,
           description: body.description,
@@ -212,8 +233,10 @@ const webhookRoutes: FastifyPluginAsync = async (fastify) => {
       }
 
       // Build update data (whitelist - prevent updating secret)
-      const updateData: any = {};
+      const updateData: Prisma.WebhookEndpointUpdateInput = {};
       if (updates.url !== undefined) {
+        // Validate new URL for SSRF protection
+        validateWebhookUrl(updates.url);
         updateData.url = updates.url;
       }
       if (updates.events !== undefined) {

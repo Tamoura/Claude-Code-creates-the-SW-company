@@ -2,19 +2,17 @@ import { buildApp } from '../../src/app';
 import { FastifyInstance } from 'fastify';
 
 /**
- * SSE Query Token Authentication Tests
+ * SSE Security Tests
  *
- * Tests authentication via query parameter for SSE endpoints.
- * This is necessary because EventSource API cannot set custom headers.
- *
- * Note: These tests focus on authentication and authorization, not full SSE streaming.
- * SSE connections stay open indefinitely, which makes them difficult to test with inject().
+ * Verifies that query parameter authentication is REJECTED for SSE endpoints.
+ * Query tokens leak in logs, browser history, and referrer headers.
+ * Only Authorization header with short-lived SSE tokens should be accepted.
  */
 
-describe('SSE Query Token Authentication', () => {
+describe('SSE Query Token Security', () => {
   let app: FastifyInstance;
-  let validAccessToken: string;
-  let invalidToken: string;
+  let accessToken: string;
+  let sseToken: string;
   let paymentId: string;
 
   beforeAll(async () => {
@@ -25,20 +23,19 @@ describe('SSE Query Token Authentication', () => {
       method: 'POST',
       url: '/v1/auth/signup',
       payload: {
-        email: 'sse-query-test@example.com',
+        email: 'sse-security-test@example.com',
         password: 'SecurePass123!',
       },
     });
 
-    validAccessToken = signupResponse.json().access_token;
-    invalidToken = 'invalid.jwt.token';
+    accessToken = signupResponse.json().access_token;
 
     // Create payment session
     const paymentResponse = await app.inject({
       method: 'POST',
       url: '/v1/payment-sessions',
       headers: {
-        authorization: `Bearer ${validAccessToken}`,
+        authorization: `Bearer ${accessToken}`,
       },
       payload: {
         amount: 100.0,
@@ -46,82 +43,116 @@ describe('SSE Query Token Authentication', () => {
       },
     });
 
-    if (paymentResponse.statusCode === 201) {
-      paymentId = paymentResponse.json().id;
-    } else {
-      console.error('Payment creation failed:', paymentResponse.statusCode, paymentResponse.json());
-    }
+    paymentId = paymentResponse.json().id;
+
+    // Get SSE token for this payment
+    const sseTokenResponse = await app.inject({
+      method: 'POST',
+      url: '/v1/auth/sse-token',
+      headers: {
+        authorization: `Bearer ${accessToken}`,
+      },
+      payload: {
+        payment_session_id: paymentId,
+      },
+    });
+
+    sseToken = sseTokenResponse.json().token;
   });
 
   afterAll(async () => {
     await app.close();
   });
 
-  it('should reject requests with missing token parameter', async () => {
-    if (!paymentId) {
-      console.log('Skipping: payment creation failed');
-      return;
-    }
+  describe('Query Token Rejection (Security)', () => {
+    it('should reject query tokens (security - tokens leak in logs)', async () => {
+      const response = await app.inject({
+        method: 'GET',
+        url: `/v1/payment-sessions/${paymentId}/events?token=${encodeURIComponent(accessToken)}`,
+      });
 
-    const response = await app.inject({
-      method: 'GET',
-      url: `/v1/payment-sessions/${paymentId}/events`,
+      // Should reject query tokens
+      expect(response.statusCode).toBe(401);
+      expect(response.body).toContain('Unauthorized');
     });
 
-    expect(response.statusCode).toBe(401);
-    expect(response.body).toContain('Unauthorized');
+    it('should reject SSE tokens in query parameter', async () => {
+      const response = await app.inject({
+        method: 'GET',
+        url: `/v1/payment-sessions/${paymentId}/events?token=${encodeURIComponent(sseToken)}`,
+      });
+
+      // Even SSE tokens should not be accepted in query
+      expect(response.statusCode).toBe(401);
+    });
   });
 
-  it('should reject requests with invalid token', async () => {
-    if (!paymentId) {
-      console.log('Skipping: payment creation failed');
-      return;
-    }
+  describe('Authorization Header Requirement', () => {
+    it('should reject requests with missing authorization header', async () => {
+      const response = await app.inject({
+        method: 'GET',
+        url: `/v1/payment-sessions/${paymentId}/events`,
+      });
 
-    const response = await app.inject({
-      method: 'GET',
-      url: `/v1/payment-sessions/${paymentId}/events?token=${invalidToken}`,
+      expect(response.statusCode).toBe(401);
+      expect(response.body).toContain('Unauthorized');
     });
 
-    expect(response.statusCode).toBe(401);
-    expect(response.body).toContain('Unauthorized');
-  });
+    it('should reject regular access tokens (requires SSE token)', async () => {
+      const response = await app.inject({
+        method: 'GET',
+        url: `/v1/payment-sessions/${paymentId}/events`,
+        headers: {
+          authorization: `Bearer ${accessToken}`,
+        },
+      });
 
-  it('should reject access to payment session owned by different user', async () => {
-    if (!paymentId) {
-      console.log('Skipping: payment creation failed');
-      return;
-    }
-
-    // Create second user
-    const user2Signup = await app.inject({
-      method: 'POST',
-      url: '/v1/auth/signup',
-      payload: {
-        email: 'sse-query-test-user2@example.com',
-        password: 'SecurePass123!',
-      },
+      // Access tokens should be rejected - only SSE tokens allowed
+      expect(response.statusCode).toBe(403);
+      expect(response.body).toContain('SSE endpoint requires SSE token');
     });
 
-    const user2Token = user2Signup.json().access_token;
+    it('should accept valid SSE token via Authorization header', async () => {
+      const response = await app.inject({
+        method: 'GET',
+        url: `/v1/payment-sessions/${paymentId}/events`,
+        headers: {
+          authorization: `Bearer ${sseToken}`,
+        },
+      });
 
-    // Try to access user 1's payment session with user 2's token
-    const response = await app.inject({
-      method: 'GET',
-      url: `/v1/payment-sessions/${paymentId}/events?token=${encodeURIComponent(user2Token)}`,
+      // Should accept SSE token via Authorization header
+      expect(response.statusCode).toBe(200);
+      expect(response.headers['content-type']).toBe('text/event-stream');
     });
 
-    expect(response.statusCode).toBe(403);
-    expect(response.body).toContain('Access denied');
-  });
+    it('should reject SSE token for wrong payment session', async () => {
+      // Create another payment
+      const payment2Response = await app.inject({
+        method: 'POST',
+        url: '/v1/payment-sessions',
+        headers: {
+          authorization: `Bearer ${accessToken}`,
+        },
+        payload: {
+          amount: 200.0,
+          merchant_address: '0xCE2AA92B48F94686A4EDeCc20b243c40fD46134b',
+        },
+      });
 
-  it('should handle non-existent payment session', async () => {
-    const response = await app.inject({
-      method: 'GET',
-      url: `/v1/payment-sessions/non-existent-id/events?token=${encodeURIComponent(validAccessToken)}`,
+      const payment2Id = payment2Response.json().id;
+
+      // Try to use SSE token from payment1 for payment2
+      const response = await app.inject({
+        method: 'GET',
+        url: `/v1/payment-sessions/${payment2Id}/events`,
+        headers: {
+          authorization: `Bearer ${sseToken}`, // Token scoped to payment1
+        },
+      });
+
+      expect(response.statusCode).toBe(403);
+      expect(response.body).toContain('not valid for this payment session');
     });
-
-    expect(response.statusCode).toBe(404);
-    expect(response.body).toContain('not found');
   });
 });

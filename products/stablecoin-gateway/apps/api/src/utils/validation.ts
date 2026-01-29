@@ -81,6 +81,7 @@ export const createPaymentSessionSchema = z.object({
   success_url: z.string().url().optional(),
   cancel_url: z.string().url().optional(),
   metadata: metadataSchema,
+  // NOTE: idempotency_key removed from body - use Idempotency-Key header instead
 });
 
 export const listPaymentSessionsQuerySchema = z.object({
@@ -122,6 +123,9 @@ export const createWebhookSchema = z.object({
         'payment.completed',
         'payment.failed',
         'payment.refunded',
+        'refund.created',
+        'refund.completed',
+        'refund.failed',
       ])
     )
     .min(1, 'At least one event is required'),
@@ -139,6 +143,9 @@ export const updateWebhookSchema = z.object({
         'payment.completed',
         'payment.failed',
         'payment.refunded',
+        'refund.created',
+        'refund.completed',
+        'refund.failed',
       ])
     )
     .optional(),

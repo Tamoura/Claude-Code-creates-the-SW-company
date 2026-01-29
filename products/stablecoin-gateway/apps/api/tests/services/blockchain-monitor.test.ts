@@ -102,7 +102,7 @@ describe('BlockchainMonitorService', () => {
       );
 
       expect(result.valid).toBe(false);
-      expect(result.error).toContain('Recipient mismatch');
+      expect(result.error).toContain('No matching transfer found');
     });
 
     it('should reject transaction with wrong token contract', async () => {
@@ -182,7 +182,7 @@ describe('BlockchainMonitorService', () => {
       );
 
       expect(result.valid).toBe(false);
-      expect(result.error).toContain('Amount mismatch');
+      expect(result.error).toContain('No matching transfer found');
     });
 
     it('should accept valid transaction with correct amount, recipient, and token', async () => {

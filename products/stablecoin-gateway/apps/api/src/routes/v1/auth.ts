@@ -199,16 +199,29 @@ const authRoutes: FastifyPluginAsync = async (fastify) => {
         { expiresIn: process.env.REFRESH_TOKEN_EXPIRES_IN || '7d' }
       );
 
-      // Store new refresh token
+      // Store new refresh token and revoke old one atomically
+      // SECURITY: Prevents token reuse attacks by ensuring old token is revoked
       const newTokenHash = createHash('sha256').update(newRefreshToken).digest('hex');
       const expiresIn = 7 * 24 * 60 * 60 * 1000; // 7 days in ms
-      await fastify.prisma.refreshToken.create({
-        data: {
-          userId: decoded.userId,
-          tokenHash: newTokenHash,
-          expiresAt: new Date(Date.now() + expiresIn),
-        },
-      });
+
+      await fastify.prisma.$transaction([
+        // Revoke the old refresh token
+        fastify.prisma.refreshToken.update({
+          where: { tokenHash },
+          data: {
+            revoked: true,
+            revokedAt: new Date(),
+          },
+        }),
+        // Create the new refresh token
+        fastify.prisma.refreshToken.create({
+          data: {
+            userId: decoded.userId,
+            tokenHash: newTokenHash,
+            expiresAt: new Date(Date.now() + expiresIn),
+          },
+        }),
+      ]);
 
       return reply.send({
         access_token: accessToken,

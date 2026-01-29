@@ -1,0 +1,356 @@
+export type Priority = 'P1' | 'P2' | 'P3' | 'P4';
+export type Impact = 'HIGH' | 'MEDIUM' | 'LOW';
+export type Urgency = 'HIGH' | 'MEDIUM' | 'LOW';
+export type IncidentStatus =
+  | 'NEW'
+  | 'IN_PROGRESS'
+  | 'PENDING'
+  | 'ON_HOLD'
+  | 'RESOLVED'
+  | 'CLOSED';
+export type SLAStatus = 'ON_TRACK' | 'AT_RISK' | 'BREACHED' | 'MET' | 'PAUSED';
+export type ProblemStatus =
+  | 'NEW'
+  | 'UNDER_INVESTIGATION'
+  | 'KNOWN_ERROR'
+  | 'RESOLVED'
+  | 'CLOSED';
+
+export type ChangeStatus =
+  | 'DRAFT'
+  | 'SUBMITTED'
+  | 'PENDING_APPROVAL'
+  | 'APPROVED'
+  | 'REJECTED'
+  | 'SCHEDULED'
+  | 'IMPLEMENTING'
+  | 'COMPLETED'
+  | 'FAILED'
+  | 'CLOSED';
+
+export type ChangeType = 'STANDARD' | 'NORMAL' | 'EMERGENCY';
+export type RiskLevel = 'LOW' | 'MEDIUM' | 'HIGH';
+
+export type RequestStatus =
+  | 'SUBMITTED'
+  | 'PENDING_APPROVAL'
+  | 'APPROVED'
+  | 'REJECTED'
+  | 'FULFILLING'
+  | 'COMPLETED'
+  | 'CLOSED';
+
+export type KBStatus = 'DRAFT' | 'IN_REVIEW' | 'PUBLISHED' | 'ARCHIVED';
+
+export interface User {
+  id: string;
+  email: string;
+  firstName: string;
+  lastName: string;
+}
+
+export interface Category {
+  id: string;
+  name: string;
+  description?: string;
+  type: string;
+}
+
+export interface Incident {
+  id: string;
+  displayId: string;
+  title: string;
+  description: string;
+  status: IncidentStatus;
+  priority: Priority;
+  impact: Impact;
+  urgency: Urgency;
+  categoryId: string;
+  category?: Category;
+  reportedById: string;
+  reportedBy?: User;
+  assigneeId?: string;
+  assignee?: User;
+  affectedUserId?: string;
+  affectedUser?: User;
+  responseSlaDue?: string;
+  resolutionSlaDue?: string;
+  responseSlaStatus: SLAStatus;
+  resolutionSlaStatus: SLAStatus;
+  firstResponseAt?: string;
+  resolvedAt?: string;
+  closedAt?: string;
+  resolutionNotes?: string;
+  createdAt: string;
+  updatedAt: string;
+}
+
+export interface CreateIncidentInput {
+  title: string;
+  description: string;
+  priority: Priority;
+  impact: Impact;
+  urgency: Urgency;
+  categoryId: string;
+  reportedById: string;
+  affectedUserId?: string;
+  assigneeId?: string;
+}
+
+export interface UpdateIncidentInput {
+  title?: string;
+  description?: string;
+  status?: IncidentStatus;
+  priority?: Priority;
+  impact?: Impact;
+  urgency?: Urgency;
+  categoryId?: string;
+  assigneeId?: string;
+  resolutionNotes?: string;
+}
+
+export interface Problem {
+  id: string;
+  displayId: string;
+  title: string;
+  description: string;
+  status: ProblemStatus;
+  priority: Priority;
+  categoryId: string;
+  category?: Category;
+  createdById: string;
+  createdBy?: User;
+  assigneeId?: string;
+  assignee?: User;
+  rootCause?: string;
+  workaround?: string;
+  permanentFix?: string;
+  resolvedAt?: string;
+  closedAt?: string;
+  createdAt: string;
+  updatedAt: string;
+  _count?: {
+    problemIncidents: number;
+  };
+}
+
+export interface CreateProblemInput {
+  title: string;
+  description: string;
+  priority: Priority;
+  categoryId: string;
+  createdById: string;
+  assigneeId?: string;
+  rootCause?: string;
+  workaround?: string;
+  permanentFix?: string;
+}
+
+export interface UpdateProblemInput {
+  title?: string;
+  description?: string;
+  status?: ProblemStatus;
+  priority?: Priority;
+  categoryId?: string;
+  assigneeId?: string;
+  rootCause?: string;
+  workaround?: string;
+  permanentFix?: string;
+}
+
+export interface Change {
+  id: string;
+  displayId: string;
+  title: string;
+  description: string;
+  status: ChangeStatus;
+  type: ChangeType;
+  priority: Priority;
+  risk: RiskLevel;
+  impact: string;
+  categoryId: string;
+  category?: Category;
+  requesterId: string;
+  requester?: User;
+  assigneeId?: string;
+  assignee?: User;
+  implementationPlan?: string;
+  rollbackPlan?: string;
+  testPlan?: string;
+  scheduledStartAt?: string;
+  scheduledEndAt?: string;
+  actualStartAt?: string;
+  actualEndAt?: string;
+  reviewNotes?: string;
+  linkedProblemId?: string;
+  linkedProblem?: Problem;
+  createdAt: string;
+  updatedAt: string;
+  _count?: {
+    approvals: number;
+  };
+}
+
+export interface CreateChangeInput {
+  title: string;
+  description: string;
+  type: ChangeType;
+  priority: Priority;
+  risk: RiskLevel;
+  impact: string;
+  categoryId: string;
+  requesterId: string;
+  assigneeId?: string;
+  implementationPlan?: string;
+  rollbackPlan?: string;
+  testPlan?: string;
+  scheduledStartAt?: string;
+  scheduledEndAt?: string;
+  linkedProblemId?: string;
+}
+
+export interface UpdateChangeInput {
+  title?: string;
+  description?: string;
+  status?: ChangeStatus;
+  type?: ChangeType;
+  priority?: Priority;
+  risk?: RiskLevel;
+  impact?: string;
+  categoryId?: string;
+  assigneeId?: string;
+  implementationPlan?: string;
+  rollbackPlan?: string;
+  testPlan?: string;
+  scheduledStartAt?: string;
+  scheduledEndAt?: string;
+  reviewNotes?: string;
+  linkedProblemId?: string;
+}
+
+export interface ServiceCatalogItem {
+  id: string;
+  name: string;
+  description: string;
+  categoryId: string;
+  category?: Category;
+  fulfillmentTime: number;
+  requiresApproval: boolean;
+  formSchema: Record<string, any>;
+  isActive: boolean;
+  createdAt: string;
+  updatedAt: string;
+  _count?: {
+    requests: number;
+  };
+}
+
+export interface ServiceRequest {
+  id: string;
+  displayId: string;
+  catalogItemId: string;
+  catalogItem?: ServiceCatalogItem;
+  requesterId: string;
+  requester?: User;
+  status: RequestStatus;
+  priority: Priority;
+  fulfillerId?: string;
+  fulfiller?: User;
+  formData: Record<string, any>;
+  notes?: string;
+  fulfilledAt?: string;
+  closedAt?: string;
+  createdAt: string;
+  updatedAt: string;
+  _count?: {
+    approvals: number;
+  };
+}
+
+export interface CreateServiceRequestInput {
+  catalogItemId: string;
+  requesterId: string;
+  priority: Priority;
+  formData: Record<string, any>;
+  notes?: string;
+}
+
+export interface UpdateServiceRequestInput {
+  status?: RequestStatus;
+  priority?: Priority;
+  fulfillerId?: string;
+  formData?: Record<string, any>;
+  notes?: string;
+}
+
+export interface CreateCatalogItemInput {
+  name: string;
+  description: string;
+  categoryId: string;
+  fulfillmentTime: number;
+  requiresApproval: boolean;
+  formSchema: Record<string, any>;
+  isActive: boolean;
+}
+
+export interface UpdateCatalogItemInput {
+  name?: string;
+  description?: string;
+  categoryId?: string;
+  fulfillmentTime?: number;
+  requiresApproval?: boolean;
+  formSchema?: Record<string, any>;
+  isActive?: boolean;
+}
+
+export interface KnowledgeArticle {
+  id: string;
+  displayId: string;
+  title: string;
+  content: string;
+  summary?: string;
+  status: KBStatus;
+  categoryId: string;
+  category?: Category;
+  authorId: string;
+  author?: User;
+  keywords: string[];
+  viewCount: number;
+  version: number;
+  publishedAt?: string;
+  createdAt: string;
+  updatedAt: string;
+  _count?: {
+    ratings: number;
+    versions: number;
+  };
+}
+
+export interface CreateKnowledgeArticleInput {
+  title: string;
+  content: string;
+  summary?: string;
+  categoryId: string;
+  authorId: string;
+  keywords: string[];
+}
+
+export interface UpdateKnowledgeArticleInput {
+  title?: string;
+  content?: string;
+  summary?: string;
+  status?: KBStatus;
+  categoryId?: string;
+  keywords?: string[];
+  changeNotes?: string;
+}
+
+export interface PaginatedResponse<T> {
+  data: T[];
+  pagination: {
+    page: number;
+    limit: number;
+    total: number;
+    totalPages: number;
+  };
+}

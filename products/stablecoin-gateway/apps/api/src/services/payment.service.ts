@@ -1,19 +1,26 @@
-import { PrismaClient, PaymentSession, PaymentStatus } from '@prisma/client';
+import { PrismaClient, PaymentSession, PaymentStatus, Prisma } from '@prisma/client';
 import { AppError, CreatePaymentSessionRequest, PaymentSessionResponse } from '../types/index.js';
 import { generatePaymentSessionId } from '../utils/crypto.js';
+import { WebhookDeliveryService } from './webhook-delivery.service.js';
 
 export class PaymentService {
-  constructor(private prisma: PrismaClient) {}
+  private webhookService: WebhookDeliveryService;
+
+  constructor(private prisma: PrismaClient) {
+    this.webhookService = new WebhookDeliveryService(prisma);
+  }
 
   /**
    * Create a new payment session
    *
    * Note: Input validation is handled by createPaymentSessionSchema in the route handler.
    * This ensures all addresses are checksummed and valid before reaching this service.
+   * Idempotency key is passed separately from header (not body) per API contract.
    */
   async createPaymentSession(
     userId: string,
-    data: CreatePaymentSessionRequest
+    data: CreatePaymentSessionRequest,
+    idempotencyKey?: string
   ): Promise<PaymentSession> {
     const id = generatePaymentSessionId();
     const expiresAt = new Date();
@@ -32,9 +39,24 @@ export class PaymentService {
         successUrl: data.success_url,
         cancelUrl: data.cancel_url,
         metadata: data.metadata as any,
+        idempotencyKey,
         expiresAt,
         status: 'PENDING',
       },
+    });
+
+    // Queue webhook for payment.created event
+    await this.webhookService.queueWebhook(userId, 'payment.created', {
+      id: paymentSession.id,
+      amount: Number(paymentSession.amount),
+      currency: paymentSession.currency,
+      status: paymentSession.status,
+      network: paymentSession.network,
+      token: paymentSession.token,
+      merchant_address: paymentSession.merchantAddress,
+      created_at: paymentSession.createdAt.toISOString(),
+      expires_at: paymentSession.expiresAt.toISOString(),
+      metadata: paymentSession.metadata,
     });
 
     return paymentSession;
@@ -63,7 +85,7 @@ export class PaymentService {
       created_before?: Date;
     }
   ): Promise<{ data: PaymentSession[]; total: number }> {
-    const where: any = { userId };
+    const where: Prisma.PaymentSessionWhereInput = { userId };
 
     if (filters.status) {
       where.status = filters.status;
@@ -132,6 +154,67 @@ export class PaymentService {
       where: { id },
       data,
     });
+
+    // Queue webhooks for status changes
+    if (status === 'CONFIRMING') {
+      await this.webhookService.queueWebhook(session.userId, 'payment.confirming', {
+        id: session.id,
+        amount: Number(session.amount),
+        currency: session.currency,
+        status: session.status,
+        network: session.network,
+        token: session.token,
+        merchant_address: session.merchantAddress,
+        customer_address: session.customerAddress,
+        tx_hash: session.txHash,
+        block_number: session.blockNumber,
+        confirmations: session.confirmations,
+        created_at: session.createdAt.toISOString(),
+        metadata: session.metadata,
+      });
+    } else if (status === 'COMPLETED') {
+      await this.webhookService.queueWebhook(session.userId, 'payment.completed', {
+        id: session.id,
+        amount: Number(session.amount),
+        currency: session.currency,
+        status: session.status,
+        network: session.network,
+        token: session.token,
+        merchant_address: session.merchantAddress,
+        customer_address: session.customerAddress,
+        tx_hash: session.txHash,
+        block_number: session.blockNumber,
+        confirmations: session.confirmations,
+        created_at: session.createdAt.toISOString(),
+        completed_at: session.completedAt?.toISOString() || null,
+        metadata: session.metadata,
+      });
+    } else if (status === 'FAILED') {
+      await this.webhookService.queueWebhook(session.userId, 'payment.failed', {
+        id: session.id,
+        amount: Number(session.amount),
+        currency: session.currency,
+        status: session.status,
+        network: session.network,
+        token: session.token,
+        merchant_address: session.merchantAddress,
+        created_at: session.createdAt.toISOString(),
+        metadata: session.metadata,
+      });
+    } else if (status === 'REFUNDED') {
+      await this.webhookService.queueWebhook(session.userId, 'payment.refunded', {
+        id: session.id,
+        amount: Number(session.amount),
+        currency: session.currency,
+        status: session.status,
+        network: session.network,
+        token: session.token,
+        merchant_address: session.merchantAddress,
+        customer_address: session.customerAddress,
+        created_at: session.createdAt.toISOString(),
+        metadata: session.metadata,
+      });
+    }
 
     return session;
   }

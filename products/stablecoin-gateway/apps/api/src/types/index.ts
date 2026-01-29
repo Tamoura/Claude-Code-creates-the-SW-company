@@ -12,6 +12,7 @@ export interface CreatePaymentSessionRequest {
   success_url?: string;
   cancel_url?: string;
   metadata?: Record<string, unknown>;
+  // NOTE: idempotency_key removed - use Idempotency-Key header instead
 }
 
 export interface PaymentSessionResponse {
@@ -202,7 +203,7 @@ declare module 'fastify' {
 
   interface FastifyInstance {
     prisma: import('@prisma/client').PrismaClient;
-    redis: import('ioredis').Redis;
+    redis: import('ioredis').Redis | null;
     authenticate: (request: FastifyRequest) => Promise<void>;
     optionalAuth: (request: FastifyRequest) => Promise<void>;
     requirePermission: (permission: 'read' | 'write' | 'refund') => (request: FastifyRequest) => Promise<void>;
