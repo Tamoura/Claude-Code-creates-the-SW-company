@@ -97,9 +97,43 @@ export async function buildApp(): Promise<FastifyInstance> {
   await fastify.register(paymentSessionRoutes, { prefix: '/v1/payment-sessions' });
   await fastify.register(webhookRoutes, { prefix: '/v1/webhooks' });
 
-  // Health check
-  fastify.get('/health', async () => {
-    return { status: 'ok', timestamp: new Date().toISOString() };
+  // Health check with deep dependency verification
+  fastify.get('/health', async (_request, reply) => {
+    const checks: Record<string, { status: string; latency?: number; error?: string }> = {};
+    let overallStatus = 'healthy';
+
+    // Check database connectivity
+    const dbStart = Date.now();
+    try {
+      await fastify.prisma.$queryRaw`SELECT 1`;
+      checks.database = {
+        status: 'healthy',
+        latency: Date.now() - dbStart,
+      };
+    } catch (error) {
+      checks.database = {
+        status: 'unhealthy',
+        error: error instanceof Error ? error.message : 'Unknown error',
+      };
+      overallStatus = 'unhealthy';
+    }
+
+    // Check Redis connectivity (if configured)
+    if (process.env.REDIS_URL) {
+      // Redis check would go here when Redis client is implemented
+      // For now, mark as not implemented
+      checks.redis = {
+        status: 'not-configured',
+      };
+    }
+
+    const statusCode = overallStatus === 'healthy' ? 200 : 503;
+
+    return reply.code(statusCode).send({
+      status: overallStatus,
+      timestamp: new Date().toISOString(),
+      checks,
+    });
   });
 
   // Global error handler
