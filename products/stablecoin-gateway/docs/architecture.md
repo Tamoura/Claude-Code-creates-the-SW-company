@@ -206,7 +206,8 @@ apps/api/
 │   │   └── cors.ts                  # CORS configuration
 │   ├── services/
 │   │   ├── blockchain.ts            # Blockchain interaction
-│   │   ├── webhook.ts               # Webhook delivery
+│   │   ├── blockchain-monitor.ts    # On-chain payment verification (FIX-07)
+│   │   ├── webhook.ts               # Webhook delivery with HMAC signatures (FIX-06)
 │   │   ├── email.ts                 # Email notifications
 │   │   └── payment.ts               # Payment business logic
 │   ├── workers/
@@ -236,6 +237,9 @@ apps/api/
 - Request validation with Zod schemas
 - Rate limiting per API key (100 req/min)
 - Idempotency keys for payment creation
+- API key permission enforcement (read, write, refund) - FIX-05
+- PATCH field whitelisting for security - FIX-03
+- SSE authentication via query tokens - FIX-02
 
 **Error Handling**:
 ```typescript
@@ -293,7 +297,7 @@ See `database-schema.md` for full ERD and schema.
 
 ### 3.4 Blockchain Integration
 
-**Purpose**: Monitor blockchain for payment confirmations
+**Purpose**: Monitor blockchain for payment confirmations and verify transactions
 
 **Architecture**:
 
@@ -305,6 +309,17 @@ Blockchain Monitor (BullMQ Worker)
   │   ├─ Check: confirmations >= threshold
   │   └─ Output: Update payment status to "completed"
   │
+  ├─ Job: VerifyTransaction (NEW - FIX-07)
+  │   ├─ Input: txHash, expectedAmount, merchantAddress
+  │   ├─ Query: Blockchain for transaction details
+  │   ├─ Verify:
+  │   │   - Transaction exists
+  │   │   - Amount matches expected (in USDC/USDT)
+  │   │   - Recipient is merchant address
+  │   │   - Token contract is correct (USDC/USDT address)
+  │   │   - Minimum confirmations met (12 for Polygon)
+  │   └─ Output: Mark payment as verified or reject
+  │
   ├─ Job: RefundTransaction
   │   ├─ Input: refundId, toAddress, amount
   │   ├─ Action: Send USDC/USDT from hot wallet
@@ -314,6 +329,56 @@ Blockchain Monitor (BullMQ Worker)
       ├─ Input: paymentSessionId
       ├─ Poll: Payment status from blockchain
       └─ Output: Update database + trigger webhook
+```
+
+**Blockchain Verification Service** (NEW - FIX-07):
+
+The BlockchainMonitorService implements comprehensive on-chain verification to prevent payment fraud:
+
+```typescript
+class BlockchainMonitorService {
+  async verifyPayment(
+    txHash: string,
+    expectedAmount: number,
+    merchantAddress: string,
+    tokenAddress: string
+  ): Promise<VerificationResult> {
+    // 1. Fetch transaction from blockchain
+    const tx = await this.provider.getTransaction(txHash);
+    if (!tx) throw new Error('Transaction not found');
+
+    // 2. Verify transaction is mined
+    const receipt = await tx.wait();
+    if (!receipt) throw new Error('Transaction not mined');
+
+    // 3. Check minimum confirmations
+    const currentBlock = await this.provider.getBlockNumber();
+    const confirmations = currentBlock - receipt.blockNumber;
+    if (confirmations < 12) {
+      throw new Error('Insufficient confirmations');
+    }
+
+    // 4. Decode transfer event from logs
+    const transferEvent = this.decodeTransferEvent(receipt.logs);
+
+    // 5. Verify amount matches
+    if (transferEvent.amount !== expectedAmount) {
+      throw new Error('Amount mismatch');
+    }
+
+    // 6. Verify recipient is merchant
+    if (transferEvent.to !== merchantAddress) {
+      throw new Error('Recipient mismatch');
+    }
+
+    // 7. Verify token contract
+    if (transferEvent.tokenAddress !== tokenAddress) {
+      throw new Error('Wrong token contract');
+    }
+
+    return { verified: true, blockNumber: receipt.blockNumber };
+  }
+}
 ```
 
 **Node Providers** (with failover):
@@ -382,12 +447,55 @@ See `ADR-002-blockchain-integration.md` for full decision rationale.
 }
 ```
 
-**Security**:
-- HMAC-SHA256 signature in `X-Webhook-Signature` header
+**Security** (FIX-06 - Timing-Safe Implementation):
+- **HMAC-SHA256 signature** in `X-Webhook-Signature` header
+- **Timing-safe comparison** using `crypto.timingSafeEqual()` to prevent timing attacks
+- **Timestamp validation** in `X-Webhook-Timestamp` header (rejects webhooks > 5 minutes old)
+- Signature computed over `timestamp + "." + rawBody` (prevents tampering and replay attacks)
 - Merchant verifies signature using their webhook secret
-- Signature computed over raw body + timestamp (prevent replay attacks)
 
-See `ADR-003-backend-architecture.md` for webhook design details.
+**Why Timing-Safe Comparison is Critical**:
+- Regular string comparison (`===`) leaks timing information
+- Attackers can use timing analysis to forge signatures (CWE-208)
+- `crypto.timingSafeEqual()` compares all bytes in constant time
+- Prevents attackers from determining correct signature characters through response time analysis
+
+**Implementation**:
+```typescript
+// Webhook signature verification with timing-safe comparison
+function verifyWebhookSignature(
+  rawBody: string,
+  signature: string,
+  timestamp: string,
+  secret: string
+): boolean {
+  // 1. Check timestamp (prevent replay)
+  const currentTime = Math.floor(Date.now() / 1000);
+  const webhookTime = parseInt(timestamp, 10);
+  if (Math.abs(currentTime - webhookTime) > 300) {
+    return false; // Reject if > 5 minutes old
+  }
+
+  // 2. Compute expected signature
+  const payload = `${timestamp}.${rawBody}`;
+  const expectedSignature = crypto
+    .createHmac('sha256', secret)
+    .update(payload)
+    .digest('hex');
+
+  // 3. Constant-time comparison (prevents timing attacks)
+  if (signature.length !== expectedSignature.length) {
+    return false;
+  }
+
+  return crypto.timingSafeEqual(
+    Buffer.from(signature),
+    Buffer.from(expectedSignature)
+  );
+}
+```
+
+See `docs/guides/webhook-integration.md` for merchant integration details.
 
 ---
 
@@ -580,7 +688,12 @@ Merchant Dashboard
 - API keys prefixed with `sk_live_` or `sk_test_`
 - Hashed with SHA-256 before storage
 - Rate limited: 100 requests/minute per key
-- Scoped permissions (read, write, refund)
+- **Scoped permissions (read, write, refund) - FIX-05**
+  - Permissions enforced before every operation
+  - Read-only keys can only GET resources
+  - Write permission required for POST/PATCH operations
+  - Refund permission required for refund operations
+  - Principle of least privilege enforced
 
 **Authorization Model**:
 ```

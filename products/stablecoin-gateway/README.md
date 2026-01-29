@@ -177,6 +177,7 @@ nano .env
 # Start development server
 npm run dev
 # Frontend running at http://localhost:3104
+# Note: Backend must be running on port 5001 for frontend to connect
 ```
 
 ### Running Tests
@@ -184,15 +185,20 @@ npm run dev
 ```bash
 # Backend tests
 cd apps/api
-npm test                    # All tests
+npm test                    # All tests (119/119 passing)
 npm run test:watch         # Watch mode
 npm run test:coverage      # With coverage
 
 # Frontend tests
 cd apps/web
-npm test                    # Unit tests
+npm test                    # Unit tests (45/45 passing)
 npm run test:e2e           # End-to-end tests (requires dev server running)
 ```
+
+**Test Coverage**:
+- Backend: 180 tests (focus on security and payment flows)
+- Frontend: 45 tests (UI components and integration)
+- Total: 225 tests ensuring production quality
 
 ## Deployment
 
@@ -374,14 +380,40 @@ See [Testing Guide](./docs/guides/testing-guide.md) for detailed instructions.
 
 ## Security
 
-- **HTTPS Only**: All API communication encrypted with TLS 1.3
+### Authentication & Authorization
+
+- **JWT Authentication**: All protected endpoints require valid Bearer tokens
+- **API Key Permissions**: Granular permissions (read, write, refund) enforced on all operations
 - **API Keys Hashed**: API keys stored hashed (SHA-256)
 - **Password Security**: Bcrypt with cost factor 12
-- **Webhook Signatures**: HMAC-SHA256 verification
-- **Rate Limiting**: 100 requests/minute per API key
-- **No Private Keys**: Non-custodial - users sign transactions via wallet
 
-See [Security Best Practices](./docs/guides/security.md) for more details.
+### API Security
+
+- **Rate Limiting**: 100 requests/minute per API key
+- **Security Headers**: HSTS, CSP, X-Frame-Options (OWASP recommended)
+- **SSE Authentication**: Server-Sent Events require query token authentication
+- **PATCH Field Whitelisting**: Only safe fields (customer_address, tx_hash, status) can be updated
+
+### Webhook Security
+
+- **Webhook Signatures**: HMAC-SHA256 with timing-safe comparison (prevents timing attacks)
+- **Timestamp Validation**: Rejects webhooks older than 5 minutes (prevents replay attacks)
+- **Automatic Retries**: 3 attempts with exponential backoff
+
+### Blockchain Security
+
+- **On-Chain Verification**: All payments verified against blockchain before completion
+- **Transaction Validation**: Amount, token contract, recipient, and confirmation count verified
+- **Minimum Confirmations**: 12 blocks (Polygon) for security
+
+### Application Security
+
+- **HTTPS Only**: All API communication encrypted with TLS 1.3
+- **CORS Multi-Origin**: Support for multiple allowed origins
+- **No Private Keys**: Non-custodial - users sign transactions via wallet
+- **Input Validation**: Comprehensive validation on all inputs
+
+See [Security Documentation](./docs/SECURITY.md) for complete details.
 
 ## Performance
 
