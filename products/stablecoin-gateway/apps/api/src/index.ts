@@ -9,7 +9,7 @@ async function start() {
 
     const app = await buildApp();
 
-    const port = parseInt(process.env.PORT || '5001');
+    const port = parseInt(process.env.PORT || '5001'); // See .claude/PORT-REGISTRY.md
     const host = process.env.HOST || '0.0.0.0';
 
     await app.listen({ port, host });

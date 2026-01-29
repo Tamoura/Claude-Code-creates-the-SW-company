@@ -10,7 +10,7 @@ export default defineConfig({
     },
   },
   server: {
-    port: 3100,
+    port: 3105, // See .claude/PORT-REGISTRY.md
   },
   test: {
     globals: true,

@@ -185,6 +185,64 @@ Each product has a `.claude/addendum.md` file with product-specific context:
 
 When working on a product, ALWAYS read its addendum first.
 
+## Port Registry Management
+
+**CRITICAL**: All products must run simultaneously without port conflicts.
+
+### Before Creating Any New Product
+
+1. **Read the port registry**: `.claude/PORT-REGISTRY.md`
+2. **Assign unique ports**:
+   - Frontend: Next available in 3100-3199 range
+   - Backend API: Next available in 5000-5099 range
+   - Mobile dev server: Next available in 8081-8099 range
+3. **Pass ports to agents** in task instructions
+4. **Update registry** immediately after assignment
+5. **Commit registry** with product code
+
+### Port Assignment Example
+
+```markdown
+## Your Current Task
+
+Create new product "[product-name]"
+
+## Assigned Ports
+
+- Frontend: 3107 (verified available in PORT-REGISTRY.md)
+- Backend API: 5003 (verified available in PORT-REGISTRY.md)
+
+## Requirements
+
+- Configure Vite/Next.js to use port 3107
+- Configure Fastify/Express to use port 5003
+- Add comment in configs: "// See .claude/PORT-REGISTRY.md"
+- Update PORT-REGISTRY.md with these assignments before completing
+```
+
+### Sanity Testing After Product Creation
+
+Before completing any product workflow, **ALWAYS run sanity test**:
+
+1. **Start the product** on its assigned port
+2. **Verify** it loads without errors
+3. **Check** for configuration issues (Tailwind, TypeScript, etc.)
+4. **Test** basic functionality (homepage loads, buttons work)
+5. **Only THEN** proceed to checkpoint
+
+**Common issues to catch**:
+- Port conflicts (check with `lsof -i :[port]`)
+- Tailwind CSS PostCSS plugin conflicts
+- Missing dependencies
+- TypeScript compilation errors
+- Broken imports
+
+If sanity test fails:
+- DO NOT proceed to checkpoint
+- Route back to relevant engineer (Frontend/Backend/DevOps)
+- Fix issue and re-run sanity test
+- Only proceed when product runs cleanly
+
 ## Invoking Specialist Agents
 
 Use the Task tool to invoke agents:
