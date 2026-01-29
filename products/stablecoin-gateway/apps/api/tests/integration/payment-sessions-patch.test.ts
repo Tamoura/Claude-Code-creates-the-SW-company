@@ -145,7 +145,7 @@ describe('PATCH /v1/payment-sessions/:id', () => {
       expect(body.tx_hash).toBe(txHash);
     });
 
-    it('should update status successfully', async () => {
+    it('should update status successfully (to FAILED - no verification needed)', async () => {
       const response = await app.inject({
         method: 'PATCH',
         url: `/v1/payment-sessions/${paymentId}`,
@@ -153,13 +153,13 @@ describe('PATCH /v1/payment-sessions/:id', () => {
           authorization: `Bearer ${accessToken}`,
         },
         payload: {
-          status: 'CONFIRMING',
+          status: 'FAILED',
         },
       });
 
       expect(response.statusCode).toBe(200);
       const body = response.json();
-      expect(body.status).toBe('CONFIRMING');
+      expect(body.status).toBe('FAILED');
     });
 
     it('should update block_number successfully', async () => {
@@ -196,7 +196,7 @@ describe('PATCH /v1/payment-sessions/:id', () => {
       expect(body.confirmations).toBe(12);
     });
 
-    it('should update multiple fields at once', async () => {
+    it('should update multiple fields at once (without status change requiring verification)', async () => {
       const txHash = '0x' + 'b'.repeat(64);
       const response = await app.inject({
         method: 'PATCH',
@@ -206,18 +206,18 @@ describe('PATCH /v1/payment-sessions/:id', () => {
         },
         payload: {
           tx_hash: txHash,
-          status: 'CONFIRMING',
           block_number: 99999,
           confirmations: 3,
+          customer_address: '0x9999999999999999999999999999999999999999',
         },
       });
 
       expect(response.statusCode).toBe(200);
       const body = response.json();
       expect(body.tx_hash).toBe(txHash);
-      expect(body.status).toBe('CONFIRMING');
       expect(body.block_number).toBe(99999);
       expect(body.confirmations).toBe(3);
+      expect(body.customer_address).toBe('0x9999999999999999999999999999999999999999');
     });
   });
 
@@ -242,7 +242,7 @@ describe('PATCH /v1/payment-sessions/:id', () => {
         },
         payload: {
           amount: 99999,
-          status: 'CONFIRMING', // Also send a valid field
+          customer_address: '0x8888888888888888888888888888888888888888', // Also send a valid field
         },
       });
 
@@ -252,8 +252,8 @@ describe('PATCH /v1/payment-sessions/:id', () => {
       // Amount should NOT be updated (ignored)
       expect(body.amount).toBe(originalAmount);
 
-      // But status should be updated (allowed field)
-      expect(body.status).toBe('CONFIRMING');
+      // But customer_address should be updated (allowed field)
+      expect(body.customer_address).toBe('0x8888888888888888888888888888888888888888');
     });
 
     it('should ignore attempt to update merchant_address (critical field)', async () => {

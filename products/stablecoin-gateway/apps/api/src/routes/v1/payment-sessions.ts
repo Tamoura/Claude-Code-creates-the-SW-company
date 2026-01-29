@@ -2,6 +2,7 @@ import { FastifyPluginAsync } from 'fastify';
 import { ZodError } from 'zod';
 import { createPaymentSessionSchema, listPaymentSessionsQuerySchema, updatePaymentSessionSchema, validateBody, validateQuery } from '../../utils/validation.js';
 import { PaymentService } from '../../services/payment.service.js';
+import { BlockchainMonitorService } from '../../services/blockchain-monitor.service.js';
 import { AppError } from '../../types/index.js';
 import { logger } from '../../utils/logger.js';
 
@@ -137,33 +138,70 @@ const paymentSessionRoutes: FastifyPluginAsync = async (fastify) => {
       const paymentService = new PaymentService(fastify.prisma);
 
       // Get existing session and verify ownership (this will throw 404 if not found or not owned)
-      await paymentService.getPaymentSession(id, userId);
+      const existingSession = await paymentService.getPaymentSession(id, userId);
 
       // Build update data with only allowed fields (security: whitelist prevents mass assignment)
       const updateData: any = {};
 
-      if (updates.customer_address !== undefined) {
-        updateData.customerAddress = updates.customer_address;
-      }
+      // If status is being updated to CONFIRMING or COMPLETED, verify on blockchain
+      if (updates.status === 'CONFIRMING' || updates.status === 'COMPLETED') {
+        // Require tx_hash when changing to CONFIRMING or COMPLETED
+        const txHash = updates.tx_hash || existingSession.txHash;
+        if (!txHash) {
+          throw new AppError(400, 'missing-tx-hash', 'Transaction hash required when changing status to CONFIRMING or COMPLETED');
+        }
 
-      if (updates.tx_hash !== undefined) {
-        updateData.txHash = updates.tx_hash;
-      }
+        // Verify transaction on blockchain
+        const blockchainService = new BlockchainMonitorService();
+        const verification = await blockchainService.verifyPaymentTransaction(
+          {
+            id: existingSession.id,
+            network: existingSession.network as 'polygon' | 'ethereum',
+            token: existingSession.token as 'USDC' | 'USDT',
+            amount: Number(existingSession.amount),
+            merchantAddress: existingSession.merchantAddress,
+          },
+          txHash,
+          updates.status === 'COMPLETED' ? 12 : 1 // Require 12 confirmations for COMPLETED, 1 for CONFIRMING
+        );
 
-      if (updates.block_number !== undefined) {
-        updateData.blockNumber = updates.block_number;
-      }
+        if (!verification.valid) {
+          throw new AppError(400, 'invalid-transaction', verification.error || 'Transaction verification failed');
+        }
 
-      if (updates.confirmations !== undefined) {
-        updateData.confirmations = updates.confirmations;
-      }
-
-      if (updates.status !== undefined) {
+        // Add verified data to updates
+        if (updates.tx_hash) {
+          updateData.txHash = updates.tx_hash;
+        }
+        updateData.blockNumber = verification.blockNumber;
+        updateData.confirmations = verification.confirmations;
+        updateData.customerAddress = verification.sender;
         updateData.status = updates.status;
 
         // Auto-set completedAt when status changes to COMPLETED
         if (updates.status === 'COMPLETED') {
           updateData.completedAt = new Date();
+        }
+      } else {
+        // No blockchain verification needed for other updates
+        if (updates.customer_address !== undefined) {
+          updateData.customerAddress = updates.customer_address;
+        }
+
+        if (updates.tx_hash !== undefined) {
+          updateData.txHash = updates.tx_hash;
+        }
+
+        if (updates.block_number !== undefined) {
+          updateData.blockNumber = updates.block_number;
+        }
+
+        if (updates.confirmations !== undefined) {
+          updateData.confirmations = updates.confirmations;
+        }
+
+        if (updates.status !== undefined) {
+          updateData.status = updates.status;
         }
       }
 
