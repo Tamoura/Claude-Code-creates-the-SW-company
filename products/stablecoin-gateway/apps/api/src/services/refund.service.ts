@@ -21,6 +21,7 @@ import { PrismaClient, Refund, RefundStatus, PaymentStatus } from '@prisma/clien
 import { AppError } from '../types/index.js';
 import { generateRefundId } from '../utils/crypto.js';
 import { WebhookDeliveryService } from './webhook-delivery.service.js';
+import { BlockchainTransactionService } from './blockchain-transaction.service.js';
 
 export interface CreateRefundRequest {
   amount: number;
@@ -41,9 +42,19 @@ export interface RefundResponse {
 
 export class RefundService {
   private webhookService: WebhookDeliveryService;
+  private blockchainService: BlockchainTransactionService | null;
 
   constructor(private prisma: PrismaClient) {
     this.webhookService = new WebhookDeliveryService(prisma);
+
+    // Initialize blockchain service if merchant wallet is configured
+    // If not configured, refunds can still be created but won't execute on-chain
+    try {
+      this.blockchainService = new BlockchainTransactionService();
+    } catch (error) {
+      this.blockchainService = null;
+      // Log warning but don't fail - allows testing without wallet
+    }
   }
 
   /**
@@ -201,14 +212,21 @@ export class RefundService {
   }
 
   /**
-   * Process a refund (mark as PROCESSING)
+   * Process a refund (execute blockchain transaction)
    *
-   * This would typically be called by an internal worker/admin
-   * to indicate that the refund is being processed
+   * This executes the actual on-chain refund transaction:
+   * 1. Marks refund as PROCESSING
+   * 2. Executes blockchain transaction to send tokens back to customer
+   * 3. Updates refund with transaction hash and status
+   *
+   * Requires MERCHANT_WALLET_PRIVATE_KEY to be configured
    */
   async processRefund(id: string): Promise<Refund> {
     const refund = await this.prisma.refund.findUnique({
       where: { id },
+      include: {
+        paymentSession: true,
+      },
     });
 
     if (!refund) {
@@ -223,12 +241,100 @@ export class RefundService {
       );
     }
 
-    return this.prisma.refund.update({
+    // Check if blockchain service is available
+    if (!this.blockchainService) {
+      throw new AppError(
+        500,
+        'blockchain-service-unavailable',
+        'Blockchain service not configured - MERCHANT_WALLET_PRIVATE_KEY required'
+      );
+    }
+
+    // Mark as PROCESSING
+    await this.prisma.refund.update({
       where: { id },
       data: {
         status: RefundStatus.PROCESSING,
       },
     });
+
+    try {
+      // Execute blockchain transaction
+      const result = await this.blockchainService.executeRefund({
+        network: refund.paymentSession.network as 'polygon' | 'ethereum',
+        token: refund.paymentSession.token as 'USDC' | 'USDT',
+        recipientAddress: refund.paymentSession.customerAddress,
+        amount: Number(refund.amount),
+      });
+
+      if (!result.success) {
+        // Mark refund as FAILED
+        await this.prisma.refund.update({
+          where: { id },
+          data: {
+            status: RefundStatus.FAILED,
+          },
+        });
+
+        throw new AppError(
+          500,
+          'blockchain-transaction-failed',
+          `Refund transaction failed: ${result.error}`
+        );
+      }
+
+      // Mark refund as COMPLETED with blockchain details
+      const completedRefund = await this.prisma.refund.update({
+        where: { id },
+        data: {
+          status: RefundStatus.COMPLETED,
+          txHash: result.txHash,
+          blockNumber: result.blockNumber,
+          completedAt: new Date(),
+        },
+        include: {
+          paymentSession: true,
+        },
+      });
+
+      // Queue webhook for refund.completed event
+      await this.webhookService.queueWebhook(
+        completedRefund.paymentSession.userId,
+        'refund.completed',
+        {
+          id: completedRefund.id,
+          payment_session_id: completedRefund.paymentSessionId,
+          amount: Number(completedRefund.amount),
+          reason: completedRefund.reason,
+          status: completedRefund.status,
+          tx_hash: completedRefund.txHash,
+          block_number: completedRefund.blockNumber,
+          created_at: completedRefund.createdAt.toISOString(),
+          completed_at: completedRefund.completedAt?.toISOString() || null,
+        }
+      );
+
+      return completedRefund;
+    } catch (error) {
+      // If it's already an AppError, rethrow it
+      if (error instanceof AppError) {
+        throw error;
+      }
+
+      // Mark as FAILED for unexpected errors
+      await this.prisma.refund.update({
+        where: { id },
+        data: {
+          status: RefundStatus.FAILED,
+        },
+      });
+
+      throw new AppError(
+        500,
+        'refund-processing-failed',
+        `Failed to process refund: ${error instanceof Error ? error.message : 'Unknown error'}`
+      );
+    }
   }
 
   /**
