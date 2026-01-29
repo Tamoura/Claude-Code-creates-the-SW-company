@@ -1,4 +1,4 @@
-import { FastifyPluginAsync } from 'fastify';
+import { FastifyPluginAsync, FastifyRequest } from 'fastify';
 import { ZodError } from 'zod';
 import { signupSchema, loginSchema, sseTokenSchema, validateBody } from '../../utils/validation.js';
 import { hashPassword, verifyPassword } from '../../utils/crypto.js';
@@ -8,11 +8,23 @@ import { createHash } from 'crypto';
 
 const authRoutes: FastifyPluginAsync = async (fastify) => {
   // Auth-specific rate limiting config (5 requests per 15 minutes)
+  // Uses IP + User-Agent fingerprinting to prevent bypass via IP rotation
+  // while still limiting abuse from the same browser/client
   const authRateLimit = {
     config: {
       rateLimit: {
         max: 5,
         timeWindow: 15 * 60 * 1000, // 15 minutes in ms
+        // Fingerprint using IP + truncated User-Agent
+        // This prevents:
+        // 1. IP rotation attacks (different IPs with same UA share limit)
+        // 2. Legitimate shared IP issues (different UAs get separate limits)
+        keyGenerator: (request: FastifyRequest) => {
+          const ua = request.headers['user-agent'] || 'unknown';
+          // Truncate User-Agent to 50 chars to limit key size
+          const truncatedUA = ua.substring(0, 50);
+          return `auth:${request.ip}:${truncatedUA}`;
+        },
       },
     },
   };

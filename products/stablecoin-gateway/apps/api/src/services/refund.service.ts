@@ -48,13 +48,34 @@ export class RefundService {
     this.webhookService = new WebhookDeliveryService(prisma);
 
     // Initialize blockchain service if merchant wallet is configured
-    // If not configured, refunds can still be created but won't execute on-chain
     try {
       this.blockchainService = new BlockchainTransactionService();
     } catch (error) {
       this.blockchainService = null;
-      // Log warning but don't fail - allows testing without wallet
+
+      // In production, blockchain service is REQUIRED
+      if (process.env.NODE_ENV === 'production') {
+        throw new Error(
+          'BlockchainTransactionService initialization failed in production. ' +
+          'Refunds cannot be processed without blockchain access. ' +
+          `Original error: ${error instanceof Error ? error.message : 'Unknown error'}`
+        );
+      }
+
+      // In development/test, log warning but allow mocking
+      console.warn(
+        'BlockchainTransactionService not available. ' +
+        'Refunds will be created but not executed on-chain. ' +
+        'This is only acceptable in development/test environments.'
+      );
     }
+  }
+
+  /**
+   * Check if blockchain service is available for processing refunds
+   */
+  isBlockchainAvailable(): boolean {
+    return this.blockchainService !== null;
   }
 
   /**
@@ -243,11 +264,17 @@ export class RefundService {
 
     // Check if blockchain service is available
     if (!this.blockchainService) {
-      throw new AppError(
-        500,
-        'blockchain-service-unavailable',
-        'Blockchain service not configured - MERCHANT_WALLET_PRIVATE_KEY required'
-      );
+      if (process.env.NODE_ENV === 'production') {
+        throw new AppError(
+          500,
+          'blockchain-service-unavailable',
+          'Cannot process refund: blockchain service unavailable'
+        );
+      }
+
+      // In dev/test, log warning and skip on-chain execution
+      console.warn(`Skipping on-chain refund for ${id} - no blockchain service`);
+      return refund;
     }
 
     // Mark as PROCESSING

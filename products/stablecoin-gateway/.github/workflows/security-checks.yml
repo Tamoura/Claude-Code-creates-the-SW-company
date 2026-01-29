@@ -1,0 +1,105 @@
+name: Security Checks
+
+on:
+  push:
+    branches: [main, prototype/stablecoin-gateway, 'fix/**', 'feature/**']
+    paths:
+      - 'products/stablecoin-gateway/**'
+  pull_request:
+    branches: [main, prototype/stablecoin-gateway]
+    paths:
+      - 'products/stablecoin-gateway/**'
+
+jobs:
+  check-hardcoded-secrets:
+    name: Check for Hardcoded Secrets
+    runs-on: ubuntu-latest
+
+    steps:
+      - name: Checkout code
+        uses: actions/checkout@v4
+
+      - name: Check docker-compose for hardcoded JWT secrets
+        working-directory: products/stablecoin-gateway
+        run: |
+          echo "Checking for hardcoded JWT_SECRET in docker-compose files..."
+          # Match JWT_SECRET= followed by a value that doesn't use variable substitution
+          if grep -E "JWT_SECRET=[^$\{]" docker-compose*.yml 2>/dev/null; then
+            echo "::error::Hardcoded JWT_SECRET found in docker-compose files"
+            echo "Please use environment variable syntax: JWT_SECRET=\${JWT_SECRET:?error message}"
+            exit 1
+          fi
+          echo "No hardcoded JWT_SECRET found"
+
+      - name: Check docker-compose for hardcoded database passwords
+        working-directory: products/stablecoin-gateway
+        run: |
+          echo "Checking for hardcoded POSTGRES_PASSWORD in docker-compose files..."
+          # Match POSTGRES_PASSWORD: or POSTGRES_PASSWORD= followed by a plain value
+          if grep -E "POSTGRES_PASSWORD[=:]\s*[^$\{]" docker-compose*.yml 2>/dev/null | grep -v "POSTGRES_PASSWORD.*\${"; then
+            echo "::error::Hardcoded POSTGRES_PASSWORD found in docker-compose files"
+            echo "Please use environment variable syntax: POSTGRES_PASSWORD=\${POSTGRES_PASSWORD:?error message}"
+            exit 1
+          fi
+          echo "No hardcoded POSTGRES_PASSWORD found"
+
+      - name: Check for other common secret patterns
+        working-directory: products/stablecoin-gateway
+        run: |
+          echo "Checking for common secret patterns..."
+
+          # Check for API keys that look hardcoded (not using ${} syntax)
+          PATTERNS=(
+            "API_KEY=['\"]?[a-zA-Z0-9]{20,}['\"]?"
+            "SECRET=['\"]?[a-zA-Z0-9]{20,}['\"]?"
+            "PASSWORD=['\"]?[a-zA-Z0-9]{8,}['\"]?"
+          )
+
+          FOUND_SECRETS=0
+          for pattern in "${PATTERNS[@]}"; do
+            if grep -rE "$pattern" docker-compose*.yml 2>/dev/null | grep -v '\${' | grep -v '#'; then
+              echo "::warning::Potential hardcoded secret found matching pattern: $pattern"
+              FOUND_SECRETS=1
+            fi
+          done
+
+          if [ $FOUND_SECRETS -eq 1 ]; then
+            echo "::warning::Please review the above matches and ensure secrets use environment variable substitution"
+          fi
+
+          echo "Secret pattern check completed"
+
+      - name: Verify .env.example exists
+        working-directory: products/stablecoin-gateway
+        run: |
+          echo "Checking for .env.example file..."
+          if [ ! -f ".env.example" ]; then
+            echo "::error::.env.example file not found"
+            echo "Please create a .env.example file with placeholder values and generation instructions"
+            exit 1
+          fi
+          echo ".env.example exists"
+
+      - name: Verify .env is in .gitignore
+        working-directory: products/stablecoin-gateway
+        run: |
+          echo "Checking that .env is in .gitignore..."
+          if [ -f ".gitignore" ]; then
+            if ! grep -q "^\.env$" .gitignore && ! grep -q "^\.env\s" .gitignore; then
+              echo "::warning::.env may not be properly ignored in .gitignore"
+              echo "Please add '.env' to .gitignore to prevent accidental secret commits"
+            else
+              echo ".env is properly ignored"
+            fi
+          else
+            echo "::warning::No .gitignore file found"
+          fi
+
+      - name: Summary
+        run: |
+          echo "Security checks completed successfully"
+          echo ""
+          echo "Remember:"
+          echo "- Never commit .env files with real secrets"
+          echo "- Always use \${VAR:?error} syntax for required secrets in docker-compose"
+          echo "- Generate secrets with: openssl rand -hex 32"

@@ -1,4 +1,4 @@
-import Fastify, { FastifyInstance } from 'fastify';
+import Fastify, { FastifyInstance, FastifyRequest } from 'fastify';
 import cors from '@fastify/cors';
 import jwt from '@fastify/jwt';
 import rateLimit from '@fastify/rate-limit';
@@ -94,9 +94,28 @@ export async function buildApp(): Promise<FastifyInstance> {
   await fastify.register(redisPlugin);
 
   // Register rate limiting with Redis-backed distributed store
+  // Enhanced rate limiting (FIX-PHASE2-09):
+  // - Health/ready endpoints are exempted
+  // - Rate limit headers added to all non-exempt responses
+  // - Authenticated endpoints use user/API key as key
+  // - Pre-auth endpoints use IP+User-Agent fingerprint (in auth routes)
   const rateLimitConfig: any = {
     max: parseInt(process.env.RATE_LIMIT_MAX || '100'),
     timeWindow: parseInt(process.env.RATE_LIMIT_WINDOW || '60000'),
+    // Exempt health and ready endpoints from rate limiting
+    // These are critical for load balancers and monitoring
+    allowList: (request: FastifyRequest) => {
+      const url = request.url.split('?')[0]; // Remove query string
+      return url === '/health' || url === '/ready';
+    },
+    // Do not add rate limit headers for exempted endpoints
+    addHeadersOnExemption: false,
+    // Add rate limit headers to all non-exempt responses
+    addHeaders: {
+      'x-ratelimit-limit': true,
+      'x-ratelimit-remaining': true,
+      'x-ratelimit-reset': true,
+    },
     // Key by authenticated user/API key instead of IP to prevent:
     // 1. Shared IP throttling (corporate NAT, VPNs)
     // 2. IP-based abuse (attacker rotating IPs)

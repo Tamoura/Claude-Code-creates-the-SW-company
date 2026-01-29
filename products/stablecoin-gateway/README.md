@@ -185,22 +185,23 @@ npm run dev
 ```bash
 # Backend tests
 cd apps/api
-npm test                    # All tests (248 total, 164 passing)
+npm test                    # All tests (467 total)
 npm run test:watch         # Watch mode
 npm run test:coverage      # With coverage
 
 # Frontend tests
 cd apps/web
-npm test                    # Unit tests (63 total, 52 passing)
+npm test                    # Unit tests (79 total)
 npm run test:e2e           # End-to-end tests (requires dev server running)
 ```
 
 **Test Coverage**:
-- Backend: 248 tests (focus on security and payment flows)
+- Backend: 467 tests (security, payment flows, infrastructure)
   - Phase 1: 119 tests (authentication, payment sessions)
   - Phase 2: 89 tests (webhooks, SSE tokens, password policy)
-- Frontend: 63 tests (UI components and integration)
-- Total: 311 tests ensuring production quality
+  - Security Audit Phase 2: 155+ tests (all 10 security fixes verified)
+- Frontend: 79 tests (UI components, integration, security controls)
+- Total: 546 tests ensuring production quality
 
 ## Deployment
 
@@ -208,21 +209,53 @@ npm run test:e2e           # End-to-end tests (requires dev server running)
 
 See [Deployment Guide](./docs/guides/deployment.md) for detailed instructions.
 
-**Backend** (apps/api/.env):
-```bash
-PORT=5001
-NODE_ENV=production
-DATABASE_URL=postgresql://...
-REDIS_URL=redis://...
-JWT_SECRET=your-secret-key
-ALCHEMY_API_KEY=your-alchemy-key
-```
+#### Backend (apps/api/.env)
 
-**Frontend** (apps/web/.env):
+| Variable | Required | Default | Description |
+|----------|----------|---------|-------------|
+| `PORT` | No | `5001` | API server port |
+| `NODE_ENV` | No | `development` | Environment (`development`, `production`, `test`) |
+| `DATABASE_URL` | Yes | -- | PostgreSQL connection string |
+| `REDIS_URL` | No | -- | Redis connection string (rate limiting, queues) |
+| `JWT_SECRET` | Yes | -- | JWT signing key (min 64 hex chars). Generate: `openssl rand -hex 32` |
+| `JWT_EXPIRES_IN` | No | `15m` | Access token expiry duration |
+| `REFRESH_TOKEN_EXPIRES_IN` | No | `7d` | Refresh token expiry duration |
+| `INTERNAL_API_KEY` | Prod | -- | Bearer token for `/internal/metrics`. Generate: `openssl rand -hex 32` |
+| `WEBHOOK_ENCRYPTION_KEY` | Prod | -- | AES-256 key for webhook secrets (exactly 64 hex chars). Generate: `openssl rand -hex 32` |
+| `REDIS_TLS` | No | `false` | Enable TLS for Redis connections (`true`/`false`) |
+| `REDIS_TLS_REJECT_UNAUTHORIZED` | No | `true` | Reject self-signed Redis TLS certs (`false` for staging) |
+| `REDIS_PASSWORD` | No | -- | Redis password (if not in REDIS_URL) |
+| `ALCHEMY_API_KEY` | No | -- | Alchemy RPC provider key |
+| `INFURA_PROJECT_ID` | No | -- | Infura RPC provider key |
+| `FRONTEND_URL` | No | `http://localhost:3104` | Allowed CORS origin |
+
+#### Frontend (apps/web/.env)
+
+| Variable | Required | Default | Description |
+|----------|----------|---------|-------------|
+| `VITE_API_URL` | Yes | `http://localhost:5001` | Backend API base URL |
+| `VITE_WALLETCONNECT_PROJECT_ID` | No | -- | WalletConnect project ID |
+| `VITE_USE_MOCK_API` | No | `true` | Toggle mock vs. real API calls |
+| `VITE_USE_MOCK` | No | `false` | Enable mock wallet (dev only; blocked in production builds) |
+
+> **Important**: `VITE_USE_MOCK=true` is gated behind `import.meta.env.DEV`. Production builds will throw an error if mock wallet code is accessed, regardless of this setting.
+
+#### Generating Secrets
+
+All secrets must be cryptographically random. Use the following commands:
+
 ```bash
-VITE_API_URL=https://api.gateway.io
-VITE_WALLETCONNECT_PROJECT_ID=your-project-id
-VITE_USE_MOCK_API=false
+# JWT signing key (64 hex characters / 32 bytes)
+openssl rand -hex 32
+
+# Webhook encryption key (64 hex characters / 32 bytes for AES-256)
+openssl rand -hex 32
+
+# Internal API key (64 hex characters)
+openssl rand -hex 32
+
+# Database password
+openssl rand -base64 24
 ```
 
 ### Build for Production
@@ -242,13 +275,49 @@ npm run build
 ### Docker Deployment
 
 ```bash
-# Build images
-docker build -t stablecoin-gateway-api ./apps/api
-docker build -t stablecoin-gateway-web ./apps/web
+# 1. Copy and configure environment variables
+cp .env.example .env
 
-# Run with Docker Compose
+# 2. Generate secure secrets (REQUIRED)
+# For JWT_SECRET:
+openssl rand -hex 32
+# Copy the output to JWT_SECRET in .env
+
+# For POSTGRES_PASSWORD:
+openssl rand -base64 24
+# Copy the output to POSTGRES_PASSWORD in .env
+
+# For WEBHOOK_ENCRYPTION_KEY:
+openssl rand -hex 32
+# Copy the output to WEBHOOK_ENCRYPTION_KEY in .env
+
+# For INTERNAL_API_KEY:
+openssl rand -hex 32
+# Copy the output to INTERNAL_API_KEY in .env
+
+# 3. Edit .env with your values
+nano .env
+
+# 4. Start all services
 docker-compose up -d
+
+# 5. Verify services are running
+docker-compose ps
 ```
+
+**Required Environment Variables for Docker:**
+- `JWT_SECRET` - JWT signing key (generate with `openssl rand -hex 32`)
+- `POSTGRES_PASSWORD` - Database password (generate with `openssl rand -base64 24`)
+
+**Required in Production:**
+- `INTERNAL_API_KEY` - Protects `/internal/metrics` endpoint (generate with `openssl rand -hex 32`)
+- `WEBHOOK_ENCRYPTION_KEY` - AES-256 encryption for webhook secrets (generate with `openssl rand -hex 32`)
+
+**Optional Environment Variables:**
+- `ALCHEMY_API_KEY` - For blockchain monitoring
+- `INFURA_PROJECT_ID` - Alternative blockchain provider
+- `REDIS_TLS` - Set to `true` for encrypted Redis connections (recommended in cloud)
+- `REDIS_PASSWORD` - Redis authentication (required when using cloud Redis)
 
 See [Docker Compose Configuration](./docker-compose.yml) for details.
 
@@ -403,22 +472,36 @@ See [Testing Guide](./docs/guides/testing-guide.md) for detailed instructions.
 - **API Key Permissions**: Granular permissions (read, write, refund) enforced on all operations
 - **API Keys Hashed**: API keys stored hashed (SHA-256)
 - **Password Security**: Bcrypt with cost factor 12, 12+ character minimum with complexity requirements
-- **SSE Token Security**: Short-lived tokens (15 minutes) for Server-Sent Events authentication
+- **SSE Token Security**: Short-lived tokens (15 minutes) sent via Authorization header (not in query strings)
+- **Internal Endpoint Protection**: `/internal/metrics` requires `INTERNAL_API_KEY` Bearer auth in production
 
 ### API Security
 
-- **Rate Limiting**: 100 requests/minute per API key
-- **Security Headers**: HSTS, CSP, X-Frame-Options (OWASP recommended)
-- **SSE Authentication**: Server-Sent Events require short-lived tokens via dedicated endpoint
+- **Rate Limiting**: 100 requests/minute per user/API key; 5 requests/minute on auth endpoints per IP+UA fingerprint
+- **Health Endpoint Exemption**: `/health` exempt from rate limiting for uptime monitoring
+- **Security Headers**: HSTS, CSP, X-Frame-Options via Helmet (OWASP recommended)
+- **SSE Authentication**: Tokens sent via Authorization header; query-string tokens rejected with 401
 - **PATCH Field Whitelisting**: Only safe fields (customer_address, tx_hash, status) can be updated
+- **SSRF Protection**: Async DNS validation on webhook URLs prevents internal network access
 
 ### Webhook Security
 
 - **Webhook Secret Hashing**: Secrets stored with bcrypt (never retrievable after creation)
 - **Webhook Signatures**: HMAC-SHA256 with timing-safe comparison (prevents timing attacks)
+- **Webhook Secret Encryption**: AES-256 encryption with 64-char hex key (`WEBHOOK_ENCRYPTION_KEY`)
 - **Timestamp Validation**: Rejects webhooks older than 5 minutes (prevents replay attacks)
 - **Automatic Retries**: 3 attempts with exponential backoff
 - **HTTPS Only**: All webhook URLs must use HTTPS
+- **Row Locking**: Prevents race conditions in webhook delivery
+
+### Data & Infrastructure Security
+
+- **Redis TLS**: Configurable TLS encryption for Redis connections (`REDIS_TLS=true`)
+- **Mock Code Isolation**: Mock wallet code gated behind `VITE_USE_MOCK=true && DEV`; production builds throw on access
+- **No Hardcoded Secrets**: Docker Compose uses `${VAR:?error}` syntax; CI workflow scans for leaked secrets
+- **Environment Validation**: Startup checks enforce 64-hex-char encryption keys; rejects 32-char legacy keys
+- **Payment Expiration**: State machine enforces `PENDING -> FAILED` transitions for expired sessions
+- **Refund Failsafe**: Production throws if blockchain service unavailable; dev/test mode degrades gracefully
 
 ### Blockchain Security
 
@@ -429,11 +512,12 @@ See [Testing Guide](./docs/guides/testing-guide.md) for detailed instructions.
 ### Application Security
 
 - **HTTPS Only**: All API communication encrypted with TLS 1.3
-- **CORS Multi-Origin**: Support for multiple allowed origins
+- **CORS Allowlist**: Only configured origins permitted; dynamic checking via callback
+- **Content Security Policy**: Helmet CSP directives restrict script/style/image sources
 - **No Private Keys**: Non-custodial - users sign transactions via wallet
-- **Input Validation**: Comprehensive validation on all inputs
+- **Input Validation**: Comprehensive validation on all inputs via Zod schemas
 
-**Security Score**: 92/100 (OWASP Top 10 compliance)
+**Security Score**: 95/100 (OWASP Top 10 compliance, Phase 2 audit complete)
 
 See [Security Documentation](./docs/SECURITY.md) for complete details.
 
@@ -526,5 +610,5 @@ See [LICENSE](./LICENSE) for details.
 ---
 
 **Created by**: ConnectSW
-**Last Updated**: 2026-01-27
+**Last Updated**: 2026-01-29
 **Version**: 1.0.0

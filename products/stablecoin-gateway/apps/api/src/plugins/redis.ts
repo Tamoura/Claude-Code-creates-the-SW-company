@@ -8,11 +8,16 @@
  * - Graceful shutdown on app close
  * - Health monitoring
  * - Optional configuration (graceful degradation if Redis unavailable)
+ * - TLS support for secure connections
+ * - Password authentication support
  *
  * Environment Variables:
  * - REDIS_URL: Redis connection URL (optional)
  *   Format: redis://[user:password@]host:port[/db]
  *   Example: redis://localhost:6379
+ * - REDIS_TLS: Enable TLS encryption ('true' to enable)
+ * - REDIS_TLS_REJECT_UNAUTHORIZED: Reject self-signed certs ('false' to allow)
+ * - REDIS_PASSWORD: Password for Redis authentication (if not in URL)
  *
  * If REDIS_URL is not set, Redis will be disabled and in-memory
  * alternatives will be used where possible.
@@ -20,8 +25,41 @@
 
 import fp from 'fastify-plugin';
 import { FastifyPluginAsync } from 'fastify';
-import Redis from 'ioredis';
+import Redis, { RedisOptions } from 'ioredis';
 import { logger } from '../utils/logger.js';
+
+/**
+ * Build Redis connection options based on environment variables.
+ * Exported for testing purposes.
+ */
+export function getRedisOptions(): RedisOptions {
+  const enableTls = process.env.REDIS_TLS === 'true';
+  const rejectUnauthorized = process.env.REDIS_TLS_REJECT_UNAUTHORIZED !== 'false';
+  const password = process.env.REDIS_PASSWORD || undefined;
+
+  return {
+    // TLS configuration - enable for production/cloud Redis
+    tls: enableTls
+      ? {
+          rejectUnauthorized,
+        }
+      : undefined,
+
+    // Password authentication (if not already in REDIS_URL)
+    password,
+
+    // Retry configuration
+    maxRetriesPerRequest: 3,
+    retryStrategy(times: number) {
+      const delay = Math.min(times * 50, 2000);
+      return delay;
+    },
+    reconnectOnError(err: Error) {
+      logger.error('Redis connection error', err);
+      return true; // Attempt reconnect
+    },
+  };
+}
 
 declare module 'fastify' {
   interface FastifyInstance {
@@ -40,17 +78,14 @@ const redisPlugin: FastifyPluginAsync = async (fastify) => {
   }
 
   try {
-    const redis = new Redis(redisUrl, {
-      maxRetriesPerRequest: 3,
-      retryStrategy(times) {
-        const delay = Math.min(times * 50, 2000);
-        return delay;
-      },
-      reconnectOnError(err) {
-        logger.error('Redis connection error', err);
-        return true; // Attempt reconnect
-      },
-    });
+    const options = getRedisOptions();
+
+    // Log TLS status for debugging
+    if (options.tls) {
+      logger.info('Redis TLS enabled', { rejectUnauthorized: options.tls.rejectUnauthorized });
+    }
+
+    const redis = new Redis(redisUrl, options);
 
     // Handle connection events
     redis.on('connect', () => {

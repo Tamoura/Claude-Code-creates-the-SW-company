@@ -1,8 +1,17 @@
 import { buildApp } from '../../src/app';
 import { FastifyInstance } from 'fastify';
 
+/**
+ * Auth integration tests
+ *
+ * NOTE: Uses unique User-Agent headers per describe block to isolate
+ * fingerprinted rate limit buckets (auth endpoints use IP+UA fingerprinting)
+ */
+
 describe('POST /v1/auth/signup', () => {
   let app: FastifyInstance;
+  // Unique User-Agent to isolate rate limit bucket from other test files
+  const testUA = `AuthSignupTest/${Date.now()}`;
 
   beforeAll(async () => {
     app = await buildApp();
@@ -19,6 +28,9 @@ describe('POST /v1/auth/signup', () => {
       payload: {
         email: 'test@example.com',
         password: 'SecurePass123!',
+      },
+      headers: {
+        'user-agent': testUA,
       },
     });
 
@@ -41,6 +53,9 @@ describe('POST /v1/auth/signup', () => {
         email: 'not-an-email',
         password: 'SecurePass123!',
       },
+      headers: {
+        'user-agent': testUA,
+      },
     });
 
     expect(response.statusCode).toBe(400);
@@ -56,19 +71,25 @@ describe('POST /v1/auth/signup', () => {
         email: 'test@example.com',
         password: 'weak',
       },
+      headers: {
+        'user-agent': testUA,
+      },
     });
 
     expect(response.statusCode).toBe(400);
   });
 
   it('should return 409 for duplicate email', async () => {
-    // Create first user
+    // Create first user (may already exist from earlier test)
     await app.inject({
       method: 'POST',
       url: '/v1/auth/signup',
       payload: {
         email: 'test@example.com',
         password: 'SecurePass123!',
+      },
+      headers: {
+        'user-agent': testUA,
       },
     });
 
@@ -80,6 +101,9 @@ describe('POST /v1/auth/signup', () => {
         email: 'test@example.com',
         password: 'SecurePass123!',
       },
+      headers: {
+        'user-agent': testUA,
+      },
     });
 
     expect(response.statusCode).toBe(409);
@@ -90,6 +114,8 @@ describe('POST /v1/auth/signup', () => {
 
 describe('POST /v1/auth/login', () => {
   let app: FastifyInstance;
+  // Unique User-Agent to isolate rate limit bucket from other test files
+  const testUA = `AuthLoginTest/${Date.now()}`;
 
   beforeAll(async () => {
     app = await buildApp();
@@ -100,13 +126,16 @@ describe('POST /v1/auth/login', () => {
   });
 
   beforeEach(async () => {
-    // Create a test user
+    // Create a test user using a dedicated UA for setup
     await app.inject({
       method: 'POST',
       url: '/v1/auth/signup',
       payload: {
         email: 'test@example.com',
         password: 'SecurePass123!',
+      },
+      headers: {
+        'user-agent': `AuthLoginSetup/${Date.now()}`,
       },
     });
   });
@@ -118,6 +147,9 @@ describe('POST /v1/auth/login', () => {
       payload: {
         email: 'test@example.com',
         password: 'SecurePass123!',
+      },
+      headers: {
+        'user-agent': testUA,
       },
     });
 
@@ -138,6 +170,9 @@ describe('POST /v1/auth/login', () => {
         email: 'wrong@example.com',
         password: 'SecurePass123!',
       },
+      headers: {
+        'user-agent': testUA,
+      },
     });
 
     expect(response.statusCode).toBe(401);
@@ -152,6 +187,9 @@ describe('POST /v1/auth/login', () => {
       payload: {
         email: 'test@example.com',
         password: 'WrongPassword123!',
+      },
+      headers: {
+        'user-agent': testUA,
       },
     });
 

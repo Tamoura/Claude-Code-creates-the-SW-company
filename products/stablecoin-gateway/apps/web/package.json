@@ -15,6 +15,7 @@
   "dependencies": {
     "@tanstack/react-query": "^5.90.20",
     "@walletconnect/ethereum-provider": "^2.23.4",
+    "event-source-polyfill": "^1.0.31",
     "react": "^19.2.0",
     "react-dom": "^19.2.0",
     "react-hook-form": "^7.71.1",
@@ -28,6 +29,7 @@
     "@tailwindcss/postcss": "^4.1.18",
     "@testing-library/jest-dom": "^6.9.1",
     "@testing-library/react": "^16.3.2",
+    "@types/event-source-polyfill": "^1.0.5",
     "@types/node": "^24.10.1",
     "@types/react": "^19.2.5",
     "@types/react-dom": "^19.2.3",

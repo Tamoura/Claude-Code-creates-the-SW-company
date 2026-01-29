@@ -1,6 +1,9 @@
 /**
  * Auth endpoint rate limiting tests - Login and Refresh
  * Note: Signup tests are in auth-rate-limit-isolated.test.ts to prevent rate limit carryover
+ *
+ * NOTE: Uses unique User-Agent per test suite to isolate fingerprinted
+ * rate limit buckets (auth endpoints use IP+UA fingerprinting)
  */
 
 import { FastifyInstance } from 'fastify';
@@ -8,6 +11,8 @@ import { buildApp } from '../../src/app';
 
 describe('Auth Endpoint Rate Limiting - Login', () => {
   let app: FastifyInstance;
+  // Unique User-Agent to isolate this test's rate limit bucket
+  const testUA = `LoginRateLimitTest/${Date.now()}`;
 
   beforeAll(async () => {
     app = await buildApp();
@@ -35,6 +40,9 @@ describe('Auth Endpoint Rate Limiting - Login', () => {
           email: 'test@example.com',
           password: 'WrongPassword123!',
         },
+        headers: {
+          'user-agent': testUA,
+        },
       });
 
       expect(response.statusCode).toBe(401);
@@ -47,6 +55,9 @@ describe('Auth Endpoint Rate Limiting - Login', () => {
       payload: {
         email: 'test@example.com',
         password: 'WrongPassword123!',
+      },
+      headers: {
+        'user-agent': testUA,
       },
     });
 
@@ -65,6 +76,9 @@ describe('Auth Endpoint Rate Limiting - Login', () => {
         email: 'test@example.com',
         password: 'test',
       },
+      headers: {
+        'user-agent': `LoginHeaderTest/${Date.now()}`,
+      },
     });
 
     expect(response.headers).toHaveProperty('x-ratelimit-limit');
@@ -75,6 +89,8 @@ describe('Auth Endpoint Rate Limiting - Login', () => {
 
 describe('Auth Endpoint Rate Limiting - Refresh', () => {
   let app: FastifyInstance;
+  // Unique User-Agent to isolate this test's rate limit bucket
+  const testUA = `RefreshRateLimitTest/${Date.now()}`;
 
   beforeAll(async () => {
     app = await buildApp();
@@ -93,6 +109,9 @@ describe('Auth Endpoint Rate Limiting - Refresh', () => {
         payload: {
           refresh_token: 'invalid-token',
         },
+        headers: {
+          'user-agent': testUA,
+        },
       });
     }
 
@@ -102,6 +121,9 @@ describe('Auth Endpoint Rate Limiting - Refresh', () => {
       url: '/v1/auth/refresh',
       payload: {
         refresh_token: 'another-invalid-token',
+      },
+      headers: {
+        'user-agent': testUA,
       },
     });
 

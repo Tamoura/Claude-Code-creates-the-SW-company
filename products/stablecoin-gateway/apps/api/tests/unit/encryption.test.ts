@@ -14,8 +14,8 @@ describe('Encryption Utility - AES-256-GCM', () => {
   const originalEnv = process.env.WEBHOOK_ENCRYPTION_KEY;
 
   beforeAll(() => {
-    // Set encryption key for tests
-    process.env.WEBHOOK_ENCRYPTION_KEY = 'test-encryption-key-32-bytes-minimum-length-required';
+    // Set encryption key for tests (64 hex chars = 32 bytes for AES-256)
+    process.env.WEBHOOK_ENCRYPTION_KEY = 'a1b2c3d4e5f6a7b8c9d0e1f2a3b4c5d6e7f8a9b0c1d2e3f4a5b6c7d8e9f0a1b2';
     initializeEncryption();
   });
 
@@ -145,17 +145,17 @@ describe('Encryption Utility - AES-256-GCM', () => {
       process.env.WEBHOOK_ENCRYPTION_KEY = tempKey;
     });
 
-    it('should require minimum key length', () => {
+    it('should require exactly 64 hex characters', () => {
       const shortKey = 'short';
       process.env.WEBHOOK_ENCRYPTION_KEY = shortKey;
 
       expect(() => {
         const { initializeEncryption: reinit } = require('../../src/utils/encryption');
         reinit();
-      }).toThrow('WEBHOOK_ENCRYPTION_KEY must be at least 32 characters');
+      }).toThrow('WEBHOOK_ENCRYPTION_KEY must be exactly 64 hexadecimal characters (32 bytes for AES-256)');
 
-      // Restore proper key
-      process.env.WEBHOOK_ENCRYPTION_KEY = 'test-encryption-key-32-bytes-minimum-length-required';
+      // Restore proper key (64 hex chars)
+      process.env.WEBHOOK_ENCRYPTION_KEY = 'a1b2c3d4e5f6a7b8c9d0e1f2a3b4c5d6e7f8a9b0c1d2e3f4a5b6c7d8e9f0a1b2';
     });
   });
 

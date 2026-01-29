@@ -1,6 +1,13 @@
 import { buildApp } from '../../src/app';
 import { FastifyInstance } from 'fastify';
 
+/**
+ * SSE Endpoint Authentication tests
+ *
+ * NOTE: Uses unique User-Agent headers to isolate fingerprinted
+ * rate limit buckets (auth endpoints use IP+UA fingerprinting)
+ */
+
 describe('SSE Endpoint Authentication', () => {
   let app: FastifyInstance;
   let user1AccessToken: string;
@@ -8,6 +15,8 @@ describe('SSE Endpoint Authentication', () => {
   let user1PaymentId: string;
   let user1SseToken: string;
   let user2SseToken: string;
+  // Unique User-Agent to isolate rate limit bucket from other test files
+  const testUA = `SSEAuthTest/${Date.now()}`;
 
   beforeAll(async () => {
     app = await buildApp();
@@ -20,6 +29,9 @@ describe('SSE Endpoint Authentication', () => {
         email: 'sse-user1@example.com',
         password: 'SecurePass123!',
       },
+      headers: {
+        'user-agent': testUA,
+      },
     });
     user1AccessToken = user1Signup.json().access_token;
 
@@ -30,6 +42,9 @@ describe('SSE Endpoint Authentication', () => {
       payload: {
         email: 'sse-user2@example.com',
         password: 'SecurePass123!',
+      },
+      headers: {
+        'user-agent': testUA,
       },
     });
     user2AccessToken = user2Signup.json().access_token;
