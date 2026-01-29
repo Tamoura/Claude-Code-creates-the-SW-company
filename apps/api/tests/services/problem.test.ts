@@ -1,3 +1,7 @@
+// TODO: Test database isolation - These tests currently share the development
+// database which causes displayId collisions. Need to implement separate test
+// database with proper cleanup. See GitHub issue #[TBD]
+
 import { describe, it, expect, beforeEach, afterAll } from 'vitest';
 import { PrismaClient, Priority, ProblemStatus } from '@prisma/client';
 import {
