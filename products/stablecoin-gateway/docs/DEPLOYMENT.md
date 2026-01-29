@@ -425,6 +425,34 @@ aws cloudwatch get-metric-statistics \
 
 ## Environment Variables
 
+### Generating Secure Secrets
+
+**CRITICAL:** Never use default or weak secrets in production. Generate cryptographically secure secrets using:
+
+```bash
+# Generate a 64-byte (512-bit) secret in hexadecimal format
+openssl rand -hex 64
+```
+
+This command generates a 128-character hexadecimal string suitable for:
+- `JWT_SECRET` - JSON Web Token signing key
+- `REFRESH_TOKEN_SECRET` - Refresh token signing key (if different from JWT_SECRET)
+- Any other cryptographic keys
+
+**Example output:**
+```
+a7f4c9e2d1b8f6a3e5c7d9b1f3a5c7e9b1d3f5a7c9e1b3d5f7a9c1e3b5d7f9a1
+c3e5b7d9f1a3c5e7b9d1f3a5c7e9b1d3f5a7c9e1b3d5f7a9c1e3b5d7f9a1c3e5
+```
+
+**Security Best Practices:**
+- Generate unique secrets for staging and production
+- Store secrets in GitHub Actions Secrets (encrypted)
+- Never commit secrets to version control
+- Rotate secrets periodically (every 90 days minimum)
+- Use AWS Secrets Manager or similar for production secrets
+- Never reuse secrets across different environments or services
+
 ### Required Secrets (GitHub Actions)
 
 Configure these in GitHub Settings → Secrets and Variables → Actions:
