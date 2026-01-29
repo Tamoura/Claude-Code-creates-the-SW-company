@@ -29,7 +29,8 @@ CEO
       ├── QA Engineer (testing, quality)
       ├── DevOps Engineer (CI/CD, infrastructure)
       ├── Technical Writer (documentation)
-      └── Support Engineer (issues, bugs)
+      ├── Support Engineer (issues, bugs)
+      └── Code Reviewer (production-level audits, security assessment)
 ```
 
 ## Standards
