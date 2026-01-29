@@ -1,3 +1,21 @@
+/**
+ * Webhook CRUD API Routes
+ *
+ * Provides complete webhook management functionality:
+ * - Create webhook endpoints with auto-generated secrets
+ * - List all user webhooks
+ * - Get individual webhook details
+ * - Update webhook configuration
+ * - Delete webhook endpoints
+ *
+ * Security:
+ * - All endpoints require authentication (JWT or API key)
+ * - Webhook secrets are hashed before storage (bcrypt)
+ * - Secrets only shown once during creation
+ * - HTTPS-only URLs enforced
+ * - Ownership verified on all operations
+ */
+
 import { FastifyPluginAsync } from 'fastify';
 import { ZodError } from 'zod';
 import { createWebhookSchema, updateWebhookSchema, validateBody } from '../../utils/validation.js';
@@ -8,6 +26,9 @@ import bcrypt from 'bcrypt';
 
 /**
  * Generate a webhook secret with whsec_ prefix (Stripe-style)
+ *
+ * Format: whsec_[64 hex characters]
+ * Provides 256 bits of entropy for HMAC-SHA256 signatures
  */
 function generateWebhookSecret(): string {
   const randomBytes = crypto.randomBytes(32).toString('hex');
@@ -16,9 +37,51 @@ function generateWebhookSecret(): string {
 
 /**
  * Hash webhook secret using bcrypt for secure storage
+ *
+ * SECURITY: Never store plaintext secrets in database.
+ * Bcrypt provides one-way hashing resistant to rainbow tables.
  */
 async function hashWebhookSecret(secret: string): Promise<string> {
   return bcrypt.hash(secret, 10);
+}
+
+/**
+ * Format webhook response (exclude secret from output)
+ */
+interface WebhookResponse {
+  id: string;
+  url: string;
+  events: string[];
+  enabled: boolean;
+  description: string | null;
+  created_at: string;
+  updated_at: string;
+  secret?: string; // Only included on creation
+}
+
+/**
+ * Transform webhook database record to API response
+ * SECURITY: Excludes secret by default
+ */
+function formatWebhookResponse(
+  webhook: any,
+  includeSecret?: { secret: string }
+): WebhookResponse {
+  const response: WebhookResponse = {
+    id: webhook.id,
+    url: webhook.url,
+    events: webhook.events,
+    enabled: webhook.enabled,
+    description: webhook.description,
+    created_at: webhook.createdAt.toISOString(),
+    updated_at: webhook.updatedAt.toISOString(),
+  };
+
+  if (includeSecret) {
+    response.secret = includeSecret.secret;
+  }
+
+  return response;
 }
 
 const webhookRoutes: FastifyPluginAsync = async (fastify) => {
@@ -54,16 +117,7 @@ const webhookRoutes: FastifyPluginAsync = async (fastify) => {
       });
 
       // Return webhook with plaintext secret (ONLY TIME IT'S SHOWN)
-      return reply.code(201).send({
-        id: webhook.id,
-        url: webhook.url,
-        events: webhook.events,
-        enabled: webhook.enabled,
-        description: webhook.description,
-        secret, // Plaintext secret - only shown once
-        created_at: webhook.createdAt.toISOString(),
-        updated_at: webhook.updatedAt.toISOString(),
-      });
+      return reply.code(201).send(formatWebhookResponse(webhook, { secret }));
     } catch (error) {
       if (error instanceof AppError) {
         return reply.code(error.statusCode).send(error.toJSON());
@@ -94,17 +148,9 @@ const webhookRoutes: FastifyPluginAsync = async (fastify) => {
       });
 
       // Do NOT return secrets in list
-      const response = webhooks.map(webhook => ({
-        id: webhook.id,
-        url: webhook.url,
-        events: webhook.events,
-        enabled: webhook.enabled,
-        description: webhook.description,
-        created_at: webhook.createdAt.toISOString(),
-        updated_at: webhook.updatedAt.toISOString(),
-      }));
-
-      return reply.send({ data: response });
+      return reply.send({
+        data: webhooks.map(webhook => formatWebhookResponse(webhook)),
+      });
     } catch (error) {
       if (error instanceof AppError) {
         return reply.code(error.statusCode).send(error.toJSON());
@@ -134,15 +180,7 @@ const webhookRoutes: FastifyPluginAsync = async (fastify) => {
       }
 
       // Do NOT return secret
-      return reply.send({
-        id: webhook.id,
-        url: webhook.url,
-        events: webhook.events,
-        enabled: webhook.enabled,
-        description: webhook.description,
-        created_at: webhook.createdAt.toISOString(),
-        updated_at: webhook.updatedAt.toISOString(),
-      });
+      return reply.send(formatWebhookResponse(webhook));
     } catch (error) {
       if (error instanceof AppError) {
         return reply.code(error.statusCode).send(error.toJSON());
@@ -201,15 +239,7 @@ const webhookRoutes: FastifyPluginAsync = async (fastify) => {
       });
 
       // Do NOT return secret
-      return reply.send({
-        id: webhook.id,
-        url: webhook.url,
-        events: webhook.events,
-        enabled: webhook.enabled,
-        description: webhook.description,
-        created_at: webhook.createdAt.toISOString(),
-        updated_at: webhook.updatedAt.toISOString(),
-      });
+      return reply.send(formatWebhookResponse(webhook));
     } catch (error) {
       if (error instanceof AppError) {
         return reply.code(error.statusCode).send(error.toJSON());
