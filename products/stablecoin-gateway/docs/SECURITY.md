@@ -164,40 +164,124 @@ await prisma.paymentSession.update({
 
 ---
 
-### SSE Authentication (FIX-02)
+### SSE Authentication (PHASE2-02)
 
 Server-Sent Events (SSE) for real-time payment updates require authentication.
 
 **Challenge**: EventSource API doesn't support custom headers
-**Solution**: Query parameter token authentication
+**Solution**: Short-lived SSE tokens via dedicated endpoint
 
-**Implementation**:
+#### Token Generation Flow
+
+**Step 1**: Client requests SSE token with standard Bearer authentication
 ```typescript
-// Frontend: Include token in query string
-const token = localStorage.getItem('access_token');
-const eventSource = new EventSource(
-  `/v1/payment-sessions/${paymentId}/events?token=${token}`
-);
+POST /v1/auth/sse-token
+Authorization: Bearer <access_token>
 
-// Backend: Extract and verify token from query
-const token = request.query.token;
-const decoded = fastify.jwt.verify(token);
+{
+  "payment_session_id": "ps_abc123"
+}
+```
+
+**Step 2**: Server validates ownership and generates short-lived token
+```typescript
+// Backend implementation
+const userId = request.user.userId;
 
 // Verify ownership
+const paymentSession = await prisma.paymentSession.findUnique({
+  where: { id: body.payment_session_id }
+});
+
+if (paymentSession.userId !== userId) {
+  throw new AppError(403, 'access-denied', 'You do not have access to this payment session');
+}
+
+// Generate token with 15-minute expiry
+const sseToken = fastify.jwt.sign(
+  {
+    userId,
+    paymentSessionId: body.payment_session_id,
+    type: 'sse',
+  },
+  { expiresIn: 15 * 60 } // 900 seconds
+);
+```
+
+**Step 3**: Client uses token in EventSource query parameter
+```typescript
+const eventSource = new EventSource(
+  `/v1/payment-sessions/${paymentId}/events?token=${sseToken}`
+);
+```
+
+**Step 4**: Backend validates token on SSE connection
+```typescript
+// Extract token from query (EventSource limitation)
+const token = request.query.token;
+
+// Verify token signature and expiry
+const decoded = fastify.jwt.verify(token);
+
+// Verify token type
+if (decoded.type !== 'sse') {
+  throw new AppError(401, 'invalid-token', 'Invalid token type');
+}
+
+// Verify payment session ownership
+if (decoded.paymentSessionId !== paymentId) {
+  throw new AppError(403, 'forbidden', 'Token not valid for this payment session');
+}
+
+// Verify user still owns payment session
 const session = await prisma.paymentSession.findFirst({
   where: { id: paymentId, userId: decoded.userId }
 });
 
 if (!session) {
-  return reply.code(403).send({ error: 'Forbidden' });
+  throw new AppError(403, 'forbidden', 'Access denied');
 }
 ```
 
-**Security Features**:
-- Token validated before opening SSE connection
-- Only payment owner can subscribe to updates
-- Unauthorized access returns 401/403
-- Token expiration enforced (15-minute window)
+#### Security Features
+
+**Token Lifetime**:
+- ✅ 15-minute expiry (900 seconds)
+- ✅ Short window minimizes exposure if token leaked in logs
+- ✅ Long enough for typical payment flows (1-3 minutes)
+- ✅ Expired tokens automatically rejected
+
+**Token Scope**:
+- ✅ Scoped to single payment session
+- ✅ Cannot be reused for different payment sessions
+- ✅ User ID embedded in token payload
+- ✅ Payment session ID embedded in token payload
+
+**Token Type**:
+- ✅ Dedicated token type (`type: 'sse'`)
+- ✅ Cannot use standard access tokens for SSE
+- ✅ Prevents accidental logging of long-lived credentials
+- ✅ Clear separation of authentication contexts
+
+**Authorization**:
+- ✅ User must own payment session to generate token
+- ✅ User must own payment session to use token
+- ✅ Cross-user access prevented
+- ✅ Ownership verified on both token generation and usage
+
+**Trade-offs Considered**:
+
+| Approach | Pros | Cons | Decision |
+|----------|------|------|----------|
+| **Long-lived tokens in query** | Simple | High security risk if logged | ❌ Rejected |
+| **Session cookies** | W3C standard, no query params | Complex CORS setup, browser-only | 🤔 Future consideration |
+| **Short-lived tokens in query** | Minimal risk, simple, works everywhere | Token in logs (15-min window) | ✅ **Selected** |
+
+**Why Short-Lived Tokens Work**:
+1. **Log exposure limited**: Even if token appears in server logs, it's valid for maximum 15 minutes
+2. **Scope limited**: Token only works for one specific payment session
+3. **User verification**: Both initial ownership check and ongoing validation
+4. **Practical trade-off**: Balances security with W3C EventSource API limitations
 
 ---
 
@@ -235,6 +319,104 @@ ALLOWED_ORIGINS=https://gateway.io,https://app.gateway.io
 ---
 
 ## Webhook Security
+
+### Webhook Secret Management (PHASE2-01)
+
+Webhook secrets are generated and stored securely to prevent unauthorized webhook spoofing.
+
+#### Secret Generation
+
+**Format**: `whsec_[64 hex characters]` (Stripe-style)
+```typescript
+function generateWebhookSecret(): string {
+  const randomBytes = crypto.randomBytes(32).toString('hex');
+  return `whsec_${randomBytes}`;
+}
+```
+
+**Properties**:
+- ✅ 256 bits of entropy (32 bytes × 8 bits)
+- ✅ Cryptographically secure random generation
+- ✅ Unique per webhook endpoint
+- ✅ Format clearly identifies it as webhook secret
+
+#### Secret Storage
+
+**Security Requirement**: Never store plaintext secrets in database
+
+**Implementation**:
+```typescript
+import bcrypt from 'bcrypt';
+
+async function hashWebhookSecret(secret: string): Promise<string> {
+  return bcrypt.hash(secret, 10);
+}
+
+// On webhook creation
+const secret = generateWebhookSecret();
+const hashedSecret = await hashWebhookSecret(secret);
+
+await prisma.webhook.create({
+  data: {
+    url: 'https://merchant.com/webhooks',
+    secretHash: hashedSecret, // Only hash stored
+    // ... other fields
+  }
+});
+
+// Return plaintext secret ONLY ONCE on creation
+return reply.code(201).send({
+  id: webhook.id,
+  secret: secret, // ONLY shown here
+  // ... other fields
+});
+```
+
+**Security Properties**:
+- ✅ Bcrypt one-way hashing (cost factor 10)
+- ✅ Rainbow table resistant (bcrypt salting)
+- ✅ Plaintext secret never retrievable after creation
+- ✅ Database compromise doesn't expose secrets
+- ✅ Secrets cannot be updated (create new webhook if needed)
+
+#### Secret Lifecycle
+
+**Creation**:
+1. User calls `POST /v1/webhooks`
+2. Server generates secret with 256-bit entropy
+3. Server hashes secret with bcrypt
+4. Server stores hash in database
+5. Server returns plaintext secret **once** in response
+6. User saves secret securely for signature verification
+
+**Usage**:
+1. Event occurs (e.g., payment completed)
+2. Server retrieves webhook endpoint and hashed secret
+3. Server generates HMAC-SHA256 signature using plaintext payload and hashed secret
+4. Server sends webhook with signature header
+5. Merchant verifies signature using their saved secret
+
+**Deletion**:
+1. User calls `DELETE /v1/webhooks/:id`
+2. Server deletes webhook and all delivery attempts (cascade)
+3. Secret permanently lost (cannot be recovered)
+
+**Why Bcrypt for Webhook Secrets?**:
+
+| Algorithm | Use Case | Why? |
+|-----------|----------|------|
+| **Bcrypt** | Webhook secrets | Slow hashing prevents brute-force, salting prevents rainbow tables |
+| SHA-256 | API key hashing | Fast hashing OK since API keys have high entropy |
+| HMAC-SHA256 | Signature generation | Fast symmetric authentication |
+
+**Best Practices for Merchants**:
+- ✅ Save webhook secret immediately after creation (it's only shown once)
+- ✅ Store secret in secure environment variables, not code
+- ✅ Never commit secrets to version control
+- ✅ Rotate secrets regularly (create new webhook, delete old)
+- ✅ Use different secrets for production and staging
+
+---
 
 ### Signature Verification (FIX-06)
 

@@ -408,26 +408,96 @@ See `ADR-002-blockchain-integration.md` for full decision rationale.
 
 **Purpose**: Notify merchants of payment events
 
+**Architecture Overview (PHASE2-01)**:
+```
+┌─────────────┐     POST /v1/webhooks       ┌──────────────┐
+│  Merchant   │ ─────────────────────────────▶│  API Server  │
+│  Dashboard  │◀───── webhook_id + secret ────│              │
+│             │                                │  - Generate  │
+└─────────────┘                                │    secret    │
+                                               │  - Hash      │
+                                               │    (bcrypt)  │
+                                               │  - Store     │
+                                               └──────────────┘
+
+┌─────────────┐                               ┌──────────────┐
+│  Payment    │─────── Event Occurs ─────────▶│   Webhook    │
+│  Monitor    │        (completed/failed)      │   Worker     │
+└─────────────┘                               └──────┬───────┘
+                                                     │
+                    1. Load webhook endpoint         │
+                    2. Load hashed secret            │
+                    3. Sign payload (HMAC-SHA256)    │
+                    4. POST to merchant URL          │
+                                                     │
+                                                     ▼
+                                              ┌──────────────┐
+                                              │  Merchant    │
+                                              │  Server      │
+                                              │              │
+                                              │  - Verify    │
+                                              │    signature │
+                                              │  - Process   │
+                                              └──────────────┘
+```
+
+**Webhook CRUD Operations (PHASE2-01)**:
+- `POST /v1/webhooks` - Create webhook (secret shown once)
+- `GET /v1/webhooks` - List all webhooks
+- `GET /v1/webhooks/:id` - Get webhook details
+- `PATCH /v1/webhooks/:id` - Update webhook (URL, events, enabled)
+- `DELETE /v1/webhooks/:id` - Delete webhook
+
 **Event Types**:
 - `payment.created` - Payment session created
 - `payment.confirming` - Transaction detected on blockchain
 - `payment.completed` - Payment confirmed
 - `payment.failed` - Transaction failed or expired
+- `payment.expired` - Payment session expired (24-hour timeout)
 - `payment.refunded` - Refund processed
+
+**Secret Management (PHASE2-01)**:
+```typescript
+// Secret generation (256 bits of entropy)
+const secret = `whsec_${crypto.randomBytes(32).toString('hex')}`;
+
+// Secret hashing (bcrypt, one-way)
+const hashedSecret = await bcrypt.hash(secret, 10);
+
+// Storage
+await prisma.webhook.create({
+  data: {
+    url: 'https://merchant.com/webhooks',
+    secretHash: hashedSecret, // Only hash stored
+    events: ['payment.completed'],
+  }
+});
+
+// Return secret ONLY ONCE
+return { id: webhook.id, secret: secret };
+```
+
+**Security Properties**:
+- ✅ Secrets generated with 256 bits of entropy
+- ✅ Secrets stored hashed (bcrypt), never retrievable
+- ✅ Database compromise doesn't expose secrets
+- ✅ Secrets shown only once during creation
+- ✅ HTTPS-only URLs enforced
 
 **Delivery Mechanism**:
 ```
 1. Payment event occurs → Emit event
 2. Webhook worker picks up event from queue
-3. Sign payload with HMAC-SHA256 (merchant's webhook secret)
-4. POST to merchant's webhook URL
-5. Retry on failure:
+3. Load webhook endpoint and hashed secret
+4. Sign payload with HMAC-SHA256 (using plaintext secret for signing)
+5. POST to merchant's webhook URL with signature header
+6. Retry on failure:
    - Attempt 1: Immediate
    - Attempt 2: +10 seconds
    - Attempt 3: +60 seconds
    - Attempt 4: +600 seconds (10 min)
-6. Mark as "failed" after 4 attempts
-7. Merchant can replay via dashboard
+7. Mark as "failed" after 4 attempts
+8. Merchant can replay via dashboard
 ```
 
 **Payload Format**:
@@ -682,7 +752,8 @@ Merchant Dashboard
 - JWT tokens (access token + refresh token)
 - Access token: 15-minute expiry
 - Refresh token: 7-day expiry, stored in httpOnly cookie
-- Password: Bcrypt with cost factor 12
+- Password: Bcrypt with cost factor 12, minimum 12 characters with complexity requirements
+- Refresh token revocation on logout (database-backed)
 
 **API Key Authentication**:
 - API keys prefixed with `sk_live_` or `sk_test_`
@@ -695,11 +766,46 @@ Merchant Dashboard
   - Refund permission required for refund operations
   - Principle of least privilege enforced
 
+**SSE Token Authentication (PHASE2-02)**:
+- Short-lived tokens for Server-Sent Events (15-minute expiry)
+- Generated via dedicated endpoint: `POST /v1/auth/sse-token`
+- Scoped to specific payment session
+- Addresses W3C EventSource API limitation (no custom headers)
+- Token passed as query parameter: `?token=<sse_token>`
+
+**Authentication Flow Diagram**:
+```
+┌─────────────┐     POST /v1/auth/login      ┌──────────────┐
+│   Client    │ ─────────────────────────────▶│  API Server  │
+│   (Browser) │◀───── access_token (15m) ─────│              │
+│             │◀───── refresh_token (7d) ─────│              │
+└──────┬──────┘                               └──────────────┘
+       │
+       │ Access token expires after 15 minutes
+       │
+       ▼
+┌─────────────┐   POST /v1/auth/sse-token    ┌──────────────┐
+│   Client    │ ─────────────────────────────▶│  API Server  │
+│             │   (with access_token)          │              │
+│             │◀───── sse_token (15m) ─────────│  - Verify    │
+│             │                                │    ownership │
+└──────┬──────┘                               │  - Generate  │
+       │                                       │    scoped    │
+       │ Connect to SSE with short-lived token│    token     │
+       │                                       └──────────────┘
+       ▼
+GET /v1/payment-sessions/:id/events?token=<sse_token>
+│
+▼
+Server-Sent Event Stream (real-time updates)
+```
+
 **Authorization Model**:
 ```
 User → owns → API Keys
 User → owns → Payment Sessions
 User → owns → Webhooks
+User → can generate → SSE Tokens (scoped to payment session)
 ```
 
 **Principle of Least Privilege**:
