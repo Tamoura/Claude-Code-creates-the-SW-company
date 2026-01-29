@@ -1,0 +1,938 @@
+openapi: 3.0.3
+info:
+  title: Stablecoin Gateway API
+  description: |
+    Accept stablecoin payments (USDC/USDT) with Stripe-level developer experience at 0.5% transaction fees.
+
+    ## Authentication
+
+    Use API keys to authenticate requests. Include your API key in the `Authorization` header:
+
+    ```
+    Authorization: Bearer sk_live_abc123...
+    ```
+
+    API keys can be created in the [Dashboard](https://gateway.io/dashboard/api-keys).
+
+    ## Rate Limits
+
+    - Payment creation: 10 requests/minute
+    - Payment queries: 100 requests/minute
+    - Webhook config: 5 requests/minute
+
+    Rate limit info is returned in headers:
+    - `X-RateLimit-Limit`: Total requests allowed
+    - `X-RateLimit-Remaining`: Requests remaining
+    - `X-RateLimit-Reset`: Unix timestamp when limit resets
+
+    ## Webhooks
+
+    Configure webhooks to receive real-time notifications for payment events. See `/v1/webhooks` endpoints.
+
+    ## Idempotency
+
+    Pass `Idempotency-Key` header when creating payments to prevent duplicate charges:
+
+    ```
+    Idempotency-Key: unique-key-123
+    ```
+
+    ## Errors
+
+    Errors follow RFC 7807 Problem Details format:
+
+    ```json
+    {
+      "type": "https://gateway.io/errors/insufficient-balance",
+      "title": "Insufficient Balance",
+      "status": 400,
+      "detail": "Customer wallet has insufficient USDC balance",
+      "instance": "/v1/payment-sessions/ps_abc123",
+      "request_id": "req_xyz789"
+    }
+    ```
+  version: 1.0.0
+  contact:
+    name: Stablecoin Gateway Support
+    email: support@gateway.io
+    url: https://gateway.io/support
+  license:
+    name: Proprietary
+    url: https://gateway.io/terms
+
+servers:
+  - url: https://api.gateway.io
+    description: Production server
+  - url: https://api-sandbox.gateway.io
+    description: Sandbox server (test mode)
+
+tags:
+  - name: Authentication
+    description: User signup, login, token refresh
+  - name: Payment Sessions
+    description: Create and manage payment sessions
+  - name: Webhooks
+    description: Configure webhook endpoints for event notifications
+  - name: API Keys
+    description: Manage API keys for authentication
+  - name: Refunds
+    description: Issue refunds to customers
+
+security:
+  - BearerAuth: []
+
+paths:
+  # ==================== Authentication ====================
+  /v1/auth/signup:
+    post:
+      tags: [Authentication]
+      summary: Create new user account
+      operationId: signup
+      security: []
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              type: object
+              required: [email, password]
+              properties:
+                email:
+                  type: string
+                  format: email
+                  example: merchant@example.com
+                password:
+                  type: string
+                  format: password
+                  minLength: 8
+                  example: SecurePass123!
+                  description: Minimum 8 characters, 1 uppercase, 1 number
+      responses:
+        '201':
+          description: Account created successfully
+          content:
+            application/json:
+              schema:
+                type: object
+                properties:
+                  id:
+                    type: string
+                    example: usr_abc123
+                  email:
+                    type: string
+                    example: merchant@example.com
+                  created_at:
+                    type: string
+                    format: date-time
+                  access_token:
+                    type: string
+                    example: eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9...
+                  refresh_token:
+                    type: string
+                    example: rt_def456...
+        '400':
+          $ref: '#/components/responses/BadRequest'
+        '409':
+          description: Email already exists
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/Error'
+
+  /v1/auth/login:
+    post:
+      tags: [Authentication]
+      summary: Login to existing account
+      operationId: login
+      security: []
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              type: object
+              required: [email, password]
+              properties:
+                email:
+                  type: string
+                  format: email
+                password:
+                  type: string
+                  format: password
+      responses:
+        '200':
+          description: Login successful
+          content:
+            application/json:
+              schema:
+                type: object
+                properties:
+                  id:
+                    type: string
+                  email:
+                    type: string
+                  access_token:
+                    type: string
+                  refresh_token:
+                    type: string
+        '401':
+          description: Invalid credentials
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/Error'
+
+  /v1/auth/refresh:
+    post:
+      tags: [Authentication]
+      summary: Refresh access token
+      operationId: refreshToken
+      security: []
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              type: object
+              required: [refresh_token]
+              properties:
+                refresh_token:
+                  type: string
+                  example: rt_def456...
+      responses:
+        '200':
+          description: Token refreshed
+          content:
+            application/json:
+              schema:
+                type: object
+                properties:
+                  access_token:
+                    type: string
+                  refresh_token:
+                    type: string
+        '401':
+          $ref: '#/components/responses/Unauthorized'
+
+  # ==================== Payment Sessions ====================
+  /v1/payment-sessions:
+    post:
+      tags: [Payment Sessions]
+      summary: Create payment session
+      operationId: createPaymentSession
+      description: |
+        Create a new payment session. Returns a checkout URL where customers can complete payment.
+
+        Use `Idempotency-Key` header to prevent duplicate sessions.
+      parameters:
+        - $ref: '#/components/parameters/IdempotencyKey'
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              type: object
+              required: [amount, currency]
+              properties:
+                amount:
+                  type: number
+                  format: decimal
+                  minimum: 1
+                  maximum: 10000
+                  example: 100.00
+                  description: Payment amount (USD)
+                currency:
+                  type: string
+                  enum: [USD]
+                  default: USD
+                  example: USD
+                description:
+                  type: string
+                  maxLength: 500
+                  example: "Order #1234 - Blue Widget"
+                network:
+                  type: string
+                  enum: [polygon, ethereum]
+                  default: polygon
+                  example: polygon
+                  description: Blockchain network for payment
+                token:
+                  type: string
+                  enum: [USDC, USDT]
+                  default: USDC
+                  example: USDC
+                  description: Stablecoin token to accept
+                merchant_address:
+                  type: string
+                  pattern: '^0x[a-fA-F0-9]{40}$'
+                  example: "0x742d35Cc6634C0532925a3b844Bc9e7595f0bEb"
+                  description: Merchant's wallet address (receives payment)
+                success_url:
+                  type: string
+                  format: uri
+                  example: "https://example.com/order/success"
+                  description: Redirect URL after successful payment
+                cancel_url:
+                  type: string
+                  format: uri
+                  example: "https://example.com/order/cancel"
+                  description: Redirect URL if payment cancelled
+                metadata:
+                  type: object
+                  additionalProperties: true
+                  example: { order_id: "1234", customer_id: "cust_789" }
+                  description: Custom metadata (max 50KB)
+      responses:
+        '201':
+          description: Payment session created
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/PaymentSession'
+        '400':
+          $ref: '#/components/responses/BadRequest'
+        '401':
+          $ref: '#/components/responses/Unauthorized'
+        '429':
+          $ref: '#/components/responses/RateLimitExceeded'
+
+    get:
+      tags: [Payment Sessions]
+      summary: List payment sessions
+      operationId: listPaymentSessions
+      description: Returns a paginated list of payment sessions
+      parameters:
+        - name: limit
+          in: query
+          schema:
+            type: integer
+            minimum: 1
+            maximum: 100
+            default: 50
+          description: Number of results per page
+        - name: offset
+          in: query
+          schema:
+            type: integer
+            minimum: 0
+            default: 0
+          description: Offset for pagination
+        - name: status
+          in: query
+          schema:
+            type: string
+            enum: [pending, confirming, completed, failed, refunded]
+          description: Filter by payment status
+        - name: network
+          in: query
+          schema:
+            type: string
+            enum: [polygon, ethereum]
+          description: Filter by blockchain network
+        - name: created_after
+          in: query
+          schema:
+            type: string
+            format: date-time
+          description: Filter payments created after this timestamp
+        - name: created_before
+          in: query
+          schema:
+            type: string
+            format: date-time
+          description: Filter payments created before this timestamp
+      responses:
+        '200':
+          description: List of payment sessions
+          content:
+            application/json:
+              schema:
+                type: object
+                properties:
+                  data:
+                    type: array
+                    items:
+                      $ref: '#/components/schemas/PaymentSession'
+                  pagination:
+                    $ref: '#/components/schemas/Pagination'
+        '401':
+          $ref: '#/components/responses/Unauthorized'
+
+  /v1/payment-sessions/{id}:
+    get:
+      tags: [Payment Sessions]
+      summary: Get payment session
+      operationId: getPaymentSession
+      parameters:
+        - name: id
+          in: path
+          required: true
+          schema:
+            type: string
+            pattern: '^ps_[a-zA-Z0-9]+$'
+          example: ps_abc123
+      responses:
+        '200':
+          description: Payment session details
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/PaymentSession'
+        '404':
+          $ref: '#/components/responses/NotFound'
+
+  /v1/payment-sessions/{id}/events:
+    get:
+      tags: [Payment Sessions]
+      summary: Stream payment status updates (SSE)
+      operationId: streamPaymentStatus
+      description: |
+        Server-Sent Events endpoint for real-time payment status updates.
+
+        Connect using EventSource:
+        ```javascript
+        const eventSource = new EventSource('/v1/payment-sessions/ps_abc123/events');
+        eventSource.onmessage = (event) => {
+          const payment = JSON.parse(event.data);
+          console.log('Status:', payment.status);
+        };
+        ```
+      parameters:
+        - name: id
+          in: path
+          required: true
+          schema:
+            type: string
+      responses:
+        '200':
+          description: SSE stream
+          content:
+            text/event-stream:
+              schema:
+                type: string
+                example: |
+                  data: {"status":"confirming","confirmations":1}
+
+                  data: {"status":"completed","confirmations":3}
+
+  # ==================== Refunds ====================
+  /v1/refunds:
+    post:
+      tags: [Refunds]
+      summary: Issue refund
+      operationId: createRefund
+      description: Refund a completed payment. Sends stablecoins back to customer's wallet.
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              type: object
+              required: [payment_session_id, amount]
+              properties:
+                payment_session_id:
+                  type: string
+                  example: ps_abc123
+                amount:
+                  type: number
+                  format: decimal
+                  example: 100.00
+                  description: Refund amount (must be <= original payment amount)
+                reason:
+                  type: string
+                  maxLength: 500
+                  example: "Customer requested refund"
+      responses:
+        '201':
+          description: Refund initiated
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/Refund'
+        '400':
+          description: Invalid refund request
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/Error'
+              examples:
+                already_refunded:
+                  summary: Payment already refunded
+                  value:
+                    type: "https://gateway.io/errors/already-refunded"
+                    title: "Payment Already Refunded"
+                    detail: "This payment has already been refunded"
+                insufficient_balance:
+                  summary: Merchant has insufficient balance
+                  value:
+                    type: "https://gateway.io/errors/insufficient-balance"
+                    title: "Insufficient Balance"
+                    detail: "Merchant hot wallet has insufficient USDC balance for refund"
+
+  # ==================== Webhooks ====================
+  /v1/webhooks:
+    post:
+      tags: [Webhooks]
+      summary: Create webhook endpoint
+      operationId: createWebhook
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              type: object
+              required: [url, events]
+              properties:
+                url:
+                  type: string
+                  format: uri
+                  example: "https://example.com/webhooks/stablecoin-gateway"
+                  description: Your webhook endpoint URL (must be HTTPS)
+                events:
+                  type: array
+                  items:
+                    type: string
+                    enum:
+                      - payment.created
+                      - payment.confirming
+                      - payment.completed
+                      - payment.failed
+                      - payment.refunded
+                  example: ["payment.completed", "payment.refunded"]
+                  description: Event types to receive
+                description:
+                  type: string
+                  maxLength: 200
+                  example: "Production webhook"
+      responses:
+        '201':
+          description: Webhook created
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/WebhookEndpoint'
+        '400':
+          $ref: '#/components/responses/BadRequest'
+
+    get:
+      tags: [Webhooks]
+      summary: List webhook endpoints
+      operationId: listWebhooks
+      responses:
+        '200':
+          description: List of webhooks
+          content:
+            application/json:
+              schema:
+                type: object
+                properties:
+                  data:
+                    type: array
+                    items:
+                      $ref: '#/components/schemas/WebhookEndpoint'
+
+  /v1/webhooks/{id}:
+    patch:
+      tags: [Webhooks]
+      summary: Update webhook endpoint
+      operationId: updateWebhook
+      parameters:
+        - name: id
+          in: path
+          required: true
+          schema:
+            type: string
+      requestBody:
+        content:
+          application/json:
+            schema:
+              type: object
+              properties:
+                url:
+                  type: string
+                  format: uri
+                events:
+                  type: array
+                  items:
+                    type: string
+                enabled:
+                  type: boolean
+      responses:
+        '200':
+          description: Webhook updated
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/WebhookEndpoint'
+
+    delete:
+      tags: [Webhooks]
+      summary: Delete webhook endpoint
+      operationId: deleteWebhook
+      parameters:
+        - name: id
+          in: path
+          required: true
+          schema:
+            type: string
+      responses:
+        '204':
+          description: Webhook deleted
+
+  # ==================== API Keys ====================
+  /v1/api-keys:
+    post:
+      tags: [API Keys]
+      summary: Create API key
+      operationId: createApiKey
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              type: object
+              required: [name]
+              properties:
+                name:
+                  type: string
+                  maxLength: 100
+                  example: "Production API Key"
+                permissions:
+                  type: object
+                  properties:
+                    read:
+                      type: boolean
+                      default: true
+                    write:
+                      type: boolean
+                      default: true
+                    refund:
+                      type: boolean
+                      default: false
+      responses:
+        '201':
+          description: API key created
+          content:
+            application/json:
+              schema:
+                type: object
+                properties:
+                  id:
+                    type: string
+                  name:
+                    type: string
+                  key:
+                    type: string
+                    example: sk_live_abc123xyz789...
+                    description: Full API key (only shown once!)
+                  key_prefix:
+                    type: string
+                    example: sk_live_abc123...
+                  permissions:
+                    type: object
+                  created_at:
+                    type: string
+                    format: date-time
+
+    get:
+      tags: [API Keys]
+      summary: List API keys
+      operationId: listApiKeys
+      responses:
+        '200':
+          description: List of API keys
+          content:
+            application/json:
+              schema:
+                type: object
+                properties:
+                  data:
+                    type: array
+                    items:
+                      $ref: '#/components/schemas/ApiKey'
+
+  /v1/api-keys/{id}:
+    delete:
+      tags: [API Keys]
+      summary: Revoke API key
+      operationId: revokeApiKey
+      parameters:
+        - name: id
+          in: path
+          required: true
+          schema:
+            type: string
+      responses:
+        '204':
+          description: API key revoked
+
+# ==================== Components ====================
+components:
+  securitySchemes:
+    BearerAuth:
+      type: http
+      scheme: bearer
+      bearerFormat: JWT
+      description: Use API key as bearer token
+
+  parameters:
+    IdempotencyKey:
+      name: Idempotency-Key
+      in: header
+      schema:
+        type: string
+        maxLength: 255
+      description: Unique key to prevent duplicate requests
+
+  schemas:
+    PaymentSession:
+      type: object
+      properties:
+        id:
+          type: string
+          example: ps_abc123
+        amount:
+          type: number
+          format: decimal
+          example: 100.00
+        currency:
+          type: string
+          example: USD
+        description:
+          type: string
+          example: "Order #1234"
+        status:
+          type: string
+          enum: [pending, confirming, completed, failed, refunded]
+          example: completed
+        network:
+          type: string
+          enum: [polygon, ethereum]
+          example: polygon
+        token:
+          type: string
+          enum: [USDC, USDT]
+          example: USDC
+        merchant_address:
+          type: string
+          example: "0x742d35Cc6634C0532925a3b844Bc9e7595f0bEb"
+        customer_address:
+          type: string
+          nullable: true
+          example: "0x123...abc"
+        tx_hash:
+          type: string
+          nullable: true
+          example: "0xabc123..."
+        block_number:
+          type: integer
+          nullable: true
+          example: 45678901
+        confirmations:
+          type: integer
+          example: 64
+        checkout_url:
+          type: string
+          format: uri
+          example: "https://gateway.io/checkout/ps_abc123"
+        success_url:
+          type: string
+          format: uri
+          nullable: true
+        cancel_url:
+          type: string
+          format: uri
+          nullable: true
+        metadata:
+          type: object
+          nullable: true
+        created_at:
+          type: string
+          format: date-time
+        expires_at:
+          type: string
+          format: date-time
+        completed_at:
+          type: string
+          format: date-time
+          nullable: true
+
+    Refund:
+      type: object
+      properties:
+        id:
+          type: string
+          example: ref_abc123
+        payment_session_id:
+          type: string
+          example: ps_abc123
+        amount:
+          type: number
+          format: decimal
+          example: 100.00
+        reason:
+          type: string
+          nullable: true
+        status:
+          type: string
+          enum: [pending, processing, completed, failed]
+          example: completed
+        tx_hash:
+          type: string
+          nullable: true
+        created_at:
+          type: string
+          format: date-time
+        completed_at:
+          type: string
+          format: date-time
+          nullable: true
+
+    WebhookEndpoint:
+      type: object
+      properties:
+        id:
+          type: string
+          example: we_abc123
+        url:
+          type: string
+          format: uri
+        secret:
+          type: string
+          description: Use to verify webhook signatures (HMAC-SHA256)
+          example: whsec_xyz789...
+        events:
+          type: array
+          items:
+            type: string
+        enabled:
+          type: boolean
+        description:
+          type: string
+          nullable: true
+        created_at:
+          type: string
+          format: date-time
+
+    ApiKey:
+      type: object
+      properties:
+        id:
+          type: string
+        name:
+          type: string
+        key_prefix:
+          type: string
+          example: sk_live_abc123...
+          description: First 16 chars of API key
+        permissions:
+          type: object
+        last_used_at:
+          type: string
+          format: date-time
+          nullable: true
+        created_at:
+          type: string
+          format: date-time
+
+    Pagination:
+      type: object
+      properties:
+        limit:
+          type: integer
+          example: 50
+        offset:
+          type: integer
+          example: 0
+        total:
+          type: integer
+          example: 1234
+        has_more:
+          type: boolean
+          example: true
+
+    Error:
+      type: object
+      properties:
+        type:
+          type: string
+          format: uri
+          example: "https://gateway.io/errors/insufficient-balance"
+        title:
+          type: string
+          example: "Insufficient Balance"
+        status:
+          type: integer
+          example: 400
+        detail:
+          type: string
+          example: "Customer wallet has insufficient USDC balance"
+        instance:
+          type: string
+          example: "/v1/payment-sessions/ps_abc123"
+        request_id:
+          type: string
+          example: req_xyz789
+
+  responses:
+    BadRequest:
+      description: Invalid request
+      content:
+        application/json:
+          schema:
+            $ref: '#/components/schemas/Error'
+          example:
+            type: "https://gateway.io/errors/validation-error"
+            title: "Validation Error"
+            status: 400
+            detail: "Amount must be between 1 and 10000"
+            request_id: "req_xyz789"
+
+    Unauthorized:
+      description: Unauthorized (invalid or missing API key)
+      content:
+        application/json:
+          schema:
+            $ref: '#/components/schemas/Error'
+          example:
+            type: "https://gateway.io/errors/unauthorized"
+            title: "Unauthorized"
+            status: 401
+            detail: "Invalid API key"
+            request_id: "req_xyz789"
+
+    NotFound:
+      description: Resource not found
+      content:
+        application/json:
+          schema:
+            $ref: '#/components/schemas/Error'
+          example:
+            type: "https://gateway.io/errors/not-found"
+            title: "Not Found"
+            status: 404
+            detail: "Payment session not found"
+            request_id: "req_xyz789"
+
+    RateLimitExceeded:
+      description: Rate limit exceeded
+      headers:
+        X-RateLimit-Limit:
+          schema:
+            type: integer
+        X-RateLimit-Remaining:
+          schema:
+            type: integer
+        X-RateLimit-Reset:
+          schema:
+            type: integer
+      content:
+        application/json:
+          schema:
+            $ref: '#/components/schemas/Error'
+          example:
+            type: "https://gateway.io/errors/rate-limit-exceeded"
+            title: "Rate Limit Exceeded"
+            status: 429
+            detail: "You have exceeded the rate limit of 100 requests per minute"
+            request_id: "req_xyz789"

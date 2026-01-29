@@ -1,0 +1,444 @@
+# Mobile App Store Release Workflow
+# Placeholders: {PRODUCT}, {VERSION}, {PLATFORMS}
+# PLATFORMS can be: "ios", "android", or "both"
+# Use this workflow to submit mobile app to app stores
+
+metadata:
+  product: "{PRODUCT}"
+  version: "{VERSION}"
+  workflow_type: "mobile-app-store-release"
+  platforms: "{PLATFORMS}"
+  created_at: "{TIMESTAMP}"
+  updated_at: "{TIMESTAMP}"
+
+tasks:
+  # ============================================================================
+  # PHASE 1: PRE-RELEASE PREPARATION
+  # ============================================================================
+
+  - id: "QA-01"
+    name: "Final QA Testing"
+    description: |
+      Complete final testing before release:
+      - Run full test suite (unit + integration)
+      - Test on real iOS devices (multiple models)
+      - Test on real Android devices (multiple models/versions)
+      - Test all critical user flows
+      - Test edge cases and error scenarios
+      - Performance testing
+      - Battery usage testing
+      - Network conditions testing (3G, 4G, WiFi, offline)
+      - Generate final test report
+    agent: "qa-engineer"
+    depends_on: []
+    produces:
+      - name: "Final Test Report"
+        type: "document"
+        path: "products/{PRODUCT}/docs/test-reports/release-{VERSION}-testing.md"
+    parallel_ok: false
+    checkpoint: true
+    priority: "critical"
+    estimated_time_minutes: 180
+    acceptance_criteria:
+      - "All tests pass"
+      - "No critical bugs"
+      - "Performance acceptable"
+      - "Tested on required devices"
+      - "Test report complete"
+    status: "pending"
+
+  - id: "SECURITY-01"
+    name: "Security Review"
+    description: |
+      Security audit before release:
+      - Review authentication implementation
+      - Check for hardcoded secrets/keys
+      - Verify API keys are not exposed
+      - Check data encryption (at rest and in transit)
+      - Review permissions requested
+      - Check for common vulnerabilities
+      - Verify SSL certificate pinning (if applicable)
+      - Review third-party dependencies
+      - Generate security report
+    agent: "security-engineer"
+    depends_on: []
+    consumes:
+      - name: "Mobile App"
+        path: "products/{PRODUCT}/apps/mobile"
+    produces:
+      - name: "Security Report"
+        type: "document"
+        path: "products/{PRODUCT}/docs/security-reports/release-{VERSION}.md"
+    parallel_ok: true
+    checkpoint: false
+    priority: "critical"
+    estimated_time_minutes: 120
+    acceptance_criteria:
+      - "No hardcoded secrets found"
+      - "All sensitive data encrypted"
+      - "Permissions appropriate"
+      - "Dependencies reviewed"
+      - "Security report complete"
+    status: "pending"
+
+  - id: "DOCS-01"
+    name: "Prepare App Store Listings"
+    description: |
+      Create app store listing materials:
+      - App name and subtitle
+      - Description (for iOS App Store)
+      - Short description (for Google Play)
+      - Keywords (for iOS)
+      - Category selection
+      - Screenshots (all required sizes)
+      - App preview video (optional but recommended)
+      - Privacy policy URL
+      - Support URL
+      - Marketing URL
+      - Release notes
+    agent: "technical-writer"
+    depends_on: []
+    produces:
+      - name: "App Store Listing"
+        type: "document"
+        path: "products/{PRODUCT}/docs/app-store-listing-{VERSION}.md"
+      - name: "Screenshots"
+        type: "directory"
+        path: "products/{PRODUCT}/docs/screenshots"
+    parallel_ok: true
+    checkpoint: false
+    priority: "high"
+    estimated_time_minutes: 90
+    acceptance_criteria:
+      - "All text content prepared"
+      - "Screenshots for all required sizes"
+      - "Privacy policy accessible"
+      - "Release notes written"
+    status: "pending"
+
+  - id: "PRODUCT-01"
+    name: "Beta Testing Coordination"
+    description: |
+      Organize beta testing (TestFlight/Google Play Beta):
+      - Recruit beta testers (internal + external)
+      - Create beta testing instructions
+      - Distribute beta builds
+      - Collect feedback
+      - Track and fix critical issues
+      - Document beta feedback
+    agent: "product-manager"
+    depends_on: ["QA-01"]
+    produces:
+      - name: "Beta Feedback Report"
+        type: "document"
+        path: "products/{PRODUCT}/docs/beta-feedback-{VERSION}.md"
+    parallel_ok: true
+    checkpoint: true
+    priority: "high"
+    estimated_time_minutes: 480
+    acceptance_criteria:
+      - "At least 10 beta testers recruited"
+      - "Beta builds distributed"
+      - "Feedback collected and reviewed"
+      - "Critical issues fixed"
+    status: "pending"
+
+  # ============================================================================
+  # PHASE 2: BUILD PREPARATION
+  # ============================================================================
+
+  - id: "BUILD-01"
+    name: "Prepare Production Builds"
+    description: |
+      Configure and prepare production builds:
+      - Update version numbers (app.json, package.json)
+      - Update build numbers
+      - Configure production environment variables
+      - Enable production optimizations
+      - Disable debug features
+      - Update app icons (production versions)
+      - Update splash screens
+      - Verify bundle identifiers
+    agent: "devops-engineer"
+    depends_on: ["PRODUCT-01", "SECURITY-01"]
+    consumes:
+      - name: "Beta Feedback Report"
+        required_from_task: "PRODUCT-01"
+      - name: "Security Report"
+        required_from_task: "SECURITY-01"
+    produces:
+      - name: "Production Config"
+        type: "file"
+        path: "products/{PRODUCT}/apps/mobile/app.json"
+    parallel_ok: false
+    checkpoint: false
+    priority: "critical"
+    estimated_time_minutes: 60
+    acceptance_criteria:
+      - "Version numbers updated"
+      - "Production config verified"
+      - "Debug features disabled"
+      - "Bundle IDs correct"
+    status: "pending"
+
+  - id: "BUILD-02"
+    name: "Build iOS Production Version"
+    description: |
+      Build iOS app for App Store (if {PLATFORMS} includes ios):
+      - Run EAS Build with production profile
+      - Use correct provisioning profile
+      - Build for iOS release
+      - Verify build succeeded
+      - Test production build
+      - Save build artifacts
+    agent: "devops-engineer"
+    depends_on: ["BUILD-01"]
+    consumes:
+      - name: "Production Config"
+        required_from_task: "BUILD-01"
+    produces:
+      - name: "iOS Production Build"
+        type: "artifact"
+        path: "EAS Cloud - iOS"
+    parallel_ok: true
+    checkpoint: false
+    priority: "critical"
+    estimated_time_minutes: 45
+    acceptance_criteria:
+      - "Build succeeds"
+      - "IPA file generated"
+      - "Build tested on device"
+      - "No errors or warnings"
+    status: "pending"
+
+  - id: "BUILD-03"
+    name: "Build Android Production Version"
+    description: |
+      Build Android app for Google Play (if {PLATFORMS} includes android):
+      - Run EAS Build with production profile
+      - Generate signed AAB (Android App Bundle)
+      - Use correct signing keystore
+      - Verify build succeeded
+      - Test production build
+      - Save build artifacts
+    agent: "devops-engineer"
+    depends_on: ["BUILD-01"]
+    consumes:
+      - name: "Production Config"
+        required_from_task: "BUILD-01"
+    produces:
+      - name: "Android Production Build"
+        type: "artifact"
+        path: "EAS Cloud - Android"
+    parallel_ok: true
+    checkpoint: false
+    priority: "critical"
+    estimated_time_minutes: 45
+    acceptance_criteria:
+      - "Build succeeds"
+      - "AAB file generated"
+      - "Build tested on device"
+      - "No errors or warnings"
+    status: "pending"
+
+  # ============================================================================
+  # PHASE 3: APP STORE SUBMISSION
+  # ============================================================================
+
+  - id: "SUBMIT-01"
+    name: "Submit to iOS App Store"
+    description: |
+      Submit iOS app to App Store Connect (if {PLATFORMS} includes ios):
+      - Upload build to App Store Connect (via EAS Submit)
+      - Create new version in App Store Connect
+      - Add app description and metadata
+      - Upload screenshots (all required sizes)
+      - Add privacy policy and support URLs
+      - Set pricing and availability
+      - Add release notes
+      - Select app review information
+      - Submit for review
+      - Monitor submission status
+    agent: "devops-engineer"
+    depends_on: ["BUILD-02", "DOCS-01"]
+    consumes:
+      - name: "iOS Production Build"
+        required_from_task: "BUILD-02"
+      - name: "App Store Listing"
+        required_from_task: "DOCS-01"
+    produces:
+      - name: "iOS Submission Report"
+        type: "document"
+        path: "products/{PRODUCT}/docs/submissions/ios-{VERSION}-submission.md"
+    parallel_ok: true
+    checkpoint: false
+    priority: "critical"
+    estimated_time_minutes: 90
+    acceptance_criteria:
+      - "Build uploaded successfully"
+      - "All metadata entered"
+      - "Screenshots uploaded"
+      - "App submitted for review"
+      - "Submission documented"
+    status: "pending"
+
+  - id: "SUBMIT-02"
+    name: "Submit to Google Play Store"
+    description: |
+      Submit Android app to Google Play Console (if {PLATFORMS} includes android):
+      - Upload AAB to Google Play Console (via EAS Submit)
+      - Create new release (production track)
+      - Add app description and metadata
+      - Upload screenshots (all required sizes)
+      - Add privacy policy URL
+      - Set pricing and distribution
+      - Add release notes
+      - Configure content rating
+      - Submit for review
+      - Monitor submission status
+    agent: "devops-engineer"
+    depends_on: ["BUILD-03", "DOCS-01"]
+    consumes:
+      - name: "Android Production Build"
+        required_from_task: "BUILD-03"
+      - name: "App Store Listing"
+        required_from_task: "DOCS-01"
+    produces:
+      - name: "Android Submission Report"
+        type: "document"
+        path: "products/{PRODUCT}/docs/submissions/android-{VERSION}-submission.md"
+    parallel_ok: true
+    checkpoint: false
+    priority: "critical"
+    estimated_time_minutes: 90
+    acceptance_criteria:
+      - "AAB uploaded successfully"
+      - "All metadata entered"
+      - "Screenshots uploaded"
+      - "App submitted for review"
+      - "Submission documented"
+    status: "pending"
+
+  # ============================================================================
+  # PHASE 4: POST-SUBMISSION
+  # ============================================================================
+
+  - id: "MONITOR-01"
+    name: "Monitor App Review Process"
+    description: |
+      Monitor app review status:
+      - Check App Store Connect daily (iOS)
+      - Check Google Play Console daily (Android)
+      - Respond to review questions promptly
+      - Fix any rejection issues quickly
+      - Update submission if needed
+      - Track review timeline
+      - Document any issues or rejections
+    agent: "support-engineer"
+    depends_on: ["SUBMIT-01", "SUBMIT-02"]
+    produces:
+      - name: "Review Monitoring Log"
+        type: "document"
+        path: "products/{PRODUCT}/docs/submissions/review-log-{VERSION}.md"
+    parallel_ok: false
+    checkpoint: false
+    priority: "high"
+    estimated_time_minutes: 120
+    acceptance_criteria:
+      - "Review status checked daily"
+      - "Reviewer questions answered"
+      - "Issues documented"
+      - "Timeline tracked"
+    status: "pending"
+
+  - id: "DOCS-02"
+    name: "Prepare Release Announcement"
+    description: |
+      Create release announcement materials:
+      - Release blog post
+      - Social media announcements
+      - Email to existing users
+      - Press release (if major release)
+      - Update website with app store links
+      - Update documentation with new features
+    agent: "technical-writer"
+    depends_on: ["SUBMIT-01", "SUBMIT-02"]
+    produces:
+      - name: "Release Announcement"
+        type: "document"
+        path: "products/{PRODUCT}/docs/release-announcements/{VERSION}.md"
+    parallel_ok: true
+    checkpoint: false
+    priority: "normal"
+    estimated_time_minutes: 120
+    acceptance_criteria:
+      - "Blog post drafted"
+      - "Social media posts prepared"
+      - "Email draft ready"
+      - "Website updates planned"
+    status: "pending"
+
+  - id: "DEVOPS-01"
+    name: "Setup Monitoring and Analytics"
+    description: |
+      Configure post-launch monitoring:
+      - Setup crash reporting (Sentry, Bugsnag, or similar)
+      - Configure analytics (Google Analytics, Mixpanel, or similar)
+      - Setup performance monitoring
+      - Configure alerts for critical issues
+      - Create monitoring dashboard
+      - Document monitoring setup
+    agent: "devops-engineer"
+    depends_on: ["SUBMIT-01", "SUBMIT-02"]
+    produces:
+      - name: "Monitoring Setup"
+        type: "document"
+        path: "products/{PRODUCT}/docs/monitoring-setup.md"
+    parallel_ok: true
+    checkpoint: false
+    priority: "high"
+    estimated_time_minutes: 90
+    acceptance_criteria:
+      - "Crash reporting configured"
+      - "Analytics tracking setup"
+      - "Alerts configured"
+      - "Dashboard created"
+    status: "pending"
+
+  # ============================================================================
+  # CHECKPOINT: APP PUBLISHED
+  # ============================================================================
+
+  - id: "CHECKPOINT-PUBLISHED"
+    name: "App Published - Launch Complete"
+    description: |
+      Mobile app version {VERSION} is now live:
+      - iOS app live on App Store (if applicable)
+      - Android app live on Google Play (if applicable)
+      - Monitoring and analytics active
+      - Support ready for user issues
+      - Release announced
+
+      Next steps:
+      - Monitor crash reports and user feedback
+      - Respond to app store reviews
+      - Plan next update based on feedback
+    agent: "orchestrator"
+    depends_on: ["MONITOR-01", "DOCS-02", "DEVOPS-01"]
+    parallel_ok: false
+    checkpoint: true
+    priority: "critical"
+    estimated_time_minutes: 0
+    status: "pending"
+
+# Execution estimates:
+# - iOS review time: 1-3 days typically
+# - Android review time: 1-2 days typically
+# - Total workflow time (excluding review): ~1,200 minutes (~20 hours)
+# - Total time including reviews: 2-5 days
+
+# Notes:
+# - Apple review is typically slower than Google
+# - First-time submissions may take longer
+# - Updates to existing apps are usually faster
+# - Have TestFlight/beta builds ready before submission

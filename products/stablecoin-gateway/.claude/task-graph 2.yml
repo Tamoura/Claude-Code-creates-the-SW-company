@@ -1,0 +1,778 @@
+metadata:
+  product: stablecoin-gateway
+  version: 1.1.0
+  workflow_type: security-audit-fix
+  issue_id: SECURITY-AUDIT-2026-01
+  created_at: '2026-01-29T06:18:22Z'
+  updated_at: '2026-01-29T07:34:24Z'
+  description: Fix critical auth, security, and integration gaps from CEO security
+    audit
+tasks:
+- id: AUDIT-01
+  name: Security Audit Analysis & Prioritization
+  description: 'Analyze all 10 issues from CEO audit and create comprehensive fix
+    plan:
+
+
+    CRITICAL BLOCKERS (Production Breaking):
+
+    1. Frontend cannot authenticate - No Authorization headers
+
+    2. SSE unusable - EventSource can''t set auth headers
+
+    3. Missing PATCH endpoint - Frontend expects /v1/payment-sessions/:id PATCH
+
+    4. Port mismatch - Frontend (5000) vs Backend (5001)
+
+
+    HIGH-RISK SECURITY:
+
+    5. API key permissions not enforced
+
+    6. Webhook signature inconsistency (two schemes + timing attack)
+
+    7. No on-chain verification logic
+
+
+    MEDIUM-RISK QUALITY:
+
+    8. Unbounded metadata
+
+    9. Duplicated address validation
+
+    10. CORS single-origin string
+
+
+    Your tasks:
+
+    1. Read all referenced code files
+
+    2. Confirm each issue
+
+    3. Identify dependencies between fixes
+
+    4. Create detailed fix plan with specific file changes
+
+    5. Document in investigation report
+
+
+    Output: products/stablecoin-gateway/docs/SECURITY-AUDIT-PLAN.md
+
+    '
+  agent: security-engineer
+  depends_on: []
+  produces:
+  - name: Security Audit Analysis
+    type: document
+    path: products/stablecoin-gateway/docs/SECURITY-AUDIT-PLAN.md
+  parallel_ok: false
+  checkpoint: false
+  priority: critical
+  estimated_time_minutes: 45
+  acceptance_criteria:
+  - All 10 issues confirmed with code references
+  - Root causes identified
+  - Fix strategy documented for each
+  - Dependencies mapped
+  - Priority order established
+  status: completed
+  completed_at: '2026-01-29T06:26:25Z'
+- id: FIX-01
+  name: Fix Authentication Flow - Add Authorization Headers
+  description: "ISSUE #1: Frontend cannot authenticate to backend.\n\nRoot cause:\n\
+    - API client never sends Authorization headers\n- All payment endpoints require\
+    \ auth\n- Core flows fail in real mode\n\nFiles to fix:\n- products/stablecoin-gateway/apps/web/src/lib/api-client.ts\
+    \ (lines 72-91)\n\nTDD Approach:\n1. Create branch: fix/stablecoin-gateway/auth-flow\n\
+    2. Write failing tests for authenticated requests\n3. Implement fix:\n   - Add\
+    \ JWT token storage (localStorage/cookie)\n   - Add Authorization header to all\
+    \ requests\n   - Handle token refresh\n   - Handle 401 responses\n4. All tests\
+    \ pass\n\nAcceptance:\n- Authorization header sent on all API requests\n- Token\
+    \ stored securely\n- 401 errors handled gracefully\n- Tests prove auth works end-to-end\n"
+  agent: frontend-engineer
+  depends_on:
+  - AUDIT-01
+  consumes:
+  - name: Security Audit Analysis
+    required_from_task: AUDIT-01
+  produces:
+  - name: Auth Flow Fix
+    type: file
+    path: products/stablecoin-gateway/apps/web/src/lib/api-client.ts
+  - name: Auth Tests
+    type: file
+    path: products/stablecoin-gateway/apps/web/tests/lib/api-client.test.ts
+  parallel_ok: false
+  checkpoint: false
+  priority: critical
+  estimated_time_minutes: 90
+  acceptance_criteria:
+  - Authorization headers added to API client
+  - Token management implemented
+  - Tests prove auth flow works
+  - All existing tests still pass
+  status: completed
+  completed_at: '2026-01-29T06:43:31Z'
+- id: FIX-02
+  name: Fix SSE Authentication
+  description: 'ISSUE #2: SSE is unusable in production.
+
+
+    Root cause:
+
+    - Backend requires JWT via Authorization header
+
+    - EventSource API cannot set custom headers
+
+    - Frontend creates plain EventSource with no auth
+
+
+    Files to fix:
+
+    - products/stablecoin-gateway/apps/api/src/routes/v1/payment-sessions.ts (lines
+    126-155)
+
+    - products/stablecoin-gateway/apps/web/src/lib/api-client.ts (lines 196-204)
+
+
+    Solution options:
+
+    A. Token in query string: /events?token=JWT
+
+    B. Cookie-based auth for SSE
+
+    C. Polling fallback (no SSE)
+
+
+    Recommended: Option A (token in query, validate server-side)
+
+
+    TDD Approach:
+
+    1. Write failing tests for authenticated SSE
+
+    2. Implement backend: Accept token via query param
+
+    3. Implement frontend: Add token to EventSource URL
+
+    4. All tests pass
+
+
+    Acceptance:
+
+    - SSE endpoint accepts auth token
+
+    - Frontend sends token
+
+    - Unauthorized connections rejected
+
+    - Tests prove SSE auth works
+
+    '
+  agent: backend-engineer
+  depends_on:
+  - FIX-01
+  consumes:
+  - name: Auth Flow Fix
+    required_from_task: FIX-01
+  produces:
+  - name: SSE Auth Backend
+    type: file
+    path: products/stablecoin-gateway/apps/api/src/routes/v1/payment-sessions.ts
+  - name: SSE Auth Frontend
+    type: file
+    path: products/stablecoin-gateway/apps/web/src/lib/api-client.ts
+  - name: SSE Auth Tests
+    type: file
+    path: products/stablecoin-gateway/apps/api/tests/routes/v1/payment-sessions-sse.test.ts
+  parallel_ok: false
+  checkpoint: false
+  priority: critical
+  estimated_time_minutes: 75
+  acceptance_criteria:
+  - SSE endpoint validates authentication
+  - Frontend passes auth token
+  - Unauthorized requests rejected
+  - Tests prove SSE works with auth
+  status: completed
+  completed_at: '2026-01-29T06:57:07Z'
+- id: FIX-03
+  name: Add Missing PATCH Endpoint
+  description: "ISSUE #3: Frontend expects PATCH endpoint that doesn't exist.\n\n\
+    Root cause:\n- apiClient.updatePaymentSession() uses PATCH /v1/payment-sessions/:id\n\
+    - No PATCH route exists in backend\n- UI flows that update status fail\n\nFiles\
+    \ to fix:\n- products/stablecoin-gateway/apps/api/src/routes/v1/payment-sessions.ts\
+    \ (add PATCH route)\n\nTDD Approach:\n1. Write failing tests for PATCH endpoint\n\
+    2. Implement PATCH route:\n   - Validate request body (Zod schema)\n   - Check\
+    \ permissions (user owns payment session)\n   - Update payment session\n   - Return\
+    \ updated session\n3. All tests pass\n\nAcceptance:\n- PATCH /v1/payment-sessions/:id\
+    \ endpoint exists\n- Validates input\n- Enforces permissions\n- Tests prove PATCH\
+    \ works\n"
+  agent: backend-engineer
+  depends_on:
+  - AUDIT-01
+  produces:
+  - name: PATCH Endpoint
+    type: file
+    path: products/stablecoin-gateway/apps/api/src/routes/v1/payment-sessions.ts
+  - name: PATCH Tests
+    type: file
+    path: products/stablecoin-gateway/apps/api/tests/routes/v1/payment-sessions-patch.test.ts
+  parallel_ok: true
+  checkpoint: false
+  priority: critical
+  estimated_time_minutes: 60
+  acceptance_criteria:
+  - PATCH endpoint implemented
+  - Input validation with Zod
+  - Permission checks enforced
+  - Tests prove functionality
+  status: completed
+  completed_at: '2026-01-29T06:43:31Z'
+- id: FIX-04
+  name: Fix Port Mismatch
+  description: 'ISSUE #4: Port mismatch between frontend and backend.
+
+
+    Root cause:
+
+    - Frontend defaults to http://localhost:5000
+
+    - Backend defaults to 5001
+
+
+    Files to fix:
+
+    - products/stablecoin-gateway/apps/web/src/lib/api-client.ts (line 8-9)
+
+    - products/stablecoin-gateway/apps/api/src/index.ts (line 12-13)
+
+    - products/stablecoin-gateway/apps/web/.env.example
+
+    - products/stablecoin-gateway/apps/api/.env.example
+
+
+    Solution:
+
+    - Check .claude/PORT-REGISTRY.md for assigned port
+
+    - Update both to use consistent port
+
+    - Document in README
+
+
+    Acceptance:
+
+    - Ports consistent across frontend/backend
+
+    - Environment variables documented
+
+    - README updated
+
+    '
+  agent: devops-engineer
+  depends_on:
+  - AUDIT-01
+  produces:
+  - name: Port Configuration
+    type: file
+    path: products/stablecoin-gateway/apps/api/src/index.ts
+  - name: Frontend Port Config
+    type: file
+    path: products/stablecoin-gateway/apps/web/src/lib/api-client.ts
+  parallel_ok: true
+  checkpoint: false
+  priority: high
+  estimated_time_minutes: 20
+  acceptance_criteria:
+  - Ports consistent
+  - Environment variables documented
+  - Verified working locally
+  status: completed
+  completed_at: '2026-01-29T06:43:31Z'
+- id: FIX-05
+  name: Enforce API Key Permissions
+  description: "ISSUE #5: API key permissions not enforced.\n\nRoot cause:\n- API\
+    \ keys have permissions in DB\n- Auth plugin only attaches request.apiKey\n- Routes\
+    \ never check permissions\n\nFiles to fix:\n- products/stablecoin-gateway/apps/api/src/plugins/auth.ts\
+    \ (lines 41-59)\n- Add permission guard middleware\n\nTDD Approach:\n1. Write\
+    \ failing tests for permission enforcement\n2. Implement permission guard:\n \
+    \  - Check request.apiKey.permissions\n   - Reject if insufficient permissions\n\
+    \   - Add guard to all protected routes\n3. All tests pass\n\nAcceptance:\n- Permission\
+    \ guard implemented\n- All protected routes use guard\n- Tests prove permissions\
+    \ enforced\n"
+  agent: security-engineer
+  depends_on:
+  - FIX-01
+  - FIX-02
+  - FIX-03
+  produces:
+  - name: Permission Guard
+    type: file
+    path: products/stablecoin-gateway/apps/api/src/plugins/auth.ts
+  - name: Permission Tests
+    type: file
+    path: products/stablecoin-gateway/apps/api/tests/plugins/auth-permissions.test.ts
+  parallel_ok: false
+  checkpoint: false
+  priority: critical
+  estimated_time_minutes: 90
+  acceptance_criteria:
+  - Permission guard implemented
+  - All routes protected
+  - Tests prove enforcement
+  - Unauthorized access blocked
+  status: completed
+  completed_at: '2026-01-29T07:09:43Z'
+- id: FIX-06
+  name: Unify Webhook Signature Verification
+  description: 'ISSUE #6: Webhook signature verification has two competing schemes.
+
+
+    Root cause:
+
+    - WebhookService uses signature field + string compare
+
+    - crypto.ts uses timestamp + body HMAC + timing-safe compare
+
+    - Non-constant-time compare is vulnerable
+
+
+    Files to fix:
+
+    - products/stablecoin-gateway/apps/api/src/services/webhook.service.ts (lines
+    35-48)
+
+    - products/stablecoin-gateway/apps/api/src/utils/crypto.ts (lines 31-46)
+
+
+    Solution:
+
+    - Keep crypto.ts implementation (timestamp + raw body, timing-safe)
+
+    - Remove WebhookService duplicate
+
+    - Update WebhookService to use crypto.ts
+
+    - Document signature scheme in docs
+
+
+    TDD Approach:
+
+    1. Write failing tests for unified signature verification
+
+    2. Refactor WebhookService to use crypto.ts
+
+    3. All tests pass
+
+
+    Acceptance:
+
+    - Single signature scheme (timestamp + body HMAC)
+
+    - Timing-safe comparison
+
+    - Tests prove security
+
+    - Documented for merchants
+
+    '
+  agent: security-engineer
+  depends_on:
+  - AUDIT-01
+  produces:
+  - name: Unified Webhook Service
+    type: file
+    path: products/stablecoin-gateway/apps/api/src/services/webhook.service.ts
+  - name: Webhook Tests
+    type: file
+    path: products/stablecoin-gateway/apps/api/tests/services/webhook.test.ts
+  - name: Webhook Documentation
+    type: document
+    path: products/stablecoin-gateway/docs/guides/webhook-integration.md
+  parallel_ok: true
+  checkpoint: false
+  priority: high
+  estimated_time_minutes: 60
+  acceptance_criteria:
+  - Single signature scheme
+  - Timing-safe verification
+  - Tests prove security
+  - Merchant docs updated
+  status: completed
+  completed_at: '2026-01-29T07:09:43Z'
+- id: FIX-07
+  name: Implement On-Chain Verification
+  description: "ISSUE #7: No on-chain verification logic exists.\n\nRoot cause:\n\
+    - No blockchain monitor/service\n- Cannot verify tx amount/token/recipient\n-\
+    \ \"completed\" status not trustworthy\n\nFiles to create:\n- products/stablecoin-gateway/apps/api/src/services/blockchain-monitor.service.ts\n\
+    - products/stablecoin-gateway/apps/api/src/workers/blockchain-verification.worker.ts\n\
+    \nTDD Approach:\n1. Write failing tests for blockchain verification\n2. Implement\
+    \ BlockchainMonitorService:\n   - Poll blockchain for transaction\n   - Verify\
+    \ recipient address\n   - Verify token contract\n   - Verify amount (with tolerance\
+    \ for gas/decimals)\n   - Update payment status only after verification\n3. All\
+    \ tests pass\n\nAcceptance:\n- BlockchainMonitorService implemented\n- Verifies\
+    \ recipient, token, amount\n- Payment status only updated after verification\n\
+    - Tests prove verification works\n"
+  agent: backend-engineer
+  depends_on:
+  - FIX-05
+  produces:
+  - name: Blockchain Monitor Service
+    type: file
+    path: products/stablecoin-gateway/apps/api/src/services/blockchain-monitor.service.ts
+  - name: Blockchain Worker
+    type: file
+    path: products/stablecoin-gateway/apps/api/src/workers/blockchain-verification.worker.ts
+  - name: Blockchain Tests
+    type: file
+    path: products/stablecoin-gateway/apps/api/tests/services/blockchain-monitor.test.ts
+  parallel_ok: false
+  checkpoint: false
+  priority: critical
+  estimated_time_minutes: 120
+  acceptance_criteria:
+  - Blockchain verification service implemented
+  - Verifies recipient, token, amount
+  - Payment status trustworthy
+  - Tests prove verification
+  status: completed
+  completed_at: '2026-01-29T07:21:56Z'
+- id: FIX-08
+  name: Add Metadata Size Limit
+  description: 'ISSUE #8: Metadata is unbounded.
+
+
+    Root cause:
+
+    - API allows arbitrary JSON without size limit
+
+    - DoS/abuse vector
+
+
+    Files to fix:
+
+    - products/stablecoin-gateway/apps/api/src/utils/validation.ts (lines 37-49)
+
+
+    Solution:
+
+    - Add max size to Zod schema (e.g., 16KB)
+
+    - Add max keys (e.g., 50)
+
+    - Add max depth (e.g., 5)
+
+
+    TDD Approach:
+
+    1. Write failing tests for size limits
+
+    2. Update Zod schema with limits
+
+    3. All tests pass
+
+
+    Acceptance:
+
+    - Metadata size limited
+
+    - Tests prove limits enforced
+
+    '
+  agent: backend-engineer
+  depends_on:
+  - AUDIT-01
+  produces:
+  - name: Metadata Validation
+    type: file
+    path: products/stablecoin-gateway/apps/api/src/utils/validation.ts
+  - name: Metadata Tests
+    type: file
+    path: products/stablecoin-gateway/apps/api/tests/utils/validation-metadata.test.ts
+  parallel_ok: true
+  checkpoint: false
+  priority: medium
+  estimated_time_minutes: 30
+  acceptance_criteria:
+  - Metadata size limited
+  - Tests prove enforcement
+  - Error messages helpful
+  status: completed
+  completed_at: '2026-01-29T07:09:43Z'
+- id: FIX-09
+  name: Remove Duplicate Address Validation
+  description: 'ISSUE #9: Merchant address validation duplicated and weaker in service.
+
+
+    Root cause:
+
+    - Zod schema enforces checksum via ethers.getAddress
+
+    - Service re-validates with regex only (no checksum)
+
+
+    Files to fix:
+
+    - products/stablecoin-gateway/apps/api/src/services/payment.service.ts (lines
+    12-15)
+
+
+    Solution:
+
+    - Remove duplicate validation from service
+
+    - Trust Zod schema validation
+
+
+    Acceptance:
+
+    - Duplicate validation removed
+
+    - Tests still pass
+
+    '
+  agent: backend-engineer
+  depends_on:
+  - AUDIT-01
+  produces:
+  - name: Cleaned Payment Service
+    type: file
+    path: products/stablecoin-gateway/apps/api/src/services/payment.service.ts
+  parallel_ok: true
+  checkpoint: false
+  priority: low
+  estimated_time_minutes: 15
+  acceptance_criteria:
+  - Duplicate validation removed
+  - All tests still pass
+  - Code cleaner
+  status: completed
+  completed_at: '2026-01-29T07:09:43Z'
+- id: FIX-10
+  name: Fix CORS Configuration
+  description: 'ISSUE #10: CORS uses single origin string.
+
+
+    Root cause:
+
+    - CORS configured with single string
+
+    - Brittle for multi-env setups
+
+
+    Files to fix:
+
+    - products/stablecoin-gateway/apps/api/src/app.ts (lines 53-57)
+
+
+    Solution:
+
+    - Use array of allowed origins
+
+    - Support environment-based configuration
+
+    - Add validation for origin
+
+
+    TDD Approach:
+
+    1. Write tests for CORS config
+
+    2. Update to array-based config
+
+    3. All tests pass
+
+
+    Acceptance:
+
+    - CORS uses allowlist
+
+    - Environment-based config
+
+    - Tests prove multi-origin support
+
+    '
+  agent: backend-engineer
+  depends_on:
+  - AUDIT-01
+  produces:
+  - name: CORS Configuration
+    type: file
+    path: products/stablecoin-gateway/apps/api/src/app.ts
+  - name: CORS Tests
+    type: file
+    path: products/stablecoin-gateway/apps/api/tests/app-cors.test.ts
+  parallel_ok: true
+  checkpoint: false
+  priority: medium
+  estimated_time_minutes: 30
+  acceptance_criteria:
+  - CORS uses allowlist
+  - Environment-based config
+  - Tests prove functionality
+  status: completed
+  completed_at: '2026-01-29T07:09:43Z'
+- id: QA-01
+  name: End-to-End Integration Testing
+  description: "Test all fixes together:\n\n1. Run all unit tests\n2. Run all integration\
+    \ tests\n3. Run all E2E tests\n4. Manual testing:\n   - Auth flow (login, API\
+    \ calls with JWT)\n   - SSE with auth\n   - Payment session PATCH\n   - Webhook\
+    \ signature verification\n   - On-chain verification (testnet)\n   - Metadata\
+    \ limits\n   - CORS with multiple origins\n\nCreate comprehensive test report\
+    \ documenting:\n- All tests passing\n- Manual test scenarios\n- Any issues found\n\
+    - Performance impact\n\nOutput: products/stablecoin-gateway/docs/SECURITY-AUDIT-TEST-REPORT.md\n"
+  agent: qa-engineer
+  depends_on:
+  - FIX-01
+  - FIX-02
+  - FIX-03
+  - FIX-04
+  - FIX-05
+  - FIX-06
+  - FIX-07
+  - FIX-08
+  - FIX-09
+  - FIX-10
+  produces:
+  - name: Integration Test Report
+    type: document
+    path: products/stablecoin-gateway/docs/SECURITY-AUDIT-TEST-REPORT.md
+  parallel_ok: false
+  checkpoint: false
+  priority: critical
+  estimated_time_minutes: 90
+  acceptance_criteria:
+  - All unit tests pass
+  - All integration tests pass
+  - All E2E tests pass
+  - Manual testing complete
+  - Test report comprehensive
+  - No critical issues found
+  status: completed
+  completed_at: '2026-01-29T07:28:05Z'
+- id: DOC-01
+  name: Update Documentation
+  description: 'Update all documentation to reflect security fixes:
+
+
+    1. README.md - Update setup instructions
+
+    2. Architecture.md - Document new security controls
+
+    3. API docs - Update endpoint documentation
+
+    4. Webhook guide - Document signature scheme
+
+    5. Security docs - Document all security measures
+
+
+    Ensure documentation is:
+
+    - Accurate
+
+    - Complete
+
+    - Clear for developers
+
+    - Includes examples
+
+    '
+  agent: technical-writer
+  depends_on:
+  - QA-01
+  consumes:
+  - name: Integration Test Report
+    required_from_task: QA-01
+  produces:
+  - name: Updated Documentation
+    type: directory
+    path: products/stablecoin-gateway/docs/
+  parallel_ok: false
+  checkpoint: false
+  priority: high
+  estimated_time_minutes: 60
+  acceptance_criteria:
+  - All docs updated
+  - Security controls documented
+  - Examples included
+  - Clear for developers
+  status: completed
+  completed_at: '2026-01-29T07:34:24Z'
+- id: PR-01
+  name: Create Pull Request
+  description: 'Create comprehensive PR for security audit fixes:
+
+
+    Branch: fix/stablecoin-gateway/security-audit-2026-01
+
+    Target: main (or feature/stablecoin-gateway/production-ready)
+
+
+    PR Description:
+
+    - Summary of all 10 issues fixed
+
+    - Root causes
+
+    - Solutions implemented
+
+    - Test coverage (list all tests added)
+
+    - Breaking changes (if any)
+
+    - Migration guide (if needed)
+
+    - Link to audit report
+
+
+    Ensure:
+
+    - All tests pass
+
+    - CI passes
+
+    - No merge conflicts
+
+    '
+  agent: security-engineer
+  depends_on:
+  - DOC-01
+  produces:
+  - name: Pull Request
+    type: pr
+    path: '#{PR_NUMBER}'
+  parallel_ok: false
+  checkpoint: false
+  priority: critical
+  estimated_time_minutes: 30
+  acceptance_criteria:
+  - PR created with comprehensive description
+  - All tests pass
+  - CI passes
+  - No conflicts
+  status: pending
+- id: CHECKPOINT-REVIEW
+  name: Security Audit Fixes Ready for Review
+  description: "All 10 security and integration issues have been fixed and tested.\n\
+    \n**CRITICAL BLOCKERS FIXED:**\n\u2705 Frontend authentication flow (Authorization\
+    \ headers)\n\u2705 SSE authentication (token in query)\n\u2705 Missing PATCH endpoint\n\
+    \u2705 Port mismatch\n\n**HIGH-RISK SECURITY FIXED:**\n\u2705 API key permissions\
+    \ enforced\n\u2705 Webhook signature unified (timing-safe)\n\u2705 On-chain verification\
+    \ implemented\n\n**MEDIUM-RISK QUALITY FIXED:**\n\u2705 Metadata size limits\n\
+    \u2705 Duplicate validation removed\n\u2705 CORS allowlist configuration\n\n**Test\
+    \ Results:**\n- All unit tests passing\n- All integration tests passing\n- All\
+    \ E2E tests passing\n- Manual testing complete\n\n**Documentation:**\n- All docs\
+    \ updated\n- Security controls documented\n\n**Ready for CEO Review:**\n- PR:\
+    \ #{PR_NUMBER}\n- Test Report: products/stablecoin-gateway/docs/SECURITY-AUDIT-TEST-REPORT.md\n\
+    - Audit Plan: products/stablecoin-gateway/docs/SECURITY-AUDIT-PLAN.md\n\nCEO Decision:\n\
+    - \u2705 Approve & Merge \u2192 Security fixes go to production\n- \U0001F504\
+    \ Request Changes \u2192 Specify what needs adjustment\n- \u274C Block \u2192\
+    \ Critical issue found, needs rework\n"
+  agent: orchestrator
+  depends_on:
+  - PR-01
+  parallel_ok: false
+  checkpoint: true
+  priority: critical
+  estimated_time_minutes: 0
+  status: pending

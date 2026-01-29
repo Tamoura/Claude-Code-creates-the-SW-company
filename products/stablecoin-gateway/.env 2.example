@@ -1,0 +1,87 @@
+# Stablecoin Gateway - Environment Variables Template
+
+# ===================================
+# API Configuration
+# ===================================
+PORT=5001
+NODE_ENV=development
+
+# ===================================
+# Database (PostgreSQL)
+# ===================================
+DATABASE_URL="postgresql://dev:dev@localhost:5432/stablecoin_gateway_dev"
+
+# ===================================
+# Redis (Cache & Job Queue)
+# ===================================
+REDIS_URL="redis://localhost:6379"
+
+# ===================================
+# Authentication
+# ===================================
+# CRITICAL: Generate secure production secrets using:
+#   openssl rand -hex 64
+# Never use the default values in production!
+# Example: JWT_SECRET="a7f4c9e2d1b8..." (128 hex characters)
+JWT_SECRET="your-secret-key-change-in-production"
+JWT_EXPIRES_IN="15m"
+REFRESH_TOKEN_EXPIRES_IN="7d"
+
+# ===================================
+# Blockchain Providers
+# ===================================
+# At least one RPC provider is required for blockchain monitoring
+# Get API key from: https://dashboard.alchemy.com/
+ALCHEMY_API_KEY="your-alchemy-key"
+
+# Get Project ID from: https://infura.io/dashboard
+INFURA_PROJECT_ID="your-infura-project-id"
+
+# Alternative: QuickNode (https://www.quicknode.com/)
+# Full endpoint URL including network
+QUICKNODE_ENDPOINT=""
+
+# ===================================
+# Frontend Configuration
+# ===================================
+FRONTEND_URL="http://localhost:3101"
+
+# ===================================
+# Email (Optional - SendGrid)
+# ===================================
+# Get API key from: https://app.sendgrid.com/settings/api_keys
+SENDGRID_API_KEY=""
+SENDGRID_FROM_EMAIL=""
+
+# ===================================
+# Monitoring (Optional - Datadog)
+# ===================================
+# Get API key from: https://app.datadoghq.com/organization-settings/api-keys
+DD_API_KEY=""
+DD_SERVICE_NAME="stablecoin-gateway-api"
+
+# ===================================
+# AWS (For Production Deployment)
+# ===================================
+AWS_ACCESS_KEY_ID=""
+AWS_SECRET_ACCESS_KEY=""
+AWS_REGION="us-east-1"
+
+# ===================================
+# KMS Configuration (Production)
+# ===================================
+# Use AWS KMS for secure key management in production
+# Format: ARN, Key ID (UUID), or alias/key-name
+# Example: arn:aws:kms:us-east-1:123456789012:key/12345678-1234-1234-1234-123456789012
+KMS_KEY_ID=""
+# Alternative name (either KMS_KEY_ID or AWS_KMS_KEY_ID works)
+AWS_KMS_KEY_ID=""
+
+# ===================================
+# Hot Wallet (Development Only)
+# ===================================
+# WARNING: Never commit private keys to version control!
+# For production, use KMS_KEY_ID instead
+# Only use this in development with ALLOW_PRIVATE_KEY_FALLBACK=true
+HOT_WALLET_PRIVATE_KEY=""
+ALLOW_PRIVATE_KEY_FALLBACK="false"
