@@ -119,6 +119,7 @@ export const createWebhookSchema = z.object({
       ])
     )
     .min(1, 'At least one event is required'),
+  enabled: z.boolean().optional(),
   description: z.string().max(200).optional(),
 });
 
