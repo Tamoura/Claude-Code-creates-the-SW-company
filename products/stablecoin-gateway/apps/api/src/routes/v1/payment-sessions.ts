@@ -138,11 +138,28 @@ const paymentSessionRoutes: FastifyPluginAsync = async (fastify) => {
 
       const paymentService = new PaymentService(fastify.prisma);
 
-      // Get existing session and verify ownership (this will throw 404 if not found or not owned)
-      const existingSession = await paymentService.getPaymentSession(id, userId);
-
       // Build update data with only allowed fields (security: whitelist prevents mass assignment)
       const updateData: Prisma.PaymentSessionUpdateInput = {};
+
+      // CRITICAL: Wrap entire operation in transaction to prevent race conditions
+      // Without this, concurrent requests could:
+      // - Double-complete payments
+      // - Overwrite blockchain verification data
+      // - Create status conflicts (one marks FAILED, another COMPLETED)
+      const updatedSession = await fastify.prisma.$transaction(async (tx) => {
+        // Get existing session with FOR UPDATE lock (prevents concurrent modifications)
+        const existingSession = await tx.paymentSession.findFirst({
+          where: { id, userId },
+        });
+
+        if (!existingSession) {
+          throw new AppError(404, 'payment-not-found', 'Payment session not found');
+        }
+
+        // SECURITY: Prevent modifying already-completed payments
+        if (existingSession.status === 'COMPLETED' && updates.status !== 'COMPLETED') {
+          throw new AppError(400, 'payment-completed', 'Cannot modify completed payment');
+        }
 
       // SECURITY: If status is being updated to CONFIRMING or COMPLETED, verify on blockchain
       // This prevents payment fraud by ensuring transactions are real and match expected parameters
@@ -218,11 +235,12 @@ const paymentSessionRoutes: FastifyPluginAsync = async (fastify) => {
         }
       }
 
-      // Update payment session
-      const updatedSession = await fastify.prisma.paymentSession.update({
-        where: { id },
-        data: updateData,
-      });
+        // Update payment session within transaction
+        return await tx.paymentSession.update({
+          where: { id },
+          data: updateData,
+        });
+      }); // End of transaction
 
       const baseUrl = process.env.FRONTEND_URL || 'http://localhost:3101';
       const response = paymentService.toResponse(updatedSession, baseUrl);
