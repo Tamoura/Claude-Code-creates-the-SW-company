@@ -8,6 +8,7 @@ import { ZodError } from 'zod';
 // Plugins
 import prismaPlugin from './plugins/prisma.js';
 import redisPlugin from './plugins/redis.js';
+import observabilityPlugin from './plugins/observability.js';
 import authPlugin from './plugins/auth.js';
 
 // Routes
@@ -87,6 +88,7 @@ export async function buildApp(): Promise<FastifyInstance> {
   });
 
   // Register plugins
+  await fastify.register(observabilityPlugin); // Register first to track all requests
   await fastify.register(prismaPlugin);
   await fastify.register(redisPlugin);
 
