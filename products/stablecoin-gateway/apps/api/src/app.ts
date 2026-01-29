@@ -7,6 +7,7 @@ import { ZodError } from 'zod';
 
 // Plugins
 import prismaPlugin from './plugins/prisma.js';
+import redisPlugin from './plugins/redis.js';
 import authPlugin from './plugins/auth.js';
 
 // Routes
@@ -85,14 +86,27 @@ export async function buildApp(): Promise<FastifyInstance> {
     secret: process.env.JWT_SECRET!,
   });
 
+  // Register plugins
+  await fastify.register(prismaPlugin);
+  await fastify.register(redisPlugin);
+
   // Register rate limiting
+  // Note: Redis is available via fastify.redis for custom distributed rate limiting
+  // Current implementation uses in-memory store for simplicity
+  // Production deployments can implement Redis-backed rate limiting using:
+  // - Custom store implementing the rate-limit store interface
+  // - Third-party packages like @fastify/rate-limit-redis
   await fastify.register(rateLimit, {
     max: parseInt(process.env.RATE_LIMIT_MAX || '100'),
     timeWindow: parseInt(process.env.RATE_LIMIT_WINDOW || '60000'),
   });
 
-  // Register plugins
-  await fastify.register(prismaPlugin);
+  if (fastify.redis) {
+    logger.info('Redis available for distributed rate limiting (custom store needed)');
+  } else {
+    logger.warn('Redis not configured - rate limiting uses in-memory store');
+  }
+
   await fastify.register(authPlugin);
 
   // Register routes
@@ -127,11 +141,26 @@ export async function buildApp(): Promise<FastifyInstance> {
     }
 
     // Check Redis connectivity (if configured)
-    if (process.env.REDIS_URL) {
-      // Redis check would go here when Redis client is implemented
-      // For now, mark as not implemented
+    if (fastify.redis) {
+      const redisStart = Date.now();
+      try {
+        await fastify.redis.ping();
+        checks.redis = {
+          status: 'healthy',
+          latency: Date.now() - redisStart,
+        };
+      } catch (error) {
+        checks.redis = {
+          status: 'unhealthy',
+          error: error instanceof Error ? error.message : 'Unknown error',
+        };
+        // Redis is optional, so don't mark overall as unhealthy
+        // overallStatus = 'degraded'; // Could use this if we want to indicate degraded state
+      }
+    } else if (process.env.REDIS_URL) {
+      // Redis URL configured but client not connected
       checks.redis = {
-        status: 'not-configured',
+        status: 'not-connected',
       };
     }
 
