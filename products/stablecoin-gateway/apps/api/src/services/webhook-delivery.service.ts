@@ -19,6 +19,7 @@ import { PrismaClient, WebhookStatus } from '@prisma/client';
 import { signWebhookPayload } from '../utils/crypto.js';
 import { logger } from '../utils/logger.js';
 import { validateWebhookUrl } from '../utils/url-validator.js';
+import { decryptSecret } from '../utils/encryption.js';
 
 export type WebhookEventType =
   | 'payment.created'
@@ -201,10 +202,15 @@ export class WebhookDeliveryService {
         return;
       }
 
+      // Decrypt secret if encrypted (otherwise use as-is for backwards compatibility)
+      const secret = process.env.WEBHOOK_ENCRYPTION_KEY
+        ? decryptSecret(endpoint.secret)
+        : endpoint.secret;
+
       // Generate signature
       const timestamp = Math.floor(Date.now() / 1000);
       const payloadString = JSON.stringify(payload);
-      const signature = signWebhookPayload(payloadString, endpoint.secret, timestamp);
+      const signature = signWebhookPayload(payloadString, secret, timestamp);
 
       // Send webhook
       const response = await fetch(endpoint.url, {

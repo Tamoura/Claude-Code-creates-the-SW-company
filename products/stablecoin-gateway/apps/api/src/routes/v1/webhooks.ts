@@ -23,6 +23,7 @@ import { createWebhookSchema, updateWebhookSchema, validateBody } from '../../ut
 import { AppError } from '../../types/index.js';
 import { logger } from '../../utils/logger.js';
 import { validateWebhookUrl } from '../../utils/url-validator.js';
+import { encryptSecret } from '../../utils/encryption.js';
 import crypto from 'crypto';
 
 /**
@@ -39,21 +40,23 @@ function generateWebhookSecret(): string {
 /**
  * SECURITY NOTE: Webhook Secrets Storage
  *
- * Unlike passwords and API keys, webhook secrets are stored in PLAINTEXT.
+ * Unlike passwords and API keys, webhook secrets must be recoverable for HMAC signing.
  *
- * Why the difference?
+ * Storage approach:
  * - Passwords: Never need to be recovered → one-way hash (bcrypt)
  * - API keys: Verify incoming requests → one-way hash (SHA-256) + compare
- * - Webhook secrets: Sign outgoing payloads → must be recoverable (plaintext)
+ * - Webhook secrets: Sign outgoing payloads → must be recoverable
  *
- * We need the plaintext secret to compute HMAC signatures when sending
+ * We use AES-256-GCM encryption at rest for webhook secrets:
+ * - If WEBHOOK_ENCRYPTION_KEY is set: secrets encrypted before storage
+ * - If not set: secrets stored in plaintext (backwards compatible)
+ *
+ * Why encryption (not hashing)?
+ * We need the plaintext secret to compute HMAC-SHA256 signatures when sending
  * webhooks to merchant endpoints. One-way hashing would make signing impossible.
  *
  * Industry standard: Stripe, GitHub, and other webhook providers all store
- * webhook secrets in a recoverable format (plaintext or encrypted at rest).
- *
- * Database-level encryption at rest (if enabled) provides protection for
- * secrets stored in the database.
+ * webhook secrets in a recoverable format (encrypted at rest or plaintext).
  */
 
 /**
@@ -107,15 +110,20 @@ const webhookRoutes: FastifyPluginAsync = async (fastify) => {
       // Validate webhook URL for SSRF protection
       validateWebhookUrl(body.url);
 
-      // Generate webhook secret (stored in plaintext for HMAC signing)
+      // Generate webhook secret
       const secret = generateWebhookSecret();
+
+      // Encrypt secret if encryption is available, otherwise store plaintext
+      const secretToStore = process.env.WEBHOOK_ENCRYPTION_KEY
+        ? encryptSecret(secret)
+        : secret;
 
       // Create webhook endpoint
       const webhook = await fastify.prisma.webhookEndpoint.create({
         data: {
           userId,
           url: body.url,
-          secret: secret, // Plaintext - needed for signing outgoing webhooks
+          secret: secretToStore, // Encrypted (if key available) or plaintext
           events: body.events,
           enabled: body.enabled ?? true,
           description: body.description,

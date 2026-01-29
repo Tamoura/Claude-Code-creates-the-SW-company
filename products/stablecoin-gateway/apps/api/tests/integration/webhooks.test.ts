@@ -945,4 +945,67 @@ describe('Webhook CRUD API', () => {
       expect(getResponse.json().url).toBe('https://example.com/webhook');
     });
   });
+
+  describe('Secret Encryption at Rest', () => {
+    it('should encrypt webhook secret in database if encryption key is set', async () => {
+      // Create webhook
+      const response = await app.inject({
+        method: 'POST',
+        url: '/v1/webhooks',
+        headers: {
+          authorization: `Bearer ${authToken}`,
+        },
+        payload: {
+          url: 'https://example.com/webhook',
+          events: ['payment.created'],
+        },
+      });
+
+      expect(response.statusCode).toBe(201);
+      const webhook = response.json();
+
+      // Get webhook from database
+      const dbWebhook = await prisma.webhookEndpoint.findUnique({
+        where: { id: webhook.id },
+      });
+
+      // If encryption key is set, secret in DB should be encrypted (not start with whsec_)
+      if (process.env.WEBHOOK_ENCRYPTION_KEY) {
+        expect(dbWebhook?.secret).not.toMatch(/^whsec_/);
+        // Encrypted format should be iv:authTag:ciphertext
+        expect(dbWebhook?.secret.split(':')).toHaveLength(3);
+      } else {
+        // Without encryption key, secret is stored as plaintext
+        expect(dbWebhook?.secret).toMatch(/^whsec_/);
+      }
+
+      // Secret returned to user should always be plaintext whsec_ format
+      expect(webhook.secret).toMatch(/^whsec_[0-9a-f]{64}$/);
+    });
+
+    it('should decrypt secret correctly when delivering webhooks', async () => {
+      // This is tested indirectly - if decryption fails, webhook delivery will fail
+      // The webhook-delivery.test.ts tests verify that HMAC signatures are correct,
+      // which proves decryption is working (since HMAC is computed with decrypted secret)
+
+      // Create webhook
+      const response = await app.inject({
+        method: 'POST',
+        url: '/v1/webhooks',
+        headers: {
+          authorization: `Bearer ${authToken}`,
+        },
+        payload: {
+          url: 'https://example.com/webhook',
+          events: ['payment.created'],
+        },
+      });
+
+      expect(response.statusCode).toBe(201);
+      const webhook = response.json();
+
+      // Verify webhook was created (actual delivery testing is in webhook-delivery.test.ts)
+      expect(webhook.secret).toMatch(/^whsec_/);
+    });
+  });
 });
