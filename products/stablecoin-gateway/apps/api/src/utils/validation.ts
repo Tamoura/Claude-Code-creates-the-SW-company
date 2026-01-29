@@ -34,6 +34,34 @@ export const loginSchema = z.object({
 
 // ==================== Payment Session Schemas ====================
 
+// Metadata validation with size limits
+const metadataValueSchema = z.union([
+  z.string().max(500, 'Metadata string values must be <= 500 characters'),
+  z.number(),
+  z.boolean(),
+  z.null(),
+]);
+
+const metadataSchema = z
+  .record(metadataValueSchema)
+  .optional()
+  .refine(
+    (data) => {
+      if (!data) return true;
+      const keys = Object.keys(data);
+      return keys.length <= 50;
+    },
+    { message: 'Metadata cannot have more than 50 keys' }
+  )
+  .refine(
+    (data) => {
+      if (!data) return true;
+      const jsonSize = JSON.stringify(data).length;
+      return jsonSize <= 16384; // 16KB
+    },
+    { message: 'Metadata size cannot exceed 16KB' }
+  );
+
 export const createPaymentSessionSchema = z.object({
   amount: z
     .number()
@@ -46,7 +74,7 @@ export const createPaymentSessionSchema = z.object({
   merchant_address: ethereumAddressSchema,
   success_url: z.string().url().optional(),
   cancel_url: z.string().url().optional(),
-  metadata: z.record(z.unknown()).optional(),
+  metadata: metadataSchema,
 });
 
 export const listPaymentSessionsQuerySchema = z.object({
