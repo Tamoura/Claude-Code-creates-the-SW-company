@@ -240,6 +240,25 @@ const paymentSessionRoutes: FastifyPluginAsync = async (fastify) => {
           completedAt: row.completed_at,
         };
 
+        // SECURITY: Enforce payment session expiry
+        // Expired sessions cannot advance to CONFIRMING or COMPLETED.
+        // They are auto-set to FAILED and the request is rejected.
+        // Transitions to FAILED (or non-status updates) are still allowed.
+        const isExpired = existingSession.expiresAt &&
+          new Date(existingSession.expiresAt) < new Date();
+        const isAdvancingStatus = updates.status === 'CONFIRMING' ||
+          updates.status === 'COMPLETED';
+
+        if (isExpired && isAdvancingStatus) {
+          // Set to FAILED via sentinel return so the transaction commits
+          // before we throw an error (prevents rollback of FAILED status)
+          const failedSession = await tx.paymentSession.update({
+            where: { id },
+            data: { status: 'FAILED' },
+          });
+          return { __expired: true, session: failedSession };
+        }
+
         // SECURITY: Validate status transitions using state machine
         // Prevents unauthorized or invalid state changes (e.g., PENDING → COMPLETED without CONFIRMING)
         if (updates.status && updates.status !== existingSession.status) {
@@ -329,6 +348,16 @@ const paymentSessionRoutes: FastifyPluginAsync = async (fastify) => {
           data: updateData,
         });
       }); // End of transaction
+
+      // Check if the session was detected as expired during the transaction.
+      // The FAILED status update is committed, now throw the error.
+      if (updatedSession && typeof updatedSession === 'object' && '__expired' in updatedSession) {
+        throw new AppError(
+          400,
+          'session-expired',
+          'Payment session has expired'
+        );
+      }
 
       const baseUrl = process.env.FRONTEND_URL || 'http://localhost:3101';
       const response = paymentService.toResponse(updatedSession, baseUrl);
