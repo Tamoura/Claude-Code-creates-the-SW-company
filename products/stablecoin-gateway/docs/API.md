@@ -693,9 +693,18 @@ eventSource.addEventListener('error', (error) => {
 
 ### Webhooks
 
+Webhooks allow your server to receive real-time notifications when events occur (e.g., payment completed).
+
+**Available Events**:
+- `payment.created` - Payment session created
+- `payment.confirming` - Transaction submitted to blockchain
+- `payment.completed` - Payment confirmed on-chain
+- `payment.failed` - Payment failed or timed out
+- `payment.refunded` - Refund issued
+
 #### POST /v1/webhooks
 
-Create a webhook endpoint.
+Create a webhook endpoint to receive events.
 
 **Request**:
 ```http
@@ -706,7 +715,8 @@ Content-Type: application/json
 {
   "url": "https://yourserver.com/webhooks/stablecoin-gateway",
   "events": ["payment.completed", "payment.failed", "payment.refunded"],
-  "description": "Production webhook"
+  "description": "Production webhook",
+  "enabled": true
 }
 ```
 
@@ -714,19 +724,190 @@ Content-Type: application/json
 ```json
 {
   "id": "wh_abc123",
-  "object": "webhook",
   "url": "https://yourserver.com/webhooks/stablecoin-gateway",
   "events": ["payment.completed", "payment.failed", "payment.refunded"],
   "description": "Production webhook",
-  "secret": "whsec_abc123...",
-  "status": "active",
-  "created_at": "2026-01-27T10:00:00Z"
+  "enabled": true,
+  "secret": "whsec_1234567890abcdef...",
+  "created_at": "2026-01-27T10:00:00Z",
+  "updated_at": "2026-01-27T10:00:00Z"
 }
 ```
 
-**Important**: Save the `secret` - you'll need it to verify webhook signatures.
+**Important**:
+- Save the `secret` - it's **only shown once** and needed to verify signatures
+- URLs must use HTTPS (required for security)
+- Secrets are auto-generated and hashed before storage
 
-See [Webhook Integration Guide](./guides/webhook-integration.md) for details.
+---
+
+#### GET /v1/webhooks
+
+List all webhook endpoints for your account.
+
+**Request**:
+```http
+GET /v1/webhooks
+Authorization: Bearer sk_live_abc123
+```
+
+**Response**: `200 OK`
+```json
+{
+  "data": [
+    {
+      "id": "wh_abc123",
+      "url": "https://yourserver.com/webhooks/stablecoin-gateway",
+      "events": ["payment.completed", "payment.failed"],
+      "description": "Production webhook",
+      "enabled": true,
+      "created_at": "2026-01-27T10:00:00Z",
+      "updated_at": "2026-01-27T10:00:00Z"
+    },
+    {
+      "id": "wh_def456",
+      "url": "https://staging.yourserver.com/webhooks",
+      "events": ["payment.created"],
+      "description": "Staging webhook",
+      "enabled": false,
+      "created_at": "2026-01-26T08:30:00Z",
+      "updated_at": "2026-01-27T09:00:00Z"
+    }
+  ]
+}
+```
+
+**Note**: Secrets are never returned in list operations (security measure).
+
+---
+
+#### GET /v1/webhooks/:id
+
+Get details of a specific webhook endpoint.
+
+**Request**:
+```http
+GET /v1/webhooks/wh_abc123
+Authorization: Bearer sk_live_abc123
+```
+
+**Response**: `200 OK`
+```json
+{
+  "id": "wh_abc123",
+  "url": "https://yourserver.com/webhooks/stablecoin-gateway",
+  "events": ["payment.completed", "payment.failed", "payment.refunded"],
+  "description": "Production webhook",
+  "enabled": true,
+  "created_at": "2026-01-27T10:00:00Z",
+  "updated_at": "2026-01-27T10:00:00Z"
+}
+```
+
+**Errors**:
+- `404 Not Found` - Webhook doesn't exist or you don't own it
+
+---
+
+#### PATCH /v1/webhooks/:id
+
+Update a webhook endpoint.
+
+**Request**:
+```http
+PATCH /v1/webhooks/wh_abc123
+Authorization: Bearer sk_live_abc123
+Content-Type: application/json
+
+{
+  "events": ["payment.completed", "payment.failed", "payment.refunded", "payment.created"],
+  "description": "Updated production webhook",
+  "enabled": false
+}
+```
+
+**Response**: `200 OK`
+```json
+{
+  "id": "wh_abc123",
+  "url": "https://yourserver.com/webhooks/stablecoin-gateway",
+  "events": ["payment.completed", "payment.failed", "payment.refunded", "payment.created"],
+  "description": "Updated production webhook",
+  "enabled": false,
+  "created_at": "2026-01-27T10:00:00Z",
+  "updated_at": "2026-01-27T11:30:00Z"
+}
+```
+
+**Updatable Fields**:
+- `url` - Webhook endpoint URL (must be HTTPS)
+- `events` - Array of event types to subscribe to
+- `enabled` - Enable/disable webhook deliveries
+- `description` - Human-readable description
+
+**Not Updatable**:
+- `secret` - Cannot be changed (create new webhook if needed)
+
+---
+
+#### DELETE /v1/webhooks/:id
+
+Delete a webhook endpoint.
+
+**Request**:
+```http
+DELETE /v1/webhooks/wh_abc123
+Authorization: Bearer sk_live_abc123
+```
+
+**Response**: `204 No Content`
+
+**Note**: Deleting a webhook also deletes all associated delivery attempts (cascade delete).
+
+---
+
+#### Webhook Security
+
+All webhook payloads include HMAC-SHA256 signatures for verification:
+
+```json
+{
+  "id": "evt_abc123",
+  "type": "payment.completed",
+  "data": {
+    "id": "ps_abc123",
+    "amount": 100.00,
+    "status": "completed",
+    "tx_hash": "0x1234..."
+  },
+  "timestamp": 1706356800000,
+  "signature": "sha256=a8b7c6d5e4f3..."
+}
+```
+
+**Verify signatures** to prevent spoofed requests:
+
+```javascript
+const crypto = require('crypto');
+
+function verifyWebhook(payload, signature, secret) {
+  const { signature: _, ...dataToVerify } = payload;
+  const payloadString = JSON.stringify(dataToVerify);
+  const signedPayload = `${payload.timestamp}.${payloadString}`;
+
+  const expectedSignature = crypto
+    .createHmac('sha256', secret)
+    .update(signedPayload)
+    .digest('hex');
+
+  return crypto.timingSafeEqual(
+    Buffer.from(signature),
+    Buffer.from(`sha256=${expectedSignature}`)
+  );
+}
+```
+
+See [Webhook Integration Guide](./guides/webhook-integration.md) for complete implementation details.
 
 ---
 
