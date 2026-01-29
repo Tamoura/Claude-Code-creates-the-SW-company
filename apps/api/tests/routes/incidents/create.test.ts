@@ -13,11 +13,12 @@ describe('POST /api/v1/incidents', () => {
   beforeEach(async () => {
     app = buildApp();
 
-    // Clean up
+    // Clean up in correct order
     await prisma.incident.deleteMany({ where: { title: { contains: 'Route Test' } } });
-    await prisma.user.deleteMany({ where: { email: { contains: 'routetest@' } } });
     await prisma.category.deleteMany({ where: { name: { contains: 'Route Test' } } });
+    await prisma.user.deleteMany({ where: { email: { contains: 'routetest@' } } });
     await prisma.role.deleteMany({ where: { name: { contains: 'Route Test' } } });
+    // Don't reset sequences - tests should work regardless of existing data
 
     // Create test role
     const role = await prisma.role.create({

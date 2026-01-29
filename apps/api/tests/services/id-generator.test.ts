@@ -6,9 +6,9 @@ const prisma = new PrismaClient();
 
 describe('ID Generator Service', () => {
   beforeEach(async () => {
-    // Clean up test data
+    // Clean up ALL sequences to ensure tests start from known state
     await prisma.idSequence.deleteMany({
-      where: { prefix: { in: ['TST', 'INC'] } },
+      where: { prefix: { in: ['TST', 'INC', 'PRB'] } },
     });
   });
 

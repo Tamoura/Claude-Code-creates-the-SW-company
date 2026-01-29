@@ -1,4 +1,4 @@
-import { describe, it, expect, beforeEach } from 'vitest';
+import { describe, it, expect, beforeEach, afterAll } from 'vitest';
 import { PrismaClient, Priority, Impact, Urgency, IncidentStatus } from '@prisma/client';
 import { createIncident, getIncident, listIncidents, updateIncident, deleteIncident } from '../../src/services/incident.service.js';
 
@@ -11,37 +11,47 @@ describe('Incident Service', () => {
   let testSlaConfigId: string;
 
   beforeEach(async () => {
-    // Clean up test data
+    // Clean up test data in correct order (FK constraints)
+    // Note: We don't delete categories or roles as they might be referenced by seed data
+    // Delete by displayId to catch any orphaned records from previous runs
     await prisma.incident.deleteMany({
-      where: { title: { contains: 'Test' } },
-    });
-    await prisma.user.deleteMany({
-      where: { email: { contains: 'test@' } },
-    });
-    await prisma.category.deleteMany({
-      where: { name: { contains: 'Test' } },
-    });
-    await prisma.role.deleteMany({
-      where: { name: { contains: 'Test' } },
+      where: { displayId: { gte: 'INC-00006' } }, // Seed creates INC-00001 to INC-00005
     });
     await prisma.sLAConfig.deleteMany({
-      where: { name: { contains: 'Test' } },
+      where: { name: 'Test SLA' },
     });
+    await prisma.category.deleteMany({
+      where: { name: 'Test Hardware' },
+    });
+    await prisma.user.deleteMany({
+      where: { email: 'test@incident-test.com' },
+    });
+    // Reuse or create role
+    let existingRole = await prisma.role.findFirst({
+      where: { name: 'Test Role' },
+    });
+    if (existingRole) {
+      testRoleId = existingRole.id;
+    }
+    // Don't reset sequences - just work with existing data
+    // Tests should work regardless of existing sequence values
 
-    // Create test role
-    const role = await prisma.role.create({
-      data: {
-        name: 'Test Role',
-        description: 'Test role for testing',
-        level: 1,
-      },
-    });
-    testRoleId = role.id;
+    // Create test role if needed
+    if (!testRoleId) {
+      const role = await prisma.role.create({
+        data: {
+          name: 'Test Role',
+          description: 'Test role for testing',
+          level: 1,
+        },
+      });
+      testRoleId = role.id;
+    }
 
     // Create test user
     const user = await prisma.user.create({
       data: {
-        email: 'test@example.com',
+        email: 'test@incident-test.com',
         passwordHash: 'hashed',
         firstName: 'Test',
         lastName: 'User',
@@ -66,6 +76,23 @@ describe('Incident Service', () => {
       },
     });
     testSlaConfigId = slaConfig.id;
+  });
+
+  afterAll(async () => {
+    // Clean up all test data after all tests complete
+    await prisma.incident.deleteMany({
+      where: { title: { contains: 'Test Incident' } },
+    });
+    await prisma.sLAConfig.deleteMany({
+      where: { name: 'Test SLA' },
+    });
+    await prisma.category.deleteMany({
+      where: { name: 'Test Hardware' },
+    });
+    await prisma.user.deleteMany({
+      where: { email: 'test@incident-test.com' },
+    });
+    // Don't delete role as seed users might reference it
   });
 
   describe('createIncident', () => {

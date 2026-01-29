@@ -1,4 +1,4 @@
-import { describe, it, expect, beforeEach } from 'vitest';
+import { describe, it, expect, beforeEach, afterAll } from 'vitest';
 import { PrismaClient, Priority, ProblemStatus } from '@prisma/client';
 import {
   createProblem,
@@ -19,22 +19,31 @@ describe('Problem Service', () => {
   let testIncidentId: string;
 
   beforeEach(async () => {
-    // Clean up test data
+    // Clean up test data in correct order
+    // Delete by displayId to catch any orphaned records from previous runs
+    await prisma.knownError.deleteMany({
+      where: { problem: { displayId: { gte: 'PRB-00003' } } },
+    });
+    await prisma.problemIncident.deleteMany({
+      where: { problem: { displayId: { gte: 'PRB-00003' } } },
+    });
     await prisma.problem.deleteMany({
-      where: { title: { contains: 'Test Problem' } },
+      where: { displayId: { gte: 'PRB-00003' } }, // Seed creates PRB-00001 to PRB-00002
     });
     await prisma.incident.deleteMany({
       where: { title: { contains: 'Test Problem Incident' } },
     });
-    await prisma.user.deleteMany({
-      where: { email: { contains: 'problemtest@' } },
-    });
     await prisma.category.deleteMany({
       where: { name: { contains: 'Problem Test' } },
+    });
+    await prisma.user.deleteMany({
+      where: { email: { contains: 'problemtest@' } },
     });
     await prisma.role.deleteMany({
       where: { name: { contains: 'Problem Test' } },
     });
+    // Don't reset sequences - just work with existing data
+    // Tests should work regardless of existing sequence values
 
     // Create test role
     const role = await prisma.role.create({
@@ -82,6 +91,31 @@ describe('Problem Service', () => {
       },
     });
     testIncidentId = incident.id;
+  });
+
+  afterAll(async () => {
+    // Clean up all test data after all tests complete
+    await prisma.knownError.deleteMany({
+      where: { problem: { title: { contains: 'Test Problem' } } },
+    });
+    await prisma.problemIncident.deleteMany({
+      where: { problem: { title: { contains: 'Test Problem' } } },
+    });
+    await prisma.problem.deleteMany({
+      where: { title: { contains: 'Test Problem' } },
+    });
+    await prisma.incident.deleteMany({
+      where: { displayId: 'INC-TEST-001' },
+    });
+    await prisma.category.deleteMany({
+      where: { name: 'Problem Test Category' },
+    });
+    await prisma.user.deleteMany({
+      where: { email: 'problemtest@example.com' },
+    });
+    await prisma.role.deleteMany({
+      where: { name: 'Problem Test Role' },
+    });
   });
 
   describe('createProblem', () => {

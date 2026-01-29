@@ -5,11 +5,44 @@ import { logAudit } from '../../src/services/audit.service.js';
 const prisma = new PrismaClient();
 
 describe('Audit Service', () => {
+  let testUserId: string;
+  let testRoleId: string;
+
   beforeEach(async () => {
     // Clean up test audit logs
     await prisma.auditLog.deleteMany({
       where: { entityType: 'TEST' },
     });
+
+    // Clean up test data
+    await prisma.user.deleteMany({
+      where: { email: { contains: '@audit-test.com' } },
+    });
+    await prisma.role.deleteMany({
+      where: { name: 'Audit Test Role' },
+    });
+
+    // Create test role
+    const role = await prisma.role.create({
+      data: {
+        name: 'Audit Test Role',
+        description: 'Test role for audit service tests',
+        level: 1,
+      },
+    });
+    testRoleId = role.id;
+
+    // Create test user
+    const user = await prisma.user.create({
+      data: {
+        email: 'test@audit-test.com',
+        passwordHash: 'hashed',
+        firstName: 'Audit',
+        lastName: 'Tester',
+        roleId: testRoleId,
+      },
+    });
+    testUserId = user.id;
   });
 
   it('should log CREATE action', async () => {
@@ -17,7 +50,7 @@ describe('Audit Service', () => {
       entityType: 'TEST',
       entityId: 'test-123',
       action: AuditAction.CREATE,
-      userId: 'user-123',
+      userId: testUserId,
       newValues: { title: 'Test Item', status: 'NEW' },
       ipAddress: '127.0.0.1',
     });
@@ -37,7 +70,7 @@ describe('Audit Service', () => {
       entityType: 'TEST',
       entityId: 'test-456',
       action: AuditAction.UPDATE,
-      userId: 'user-123',
+      userId: testUserId,
       oldValues: { status: 'NEW' },
       newValues: { status: 'IN_PROGRESS' },
       ipAddress: '127.0.0.1',
@@ -58,7 +91,7 @@ describe('Audit Service', () => {
       entityType: 'TEST',
       entityId: 'test-789',
       action: AuditAction.DELETE,
-      userId: 'user-123',
+      userId: testUserId,
       oldValues: { title: 'Deleted Item' },
       ipAddress: '127.0.0.1',
     });
