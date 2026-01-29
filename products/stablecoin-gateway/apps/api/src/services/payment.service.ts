@@ -156,7 +156,23 @@ export class PaymentService {
     });
 
     // Queue webhooks for status changes
-    if (status === 'COMPLETED') {
+    if (status === 'CONFIRMING') {
+      await this.webhookService.queueWebhook(session.userId, 'payment.confirming', {
+        id: session.id,
+        amount: Number(session.amount),
+        currency: session.currency,
+        status: session.status,
+        network: session.network,
+        token: session.token,
+        merchant_address: session.merchantAddress,
+        customer_address: session.customerAddress,
+        tx_hash: session.txHash,
+        block_number: session.blockNumber,
+        confirmations: session.confirmations,
+        created_at: session.createdAt.toISOString(),
+        metadata: session.metadata,
+      });
+    } else if (status === 'COMPLETED') {
       await this.webhookService.queueWebhook(session.userId, 'payment.completed', {
         id: session.id,
         amount: Number(session.amount),
@@ -182,6 +198,19 @@ export class PaymentService {
         network: session.network,
         token: session.token,
         merchant_address: session.merchantAddress,
+        created_at: session.createdAt.toISOString(),
+        metadata: session.metadata,
+      });
+    } else if (status === 'REFUNDED') {
+      await this.webhookService.queueWebhook(session.userId, 'payment.refunded', {
+        id: session.id,
+        amount: Number(session.amount),
+        currency: session.currency,
+        status: session.status,
+        network: session.network,
+        token: session.token,
+        merchant_address: session.merchantAddress,
+        customer_address: session.customerAddress,
         created_at: session.createdAt.toISOString(),
         metadata: session.metadata,
       });

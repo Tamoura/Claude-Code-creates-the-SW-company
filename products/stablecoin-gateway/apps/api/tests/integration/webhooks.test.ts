@@ -727,11 +727,13 @@ describe('Webhook CRUD API', () => {
           {
             endpointId: webhook.id,
             eventType: 'payment.created',
+            resourceId: 'ps_test1',
             payload: { test: 'data1' },
           },
           {
             endpointId: webhook.id,
             eventType: 'payment.completed',
+            resourceId: 'ps_test2',
             payload: { test: 'data2' },
           },
         ],

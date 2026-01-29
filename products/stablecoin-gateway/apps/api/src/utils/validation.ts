@@ -123,6 +123,9 @@ export const createWebhookSchema = z.object({
         'payment.completed',
         'payment.failed',
         'payment.refunded',
+        'refund.created',
+        'refund.completed',
+        'refund.failed',
       ])
     )
     .min(1, 'At least one event is required'),
@@ -140,6 +143,9 @@ export const updateWebhookSchema = z.object({
         'payment.completed',
         'payment.failed',
         'payment.refunded',
+        'refund.created',
+        'refund.completed',
+        'refund.failed',
       ])
     )
     .optional(),

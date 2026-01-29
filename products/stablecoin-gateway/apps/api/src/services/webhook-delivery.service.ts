@@ -9,10 +9,13 @@
  *
  * Event Types:
  * - payment.created - New payment session initiated
- * - payment.completed - Payment successfully verified
- * - payment.failed - Payment verification failed
- * - refund.created - Refund initiated
- * - refund.completed - Refund processed
+ * - payment.confirming - Payment transaction detected, awaiting confirmations
+ * - payment.completed - Payment successfully verified and confirmed
+ * - payment.failed - Payment verification failed or transaction reverted
+ * - payment.refunded - Payment fully refunded to customer
+ * - refund.created - Refund initiated by merchant
+ * - refund.completed - Refund successfully processed on-chain
+ * - refund.failed - Refund processing failed
  */
 
 import { PrismaClient, WebhookStatus } from '@prisma/client';
@@ -23,10 +26,13 @@ import { decryptSecret } from '../utils/encryption.js';
 
 export type WebhookEventType =
   | 'payment.created'
+  | 'payment.confirming'
   | 'payment.completed'
   | 'payment.failed'
+  | 'payment.refunded'
   | 'refund.created'
-  | 'refund.completed';
+  | 'refund.completed'
+  | 'refund.failed';
 
 interface WebhookPayload {
   id: string;

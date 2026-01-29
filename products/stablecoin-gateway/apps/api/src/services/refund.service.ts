@@ -283,12 +283,31 @@ export class RefundService {
 
       if (!result.success) {
         // Mark refund as FAILED
-        await this.prisma.refund.update({
+        const failedRefund = await this.prisma.refund.update({
           where: { id },
           data: {
             status: RefundStatus.FAILED,
           },
+          include: {
+            paymentSession: true,
+          },
         });
+
+        // Queue webhook for refund.failed event
+        await this.webhookService.queueWebhook(
+          failedRefund.paymentSession.userId,
+          'refund.failed',
+          {
+            id: failedRefund.id,
+            payment_session_id: failedRefund.paymentSessionId,
+            refund_id: failedRefund.id,
+            amount: Number(failedRefund.amount),
+            reason: failedRefund.reason,
+            status: failedRefund.status,
+            created_at: failedRefund.createdAt.toISOString(),
+            error: result.error,
+          }
+        );
 
         throw new AppError(
           500,
@@ -330,18 +349,37 @@ export class RefundService {
 
       return completedRefund;
     } catch (error) {
-      // If it's already an AppError, rethrow it
+      // If it's already an AppError, rethrow it (webhook already sent if applicable)
       if (error instanceof AppError) {
         throw error;
       }
 
       // Mark as FAILED for unexpected errors
-      await this.prisma.refund.update({
+      const failedRefund = await this.prisma.refund.update({
         where: { id },
         data: {
           status: RefundStatus.FAILED,
         },
+        include: {
+          paymentSession: true,
+        },
       });
+
+      // Queue webhook for refund.failed event
+      await this.webhookService.queueWebhook(
+        failedRefund.paymentSession.userId,
+        'refund.failed',
+        {
+          id: failedRefund.id,
+          payment_session_id: failedRefund.paymentSessionId,
+          refund_id: failedRefund.id,
+          amount: Number(failedRefund.amount),
+          reason: failedRefund.reason,
+          status: failedRefund.status,
+          created_at: failedRefund.createdAt.toISOString(),
+          error: error instanceof Error ? error.message : 'Unknown error',
+        }
+      );
 
       throw new AppError(
         500,
@@ -407,12 +445,32 @@ export class RefundService {
    * Mark a refund as failed
    */
   async failRefund(id: string): Promise<Refund> {
-    return this.prisma.refund.update({
+    const refund = await this.prisma.refund.update({
       where: { id },
       data: {
         status: RefundStatus.FAILED,
       },
+      include: {
+        paymentSession: true,
+      },
     });
+
+    // Queue webhook for refund.failed event
+    await this.webhookService.queueWebhook(
+      refund.paymentSession.userId,
+      'refund.failed',
+      {
+        id: refund.id,
+        payment_session_id: refund.paymentSessionId,
+        refund_id: refund.id,
+        amount: Number(refund.amount),
+        reason: refund.reason,
+        status: refund.status,
+        created_at: refund.createdAt.toISOString(),
+      }
+    );
+
+    return refund;
   }
 
   /**
