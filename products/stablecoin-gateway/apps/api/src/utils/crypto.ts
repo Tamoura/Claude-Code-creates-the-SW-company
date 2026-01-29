@@ -40,10 +40,22 @@ export function verifyWebhookSignature(
   timestamp: number
 ): boolean {
   const expectedSignature = signWebhookPayload(payload, secret, timestamp);
-  return crypto.timingSafeEqual(
-    Buffer.from(signature),
-    Buffer.from(expectedSignature)
-  );
+
+  // timingSafeEqual requires buffers of same length
+  // If lengths differ, signature is definitely invalid
+  if (signature.length !== expectedSignature.length) {
+    return false;
+  }
+
+  try {
+    return crypto.timingSafeEqual(
+      Buffer.from(signature),
+      Buffer.from(expectedSignature)
+    );
+  } catch (error) {
+    // If buffer creation fails or lengths mismatch, signature is invalid
+    return false;
+  }
 }
 
 export function generatePaymentSessionId(): string {

@@ -8,7 +8,7 @@ import { logger } from '../../utils/logger.js';
 const paymentSessionRoutes: FastifyPluginAsync = async (fastify) => {
   // POST /v1/payment-sessions
   fastify.post('/', {
-    onRequest: [fastify.authenticate],
+    onRequest: [fastify.authenticate, fastify.requirePermission('write')],
   }, async (request, reply) => {
     try {
       const body = validateBody(createPaymentSessionSchema, request.body);
@@ -46,7 +46,7 @@ const paymentSessionRoutes: FastifyPluginAsync = async (fastify) => {
 
   // GET /v1/payment-sessions
   fastify.get('/', {
-    onRequest: [fastify.authenticate],
+    onRequest: [fastify.authenticate, fastify.requirePermission('read')],
   }, async (request, reply) => {
     try {
       const query = validateQuery(listPaymentSessionsQuerySchema, request.query);
@@ -93,7 +93,7 @@ const paymentSessionRoutes: FastifyPluginAsync = async (fastify) => {
 
   // GET /v1/payment-sessions/:id
   fastify.get('/:id', {
-    onRequest: [fastify.authenticate],
+    onRequest: [fastify.authenticate, fastify.requirePermission('read')],
   }, async (request, reply) => {
     try {
       const { id } = request.params as { id: string };
@@ -125,7 +125,7 @@ const paymentSessionRoutes: FastifyPluginAsync = async (fastify) => {
 
   // PATCH /v1/payment-sessions/:id
   fastify.patch('/:id', {
-    onRequest: [fastify.authenticate],
+    onRequest: [fastify.authenticate, fastify.requirePermission('write')],
   }, async (request, reply) => {
     try {
       const { id } = request.params as { id: string };
