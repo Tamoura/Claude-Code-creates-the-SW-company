@@ -20,7 +20,7 @@
 import { Redis } from 'ioredis';
 
 export interface RateLimitStoreOptions {
-  redis: Redis;
+  redis?: Redis;
   keyPrefix?: string;
 }
 
@@ -28,9 +28,16 @@ export class RedisRateLimitStore {
   private redis: Redis;
   private keyPrefix: string;
 
-  constructor(options: RateLimitStoreOptions) {
-    this.redis = options.redis;
+  constructor(options: RateLimitStoreOptions = {}) {
+    // When @fastify/rate-limit instantiates this, it passes globalParams
+    // We need to get the redis instance from somewhere else
+    // This will be set via a static property
+    this.redis = options.redis || (RedisRateLimitStore as any)._redis;
     this.keyPrefix = options.keyPrefix || 'ratelimit:';
+  }
+
+  static setRedis(redis: Redis): void {
+    (RedisRateLimitStore as any)._redis = redis;
   }
 
   /**
@@ -40,72 +47,41 @@ export class RedisRateLimitStore {
    */
   async incr(key: string, callback: (err: Error | null, result?: { current: number; ttl: number }) => void): Promise<void> {
     const redisKey = this.keyPrefix + key;
+    const ttl = (this as any)._routeTtl || 60000; // Use route-specific TTL or default
 
     try {
-      // Use Redis pipeline for atomic operations
-      const pipeline = this.redis.pipeline();
-      pipeline.incr(redisKey);
-      pipeline.pttl(redisKey);
+      // Increment and set TTL if not exists
+      const current = await this.redis.incr(redisKey);
 
-      const results = await pipeline.exec();
-
-      if (!results) {
-        callback(new Error('Redis pipeline execution failed'));
-        return;
+      // Set TTL on first request (when counter is 1)
+      if (current === 1) {
+        await this.redis.pexpire(redisKey, ttl);
       }
 
-      const [incrResult, ttlResult] = results;
+      const remainingTtl = await this.redis.pttl(redisKey);
 
-      if (incrResult[0]) {
-        callback(incrResult[0] as Error);
-        return;
-      }
-
-      if (ttlResult[0]) {
-        callback(ttlResult[0] as Error);
-        return;
-      }
-
-      const current = incrResult[1] as number;
-      const ttl = ttlResult[1] as number;
-
-      callback(null, { current, ttl });
+      callback(null, {
+        current,
+        ttl: remainingTtl > 0 ? remainingTtl : ttl,
+      });
     } catch (error) {
       callback(error as Error);
     }
   }
 
   /**
-   * Get the current count for a key
+   * Create a child store for route-specific rate limiting
    */
-  async child(routeOptions: { ttl?: number }): Promise<RedisRateLimitStore> {
-    const ttl = routeOptions.ttl || 60000; // Default 60 seconds
-
-    return {
+  child(routeOptions: { ttl?: number; timeWindow?: number; keyPrefix?: string }): RedisRateLimitStore {
+    // Create a new instance with the same Redis connection but route-specific options
+    const childStore = new RedisRateLimitStore({
       redis: this.redis,
-      keyPrefix: this.keyPrefix,
-      incr: async (key: string, callback: (err: Error | null, result?: { current: number; ttl: number }) => void) => {
-        const redisKey = this.keyPrefix + key;
+      keyPrefix: routeOptions.keyPrefix || this.keyPrefix,
+    });
 
-        try {
-          // Increment and set TTL if not exists
-          const current = await this.redis.incr(redisKey);
+    // Store the TTL for this child (used in incr method)
+    (childStore as any)._routeTtl = routeOptions.ttl || routeOptions.timeWindow || 60000;
 
-          // Set TTL on first request (when counter is 1)
-          if (current === 1) {
-            await this.redis.pexpire(redisKey, ttl);
-          }
-
-          const remainingTtl = await this.redis.pttl(redisKey);
-
-          callback(null, {
-            current,
-            ttl: remainingTtl > 0 ? remainingTtl : ttl,
-          });
-        } catch (error) {
-          callback(error as Error);
-        }
-      },
-    } as any;
+    return childStore;
   }
 }

@@ -119,11 +119,11 @@ export async function buildApp(): Promise<FastifyInstance> {
 
   if (fastify.redis) {
     // Use Redis for distributed rate limiting across multiple instances
-    const redisStore = new RedisRateLimitStore({
-      redis: fastify.redis,
-      keyPrefix: 'ratelimit:',
-    });
-    rateLimitConfig.store = redisStore;
+    // Set the Redis instance globally for the store class
+    RedisRateLimitStore.setRedis(fastify.redis);
+    // Pass the CLASS (not an instance) to @fastify/rate-limit
+    rateLimitConfig.store = RedisRateLimitStore;
+    rateLimitConfig.keyPrefix = 'ratelimit:';
     logger.info('Rate limiting configured with Redis distributed store', {
       max: rateLimitConfig.max,
       timeWindow: rateLimitConfig.timeWindow,
