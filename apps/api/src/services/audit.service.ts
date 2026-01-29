@@ -1,4 +1,4 @@
-import { PrismaClient, AuditAction } from '@prisma/client';
+import { PrismaClient, AuditAction, Prisma } from '@prisma/client';
 
 export interface AuditLogData {
   entityType: string;
@@ -20,8 +20,8 @@ export async function logAudit(
       entityId: data.entityId,
       action: data.action,
       userId: data.userId,
-      oldValues: data.oldValues || null,
-      newValues: data.newValues || null,
+      oldValues: data.oldValues || Prisma.JsonNull,
+      newValues: data.newValues || Prisma.JsonNull,
       ipAddress: data.ipAddress || null,
     },
   });

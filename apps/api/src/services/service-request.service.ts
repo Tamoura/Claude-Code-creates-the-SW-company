@@ -1,4 +1,4 @@
-import { PrismaClient, ServiceRequest, RequestStatus, ServiceCatalogItem, AuditAction } from '@prisma/client';
+import { PrismaClient, ServiceRequest, RequestStatus, ServiceCatalogItem, AuditAction, ApprovalDecision } from '@prisma/client';
 import { generateDisplayId } from './id-generator.service.js';
 import { logAudit } from './audit.service.js';
 import type {
@@ -237,8 +237,9 @@ export async function approveServiceRequest(
     data: {
       requestId: id,
       approverId: data.approverId,
-      approved: true,
-      notes: data.notes,
+      decision: ApprovalDecision.APPROVED,
+      comments: data.notes,
+      decidedAt: new Date(),
     },
   });
 
@@ -289,8 +290,9 @@ export async function rejectServiceRequest(
     data: {
       requestId: id,
       approverId: data.rejectedById,
-      approved: false,
-      notes: data.reason,
+      decision: ApprovalDecision.REJECTED,
+      comments: data.reason,
+      decidedAt: new Date(),
     },
   });
 

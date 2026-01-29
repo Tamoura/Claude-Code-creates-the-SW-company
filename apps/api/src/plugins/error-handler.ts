@@ -3,7 +3,7 @@ import fp from 'fastify-plugin';
 import { ZodError } from 'zod';
 
 const errorHandlerPlugin: FastifyPluginAsync = async (fastify) => {
-  fastify.setErrorHandler((error: FastifyError, request, reply) => {
+  fastify.setErrorHandler((error: FastifyError, _request, reply) => {
     // Zod validation errors
     if (error instanceof ZodError) {
       return reply.status(400).send({
@@ -27,7 +27,7 @@ const errorHandlerPlugin: FastifyPluginAsync = async (fastify) => {
 
     // Default error response
     const statusCode = error.statusCode || 500;
-    reply.status(statusCode).send({
+    return reply.status(statusCode).send({
       error: error.name || 'Internal Server Error',
       message: statusCode === 500 ? 'Something went wrong' : error.message,
     });
