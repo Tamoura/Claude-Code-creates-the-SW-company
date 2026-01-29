@@ -6,24 +6,36 @@
  * Features:
  * - ERC-20 token transfers (USDC, USDT)
  * - Gas fee estimation
- * - Transaction signing with merchant wallet
+ * - Transaction signing via KMS signer abstraction
  * - Multi-network support (Polygon, Ethereum)
  * - Error handling and retry logic
+ * - Optional nonce management via NonceManager for concurrent safety
  *
  * Security:
- * - Merchant wallet private key from environment
+ * - Uses KMS signer abstraction (never reads raw private key directly)
+ * - In production: AWS KMS signing (USE_KMS=true)
+ * - In development: env var fallback with warning
  * - Address validation
  * - Amount validation
  * - Transaction confirmation
+ * - Redis-based nonce serialization (when NonceManager provided)
  *
  * Environment Variables:
- * - MERCHANT_WALLET_PRIVATE_KEY: Private key for merchant wallet (required)
+ * - USE_KMS: 'true' for KMS signing, 'false' for env var fallback
+ * - KMS_KEY_ID: AWS KMS key identifier (required if USE_KMS=true)
+ * - MERCHANT_WALLET_PRIVATE_KEY: Fallback key (dev only, when USE_KMS=false)
  * - POLYGON_RPC_URL: Polygon RPC endpoint (optional, defaults to public)
  * - ETHEREUM_RPC_URL: Ethereum RPC endpoint (optional, defaults to public)
  */
 
 import { ethers } from 'ethers';
 import { logger } from '../utils/logger.js';
+import { createSignerProvider, SignerProvider } from './kms-signer.service.js';
+import { NonceManager } from './nonce-manager.service.js';
+
+export interface BlockchainTransactionServiceOptions {
+  nonceManager?: NonceManager;
+}
 
 // ERC-20 ABI (only the functions we need)
 const ERC20_ABI = [
@@ -70,17 +82,16 @@ export interface GasEstimate {
 
 export class BlockchainTransactionService {
   private providers: Map<string, ethers.JsonRpcProvider>;
-  private wallet: ethers.Wallet;
+  private wallet: ethers.Wallet | null = null;
+  private signerProvider: SignerProvider;
+  private walletInitialized = false;
+  private nonceManager: NonceManager | null;
   private readonly decimals = 6; // USDC and USDT use 6 decimals
 
-  constructor() {
-    // Validate merchant wallet is configured
-    const privateKey = process.env.MERCHANT_WALLET_PRIVATE_KEY;
-    if (!privateKey) {
-      throw new Error(
-        'MERCHANT_WALLET_PRIVATE_KEY not configured - required for refund execution'
-      );
-    }
+  constructor(options?: BlockchainTransactionServiceOptions) {
+    // SECURITY: Use signer provider abstraction instead of direct env var access
+    // In production: KMS signing. In dev: env var fallback with warning.
+    this.signerProvider = createSignerProvider();
 
     // Initialize providers
     this.providers = new Map();
@@ -91,13 +102,34 @@ export class BlockchainTransactionService {
     const ethereumRpcUrl = process.env.ETHEREUM_RPC_URL || 'https://eth.llamarpc.com';
     this.providers.set('ethereum', new ethers.JsonRpcProvider(ethereumRpcUrl));
 
-    // Initialize wallet (will be connected to provider per transaction)
-    this.wallet = new ethers.Wallet(privateKey);
+    // Initialize optional nonce manager for concurrent transaction safety
+    this.nonceManager = options?.nonceManager ?? null;
 
     logger.info('BlockchainTransactionService initialized', {
-      merchantWallet: this.wallet.address,
+      signerType: process.env.USE_KMS === 'true' ? 'KMS' : 'EnvVar',
       networks: ['polygon', 'ethereum'],
+      nonceManaged: this.nonceManager !== null,
     });
+  }
+
+  /**
+   * Lazily initialize the wallet via the signer provider.
+   * Async because KMS wallet retrieval requires network call.
+   */
+  private async getWallet(network: Network): Promise<ethers.Wallet> {
+    if (!this.walletInitialized) {
+      const walletOrAdapter = await this.signerProvider.getWallet(network);
+      this.wallet = walletOrAdapter as ethers.Wallet;
+      this.walletInitialized = true;
+    }
+    return this.wallet!;
+  }
+
+  /**
+   * Get the configured NonceManager, or null if not configured.
+   */
+  getNonceManager(): NonceManager | null {
+    return this.nonceManager;
   }
 
   /**
@@ -133,7 +165,8 @@ export class BlockchainTransactionService {
         };
       }
 
-      const connectedWallet = this.wallet.connect(provider);
+      const wallet = await this.getWallet(network);
+      const connectedWallet = wallet.connect(provider);
 
       // Get token contract
       const tokenAddress = TOKEN_ADDRESSES[network][token];
@@ -148,7 +181,7 @@ export class BlockchainTransactionService {
         recipient: recipientAddress,
         amount,
         amountInTokenUnits: amountInTokenUnits.toString(),
-        merchantWallet: this.wallet.address,
+        merchantWallet: wallet.address,
       });
 
       // Estimate gas first
@@ -166,8 +199,23 @@ export class BlockchainTransactionService {
         };
       }
 
-      // Execute transfer
-      const tx = await tokenContract.transfer(recipientAddress, amountInTokenUnits);
+      // Acquire nonce if nonce manager is configured
+      let nonce: number | undefined;
+      if (this.nonceManager) {
+        nonce = await this.nonceManager.getNextNonce(wallet.address, provider);
+        logger.info('Nonce acquired for transaction', {
+          nonce,
+          walletAddress: wallet.address,
+        });
+      }
+
+      // Execute transfer (with managed nonce if available)
+      const transferOptions = nonce !== undefined ? { nonce } : {};
+      const tx = await tokenContract.transfer(
+        recipientAddress,
+        amountInTokenUnits,
+        transferOptions
+      );
 
       logger.info('Refund transaction sent', {
         txHash: tx.hash,
@@ -175,10 +223,16 @@ export class BlockchainTransactionService {
         token,
         recipient: recipientAddress,
         amount,
+        nonce,
       });
 
       // Wait for confirmation (1 confirmation for now, can be increased)
       const receipt = await tx.wait(1);
+
+      // Confirm nonce was used successfully
+      if (this.nonceManager && nonce !== undefined) {
+        await this.nonceManager.confirmNonce(wallet.address, nonce);
+      }
 
       // Check transaction status
       if (receipt.status !== 1) {
@@ -233,14 +287,18 @@ export class BlockchainTransactionService {
       throw new Error(`Unsupported network: ${network}`);
     }
 
-    const connectedWallet = this.wallet.connect(provider);
+    const wallet = await this.getWallet(network);
+    const connectedWallet = wallet.connect(provider);
     const tokenAddress = TOKEN_ADDRESSES[network][token];
     const tokenContract = new ethers.Contract(tokenAddress, ERC20_ABI, connectedWallet);
 
     const amountInTokenUnits = BigInt(Math.floor(amount * Math.pow(10, this.decimals)));
 
     // Estimate gas
-    const gasLimit = await tokenContract.transfer.estimateGas(recipientAddress, amountInTokenUnits);
+    const gasLimit = await tokenContract.transfer.estimateGas(
+      recipientAddress,
+      amountInTokenUnits
+    );
     const feeData = await provider.getFeeData();
     const gasPrice = feeData.gasPrice || BigInt(0);
 
@@ -266,10 +324,11 @@ export class BlockchainTransactionService {
       throw new Error(`Unsupported network: ${network}`);
     }
 
+    const wallet = await this.getWallet(network);
     const tokenAddress = TOKEN_ADDRESSES[network][token];
     const tokenContract = new ethers.Contract(tokenAddress, ERC20_ABI, provider);
 
-    const balance = await tokenContract.balanceOf(this.wallet.address);
+    const balance = await tokenContract.balanceOf(wallet.address);
     const balanceInUsd = Number(balance) / Math.pow(10, this.decimals);
 
     return balanceInUsd;

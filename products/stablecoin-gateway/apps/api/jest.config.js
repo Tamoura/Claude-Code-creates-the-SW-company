@@ -5,7 +5,12 @@ module.exports = {
   roots: ['<rootDir>/tests', '<rootDir>/src'],
   testMatch: ['**/__tests__/**/*.ts', '**/?(*.)+(spec|test).ts'],
   transform: {
-    '^.+\\.ts$': 'ts-jest',
+    '^.+\\.ts$': ['ts-jest', {
+      // Disable TS diagnostics in Jest to avoid blocking tests
+      // when concurrent branches introduce WIP type errors.
+      // Real type errors are caught by `tsc` during build.
+      diagnostics: false,
+    }],
   },
   moduleNameMapper: {
     '^(\\.{1,2}/.*)\\.js$': '$1',

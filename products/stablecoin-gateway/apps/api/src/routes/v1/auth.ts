@@ -4,7 +4,7 @@ import { signupSchema, loginSchema, sseTokenSchema, validateBody } from '../../u
 import { hashPassword, verifyPassword } from '../../utils/crypto.js';
 import { AppError } from '../../types/index.js';
 import { logger } from '../../utils/logger.js';
-import { createHash } from 'crypto';
+import { createHash, randomUUID } from 'crypto';
 
 const authRoutes: FastifyPluginAsync = async (fastify) => {
   // Auth-specific rate limiting config (5 requests per 15 minutes)
@@ -59,7 +59,7 @@ const authRoutes: FastifyPluginAsync = async (fastify) => {
       );
 
       const refreshToken = fastify.jwt.sign(
-        { userId: user.id, type: 'refresh', jti: Math.random().toString(36) },
+        { userId: user.id, type: 'refresh', jti: randomUUID() },
         { expiresIn: process.env.REFRESH_TOKEN_EXPIRES_IN || '7d' }
       );
 
@@ -127,7 +127,7 @@ const authRoutes: FastifyPluginAsync = async (fastify) => {
       );
 
       const refreshToken = fastify.jwt.sign(
-        { userId: user.id, type: 'refresh', jti: Math.random().toString(36) },
+        { userId: user.id, type: 'refresh', jti: randomUUID() },
         { expiresIn: process.env.REFRESH_TOKEN_EXPIRES_IN || '7d' }
       );
 
@@ -207,7 +207,7 @@ const authRoutes: FastifyPluginAsync = async (fastify) => {
       );
 
       const newRefreshToken = fastify.jwt.sign(
-        { userId: decoded.userId, type: 'refresh', jti: Math.random().toString(36) },
+        { userId: decoded.userId, type: 'refresh', jti: randomUUID() },
         { expiresIn: process.env.REFRESH_TOKEN_EXPIRES_IN || '7d' }
       );
 
