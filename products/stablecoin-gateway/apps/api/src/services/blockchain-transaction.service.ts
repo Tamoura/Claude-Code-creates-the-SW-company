@@ -19,6 +19,7 @@
  * - Amount validation
  * - Transaction confirmation
  * - Redis-based nonce serialization (when NonceManager provided)
+ * - Per-network wallet caching (prevents cross-network wallet reuse)
  *
  * Environment Variables:
  * - USE_KMS: 'true' for KMS signing, 'false' for env var fallback
@@ -82,9 +83,8 @@ export interface GasEstimate {
 
 export class BlockchainTransactionService {
   private providers: Map<string, ethers.JsonRpcProvider>;
-  private wallet: ethers.Wallet | null = null;
+  private wallets: Map<string, ethers.Wallet> = new Map();
   private signerProvider: SignerProvider;
-  private walletInitialized = false;
   private nonceManager: NonceManager | null;
   private readonly decimals = 6; // USDC and USDT use 6 decimals
 
@@ -113,16 +113,18 @@ export class BlockchainTransactionService {
   }
 
   /**
-   * Lazily initialize the wallet via the signer provider.
-   * Async because KMS wallet retrieval requires network call.
+   * Lazily initialize and cache a wallet per network via the signer
+   * provider. Each network gets its own wallet instance to prevent
+   * cross-network wallet reuse.
+   *
+   * Async because KMS wallet retrieval requires a network call.
    */
   private async getWallet(network: Network): Promise<ethers.Wallet> {
-    if (!this.walletInitialized) {
+    if (!this.wallets.has(network)) {
       const walletOrAdapter = await this.signerProvider.getWallet(network);
-      this.wallet = walletOrAdapter as ethers.Wallet;
-      this.walletInitialized = true;
+      this.wallets.set(network, walletOrAdapter as ethers.Wallet);
     }
-    return this.wallet!;
+    return this.wallets.get(network)!;
   }
 
   /**
