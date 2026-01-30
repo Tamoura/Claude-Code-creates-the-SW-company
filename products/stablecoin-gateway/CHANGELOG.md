@@ -6,7 +6,59 @@ The format is based on [Keep a Changelog](https://keepachangelog.com/en/1.1.0/).
 
 ---
 
-## [Unreleased] - Security Audit Phase 4
+## [Unreleased] - Security Audit Phase 5
+
+**Date**: 2026-01-30
+**Branch**: `fix/stablecoin-gateway/security-audit-phase5`
+**Audit Status**: 7 new issues resolved (3 previously fixed), 60 dedicated Phase 5 tests passing
+
+### Security
+
+- **FIX-01**: Added daily spending limits on hot wallet refunds. Redis-based `spend:daily:YYYY-MM-DD` counter with atomic INCRBY. Default $10,000/day cap, configurable via `DAILY_REFUND_LIMIT` env var. Graceful degradation when Redis unavailable. (CRIT-PHASE5-01)
+- **FIX-02**: Replaced JavaScript floating-point arithmetic with `Decimal.js` for all financial calculations. `refund.service.ts` and `blockchain-monitor.service.ts` now use exact decimal math. Eliminates rounding errors on refund totals and on-chain amount conversions. (CRIT-PHASE5-02)
+- **FIX-03**: Added Redis distributed locking for refund processing worker. `lock:refund-worker` with 60s TTL prevents parallel workers from double-processing refunds. SQL `FOR UPDATE SKIP LOCKED` prevents row-level race conditions. (HIGH-PHASE5-03)
+- **FIX-04**: Added JTI (JWT ID) token revocation on logout. Access tokens now include `jti: randomUUID()`. Logout blacklists the JTI in Redis (`revoked_jti:{jti}`, 900s TTL). Auth plugin checks blacklist before granting access. (HIGH-PHASE5-04)
+- **FIX-07**: Added webhook delivery circuit breaker. 10 consecutive failures opens circuit for 5 minutes. Redis-tracked failure counts per endpoint (`circuit:failures:{id}`, `circuit:open:{id}`). Success resets failure counter. (MED-PHASE5-07)
+- **FIX-08**: Added password reset flow. `POST /forgot-password` generates Redis-backed token (`reset:{token}`, 1h TTL). `POST /reset-password` validates token and updates password. Email enumeration prevention via constant-time response. (MED-PHASE5-08)
+- **FIX-09**: Added blockchain RPC provider failover. `ProviderManager` class manages multiple providers per network with automatic health checks (`getBlockNumber()`). Failed providers enter 60s cooldown. Independent failover per network. (MED-PHASE5-09)
+
+### Added
+
+- `ProviderManager` in `utils/provider-manager.ts` for RPC failover
+- `SpendingLimitRedis` interface and daily spend tracking in `blockchain-transaction.service.ts`
+- `Decimal.js` dependency for exact financial arithmetic
+- Password reset endpoints (`POST /forgot-password`, `POST /reset-password`)
+- JTI field in all JWT access tokens (signup, login, refresh)
+- JTI blacklist check in auth plugin
+- Webhook circuit breaker in `webhook-delivery.service.ts`
+- Distributed locking in `refund-processing.worker.ts`
+- `forgotPasswordSchema` and `resetPasswordSchema` in `validation.ts`
+- 60 new Phase 5 security tests across 7 test suites
+
+### Changed
+
+- `blockchain-transaction.service.ts` accepts optional `ProviderManager` and `SpendingLimitRedis`
+- `refund.service.ts` uses `Decimal.js` for `computeRefundedTotal()` and `computeRemainingAmount()`
+- `blockchain-monitor.service.ts` uses `Decimal.js` for wei-to-USD conversion
+- `auth.ts` adds `jti` to tokens, blacklists on logout, adds reset endpoints
+- `auth.ts` plugin checks Redis JTI blacklist before granting access
+- `webhook-delivery.service.ts` checks circuit breaker before delivery attempts
+- `refund-processing.worker.ts` acquires distributed lock before processing
+- Security score maintained at 99/100
+
+### Fixed
+
+- Unlimited hot wallet fund drainage via compromised KMS key
+- Floating-point rounding errors in refund calculations (e.g., 3x $33.33 != $99.99)
+- Parallel refund workers double-processing the same refund
+- Revoked JWT tokens remaining valid until natural expiry
+- Webhook deliveries hammering consistently-failing endpoints
+- No self-service password recovery mechanism
+- Single-provider RPC failures causing complete service outage
+
+---
+
+## [1.3.0] - Security Audit Phase 4
 
 **Date**: 2026-01-30
 **Branch**: `fix/stablecoin-gateway/security-audit-phase4`
