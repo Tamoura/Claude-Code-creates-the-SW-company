@@ -6,6 +6,11 @@ import { AppError } from '../../types/index.js';
 import { logger } from '../../utils/logger.js';
 import { createHash, randomUUID } from 'crypto';
 
+// Account lockout constants (Redis-based, no DB migration needed)
+const LOCKOUT_MAX_ATTEMPTS = 5;
+const LOCKOUT_WINDOW_SECONDS = 900; // 15 minutes
+const LOCKOUT_DURATION_MS = 900_000; // 15 minutes in ms
+
 const authRoutes: FastifyPluginAsync = async (fastify) => {
   // Auth-specific rate limiting config (5 requests per 15 minutes)
   // Uses IP + User-Agent fingerprinting to prevent bypass via IP rotation
@@ -104,6 +109,21 @@ const authRoutes: FastifyPluginAsync = async (fastify) => {
     const body = validateBody(loginSchema, request.body);
 
     try {
+      const redis = fastify.redis;
+      const lockKey = `lockout:${body.email}`;
+      const failKey = `failed:${body.email}`;
+
+      // Check if account is locked (Redis-based, degrades gracefully)
+      if (redis) {
+        const lockUntil = await redis.get(lockKey);
+        if (lockUntil && Date.now() < parseInt(lockUntil)) {
+          throw new AppError(
+            429,
+            'account-locked',
+            'Account temporarily locked due to too many failed login attempts. Try again in 15 minutes.'
+          );
+        }
+      }
 
       // Find user
       const user = await fastify.prisma.user.findUnique({
@@ -117,7 +137,35 @@ const authRoutes: FastifyPluginAsync = async (fastify) => {
       // Verify password
       const isValid = await verifyPassword(body.password, user.passwordHash);
       if (!isValid) {
+        // Track failed attempt in Redis
+        if (redis) {
+          const attempts = await redis.incr(failKey);
+          await redis.expire(failKey, LOCKOUT_WINDOW_SECONDS);
+          if (attempts >= LOCKOUT_MAX_ATTEMPTS) {
+            await redis.set(
+              lockKey,
+              String(Date.now() + LOCKOUT_DURATION_MS),
+              'PX',
+              LOCKOUT_DURATION_MS
+            );
+            logger.warn('Account locked due to failed login attempts', {
+              email: body.email,
+              attempts,
+            });
+            throw new AppError(
+              429,
+              'account-locked',
+              'Account temporarily locked due to too many failed login attempts. Try again in 15 minutes.'
+            );
+          }
+        }
         throw new AppError(401, 'invalid-credentials', 'Invalid email or password');
+      }
+
+      // Successful login: reset failed attempt counter
+      if (redis) {
+        await redis.del(failKey);
+        await redis.del(lockKey);
       }
 
       // Generate tokens

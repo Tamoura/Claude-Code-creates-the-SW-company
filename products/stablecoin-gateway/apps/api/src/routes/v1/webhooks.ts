@@ -12,6 +12,7 @@
  * Security:
  * - All endpoints require authentication (JWT or API key)
  * - Webhook secrets encrypted at rest (AES-256-GCM) when key is configured
+ * - In production, encryption is mandatory (no plaintext fallback)
  * - Secrets only shown once during creation or rotation
  * - HTTPS-only URLs enforced
  * - Ownership verified on all operations
@@ -39,18 +40,55 @@ function generateWebhookSecret(): string {
 }
 
 /**
+ * Enforce webhook secret encryption in production.
+ *
+ * In production, WEBHOOK_ENCRYPTION_KEY must be set. Plaintext
+ * storage of webhook secrets is only permitted in development
+ * and test environments.
+ *
+ * @throws {AppError} 500 if production and no encryption key
+ */
+function requireEncryptionInProduction(): void {
+  if (
+    process.env.NODE_ENV === 'production' &&
+    !process.env.WEBHOOK_ENCRYPTION_KEY
+  ) {
+    throw new AppError(
+      500,
+      'encryption-required',
+      'Webhook encryption key is required in production'
+    );
+  }
+}
+
+/**
+ * Encrypt a webhook secret for storage.
+ *
+ * - Production: always encrypted (enforced by requireEncryptionInProduction)
+ * - Dev/test with key: encrypted
+ * - Dev/test without key: plaintext fallback
+ */
+function encryptSecretForStorage(secret: string): string {
+  requireEncryptionInProduction();
+
+  return process.env.WEBHOOK_ENCRYPTION_KEY
+    ? encryptSecret(secret)
+    : secret;
+}
+
+/**
  * SECURITY NOTE: Webhook Secrets Storage
  *
  * Unlike passwords and API keys, webhook secrets must be recoverable for HMAC signing.
  *
  * Storage approach:
- * - Passwords: Never need to be recovered → one-way hash (bcrypt)
- * - API keys: Verify incoming requests → one-way hash (SHA-256) + compare
- * - Webhook secrets: Sign outgoing payloads → must be recoverable
+ * - Passwords: Never need to be recovered -> one-way hash (bcrypt)
+ * - API keys: Verify incoming requests -> one-way hash (SHA-256) + compare
+ * - Webhook secrets: Sign outgoing payloads -> must be recoverable
  *
  * We use AES-256-GCM encryption at rest for webhook secrets:
- * - If WEBHOOK_ENCRYPTION_KEY is set: secrets encrypted before storage
- * - If not set: secrets stored in plaintext (backwards compatible)
+ * - Production: encryption is MANDATORY (WEBHOOK_ENCRYPTION_KEY required)
+ * - Dev/test: plaintext fallback if key not set (backwards compatible)
  *
  * Why encryption (not hashing)?
  * We need the plaintext secret to compute HMAC-SHA256 signatures when sending
@@ -114,10 +152,8 @@ const webhookRoutes: FastifyPluginAsync = async (fastify) => {
       // Generate webhook secret
       const secret = generateWebhookSecret();
 
-      // Encrypt secret if encryption is available, otherwise store plaintext
-      const secretToStore = process.env.WEBHOOK_ENCRYPTION_KEY
-        ? encryptSecret(secret)
-        : secret;
+      // Encrypt secret for storage (enforces encryption in production)
+      const secretToStore = encryptSecretForStorage(secret);
 
       // Create webhook endpoint
       const webhook = await fastify.prisma.webhookEndpoint.create({
@@ -344,10 +380,8 @@ const webhookRoutes: FastifyPluginAsync = async (fastify) => {
       // Generate new cryptographically secure secret
       const newSecret = generateWebhookSecret();
 
-      // Encrypt if encryption key is available, otherwise store plaintext
-      const secretToStore = process.env.WEBHOOK_ENCRYPTION_KEY
-        ? encryptSecret(newSecret)
-        : newSecret;
+      // Encrypt secret for storage (enforces encryption in production)
+      const secretToStore = encryptSecretForStorage(newSecret);
 
       // Update the webhook with the new secret
       await fastify.prisma.webhookEndpoint.update({

@@ -141,12 +141,12 @@ export class BlockchainMonitorService {
         const toAddress = '0x' + log.topics[2].slice(26); // Remove 0x and padding
         const amountWei = BigInt(log.data);
         const amountUsd = Number(amountWei) / Math.pow(10, decimals);
-        const amountDiff = Math.abs(amountUsd - paymentSession.amount);
+        // Security: accept exact payment or overpayment only (no underpayment tolerance)
 
-        // Check if this transfer matches merchant address AND expected amount (within 0.01 USD tolerance)
+        // Check if this transfer matches merchant address AND amount >= expected
         if (
           toAddress.toLowerCase() === expectedMerchantAddress &&
-          amountDiff <= 0.01
+          amountUsd >= paymentSession.amount
         ) {
           matchingTransfer = log;
           fromAddress = '0x' + log.topics[1].slice(26);
@@ -169,9 +169,9 @@ export class BlockchainMonitorService {
       const amountWei = BigInt(matchingTransfer.data);
       const amountUsd = Number(amountWei) / Math.pow(10, decimals);
 
-      // Verification already done in the loop above, but keep for clarity
-      const amountDiff = Math.abs(amountUsd - paymentSession.amount);
-      if (amountDiff > 0.01) {
+      // Secondary verification: ensure amount meets or exceeds expected
+      
+      if (amountUsd < paymentSession.amount) {
         return {
           valid: false,
           confirmations,

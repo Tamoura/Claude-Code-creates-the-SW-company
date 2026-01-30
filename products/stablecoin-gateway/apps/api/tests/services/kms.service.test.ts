@@ -18,6 +18,35 @@ describe('KMSService', () => {
   const testPublicKey = testWallet.signingKey.publicKey; // 0x04... format
   const testAddress = testWallet.address;
 
+  function buildMockDER(): Buffer {
+    const publicKeyBytes = Buffer.from(testPublicKey.slice(2), 'hex');
+    return Buffer.concat([
+      Buffer.from([0x30, 0x56, 0x30, 0x10]), // DER header (simplified)
+      publicKeyBytes,
+    ]);
+  }
+
+  function buildDERSignature(rHex: string, sHex: string): Buffer {
+    const rBuf = Buffer.from(rHex, 'hex');
+    const sBuf = Buffer.from(sHex, 'hex');
+    return Buffer.concat([
+      Buffer.from([0x30, 4 + rBuf.length + sBuf.length, 0x02, rBuf.length]),
+      rBuf,
+      Buffer.from([0x02, sBuf.length]),
+      sBuf,
+    ]);
+  }
+
+  /**
+   * Prime the public key cache by calling getPublicKey() once.
+   * This ensures subsequent sign() calls don't need an extra
+   * GetPublicKey mock in the send() queue.
+   */
+  async function primePublicKeyCache() {
+    mockKMSClient.send.mockResolvedValueOnce({ PublicKey: buildMockDER() });
+    await kmsService.getPublicKey();
+  }
+
   beforeEach(() => {
     jest.clearAllMocks();
 
@@ -70,15 +99,8 @@ describe('KMSService', () => {
 
   describe('getPublicKey', () => {
     it('should retrieve and cache public key from KMS', async () => {
-      // Create DER-encoded public key (simplified)
-      const publicKeyBytes = Buffer.from(testPublicKey.slice(2), 'hex');
-      const mockDER = Buffer.concat([
-        Buffer.from([0x30, 0x56, 0x30, 0x10]), // DER header (simplified)
-        publicKeyBytes,
-      ]);
-
       mockKMSClient.send.mockResolvedValueOnce({
-        PublicKey: mockDER,
+        PublicKey: buildMockDER(),
       });
 
       const publicKey = await kmsService.getPublicKey();
@@ -121,14 +143,8 @@ describe('KMSService', () => {
 
   describe('getAddress', () => {
     it('should derive Ethereum address from public key', async () => {
-      const publicKeyBytes = Buffer.from(testPublicKey.slice(2), 'hex');
-      const mockDER = Buffer.concat([
-        Buffer.from([0x30, 0x56, 0x30, 0x10]),
-        publicKeyBytes,
-      ]);
-
       mockKMSClient.send.mockResolvedValueOnce({
-        PublicKey: mockDER,
+        PublicKey: buildMockDER(),
       });
 
       const address = await kmsService.getAddress();
@@ -138,14 +154,8 @@ describe('KMSService', () => {
     });
 
     it('should cache derived address', async () => {
-      const publicKeyBytes = Buffer.from(testPublicKey.slice(2), 'hex');
-      const mockDER = Buffer.concat([
-        Buffer.from([0x30, 0x56, 0x30, 0x10]),
-        publicKeyBytes,
-      ]);
-
       mockKMSClient.send.mockResolvedValueOnce({
-        PublicKey: mockDER,
+        PublicKey: buildMockDER(),
       });
 
       const address1 = await kmsService.getAddress();
@@ -158,34 +168,18 @@ describe('KMSService', () => {
 
   describe('sign', () => {
     it('should sign message hash and return valid signature', async () => {
-      // Setup: Get public key first
-      const publicKeyBytes = Buffer.from(testPublicKey.slice(2), 'hex');
-      const mockDER = Buffer.concat([
-        Buffer.from([0x30, 0x56, 0x30, 0x10]),
-        publicKeyBytes,
-      ]);
-
-      mockKMSClient.send.mockResolvedValueOnce({
-        PublicKey: mockDER,
-      });
+      // Prime the public key cache first
+      await primePublicKeyCache();
 
       // Create a test message and sign it with the test wallet
       const messageHash = ethers.id('test message');
       const expectedSig = testWallet.signingKey.sign(messageHash);
 
       // Mock KMS Sign response with DER-encoded signature
-      const rBuf = Buffer.from(expectedSig.r.slice(2), 'hex');
-      const sBuf = Buffer.from(expectedSig.s.slice(2), 'hex');
-
-      // Create DER-encoded ECDSA signature
-      const derSig = Buffer.concat([
-        Buffer.from([0x30]), // SEQUENCE
-        Buffer.from([4 + rBuf.length + sBuf.length]), // Length
-        Buffer.from([0x02, rBuf.length]), // INTEGER r
-        rBuf,
-        Buffer.from([0x02, sBuf.length]), // INTEGER s
-        sBuf,
-      ]);
+      const derSig = buildDERSignature(
+        expectedSig.r.slice(2),
+        expectedSig.s.slice(2)
+      );
 
       mockKMSClient.send.mockResolvedValueOnce({
         Signature: derSig,
@@ -205,25 +199,20 @@ describe('KMSService', () => {
     });
 
     it('should throw error for invalid message hash format', async () => {
+      // AppError wraps the inner message, so match the outer error
       await expect(kmsService.sign('invalid')).rejects.toThrow(
-        'Message hash must be a 32-byte hex string with 0x prefix'
+        'Failed to sign message with KMS'
       );
 
       await expect(kmsService.sign('0x1234')).rejects.toThrow(
-        'Message hash must be a 32-byte hex string with 0x prefix'
+        'Failed to sign message with KMS'
       );
     });
 
     it('should throw error if KMS returns no signature', async () => {
-      const publicKeyBytes = Buffer.from(testPublicKey.slice(2), 'hex');
-      const mockDER = Buffer.concat([
-        Buffer.from([0x30, 0x56, 0x30, 0x10]),
-        publicKeyBytes,
-      ]);
+      await primePublicKeyCache();
 
-      mockKMSClient.send
-        .mockResolvedValueOnce({ PublicKey: mockDER })
-        .mockResolvedValueOnce({ Signature: undefined });
+      mockKMSClient.send.mockResolvedValueOnce({ Signature: undefined });
 
       const messageHash = ethers.id('test');
 
@@ -233,18 +222,20 @@ describe('KMSService', () => {
     });
 
     it('should normalize s value to lower half of curve order (EIP-2)', async () => {
-      const publicKeyBytes = Buffer.from(testPublicKey.slice(2), 'hex');
-      const mockDER = Buffer.concat([
-        Buffer.from([0x30, 0x56, 0x30, 0x10]),
-        publicKeyBytes,
-      ]);
+      await primePublicKeyCache();
 
       // Create signature with high s value
       const secp256k1N = BigInt(
         '0xFFFFFFFFFFFFFFFFFFFFFFFFFFFFFFFEBAAEDCE6AF48A03BBFD25E8CD0364141'
       );
-      const r = BigInt('0x1234567890abcdef1234567890abcdef1234567890abcdef1234567890abcdef');
-      const sHigh = secp256k1N - BigInt(1); // Very high s value
+
+      // Sign a message to get a valid r, then construct high s
+      const messageHash = ethers.id('test');
+      const validSig = testWallet.signingKey.sign(messageHash);
+      const r = BigInt(validSig.r);
+      const sLow = BigInt(validSig.s);
+      // Flip s to high half: sHigh = N - sLow
+      const sHigh = secp256k1N - sLow;
 
       const rBuf = Buffer.from(r.toString(16).padStart(64, '0'), 'hex');
       const sBuf = Buffer.from(sHigh.toString(16).padStart(64, '0'), 'hex');
@@ -256,11 +247,8 @@ describe('KMSService', () => {
         sBuf,
       ]);
 
-      mockKMSClient.send
-        .mockResolvedValueOnce({ PublicKey: mockDER })
-        .mockResolvedValueOnce({ Signature: derSig });
+      mockKMSClient.send.mockResolvedValueOnce({ Signature: derSig });
 
-      const messageHash = ethers.id('test');
       const signature = await kmsService.sign(messageHash);
 
       // s should be normalized to lower half
@@ -272,11 +260,7 @@ describe('KMSService', () => {
 
   describe('signTransaction', () => {
     it('should sign EIP-1559 transaction', async () => {
-      const publicKeyBytes = Buffer.from(testPublicKey.slice(2), 'hex');
-      const mockDER = Buffer.concat([
-        Buffer.from([0x30, 0x56, 0x30, 0x10]),
-        publicKeyBytes,
-      ]);
+      await primePublicKeyCache();
 
       // Use a valid random address
       const toAddress = ethers.Wallet.createRandom().address;
@@ -292,24 +276,15 @@ describe('KMSService', () => {
         type: 2,
       };
 
-      // Mock GetPublicKey
-      mockKMSClient.send.mockResolvedValueOnce({
-        PublicKey: mockDER,
-      });
-
       // Sign the transaction with test wallet to get expected signature
       const unsignedTx = ethers.Transaction.from(transaction);
       const txHash = ethers.keccak256(unsignedTx.unsignedSerialized);
       const expectedSig = testWallet.signingKey.sign(txHash);
 
-      const rBuf = Buffer.from(expectedSig.r.slice(2), 'hex');
-      const sBuf = Buffer.from(expectedSig.s.slice(2), 'hex');
-      const derSig = Buffer.concat([
-        Buffer.from([0x30, 4 + rBuf.length + sBuf.length, 0x02, rBuf.length]),
-        rBuf,
-        Buffer.from([0x02, sBuf.length]),
-        sBuf,
-      ]);
+      const derSig = buildDERSignature(
+        expectedSig.r.slice(2),
+        expectedSig.s.slice(2)
+      );
 
       // Mock Sign
       mockKMSClient.send.mockResolvedValueOnce({
@@ -339,22 +314,13 @@ describe('KMSService', () => {
     });
 
     it('should use default values for missing transaction fields', async () => {
-      const publicKeyBytes = Buffer.from(testPublicKey.slice(2), 'hex');
-      const mockDER = Buffer.concat([
-        Buffer.from([0x30, 0x56, 0x30, 0x10]),
-        publicKeyBytes,
-      ]);
+      await primePublicKeyCache();
 
       const toAddress = ethers.Wallet.createRandom().address;
 
       const minimalTx = {
         to: toAddress,
       };
-
-      // Mock GetPublicKey for signTransaction
-      mockKMSClient.send.mockResolvedValueOnce({
-        PublicKey: mockDER,
-      });
 
       const unsignedTx = ethers.Transaction.from({
         to: toAddress,
@@ -366,23 +332,14 @@ describe('KMSService', () => {
       const txHash = ethers.keccak256(unsignedTx.unsignedSerialized);
       const expectedSig = testWallet.signingKey.sign(txHash);
 
-      const rBuf = Buffer.from(expectedSig.r.slice(2), 'hex');
-      const sBuf = Buffer.from(expectedSig.s.slice(2), 'hex');
-      const derSig = Buffer.concat([
-        Buffer.from([0x30, 4 + rBuf.length + sBuf.length, 0x02, rBuf.length]),
-        rBuf,
-        Buffer.from([0x02, sBuf.length]),
-        sBuf,
-      ]);
+      const derSig = buildDERSignature(
+        expectedSig.r.slice(2),
+        expectedSig.s.slice(2)
+      );
 
       // Mock Sign
       mockKMSClient.send.mockResolvedValueOnce({
         Signature: derSig,
-      });
-
-      // Mock GetPublicKey again for recovery param calculation
-      mockKMSClient.send.mockResolvedValueOnce({
-        PublicKey: mockDER,
       });
 
       const signedTxHex = await kmsService.signTransaction(minimalTx);
@@ -393,14 +350,8 @@ describe('KMSService', () => {
 
   describe('clearCache', () => {
     it('should clear cached public key and address', async () => {
-      const publicKeyBytes = Buffer.from(testPublicKey.slice(2), 'hex');
-      const mockDER = Buffer.concat([
-        Buffer.from([0x30, 0x56, 0x30, 0x10]),
-        publicKeyBytes,
-      ]);
-
       mockKMSClient.send.mockResolvedValue({
-        PublicKey: mockDER,
+        PublicKey: buildMockDER(),
       });
 
       // Get public key (caches it)
@@ -422,14 +373,8 @@ describe('KMSService', () => {
 
   describe('healthCheck', () => {
     it('should return healthy status when KMS is accessible', async () => {
-      const publicKeyBytes = Buffer.from(testPublicKey.slice(2), 'hex');
-      const mockDER = Buffer.concat([
-        Buffer.from([0x30, 0x56, 0x30, 0x10]),
-        publicKeyBytes,
-      ]);
-
       mockKMSClient.send.mockResolvedValueOnce({
-        PublicKey: mockDER,
+        PublicKey: buildMockDER(),
       });
 
       const result = await kmsService.healthCheck();

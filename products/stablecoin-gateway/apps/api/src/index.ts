@@ -2,6 +2,9 @@ import { buildApp } from './app.js';
 import { logger } from './utils/logger.js';
 import { validateEnvironment } from './utils/env-validator.js';
 import { initializeEncryption } from './utils/encryption.js';
+import { PrismaClient } from '@prisma/client';
+import { RefundService } from './services/refund.service.js';
+import { RefundProcessingWorker } from './workers/refund-processing.worker.js';
 
 async function start() {
   try {
@@ -29,14 +32,23 @@ async function start() {
     app.server.headersTimeout = 31000; // slightly more than timeout
     app.server.keepAliveTimeout = 5000; // 5 seconds
 
-    logger.info(`Server listening on http://${host}:${port}`);
-    logger.info(`Environment: ${process.env.NODE_ENV || 'development'}`);
+    const listenMsg = 'Server listening on http://' + host + ':' + port;
+    logger.info(listenMsg);
+    logger.info('Environment: ' + (process.env.NODE_ENV || 'development'));
+
+    // Start background workers
+    const prisma = new PrismaClient();
+    const refundService = new RefundService(prisma);
+    const refundWorker = new RefundProcessingWorker(prisma, refundService);
+    refundWorker.start();
 
     // Graceful shutdown
     const signals = ['SIGINT', 'SIGTERM'];
     signals.forEach((signal) => {
       process.on(signal, async () => {
-        logger.info(`Received ${signal}, closing server...`);
+        logger.info('Received ' + signal + ', closing server...');
+        refundWorker.stop();
+        await prisma.$disconnect();
         await app.close();
         process.exit(0);
       });

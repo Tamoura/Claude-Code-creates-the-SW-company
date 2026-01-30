@@ -69,9 +69,11 @@ export class KMSService {
     try {
       const publicKey = await this.getPublicKey();
 
-      // Derive Ethereum address from uncompressed public key
-      // Remove '04' prefix and hash with keccak256
-      const publicKeyBytes = Buffer.from(publicKey.slice(2), 'hex');
+      // Derive Ethereum address from uncompressed public key (0x04 + X + Y).
+      // Per Ethereum spec, we strip the 04 uncompressed-point prefix, leaving
+      // only the 64-byte raw X,Y coordinates, then hash with Keccak-256.
+      // publicKey is '0x04...' so slice(4) removes both '0x' and '04'.
+      const publicKeyBytes = Buffer.from(publicKey.slice(4), 'hex');
       const hash = ethers.keccak256(publicKeyBytes);
       const address = ethers.getAddress('0x' + hash.slice(-40));
 
@@ -160,7 +162,8 @@ export class KMSService {
         type: transaction.type || 2, // EIP-1559
       };
 
-      // Serialize the transaction for signing
+      // Serialize the transaction and hash with Keccak-256 (Ethereum standard).
+      // This hash is passed to sign() which sends it to KMS as a DIGEST.
       const tx = ethers.Transaction.from(unsignedTx);
       const txHash = ethers.keccak256(tx.unsignedSerialized);
 
@@ -201,7 +204,11 @@ export class KMSService {
 
       const messageHashBuffer = Buffer.from(messageHash.slice(2), 'hex');
 
-      // Sign with KMS
+      // IMPORTANT: Ethereum uses Keccak-256 for message hashing, not SHA-256.
+      // We use MessageType: 'DIGEST' which tells KMS to sign the provided bytes
+      // directly without additional hashing. The 'ECDSA_SHA_256' algorithm refers
+      // to the key type (secp256k1 ECDSA), not the hash applied to the digest.
+      // This correctly signs our Keccak-256 hash as a raw ECDSA operation.
       const command = new SignCommand({
         KeyId: this.keyId,
         Message: messageHashBuffer,
