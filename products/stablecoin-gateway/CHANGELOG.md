@@ -6,7 +6,53 @@ The format is based on [Keep a Changelog](https://keepachangelog.com/en/1.1.0/).
 
 ---
 
-## [Unreleased] - Security Audit Phase 3
+## [Unreleased] - Security Audit Phase 4
+
+**Date**: 2026-01-30
+**Branch**: `fix/stablecoin-gateway/security-audit-phase4`
+**Audit Status**: 7 new issues resolved (4 previously fixed), 40 dedicated Phase 4 tests passing
+
+### Security
+
+- **FIX-01**: Removed payment amount tolerance that allowed $0.01 underpayment. Now requires exact or overpayment only (`amountUsd >= paymentSession.amount`). (CRIT-PHASE4-01)
+- **FIX-02**: Fixed wallet network caching bug. Replaced single cached wallet with per-network `Map<string, Wallet>` so Polygon and Ethereum use separate wallet instances. (CRIT-PHASE4-02)
+- **FIX-03**: Added `RefundProcessingWorker` that auto-processes PENDING refunds every 30 seconds (batch of 10, fault-tolerant per-refund error handling). (CRIT-PHASE4-03)
+- **FIX-05**: Fixed KMS address derivation bug (`publicKey.slice(2)` → `slice(4)` to strip `04` uncompressed point prefix). Added documentation clarifying `MessageType: 'DIGEST'` usage with Keccak-256. (HIGH-PHASE4-05)
+- **FIX-06**: Enforced webhook secret encryption in production. `NODE_ENV=production` without `WEBHOOK_ENCRYPTION_KEY` now throws 500 error. Dev/test still allows plaintext. (HIGH-PHASE4-06)
+- **FIX-08**: Added SSE token re-validation on every heartbeat (30s). Expired tokens close the connection. Added 30-minute maximum connection timeout with double-close guard. (MED-PHASE4-08)
+- **FIX-10**: Added Redis-based account lockout. 5 failed login attempts locks account for 15 minutes. Successful login resets counter. Graceful degradation when Redis unavailable. (MED-PHASE4-10)
+
+### Added
+
+- `RefundProcessingWorker` in `workers/refund-processing.worker.ts`
+- Account lockout via Redis (`lockout:<email>`, `failed:<email>` keys)
+- SSE connection maximum timeout (30 minutes)
+- SSE heartbeat token re-validation
+- 40 new Phase 4 security tests across 7 test suites
+
+### Changed
+
+- `blockchain-monitor.service.ts` rejects underpayment (exact or overpay only)
+- `blockchain-transaction.service.ts` uses `Map<string, Wallet>` for per-network caching
+- `kms.service.ts` correctly strips `04` prefix in `getAddress()`
+- `webhooks.ts` throws in production without encryption key
+- `payment-sessions.ts` SSE endpoint re-validates JWT on each heartbeat
+- `auth.ts` tracks failed logins and locks accounts via Redis
+- Security score updated from 98/100 to 99/100
+
+### Fixed
+
+- Payment fraud via systematic $0.01 underpayment
+- Wrong-network wallet used for cross-chain refunds
+- Refunds stuck in PENDING state forever
+- KMS Ethereum address derivation with uncompressed public key
+- Webhook secrets stored in plaintext in production
+- SSE connections persisting after JWT expiry
+- Brute force password attacks via slow distributed attempts
+
+---
+
+## [1.2.0] - Security Audit Phase 3
 
 **Date**: 2026-01-30
 **Branch**: `fix/stablecoin-gateway/security-audit-phase3`

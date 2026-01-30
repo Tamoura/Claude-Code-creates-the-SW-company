@@ -1,8 +1,8 @@
 # Security Documentation - Stablecoin Gateway
 
 **Last Updated**: 2026-01-30
-**Version**: 3.0
-**Security Audit**: Phase 1 + Phase 2 + Phase 3 complete (all CRITICAL, HIGH, and MEDIUM issues resolved)
+**Version**: 4.0
+**Security Audit**: Phase 1 + Phase 2 + Phase 3 + Phase 4 complete (all CRITICAL, HIGH, and MEDIUM issues resolved)
 
 ---
 
