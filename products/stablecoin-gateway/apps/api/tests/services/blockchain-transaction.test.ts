@@ -2,24 +2,42 @@
  * Blockchain Transaction Service Tests
  *
  * Tests blockchain transaction execution for refunds:
- * - Service initialization
+ * - Service initialization via KMS signer abstraction
  * - Input validation
  * - Error handling
+ * - Nonce management integration
  *
  * Note: These are unit tests focusing on validation and error handling.
- * Actual blockchain interaction is tested in integration tests.
+ * KMS signer provider is mocked to return a valid ethers.Wallet.
+ * KMS signer-specific tests are in kms-signer.service.test.ts.
  */
+
+import { NonceManager } from '../../src/services/nonce-manager.service';
+
+// Mock the KMS signer service so tests use a valid wallet
+// This MUST be before the import of BlockchainTransactionService
+jest.mock('../../src/services/kms-signer.service', () => {
+  const { ethers } = jest.requireActual('ethers');
+  const validKey = '0x' + 'a'.repeat(64);
+  const mockWallet = new ethers.Wallet(validKey);
+  return {
+    createSignerProvider: jest.fn().mockReturnValue({
+      getWallet: jest.fn().mockResolvedValue(mockWallet),
+    }),
+    KMSSignerProvider: jest.fn(),
+    EnvVarSignerProvider: jest.fn(),
+  };
+});
 
 import { BlockchainTransactionService } from '../../src/services/blockchain-transaction.service';
 
 describe('BlockchainTransactionService', () => {
-  const validPrivateKey = '0x' + 'a'.repeat(64); // Valid private key format
-
   beforeEach(() => {
     // Set environment variables for test
     process.env.POLYGON_RPC_URL = 'https://polygon-test.com';
     process.env.ETHEREUM_RPC_URL = 'https://ethereum-test.com';
-    process.env.MERCHANT_WALLET_PRIVATE_KEY = validPrivateKey;
+    // Note: MERCHANT_WALLET_PRIVATE_KEY is NOT set here.
+    // The service now uses the signer provider (mocked above).
   });
 
   afterEach(() => {
@@ -27,17 +45,16 @@ describe('BlockchainTransactionService', () => {
   });
 
   describe('Initialization', () => {
-    it('should initialize with valid merchant wallet', () => {
+    it('should initialize with signer provider', () => {
       const service = new BlockchainTransactionService();
       expect(service).toBeInstanceOf(BlockchainTransactionService);
     });
 
-    it('should throw error if merchant wallet not configured', () => {
+    it('should initialize without requiring MERCHANT_WALLET_PRIVATE_KEY directly', () => {
+      // The service delegates key management to the signer provider
       delete process.env.MERCHANT_WALLET_PRIVATE_KEY;
-
-      expect(() => {
-        new BlockchainTransactionService();
-      }).toThrow('MERCHANT_WALLET_PRIVATE_KEY not configured');
+      const service = new BlockchainTransactionService();
+      expect(service).toBeInstanceOf(BlockchainTransactionService);
     });
   });
 
@@ -142,6 +159,42 @@ describe('BlockchainTransactionService', () => {
 
       // USDT should be supported (may fail on execution, but not on token support)
       expect(result).toBeDefined();
+    });
+  });
+
+  describe('Nonce Management Integration', () => {
+    it('should accept an optional NonceManager in constructor', () => {
+      const mockRedis = {
+        set: jest.fn(),
+        get: jest.fn(),
+        del: jest.fn(),
+      };
+      const nonceManager = new NonceManager(mockRedis as any);
+
+      const service = new BlockchainTransactionService({ nonceManager });
+      expect(service).toBeInstanceOf(BlockchainTransactionService);
+    });
+
+    it('should still work without NonceManager (backward compat)', () => {
+      const service = new BlockchainTransactionService();
+      expect(service).toBeInstanceOf(BlockchainTransactionService);
+    });
+
+    it('should return nonce manager when configured', () => {
+      const mockRedis = {
+        set: jest.fn(),
+        get: jest.fn(),
+        del: jest.fn(),
+      };
+      const nonceManager = new NonceManager(mockRedis as any);
+
+      const service = new BlockchainTransactionService({ nonceManager });
+      expect(service.getNonceManager()).toBe(nonceManager);
+    });
+
+    it('should return null nonce manager when not configured', () => {
+      const service = new BlockchainTransactionService();
+      expect(service.getNonceManager()).toBeNull();
     });
   });
 });

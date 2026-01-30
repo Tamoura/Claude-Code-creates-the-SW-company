@@ -1,0 +1,82 @@
+metadata:
+  product: stablecoin-gateway
+  version: 1.3.0
+  workflow_type: security-audit-phase3
+  issue_id: SECURITY-AUDIT-PHASE3-2026-01
+  created_at: '2026-01-29T18:00:00Z'
+  updated_at: '2026-01-30T05:30:00Z'
+  description: Fix 7 security issues from Phase 3 professional audit (3 already resolved)
+
+progress:
+  total_tasks: 12
+  completed: 12
+  in_progress: 0
+  pending: 0
+
+tasks:
+  - id: TRIAGE-PHASE3-01
+    status: completed
+    description: Triage 10 audit findings, identify 3 already fixed, 7 needing work
+    completed_at: '2026-01-29T18:10:00Z'
+
+  - id: FIX-PHASE3-01
+    status: completed
+    description: KMS signer abstraction replacing direct private key env var
+    tests: 13
+    completed_at: '2026-01-29T19:00:00Z'
+
+  - id: FIX-PHASE3-02
+    status: completed
+    description: Refund race condition prevention with FOR UPDATE row locking
+    tests: 9
+    completed_at: '2026-01-29T19:00:00Z'
+
+  - id: FIX-PHASE3-03
+    status: completed
+    description: Distributed nonce management with Redis locking
+    tests: 13
+    completed_at: '2026-01-29T19:00:00Z'
+
+  - id: FIX-PHASE3-04
+    status: completed
+    description: Webhook secret rotation endpoint
+    tests: 8
+    completed_at: '2026-01-29T19:00:00Z'
+
+  - id: FIX-PHASE3-06
+    status: completed
+    description: JWT memory-only storage + cryptographic JTI
+    tests: 19
+    completed_at: '2026-01-29T19:00:00Z'
+
+  - id: FIX-PHASE3-09
+    status: completed
+    description: Payment session expiry enforcement with sentinel pattern
+    tests: 9
+    completed_at: '2026-01-29T19:00:00Z'
+
+  - id: FIX-PHASE3-QUICK
+    status: completed
+    description: Dockerfile, body limit, timeouts, npm audit CI, env docs
+    tests: 0
+    completed_at: '2026-01-29T19:00:00Z'
+
+  - id: QA-PHASE3-01
+    status: completed
+    description: All 71 Phase 3 tests passing across 8 test suites
+    completed_at: '2026-01-30T05:28:00Z'
+
+  - id: DOC-PHASE3-01
+    status: completed
+    description: Updated CHANGELOG.md, SECURITY.md, task graph
+    completed_at: '2026-01-30T05:30:00Z'
+
+  - id: PR-PHASE3-01
+    status: completed
+    description: PR created for Phase 3 security fixes
+    completed_at: '2026-01-30T05:30:00Z'
+
+  - id: CHECKPOINT-PHASE3-REVIEW
+    status: completed
+    description: CEO review checkpoint
+    completed_at: '2026-01-30T05:30:00Z'

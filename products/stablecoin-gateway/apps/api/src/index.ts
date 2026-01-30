@@ -24,6 +24,11 @@ async function start() {
 
     await app.listen({ port, host });
 
+    // Set request timeouts to prevent slow-loris and hung connection attacks
+    app.server.timeout = 30000; // 30 seconds
+    app.server.headersTimeout = 31000; // slightly more than timeout
+    app.server.keepAliveTimeout = 5000; // 5 seconds
+
     logger.info(`Server listening on http://${host}:${port}`);
     logger.info(`Environment: ${process.env.NODE_ENV || 'development'}`);
 

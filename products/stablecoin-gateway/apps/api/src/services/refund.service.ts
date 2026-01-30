@@ -81,73 +81,108 @@ export class RefundService {
   /**
    * Create a refund request for a completed payment
    *
+   * Uses database-level row locking (FOR UPDATE) to prevent
+   * concurrent refund requests from over-refunding a payment.
+   * The entire read-validate-create flow runs inside a single
+   * transaction, ensuring atomicity.
+   *
    * Validations:
    * - Payment must exist and be owned by user
    * - Payment must be in COMPLETED status
    * - Refund amount must not exceed remaining refundable amount
    * - Partial and full refunds supported
+   *
+   * Concurrency safety:
+   * - FOR UPDATE lock on payment_sessions row serializes access
+   * - Webhook is queued after transaction commits (best-effort)
+   * - 10 second transaction timeout prevents deadlocks
    */
   async createRefund(
     userId: string,
     paymentSessionId: string,
     data: CreateRefundRequest
   ): Promise<Refund> {
-    // Verify payment exists and user owns it
-    const payment = await this.prisma.paymentSession.findFirst({
-      where: {
-        id: paymentSessionId,
-        userId,
-      },
-      include: {
-        refunds: true,
-      },
-    });
-
-    if (!payment) {
-      throw new AppError(404, 'payment-not-found', 'Payment session not found');
-    }
-
-    // Verify payment is completed
-    if (payment.status !== PaymentStatus.COMPLETED) {
-      throw new AppError(
-        400,
-        'payment-not-completed',
-        'Payment must be completed before refunding'
-      );
-    }
-
-    // Calculate total refunded amount (including pending refunds to prevent over-refunding)
-    const totalRefunded = payment.refunds
-      .filter((r) => r.status !== RefundStatus.FAILED) // Count all non-failed refunds
-      .reduce((sum, r) => sum + Number(r.amount), 0);
-
-    const remainingAmount = Number(payment.amount) - totalRefunded;
-
-    // Verify refund amount is valid
+    // Validate amount early (before acquiring lock)
     if (data.amount <= 0) {
       throw new AppError(400, 'invalid-refund-amount', 'Refund amount must be greater than 0');
     }
 
-    if (data.amount > remainingAmount) {
-      throw new AppError(
-        400,
-        'refund-exceeds-payment',
-        `Refund amount (${data.amount}) exceeds remaining refundable amount (${remainingAmount})`
-      );
-    }
+    // CRITICAL: Wrap entire flow in a transaction with FOR UPDATE
+    // to prevent concurrent refund requests from over-refunding.
+    //
+    // Without this lock, two concurrent requests can both read the
+    // same remaining amount, both pass the over-refund check, and
+    // both create refunds that together exceed the payment amount.
+    //
+    // Pattern matches payment-sessions.ts lines 186-211.
+    const refund = await this.prisma.$transaction(async (tx) => {
+      // Lock the payment session row to serialize concurrent refunds
+      // FOR UPDATE prevents other transactions from reading this row
+      // until this transaction commits or rolls back
+      await tx.$executeRaw`
+        SELECT 1 FROM "payment_sessions"
+        WHERE id = ${paymentSessionId} AND user_id = ${userId}
+        FOR UPDATE
+      `;
 
-    // Create refund
-    const refund = await this.prisma.refund.create({
-      data: {
-        id: generateRefundId(),
-        paymentSessionId,
-        amount: data.amount,
-        reason: data.reason,
-        status: RefundStatus.PENDING,
-      },
+      // Now safely read the payment with all refunds
+      // (no other transaction can modify refunds for this payment)
+      const payment = await tx.paymentSession.findFirst({
+        where: {
+          id: paymentSessionId,
+          userId,
+        },
+        include: {
+          refunds: true,
+        },
+      });
+
+      if (!payment) {
+        throw new AppError(404, 'payment-not-found', 'Payment session not found');
+      }
+
+      // Verify payment is completed
+      if (payment.status !== PaymentStatus.COMPLETED) {
+        throw new AppError(
+          400,
+          'payment-not-completed',
+          'Payment must be completed before refunding'
+        );
+      }
+
+      // Calculate remaining (now safe from race conditions)
+      const totalRefunded = payment.refunds
+        .filter((r) => r.status !== RefundStatus.FAILED)
+        .reduce((sum, r) => sum + Number(r.amount), 0);
+
+      const remainingAmount = Number(payment.amount) - totalRefunded;
+
+      if (data.amount > remainingAmount) {
+        throw new AppError(
+          400,
+          'refund-exceeds-payment',
+          `Refund amount (${data.amount}) exceeds remaining refundable amount (${remainingAmount})`
+        );
+      }
+
+      // Create refund within the same transaction
+      const newRefund = await tx.refund.create({
+        data: {
+          id: generateRefundId(),
+          paymentSessionId,
+          amount: data.amount,
+          reason: data.reason,
+          status: RefundStatus.PENDING,
+        },
+      });
+
+      return newRefund;
+    }, {
+      timeout: 10000, // 10 second timeout to prevent deadlocks
     });
 
-    // Queue webhook for refund.created event
+    // Queue webhook outside the transaction (non-critical, best-effort)
+    // This avoids holding the row lock while making network calls
     await this.webhookService.queueWebhook(userId, 'refund.created', {
       id: refund.id,
       payment_session_id: refund.paymentSessionId,

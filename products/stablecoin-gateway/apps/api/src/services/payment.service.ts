@@ -128,6 +128,28 @@ export class PaymentService {
       customerAddress?: string;
     }
   ): Promise<PaymentSession> {
+    // Enforce payment session expiry before allowing CONFIRMING or COMPLETED
+    if (status === 'CONFIRMING' || status === 'COMPLETED') {
+      const existingSession = await this.prisma.paymentSession.findUnique({
+        where: { id },
+      });
+      if (
+        existingSession &&
+        existingSession.expiresAt &&
+        existingSession.expiresAt < new Date()
+      ) {
+        await this.prisma.paymentSession.update({
+          where: { id },
+          data: { status: 'FAILED' },
+        });
+        throw new AppError(
+          400,
+          'session-expired',
+          'Payment session has expired'
+        );
+      }
+    }
+
     const data: any = { status };
 
     if (updates.txHash) {

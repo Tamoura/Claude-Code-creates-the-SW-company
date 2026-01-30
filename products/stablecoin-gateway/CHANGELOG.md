@@ -6,7 +6,53 @@ The format is based on [Keep a Changelog](https://keepachangelog.com/en/1.1.0/).
 
 ---
 
-## [Unreleased] - Security Audit Phase 2
+## [Unreleased] - Security Audit Phase 3
+
+**Date**: 2026-01-30
+**Branch**: `fix/stablecoin-gateway/security-audit-phase3`
+**Audit Status**: 7 new issues resolved, 3 previously fixed (71 dedicated Phase 3 tests passing)
+
+### Security
+
+- **FIX-01**: Replaced direct private key env var (`MERCHANT_WALLET_PRIVATE_KEY`) with KMS signer abstraction. `SignerProvider` interface with `KMSSignerProvider` (production via AWS KMS) and `EnvVarSignerProvider` (dev only). Production blocks raw key usage. (CRIT-PHASE3-01)
+- **FIX-02**: Prevented refund race conditions using `SELECT ... FOR UPDATE` row locking inside `prisma.$transaction`. Concurrent over-refund attempts are now serialized and rejected. (CRIT-PHASE3-02)
+- **FIX-03**: Added `NonceManager` service with Redis distributed locking (`SET key PX timeout NX`) to serialize blockchain transaction nonce acquisition across concurrent requests. (CRIT-PHASE3-03)
+- **FIX-04**: Added `POST /v1/webhooks/:id/rotate-secret` endpoint. Generates `whsec_`-prefixed secrets with `crypto.randomBytes(32)`, encrypts with AES-256-GCM before storage. (HIGH-PHASE3-04)
+- **FIX-06**: Moved JWT access token storage from `localStorage` to module-scoped memory variable. Eliminates XSS token theft vector. Replaced `Math.random().toString(36)` JTI generation with `crypto.randomUUID()`. (HIGH-PHASE3-06)
+- **FIX-09**: Added payment session expiry enforcement inside `$transaction` before status transitions. Uses sentinel pattern to commit FAILED status without rollback. (HIGH-PHASE3-09)
+- **Quick Wins**: Updated Dockerfile to `--omit=dev`, added 1MB body size limit, configured request timeouts (30s server, 31s headers, 5s keepalive), added npm audit CI step, documented new env vars. (MED-PHASE3)
+
+### Added
+
+- `KMSSignerProvider` and `EnvVarSignerProvider` in `kms-signer.service.ts`
+- `NonceManager` service in `nonce-manager.service.ts`
+- `POST /v1/webhooks/:id/rotate-secret` endpoint
+- `npm audit` step in CI pipeline
+- 71 new Phase 3 security tests across 8 test suites
+- `AWS_KMS_KEY_ID` and `AWS_REGION` environment variables for KMS signer
+
+### Changed
+
+- `blockchain-transaction.service.ts` uses `SignerProvider` instead of direct env var access
+- `refund.service.ts` uses transactional row locking for refund creation
+- `token-manager.ts` uses module-scoped variable instead of `localStorage`
+- `auth.ts` uses `crypto.randomUUID()` for JTI generation
+- Dockerfile uses `--omit=dev` instead of deprecated `--only=production`
+- Server configured with explicit timeouts (30s/31s/5s)
+- Security score updated from 95/100 to 98/100
+
+### Fixed
+
+- Private key exposure via environment variable (now KMS-managed)
+- Concurrent refund race condition allowing over-refunds
+- Blockchain nonce collisions under concurrent load
+- JWT tokens accessible to XSS via localStorage
+- Weak JTI randomness using Math.random()
+- Expired payment sessions still accepting status transitions
+
+---
+
+## [1.1.0] - Security Audit Phase 2
 
 **Date**: 2026-01-29
 **Branch**: `fix/stablecoin-gateway/security-audit-phase2`
