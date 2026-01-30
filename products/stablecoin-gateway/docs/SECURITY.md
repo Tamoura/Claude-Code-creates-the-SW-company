@@ -1,17 +1,24 @@
 # Security Documentation - Stablecoin Gateway
 
-**Last Updated**: 2026-01-29
-**Version**: 2.0
-**Security Audit**: Phase 1 + Phase 2 complete (all CRITICAL, HIGH, and MEDIUM issues resolved)
+**Last Updated**: 2026-01-30
+**Version**: 3.0
+**Security Audit**: Phase 1 + Phase 2 + Phase 3 complete (all CRITICAL, HIGH, and MEDIUM issues resolved)
 
 ---
 
 ## Executive Summary
 
-Stablecoin Gateway implements comprehensive security controls across authentication, authorization, data protection, infrastructure, and blockchain operations. Two rounds of security audits have been completed. All 10 issues identified in the Phase 2 audit have been resolved and verified with 155+ dedicated tests, bringing the overall security score to 95/100.
+Stablecoin Gateway implements comprehensive security controls across authentication, authorization, data protection, infrastructure, and blockchain operations. Three rounds of security audits have been completed. All issues from Phase 3 (7 new fixes, 3 already resolved) have been verified with 71 dedicated tests, bringing the overall security score to 98/100.
 
 **Security Highlights**:
 - JWT-based authentication with API key support and httpOnly cookie readiness
+- **KMS signer abstraction** - private keys managed via AWS KMS in production (no raw env vars)
+- **Transactional row locking** for refund operations (prevents race conditions)
+- **Distributed nonce management** via Redis locks (prevents nonce collisions)
+- **Webhook secret rotation** endpoint with encrypted storage
+- **Memory-only token storage** (no localStorage, mitigates XSS)
+- **Cryptographic JTI** generation via `crypto.randomUUID()`
+- **Payment session expiry enforcement** with sentinel pattern
 - Granular API key permissions (read, write, refund)
 - Timing-safe webhook signature verification (HMAC-SHA256)
 - AES-256 webhook secret encryption with validated 64-hex-char keys
@@ -24,6 +31,7 @@ Stablecoin Gateway implements comprehensive security controls across authenticat
 - Mock code isolation (production builds cannot access mock wallet)
 - Refund service failsafe (production throws if blockchain unavailable)
 - Payment session expiration state machine
+- Request body size limits (1MB) and explicit server timeouts
 
 ---
 
