@@ -123,7 +123,7 @@ describe('KMSService', () => {
       });
 
       await expect(kmsService.getPublicKey()).rejects.toThrow(
-        'Failed to retrieve public key from KMS'
+        'KMS public-key-retrieval failed'
       );
     });
 
@@ -136,7 +136,7 @@ describe('KMSService', () => {
       });
 
       await expect(kmsService.getPublicKey()).rejects.toThrow(
-        'Failed to retrieve public key from KMS'
+        'KMS public-key-retrieval failed'
       );
     });
   });
@@ -201,11 +201,11 @@ describe('KMSService', () => {
     it('should throw error for invalid message hash format', async () => {
       // AppError wraps the inner message, so match the outer error
       await expect(kmsService.sign('invalid')).rejects.toThrow(
-        'Failed to sign message with KMS'
+        'KMS signing failed'
       );
 
       await expect(kmsService.sign('0x1234')).rejects.toThrow(
-        'Failed to sign message with KMS'
+        'KMS signing failed'
       );
     });
 
@@ -217,7 +217,7 @@ describe('KMSService', () => {
       const messageHash = ethers.id('test');
 
       await expect(kmsService.sign(messageHash)).rejects.toThrow(
-        'Failed to sign message with KMS'
+        'KMS signing failed'
       );
     });
 
@@ -309,7 +309,7 @@ describe('KMSService', () => {
       };
 
       await expect(kmsService.signTransaction(transaction)).rejects.toThrow(
-        'Failed to sign transaction with KMS'
+        'KMS transaction-signing failed'
       );
     });
 
@@ -389,7 +389,7 @@ describe('KMSService', () => {
       const result = await kmsService.healthCheck();
 
       expect(result.status).toBe('unhealthy');
-      expect(result.message).toContain('retrieve public key');
+      expect(result.message).toContain('KMS public-key-retrieval failed');
     });
   });
 
