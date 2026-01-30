@@ -8,6 +8,7 @@
  * - Gas fee estimation
  * - Transaction signing via KMS signer abstraction
  * - Multi-network support (Polygon, Ethereum)
+ * - RPC provider failover with health checks
  * - Error handling and retry logic
  * - Optional nonce management via NonceManager for concurrent safety
  * - Daily spending limits to prevent unlimited fund drainage
@@ -27,13 +28,16 @@
  * - USE_KMS: 'true' for KMS signing, 'false' for env var fallback
  * - KMS_KEY_ID: AWS KMS key identifier (required if USE_KMS=true)
  * - MERCHANT_WALLET_PRIVATE_KEY: Fallback key (dev only, USE_KMS=false)
- * - POLYGON_RPC_URL: Polygon RPC endpoint (optional, defaults to public)
- * - ETHEREUM_RPC_URL: Ethereum RPC endpoint (optional, defaults to public)
+ * - POLYGON_RPC_URLS: Comma-separated Polygon RPC endpoints (failover)
+ * - ETHEREUM_RPC_URLS: Comma-separated Ethereum RPC endpoints (failover)
+ * - POLYGON_RPC_URL: Single Polygon RPC endpoint (backwards compatible)
+ * - ETHEREUM_RPC_URL: Single Ethereum RPC endpoint (backwards compatible)
  * - DAILY_REFUND_LIMIT: Max USD refunded per day (default: 10000)
  */
 
 import { ethers } from 'ethers';
 import { logger } from '../utils/logger.js';
+import { ProviderManager } from '../utils/provider-manager.js';
 import { createSignerProvider, SignerProvider } from './kms-signer.service.js';
 import { NonceManager } from './nonce-manager.service.js';
 
@@ -50,6 +54,7 @@ export interface SpendingLimitRedis {
 export interface BlockchainTransactionServiceOptions {
   nonceManager?: NonceManager;
   redis?: SpendingLimitRedis;
+  providerManager?: ProviderManager;
 }
 
 // ERC-20 ABI (only the functions we need)
@@ -57,6 +62,32 @@ const ERC20_ABI = [
   'function transfer(address to, uint256 amount) returns (bool)',
   'function balanceOf(address account) view returns (uint256)',
 ];
+
+/**
+ * Build an array of RPC URLs for a network from environment variables.
+ * Prefers comma-separated NETWORK_RPC_URLS, falls back to single
+ * NETWORK_RPC_URL, then to a public default.
+ */
+function getRpcUrls(network: 'polygon' | 'ethereum'): string[] {
+  const multiKey = network.toUpperCase() + '_RPC_URLS';
+  const singleKey = network.toUpperCase() + '_RPC_URL';
+  const defaults: Record<string, string> = {
+    polygon: 'https://polygon-rpc.com',
+    ethereum: 'https://eth.llamarpc.com',
+  };
+
+  const multi = process.env[multiKey];
+  if (multi) {
+    return multi.split(',').map(u => u.trim()).filter(Boolean);
+  }
+
+  const single = process.env[singleKey];
+  if (single) {
+    return [single];
+  }
+
+  return [defaults[network]];
+}
 
 // Token contract addresses by network
 const TOKEN_ADDRESSES = {
@@ -102,7 +133,7 @@ export interface GasEstimate {
 }
 
 export class BlockchainTransactionService {
-  private providers: Map<string, ethers.JsonRpcProvider>;
+  private providerManager: ProviderManager;
   private wallets: Map<string, ethers.Wallet> = new Map();
   private signerProvider: SignerProvider;
   private nonceManager: NonceManager | null;
@@ -114,22 +145,13 @@ export class BlockchainTransactionService {
     // SECURITY: Use signer provider abstraction instead of direct env var access
     this.signerProvider = createSignerProvider();
 
-    // Initialize providers
-    this.providers = new Map();
+    // Initialize provider manager with failover support
+    this.providerManager = options?.providerManager ?? new ProviderManager();
 
-    const polygonRpcUrl =
-      process.env.POLYGON_RPC_URL || 'https://polygon-rpc.com';
-    this.providers.set(
-      'polygon',
-      new ethers.JsonRpcProvider(polygonRpcUrl)
-    );
-
-    const ethereumRpcUrl =
-      process.env.ETHEREUM_RPC_URL || 'https://eth.llamarpc.com';
-    this.providers.set(
-      'ethereum',
-      new ethers.JsonRpcProvider(ethereumRpcUrl)
-    );
+    if (!options?.providerManager) {
+      this.providerManager.addProviders('polygon', getRpcUrls('polygon'));
+      this.providerManager.addProviders('ethereum', getRpcUrls('ethereum'));
+    }
 
     // Initialize optional nonce manager for concurrent transaction safety
     this.nonceManager = options?.nonceManager ?? null;
@@ -288,14 +310,8 @@ export class BlockchainTransactionService {
         };
       }
 
-      // Get provider and connect wallet
-      const provider = this.providers.get(network);
-      if (!provider) {
-        return {
-          success: false,
-          error: `Unsupported network: ${network}`,
-        };
-      }
+      // Get a healthy provider via failover manager
+      const provider = await this.providerManager.getProvider(network);
 
       const wallet = await this.getWallet(network);
       const connectedWallet = wallet.connect(provider);
@@ -431,10 +447,7 @@ export class BlockchainTransactionService {
   ): Promise<GasEstimate> {
     const { network, token, recipientAddress, amount } = params;
 
-    const provider = this.providers.get(network);
-    if (!provider) {
-      throw new Error(`Unsupported network: ${network}`);
-    }
+    const provider = await this.providerManager.getProvider(network);
 
     const wallet = await this.getWallet(network);
     const connectedWallet = wallet.connect(provider);
@@ -477,10 +490,7 @@ export class BlockchainTransactionService {
     network: Network,
     token: Token
   ): Promise<number> {
-    const provider = this.providers.get(network);
-    if (!provider) {
-      throw new Error(`Unsupported network: ${network}`);
-    }
+    const provider = await this.providerManager.getProvider(network);
 
     const wallet = await this.getWallet(network);
     const tokenAddress = TOKEN_ADDRESSES[network][token];
