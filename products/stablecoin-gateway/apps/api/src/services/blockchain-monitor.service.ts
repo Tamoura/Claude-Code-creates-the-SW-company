@@ -104,7 +104,8 @@ export class BlockchainMonitorService {
    * - Has minimum confirmations (default: 12)
    * - Recipient matches merchant address
    * - Token contract matches expected token
-   * - Amount matches expected amount (within 0.01 tolerance)
+   * - Amount matches expected amount (exact or overpayment)
+   * - Sender matches customer address (if provided)
    */
   async verifyPaymentTransaction(
     paymentSession: PaymentSessionForVerification,
@@ -212,6 +213,25 @@ export class BlockchainMonitorService {
           sender: fromAddress || ('0x' + transferEvents[0].topics[1].slice(26)),
           error: 'No matching transfer found (expected ' + paymentSession.amount + ' ' + paymentSession.token + ' to ' + paymentSession.merchantAddress + '). Found ' + transferEvents.length + ' transfer(s) but none matched recipient and amount.',
         };
+      }
+
+      // Validate sender if customer address is known
+      if (paymentSession.customerAddress) {
+        const expectedSender = paymentSession.customerAddress.toLowerCase();
+        if (fromAddress.toLowerCase() !== expectedSender) {
+          logger.warn('Transfer sender does not match expected customer address', {
+            paymentSessionId: paymentSession.id,
+            expectedSender: paymentSession.customerAddress,
+            actualSender: fromAddress,
+          });
+          return {
+            valid: false,
+            confirmations,
+            blockNumber: receipt.blockNumber,
+            sender: fromAddress,
+            error: `Sender mismatch: expected ${paymentSession.customerAddress}, got ${fromAddress}`,
+          };
+        }
       }
 
       // Use the matching transfer data

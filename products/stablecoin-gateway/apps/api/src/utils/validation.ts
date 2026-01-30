@@ -147,6 +147,7 @@ export const createWebhookSchema = z.object({
         'payment.failed',
         'payment.refunded',
         'refund.created',
+        'refund.processing',
         'refund.completed',
         'refund.failed',
       ])
@@ -167,6 +168,7 @@ export const updateWebhookSchema = z.object({
         'payment.failed',
         'payment.refunded',
         'refund.created',
+        'refund.processing',
         'refund.completed',
         'refund.failed',
       ])
@@ -174,6 +176,18 @@ export const updateWebhookSchema = z.object({
     .optional(),
   enabled: z.boolean().optional(),
   description: z.string().max(200).optional(),
+});
+
+// ==================== Pagination Query Schemas ====================
+
+export const listApiKeysQuerySchema = z.object({
+  limit: z.coerce.number().min(1).max(100).default(50),
+  offset: z.coerce.number().min(0).default(0),
+});
+
+export const listWebhooksQuerySchema = z.object({
+  limit: z.coerce.number().min(1).max(100).default(50),
+  offset: z.coerce.number().min(0).default(0),
 });
 
 // ==================== API Key Schemas ====================

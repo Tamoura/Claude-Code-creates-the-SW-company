@@ -14,6 +14,30 @@ jobs:
     runs-on: ubuntu-latest
     environment: production
 
+    services:
+      postgres:
+        image: postgres:15
+        env:
+          POSTGRES_USER: test
+          POSTGRES_PASSWORD: test
+          POSTGRES_DB: stablecoin_gateway_test
+        ports:
+          - 5432:5432
+        options: >-
+          --health-cmd pg_isready
+          --health-interval 10s
+          --health-timeout 5s
+          --health-retries 5
+      redis:
+        image: redis:7
+        ports:
+          - 6379:6379
+        options: >-
+          --health-cmd "redis-cli ping"
+          --health-interval 10s
+          --health-timeout 5s
+          --health-retries 5
+
     steps:
       - name: Checkout code
         uses: actions/checkout@v4
@@ -30,6 +54,20 @@ jobs:
       - name: Install API dependencies
         working-directory: products/stablecoin-gateway/apps/api
         run: npm ci
+
+      - name: Run API unit tests (pre-flight gate)
+        working-directory: products/stablecoin-gateway/apps/api
+        run: npm test -- --no-coverage
+        env:
+          DATABASE_URL: postgresql://test:test@localhost:5432/stablecoin_gateway_test
+          REDIS_URL: redis://localhost:6379
+          JWT_SECRET: test-secret-key-for-ci-testing-environment-that-meets-64-char-minimum-requirement
+          NODE_ENV: test
+          API_KEY_HMAC_SECRET: test-hmac-secret-for-ci
+
+      - name: Run API lint check (pre-flight gate)
+        working-directory: products/stablecoin-gateway/apps/api
+        run: npx eslint src/ --ext .ts --max-warnings 0
 
       - name: Build API
         working-directory: products/stablecoin-gateway/apps/api
@@ -128,10 +166,10 @@ jobs:
       - name: Notify deployment success
         if: success()
         run: |
-          echo "✅ Production deployment of ${{ inputs.version }} succeeded"
+          echo "Production deployment of ${{ inputs.version }} succeeded"
 
       - name: Notify deployment failure
         if: failure()
         run: |
-          echo "❌ Production deployment failed - consider rollback"
+          echo "Production deployment failed - consider rollback"
           echo "To rollback: Trigger this workflow with the previous version tag"

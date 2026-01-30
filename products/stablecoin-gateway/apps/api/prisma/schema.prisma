@@ -59,7 +59,7 @@ model PaymentSession {
   idempotencyKey  String? @map("idempotency_key")
 
   // Payment details
-  amount      Decimal @db.Decimal(10, 2)
+  amount      Decimal @db.Decimal(18, 6)
   currency    String  @default("USD")
   description String?
 
@@ -119,7 +119,7 @@ model Refund {
   paymentSessionId String @map("payment_session_id")
 
   // Refund details
-  amount Decimal @db.Decimal(10, 2)
+  amount Decimal @db.Decimal(18, 6)
   reason String?
 
   // Refund state
