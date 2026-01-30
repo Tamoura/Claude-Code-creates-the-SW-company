@@ -23,6 +23,7 @@
  * - payment.failed - Payment verification failed or transaction reverted
  * - payment.refunded - Payment fully refunded to customer
  * - refund.created - Refund initiated by merchant
+ * - refund.processing - Refund transaction submitted, awaiting confirmation
  * - refund.completed - Refund successfully processed on-chain
  * - refund.failed - Refund processing failed
  */
@@ -40,6 +41,7 @@ export type WebhookEventType =
   | 'payment.failed'
   | 'payment.refunded'
   | 'refund.created'
+  | 'refund.processing'
   | 'refund.completed'
   | 'refund.failed';
 
