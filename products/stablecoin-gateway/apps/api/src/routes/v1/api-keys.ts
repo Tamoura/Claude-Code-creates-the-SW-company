@@ -1,6 +1,6 @@
 import { FastifyPluginAsync } from 'fastify';
 import { ZodError } from 'zod';
-import { createApiKeySchema, validateBody } from '../../utils/validation.js';
+import { createApiKeySchema, listApiKeysQuerySchema, validateBody, validateQuery } from '../../utils/validation.js';
 import { generateApiKey, hashApiKey, getApiKeyPrefix } from '../../utils/crypto.js';
 import { AppError, ApiKeyResponse } from '../../types/index.js';
 import { logger } from '../../utils/logger.js';
@@ -65,19 +65,27 @@ const apiKeyRoutes: FastifyPluginAsync = async (fastify) => {
     }
   });
 
-  // GET /v1/api-keys - List user's API keys
+  // GET /v1/api-keys - List user's API keys (paginated)
   fastify.get('/', {
     onRequest: [fastify.authenticate],
   }, async (request, reply) => {
     try {
+      const query = validateQuery(listApiKeysQuerySchema, request.query);
       const userId = request.currentUser!.id;
 
-      const apiKeys = await fastify.prisma.apiKey.findMany({
-        where: { userId },
-        orderBy: { createdAt: 'desc' },
-      });
+      const [apiKeys, total] = await Promise.all([
+        fastify.prisma.apiKey.findMany({
+          where: { userId },
+          orderBy: { createdAt: 'desc' },
+          take: query.limit,
+          skip: query.offset,
+        }),
+        fastify.prisma.apiKey.count({
+          where: { userId },
+        }),
+      ]);
 
-      const response = apiKeys.map((key): ApiKeyResponse => ({
+      const data = apiKeys.map((key): ApiKeyResponse => ({
         id: key.id,
         name: key.name,
         // Never return the full key after creation
@@ -87,10 +95,26 @@ const apiKeyRoutes: FastifyPluginAsync = async (fastify) => {
         created_at: key.createdAt.toISOString(),
       }));
 
-      return reply.send({ data: response });
+      return reply.send({
+        data,
+        pagination: {
+          limit: query.limit,
+          offset: query.offset,
+          total,
+          has_more: query.offset + query.limit < total,
+        },
+      });
     } catch (error) {
       if (error instanceof AppError) {
         return reply.code(error.statusCode).send(error.toJSON());
+      }
+      if (error instanceof ZodError) {
+        return reply.code(400).send({
+          type: 'https://gateway.io/errors/validation-error',
+          title: 'Validation Error',
+          status: 400,
+          detail: error.message,
+        });
       }
       logger.error('Error listing API keys', error);
       throw error;

@@ -176,6 +176,18 @@ export const updateWebhookSchema = z.object({
   description: z.string().max(200).optional(),
 });
 
+// ==================== Pagination Query Schemas ====================
+
+export const listApiKeysQuerySchema = z.object({
+  limit: z.coerce.number().min(1).max(100).default(50),
+  offset: z.coerce.number().min(0).default(0),
+});
+
+export const listWebhooksQuerySchema = z.object({
+  limit: z.coerce.number().min(1).max(100).default(50),
+  offset: z.coerce.number().min(0).default(0),
+});
+
 // ==================== API Key Schemas ====================
 
 export const createApiKeySchema = z.object({
