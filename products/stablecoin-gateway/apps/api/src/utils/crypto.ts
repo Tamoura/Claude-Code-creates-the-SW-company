@@ -11,7 +11,25 @@ export async function verifyPassword(password: string, hash: string): Promise<bo
   return bcrypt.compare(password, hash);
 }
 
+/**
+ * Hash an API key using HMAC-SHA-256 with a server-side secret.
+ *
+ * HMAC prevents rainbow table attacks without the performance cost of bcrypt.
+ * API keys need fast hash lookups (called on every authenticated request),
+ * so bcrypt is not appropriate here.
+ *
+ * Falls back to plain SHA-256 only if API_KEY_HMAC_SECRET is not set
+ * (development/test environments). Production should always have the secret.
+ */
 export function hashApiKey(apiKey: string): string {
+  const hmacSecret = process.env.API_KEY_HMAC_SECRET;
+  if (hmacSecret) {
+    return crypto.createHmac('sha256', hmacSecret).update(apiKey).digest('hex');
+  }
+  // Fallback for dev/test - plain SHA-256 (log warning in production)
+  if (process.env.NODE_ENV === 'production') {
+    console.warn('WARNING: API_KEY_HMAC_SECRET not set in production - using unsalted SHA-256');
+  }
   return crypto.createHash('sha256').update(apiKey).digest('hex');
 }
 
