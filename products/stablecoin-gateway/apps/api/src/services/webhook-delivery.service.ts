@@ -61,6 +61,7 @@ interface RedisLike {
   incr(key: string): Promise<number>;
   del(key: string): Promise<number>;
   expire(key: string, seconds: number): Promise<number>;
+  eval(script: string, numkeys: number, ...args: (string | number)[]): Promise<any>;
 }
 
 export class WebhookDeliveryService {
@@ -72,6 +73,28 @@ export class WebhookDeliveryService {
   // Circuit breaker configuration
   private readonly CIRCUIT_THRESHOLD = 10;
   private readonly CIRCUIT_RESET_MS = 5 * 60 * 1000; // 5 minutes
+
+  /**
+   * Lua script that atomically increments the failure counter,
+   * refreshes its TTL, and opens the circuit when the threshold
+   * is reached. Executed via Redis EVAL so the entire sequence
+   * runs without interleaving from other clients.
+   *
+   * KEYS[1] = circuit:failures:<endpointId>
+   * KEYS[2] = circuit:open:<endpointId>
+   * ARGV[1] = expire seconds for the failure counter (600)
+   * ARGV[2] = circuit threshold (10)
+   * ARGV[3] = current timestamp string
+   * ARGV[4] = circuit reset milliseconds (PX value)
+   */
+  private static readonly CIRCUIT_BREAKER_SCRIPT = `
+    local failures = redis.call('INCR', KEYS[1])
+    redis.call('EXPIRE', KEYS[1], ARGV[1])
+    if failures >= tonumber(ARGV[2]) then
+      redis.call('SET', KEYS[2], ARGV[3], 'PX', ARGV[4])
+    end
+    return failures
+  `;
 
   constructor(prisma: PrismaClient, redis?: RedisLike | null) {
     this.prisma = prisma;
@@ -111,23 +134,40 @@ export class WebhookDeliveryService {
   /**
    * Record a delivery failure for the circuit breaker.
    *
-   * Increments the consecutive-failure counter for the endpoint.
-   * If the counter reaches CIRCUIT_THRESHOLD the circuit is opened
-   * by storing the current timestamp under the circuit:open key.
+   * Uses a Lua script executed via Redis EVAL to atomically:
+   * 1. Increment the consecutive-failure counter
+   * 2. Refresh its TTL
+   * 3. Open the circuit if the threshold is reached
+   *
+   * Falls back to the non-atomic incr+check+set approach if EVAL
+   * is not supported (e.g., certain Redis-compatible stores).
    */
   private async recordFailure(endpointId: string): Promise<void> {
     if (!this.redis) return;
 
-    const failures = await this.redis.incr('circuit:failures:' + endpointId);
-    await this.redis.expire('circuit:failures:' + endpointId, 600);
-
-    if (failures >= this.CIRCUIT_THRESHOLD) {
-      await this.redis.set(
+    try {
+      await this.redis.eval(
+        WebhookDeliveryService.CIRCUIT_BREAKER_SCRIPT,
+        2,
+        'circuit:failures:' + endpointId,
         'circuit:open:' + endpointId,
+        600,
+        this.CIRCUIT_THRESHOLD,
         String(Date.now()),
-        'PX',
         this.CIRCUIT_RESET_MS,
       );
+    } catch (error) {
+      // Fallback: if eval not supported, use original non-atomic approach
+      const failures = await this.redis.incr('circuit:failures:' + endpointId);
+      await this.redis.expire('circuit:failures:' + endpointId, 600);
+      if (failures >= this.CIRCUIT_THRESHOLD) {
+        await this.redis.set(
+          'circuit:open:' + endpointId,
+          String(Date.now()),
+          'PX',
+          this.CIRCUIT_RESET_MS,
+        );
+      }
     }
   }
 
