@@ -11,6 +11,9 @@ const LOCKOUT_MAX_ATTEMPTS = 5;
 const LOCKOUT_WINDOW_SECONDS = 900; // 15 minutes
 const LOCKOUT_DURATION_MS = 900_000; // 15 minutes in ms
 
+// Access token TTL in seconds (matches JWT_EXPIRES_IN default)
+const ACCESS_TOKEN_TTL_SECONDS = 900; // 15 minutes
+
 const authRoutes: FastifyPluginAsync = async (fastify) => {
   // Auth-specific rate limiting config (5 requests per 15 minutes)
   // Uses IP + User-Agent fingerprinting to prevent bypass via IP rotation
@@ -59,7 +62,7 @@ const authRoutes: FastifyPluginAsync = async (fastify) => {
 
       // Generate tokens
       const accessToken = fastify.jwt.sign(
-        { userId: user.id },
+        { userId: user.id, jti: randomUUID() },
         { expiresIn: process.env.JWT_EXPIRES_IN || '15m' }
       );
 
@@ -170,7 +173,7 @@ const authRoutes: FastifyPluginAsync = async (fastify) => {
 
       // Generate tokens
       const accessToken = fastify.jwt.sign(
-        { userId: user.id },
+        { userId: user.id, jti: randomUUID() },
         { expiresIn: process.env.JWT_EXPIRES_IN || '15m' }
       );
 
@@ -250,7 +253,7 @@ const authRoutes: FastifyPluginAsync = async (fastify) => {
 
       // Generate new access token
       const accessToken = fastify.jwt.sign(
-        { userId: decoded.userId },
+        { userId: decoded.userId, jti: randomUUID() },
         { expiresIn: process.env.JWT_EXPIRES_IN || '15m' }
       );
 
@@ -324,6 +327,28 @@ const authRoutes: FastifyPluginAsync = async (fastify) => {
 
       if (result.count === 0) {
         throw new AppError(404, 'token-not-found', 'Refresh token not found or already revoked');
+      }
+
+      // SECURITY: Blacklist the access token's JTI in Redis so it
+      // is rejected for the remainder of its lifetime (up to 15 min).
+      // TTL ensures automatic cleanup -- no manual purge needed.
+      const jti = (request.user as { jti?: string }).jti;
+      if (jti && fastify.redis) {
+        try {
+          await fastify.redis.setex(
+            `revoked_jti:${jti}`,
+            ACCESS_TOKEN_TTL_SECONDS,
+            '1'
+          );
+        } catch (redisError) {
+          // Log but do not fail the logout -- refresh token is
+          // already revoked, which is the primary defense.
+          logger.warn('Failed to blacklist access token JTI in Redis', {
+            jti,
+            userId,
+            error: redisError instanceof Error ? redisError.message : 'unknown',
+          });
+        }
       }
 
       logger.info('User logged out', { userId });
