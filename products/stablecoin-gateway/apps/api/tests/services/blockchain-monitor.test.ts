@@ -230,7 +230,7 @@ describe('BlockchainMonitorService', () => {
       expect(result.error).toBeUndefined();
     });
 
-    it('should accept transaction with amount within tolerance (rounding)', async () => {
+    it('should REJECT transaction with micro-underpayment (security fix)', async () => {
       const paymentSession = {
         id: 'ps_123',
         network: 'polygon' as const,
@@ -239,7 +239,7 @@ describe('BlockchainMonitorService', () => {
         merchantAddress: '0x742d35Cc6634C0532925a3b844Bc9e7595f0bEb',
       };
 
-      // Mock a transaction with 99.999999 USDC (within 0.01 tolerance)
+      // Mock a transaction with 99.999999 USDC (underpayment of $0.000001 - must be rejected)
       const mockProvider = {
         getTransaction: jest.fn(),
         getTransactionReceipt: jest.fn().mockResolvedValue({
@@ -266,7 +266,7 @@ describe('BlockchainMonitorService', () => {
         '0xabcdef1234567890abcdef1234567890abcdef1234567890abcdef1234567890'
       );
 
-      expect(result.valid).toBe(true);
+      expect(result.valid).toBe(false);
     });
 
     it('should work with Ethereum network and USDT token', async () => {
