@@ -104,7 +104,8 @@ export class BlockchainMonitorService {
    * - Has minimum confirmations (default: 12)
    * - Recipient matches merchant address
    * - Token contract matches expected token
-   * - Amount matches expected amount (within 0.01 tolerance)
+   * - Amount matches expected amount (exact or overpayment)
+   * - Sender matches customer address (if provided)
    */
   async verifyPaymentTransaction(
     paymentSession: PaymentSessionForVerification,

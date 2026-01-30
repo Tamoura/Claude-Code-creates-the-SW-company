@@ -147,6 +147,7 @@ export const createWebhookSchema = z.object({
         'payment.failed',
         'payment.refunded',
         'refund.created',
+        'refund.processing',
         'refund.completed',
         'refund.failed',
       ])
@@ -167,6 +168,7 @@ export const updateWebhookSchema = z.object({
         'payment.failed',
         'payment.refunded',
         'refund.created',
+        'refund.processing',
         'refund.completed',
         'refund.failed',
       ])
