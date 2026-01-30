@@ -21,7 +21,7 @@
 import { FastifyPluginAsync } from 'fastify';
 import { ZodError } from 'zod';
 import { Prisma } from '@prisma/client';
-import { createWebhookSchema, updateWebhookSchema, validateBody } from '../../utils/validation.js';
+import { createWebhookSchema, updateWebhookSchema, listWebhooksQuerySchema, validateBody, validateQuery } from '../../utils/validation.js';
 import { AppError } from '../../types/index.js';
 import { logger } from '../../utils/logger.js';
 import { validateWebhookUrl } from '../../utils/url-validator.js';
@@ -193,25 +193,47 @@ const webhookRoutes: FastifyPluginAsync = async (fastify) => {
     }
   });
 
-  // GET /v1/webhooks - List all webhooks
+  // GET /v1/webhooks - List all webhooks (paginated)
   fastify.get('/', {
     onRequest: [fastify.authenticate, fastify.requirePermission('read')],
   }, async (request, reply) => {
     try {
+      const query = validateQuery(listWebhooksQuerySchema, request.query);
       const userId = request.currentUser!.id;
 
-      const webhooks = await fastify.prisma.webhookEndpoint.findMany({
-        where: { userId },
-        orderBy: { createdAt: 'desc' },
-      });
+      const [webhooks, total] = await Promise.all([
+        fastify.prisma.webhookEndpoint.findMany({
+          where: { userId },
+          orderBy: { createdAt: 'desc' },
+          take: query.limit,
+          skip: query.offset,
+        }),
+        fastify.prisma.webhookEndpoint.count({
+          where: { userId },
+        }),
+      ]);
 
       // Do NOT return secrets in list
       return reply.send({
         data: webhooks.map(webhook => formatWebhookResponse(webhook)),
+        pagination: {
+          limit: query.limit,
+          offset: query.offset,
+          total,
+          has_more: query.offset + query.limit < total,
+        },
       });
     } catch (error) {
       if (error instanceof AppError) {
         return reply.code(error.statusCode).send(error.toJSON());
+      }
+      if (error instanceof ZodError) {
+        return reply.code(400).send({
+          type: 'https://gateway.io/errors/validation-error',
+          title: 'Validation Error',
+          status: 400,
+          detail: error.message,
+        });
       }
       logger.error('Error listing webhooks', error);
       throw error;
