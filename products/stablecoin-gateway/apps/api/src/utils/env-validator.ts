@@ -280,6 +280,34 @@ function validateWebhookEncryption(): ValidationResult {
 }
 
 /**
+ * Validate API key HMAC secret configuration
+ */
+function validateApiKeyHmac(): ValidationResult {
+  const errors: string[] = [];
+  const warnings: string[] = [];
+
+  const hmacSecret = process.env.API_KEY_HMAC_SECRET;
+  const isProduction = process.env.NODE_ENV === 'production';
+
+  if (!hmacSecret) {
+    if (isProduction) {
+      warnings.push('API_KEY_HMAC_SECRET not set - API key hashing will use unsalted SHA-256');
+      warnings.push('Set API_KEY_HMAC_SECRET for HMAC-SHA-256 protection against rainbow table attacks');
+      warnings.push('Generate a secret: openssl rand -hex 64');
+    }
+  } else if (hmacSecret.length < 32) {
+    warnings.push(`API_KEY_HMAC_SECRET is short (${hmacSecret.length} chars) - recommend at least 32 characters`);
+    warnings.push('Generate a strong secret: openssl rand -hex 64');
+  }
+
+  return {
+    valid: errors.length === 0,
+    errors,
+    warnings,
+  };
+}
+
+/**
  * Validate all environment variables
  */
 export function validateEnvironment(): void {
@@ -292,6 +320,7 @@ export function validateEnvironment(): void {
     { name: 'Redis Configuration', result: validateRedis() },
     { name: 'Blockchain Configuration', result: validateBlockchain() },
     { name: 'Webhook Encryption', result: validateWebhookEncryption() },
+    { name: 'API Key HMAC', result: validateApiKeyHmac() },
   ];
 
   let hasErrors = false;
