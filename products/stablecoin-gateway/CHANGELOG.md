@@ -6,6 +6,43 @@ The format is based on [Keep a Changelog](https://keepachangelog.com/en/1.1.0/).
 
 ---
 
+## [Unreleased] - Security Audit Phase 6
+
+**Date**: 2026-01-30
+**Branch**: `fix/stablecoin-gateway/security-audit-phase6`
+**Audit Status**: 7 issues resolved (3 HIGH partial fixes, 4 remaining HIGH), 90 dedicated Phase 6 tests passing
+
+### Security
+
+- **SEC-014**: Refund webhook now requires sufficient blockchain confirmations before sending `refund.completed`. Initial broadcast sets status to `PROCESSING` and sends `refund.processing` webhook. New `confirmRefundFinality()` method checks on-chain confirmations (Polygon: 12, Ethereum: 3). (HIGH)
+- **SEC-015**: Idempotency key format validation added. Keys must be 1-64 chars, alphanumeric with hyphens/underscores only. Empty, oversized, or special-character keys rejected with 400. (HIGH)
+- **SEC-016**: KMS error messages sanitized in production. AWS key ARNs, IAM roles, and region endpoints no longer leaked in API error responses. Full details still logged server-side for debugging. (HIGH)
+- **SEC-005**: KMS key rotation and health check methods added. `rotateKey(newKeyId)` updates key and clears caches. `isKeyHealthy()` provides boolean health verification. (CRIT - partial)
+- **SEC-011**: Dedicated audit log service with sensitive field redaction. Records actor, action, resource, IP, user agent. Redacts passwords, secrets, tokens, keys. Fire-and-forget (never blocks operations). (HIGH - partial)
+- **SEC-013**: JWT secret entropy validation via Shannon entropy. Requires minimum 3.0 bits/char and 16 unique characters. Production rejects low-entropy secrets; development warns. (HIGH - partial)
+- **SEC-032**: CI npm audit now fails builds on HIGH/CRITICAL vulnerabilities. Removed `continue-on-error: true` from both API and Web audit steps. (MED - partial)
+
+### Added
+
+- `confirmRefundFinality()` method in refund service
+- `CONFIRMATION_REQUIREMENTS` constant (polygon: 12, ethereum: 3)
+- `refund.processing` webhook event type
+- `idempotencyKeySchema` in validation utils
+- `sanitizeKmsError()` helper in KMS service
+- `AuditLogService` with `record()` and `query()` methods
+- `calculateShannonEntropy()` in env-validator
+- `rotateKey()` and `isKeyHealthy()` on KMSService
+- 90 new Phase 6 security tests across 7 test suites
+
+### Changed
+
+- Refund status flow: `PENDING` → `PROCESSING` → `COMPLETED` (was `PENDING` → `COMPLETED`)
+- KMS catch blocks use sanitized errors in production
+- CI audit steps block on high/critical vulnerabilities
+- JWT_SECRET validation includes entropy and unique character checks
+
+---
+
 ## [Unreleased] - Security Audit Phase 5
 
 **Date**: 2026-01-30
