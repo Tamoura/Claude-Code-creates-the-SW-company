@@ -459,15 +459,45 @@ const paymentSessionRoutes: FastifyPluginAsync = async (fastify) => {
 
       reply.raw.write(`data: ${JSON.stringify(data)}\n\n`);
 
-      // Keep connection alive with heartbeat
+      // Guard against calling reply.raw.end() multiple times.
+      // The close handler, heartbeat expiry, and max timeout can
+      // all trigger independently; only the first should end().
+      let connectionClosed = false;
+      const closeConnection = () => {
+        if (connectionClosed) return;
+        connectionClosed = true;
+        clearInterval(heartbeat);
+        clearTimeout(maxConnectionTimeout);
+        reply.raw.end();
+      };
+
+      // SECURITY: Re-validate token on each heartbeat to detect expiry.
+      // Without this, an attacker could start an SSE connection and
+      // maintain access indefinitely after the JWT expires.
       const heartbeat = setInterval(() => {
+        if (connectionClosed) return;
+        try {
+          fastify.jwt.verify(token);
+        } catch {
+          // Token expired or invalid -- close the connection
+          reply.raw.write('event: error\ndata: {"message":"Token expired"}\n\n');
+          closeConnection();
+          return;
+        }
         reply.raw.write(': heartbeat\n\n');
       }, 30000);
 
-      // Clean up on close
+      // SECURITY: Enforce a maximum connection duration (30 minutes).
+      // Prevents indefinite resource consumption even with valid tokens.
+      const maxConnectionTimeout = setTimeout(() => {
+        if (connectionClosed) return;
+        reply.raw.write('event: close\ndata: {"message":"Maximum connection time reached"}\n\n');
+        closeConnection();
+      }, 30 * 60 * 1000);
+
+      // Clean up all timers on client disconnect
       request.raw.on('close', () => {
-        clearInterval(heartbeat);
-        reply.raw.end();
+        closeConnection();
       });
     } catch (error) {
       logger.error('Error in SSE stream', error);
