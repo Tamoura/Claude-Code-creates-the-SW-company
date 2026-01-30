@@ -1,10 +1,10 @@
 import { FastifyPluginAsync, FastifyRequest } from 'fastify';
 import { ZodError } from 'zod';
-import { signupSchema, loginSchema, sseTokenSchema, validateBody } from '../../utils/validation.js';
+import { signupSchema, loginSchema, sseTokenSchema, forgotPasswordSchema, resetPasswordSchema, validateBody } from '../../utils/validation.js';
 import { hashPassword, verifyPassword } from '../../utils/crypto.js';
 import { AppError } from '../../types/index.js';
 import { logger } from '../../utils/logger.js';
-import { createHash, randomUUID } from 'crypto';
+import { createHash, randomBytes, randomUUID } from 'crypto';
 
 // Account lockout constants (Redis-based, no DB migration needed)
 const LOCKOUT_MAX_ATTEMPTS = 5;
@@ -401,6 +401,114 @@ const authRoutes: FastifyPluginAsync = async (fastify) => {
       throw error;
     }
   });
+
+  // ==================== Password Reset ====================
+
+  // Reset token TTL: 1 hour
+  const RESET_TOKEN_TTL_SECONDS = 3600;
+
+  // POST /v1/auth/forgot-password
+  fastify.post('/forgot-password', authRateLimit, async (request, reply) => {
+    try {
+      const body = validateBody(forgotPasswordSchema, request.body);
+      const redis = fastify.redis;
+
+      // Look up user -- but always return the same response
+      const user = await fastify.prisma.user.findUnique({
+        where: { email: body.email },
+      });
+
+      if (user && redis) {
+        // Generate a cryptographically secure token
+        const token = randomBytes(32).toString('hex');
+
+        // Store in Redis with 1-hour TTL
+        const payload = JSON.stringify({
+          userId: user.id,
+          email: user.email,
+          createdAt: new Date().toISOString(),
+        });
+        await redis.set(`reset:${token}`, payload, 'EX', RESET_TOKEN_TTL_SECONDS);
+
+        logger.info('Password reset token generated', {
+          userId: user.id,
+          email: user.email,
+          // In production this would be emailed, not logged
+          token,
+        });
+      }
+
+      // Always return 200 to prevent email enumeration
+      return reply.send({
+        message: 'If the email exists, a reset link has been sent',
+      });
+    } catch (error) {
+      if (error instanceof ZodError) {
+        return reply.code(400).send({
+          type: 'https://gateway.io/errors/validation-error',
+          title: 'Validation Error',
+          status: 400,
+          detail: error.message,
+        });
+      }
+      throw error;
+    }
+  });
+
+  // POST /v1/auth/reset-password
+  fastify.post('/reset-password', authRateLimit, async (request, reply) => {
+    try {
+      const body = validateBody(resetPasswordSchema, request.body);
+      const redis = fastify.redis;
+
+      if (!redis) {
+        throw new AppError(503, 'service-unavailable', 'Password reset is temporarily unavailable');
+      }
+
+      // Look up the token in Redis
+      const raw = await redis.get(`reset:${body.token}`);
+      if (!raw) {
+        throw new AppError(400, 'invalid-token', 'Invalid or expired reset token');
+      }
+
+      const tokenData = JSON.parse(raw) as { userId: string; email: string };
+
+      // Hash the new password (same bcrypt rounds as signup)
+      const passwordHash = await hashPassword(body.newPassword);
+
+      // Update user's password
+      await fastify.prisma.user.update({
+        where: { id: tokenData.userId },
+        data: { passwordHash },
+      });
+
+      // Delete the token so it cannot be reused
+      await redis.del(`reset:${body.token}`);
+
+      logger.info('Password reset completed', {
+        userId: tokenData.userId,
+        email: tokenData.email,
+      });
+
+      return reply.send({
+        message: 'Password updated successfully',
+      });
+    } catch (error) {
+      if (error instanceof AppError) {
+        return reply.code(error.statusCode).send(error.toJSON());
+      }
+      if (error instanceof ZodError) {
+        return reply.code(400).send({
+          type: 'https://gateway.io/errors/validation-error',
+          title: 'Validation Error',
+          status: 400,
+          detail: error.message,
+        });
+      }
+      throw error;
+    }
+  });
+
 };
 
 export default authRoutes;
