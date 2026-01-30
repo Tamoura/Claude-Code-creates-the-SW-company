@@ -24,6 +24,30 @@ const authPlugin: FastifyPluginAsync = async (fastify) => {
       // Try JWT first (for user sessions)
       try {
         const decoded = await request.jwtVerify();
+
+        // SECURITY: Check JTI blacklist for revoked access tokens.
+        // On logout, the access token's JTI is stored in Redis so
+        // it is rejected for the remainder of its 15-minute lifetime.
+        // If Redis is unavailable, skip the check (graceful degradation).
+        const jti = (decoded as any).jti;
+        if (jti && fastify.redis) {
+          try {
+            const revoked = await fastify.redis.get(`revoked_jti:${jti}`);
+            if (revoked) {
+              throw new AppError(401, 'token-revoked', 'Token has been revoked');
+            }
+          } catch (redisError) {
+            if (redisError instanceof AppError) {
+              throw redisError;
+            }
+            // Redis error -- degrade gracefully, allow the request
+            logger.warn('Redis unavailable during JTI check, skipping', {
+              jti,
+              error: redisError instanceof Error ? redisError.message : 'unknown',
+            });
+          }
+        }
+
         const user = await fastify.prisma.user.findUnique({
           where: { id: (decoded as any).userId },
         });
@@ -35,7 +59,11 @@ const authPlugin: FastifyPluginAsync = async (fastify) => {
         request.currentUser = user;
         return;
       } catch (jwtError) {
-        // If JWT fails, try API key
+        // If it's a token-revoked error, re-throw immediately
+        if (jwtError instanceof AppError && jwtError.code === 'token-revoked') {
+          throw jwtError;
+        }
+        // If JWT fails for other reasons, try API key
       }
 
       // Try API key authentication

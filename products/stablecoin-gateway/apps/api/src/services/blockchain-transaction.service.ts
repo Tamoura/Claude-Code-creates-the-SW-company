@@ -8,8 +8,10 @@
  * - Gas fee estimation
  * - Transaction signing via KMS signer abstraction
  * - Multi-network support (Polygon, Ethereum)
+ * - RPC provider failover with health checks
  * - Error handling and retry logic
  * - Optional nonce management via NonceManager for concurrent safety
+ * - Daily spending limits to prevent unlimited fund drainage
  *
  * Security:
  * - Uses KMS signer abstraction (never reads raw private key directly)
@@ -20,22 +22,39 @@
  * - Transaction confirmation
  * - Redis-based nonce serialization (when NonceManager provided)
  * - Per-network wallet caching (prevents cross-network wallet reuse)
+ * - Daily refund spending cap via Redis (prevents unlimited drainage)
  *
  * Environment Variables:
  * - USE_KMS: 'true' for KMS signing, 'false' for env var fallback
  * - KMS_KEY_ID: AWS KMS key identifier (required if USE_KMS=true)
- * - MERCHANT_WALLET_PRIVATE_KEY: Fallback key (dev only, when USE_KMS=false)
- * - POLYGON_RPC_URL: Polygon RPC endpoint (optional, defaults to public)
- * - ETHEREUM_RPC_URL: Ethereum RPC endpoint (optional, defaults to public)
+ * - MERCHANT_WALLET_PRIVATE_KEY: Fallback key (dev only, USE_KMS=false)
+ * - POLYGON_RPC_URLS: Comma-separated Polygon RPC endpoints (failover)
+ * - ETHEREUM_RPC_URLS: Comma-separated Ethereum RPC endpoints (failover)
+ * - POLYGON_RPC_URL: Single Polygon RPC endpoint (backwards compatible)
+ * - ETHEREUM_RPC_URL: Single Ethereum RPC endpoint (backwards compatible)
+ * - DAILY_REFUND_LIMIT: Max USD refunded per day (default: 10000)
  */
 
 import { ethers } from 'ethers';
 import { logger } from '../utils/logger.js';
+import { ProviderManager } from '../utils/provider-manager.js';
 import { createSignerProvider, SignerProvider } from './kms-signer.service.js';
 import { NonceManager } from './nonce-manager.service.js';
 
+/**
+ * Minimal Redis interface required for spending limit tracking.
+ * Compatible with ioredis Redis client.
+ */
+export interface SpendingLimitRedis {
+  get(key: string): Promise<string | null>;
+  incrby(key: string, increment: number): Promise<number>;
+  expire(key: string, seconds: number): Promise<number>;
+}
+
 export interface BlockchainTransactionServiceOptions {
   nonceManager?: NonceManager;
+  redis?: SpendingLimitRedis;
+  providerManager?: ProviderManager;
 }
 
 // ERC-20 ABI (only the functions we need)
@@ -43,6 +62,32 @@ const ERC20_ABI = [
   'function transfer(address to, uint256 amount) returns (bool)',
   'function balanceOf(address account) view returns (uint256)',
 ];
+
+/**
+ * Build an array of RPC URLs for a network from environment variables.
+ * Prefers comma-separated NETWORK_RPC_URLS, falls back to single
+ * NETWORK_RPC_URL, then to a public default.
+ */
+function getRpcUrls(network: 'polygon' | 'ethereum'): string[] {
+  const multiKey = network.toUpperCase() + '_RPC_URLS';
+  const singleKey = network.toUpperCase() + '_RPC_URL';
+  const defaults: Record<string, string> = {
+    polygon: 'https://polygon-rpc.com',
+    ethereum: 'https://eth.llamarpc.com',
+  };
+
+  const multi = process.env[multiKey];
+  if (multi) {
+    return multi.split(',').map(u => u.trim()).filter(Boolean);
+  }
+
+  const single = process.env[singleKey];
+  if (single) {
+    return [single];
+  }
+
+  return [defaults[network]];
+}
 
 // Token contract addresses by network
 const TOKEN_ADDRESSES = {
@@ -58,6 +103,12 @@ const TOKEN_ADDRESSES = {
 
 type Network = 'polygon' | 'ethereum';
 type Token = 'USDC' | 'USDT';
+
+/** Default daily refund cap in USD */
+const DEFAULT_DAILY_REFUND_LIMIT = 10_000;
+
+/** TTL for daily spend keys: 48 hours to survive timezone edge cases */
+const SPEND_KEY_TTL_SECONDS = 48 * 60 * 60; // 172800
 
 export interface RefundTransactionParams {
   network: Network;
@@ -82,34 +133,121 @@ export interface GasEstimate {
 }
 
 export class BlockchainTransactionService {
-  private providers: Map<string, ethers.JsonRpcProvider>;
+  private providerManager: ProviderManager;
   private wallets: Map<string, ethers.Wallet> = new Map();
   private signerProvider: SignerProvider;
   private nonceManager: NonceManager | null;
+  private redis: SpendingLimitRedis | null;
+  private dailyRefundLimit: number;
   private readonly decimals = 6; // USDC and USDT use 6 decimals
 
   constructor(options?: BlockchainTransactionServiceOptions) {
     // SECURITY: Use signer provider abstraction instead of direct env var access
-    // In production: KMS signing. In dev: env var fallback with warning.
     this.signerProvider = createSignerProvider();
 
-    // Initialize providers
-    this.providers = new Map();
+    // Initialize provider manager with failover support
+    this.providerManager = options?.providerManager ?? new ProviderManager();
 
-    const polygonRpcUrl = process.env.POLYGON_RPC_URL || 'https://polygon-rpc.com';
-    this.providers.set('polygon', new ethers.JsonRpcProvider(polygonRpcUrl));
-
-    const ethereumRpcUrl = process.env.ETHEREUM_RPC_URL || 'https://eth.llamarpc.com';
-    this.providers.set('ethereum', new ethers.JsonRpcProvider(ethereumRpcUrl));
+    if (!options?.providerManager) {
+      this.providerManager.addProviders('polygon', getRpcUrls('polygon'));
+      this.providerManager.addProviders('ethereum', getRpcUrls('ethereum'));
+    }
 
     // Initialize optional nonce manager for concurrent transaction safety
     this.nonceManager = options?.nonceManager ?? null;
+
+    // Initialize optional Redis for daily spending limit tracking
+    this.redis = options?.redis ?? null;
+
+    // Read configurable daily refund limit from environment
+    const envLimit = process.env.DAILY_REFUND_LIMIT;
+    this.dailyRefundLimit = envLimit
+      ? Number(envLimit)
+      : DEFAULT_DAILY_REFUND_LIMIT;
 
     logger.info('BlockchainTransactionService initialized', {
       signerType: process.env.USE_KMS === 'true' ? 'KMS' : 'EnvVar',
       networks: ['polygon', 'ethereum'],
       nonceManaged: this.nonceManager !== null,
+      dailyRefundLimit: this.dailyRefundLimit,
+      spendingLimitEnabled: this.redis !== null,
     });
+  }
+
+  /**
+   * Build the Redis key for today's daily spend counter.
+   * Format: spend:daily:YYYY-MM-DD (UTC date)
+   */
+  private getDailySpendKey(): string {
+    const today = new Date().toISOString().split('T')[0];
+    return `spend:daily:${today}`;
+  }
+
+  /**
+   * Check whether a refund amount would exceed the daily limit.
+   * Returns true if the refund is within the limit.
+   *
+   * If Redis is unavailable, logs a warning and returns true
+   * (graceful degradation -- do not block refunds on Redis failure).
+   */
+  private async checkSpendingLimit(amount: number): Promise<boolean> {
+    if (!this.redis) {
+      return true; // No Redis = no enforcement (graceful degradation)
+    }
+
+    try {
+      const key = this.getDailySpendKey();
+      const currentSpendStr = await this.redis.get(key);
+      const currentSpend = currentSpendStr
+        ? Number(currentSpendStr)
+        : 0;
+
+      // Convert amount to cents for integer arithmetic
+      const amountCents = Math.round(amount * 100);
+      const limitCents = Math.round(this.dailyRefundLimit * 100);
+
+      if (currentSpend + amountCents > limitCents) {
+        logger.warn('Daily refund spending limit would be exceeded', {
+          currentSpendCents: currentSpend,
+          refundAmountCents: amountCents,
+          dailyLimitCents: limitCents,
+        });
+        return false;
+      }
+
+      return true;
+    } catch (error) {
+      // Graceful degradation: if Redis is broken, allow the refund
+      logger.warn(
+        'Redis unavailable for spending limit check, allowing refund',
+        error
+      );
+      return true;
+    }
+  }
+
+  /**
+   * Record a successful refund amount against the daily spend counter.
+   * Uses INCRBY for atomic increment (race-condition safe).
+   * Sets a 48-hour TTL so the key auto-expires after the day rolls over.
+   */
+  private async recordSpend(amount: number): Promise<void> {
+    if (!this.redis) {
+      return;
+    }
+
+    try {
+      const key = this.getDailySpendKey();
+      const amountCents = Math.round(amount * 100);
+      await this.redis.incrby(key, amountCents);
+      await this.redis.expire(key, SPEND_KEY_TTL_SECONDS);
+    } catch (error) {
+      // Log but do not fail the refund -- the tx already succeeded
+      logger.warn(
+        'Failed to record spend in Redis after successful refund',
+        error
+      );
+    }
   }
 
   /**
@@ -121,7 +259,8 @@ export class BlockchainTransactionService {
    */
   private async getWallet(network: Network): Promise<ethers.Wallet> {
     if (!this.wallets.has(network)) {
-      const walletOrAdapter = await this.signerProvider.getWallet(network);
+      const walletOrAdapter =
+        await this.signerProvider.getWallet(network);
       this.wallets.set(network, walletOrAdapter as ethers.Wallet);
     }
     return this.wallets.get(network)!;
@@ -137,9 +276,12 @@ export class BlockchainTransactionService {
   /**
    * Execute a refund transaction on the blockchain
    *
-   * Sends ERC-20 tokens from merchant wallet back to customer
+   * Sends ERC-20 tokens from merchant wallet back to customer.
+   * Enforces a daily spending cap to limit damage from compromised keys.
    */
-  async executeRefund(params: RefundTransactionParams): Promise<RefundTransactionResult> {
+  async executeRefund(
+    params: RefundTransactionParams
+  ): Promise<RefundTransactionResult> {
     const { network, token, recipientAddress, amount } = params;
 
     try {
@@ -158,24 +300,34 @@ export class BlockchainTransactionService {
         };
       }
 
-      // Get provider and connect wallet
-      const provider = this.providers.get(network);
-      if (!provider) {
+      // SECURITY: Check daily spending limit before executing
+      const withinLimit = await this.checkSpendingLimit(amount);
+      if (!withinLimit) {
         return {
           success: false,
-          error: `Unsupported network: ${network}`,
+          error:
+            'Daily refund limit exceeded - manual approval required',
         };
       }
+
+      // Get a healthy provider via failover manager
+      const provider = await this.providerManager.getProvider(network);
 
       const wallet = await this.getWallet(network);
       const connectedWallet = wallet.connect(provider);
 
       // Get token contract
       const tokenAddress = TOKEN_ADDRESSES[network][token];
-      const tokenContract = new ethers.Contract(tokenAddress, ERC20_ABI, connectedWallet);
+      const tokenContract = new ethers.Contract(
+        tokenAddress,
+        ERC20_ABI,
+        connectedWallet
+      );
 
       // Convert amount to token units (6 decimals for USDC/USDT)
-      const amountInTokenUnits = BigInt(Math.floor(amount * Math.pow(10, this.decimals)));
+      const amountInTokenUnits = BigInt(
+        Math.floor(amount * Math.pow(10, this.decimals))
+      );
 
       logger.info('Executing refund transaction', {
         network,
@@ -188,11 +340,14 @@ export class BlockchainTransactionService {
 
       // Estimate gas first
       try {
-        const gasEstimate = await tokenContract.transfer.estimateGas(
-          recipientAddress,
-          amountInTokenUnits
-        );
-        logger.debug('Gas estimate', { gasEstimate: gasEstimate.toString() });
+        const gasEstimate =
+          await tokenContract.transfer.estimateGas(
+            recipientAddress,
+            amountInTokenUnits
+          );
+        logger.debug('Gas estimate', {
+          gasEstimate: gasEstimate.toString(),
+        });
       } catch (error) {
         logger.error('Gas estimation failed', error);
         return {
@@ -204,7 +359,10 @@ export class BlockchainTransactionService {
       // Acquire nonce if nonce manager is configured
       let nonce: number | undefined;
       if (this.nonceManager) {
-        nonce = await this.nonceManager.getNextNonce(wallet.address, provider);
+        nonce = await this.nonceManager.getNextNonce(
+          wallet.address,
+          provider
+        );
         logger.info('Nonce acquired for transaction', {
           nonce,
           walletAddress: wallet.address,
@@ -228,7 +386,7 @@ export class BlockchainTransactionService {
         nonce,
       });
 
-      // Wait for confirmation (1 confirmation for now, can be increased)
+      // Wait for confirmation
       const receipt = await tx.wait(1);
 
       // Confirm nonce was used successfully
@@ -248,6 +406,9 @@ export class BlockchainTransactionService {
           error: 'Transaction failed on-chain',
         };
       }
+
+      // SECURITY: Record the successful spend against the daily limit
+      await this.recordSpend(amount);
 
       logger.info('Refund transaction confirmed', {
         txHash: tx.hash,
@@ -281,20 +442,25 @@ export class BlockchainTransactionService {
    *
    * Useful for showing estimated fees to merchants before executing
    */
-  async estimateRefundGas(params: RefundTransactionParams): Promise<GasEstimate> {
+  async estimateRefundGas(
+    params: RefundTransactionParams
+  ): Promise<GasEstimate> {
     const { network, token, recipientAddress, amount } = params;
 
-    const provider = this.providers.get(network);
-    if (!provider) {
-      throw new Error(`Unsupported network: ${network}`);
-    }
+    const provider = await this.providerManager.getProvider(network);
 
     const wallet = await this.getWallet(network);
     const connectedWallet = wallet.connect(provider);
     const tokenAddress = TOKEN_ADDRESSES[network][token];
-    const tokenContract = new ethers.Contract(tokenAddress, ERC20_ABI, connectedWallet);
+    const tokenContract = new ethers.Contract(
+      tokenAddress,
+      ERC20_ABI,
+      connectedWallet
+    );
 
-    const amountInTokenUnits = BigInt(Math.floor(amount * Math.pow(10, this.decimals)));
+    const amountInTokenUnits = BigInt(
+      Math.floor(amount * Math.pow(10, this.decimals))
+    );
 
     // Estimate gas
     const gasLimit = await tokenContract.transfer.estimateGas(
@@ -320,18 +486,23 @@ export class BlockchainTransactionService {
    *
    * Useful for checking if merchant has enough tokens to process refunds
    */
-  async getMerchantBalance(network: Network, token: Token): Promise<number> {
-    const provider = this.providers.get(network);
-    if (!provider) {
-      throw new Error(`Unsupported network: ${network}`);
-    }
+  async getMerchantBalance(
+    network: Network,
+    token: Token
+  ): Promise<number> {
+    const provider = await this.providerManager.getProvider(network);
 
     const wallet = await this.getWallet(network);
     const tokenAddress = TOKEN_ADDRESSES[network][token];
-    const tokenContract = new ethers.Contract(tokenAddress, ERC20_ABI, provider);
+    const tokenContract = new ethers.Contract(
+      tokenAddress,
+      ERC20_ABI,
+      provider
+    );
 
     const balance = await tokenContract.balanceOf(wallet.address);
-    const balanceInUsd = Number(balance) / Math.pow(10, this.decimals);
+    const balanceInUsd =
+      Number(balance) / Math.pow(10, this.decimals);
 
     return balanceInUsd;
   }

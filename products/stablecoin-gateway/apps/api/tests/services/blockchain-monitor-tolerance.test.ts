@@ -1,4 +1,5 @@
 import { BlockchainMonitorService } from '../../src/services/blockchain-monitor.service';
+import { ProviderManager } from '../../src/utils/provider-manager';
 import { ethers } from 'ethers';
 
 /**
@@ -10,8 +11,6 @@ import { ethers } from 'ethers';
  * attackers to systematically underpay on every transaction.
  */
 describe('BlockchainMonitorService - payment amount tolerance (security)', () => {
-  let service: BlockchainMonitorService;
-
   const USDC_POLYGON = '0x2791Bca1f2de4661ED88A30C99A7a9449Aa84174';
   const TRANSFER_SIG = ethers.id('Transfer(address,address,uint256)');
   const SENDER = '0x9999999999999999999999999999999999999999';
@@ -47,14 +46,16 @@ describe('BlockchainMonitorService - payment amount tolerance (security)', () =>
     };
   }
 
-  beforeEach(() => {
-    service = new BlockchainMonitorService();
-  });
+  function createServiceWithMock(mockProvider: any): BlockchainMonitorService {
+    const pm = new ProviderManager();
+    jest.spyOn(pm, 'getProvider').mockResolvedValue(mockProvider as ethers.JsonRpcProvider);
+    return new BlockchainMonitorService({ providerManager: pm });
+  }
 
   it('should ACCEPT exact payment amount', async () => {
     // 100.000000 USDC (exactly $100)
     const mock = buildMockProvider(100_000000);
-    (service as any).providers.set('polygon', mock);
+    const service = createServiceWithMock(mock);
 
     const result = await service.verifyPaymentTransaction(paymentSession, TX_HASH);
 
@@ -65,7 +66,7 @@ describe('BlockchainMonitorService - payment amount tolerance (security)', () =>
   it('should ACCEPT overpayment', async () => {
     // 100.050000 USDC ($0.05 overpayment)
     const mock = buildMockProvider(100_050000);
-    (service as any).providers.set('polygon', mock);
+    const service = createServiceWithMock(mock);
 
     const result = await service.verifyPaymentTransaction(paymentSession, TX_HASH);
 
@@ -76,7 +77,7 @@ describe('BlockchainMonitorService - payment amount tolerance (security)', () =>
   it('should REJECT underpayment of $0.01', async () => {
     // 99.990000 USDC ($0.01 underpayment)
     const mock = buildMockProvider(99_990000);
-    (service as any).providers.set('polygon', mock);
+    const service = createServiceWithMock(mock);
 
     const result = await service.verifyPaymentTransaction(paymentSession, TX_HASH);
 
@@ -87,7 +88,7 @@ describe('BlockchainMonitorService - payment amount tolerance (security)', () =>
   it('should REJECT underpayment of $0.001', async () => {
     // 99.999000 USDC ($0.001 underpayment)
     const mock = buildMockProvider(99_999000);
-    (service as any).providers.set('polygon', mock);
+    const service = createServiceWithMock(mock);
 
     const result = await service.verifyPaymentTransaction(paymentSession, TX_HASH);
 

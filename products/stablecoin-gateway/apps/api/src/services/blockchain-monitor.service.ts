@@ -1,6 +1,8 @@
 import { ethers } from 'ethers';
+import Decimal from 'decimal.js';
 import { AppError } from '../types/index.js';
 import { logger } from '../utils/logger.js';
+import { ProviderManager } from '../utils/provider-manager.js';
 
 // USDC and USDT contract addresses by network
 const TOKEN_ADDRESSES = {
@@ -16,6 +18,36 @@ const TOKEN_ADDRESSES = {
 
 type Network = 'polygon' | 'ethereum';
 type Token = 'USDC' | 'USDT';
+
+/**
+ * Build an array of RPC URLs for a network from environment variables.
+ * Prefers comma-separated NETWORK_RPC_URLS, falls back to single
+ * NETWORK_RPC_URL, then to a public default.
+ */
+function getRpcUrls(network: Network): string[] {
+  const multiKey = network.toUpperCase() + '_RPC_URLS';
+  const singleKey = network.toUpperCase() + '_RPC_URL';
+  const defaults: Record<Network, string> = {
+    polygon: 'https://polygon-rpc.com',
+    ethereum: 'https://eth.llamarpc.com',
+  };
+
+  const multi = process.env[multiKey];
+  if (multi) {
+    return multi.split(',').map(u => u.trim()).filter(Boolean);
+  }
+
+  const single = process.env[singleKey];
+  if (single) {
+    return [single];
+  }
+
+  return [defaults[network]];
+}
+
+export interface BlockchainMonitorServiceOptions {
+  providerManager?: ProviderManager;
+}
 
 export interface PaymentSessionForVerification {
   id: string;
@@ -33,19 +65,31 @@ export interface VerificationResult {
   error?: string;
 }
 
+/**
+ * Convert a wei (smallest unit) amount to a USD string with exact precision.
+ *
+ * Uses Decimal.js to avoid IEEE 754 floating-point errors that occur
+ * with Number(amountWei) / Math.pow(10, decimals).
+ *
+ * @param amountWei - The amount in smallest token units (e.g. 1000000 for 1 USDC)
+ * @param decimals  - Number of decimal places for the token (6 for USDC/USDT)
+ * @returns The amount as a precise decimal string
+ */
+export function weiToUsd(amountWei: string, decimals: number): string {
+  return new Decimal(amountWei).dividedBy(new Decimal(10).pow(decimals)).toString();
+}
+
 export class BlockchainMonitorService {
-  private providers: Map<string, ethers.JsonRpcProvider>;
+  private providerManager: ProviderManager;
 
-  constructor() {
-    this.providers = new Map();
+  constructor(options?: BlockchainMonitorServiceOptions) {
+    // Initialize provider manager with failover support
+    this.providerManager = options?.providerManager ?? new ProviderManager();
 
-    // Initialize Polygon provider
-    const polygonRpcUrl = process.env.POLYGON_RPC_URL || 'https://polygon-rpc.com';
-    this.providers.set('polygon', new ethers.JsonRpcProvider(polygonRpcUrl));
-
-    // Initialize Ethereum provider
-    const ethereumRpcUrl = process.env.ETHEREUM_RPC_URL || 'https://eth.llamarpc.com';
-    this.providers.set('ethereum', new ethers.JsonRpcProvider(ethereumRpcUrl));
+    if (!options?.providerManager) {
+      this.providerManager.addProviders('polygon', getRpcUrls('polygon'));
+      this.providerManager.addProviders('ethereum', getRpcUrls('ethereum'));
+    }
 
     logger.info('BlockchainMonitorService initialized', {
       networks: ['polygon', 'ethereum'],
@@ -67,10 +111,16 @@ export class BlockchainMonitorService {
     txHash: string,
     minConfirmations: number = 12
   ): Promise<VerificationResult> {
-    const provider = this.providers.get(paymentSession.network);
+    let provider: ethers.JsonRpcProvider;
 
-    if (!provider) {
-      throw new AppError(500, 'invalid-network', `Invalid blockchain network: ${paymentSession.network}`);
+    try {
+      provider = await this.providerManager.getProvider(paymentSession.network);
+    } catch {
+      throw new AppError(
+        500,
+        'invalid-network',
+        'Invalid blockchain network: ' + paymentSession.network
+      );
     }
 
     try {
@@ -98,7 +148,7 @@ export class BlockchainMonitorService {
           confirmations,
           blockNumber: receipt.blockNumber,
           sender: '',
-          error: `Insufficient confirmations (${confirmations}/${minConfirmations})`,
+          error: 'Insufficient confirmations (' + confirmations + '/' + minConfirmations + ')',
         };
       }
 
@@ -128,7 +178,7 @@ export class BlockchainMonitorService {
           confirmations,
           blockNumber: receipt.blockNumber,
           sender: '',
-          error: `No ${paymentSession.token} transfer found in transaction`,
+          error: 'No ' + paymentSession.token + ' transfer found in transaction',
         };
       }
 
@@ -140,7 +190,7 @@ export class BlockchainMonitorService {
       for (const log of transferEvents) {
         const toAddress = '0x' + log.topics[2].slice(26); // Remove 0x and padding
         const amountWei = BigInt(log.data);
-        const amountUsd = Number(amountWei) / Math.pow(10, decimals);
+        const amountUsd = new Decimal(amountWei.toString()).dividedBy(new Decimal(10).pow(decimals)).toNumber();
         // Security: accept exact payment or overpayment only (no underpayment tolerance)
 
         // Check if this transfer matches merchant address AND amount >= expected
@@ -160,14 +210,14 @@ export class BlockchainMonitorService {
           confirmations,
           blockNumber: receipt.blockNumber,
           sender: fromAddress || ('0x' + transferEvents[0].topics[1].slice(26)),
-          error: `No matching transfer found (expected ${paymentSession.amount} ${paymentSession.token} to ${paymentSession.merchantAddress}). Found ${transferEvents.length} transfer(s) but none matched recipient and amount.`,
+          error: 'No matching transfer found (expected ' + paymentSession.amount + ' ' + paymentSession.token + ' to ' + paymentSession.merchantAddress + '). Found ' + transferEvents.length + ' transfer(s) but none matched recipient and amount.',
         };
       }
 
       // Use the matching transfer data
       const toAddress = '0x' + matchingTransfer.topics[2].slice(26);
       const amountWei = BigInt(matchingTransfer.data);
-      const amountUsd = Number(amountWei) / Math.pow(10, decimals);
+      const amountUsd = new Decimal(amountWei.toString()).dividedBy(new Decimal(10).pow(decimals)).toNumber();
 
       // Secondary verification: ensure amount meets or exceeds expected
       
@@ -177,7 +227,7 @@ export class BlockchainMonitorService {
           confirmations,
           blockNumber: receipt.blockNumber,
           sender: fromAddress,
-          error: `Amount mismatch (expected ${paymentSession.amount}, got ${amountUsd})`,
+          error: 'Amount mismatch (expected ' + paymentSession.amount + ', got ' + amountUsd + ')',
         };
       }
 
@@ -209,7 +259,7 @@ export class BlockchainMonitorService {
       throw new AppError(
         500,
         'blockchain-error',
-        `Failed to verify transaction: ${error instanceof Error ? error.message : 'Unknown error'}`
+        'Failed to verify transaction: ' + (error instanceof Error ? error.message : 'Unknown error')
       );
     }
   }
@@ -218,10 +268,12 @@ export class BlockchainMonitorService {
    * Get number of confirmations for a transaction
    */
   async getConfirmations(network: Network, txHash: string): Promise<number> {
-    const provider = this.providers.get(network);
+    let provider: ethers.JsonRpcProvider;
 
-    if (!provider) {
-      throw new AppError(500, 'invalid-network', `Invalid blockchain network: ${network}`);
+    try {
+      provider = await this.providerManager.getProvider(network);
+    } catch {
+      throw new AppError(500, 'invalid-network', 'Invalid blockchain network: ' + network);
     }
 
     try {

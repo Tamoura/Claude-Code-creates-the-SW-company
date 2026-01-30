@@ -1,4 +1,6 @@
 import { BlockchainMonitorService } from '../../src/services/blockchain-monitor.service';
+import { ProviderManager } from '../../src/utils/provider-manager';
+import { ethers } from 'ethers';
 
 /**
  * Blockchain Multi-Transfer Tests
@@ -10,12 +12,13 @@ import { BlockchainMonitorService } from '../../src/services/blockchain-monitor.
  * - Other transfers in the same transaction
  */
 
-describe('BlockchainMonitorService - Multi-Transfer Scenarios', () => {
-  let service: BlockchainMonitorService;
+function createServiceWithMock(mockProvider: any): BlockchainMonitorService {
+  const pm = new ProviderManager();
+  jest.spyOn(pm, 'getProvider').mockResolvedValue(mockProvider as ethers.JsonRpcProvider);
+  return new BlockchainMonitorService({ providerManager: pm });
+}
 
-  beforeEach(() => {
-    service = new BlockchainMonitorService();
-  });
+describe('BlockchainMonitorService - Multi-Transfer Scenarios', () => {
 
   it('should find correct transfer when transaction has multiple transfers', async () => {
     const paymentSession = {
@@ -75,11 +78,7 @@ describe('BlockchainMonitorService - Multi-Transfer Scenarios', () => {
       getBlockNumber: jest.fn().mockResolvedValue(12400),
     };
 
-    // @ts-ignore - Replace provider for testing
-    service['providers'] = new Map([
-      ['polygon', mockProvider as any],
-      ['ethereum', mockProvider as any],
-    ]);
+    const service = createServiceWithMock(mockProvider);
 
     const result = await service.verifyPaymentTransaction(
       paymentSession,
@@ -135,11 +134,7 @@ describe('BlockchainMonitorService - Multi-Transfer Scenarios', () => {
       getBlockNumber: jest.fn().mockResolvedValue(12400),
     };
 
-    // @ts-ignore
-    service['providers'] = new Map([
-      ['polygon', mockProvider as any],
-      ['ethereum', mockProvider as any],
-    ]);
+    const service = createServiceWithMock(mockProvider);
 
     const result = await service.verifyPaymentTransaction(
       paymentSession,
@@ -195,11 +190,7 @@ describe('BlockchainMonitorService - Multi-Transfer Scenarios', () => {
       getBlockNumber: jest.fn().mockResolvedValue(12400),
     };
 
-    // @ts-ignore
-    service['providers'] = new Map([
-      ['polygon', mockProvider as any],
-      ['ethereum', mockProvider as any],
-    ]);
+    const service = createServiceWithMock(mockProvider);
 
     const result = await service.verifyPaymentTransaction(
       paymentSession,

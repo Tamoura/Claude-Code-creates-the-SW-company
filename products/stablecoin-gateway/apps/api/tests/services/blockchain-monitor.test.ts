@@ -1,15 +1,21 @@
 import { BlockchainMonitorService } from '../../src/services/blockchain-monitor.service';
+import { ProviderManager } from '../../src/utils/provider-manager';
 import { ethers } from 'ethers';
 
+/**
+ * Helper: create a ProviderManager that returns a mock provider
+ * for the given network without performing a real health check.
+ */
+function createMockProviderManager(mockProvider: any): ProviderManager {
+  const pm = new ProviderManager();
+  jest.spyOn(pm, 'getProvider').mockResolvedValue(mockProvider as ethers.JsonRpcProvider);
+  return pm;
+}
+
 describe('BlockchainMonitorService', () => {
-  let service: BlockchainMonitorService;
-
-  beforeEach(() => {
-    service = new BlockchainMonitorService();
-  });
-
   describe('verifyPaymentTransaction', () => {
     it('should reject transaction that does not exist on blockchain', async () => {
+      const service = new BlockchainMonitorService();
       const paymentSession = {
         id: 'ps_123',
         network: 'polygon' as const,
@@ -50,8 +56,8 @@ describe('BlockchainMonitorService', () => {
         getBlockNumber: jest.fn().mockResolvedValue(105), // Only 6 confirmations
       };
 
-      // Inject mock provider
-      (service as any).providers.set('polygon', mockProvider);
+      const pm = createMockProviderManager(mockProvider);
+      const service = new BlockchainMonitorService({ providerManager: pm });
 
       const result = await service.verifyPaymentTransaction(
         paymentSession,
@@ -94,7 +100,8 @@ describe('BlockchainMonitorService', () => {
         getBlockNumber: jest.fn().mockResolvedValue(115), // 16 confirmations
       };
 
-      (service as any).providers.set('polygon', mockProvider);
+      const pm = createMockProviderManager(mockProvider);
+      const service = new BlockchainMonitorService({ providerManager: pm });
 
       const result = await service.verifyPaymentTransaction(
         paymentSession,
@@ -134,7 +141,8 @@ describe('BlockchainMonitorService', () => {
         getBlockNumber: jest.fn().mockResolvedValue(115),
       };
 
-      (service as any).providers.set('polygon', mockProvider);
+      const pm = createMockProviderManager(mockProvider);
+      const service = new BlockchainMonitorService({ providerManager: pm });
 
       const result = await service.verifyPaymentTransaction(
         paymentSession,
@@ -174,7 +182,8 @@ describe('BlockchainMonitorService', () => {
         getBlockNumber: jest.fn().mockResolvedValue(115),
       };
 
-      (service as any).providers.set('polygon', mockProvider);
+      const pm = createMockProviderManager(mockProvider);
+      const service = new BlockchainMonitorService({ providerManager: pm });
 
       const result = await service.verifyPaymentTransaction(
         paymentSession,
@@ -216,7 +225,8 @@ describe('BlockchainMonitorService', () => {
         getBlockNumber: jest.fn().mockResolvedValue(115), // 16 confirmations (>= 12)
       };
 
-      (service as any).providers.set('polygon', mockProvider);
+      const pm = createMockProviderManager(mockProvider);
+      const service = new BlockchainMonitorService({ providerManager: pm });
 
       const result = await service.verifyPaymentTransaction(
         paymentSession,
@@ -259,7 +269,8 @@ describe('BlockchainMonitorService', () => {
         getBlockNumber: jest.fn().mockResolvedValue(115),
       };
 
-      (service as any).providers.set('polygon', mockProvider);
+      const pm = createMockProviderManager(mockProvider);
+      const service = new BlockchainMonitorService({ providerManager: pm });
 
       const result = await service.verifyPaymentTransaction(
         paymentSession,
@@ -298,7 +309,8 @@ describe('BlockchainMonitorService', () => {
         getBlockNumber: jest.fn().mockResolvedValue(215), // 16 confirmations
       };
 
-      (service as any).providers.set('ethereum', mockProvider);
+      const pm = createMockProviderManager(mockProvider);
+      const service = new BlockchainMonitorService({ providerManager: pm });
 
       const result = await service.verifyPaymentTransaction(
         paymentSession,
@@ -320,7 +332,8 @@ describe('BlockchainMonitorService', () => {
         getBlockNumber: jest.fn().mockResolvedValue(120),
       };
 
-      (service as any).providers.set('polygon', mockProvider);
+      const pm = createMockProviderManager(mockProvider);
+      const service = new BlockchainMonitorService({ providerManager: pm });
 
       const confirmations = await service.getConfirmations(
         'polygon',
@@ -337,7 +350,8 @@ describe('BlockchainMonitorService', () => {
         getBlockNumber: jest.fn().mockResolvedValue(120),
       };
 
-      (service as any).providers.set('polygon', mockProvider);
+      const pm = createMockProviderManager(mockProvider);
+      const service = new BlockchainMonitorService({ providerManager: pm });
 
       const confirmations = await service.getConfirmations(
         'polygon',

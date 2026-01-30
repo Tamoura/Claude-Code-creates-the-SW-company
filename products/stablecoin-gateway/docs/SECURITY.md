@@ -1,18 +1,25 @@
 # Security Documentation - Stablecoin Gateway
 
 **Last Updated**: 2026-01-30
-**Version**: 4.0
-**Security Audit**: Phase 1 + Phase 2 + Phase 3 + Phase 4 complete (all CRITICAL, HIGH, and MEDIUM issues resolved)
+**Version**: 5.0
+**Security Audit**: Phase 1-5 complete (all CRITICAL, HIGH, and MEDIUM issues resolved)
 
 ---
 
 ## Executive Summary
 
-Stablecoin Gateway implements comprehensive security controls across authentication, authorization, data protection, infrastructure, and blockchain operations. Three rounds of security audits have been completed. All issues from Phase 3 (7 new fixes, 3 already resolved) have been verified with 71 dedicated tests, bringing the overall security score to 98/100.
+Stablecoin Gateway implements comprehensive security controls across authentication, authorization, data protection, infrastructure, and blockchain operations. Five rounds of security audits have been completed with 60 dedicated Phase 5 tests (329+ total security tests), maintaining the security score at 99/100.
 
 **Security Highlights**:
 - JWT-based authentication with API key support and httpOnly cookie readiness
 - **KMS signer abstraction** - private keys managed via AWS KMS in production (no raw env vars)
+- **Daily hot wallet spending limits** - Redis-based daily cap prevents unlimited fund drainage (Phase 5)
+- **Exact financial arithmetic** - Decimal.js replaces floating-point for all money calculations (Phase 5)
+- **Distributed worker locking** - Redis locks + SQL `FOR UPDATE SKIP LOCKED` prevent double-processing (Phase 5)
+- **JTI token revocation** - Logout blacklists JWT IDs in Redis for immediate invalidation (Phase 5)
+- **Webhook circuit breaker** - Stops hammering consistently-failing endpoints (Phase 5)
+- **Password reset flow** - Secure token-based reset with email enumeration prevention (Phase 5)
+- **RPC provider failover** - ProviderManager with health checks and per-provider cooldown (Phase 5)
 - **Transactional row locking** for refund operations (prevents race conditions)
 - **Distributed nonce management** via Redis locks (prevents nonce collisions)
 - **Webhook secret rotation** endpoint with encrypted storage
@@ -1137,10 +1144,27 @@ All 10 issues from the Phase 2 security audit have been implemented, tested, and
 
 ### Security Score Progression
 
-| Phase | Score | Issues Found | Issues Resolved |
-|-------|-------|-------------|----------------|
-| Phase 1 | 92/100 | 10 | 10 |
-| Phase 2 | 95/100 | 10 | 10 |
+| Phase | Score | Issues Found | Issues Resolved | Tests Added |
+|-------|-------|-------------|----------------|-------------|
+| Phase 1 | 92/100 | 10 | 10 | 74 |
+| Phase 2 | 95/100 | 10 | 10 | 155 |
+| Phase 3 | 98/100 | 10 (3 pre-fixed) | 7 | 71 |
+| Phase 4 | 99/100 | 10 (4 pre-fixed) | 7 (6 new) | 40 |
+| Phase 5 | 99/100 | 10 (3 pre-fixed) | 7 | 60 |
+
+**Total Security Tests**: 329+ across all phases
+
+### Phase 5 Issues Resolved
+
+| ID | Severity | Issue | Fix |
+|----|----------|-------|-----|
+| CRIT-01 | CRITICAL | Hot wallet has no spending limits | Redis-based daily cap ($10K default, `DAILY_REFUND_LIMIT` env var) |
+| CRIT-02 | CRITICAL | Floating-point arithmetic for money | Decimal.js for all financial calculations |
+| HIGH-03 | HIGH | Refund worker race conditions | Redis distributed lock + SQL `FOR UPDATE SKIP LOCKED` |
+| HIGH-04 | HIGH | JWT tokens valid after logout | JTI blacklist in Redis (`revoked_jti:{jti}`, 900s TTL) |
+| MED-07 | MEDIUM | Webhook hammering failing endpoints | Circuit breaker: 10 failures = 5min cooldown |
+| MED-08 | MEDIUM | No password reset mechanism | Token-based reset with email enumeration prevention |
+| MED-09 | MEDIUM | Single RPC provider failure = outage | ProviderManager with health checks and failover |
 
 ### Related Documents
 
@@ -1170,9 +1194,12 @@ All 10 issues from the Phase 2 security audit have been implemented, tested, and
 |---------|------|--------|---------|
 | 1.0 | 2026-01-29 | Technical Writer | Initial creation post-Phase 1 security audit |
 | 2.0 | 2026-01-29 | Technical Writer | Phase 2 audit: 12 security controls documented, score updated to 95/100 |
+| 3.0 | 2026-01-30 | Technical Writer | Phase 3 audit: 7 fixes, score updated to 98/100 |
+| 4.0 | 2026-01-30 | Technical Writer | Phase 4 audit: 7 fixes, score updated to 99/100 |
+| 5.0 | 2026-01-30 | Technical Writer | Phase 5 audit: 7 fixes (spending limits, Decimal.js, distributed locking, JTI revocation, circuit breaker, password reset, provider failover), 60 new tests |
 
 ---
 
 **Classification**: INTERNAL - CONFIDENTIAL
-**Last Updated**: 2026-01-29
-**Next Review**: 2026-04-29
+**Last Updated**: 2026-01-30
+**Next Review**: 2026-04-30

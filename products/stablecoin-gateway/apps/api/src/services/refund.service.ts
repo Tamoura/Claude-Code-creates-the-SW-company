@@ -18,10 +18,37 @@
  */
 
 import { PrismaClient, Refund, RefundStatus, PaymentStatus } from '@prisma/client';
+import Decimal from 'decimal.js';
 import { AppError } from '../types/index.js';
 import { generateRefundId } from '../utils/crypto.js';
 import { WebhookDeliveryService } from './webhook-delivery.service.js';
 import { BlockchainTransactionService } from './blockchain-transaction.service.js';
+
+/**
+ * Compute the total refunded amount from a list of refunds,
+ * excluding those with FAILED status.
+ *
+ * Uses Decimal.js for exact arithmetic.
+ */
+export function computeRefundedTotal(
+  refunds: { amount: string | number; status: string }[]
+): Decimal {
+  return refunds
+    .filter((r) => r.status !== 'FAILED')
+    .reduce((sum, r) => sum.plus(new Decimal(r.amount.toString())), new Decimal(0));
+}
+
+/**
+ * Compute the remaining refundable amount for a payment.
+ *
+ * Uses Decimal.js for exact arithmetic.
+ */
+export function computeRemainingAmount(
+  paymentAmount: string | number,
+  totalRefunded: Decimal
+): Decimal {
+  return new Decimal(paymentAmount.toString()).minus(totalRefunded);
+}
 
 export interface CreateRefundRequest {
   amount: number;
@@ -150,18 +177,20 @@ export class RefundService {
         );
       }
 
-      // Calculate remaining (now safe from race conditions)
-      const totalRefunded = payment.refunds
-        .filter((r) => r.status !== RefundStatus.FAILED)
-        .reduce((sum, r) => sum + Number(r.amount), 0);
+      // Calculate remaining using Decimal.js for precision
+      const totalRefunded = computeRefundedTotal(
+        payment.refunds
+          .filter((r) => r.status !== RefundStatus.FAILED)
+          .map((r) => ({ amount: r.amount.toString(), status: r.status }))
+      );
 
-      const remainingAmount = Number(payment.amount) - totalRefunded;
+      const remainingAmount = computeRemainingAmount(payment.amount.toString(), totalRefunded);
 
-      if (data.amount > remainingAmount) {
+      if (new Decimal(data.amount).greaterThan(remainingAmount)) {
         throw new AppError(
           400,
           'refund-exceeds-payment',
-          `Refund amount (${data.amount}) exceeds remaining refundable amount (${remainingAmount})`
+          `Refund amount (${data.amount}) exceeds remaining refundable amount (${remainingAmount.toNumber()})`
         );
       }
 
@@ -565,16 +594,15 @@ export class RefundService {
       return; // Payment not found, nothing to do
     }
 
-    // Calculate total refunded amount
+    // Calculate total refunded amount using Decimal.js
     const totalRefunded = payment.refunds.reduce((sum, refund) => {
-      return sum + Number(refund.amount);
-    }, 0);
+      return sum.plus(new Decimal(refund.amount.toString()));
+    }, new Decimal(0));
 
-    const paymentAmount = Number(payment.amount);
+    const paymentAmount = new Decimal(payment.amount.toString());
 
-    // Check if fully refunded (with small tolerance for floating point errors)
-    const TOLERANCE = 0.01; // 1 cent
-    if (Math.abs(totalRefunded - paymentAmount) < TOLERANCE) {
+    // Exact comparison -- no floating-point tolerance needed with Decimal.js
+    if (totalRefunded.equals(paymentAmount)) {
       // Update payment status to REFUNDED
       const updatedPayment = await this.prisma.paymentSession.update({
         where: { id: paymentSessionId },
