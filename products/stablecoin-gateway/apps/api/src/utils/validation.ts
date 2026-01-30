@@ -54,6 +54,13 @@ export const resetPasswordSchema = z.object({
 });
 
 
+// ==================== Idempotency Key Schema ====================
+
+export const idempotencyKeySchema = z.string()
+  .min(1, 'Idempotency key cannot be empty')
+  .max(64, 'Idempotency key must be 64 characters or less')
+  .regex(/^[a-zA-Z0-9_-]+$/, 'Idempotency key must be alphanumeric (hyphens and underscores allowed)');
+
 // ==================== Payment Session Schemas ====================
 
 // Metadata validation with size limits

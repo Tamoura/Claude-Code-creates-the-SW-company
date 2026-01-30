@@ -13,6 +13,37 @@ interface ValidationResult {
   warnings: string[];
 }
 
+const MIN_ENTROPY_THRESHOLD = 3.0;
+const MIN_UNIQUE_CHARS = 16;
+
+/**
+ * Calculate Shannon entropy of a string (bits per character).
+ *
+ * Shannon entropy measures the average information content per character.
+ * A truly random hex string yields ~4.0 bits/char. A single repeated
+ * character yields 0. The threshold of 3.0 rejects trivially guessable
+ * secrets while allowing any reasonably generated key.
+ */
+export function calculateShannonEntropy(str: string): number {
+  if (str.length === 0) {
+    return 0;
+  }
+
+  const freq: Record<string, number> = {};
+  for (const char of str) {
+    freq[char] = (freq[char] || 0) + 1;
+  }
+
+  const len = str.length;
+  let entropy = 0;
+  for (const count of Object.values(freq)) {
+    const p = count / len;
+    entropy -= p * Math.log2(p);
+  }
+
+  return entropy;
+}
+
 /**
  * Validate KMS configuration
  */
@@ -105,8 +136,37 @@ function validateJWT(): ValidationResult {
     errors.push(
       'Generate a strong secret: openssl rand -hex 64'
     );
-  } else if (jwtSecret.length < 64) {
-    warnings.push('JWT_SECRET should be at least 64 characters for optimal security');
+  } else {
+    if (jwtSecret.length < 64) {
+      warnings.push('JWT_SECRET should be at least 64 characters for optimal security');
+    }
+
+    // Entropy validation
+    const isProduction = process.env.NODE_ENV === 'production';
+    const entropy = calculateShannonEntropy(jwtSecret);
+    const uniqueChars = new Set(jwtSecret).size;
+
+    if (entropy < MIN_ENTROPY_THRESHOLD) {
+      const msg = `JWT_SECRET has low Shannon entropy (${entropy.toFixed(2)} bits/char, minimum ${MIN_ENTROPY_THRESHOLD.toFixed(1)} required)`;
+      if (isProduction) {
+        errors.push(msg);
+        errors.push('Generate a strong secret: openssl rand -hex 64');
+      } else {
+        warnings.push(msg);
+        warnings.push('This would be rejected in production');
+      }
+    }
+
+    if (uniqueChars < MIN_UNIQUE_CHARS) {
+      const msg = `JWT_SECRET has too few unique characters (${uniqueChars}, minimum ${MIN_UNIQUE_CHARS} required)`;
+      if (isProduction) {
+        errors.push(msg);
+        errors.push('Generate a strong secret: openssl rand -hex 64');
+      } else {
+        warnings.push(msg);
+        warnings.push('This would be rejected in production');
+      }
+    }
   }
 
   return {

@@ -161,19 +161,19 @@ jobs:
         working-directory: products/stablecoin-gateway/apps/api
         run: npm ci
 
+      # Block builds with HIGH or CRITICAL vulnerabilities
       - name: Security audit (API)
         working-directory: products/stablecoin-gateway/apps/api
         run: npm audit --audit-level=high
-        continue-on-error: true
 
       - name: Install Web dependencies
         working-directory: products/stablecoin-gateway/apps/web
         run: npm ci
 
+      # Block builds with HIGH or CRITICAL vulnerabilities
       - name: Security audit (Web)
         working-directory: products/stablecoin-gateway/apps/web
         run: npm audit --audit-level=high
-        continue-on-error: true
 
   build:
     name: Build

@@ -22,7 +22,11 @@ import Decimal from 'decimal.js';
 import { AppError } from '../types/index.js';
 import { generateRefundId } from '../utils/crypto.js';
 import { WebhookDeliveryService } from './webhook-delivery.service.js';
-import { BlockchainTransactionService } from './blockchain-transaction.service.js';
+import {
+  BlockchainTransactionService,
+  CONFIRMATION_REQUIREMENTS,
+} from './blockchain-transaction.service.js';
+import { BlockchainMonitorService } from './blockchain-monitor.service.js';
 
 /**
  * Compute the total refunded amount from a list of refunds,
@@ -67,12 +71,20 @@ export interface RefundResponse {
   completed_at: string | null;
 }
 
+export interface ConfirmFinalityResult {
+  status: 'confirmed' | 'pending';
+  confirmations: number;
+  required?: number;
+}
+
 export class RefundService {
   private webhookService: WebhookDeliveryService;
   private blockchainService: BlockchainTransactionService | null;
+  private blockchainMonitor: BlockchainMonitorService;
 
   constructor(private prisma: PrismaClient) {
     this.webhookService = new WebhookDeliveryService(prisma);
+    this.blockchainMonitor = new BlockchainMonitorService();
 
     // Initialize blockchain service if merchant wallet is configured
     try {
@@ -407,41 +419,43 @@ export class RefundService {
         );
       }
 
-      // Mark refund as COMPLETED with blockchain details
-      const completedRefund = await this.prisma.refund.update({
+      // SEC-014: Mark refund as PROCESSING (not COMPLETED) after initial broadcast.
+      // The transaction has 1 confirmation but has not reached finality yet.
+      // A separate finality check (confirmRefundFinality) will promote to COMPLETED
+      // once sufficient network-specific confirmations are reached.
+      const processingRefund = await this.prisma.refund.update({
         where: { id },
         data: {
-          status: RefundStatus.COMPLETED,
+          status: RefundStatus.PROCESSING,
           txHash: result.txHash,
           blockNumber: result.blockNumber,
-          completedAt: new Date(),
         },
         include: {
           paymentSession: true,
         },
       });
 
-      // Queue webhook for refund.completed event
+      // Queue webhook for refund.processing event (not refund.completed)
       await this.webhookService.queueWebhook(
-        completedRefund.paymentSession.userId,
-        'refund.completed',
+        processingRefund.paymentSession.userId,
+        'refund.processing',
         {
-          id: completedRefund.id,
-          payment_session_id: completedRefund.paymentSessionId,
-          amount: Number(completedRefund.amount),
-          reason: completedRefund.reason,
-          status: completedRefund.status,
-          tx_hash: completedRefund.txHash,
-          block_number: completedRefund.blockNumber,
-          created_at: completedRefund.createdAt.toISOString(),
-          completed_at: completedRefund.completedAt?.toISOString() || null,
+          id: processingRefund.id,
+          payment_session_id: processingRefund.paymentSessionId,
+          amount: Number(processingRefund.amount),
+          reason: processingRefund.reason,
+          status: processingRefund.status,
+          tx_hash: processingRefund.txHash,
+          block_number: processingRefund.blockNumber,
+          created_at: processingRefund.createdAt.toISOString(),
+          pending_confirmations: result.pendingConfirmations,
         }
       );
 
-      // Check if payment should be marked as REFUNDED
-      await this.updatePaymentStatusIfFullyRefunded(completedRefund.paymentSessionId);
+      // Do NOT check if payment is fully refunded here.
+      // That only happens after confirmRefundFinality promotes to COMPLETED.
 
-      return completedRefund;
+      return processingRefund;
     } catch (error) {
       // If it's already an AppError, rethrow it (webhook already sent if applicable)
       if (error instanceof AppError) {
@@ -568,6 +582,100 @@ export class RefundService {
     );
 
     return refund;
+  }
+
+  /**
+   * Confirm refund transaction finality by checking on-chain confirmations.
+   *
+   * SEC-014: After executeRefund succeeds with 1 confirmation, the refund
+   * is in PROCESSING status. This method checks whether the transaction
+   * has reached sufficient network-specific confirmations for finality.
+   *
+   * If confirmations are sufficient:
+   *   - Updates refund to COMPLETED
+   *   - Sends refund.completed webhook
+   *   - Checks if payment is fully refunded
+   *
+   * If confirmations are insufficient:
+   *   - Returns current count (caller can retry later)
+   *
+   * @param refundId - The refund ID to check
+   * @param txHash - The blockchain transaction hash
+   * @param network - The blockchain network ('polygon' | 'ethereum')
+   * @returns ConfirmFinalityResult with status and confirmation count
+   */
+  async confirmRefundFinality(
+    refundId: string,
+    txHash: string,
+    network: 'polygon' | 'ethereum'
+  ): Promise<ConfirmFinalityResult> {
+    const refund = await this.prisma.refund.findUnique({
+      where: { id: refundId },
+      include: {
+        paymentSession: true,
+      },
+    });
+
+    if (!refund) {
+      throw new AppError(404, 'refund-not-found', 'Refund not found');
+    }
+
+    if (refund.status !== RefundStatus.PROCESSING) {
+      throw new AppError(
+        400,
+        'invalid-refund-status',
+        'Refund must be in PROCESSING status to confirm finality'
+      );
+    }
+
+    const required = CONFIRMATION_REQUIREMENTS[network];
+    const confirmations = await this.blockchainMonitor.getConfirmations(network, txHash);
+
+    if (confirmations < required) {
+      return {
+        status: 'pending',
+        confirmations,
+        required,
+      };
+    }
+
+    // Sufficient confirmations -- promote to COMPLETED
+    const completedRefund = await this.prisma.refund.update({
+      where: { id: refundId },
+      data: {
+        status: RefundStatus.COMPLETED,
+        completedAt: new Date(),
+      },
+      include: {
+        paymentSession: true,
+      },
+    });
+
+    // Send refund.completed webhook now that finality is confirmed
+    await this.webhookService.queueWebhook(
+      completedRefund.paymentSession.userId,
+      'refund.completed',
+      {
+        id: completedRefund.id,
+        payment_session_id: completedRefund.paymentSessionId,
+        amount: Number(completedRefund.amount),
+        reason: completedRefund.reason,
+        status: completedRefund.status,
+        tx_hash: completedRefund.txHash,
+        block_number: completedRefund.blockNumber,
+        created_at: completedRefund.createdAt.toISOString(),
+        completed_at: completedRefund.completedAt?.toISOString() || null,
+        confirmations,
+      }
+    );
+
+    // Now check if payment should be marked as REFUNDED
+    await this.updatePaymentStatusIfFullyRefunded(completedRefund.paymentSessionId);
+
+    return {
+      status: 'confirmed',
+      confirmations,
+    };
   }
 
   /**
