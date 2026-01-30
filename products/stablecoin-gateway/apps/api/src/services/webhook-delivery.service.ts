@@ -6,6 +6,15 @@
  * - Exponential backoff retry logic
  * - Delivery attempt tracking
  * - Concurrent delivery processing
+ * - Circuit breaker per endpoint (Redis-backed)
+ *
+ * Circuit Breaker:
+ * Tracks consecutive failures per endpoint in Redis. After 10 consecutive
+ * failures the circuit opens, pausing deliveries to that endpoint for 5
+ * minutes. After the cooldown the circuit resets and allows a probe
+ * delivery. A successful delivery resets the failure counter immediately.
+ * When Redis is unavailable the circuit breaker is disabled and all
+ * deliveries are attempted normally.
  *
  * Event Types:
  * - payment.created - New payment session initiated
@@ -41,13 +50,96 @@ interface WebhookPayload {
   data: Record<string, any>;
 }
 
+/**
+ * Minimal Redis interface required by the circuit breaker.
+ * Matches the subset of ioredis methods we actually call so
+ * that unit tests can supply a lightweight mock.
+ */
+interface RedisLike {
+  get(key: string): Promise<string | null>;
+  set(key: string, value: string, ...args: any[]): Promise<string>;
+  incr(key: string): Promise<number>;
+  del(key: string): Promise<number>;
+  expire(key: string, seconds: number): Promise<number>;
+}
+
 export class WebhookDeliveryService {
   private prisma: PrismaClient;
+  private redis: RedisLike | null;
   private maxRetries = 5;
   private retryDelays = [60, 300, 900, 3600, 7200]; // 1min, 5min, 15min, 1hr, 2hr in seconds
 
-  constructor(prisma: PrismaClient) {
+  // Circuit breaker configuration
+  private readonly CIRCUIT_THRESHOLD = 10;
+  private readonly CIRCUIT_RESET_MS = 5 * 60 * 1000; // 5 minutes
+
+  constructor(prisma: PrismaClient, redis?: RedisLike | null) {
     this.prisma = prisma;
+    this.redis = redis ?? null;
+  }
+
+  // ---------------------------------------------------------------------------
+  // Circuit breaker helpers
+  // ---------------------------------------------------------------------------
+
+  /**
+   * Check whether the circuit for a given endpoint is open.
+   *
+   * Returns true when the endpoint has hit the failure threshold
+   * and the cooldown period has not yet elapsed. If the cooldown
+   * has passed the circuit state is cleared (half-open -> closed).
+   *
+   * When Redis is unavailable the circuit breaker is disabled and
+   * this always returns false so that deliveries proceed normally.
+   */
+  private async isCircuitOpen(endpointId: string): Promise<boolean> {
+    if (!this.redis) return false;
+
+    const openedAt = await this.redis.get('circuit:open:' + endpointId);
+    if (!openedAt) return false;
+
+    if (Date.now() - parseInt(openedAt, 10) < this.CIRCUIT_RESET_MS) {
+      return true; // Circuit still open -- cooldown has not elapsed
+    }
+
+    // Cooldown elapsed -- reset the circuit (half-open -> closed)
+    await this.redis.del('circuit:open:' + endpointId);
+    await this.redis.del('circuit:failures:' + endpointId);
+    return false;
+  }
+
+  /**
+   * Record a delivery failure for the circuit breaker.
+   *
+   * Increments the consecutive-failure counter for the endpoint.
+   * If the counter reaches CIRCUIT_THRESHOLD the circuit is opened
+   * by storing the current timestamp under the circuit:open key.
+   */
+  private async recordFailure(endpointId: string): Promise<void> {
+    if (!this.redis) return;
+
+    const failures = await this.redis.incr('circuit:failures:' + endpointId);
+    await this.redis.expire('circuit:failures:' + endpointId, 600);
+
+    if (failures >= this.CIRCUIT_THRESHOLD) {
+      await this.redis.set(
+        'circuit:open:' + endpointId,
+        String(Date.now()),
+        'PX',
+        this.CIRCUIT_RESET_MS,
+      );
+    }
+  }
+
+  /**
+   * Record a successful delivery, resetting the circuit breaker
+   * state for the endpoint.
+   */
+  private async recordSuccess(endpointId: string): Promise<void> {
+    if (!this.redis) return;
+
+    await this.redis.del('circuit:failures:' + endpointId);
+    await this.redis.del('circuit:open:' + endpointId);
   }
 
   /**
@@ -247,14 +339,28 @@ export class WebhookDeliveryService {
    * Deliver a single webhook to its endpoint
    *
    * Steps:
-   * 1. Update status to DELIVERING
-   * 2. Sign payload with HMAC-SHA256
-   * 3. Send HTTP POST request
-   * 4. Update delivery record based on response
-   * 5. Schedule retry if failed and under max retries
+   * 1. Check circuit breaker -- skip if open
+   * 2. Update status to DELIVERING
+   * 3. Sign payload with HMAC-SHA256
+   * 4. Send HTTP POST request
+   * 5. Update delivery record based on response
+   * 6. Record success/failure for circuit breaker
+   * 7. Schedule retry if failed and under max retries
    */
   private async deliverWebhook(delivery: any): Promise<void> {
     const { id, endpoint, payload, attempts } = delivery;
+
+    // Circuit breaker check -- skip delivery if circuit is open
+    const circuitOpen = await this.isCircuitOpen(endpoint.id);
+    if (circuitOpen) {
+      logger.warn('Circuit breaker open - skipping webhook delivery', {
+        deliveryId: id,
+        endpointId: endpoint.id,
+        url: endpoint.url,
+      });
+      // Leave the delivery in PENDING so it will be retried after cooldown
+      return;
+    }
 
     try {
       // Mark as delivering
@@ -287,6 +393,7 @@ export class WebhookDeliveryService {
           url: endpoint.url,
           error: error instanceof Error ? error.message : 'Unknown error',
         });
+        await this.recordFailure(endpoint.id);
         return;
       }
 
@@ -335,6 +442,8 @@ export class WebhookDeliveryService {
           attempts: attempts + 1,
           statusCode: response.status,
         });
+
+        await this.recordSuccess(endpoint.id);
       } else {
         // Delivery failed - determine if we should retry
         await this.handleDeliveryFailure(
@@ -344,6 +453,8 @@ export class WebhookDeliveryService {
           responseBody,
           `HTTP ${response.status}: ${response.statusText}`
         );
+
+        await this.recordFailure(endpoint.id);
       }
     } catch (error) {
       // Network error, timeout, or other exception
@@ -358,6 +469,8 @@ export class WebhookDeliveryService {
         attempts: attempts + 1,
         error: errorMessage,
       });
+
+      await this.recordFailure(endpoint.id);
     }
   }
 
