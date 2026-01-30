@@ -2,6 +2,7 @@ import { KMSClient, SignCommand, GetPublicKeyCommand } from '@aws-sdk/client-kms
 import { ethers } from 'ethers';
 import * as asn1 from 'asn1.js';
 import { AppError } from '../types/index.js';
+import { logger } from '../utils/logger.js';
 
 /**
  * AWS KMS Service for secure private key management and transaction signing
@@ -31,6 +32,28 @@ interface KMSConfig {
   region?: string;
   maxRetries?: number;
   timeout?: number;
+}
+
+/**
+ * Sanitize KMS errors to prevent leaking AWS implementation details.
+ *
+ * Always logs the full original error for debugging, then returns
+ * a sanitized AppError. In production the message is generic; in
+ * development the original message is appended for convenience.
+ */
+function sanitizeKmsError(error: unknown, operation: string): AppError {
+  // Log the full error for debugging (before sanitizing)
+  logger.error(`KMS ${operation} failed`, error);
+
+  // In development mode only, include the original message for convenience.
+  // In all other environments (production, test, etc.) use a generic message
+  // to prevent leaking AWS key ARNs, regions, or IAM details.
+  if (process.env.NODE_ENV === 'development') {
+    const msg = error instanceof Error ? error.message : 'Unknown error';
+    return new AppError(500, `kms-${operation}-error`, `KMS ${operation} failed: ${msg}`);
+  }
+
+  return new AppError(500, `kms-${operation}-error`, `KMS ${operation} failed`);
 }
 
 export class KMSService {
@@ -80,12 +103,7 @@ export class KMSService {
       this.addressCache = address;
       return address;
     } catch (error) {
-      throw new AppError(
-        500,
-        'kms-address-derivation-failed',
-        'Failed to derive Ethereum address from KMS key',
-        { originalError: error instanceof Error ? error.message : String(error) }
-      );
+      throw sanitizeKmsError(error, 'address-derivation');
     }
   }
 
@@ -126,12 +144,7 @@ export class KMSService {
 
       return publicKey;
     } catch (error) {
-      throw new AppError(
-        500,
-        'kms-public-key-retrieval-failed',
-        'Failed to retrieve public key from KMS',
-        { originalError: error instanceof Error ? error.message : String(error) }
-      );
+      throw sanitizeKmsError(error, 'public-key-retrieval');
     }
   }
 
@@ -180,12 +193,7 @@ export class KMSService {
 
       return signedTx.serialized;
     } catch (error) {
-      throw new AppError(
-        500,
-        'kms-transaction-signing-failed',
-        'Failed to sign transaction with KMS',
-        { originalError: error instanceof Error ? error.message : String(error) }
-      );
+      throw sanitizeKmsError(error, 'transaction-signing');
     }
   }
 
@@ -247,12 +255,7 @@ export class KMSService {
         v,
       });
     } catch (error) {
-      throw new AppError(
-        500,
-        'kms-signing-failed',
-        'Failed to sign message with KMS',
-        { originalError: error instanceof Error ? error.message : String(error) }
-      );
+      throw sanitizeKmsError(error, 'signing');
     }
   }
 
@@ -308,6 +311,32 @@ export class KMSService {
   clearCache(): void {
     this.publicKeyCache = null;
     this.addressCache = null;
+  }
+
+  /**
+   * Rotate to a new KMS key. Clears all caches and updates the key ID.
+   * Used during emergency key rotation or scheduled rotation.
+   */
+  rotateKey(newKeyId: string): void {
+    logger.warn('KMS key rotation initiated', {
+      oldKeyId: this.keyId.substring(0, 8) + '...',
+      newKeyId: newKeyId.substring(0, 8) + '...',
+    });
+    this.keyId = newKeyId;
+    this.clearCache();
+  }
+
+  /**
+   * Health check: verify the current KMS key is accessible and functional.
+   * Returns true if getPublicKey succeeds, false otherwise.
+   */
+  async isKeyHealthy(): Promise<boolean> {
+    try {
+      await this.getPublicKey();
+      return true;
+    } catch {
+      return false;
+    }
   }
 
   /**

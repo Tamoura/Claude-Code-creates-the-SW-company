@@ -104,6 +104,20 @@ const TOKEN_ADDRESSES = {
 type Network = 'polygon' | 'ethereum';
 type Token = 'USDC' | 'USDT';
 
+/**
+ * Network-specific confirmation requirements for transaction finality.
+ *
+ * These represent the number of block confirmations required before a
+ * refund transaction is considered final (safe from blockchain reorgs).
+ *
+ * - Polygon: 12 confirmations (~24 seconds)
+ * - Ethereum: 3 confirmations (~36 seconds)
+ */
+export const CONFIRMATION_REQUIREMENTS: Record<Network, number> = {
+  polygon: 12,
+  ethereum: 3,
+};
+
 /** Default daily refund cap in USD */
 const DEFAULT_DAILY_REFUND_LIMIT = 10_000;
 
@@ -123,6 +137,7 @@ export interface RefundTransactionResult {
   blockNumber?: number;
   error?: string;
   gasUsed?: string;
+  pendingConfirmations?: number;
 }
 
 export interface GasEstimate {
@@ -410,10 +425,16 @@ export class BlockchainTransactionService {
       // SECURITY: Record the successful spend against the daily limit
       await this.recordSpend(amount);
 
-      logger.info('Refund transaction confirmed', {
+      // Calculate how many more confirmations are needed for finality
+      const requiredConfirmations = CONFIRMATION_REQUIREMENTS[network];
+      const pendingConfirmations = Math.max(0, requiredConfirmations - 1);
+
+      logger.info('Refund transaction confirmed (initial)', {
         txHash: tx.hash,
         blockNumber: receipt.blockNumber,
         gasUsed: receipt.gasUsed.toString(),
+        pendingConfirmations,
+        requiredConfirmations,
       });
 
       return {
@@ -421,6 +442,7 @@ export class BlockchainTransactionService {
         txHash: tx.hash,
         blockNumber: receipt.blockNumber,
         gasUsed: receipt.gasUsed.toString(),
+        pendingConfirmations,
       };
     } catch (error) {
       logger.error('Refund transaction failed', error, {
