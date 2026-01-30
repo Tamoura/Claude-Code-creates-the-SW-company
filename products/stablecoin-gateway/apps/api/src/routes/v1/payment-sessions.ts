@@ -1,7 +1,7 @@
 import { FastifyPluginAsync } from 'fastify';
 import { ZodError } from 'zod';
 import { Prisma, PaymentStatus } from '@prisma/client';
-import { createPaymentSessionSchema, listPaymentSessionsQuerySchema, updatePaymentSessionSchema, validateBody, validateQuery } from '../../utils/validation.js';
+import { createPaymentSessionSchema, listPaymentSessionsQuerySchema, updatePaymentSessionSchema, idempotencyKeySchema, validateBody, validateQuery } from '../../utils/validation.js';
 import { PaymentService } from '../../services/payment.service.js';
 import { BlockchainMonitorService } from '../../services/blockchain-monitor.service.js';
 import { AppError } from '../../types/index.js';
@@ -23,6 +23,20 @@ const paymentSessionRoutes: FastifyPluginAsync = async (fastify) => {
       // Read from Idempotency-Key header per API contract (not body)
       // Scoped to userId to prevent cross-tenant conflicts
       const idempotencyKey = request.headers['idempotency-key'] as string | undefined;
+
+      // SECURITY (SEC-015): Validate idempotency key format to prevent
+      // database bloat and potential injection via column truncation
+      if (idempotencyKey !== undefined) {
+        const result = idempotencyKeySchema.safeParse(idempotencyKey);
+        if (!result.success) {
+          return reply.code(400).send({
+            type: 'https://gateway.io/errors/validation-error',
+            title: 'Validation Error',
+            status: 400,
+            detail: result.error.issues[0].message,
+          });
+        }
+      }
 
       if (idempotencyKey) {
         const existingSession = await fastify.prisma.paymentSession.findUnique({
