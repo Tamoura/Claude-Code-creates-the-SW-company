@@ -6,6 +6,49 @@ The format is based on [Keep a Changelog](https://keepachangelog.com/en/1.1.0/).
 
 ---
 
+## [Unreleased] - Audit Quick Wins & Remaining Fixes
+
+**Date**: 2026-01-30
+**Branch**: `fix/stablecoin-gateway/audit-quickwins-and-remaining`
+**Audit Status**: 7 issues resolved from comprehensive audit, 58 new tests passing
+
+### Security
+
+- **AUDIT-01**: Added pagination to unbounded list queries on `/v1/api-keys` and `/v1/webhooks`. Default limit 50, max 100, with offset support and total count. Prevents memory exhaustion from large result sets. (MED)
+- **AUDIT-02**: Added `refund.processing` to `WebhookEventType` union and Zod webhook schemas. Phase 6 added PROCESSING refund status but the webhook event was missing. (LOW)
+- **AUDIT-03**: Replaced non-atomic circuit breaker `recordFailure()` with Redis Lua script. Atomically increments failure count and opens circuit if threshold reached. Falls back to original approach if `eval` unavailable. (HIGH)
+- **AUDIT-04**: Added transfer sender validation to blockchain monitor. When `customerAddress` is set on the payment session, verifies the on-chain sender matches. Case-insensitive comparison, backwards compatible. (MED)
+- **AUDIT-05**: Replaced unsalted SHA-256 API key hashing with HMAC-SHA-256. Uses `API_KEY_HMAC_SECRET` env var. Falls back to plain SHA-256 in dev/test. Production warns if secret not set. (HIGH)
+- **AUDIT-06**: Increased database Decimal precision from `Decimal(10,2)` to `Decimal(18,6)`. Supports larger transactions and stablecoin 6-decimal precision. Includes Prisma migration. (MED)
+- **AUDIT-07**: Added pre-flight test gate to production deployment workflow. Tests must pass before Docker images are built. Includes PostgreSQL and Redis services, lint check. (HIGH)
+
+### Added
+
+- Pagination query schemas: `listApiKeysQuerySchema`, `listWebhooksQuerySchema`
+- `total` count in paginated list responses
+- `refund.processing` webhook event type
+- Lua script for atomic circuit breaker operations
+- `customerAddress` field on `PaymentSessionForVerification`
+- HMAC-SHA-256 API key hashing via `API_KEY_HMAC_SECRET`
+- `API_KEY_HMAC_SECRET` env var validation in env-validator
+- Prisma migration `20260131000000_increase_decimal_precision`
+- Pre-flight test + lint steps in `deploy-production.yml`
+- PostgreSQL and Redis services in production deployment workflow
+- `/audit` command for on-demand product audits
+- 58 new tests across 7 test suites
+
+### Changed
+
+- API keys list endpoint returns paginated `{ data, total, limit, offset }`
+- Webhooks list endpoint returns paginated `{ data, total, limit, offset }`
+- Circuit breaker uses atomic Lua script instead of non-atomic incr+check+set
+- Blockchain monitor validates transfer sender when customer address known
+- API key hashing uses HMAC-SHA-256 when secret configured
+- PaymentSession and Refund amount fields use `Decimal(18,6)` precision
+- Production deployment requires tests to pass before Docker build
+
+---
+
 ## [Unreleased] - Security Audit Phase 6
 
 **Date**: 2026-01-30
