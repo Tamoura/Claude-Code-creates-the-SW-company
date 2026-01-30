@@ -215,6 +215,25 @@ export class BlockchainMonitorService {
         };
       }
 
+      // Validate sender if customer address is known
+      if (paymentSession.customerAddress) {
+        const expectedSender = paymentSession.customerAddress.toLowerCase();
+        if (fromAddress.toLowerCase() !== expectedSender) {
+          logger.warn('Transfer sender does not match expected customer address', {
+            paymentSessionId: paymentSession.id,
+            expectedSender: paymentSession.customerAddress,
+            actualSender: fromAddress,
+          });
+          return {
+            valid: false,
+            confirmations,
+            blockNumber: receipt.blockNumber,
+            sender: fromAddress,
+            error: `Sender mismatch: expected ${paymentSession.customerAddress}, got ${fromAddress}`,
+          };
+        }
+      }
+
       // Use the matching transfer data
       const toAddress = '0x' + matchingTransfer.topics[2].slice(26);
       const amountWei = BigInt(matchingTransfer.data);
