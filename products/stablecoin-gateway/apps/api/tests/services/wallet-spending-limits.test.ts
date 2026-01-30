@@ -47,7 +47,10 @@ jest.mock('ethers', () => {
     ...real,
     ethers: {
       ...real.ethers,
-      JsonRpcProvider: jest.fn().mockImplementation(() => ({})),
+      JsonRpcProvider: jest.fn().mockImplementation((url?: string) => ({
+        getBlockNumber: jest.fn().mockResolvedValue(12345),
+        _getConnection: jest.fn().mockReturnValue({ url: url || 'https://mock-rpc.com' }),
+      })),
       Contract: jest.fn().mockImplementation(() => ({
         transfer: mockTransferFn,
       })),
@@ -58,6 +61,15 @@ jest.mock('ethers', () => {
 import {
   BlockchainTransactionService,
 } from '../../src/services/blockchain-transaction.service';
+import { ProviderManager } from '../../src/utils/provider-manager';
+
+// Create a mock ProviderManager that returns working providers
+function createMockProviderManager() {
+  const pm = new ProviderManager();
+  pm.addProviders('polygon', ['https://polygon-test.com']);
+  pm.addProviders('ethereum', ['https://ethereum-test.com']);
+  return pm;
+}
 
 // Properly checksummed address (ethers v6 strict checksum)
 const VALID_ADDRESS = '0x0b7Eb565F75758f61F4A83F7E995B9C3201B482b';
@@ -101,7 +113,7 @@ describe('Wallet Spending Limits', () => {
     it('should default to $10,000 daily limit when env var not set', async () => {
       delete process.env.DAILY_REFUND_LIMIT;
       const redis = createMockRedis();
-      const service = new BlockchainTransactionService({ redis: redis as any });
+      const service = new BlockchainTransactionService({ redis: redis as any, providerManager: createMockProviderManager() });
 
       // A $10,000 refund should succeed (exactly at limit)
       const result = await service.executeRefund({
@@ -119,7 +131,7 @@ describe('Wallet Spending Limits', () => {
     it('should use the env var value as the daily limit', async () => {
       process.env.DAILY_REFUND_LIMIT = '5000';
       const redis = createMockRedis();
-      const service = new BlockchainTransactionService({ redis: redis as any });
+      const service = new BlockchainTransactionService({ redis: redis as any, providerManager: createMockProviderManager() });
 
       // $5,001 should exceed the $5,000 limit
       const result = await service.executeRefund({
@@ -137,7 +149,7 @@ describe('Wallet Spending Limits', () => {
   describe('Refund within daily limit succeeds', () => {
     it('should allow a refund that is under the daily limit', async () => {
       const redis = createMockRedis();
-      const service = new BlockchainTransactionService({ redis: redis as any });
+      const service = new BlockchainTransactionService({ redis: redis as any, providerManager: createMockProviderManager() });
 
       const result = await service.executeRefund({
         network: 'polygon',
@@ -154,7 +166,7 @@ describe('Wallet Spending Limits', () => {
   describe('Refund exceeding daily limit is rejected', () => {
     it('should reject a single refund that exceeds the daily limit', async () => {
       const redis = createMockRedis();
-      const service = new BlockchainTransactionService({ redis: redis as any });
+      const service = new BlockchainTransactionService({ redis: redis as any, providerManager: createMockProviderManager() });
 
       const result = await service.executeRefund({
         network: 'polygon',
@@ -173,7 +185,7 @@ describe('Wallet Spending Limits', () => {
   describe('Multiple refunds accumulate toward daily limit', () => {
     it('should track cumulative spend and reject when limit reached', async () => {
       const redis = createMockRedis();
-      const service = new BlockchainTransactionService({ redis: redis as any });
+      const service = new BlockchainTransactionService({ redis: redis as any, providerManager: createMockProviderManager() });
 
       // First refund: $6,000 (under $10,000 limit)
       const result1 = await service.executeRefund({
@@ -201,7 +213,7 @@ describe('Wallet Spending Limits', () => {
   describe('Daily limit resets at midnight UTC', () => {
     it('should use date-based Redis key so limit resets daily', async () => {
       const redis = createMockRedis();
-      const service = new BlockchainTransactionService({ redis: redis as any });
+      const service = new BlockchainTransactionService({ redis: redis as any, providerManager: createMockProviderManager() });
 
       // Execute a refund to populate the Redis key
       await service.executeRefund({
@@ -231,8 +243,8 @@ describe('Wallet Spending Limits', () => {
 
   describe('Graceful degradation when Redis unavailable', () => {
     it('should allow the refund when Redis is not provided', async () => {
-      // No redis option passed
-      const service = new BlockchainTransactionService();
+      // No redis option passed — but providerManager needed for health checks
+      const service = new BlockchainTransactionService({ providerManager: createMockProviderManager() });
 
       const result = await service.executeRefund({
         network: 'polygon',
@@ -256,6 +268,7 @@ describe('Wallet Spending Limits', () => {
 
       const service = new BlockchainTransactionService({
         redis: brokenRedis as any,
+        providerManager: createMockProviderManager(),
       });
 
       const result = await service.executeRefund({
