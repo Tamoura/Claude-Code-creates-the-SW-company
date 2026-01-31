@@ -91,6 +91,23 @@ function createMockRedis() {
       return newVal;
     }),
     expire: jest.fn(async () => 1),
+    eval: jest.fn(
+      async (
+        _script: string,
+        _numkeys: number,
+        ...args: (string | number)[]
+      ) => {
+        const key = String(args[0]);
+        const limit = Number(args[1]);
+        const amount = Number(args[2]);
+        const current = parseInt(store[key] || '0', 10);
+        if (current + amount > limit) {
+          return 0;
+        }
+        store[key] = String(current + amount);
+        return 1;
+      }
+    ),
     status: 'ready',
   };
 }
@@ -227,16 +244,14 @@ describe('Wallet Spending Limits', () => {
       const today = new Date().toISOString().split('T')[0];
       const expectedKeyPattern = `spend:daily:${today}`;
 
-      // The incrby call should have used a date-based key
-      expect(redis.incrby).toHaveBeenCalledWith(
-        expectedKeyPattern,
-        expect.any(Number)
-      );
-
-      // Verify TTL was set (48 hours = 172800 seconds)
-      expect(redis.expire).toHaveBeenCalledWith(
-        expectedKeyPattern,
-        172800
+      // The atomic eval call should have used a date-based key
+      expect(redis.eval).toHaveBeenCalledWith(
+        expect.any(String), // Lua script
+        1, // numkeys
+        expectedKeyPattern, // KEYS[1]
+        expect.any(Number), // limitCents (ARGV[1])
+        50000, // amountCents for $500 (ARGV[2])
+        172800 // TTL in seconds (ARGV[3])
       );
     });
   });
@@ -263,6 +278,7 @@ describe('Wallet Spending Limits', () => {
         incrby: jest.fn().mockRejectedValue(new Error('Connection refused')),
         set: jest.fn().mockRejectedValue(new Error('Connection refused')),
         expire: jest.fn().mockRejectedValue(new Error('Connection refused')),
+        eval: jest.fn().mockRejectedValue(new Error('Connection refused')),
         status: 'end',
       };
 

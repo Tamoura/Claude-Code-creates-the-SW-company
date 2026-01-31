@@ -734,7 +734,7 @@ export class RefundService {
           merchant_address: updatedPayment.merchantAddress,
           customer_address: updatedPayment.customerAddress,
           created_at: updatedPayment.createdAt.toISOString(),
-          refunded_amount: totalRefunded,
+          refunded_amount: totalRefunded.toNumber(),
           metadata: updatedPayment.metadata,
         }
       );

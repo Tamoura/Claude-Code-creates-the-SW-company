@@ -1,4 +1,4 @@
-import { FastifyPluginAsync } from 'fastify';
+import { FastifyPluginAsync, FastifyRequest } from 'fastify';
 import { ZodError } from 'zod';
 import { Prisma, PaymentStatus } from '@prisma/client';
 import { createPaymentSessionSchema, listPaymentSessionsQuerySchema, updatePaymentSessionSchema, idempotencyKeySchema, validateBody, validateQuery } from '../../utils/validation.js';
@@ -401,7 +401,28 @@ const paymentSessionRoutes: FastifyPluginAsync = async (fastify) => {
   });
 
   // GET /v1/payment-sessions/:id/events (SSE)
-  fastify.get('/:id/events', async (request, reply) => {
+  fastify.get('/:id/events', {
+    config: {
+      rateLimit: {
+        max: 10,
+        timeWindow: '1 minute',
+        keyGenerator: (request: FastifyRequest) => {
+          // Rate limit by auth token subject (userId from SSE token)
+          const authHeader = request.headers.authorization;
+          if (authHeader && authHeader.startsWith('Bearer ')) {
+            try {
+              const token = authHeader.substring(7);
+              const decoded = fastify.jwt.verify(token) as { userId: string };
+              return `sse:${decoded.userId}`;
+            } catch {
+              return `sse:${request.ip}`;
+            }
+          }
+          return `sse:${request.ip}`;
+        },
+      },
+    },
+  }, async (request, reply) => {
     try {
       const { id } = request.params as { id: string };
 

@@ -29,6 +29,19 @@ export class NonceManager {
   private redis: Redis;
   private lockTimeout: number;
 
+  /**
+   * Lua script for atomic compare-and-delete.
+   * Only deletes the key if the current value matches the expected value.
+   * Prevents TOCTOU race condition where lock expires and is re-acquired
+   * by another process between our GET and DEL.
+   */
+  private static readonly UNLOCK_SCRIPT = `
+  if redis.call('GET', KEYS[1]) == ARGV[1] then
+    return redis.call('DEL', KEYS[1])
+  end
+  return 0
+`;
+
   constructor(redis: Redis, lockTimeout: number = 30000) {
     this.redis = redis;
     this.lockTimeout = lockTimeout;
@@ -99,10 +112,21 @@ export class NonceManager {
 
       return nonce;
     } finally {
-      // Release lock only if we still own it
-      const currentValue = await this.redis.get(lockKey);
-      if (currentValue === lockValue) {
-        await this.redis.del(lockKey);
+      // Atomic compare-and-delete: only release if we still own the lock
+      try {
+        await this.redis.eval(
+          NonceManager.UNLOCK_SCRIPT,
+          1,
+          lockKey,
+          lockValue
+        );
+      } catch (error) {
+        // If eval fails, fall back to non-atomic release (better than leaking lock)
+        logger.warn('Lua EVAL failed for nonce lock release, attempting non-atomic fallback', { error });
+        const currentValue = await this.redis.get(lockKey);
+        if (currentValue === lockValue) {
+          await this.redis.del(lockKey);
+        }
       }
     }
   }

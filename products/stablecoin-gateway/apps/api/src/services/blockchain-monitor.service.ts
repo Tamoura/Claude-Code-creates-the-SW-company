@@ -191,13 +191,13 @@ export class BlockchainMonitorService {
       for (const log of transferEvents) {
         const toAddress = '0x' + log.topics[2].slice(26); // Remove 0x and padding
         const amountWei = BigInt(log.data);
-        const amountUsd = new Decimal(amountWei.toString()).dividedBy(new Decimal(10).pow(decimals)).toNumber();
+        const amountUsd = new Decimal(amountWei.toString()).dividedBy(new Decimal(10).pow(decimals));
         // Security: accept exact payment or overpayment only (no underpayment tolerance)
 
         // Check if this transfer matches merchant address AND amount >= expected
         if (
           toAddress.toLowerCase() === expectedMerchantAddress &&
-          amountUsd >= paymentSession.amount
+          amountUsd.greaterThanOrEqualTo(paymentSession.amount)
         ) {
           matchingTransfer = log;
           fromAddress = '0x' + log.topics[1].slice(26);
@@ -237,11 +237,11 @@ export class BlockchainMonitorService {
       // Use the matching transfer data
       const toAddress = '0x' + matchingTransfer.topics[2].slice(26);
       const amountWei = BigInt(matchingTransfer.data);
-      const amountUsd = new Decimal(amountWei.toString()).dividedBy(new Decimal(10).pow(decimals)).toNumber();
+      const amountUsd = new Decimal(amountWei.toString()).dividedBy(new Decimal(10).pow(decimals));
 
       // Secondary verification: ensure amount meets or exceeds expected
-      
-      if (amountUsd < paymentSession.amount) {
+
+      if (amountUsd.lessThan(paymentSession.amount)) {
         return {
           valid: false,
           confirmations,
@@ -257,7 +257,7 @@ export class BlockchainMonitorService {
         txHash,
         network: paymentSession.network,
         token: paymentSession.token,
-        amount: amountUsd,
+        amount: amountUsd.toNumber(),
         confirmations,
         sender: fromAddress,
         recipient: toAddress,
