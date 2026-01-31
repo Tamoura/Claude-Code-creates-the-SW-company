@@ -134,6 +134,13 @@ export const createRefundSchema = z.object({
   reason: z.string().max(500).optional(),
 });
 
+export const listRefundsQuerySchema = z.object({
+  payment_session_id: z.string().optional(),
+  status: z.enum(['PENDING', 'PROCESSING', 'COMPLETED', 'FAILED']).optional(),
+  limit: z.coerce.number().min(1).max(100).default(50),
+  offset: z.coerce.number().min(0).default(0),
+});
+
 // ==================== Webhook Schemas ====================
 
 export const createWebhookSchema = z.object({

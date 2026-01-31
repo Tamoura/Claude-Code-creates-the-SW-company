@@ -27,6 +27,7 @@ import { RedisRateLimitStore } from './utils/redis-rate-limit-store.js';
 export async function buildApp(): Promise<FastifyInstance> {
   const fastify = Fastify({
     bodyLimit: 1048576, // 1MB - prevent oversized request payloads
+    maxParamLength: 256, // Reject overly long URL parameters
     logger: process.env.NODE_ENV === 'development' ? {
       level: 'info',
       transport: {
