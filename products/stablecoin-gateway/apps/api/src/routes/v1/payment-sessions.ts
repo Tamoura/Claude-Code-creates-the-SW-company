@@ -334,21 +334,25 @@ const paymentSessionRoutes: FastifyPluginAsync = async (fastify) => {
           updateData.completedAt = new Date();
         }
       } else {
-        // No blockchain verification needed for other updates
+        // SECURITY (Audit #1): Reject blockchain field updates without a
+        // status transition to CONFIRMING or COMPLETED. These fields must
+        // only be set via blockchain verification, never by the client.
+        const hasBlockchainFields =
+          updates.tx_hash !== undefined ||
+          updates.block_number !== undefined ||
+          updates.confirmations !== undefined;
+
+        if (hasBlockchainFields) {
+          throw new AppError(
+            400,
+            'blockchain-fields-require-status-transition',
+            'Cannot update blockchain fields (tx_hash, block_number, confirmations) without a status transition to CONFIRMING or COMPLETED'
+          );
+        }
+
+        // Non-blockchain field updates
         if (updates.customer_address !== undefined) {
           updateData.customerAddress = updates.customer_address;
-        }
-
-        if (updates.tx_hash !== undefined) {
-          updateData.txHash = updates.tx_hash;
-        }
-
-        if (updates.block_number !== undefined) {
-          updateData.blockNumber = updates.block_number;
-        }
-
-        if (updates.confirmations !== undefined) {
-          updateData.confirmations = updates.confirmations;
         }
 
         if (updates.status !== undefined) {
