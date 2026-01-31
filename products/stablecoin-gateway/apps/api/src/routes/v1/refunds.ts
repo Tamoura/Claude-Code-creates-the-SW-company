@@ -22,7 +22,14 @@ import { z } from 'zod';
 // Validation schemas
 const createRefundSchema = z.object({
   payment_session_id: z.string().min(1, 'Payment session ID is required'),
-  amount: z.number().positive('Amount must be greater than 0'),
+  amount: z.number().positive('Amount must be greater than 0').refine(
+    (val) => {
+      // Max 6 decimal places (USDC/USDT precision)
+      const parts = val.toString().split('.');
+      return !parts[1] || parts[1].length <= 6;
+    },
+    { message: 'Amount cannot exceed 6 decimal places (USDC/USDT precision)' }
+  ),
   reason: z.string().optional(),
 });
 

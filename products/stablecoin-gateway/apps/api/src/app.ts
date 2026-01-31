@@ -85,8 +85,11 @@ export async function buildApp(): Promise<FastifyInstance> {
 
   // Register JWT
   // JWT_SECRET is validated in env-validator.ts on startup
+  // Pin JWT algorithm to HS256 to prevent algorithm confusion attacks (Phase 3.6)
   await fastify.register(jwt, {
     secret: process.env.JWT_SECRET!,
+    sign: { algorithm: 'HS256' },
+    verify: { algorithms: ['HS256'] },
   });
 
   // Register plugins
