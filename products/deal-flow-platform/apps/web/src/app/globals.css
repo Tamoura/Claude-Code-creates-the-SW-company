@@ -1,0 +1,32 @@
+@tailwind base;
+@tailwind components;
+@tailwind utilities;
+
+@layer base {
+  :root {
+    --font-inter: 'Inter', system-ui, sans-serif;
+    --font-cairo: 'Cairo', system-ui, sans-serif;
+  }
+
+  body {
+    @apply bg-pearl text-gray-900;
+  }
+
+  [dir='rtl'] {
+    font-family: var(--font-cairo);
+  }
+
+  [dir='ltr'] {
+    font-family: var(--font-inter);
+  }
+}
+
+@layer utilities {
+  .rtl-flip {
+    transform: scaleX(-1);
+  }
+
+  [dir='rtl'] .rtl-flip {
+    transform: scaleX(1);
+  }
+}
