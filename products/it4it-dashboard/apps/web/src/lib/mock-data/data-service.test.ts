@@ -184,6 +184,78 @@ describe("MockDataService", () => {
     });
   });
 
+  describe("R2D Data", () => {
+    it("provides requirements", () => {
+      const requirements = dataService.getRequirements();
+      expect(Array.isArray(requirements)).toBe(true);
+      expect(requirements.length).toBeGreaterThan(0);
+    });
+
+    it("retrieves requirement by ID", () => {
+      const requirements = dataService.getRequirements();
+      const firstRequirement = requirements[0];
+      const retrieved = dataService.getRequirementById(firstRequirement.id);
+
+      expect(retrieved).toEqual(firstRequirement);
+    });
+
+    it("provides builds", () => {
+      const builds = dataService.getBuilds();
+      expect(Array.isArray(builds)).toBe(true);
+      expect(builds.length).toBeGreaterThan(0);
+    });
+
+    it("retrieves build by ID", () => {
+      const builds = dataService.getBuilds();
+      const firstBuild = builds[0];
+      const retrieved = dataService.getBuildById(firstBuild.id);
+
+      expect(retrieved).toEqual(firstBuild);
+    });
+
+    it("provides deployments", () => {
+      const deployments = dataService.getDeployments();
+      expect(Array.isArray(deployments)).toBe(true);
+      expect(deployments.length).toBeGreaterThan(0);
+    });
+
+    it("retrieves deployment by ID", () => {
+      const deployments = dataService.getDeployments();
+      const firstDeployment = deployments[0];
+      const retrieved = dataService.getDeploymentById(firstDeployment.id);
+
+      expect(retrieved).toEqual(firstDeployment);
+    });
+
+    it("provides releases", () => {
+      const releases = dataService.getReleases();
+      expect(Array.isArray(releases)).toBe(true);
+      expect(releases.length).toBeGreaterThan(0);
+    });
+
+    it("retrieves release by ID", () => {
+      const releases = dataService.getReleases();
+      const firstRelease = releases[0];
+      const retrieved = dataService.getReleaseById(firstRelease.id);
+
+      expect(retrieved).toEqual(firstRelease);
+    });
+
+    it("provides pipelines", () => {
+      const pipelines = dataService.getPipelines();
+      expect(Array.isArray(pipelines)).toBe(true);
+      expect(pipelines.length).toBeGreaterThan(0);
+    });
+
+    it("retrieves pipeline by ID", () => {
+      const pipelines = dataService.getPipelines();
+      const firstPipeline = pipelines[0];
+      const retrieved = dataService.getPipelineById(firstPipeline.id);
+
+      expect(retrieved).toEqual(firstPipeline);
+    });
+  });
+
   describe("R2F Data", () => {
     it("provides service catalog", () => {
       const catalog = dataService.getServiceCatalog();
