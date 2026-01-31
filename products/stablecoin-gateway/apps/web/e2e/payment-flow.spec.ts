@@ -65,4 +65,70 @@ test.describe('Payment Flow', () => {
     await amountInput.fill('50');
     await expect(amountInput).toHaveValue('50');
   });
+
+  test('homepage renders feature cards', async ({ page }) => {
+    await page.goto('/', { waitUntil: 'networkidle' });
+
+    await expect(page.getByText('Stablecoin Gateway')).toBeVisible({ timeout: 10000 });
+
+    // Verify feature sections are rendered
+    await expect(page.getByText('Low Fees')).toBeVisible();
+    await expect(page.getByText('Fast Settlement')).toBeVisible();
+    await expect(page.getByText('Stablecoin Only')).toBeVisible();
+  });
+
+  test('payment page renders correct amount format', async ({ page }) => {
+    await page.goto('/', { waitUntil: 'networkidle' });
+
+    const amountInput = page.getByLabel('Amount (USD)');
+    await expect(amountInput).toBeVisible({ timeout: 10000 });
+    await amountInput.fill('250');
+
+    await page.getByRole('button', { name: /generate payment link/i }).click();
+    await expect(page.getByText('Payment Link Created!')).toBeVisible();
+
+    await page.getByRole('button', { name: /view payment page/i }).click();
+
+    // Verify amount is formatted as currency
+    await expect(page.getByText('$250.00')).toBeVisible();
+  });
+
+  test('copy link button is present after creating payment', async ({ page }) => {
+    await page.goto('/', { waitUntil: 'networkidle' });
+
+    const amountInput = page.getByLabel('Amount (USD)');
+    await expect(amountInput).toBeVisible({ timeout: 10000 });
+    await amountInput.fill('75');
+
+    await page.getByRole('button', { name: /generate payment link/i }).click();
+    await expect(page.getByText('Payment Link Created!')).toBeVisible();
+
+    // Verify copy link button
+    await expect(page.getByRole('button', { name: /copy link/i })).toBeVisible();
+  });
+
+  test('status page renders for valid payment', async ({ page }) => {
+    // Create a payment first
+    await page.goto('/', { waitUntil: 'networkidle' });
+
+    const amountInput = page.getByLabel('Amount (USD)');
+    await expect(amountInput).toBeVisible({ timeout: 10000 });
+    await amountInput.fill('100');
+
+    await page.getByRole('button', { name: /generate payment link/i }).click();
+    await expect(page.getByText('Payment Link Created!')).toBeVisible();
+
+    await page.getByRole('button', { name: /view payment page/i }).click();
+    await expect(page.getByText('Complete Payment')).toBeVisible();
+
+    // Connect wallet and pay
+    await page.getByRole('button', { name: /connect wallet/i }).click();
+    await expect(page.getByText('Wallet Connected')).toBeVisible({ timeout: 3000 });
+
+    await page.getByRole('button', { name: /pay \$100\.00/i }).click();
+
+    // Should show status page
+    await expect(page.getByText('Payment Complete')).toBeVisible({ timeout: 15000 });
+    await expect(page.getByText('Transaction Hash')).toBeVisible();
+  });
 });
