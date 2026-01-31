@@ -34,7 +34,7 @@ describe('PaymentService.updatePaymentStatus() state machine enforcement', () =>
   afterAll(async () => {
     // Cleanup
     await prisma.paymentSession.deleteMany({ where: { userId } });
-    await prisma.user.delete({ where: { id: userId } });
+    await prisma.user.deleteMany({ where: { id: userId } });
     await prisma.$disconnect();
   });
 

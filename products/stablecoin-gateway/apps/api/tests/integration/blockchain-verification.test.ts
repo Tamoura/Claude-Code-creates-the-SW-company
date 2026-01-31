@@ -38,7 +38,7 @@ describe('Blockchain Verification Integration', () => {
 
   afterAll(async () => {
     await prisma.paymentSession.deleteMany({ where: { userId } });
-    await prisma.user.delete({ where: { id: userId } });
+    await prisma.user.deleteMany({ where: { id: userId } });
     await app.close();
   });
 
