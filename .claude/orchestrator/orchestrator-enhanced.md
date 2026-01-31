@@ -54,22 +54,37 @@ For detailed execution instructions, see: `.claude/orchestrator/claude-code-exec
 
 ### Step 1: Assess Current State
 
+Scan the filesystem and git for ground truth. Use `state.yml` only for cross-product coordination data.
+
 ```bash
 # 1. Check git status
 git status
 git branch -a
 
-# 2. Check for active work
-gh pr list
-gh issue list --state open
+# 2. Discover products from filesystem (not state.yml)
+for product_dir in products/*/; do
+  [ -d "$product_dir" ] || continue
+  product=$(basename "$product_dir")
+  recent=$(git log --oneline --since="7 days ago" -- "$product_dir" 2>/dev/null | wc -l | tr -d ' ')
+  has_api=$( [ -d "${product_dir}apps/api" ] && echo "yes" || echo "no" )
+  has_web=$( [ -d "${product_dir}apps/web" ] && echo "yes" || echo "no" )
+  echo "$product: api=$has_api web=$has_web recent=$recent"
+done
 
-# 3. Check if product has active task graph
+# 3. Check for active work
+gh pr list 2>/dev/null || echo "No PRs"
+gh issue list --state open 2>/dev/null || echo "No issues"
+
+# 4. Check if product has active task graph
 if [ -f "products/{PRODUCT}/.claude/task-graph.yml" ]; then
   cat products/{PRODUCT}/.claude/task-graph.yml
 fi
 
-# 4. Check company state
-cat .claude/orchestrator/state.yml
+# 5. Check audit trail for recent activity
+tail -10 .claude/audit-trail.jsonl 2>/dev/null || echo "No audit trail"
+
+# 6. Cross-product state (only for coordination)
+cat .claude/orchestrator/state.yml 2>/dev/null || echo "No state file"
 ```
 
 ### Step 2: Determine Workflow Type
