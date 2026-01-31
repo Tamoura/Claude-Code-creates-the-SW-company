@@ -4,6 +4,32 @@ interface LogData {
   [key: string]: unknown;
 }
 
+/** Keys whose values should be redacted from log output. */
+const SENSITIVE_PATTERNS = [
+  'password', 'secret', 'token', 'authorization',
+  'apikey', 'api_key', 'private_key', 'privatekey',
+  'credit_card', 'creditcard', 'ssn', 'cookie',
+];
+
+/**
+ * Recursively redact sensitive fields from a data object.
+ * Returns a new object with sensitive values replaced by '[REDACTED]'.
+ */
+function redactSensitiveFields(data: LogData): LogData {
+  const redacted: LogData = {};
+  for (const [key, value] of Object.entries(data)) {
+    const lowerKey = key.toLowerCase();
+    if (SENSITIVE_PATTERNS.some((p) => lowerKey.includes(p))) {
+      redacted[key] = '[REDACTED]';
+    } else if (value !== null && typeof value === 'object' && !Array.isArray(value)) {
+      redacted[key] = redactSensitiveFields(value as LogData);
+    } else {
+      redacted[key] = value;
+    }
+  }
+  return redacted;
+}
+
 class Logger {
   private logLevel: LogLevel;
 
@@ -12,18 +38,19 @@ class Logger {
   }
 
   private log(level: LogLevel, message: string, data?: LogData) {
+    const safeData = data ? redactSensitiveFields(data) : undefined;
     const timestamp = new Date().toISOString();
     const logEntry = {
       timestamp,
       level,
       message,
-      ...data,
+      ...safeData,
     };
 
     if (process.env.NODE_ENV === 'production') {
       console.log(JSON.stringify(logEntry));
     } else {
-      console.log(`[${timestamp}] ${level.toUpperCase()}: ${message}`, data || '');
+      console.log(`[${timestamp}] ${level.toUpperCase()}: ${message}`, safeData || '');
     }
   }
 
