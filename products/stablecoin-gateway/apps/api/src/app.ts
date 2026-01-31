@@ -1,4 +1,4 @@
-import Fastify, { FastifyInstance } from 'fastify';
+import Fastify, { FastifyInstance, FastifyRequest } from 'fastify';
 import cors from '@fastify/cors';
 import jwt from '@fastify/jwt';
 import rateLimit from '@fastify/rate-limit';
@@ -26,6 +26,7 @@ import { RedisRateLimitStore } from './utils/redis-rate-limit-store.js';
 
 export async function buildApp(): Promise<FastifyInstance> {
   const fastify = Fastify({
+    bodyLimit: 1048576, // 1MB - prevent oversized request payloads
     logger: process.env.NODE_ENV === 'development' ? {
       level: 'info',
       transport: {
@@ -38,6 +39,9 @@ export async function buildApp(): Promise<FastifyInstance> {
     } : false,
     requestIdHeader: 'x-request-id',
     requestIdLogLabel: 'request_id',
+    routerOptions: {
+      maxParamLength: 256, // Reject overly long URL parameters
+    },
   });
 
   // Register security headers (helmet)
@@ -62,10 +66,19 @@ export async function buildApp(): Promise<FastifyInstance> {
     .split(',')
     .map((origin) => origin.trim());
 
+  const isProduction = process.env.NODE_ENV === 'production';
+
   await fastify.register(cors, {
     origin: (origin, callback) => {
-      // Allow requests with no origin (e.g., mobile apps, Postman, server-to-server)
       if (!origin) {
+        if (isProduction) {
+          // In production, reject requests with no Origin header.
+          // Browsers send Origin: null from sandboxed iframes and
+          // data: URIs — combined with credentials: true this is unsafe.
+          callback(new Error('Origin required'), false);
+          return;
+        }
+        // In dev/test, allow no-origin for Postman/curl convenience
         callback(null, true);
         return;
       }
@@ -94,21 +107,59 @@ export async function buildApp(): Promise<FastifyInstance> {
   await fastify.register(redisPlugin);
 
   // Register rate limiting with Redis-backed distributed store
+  // Enhanced rate limiting (FIX-PHASE2-09):
+  // - Health/ready endpoints are exempted
+  // - Rate limit headers added to all non-exempt responses
+  // - Authenticated endpoints use user/API key as key
+  // - Pre-auth endpoints use IP+User-Agent fingerprint (in auth routes)
   const rateLimitConfig: any = {
     max: parseInt(process.env.RATE_LIMIT_MAX || '100'),
     timeWindow: parseInt(process.env.RATE_LIMIT_WINDOW || '60000'),
+    // Exempt health and ready endpoints from rate limiting
+    // These are critical for load balancers and monitoring
+    allowList: (request: FastifyRequest) => {
+      const url = request.url.split('?')[0]; // Remove query string
+      return url === '/health' || url === '/ready';
+    },
+    // Do not add rate limit headers for exempted endpoints
+    addHeadersOnExemption: false,
+    // Add rate limit headers to all non-exempt responses
+    addHeaders: {
+      'x-ratelimit-limit': true,
+      'x-ratelimit-remaining': true,
+      'x-ratelimit-reset': true,
+    },
+    // Key by authenticated user/API key instead of IP to prevent:
+    // 1. Shared IP throttling (corporate NAT, VPNs)
+    // 2. IP-based abuse (attacker rotating IPs)
+    keyGenerator: (request: any) => {
+      // Priority 1: Use authenticated user ID
+      if (request.currentUser?.id) {
+        return `user:${request.currentUser.id}`;
+      }
+
+      // Priority 2: Use API key ID
+      if (request.apiKey?.id) {
+        return `apikey:${request.apiKey.id}`;
+      }
+
+      // Fallback: Use IP (for unauthenticated endpoints like health checks)
+      // Note: This is a fallback only - authenticated endpoints will use user/API key
+      return `ip:${request.ip}`;
+    },
   };
 
   if (fastify.redis) {
     // Use Redis for distributed rate limiting across multiple instances
-    const redisStore = new RedisRateLimitStore({
-      redis: fastify.redis,
-      keyPrefix: 'ratelimit:',
-    });
-    rateLimitConfig.store = redisStore;
+    // Set the Redis instance globally for the store class
+    RedisRateLimitStore.setRedis(fastify.redis);
+    // Pass the CLASS (not an instance) to @fastify/rate-limit
+    rateLimitConfig.store = RedisRateLimitStore;
+    rateLimitConfig.keyPrefix = 'ratelimit:';
     logger.info('Rate limiting configured with Redis distributed store', {
       max: rateLimitConfig.max,
       timeWindow: rateLimitConfig.timeWindow,
+      keyStrategy: 'user/apikey with IP fallback',
     });
   } else {
     logger.warn('Redis not configured - rate limiting uses in-memory store (not suitable for production)');

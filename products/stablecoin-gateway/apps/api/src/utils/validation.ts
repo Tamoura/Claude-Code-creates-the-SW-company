@@ -34,9 +34,36 @@ export const loginSchema = z.object({
   password: z.string().min(1, 'Password is required'),
 });
 
+export const logoutSchema = z.object({
+  refresh_token: z.string().min(1, 'Refresh token is required'),
+});
+
 export const sseTokenSchema = z.object({
   payment_session_id: z.string().min(1, 'Payment session ID is required'),
 });
+
+export const forgotPasswordSchema = z.object({
+  email: z.string().email('Invalid email address'),
+});
+
+export const resetPasswordSchema = z.object({
+  token: z.string().min(1, 'Reset token is required'),
+  newPassword: z
+    .string()
+    .min(12, 'Password must be at least 12 characters')
+    .regex(/[A-Z]/, 'Password must contain at least one uppercase letter')
+    .regex(/[a-z]/, 'Password must contain at least one lowercase letter')
+    .regex(/[0-9]/, 'Password must contain at least one number')
+    .regex(/[!@#$%^&*()_+\-=\[\]{}|;:,.<>?]/, 'Password must contain at least one special character'),
+});
+
+
+// ==================== Idempotency Key Schema ====================
+
+export const idempotencyKeySchema = z.string()
+  .min(1, 'Idempotency key cannot be empty')
+  .max(64, 'Idempotency key must be 64 characters or less')
+  .regex(/^[a-zA-Z0-9_-]+$/, 'Idempotency key must be alphanumeric (hyphens and underscores allowed)');
 
 // ==================== Payment Session Schemas ====================
 
@@ -111,6 +138,13 @@ export const createRefundSchema = z.object({
   reason: z.string().max(500).optional(),
 });
 
+export const listRefundsQuerySchema = z.object({
+  payment_session_id: z.string().optional(),
+  status: z.enum(['PENDING', 'PROCESSING', 'COMPLETED', 'FAILED']).optional(),
+  limit: z.coerce.number().min(1).max(100).default(50),
+  offset: z.coerce.number().min(0).default(0),
+});
+
 // ==================== Webhook Schemas ====================
 
 export const createWebhookSchema = z.object({
@@ -124,6 +158,7 @@ export const createWebhookSchema = z.object({
         'payment.failed',
         'payment.refunded',
         'refund.created',
+        'refund.processing',
         'refund.completed',
         'refund.failed',
       ])
@@ -144,6 +179,7 @@ export const updateWebhookSchema = z.object({
         'payment.failed',
         'payment.refunded',
         'refund.created',
+        'refund.processing',
         'refund.completed',
         'refund.failed',
       ])
@@ -151,6 +187,18 @@ export const updateWebhookSchema = z.object({
     .optional(),
   enabled: z.boolean().optional(),
   description: z.string().max(200).optional(),
+});
+
+// ==================== Pagination Query Schemas ====================
+
+export const listApiKeysQuerySchema = z.object({
+  limit: z.coerce.number().min(1).max(100).default(50),
+  offset: z.coerce.number().min(0).default(0),
+});
+
+export const listWebhooksQuerySchema = z.object({
+  limit: z.coerce.number().min(1).max(100).default(50),
+  offset: z.coerce.number().min(0).default(0),
 });
 
 // ==================== API Key Schemas ====================
