@@ -34,6 +34,10 @@ export const loginSchema = z.object({
   password: z.string().min(1, 'Password is required'),
 });
 
+export const logoutSchema = z.object({
+  refresh_token: z.string().min(1, 'Refresh token is required'),
+});
+
 export const sseTokenSchema = z.object({
   payment_session_id: z.string().min(1, 'Payment session ID is required'),
 });
@@ -132,6 +136,13 @@ export const createRefundSchema = z.object({
     .number()
     .positive('Amount must be positive'),
   reason: z.string().max(500).optional(),
+});
+
+export const listRefundsQuerySchema = z.object({
+  payment_session_id: z.string().optional(),
+  status: z.enum(['PENDING', 'PROCESSING', 'COMPLETED', 'FAILED']).optional(),
+  limit: z.coerce.number().min(1).max(100).default(50),
+  offset: z.coerce.number().min(0).default(0),
 });
 
 // ==================== Webhook Schemas ====================

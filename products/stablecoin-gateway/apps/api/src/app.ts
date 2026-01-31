@@ -39,6 +39,9 @@ export async function buildApp(): Promise<FastifyInstance> {
     } : false,
     requestIdHeader: 'x-request-id',
     requestIdLogLabel: 'request_id',
+    routerOptions: {
+      maxParamLength: 256, // Reject overly long URL parameters
+    },
   });
 
   // Register security headers (helmet)
@@ -63,10 +66,19 @@ export async function buildApp(): Promise<FastifyInstance> {
     .split(',')
     .map((origin) => origin.trim());
 
+  const isProduction = process.env.NODE_ENV === 'production';
+
   await fastify.register(cors, {
     origin: (origin, callback) => {
-      // Allow requests with no origin (e.g., mobile apps, Postman, server-to-server)
       if (!origin) {
+        if (isProduction) {
+          // In production, reject requests with no Origin header.
+          // Browsers send Origin: null from sandboxed iframes and
+          // data: URIs — combined with credentials: true this is unsafe.
+          callback(new Error('Origin required'), false);
+          return;
+        }
+        // In dev/test, allow no-origin for Postman/curl convenience
         callback(null, true);
         return;
       }

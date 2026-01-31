@@ -4,6 +4,23 @@ interface LogData {
   [key: string]: unknown;
 }
 
+const SENSITIVE_PATTERNS = ['password', 'secret', 'token', 'key', 'authorization'];
+
+function redactSensitiveKeys(data: LogData): LogData {
+  const result: LogData = {};
+  for (const [k, v] of Object.entries(data)) {
+    const lower = k.toLowerCase();
+    if (SENSITIVE_PATTERNS.some((p) => lower.includes(p))) {
+      result[k] = '[REDACTED]';
+    } else if (v && typeof v === 'object' && !Array.isArray(v) && !(v instanceof Error)) {
+      result[k] = redactSensitiveKeys(v as LogData);
+    } else {
+      result[k] = v;
+    }
+  }
+  return result;
+}
+
 class Logger {
   private logLevel: LogLevel;
 
@@ -13,17 +30,18 @@ class Logger {
 
   private log(level: LogLevel, message: string, data?: LogData) {
     const timestamp = new Date().toISOString();
+    const safeData = data ? redactSensitiveKeys(data) : undefined;
     const logEntry = {
       timestamp,
       level,
       message,
-      ...data,
+      ...safeData,
     };
 
     if (process.env.NODE_ENV === 'production') {
       console.log(JSON.stringify(logEntry));
     } else {
-      console.log(`[${timestamp}] ${level.toUpperCase()}: ${message}`, data || '');
+      console.log(`[${timestamp}] ${level.toUpperCase()}: ${message}`, safeData || '');
     }
   }
 
