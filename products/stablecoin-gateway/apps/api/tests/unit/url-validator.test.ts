@@ -149,4 +149,77 @@ describe('URL Validator - SSRF Protection', () => {
       await expect(validateWebhookUrl('https://10.0.0.1/webhook')).rejects.toThrow();
     });
   });
+
+  describe('Multicast IP blocking', () => {
+    it('should block IPv4 multicast range (224.0.0.0/4)', async () => {
+      await expect(validateWebhookUrl('https://224.0.0.1/webhook')).rejects.toThrow();
+      await expect(validateWebhookUrl('https://239.255.255.255/webhook')).rejects.toThrow();
+    });
+  });
+
+  describe('Reserved IP blocking', () => {
+    it('should block reserved range (240.0.0.0/4)', async () => {
+      await expect(validateWebhookUrl('https://240.0.0.1/webhook')).rejects.toThrow();
+      await expect(validateWebhookUrl('https://255.255.255.254/webhook')).rejects.toThrow();
+    });
+  });
+
+  describe('Broadcast IP blocking', () => {
+    it('should block broadcast address', async () => {
+      await expect(validateWebhookUrl('https://255.255.255.255/webhook')).rejects.toThrow();
+    });
+  });
+
+  describe('IPv6 multicast and link-local blocking', () => {
+    it('should block IPv6 multicast (ff00::/8)', async () => {
+      await expect(validateWebhookUrl('https://[ff02::1]/webhook')).rejects.toThrow();
+      await expect(validateWebhookUrl('https://[ff05::1]/webhook')).rejects.toThrow();
+    });
+
+    it('should block IPv6 link-local (fe80::/10)', async () => {
+      await expect(validateWebhookUrl('https://[fe80::1]/webhook')).rejects.toThrow();
+      await expect(validateWebhookUrl('https://[fe80::abcd:1234]/webhook')).rejects.toThrow();
+    });
+  });
+
+  describe('Error message sanitization', () => {
+    it('should not leak resolved IP in DNS rebinding error', async () => {
+      // Override DNS mock to return a private IP for a "public" domain
+      const dns = require('dns');
+      dns.resolve4.mockImplementation(
+        (_hostname: string, callback: (err: Error | null, addresses?: string[]) => void) => {
+          callback(null, ['10.0.0.1']); // private IP
+        }
+      );
+
+      try {
+        await validateWebhookUrl('https://evil-rebinding.com/webhook');
+        fail('Should have thrown');
+      } catch (error: any) {
+        // Error message should NOT contain the resolved IP
+        expect(error.message).not.toContain('10.0.0.1');
+        expect(error.message).toContain('private/internal');
+      }
+
+      // Restore original mock
+      dns.resolve4.mockImplementation(
+        (hostname: string, callback: (err: Error | null, addresses?: string[]) => void) => {
+          if (hostname.includes('example.com') || hostname.includes('merchant.com') || hostname.includes('webhooks.')) {
+            callback(null, ['93.184.216.34']);
+          } else {
+            callback(new Error('DNS lookup failed'));
+          }
+        }
+      );
+    });
+  });
+
+  describe('Public IP regression guard', () => {
+    it('should still allow valid public IPs', async () => {
+      // 8.8.8.8 is Google DNS - clearly public
+      await expect(validateWebhookUrl('https://8.8.8.8/webhook')).resolves.not.toThrow();
+      // 93.184.216.34 is example.com
+      await expect(validateWebhookUrl('https://93.184.216.34/webhook')).resolves.not.toThrow();
+    });
+  });
 });

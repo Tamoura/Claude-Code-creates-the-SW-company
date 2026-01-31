@@ -39,6 +39,16 @@ function isPrivateIP(hostname: string): boolean {
     return true;
   }
 
+  // IPv6 multicast (ff00::/8)
+  if (cleanHost.toLowerCase().startsWith('ff')) {
+    return true;
+  }
+
+  // IPv6 link-local (fe80::/10)
+  if (cleanHost.toLowerCase().startsWith('fe80')) {
+    return true;
+  }
+
   // IPv4 pattern
   const ipv4Pattern = /^(\d{1,3})\.(\d{1,3})\.(\d{1,3})\.(\d{1,3})$/;
   const match = cleanHost.match(ipv4Pattern);
@@ -93,6 +103,16 @@ function isPrivateIP(hostname: string): boolean {
 
   // 0.0.0.0/8 - "This network"
   if (first === 0) {
+    return true;
+  }
+
+  // 224.0.0.0/4 - Multicast
+  if (first >= 224 && first <= 239) {
+    return true;
+  }
+
+  // 240.0.0.0/4 - Reserved for future use
+  if (first >= 240) {
     return true;
   }
 
@@ -220,12 +240,14 @@ export async function validateWebhookUrl(url: string): Promise<void> {
     }
 
     // Check all resolved IPs - reject if ANY resolve to private/internal addresses
+    // SEC: Do NOT include the resolved IP in the error message to prevent
+    // information leakage about internal network topology.
     for (const ip of resolvedIPs) {
       if (isPrivateIP(ip)) {
         throw new AppError(
           400,
           'invalid-webhook-url',
-          `Webhook URL resolves to private/internal IP address (${ip})`,
+          'Webhook URL resolves to a private/internal IP address',
           'Provide a URL that resolves only to public internet addresses'
         );
       }
