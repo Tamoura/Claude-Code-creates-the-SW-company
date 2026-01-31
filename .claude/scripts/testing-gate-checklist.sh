@@ -69,6 +69,12 @@ echo ""
 
 cd "$PRODUCT_DIR"
 
+# Detect app structure
+HAS_WEB=false
+HAS_API=false
+[ -f "apps/web/package.json" ] && HAS_WEB=true
+[ -f "apps/api/package.json" ] && HAS_API=true
+
 # ============================================================================
 # PHASE 1: Prerequisites
 # ============================================================================
@@ -77,8 +83,21 @@ echo "│ Phase 1: Prerequisites                                       │"
 echo "└──────────────────────────────────────────────────────────────┘"
 
 check "Package.json exists" "test -f package.json"
-check "Node modules installed" "test -d node_modules || npm install"
-check "TypeScript compiles" "npm run build 2>/dev/null || npx tsc --noEmit 2>/dev/null || true" false
+
+if [ "$HAS_API" = true ]; then
+  check "API node_modules" "test -d apps/api/node_modules || (cd apps/api && npm install)"
+  check "API TypeScript compiles" "cd apps/api && (npm run build 2>/dev/null || npx tsc --noEmit 2>/dev/null || true)" false
+fi
+
+if [ "$HAS_WEB" = true ]; then
+  check "Web node_modules" "test -d apps/web/node_modules || (cd apps/web && npm install)"
+  check "Web TypeScript compiles" "cd apps/web && (npm run build 2>/dev/null || npx tsc --noEmit 2>/dev/null || true)" false
+fi
+
+if [ "$HAS_WEB" = false ] && [ "$HAS_API" = false ]; then
+  check "Node modules installed" "test -d node_modules || npm install"
+  check "TypeScript compiles" "npm run build 2>/dev/null || npx tsc --noEmit 2>/dev/null || true" false
+fi
 
 echo ""
 
@@ -89,15 +108,41 @@ echo "┌───────────────────────�
 echo "│ Phase 2: Unit Tests                                          │"
 echo "└──────────────────────────────────────────────────────────────┘"
 
-# Try different test commands
-if npm run test:run > /dev/null 2>&1; then
-  check "Unit tests pass" "npm run test:run"
-elif npm run test -- --run > /dev/null 2>&1; then
-  check "Unit tests pass" "npm run test -- --run"
-elif npm test > /dev/null 2>&1; then
-  check "Unit tests pass" "npm test -- --passWithNoTests"
-else
-  warn "Unit tests" "No test command found"
+# API tests
+if [ "$HAS_API" = true ]; then
+  cd "$PRODUCT_DIR/apps/api"
+  if npm test > /dev/null 2>&1; then
+    check "API tests pass" "npm test"
+  else
+    warn "API tests" "npm test failed or not configured"
+  fi
+  cd "$PRODUCT_DIR"
+fi
+
+# Web tests
+if [ "$HAS_WEB" = true ]; then
+  cd "$PRODUCT_DIR/apps/web"
+  if npm run test:run > /dev/null 2>&1; then
+    check "Web unit tests pass" "npm run test:run"
+  elif npm run test -- --run > /dev/null 2>&1; then
+    check "Web unit tests pass" "npm run test -- --run"
+  elif npm test > /dev/null 2>&1; then
+    check "Web unit tests pass" "npm test -- --passWithNoTests"
+  else
+    warn "Web unit tests" "No test command found"
+  fi
+  cd "$PRODUCT_DIR"
+fi
+
+# Fallback: root-level tests
+if [ "$HAS_WEB" = false ] && [ "$HAS_API" = false ]; then
+  if npm run test:run > /dev/null 2>&1; then
+    check "Unit tests pass" "npm run test:run"
+  elif npm test > /dev/null 2>&1; then
+    check "Unit tests pass" "npm test -- --passWithNoTests"
+  else
+    warn "Unit tests" "No test command found"
+  fi
 fi
 
 echo ""

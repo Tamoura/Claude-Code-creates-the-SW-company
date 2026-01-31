@@ -138,9 +138,9 @@ npx tsx .claude/protocols/message-router.ts '[JSON message above]'
 - ✅ Easy integration with orchestrator
 - ✅ Checkpoint creation when needed
 
-**Alternative (Legacy)**: If you prefer manual updates:
+**Then run the mandatory post-task update** (updates memory, audit trail, and task graph):
 ```bash
-.claude/scripts/update-agent-memory.sh [agent-name] [task-id] [product] [status] [minutes] "[summary]"
+.claude/scripts/post-task-update.sh [agent-name] [task-id] [product] [status] [minutes] "[summary]" "[optional-pattern]"
 ```
 
 ---

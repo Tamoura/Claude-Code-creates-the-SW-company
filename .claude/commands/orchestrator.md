@@ -138,9 +138,9 @@ When complete, report your results in this format:
 - [What's preventing completion]
 ```
 
-Then update your memory by running:
+Then run the mandatory post-task update (updates memory, audit trail, and task graph):
 ```bash
-.claude/scripts/update-agent-memory.sh [agent-name] [TASK-ID] [product] [success|failure] [minutes] "[summary]"
+.claude/scripts/post-task-update.sh [agent-name] [TASK-ID] [product] [success|failure] [minutes] "[summary]" "[optional-pattern]"
 ```
 
 ---
@@ -195,14 +195,52 @@ Before any checkpoint where CEO will review the product:
 
 Only proceed to checkpoint if tests pass.
 
+### 6b. Before Feature/Product Delivery: Run Audit Gate
+
+**MANDATORY** before presenting any completed feature or product to the CEO:
+
+1. Run `/audit [product]` to get dimension scores
+2. Check if all scores >= 8/10
+3. **If any score < 8/10**: DO NOT present to CEO. Instead:
+   - Read the improvement plan from the audit report
+   - Assign improvement tasks to the appropriate agents
+   - Execute the improvements
+   - Re-run `/audit [product]`
+   - Repeat until all scores reach 8/10
+4. **Once all scores >= 8/10**: Present to CEO at checkpoint
+5. CEO decides whether to push for higher scores (9-10) or accept
+
+```
+AUDIT GATE FLOW:
+
+  Feature Complete
+       │
+       ▼
+  Testing Gate ──FAIL──> Fix tests, retry
+       │
+      PASS
+       │
+       ▼
+  /audit [product]
+       │
+       ├── All scores >= 8/10 ──> Present to CEO
+       │
+       └── Any score < 8/10
+             │
+             ▼
+       Assign improvements ──> Execute ──> Re-audit
+             │                                │
+             └────────── loop until 8/10 ─────┘
+```
+
 ### 7. Checkpoints (Pause for CEO Approval)
 
 Pause and report to CEO at these points:
 - PRD complete
 - Architecture complete
 - Foundation complete (after testing gate passes)
-- Feature complete (after testing gate passes)
-- Pre-release (after all quality gates pass)
+- Feature complete (after testing gate AND audit gate pass with scores >= 8/10)
+- Pre-release (after all quality gates AND audit pass)
 - Any decision needed
 - After 3 failed retries
 
@@ -252,7 +290,10 @@ Pause and report to CEO at these points:
 .claude/scripts/testing-gate-checklist.sh <product>
 .claude/quality-gates/executor.sh <gate-type> <product>
 
-# Agent memory
+# Post-task update (mandatory - updates memory + audit trail)
+.claude/scripts/post-task-update.sh <agent> <task_id> <product> <status> <minutes> "<summary>" "[pattern]"
+
+# Agent memory (called by post-task-update, but can run standalone)
 .claude/scripts/update-agent-memory.sh <agent> <task_id> <product> <status> <minutes> "<summary>"
 
 # Task status update

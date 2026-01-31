@@ -1,49 +1,50 @@
 # ConnectSW Global Orchestrator State
-# This file tracks COMPANY-LEVEL state only
-# Product-specific state is in: products/[product]/.claude/state.yml
+# This file tracks COMPANY-LEVEL coordination only.
+# For ground truth on products, scan products/*/ directly.
 
 company:
   name: "ConnectSW"
   founded: "2025-01-25"
   ceo: "Tamer"
 
-# List of all products (state is per-product)
+# Products - derived from products/*/ directory.
+# Only list products here that need cross-product coordination data.
 products:
+  stablecoin-gateway:
+    path: "products/stablecoin-gateway"
+    status: "active"
+    notes: "Backend-only (apps/api). Most active product. Security audit in progress."
+  meetingmind:
+    path: "products/meetingmind"
+    status: "planned"
+    notes: "AI meeting assistant."
+  quantum-computing-usecases:
+    path: "products/quantum-computing-usecases"
+    status: "planned"
+    notes: "Quantum computing use case explorer."
   gpu-calculator:
     path: "products/gpu-calculator"
-    state_file: "products/gpu-calculator/.claude/state.yml"
-    worktree: ".trees/gpu-calculator"
-  itil-dashboard:
-    path: "products/itil-dashboard"
-    state_file: "products/itil-dashboard/.claude/state.yml"
-    worktree: ".trees/ITIL_dashboard_product"
-  it4it-dashboard:
-    path: "products/it4it-dashboard"
-    state_file: "products/it4it-dashboard/.claude/state.yml"
-    worktree: ".trees/IT4IT_dashboard_product"
-  tech-management-helper:
-    path: "products/tech-management-helper"
-    state_file: "products/tech-management-helper/.claude/state.yml"
-    worktree: ".trees/Tech_Management_helper"
+    status: "maintenance"
+    notes: "GPU cost calculator. Feature-complete for v1."
   basic-calculator:
     path: "products/basic-calculator"
-    state_file: "products/basic-calculator/.claude/state.yml"
-    worktree: null  # developed in main branch
+    status: "maintenance"
+    notes: "Starter project. Feature-complete."
+  it4it-dashboard:
+    path: "products/it4it-dashboard"
+    status: "paused"
+    notes: "IT4IT management dashboard."
+  itil-dashboard:
+    path: "products/itil-dashboard"
+    status: "paused"
+    notes: "ITIL service management dashboard."
+  tech-management-helper:
+    path: "products/tech-management-helper"
+    status: "paused"
+    notes: "Technology management helper."
 
 # Active worktrees (for parallel product development)
-worktrees:
-  IT4IT_dashboard_product:
-    path: ".trees/IT4IT_dashboard_product"
-    branch: "feature/it4it-dashboard/r2d"
-    product: "it4it-dashboard"
-  ITIL_dashboard_product:
-    path: ".trees/ITIL_dashboard_product"
-    branch: "foundation/itil-dashboard"
-    product: "itil-dashboard"
-  Tech_Management_helper:
-    path: ".trees/Tech_Management_helper"
-    branch: "feature/tech-management-helper/risk-management"
-    product: "tech-management-helper"
+worktrees: {}
 
 # Company-wide pending decisions (cross-product)
 pending_decisions: []
@@ -52,4 +53,4 @@ pending_decisions: []
 checkpoints: []
 
 # Last updated
-last_updated: "2026-01-29T00:00:00Z"
+last_updated: "2026-01-31T00:00:00Z"

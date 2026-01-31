@@ -419,21 +419,26 @@ export class TaskGraphExecutor {
 /**
  * CLI interface
  */
-if (require.main === module) {
+async function main() {
   const productPath = process.argv[2];
   if (!productPath) {
     console.error('Usage: npx tsx task-graph-executor.ts <product-path>');
     process.exit(1);
   }
 
-  const executor = new TaskGraphExecutor(productPath);
-  executor.loadGraph()
-    .then(() => executor.execute())
-    .then(result => {
-      console.log(JSON.stringify(result, null, 2));
-    })
-    .catch(error => {
-      console.error('Error:', error);
-      process.exit(1);
-    });
+  try {
+    const executor = new TaskGraphExecutor(productPath);
+    await executor.loadGraph();
+    const result = await executor.execute();
+    console.log(JSON.stringify(result, null, 2));
+  } catch (error) {
+    console.error('Error:', error);
+    process.exit(1);
+  }
+}
+
+// Run when invoked directly via tsx
+const isDirectRun = process.argv[1]?.includes('task-graph-executor');
+if (isDirectRun) {
+  main();
 }

@@ -1,11 +1,10 @@
 {
-  "name": "itil-dashboard",
+  "name": "connectsw-company",
   "version": "0.1.0",
   "private": true,
-  "description": "ITIL Service Management Dashboard - Full-stack monorepo",
+  "description": "ConnectSW - AI-first software company monorepo",
   "workspaces": [
-    "apps/*",
-    "packages/*"
+    "shared/*"
   ],
   "scripts": {
     "dev": "pnpm --filter api dev & pnpm --filter web dev",
@@ -34,6 +33,7 @@
     "@typescript-eslint/parser": "^6.13.0",
     "eslint": "^8.54.0",
     "prettier": "^3.1.0",
+    "tsx": "^4.7.0",
     "typescript": "^5.3.3"
   },
   "engines": {

@@ -25,6 +25,7 @@ For detailed execution instructions, see: `.claude/orchestrator/claude-code-exec
 
 ### 4. Quality Gates
 - **Testing Gate**: `.claude/scripts/testing-gate-checklist.sh`
+- **Audit Gate**: `/audit [product]` - Mandatory before CEO delivery. Scores must reach 8/10.
 - **Full Gates**: `.claude/quality-gates/executor.sh`
 - **Reference**: `.claude/quality-gates/multi-gate-system.md`
 
@@ -54,22 +55,37 @@ For detailed execution instructions, see: `.claude/orchestrator/claude-code-exec
 
 ### Step 1: Assess Current State
 
+Scan the filesystem and git for ground truth. Use `state.yml` only for cross-product coordination data.
+
 ```bash
 # 1. Check git status
 git status
 git branch -a
 
-# 2. Check for active work
-gh pr list
-gh issue list --state open
+# 2. Discover products from filesystem (not state.yml)
+for product_dir in products/*/; do
+  [ -d "$product_dir" ] || continue
+  product=$(basename "$product_dir")
+  recent=$(git log --oneline --since="7 days ago" -- "$product_dir" 2>/dev/null | wc -l | tr -d ' ')
+  has_api=$( [ -d "${product_dir}apps/api" ] && echo "yes" || echo "no" )
+  has_web=$( [ -d "${product_dir}apps/web" ] && echo "yes" || echo "no" )
+  echo "$product: api=$has_api web=$has_web recent=$recent"
+done
 
-# 3. Check if product has active task graph
+# 3. Check for active work
+gh pr list 2>/dev/null || echo "No PRs"
+gh issue list --state open 2>/dev/null || echo "No issues"
+
+# 4. Check if product has active task graph
 if [ -f "products/{PRODUCT}/.claude/task-graph.yml" ]; then
   cat products/{PRODUCT}/.claude/task-graph.yml
 fi
 
-# 4. Check company state
-cat .claude/orchestrator/state.yml
+# 5. Check audit trail for recent activity
+tail -10 .claude/audit-trail.jsonl 2>/dev/null || echo "No audit trail"
+
+# 6. Cross-product state (only for coordination)
+cat .claude/orchestrator/state.yml 2>/dev/null || echo "No state file"
 ```
 
 ### Step 2: Determine Workflow Type
@@ -225,10 +241,21 @@ E. UPDATE TASK GRAPH
 
 F. CHECK FOR CHECKPOINT
    If completed task has checkpoint = true:
-     - PAUSE execution loop
-     - Generate CEO report from task graph state
-     - Wait for CEO approval
-     - On approval: continue loop
+     - Run Testing Gate: `.claude/scripts/testing-gate-checklist.sh [product]`
+     - Run Audit Gate: `/audit [product]`
+     - If any audit dimension score < 8/10:
+       - DO NOT pause for CEO
+       - Create improvement tasks from audit report
+       - Assign to appropriate agents
+       - Continue execution loop (improvements first)
+       - Re-audit after improvements
+       - Repeat until all scores >= 8/10
+     - Once all scores >= 8/10:
+       - PAUSE execution loop
+       - Generate CEO report with audit scores
+       - Wait for CEO approval
+       - CEO may request higher scores (9-10) or accept
+       - On approval: continue loop
 
 G. CHECK FOR COMPLETION
    All tasks with status = "completed"?

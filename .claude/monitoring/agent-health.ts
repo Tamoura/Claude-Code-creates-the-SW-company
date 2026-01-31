@@ -266,38 +266,36 @@ export class AgentHealthMonitor {
 /**
  * CLI interface
  */
-if (require.main === module) {
+async function main() {
   const command = process.argv[2];
   const monitor = new AgentHealthMonitor();
 
   switch (command) {
-    case 'check':
+    case 'check': {
       const agent = process.argv[3];
       if (!agent) {
         console.error('Usage: check <agent-name>');
         process.exit(1);
       }
-      monitor.checkAgentHealth(agent)
-        .then(health => console.log(JSON.stringify(health, null, 2)))
-        .catch(console.error);
+      const health = await monitor.checkAgentHealth(agent);
+      console.log(JSON.stringify(health, null, 2));
       break;
+    }
 
-    case 'anomalies':
-      monitor.detectAnomalies()
-        .then(anomalies => {
-          console.log(JSON.stringify(anomalies, null, 2));
-          if (anomalies.length > 0) {
-            process.exit(1);
-          }
-        })
-        .catch(console.error);
+    case 'anomalies': {
+      const anomalies = await monitor.detectAnomalies();
+      console.log(JSON.stringify(anomalies, null, 2));
+      if (anomalies.length > 0) {
+        process.exit(1);
+      }
       break;
+    }
 
-    case 'all':
-      monitor.getAllAgentHealth()
-        .then(healths => console.log(JSON.stringify(healths, null, 2)))
-        .catch(console.error);
+    case 'all': {
+      const healths = await monitor.getAllAgentHealth();
+      console.log(JSON.stringify(healths, null, 2));
       break;
+    }
 
     default:
       console.error('Usage:');
@@ -306,4 +304,9 @@ if (require.main === module) {
       console.error('  all');
       process.exit(1);
   }
+}
+
+const isDirectRun = process.argv[1]?.includes('agent-health');
+if (isDirectRun) {
+  main();
 }

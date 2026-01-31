@@ -129,24 +129,45 @@ case $GATE_TYPE in
   testing)
     echo "## Testing Gate Checks" >> "$REPORT_FILE"
     echo "" >> "$REPORT_FILE"
-    
-    # Unit tests (standardized command)
-    if [ -f "$PRODUCT_PATH/apps/web/package.json" ]; then
-      echo "### Unit Tests" >> "$REPORT_FILE"
-      cd "$PRODUCT_PATH/apps/web"
+
+    # Detect which apps exist
+    HAS_WEB=false
+    HAS_API=false
+    [ -f "$PRODUCT_PATH/apps/web/package.json" ] && HAS_WEB=true
+    [ -f "$PRODUCT_PATH/apps/api/package.json" ] && HAS_API=true
+
+    # API unit/integration tests
+    if [ "$HAS_API" = true ]; then
+      echo "### API Tests" >> "$REPORT_FILE"
+      cd "$PRODUCT_PATH/apps/api"
       if npm test >> "$REPORT_FILE" 2>&1; then
-        echo "✅ PASS: All unit tests passed" >> "$REPORT_FILE"
+        echo "✅ PASS: All API tests passed" >> "$REPORT_FILE"
       else
-        echo "❌ FAIL: Unit tests failed" >> "$REPORT_FILE"
+        echo "❌ FAIL: API tests failed" >> "$REPORT_FILE"
         GATE_PASSED=false
-        GATE_FAILURES+=("Unit tests")
+        GATE_FAILURES+=("API tests")
       fi
       echo "" >> "$REPORT_FILE"
       cd - > /dev/null
     fi
 
-    # Smoke tests (standardized command)
-    if [ -f "$PRODUCT_PATH/apps/web/package.json" ]; then
+    # Web unit tests
+    if [ "$HAS_WEB" = true ]; then
+      echo "### Web Unit Tests" >> "$REPORT_FILE"
+      cd "$PRODUCT_PATH/apps/web"
+      if npm test >> "$REPORT_FILE" 2>&1; then
+        echo "✅ PASS: All web unit tests passed" >> "$REPORT_FILE"
+      else
+        echo "❌ FAIL: Web unit tests failed" >> "$REPORT_FILE"
+        GATE_PASSED=false
+        GATE_FAILURES+=("Web unit tests")
+      fi
+      echo "" >> "$REPORT_FILE"
+      cd - > /dev/null
+    fi
+
+    # Smoke tests (web only, optional)
+    if [ "$HAS_WEB" = true ]; then
       echo "### Smoke Tests" >> "$REPORT_FILE"
       cd "$PRODUCT_PATH/apps/web"
       if npm run test:smoke >> "$REPORT_FILE" 2>&1; then
@@ -158,10 +179,14 @@ case $GATE_TYPE in
       cd - > /dev/null
     fi
 
-    # E2E tests (standardized command)
-    if [ -f "$PRODUCT_PATH/apps/web/package.json" ]; then
+    # E2E tests (check both locations)
+    if [ -d "$PRODUCT_PATH/e2e" ] || [ -d "$PRODUCT_PATH/apps/web/e2e" ]; then
       echo "### E2E Tests" >> "$REPORT_FILE"
-      cd "$PRODUCT_PATH/apps/web"
+      if [ "$HAS_WEB" = true ]; then
+        cd "$PRODUCT_PATH/apps/web"
+      else
+        cd "$PRODUCT_PATH"
+      fi
       if npm run test:e2e >> "$REPORT_FILE" 2>&1; then
         echo "✅ PASS: All E2E tests passed" >> "$REPORT_FILE"
       else
@@ -173,17 +198,9 @@ case $GATE_TYPE in
       cd - > /dev/null
     fi
 
-    # All tests combined (standardized command)
-    if [ -f "$PRODUCT_PATH/apps/web/package.json" ]; then
-      echo "### All Tests (Combined)" >> "$REPORT_FILE"
-      cd "$PRODUCT_PATH/apps/web"
-      if npm run test:all >> "$REPORT_FILE" 2>&1; then
-        echo "✅ PASS: All test suites passed" >> "$REPORT_FILE"
-      else
-        echo "⚠️  INFO: test:all script not configured (optional)" >> "$REPORT_FILE"
-      fi
-      echo "" >> "$REPORT_FILE"
-      cd - > /dev/null
+    # No test apps found
+    if [ "$HAS_WEB" = false ] && [ "$HAS_API" = false ]; then
+      echo "⚠️  WARN: No apps/web or apps/api found for $PRODUCT" >> "$REPORT_FILE"
     fi
     ;;
     
