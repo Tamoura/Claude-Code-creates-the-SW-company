@@ -38,6 +38,7 @@
 import { ethers } from 'ethers';
 import { logger } from '../utils/logger.js';
 import { ProviderManager } from '../utils/provider-manager.js';
+import { amountToTokenUnits } from '../utils/token-units.js';
 import { createSignerProvider, SignerProvider } from './kms-signer.service.js';
 import { NonceManager } from './nonce-manager.service.js';
 
@@ -128,7 +129,7 @@ export interface RefundTransactionParams {
   network: Network;
   token: Token;
   recipientAddress: string;
-  amount: number; // USD amount
+  amount: number | string; // USD amount (string preserves sub-cent precision)
 }
 
 export interface RefundTransactionResult {
@@ -301,7 +302,7 @@ export class BlockchainTransactionService {
 
     try {
       // Validate inputs
-      if (amount <= 0) {
+      if (Number(amount) <= 0) {
         return {
           success: false,
           error: 'Amount must be positive',
@@ -316,7 +317,7 @@ export class BlockchainTransactionService {
       }
 
       // SECURITY: Check daily spending limit before executing
-      const withinLimit = await this.checkSpendingLimit(amount);
+      const withinLimit = await this.checkSpendingLimit(Number(amount));
       if (!withinLimit) {
         return {
           success: false,
@@ -339,10 +340,8 @@ export class BlockchainTransactionService {
         connectedWallet
       );
 
-      // Convert amount to token units (6 decimals for USDC/USDT)
-      const amountInTokenUnits = BigInt(
-        Math.floor(amount * Math.pow(10, this.decimals))
-      );
+      // Convert amount to token units using string arithmetic (precision-safe)
+      const amountInTokenUnits = amountToTokenUnits(amount.toString(), this.decimals);
 
       logger.info('Executing refund transaction', {
         network,
@@ -423,7 +422,7 @@ export class BlockchainTransactionService {
       }
 
       // SECURITY: Record the successful spend against the daily limit
-      await this.recordSpend(amount);
+      await this.recordSpend(Number(amount));
 
       // Calculate how many more confirmations are needed for finality
       const requiredConfirmations = CONFIRMATION_REQUIREMENTS[network];

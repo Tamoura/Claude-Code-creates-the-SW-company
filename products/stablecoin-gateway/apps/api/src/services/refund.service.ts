@@ -377,11 +377,12 @@ export class RefundService {
       }
 
       // Execute blockchain transaction
+      // Pass amount as string to preserve sub-cent precision (audit #2)
       const result = await this.blockchainService.executeRefund({
         network: refund.paymentSession.network as 'polygon' | 'ethereum',
         token: refund.paymentSession.token as 'USDC' | 'USDT',
         recipientAddress: refund.paymentSession.customerAddress,
-        amount: Number(refund.amount),
+        amount: refund.amount.toString(),
       });
 
       if (!result.success) {
