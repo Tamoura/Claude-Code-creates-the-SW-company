@@ -5,13 +5,15 @@
  *
  * Features:
  * - ERC-20 token transfers (USDC, USDT)
- * - Gas fee estimation
  * - Transaction signing via KMS signer abstraction
  * - Multi-network support (Polygon, Ethereum)
  * - RPC provider failover with health checks
  * - Error handling and retry logic
  * - Optional nonce management via NonceManager for concurrent safety
  * - Daily spending limits to prevent unlimited fund drainage
+ *
+ * Read-only queries (gas estimation, balance lookups) have been
+ * extracted to BlockchainQueryService.
  *
  * Security:
  * - Uses KMS signer abstraction (never reads raw private key directly)
@@ -100,13 +102,6 @@ export interface RefundTransactionResult {
   error?: string;
   gasUsed?: string;
   pendingConfirmations?: number;
-}
-
-export interface GasEstimate {
-  gasLimit: string;
-  gasPrice: string;
-  estimatedCostWei: string;
-  estimatedCostEth: string;
 }
 
 export class BlockchainTransactionService {
@@ -417,75 +412,5 @@ export class BlockchainTransactionService {
         error: error instanceof Error ? error.message : 'Unknown error',
       };
     }
-  }
-
-  /**
-   * Estimate gas cost for a refund transaction
-   *
-   * Useful for showing estimated fees to merchants before executing
-   */
-  async estimateRefundGas(
-    params: RefundTransactionParams
-  ): Promise<GasEstimate> {
-    const { network, token, recipientAddress, amount } = params;
-
-    const provider = await this.providerManager.getProvider(network);
-
-    const wallet = await this.getWallet(network);
-    const connectedWallet = wallet.connect(provider);
-    const tokenAddress = TOKEN_ADDRESSES[network][token];
-    const tokenContract = new ethers.Contract(
-      tokenAddress,
-      ERC20_ABI,
-      connectedWallet
-    );
-
-    const amountInTokenUnits = BigInt(
-      Math.floor(amount * Math.pow(10, this.decimals))
-    );
-
-    // Estimate gas
-    const gasLimit = await tokenContract.transfer.estimateGas(
-      recipientAddress,
-      amountInTokenUnits
-    );
-    const feeData = await provider.getFeeData();
-    const gasPrice = feeData.gasPrice || BigInt(0);
-
-    const estimatedCostWei = gasLimit * gasPrice;
-    const estimatedCostEth = ethers.formatEther(estimatedCostWei);
-
-    return {
-      gasLimit: gasLimit.toString(),
-      gasPrice: gasPrice.toString(),
-      estimatedCostWei: estimatedCostWei.toString(),
-      estimatedCostEth,
-    };
-  }
-
-  /**
-   * Get merchant wallet balance for a specific token
-   *
-   * Useful for checking if merchant has enough tokens to process refunds
-   */
-  async getMerchantBalance(
-    network: Network,
-    token: Token
-  ): Promise<number> {
-    const provider = await this.providerManager.getProvider(network);
-
-    const wallet = await this.getWallet(network);
-    const tokenAddress = TOKEN_ADDRESSES[network][token];
-    const tokenContract = new ethers.Contract(
-      tokenAddress,
-      ERC20_ABI,
-      provider
-    );
-
-    const balance = await tokenContract.balanceOf(wallet.address);
-    const balanceInUsd =
-      Number(balance) / Math.pow(10, this.decimals);
-
-    return balanceInUsd;
   }
 }
