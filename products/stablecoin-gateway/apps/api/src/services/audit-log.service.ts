@@ -6,13 +6,16 @@
  * modifications, refund processing, and authentication events.
  *
  * Design:
- * - In-memory store for now (database table in a follow-up task)
+ * - Database persistence via Prisma (Audit Issue #3 fix)
+ * - In-memory fallback when no Prisma client is provided
  * - Sensitive field redaction (passwords, tokens, secrets)
  * - Fire-and-forget: record() never throws
  * - Queryable by actor, action, resourceType, and date range
  *
  * SEC-011: Dedicated audit logging for administrative actions
  */
+
+import { PrismaClient } from '@prisma/client';
 
 export interface AuditEntry {
   actor: string;
@@ -74,21 +77,50 @@ function redactDetails(
 
 export class AuditLogService {
   private entries: AuditEntry[] = [];
+  private prisma: PrismaClient | null;
+
+  constructor(prisma?: PrismaClient) {
+    this.prisma = prisma ?? null;
+  }
 
   /**
    * Record an audit entry.
+   *
+   * When a Prisma client is available, persists to the database.
+   * Falls back to in-memory storage otherwise.
    *
    * This method is intentionally fire-and-forget: it will never
    * throw an exception so that audit logging failures do not block
    * the main operation being audited.
    */
-  record(input: AuditRecordInput): void {
+  record(input: AuditRecordInput): void | Promise<void> {
     try {
+      const redactedDetails = input.details ? redactDetails(input.details) : undefined;
       const entry: AuditEntry = {
         ...input,
-        details: input.details ? redactDetails(input.details) : undefined,
+        details: redactedDetails,
         timestamp: new Date(),
       };
+
+      if (this.prisma) {
+        return this.prisma.auditLog.create({
+          data: {
+            actor: entry.actor,
+            action: entry.action,
+            resourceType: entry.resourceType,
+            resourceId: entry.resourceId,
+            details: redactedDetails as any,
+            ip: entry.ip,
+            userAgent: entry.userAgent,
+            timestamp: entry.timestamp,
+          },
+        }).then(() => {
+          // Also store in memory for fast recent queries
+          this.entries.push(entry);
+        }).catch((error) => {
+          console.error('Audit log write failed', error);
+        });
+      }
 
       this.entries.push(entry);
     } catch (error) {
@@ -99,10 +131,38 @@ export class AuditLogService {
   /**
    * Query audit entries with optional filters.
    *
-   * Supports filtering by actor, action, resourceType, and a date
-   * range (from / to inclusive).
+   * When a Prisma client is available, queries the database.
+   * Falls back to in-memory filtering otherwise.
    */
-  query(filters: AuditQueryFilters): AuditEntry[] {
+  query(filters: AuditQueryFilters): AuditEntry[] | Promise<AuditEntry[]> {
+    if (this.prisma) {
+      const where: any = {};
+      if (filters.actor) where.actor = filters.actor;
+      if (filters.action) where.action = filters.action;
+      if (filters.resourceType) where.resourceType = filters.resourceType;
+      if (filters.from || filters.to) {
+        where.timestamp = {};
+        if (filters.from) where.timestamp.gte = filters.from;
+        if (filters.to) where.timestamp.lte = filters.to;
+      }
+
+      return this.prisma.auditLog.findMany({
+        where,
+        orderBy: { timestamp: 'asc' },
+      }).then((rows) =>
+        rows.map((row) => ({
+          actor: row.actor,
+          action: row.action,
+          resourceType: row.resourceType,
+          resourceId: row.resourceId,
+          details: row.details as Record<string, unknown> | undefined,
+          ip: row.ip ?? undefined,
+          userAgent: row.userAgent ?? undefined,
+          timestamp: row.timestamp,
+        }))
+      );
+    }
+
     return this.entries.filter((entry) => {
       if (filters.actor && entry.actor !== filters.actor) {
         return false;
