@@ -25,6 +25,7 @@ For detailed execution instructions, see: `.claude/orchestrator/claude-code-exec
 
 ### 4. Quality Gates
 - **Testing Gate**: `.claude/scripts/testing-gate-checklist.sh`
+- **Audit Gate**: `/audit [product]` - Mandatory before CEO delivery. Scores must reach 8/10.
 - **Full Gates**: `.claude/quality-gates/executor.sh`
 - **Reference**: `.claude/quality-gates/multi-gate-system.md`
 
@@ -240,10 +241,21 @@ E. UPDATE TASK GRAPH
 
 F. CHECK FOR CHECKPOINT
    If completed task has checkpoint = true:
-     - PAUSE execution loop
-     - Generate CEO report from task graph state
-     - Wait for CEO approval
-     - On approval: continue loop
+     - Run Testing Gate: `.claude/scripts/testing-gate-checklist.sh [product]`
+     - Run Audit Gate: `/audit [product]`
+     - If any audit dimension score < 8/10:
+       - DO NOT pause for CEO
+       - Create improvement tasks from audit report
+       - Assign to appropriate agents
+       - Continue execution loop (improvements first)
+       - Re-audit after improvements
+       - Repeat until all scores >= 8/10
+     - Once all scores >= 8/10:
+       - PAUSE execution loop
+       - Generate CEO report with audit scores
+       - Wait for CEO approval
+       - CEO may request higher scores (9-10) or accept
+       - On approval: continue loop
 
 G. CHECK FOR COMPLETION
    All tasks with status = "completed"?
