@@ -27,6 +27,7 @@ import {
   CONFIRMATION_REQUIREMENTS,
 } from './blockchain-transaction.service.js';
 import { BlockchainMonitorService } from './blockchain-monitor.service.js';
+import { sanitizeErrorForWebhook } from '../utils/error-sanitizer.js';
 
 /**
  * Compute the total refunded amount from a list of refunds,
@@ -408,7 +409,7 @@ export class RefundService {
             reason: failedRefund.reason,
             status: failedRefund.status,
             created_at: failedRefund.createdAt.toISOString(),
-            error: result.error,
+            error: sanitizeErrorForWebhook(result.error),
           }
         );
 
@@ -485,7 +486,7 @@ export class RefundService {
           reason: failedRefund.reason,
           status: failedRefund.status,
           created_at: failedRefund.createdAt.toISOString(),
-          error: error instanceof Error ? error.message : 'Unknown error',
+          error: sanitizeErrorForWebhook(error instanceof Error ? error.message : 'Unknown error'),
         }
       );
 
