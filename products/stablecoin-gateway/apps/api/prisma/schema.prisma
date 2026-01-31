@@ -238,3 +238,29 @@ enum WebhookStatus {
   SUCCEEDED
   FAILED
 }
+
+// ==================== Audit Log ====================
+
+model AuditLog {
+  id           String   @id @default(cuid())
+
+  // Who performed the action
+  actor        String
+  action       String
+  resourceType String   @map("resource_type")
+  resourceId   String   @map("resource_id")
+
+  // Optional context
+  details      Json?
+  ip           String?
+  userAgent    String?  @map("user_agent")
+
+  // Timestamp
+  timestamp    DateTime @default(now())
+
+  @@index([actor])
+  @@index([action])
+  @@index([resourceType])
+  @@index([timestamp])
+  @@map("audit_logs")
+}
