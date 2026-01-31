@@ -88,6 +88,25 @@ const DEFAULT_DAILY_REFUND_LIMIT = 10_000;
 /** TTL for daily spend keys: 48 hours to survive timezone edge cases */
 const SPEND_KEY_TTL_SECONDS = 48 * 60 * 60; // 172800
 
+/**
+ * Convert a dollar amount to cents using string arithmetic.
+ * Avoids IEEE 754 floating-point errors that affect Math.round().
+ * e.g. Math.round(1.005 * 100) = 100, but dollarsToCents(1.005) = 101
+ */
+function dollarsToCents(amount: number): number {
+  const str = amount.toString();
+  const parts = str.split('.');
+  const dollars = parts[0];
+  const cents = (parts[1] || '').padEnd(2, '0').slice(0, 2);
+  const subCents = (parts[1] || '').slice(2);
+  const base = parseInt(dollars, 10) * 100 + parseInt(cents, 10);
+  // Round up if there are sub-cent digits >= 5
+  if (subCents.length > 0 && parseInt(subCents[0], 10) >= 5) {
+    return base + 1;
+  }
+  return base;
+}
+
 export interface RefundTransactionParams {
   network: Network;
   token: Token;
@@ -174,9 +193,10 @@ export class BlockchainTransactionService {
         ? Number(currentSpendStr)
         : 0;
 
-      // Convert amount to cents for integer arithmetic
-      const amountCents = Math.round(amount * 100);
-      const limitCents = Math.round(this.dailyRefundLimit * 100);
+      // Convert amount to cents using string arithmetic to avoid IEEE 754 errors.
+      // Math.round(1.005 * 100) === 100 (wrong), but string split gives 101.
+      const amountCents = dollarsToCents(amount);
+      const limitCents = dollarsToCents(this.dailyRefundLimit);
 
       if (currentSpend + amountCents > limitCents) {
         logger.warn('Daily refund spending limit would be exceeded', {
@@ -210,7 +230,7 @@ export class BlockchainTransactionService {
 
     try {
       const key = this.getDailySpendKey();
-      const amountCents = Math.round(amount * 100);
+      const amountCents = dollarsToCents(amount);
       await this.redis.incrby(key, amountCents);
       await this.redis.expire(key, SPEND_KEY_TTL_SECONDS);
     } catch (error) {
