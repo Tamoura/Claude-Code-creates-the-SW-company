@@ -198,8 +198,12 @@ export class WebhookDeliveryService {
     eventType: WebhookEventType,
     data: Record<string, any>
   ): Promise<number> {
-    // Extract resource ID for idempotency (payment session ID or refund ID)
-    const resourceId = data.id || data.payment_session_id || data.refund_id;
+    // Extract resource ID based on event type to prevent idempotency
+    // collisions across different resource types (audit #7).
+    // Refund events use refund_id; payment events use payment session id.
+    const resourceId = eventType.startsWith('refund.')
+      ? (data.refund_id || data.id)
+      : (data.id || data.payment_session_id);
     if (!resourceId) {
       logger.error('Cannot queue webhook - missing resource ID in data', {
         userId,
