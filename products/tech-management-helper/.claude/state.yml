@@ -1,0 +1,130 @@
+# Tech Management Helper - Product State
+# Product-specific state tracking
+
+product:
+  name: "tech-management-helper"
+  phase: development  # inception | architecture | foundation | development | testing | production
+  status: active       # active | paused | completed | cancelled
+  current_sprint: "Sprint 2 - Risk Management"
+
+tech_stack:
+  backend: "fastify"
+  frontend: "nextjs-14"
+  database: "postgresql-15"
+  orm: "prisma"
+  styling: "tailwind-css"
+  ui_components: "shadcn-ui"
+
+# Checkpoints for this product
+checkpoints:
+  - id: 1
+    type: prd_complete
+    title: "PRD Approved"
+    approved: true
+    approved_at: "2026-01-26T10:15:00Z"
+  - id: 2
+    type: architecture_complete
+    title: "Architecture Ready for Review"
+    message: "System architecture, API contracts, and data models are complete."
+    artifacts:
+      - "products/tech-management-helper/docs/architecture.md"
+      - "products/tech-management-helper/docs/api-contract.yml"
+      - "products/tech-management-helper/docs/data-model.md"
+      - "products/tech-management-helper/docs/ADRs/ADR-001-open-source-research.md"
+      - "products/tech-management-helper/docs/ADRs/ADR-002-tech-stack.md"
+    raised_at: "2026-01-26T10:30:00Z"
+    approved: true
+    approved_at: "2026-01-26T10:45:00Z"
+  - id: 3
+    type: foundation_complete
+    title: "Foundation Ready for Review"
+    message: "Project scaffolding complete with API and web apps. Prisma schema, health endpoints, and basic tests passing."
+    artifacts:
+      - "products/tech-management-helper/apps/api/"
+      - "products/tech-management-helper/apps/web/"
+    test_results: "API: 4/4 tests passing"
+    raised_at: "2026-01-26T19:50:00Z"
+    approved: true
+    approved_at: "2026-01-26T20:20:00Z"
+  - id: 4
+    type: sprint_complete
+    title: "Sprint 1 - Authentication Complete"
+    message: "Full-stack authentication system complete with backend APIs, middleware, RBAC, frontend UI, and session management. All 6 tasks completed with 39 passing tests."
+    raised_at: "2026-01-26T21:00:00Z"
+    approved: true
+    approved_at: "2026-01-26T21:30:00Z"
+  - id: 5
+    type: sprint_complete
+    title: "Sprint 2 - Risk Management Complete"
+    message: "Complete Risk Management system with backend APIs (CRUD, Asset linking, Control linking), frontend UI (list, create, edit pages), and comprehensive test coverage. PR #18 ready for review."
+    artifacts:
+      # Backend
+      - "products/tech-management-helper/apps/api/src/routes/auth.ts"
+      - "products/tech-management-helper/apps/api/src/routes/user.ts"
+      - "products/tech-management-helper/apps/api/src/routes/risks.ts"
+      - "products/tech-management-helper/apps/api/src/routes/users.ts"
+      - "products/tech-management-helper/apps/api/src/routes/assessments.ts"
+      - "products/tech-management-helper/apps/api/src/middleware/auth.ts"
+      - "products/tech-management-helper/apps/api/src/middleware/authorize.ts"
+      - "products/tech-management-helper/apps/api/src/lib/jwt.ts"
+      - "products/tech-management-helper/apps/api/src/lib/password.ts"
+      - "products/tech-management-helper/apps/api/src/lib/abilities.ts"
+      - "products/tech-management-helper/apps/api/src/schemas/auth.schema.ts"
+      # Frontend
+      - "products/tech-management-helper/apps/web/src/contexts/auth-context.tsx"
+      - "products/tech-management-helper/apps/web/src/lib/api-client.ts"
+      - "products/tech-management-helper/apps/web/src/types/auth.ts"
+      - "products/tech-management-helper/apps/web/src/components/auth/protected-route.tsx"
+      - "products/tech-management-helper/apps/web/src/app/(auth)/login/page.tsx"
+      - "products/tech-management-helper/apps/web/src/components/layout/header.tsx"
+      - "products/tech-management-helper/apps/web/src/app/(dashboard)/layout.tsx"
+      - "products/tech-management-helper/apps/web/src/app/layout.tsx"
+    test_results: "API: 39/39 tests passing (100% backend coverage)"
+    completed_tasks:
+      - "User registration API endpoint (JWT + password hashing)"
+      - "User login API endpoint (session creation + validation)"
+      - "Authentication middleware (JWT verification)"
+      - "RBAC authorization middleware (4 roles with CASL)"
+      - "Login page UI (Next.js with error handling)"
+      - "Client-side session management (React Context + cookies)"
+    features_delivered:
+      - "Complete authentication flow (register, login, logout)"
+      - "Role-based access control (ADMIN, MANAGER, ANALYST, VIEWER)"
+      - "Protected routes with automatic redirects"
+      - "User profile display with role badges"
+      - "Session management with 7-day token expiry"
+      - "Secure cookie storage with proper flags"
+      - "Error handling and loading states"
+      - "Responsive UI design"
+    raised_at: "2026-01-26T21:00:00Z"
+    approved: true
+    approved_at: "2026-01-26T21:30:00Z"
+
+# Active tasks for this product
+active_tasks: []
+
+# Agent activity on this product
+agent_history:
+  product-manager:
+    last_task: "Create PRD"
+    last_activity: "2026-01-26T10:00:00Z"
+  architect:
+    last_task: "Design system architecture"
+    last_activity: "2026-01-26T10:30:00Z"
+  backend-engineer:
+    last_task: "Create API foundation"
+    last_activity: "2026-01-26T19:50:00Z"
+  frontend-engineer:
+    last_task: "Create web app foundation"
+    last_activity: "2026-01-26T19:50:00Z"
+  qa-engineer:
+    last_task: null
+    last_activity: null
+
+# Product-specific decisions
+pending_decisions: []
+
+# Error log
+error_log: []
+
+last_updated: "2026-01-26T21:00:00Z"
