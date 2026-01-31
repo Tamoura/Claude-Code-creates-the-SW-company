@@ -119,6 +119,42 @@ export class PaymentService {
     return { data, total };
   }
 
+  /**
+   * ADR: Concurrent Payment State Transition Safety
+   *
+   * SELECT ... FOR UPDATE is used to acquire an exclusive row-level lock
+   * inside the transaction. Without this, two blockchain confirmation
+   * events arriving simultaneously could both read the current status
+   * (e.g. CONFIRMING), both validate the transition to COMPLETED, and
+   * both write COMPLETED -- causing duplicate webhooks, double accounting,
+   * and corrupted state. The pessimistic lock serializes concurrent
+   * writers so only the first succeeds and the second sees the already-
+   * transitioned row.
+   *
+   * Webhook queuing is intentionally performed OUTSIDE the transaction.
+   * Webhooks involve HTTP calls to merchant endpoints with unpredictable
+   * latency (timeouts up to 30s). Holding a FOR UPDATE row lock during
+   * an outbound HTTP call would block all other transactions touching
+   * that row, creating a bottleneck that could cascade into database
+   * connection pool exhaustion under load.
+   *
+   * The state machine permits idempotent same-state transitions
+   * (e.g. COMPLETED -> COMPLETED) so that duplicate blockchain events
+   * or at-least-once delivery retries are handled gracefully without
+   * throwing errors. This is critical for distributed systems where
+   * exactly-once delivery is impractical.
+   *
+   * Alternatives considered:
+   * - Optimistic locking (version column): Rejected because blockchain
+   *   events arrive in bursts and retry storms would degrade throughput
+   *   more than a brief row lock.
+   * - Application-level mutex (Redis): Rejected because it adds an
+   *   external dependency to a critical path and cannot guarantee
+   *   atomicity with the database write.
+   * - Queuing all updates through a single worker: Rejected because it
+   *   introduces a single point of failure and unnecessary latency for
+   *   the common non-contended case.
+   */
   async updatePaymentStatus(
     id: string,
     status: PaymentStatus,
@@ -129,64 +165,70 @@ export class PaymentService {
       customerAddress?: string;
     }
   ): Promise<PaymentSession> {
-    // Enforce state machine: validate transition before any DB writes
-    const existingSession = await this.prisma.paymentSession.findUnique({
-      where: { id },
-    });
-    if (existingSession) {
-      validatePaymentStatusTransition(existingSession.status, status);
-    }
+    // Perform the state transition inside a transaction with row-level lock
+    const session = await this.prisma.$transaction(async (tx) => {
+      // Acquire exclusive lock on the payment row to prevent concurrent updates
+      const rows = await tx.$queryRaw<PaymentSession[]>`
+        SELECT * FROM "payment_sessions"
+        WHERE id = ${id}
+        FOR UPDATE
+      `;
 
-    // Enforce payment session expiry before allowing CONFIRMING or COMPLETED
-    if (status === 'CONFIRMING' || status === 'COMPLETED') {
-      const existingSession = await this.prisma.paymentSession.findUnique({
-        where: { id },
-      });
-      if (
-        existingSession &&
-        existingSession.expiresAt &&
-        existingSession.expiresAt < new Date()
-      ) {
-        await this.prisma.paymentSession.update({
-          where: { id },
-          data: { status: 'FAILED' },
-        });
-        throw new AppError(
-          400,
-          'session-expired',
-          'Payment session has expired'
-        );
+      const existingSession = rows[0];
+      if (!existingSession) {
+        throw new AppError(404, 'not-found', 'Payment session not found');
       }
-    }
 
-    const data: any = { status };
+      // Enforce state machine: validate transition
+      validatePaymentStatusTransition(existingSession.status, status);
 
-    if (updates.txHash) {
-      data.txHash = updates.txHash;
-    }
+      // Enforce payment session expiry before allowing CONFIRMING or COMPLETED
+      if (status === 'CONFIRMING' || status === 'COMPLETED') {
+        if (
+          existingSession.expiresAt &&
+          new Date(existingSession.expiresAt) < new Date()
+        ) {
+          await tx.paymentSession.update({
+            where: { id },
+            data: { status: 'FAILED' },
+          });
+          throw new AppError(
+            400,
+            'session-expired',
+            'Payment session has expired'
+          );
+        }
+      }
 
-    if (updates.blockNumber !== undefined) {
-      data.blockNumber = updates.blockNumber;
-    }
+      const data: any = { status };
 
-    if (updates.confirmations !== undefined) {
-      data.confirmations = updates.confirmations;
-    }
+      if (updates.txHash) {
+        data.txHash = updates.txHash;
+      }
 
-    if (updates.customerAddress) {
-      data.customerAddress = updates.customerAddress;
-    }
+      if (updates.blockNumber !== undefined) {
+        data.blockNumber = updates.blockNumber;
+      }
 
-    if (status === 'COMPLETED') {
-      data.completedAt = new Date();
-    }
+      if (updates.confirmations !== undefined) {
+        data.confirmations = updates.confirmations;
+      }
 
-    const session = await this.prisma.paymentSession.update({
-      where: { id },
-      data,
+      if (updates.customerAddress) {
+        data.customerAddress = updates.customerAddress;
+      }
+
+      if (status === 'COMPLETED') {
+        data.completedAt = new Date();
+      }
+
+      return tx.paymentSession.update({
+        where: { id },
+        data,
+      });
     });
 
-    // Queue webhooks for status changes
+    // Queue webhooks OUTSIDE the transaction (side effects)
     if (status === 'CONFIRMING') {
       await this.webhookService.queueWebhook(session.userId, 'payment.confirming', {
         id: session.id,

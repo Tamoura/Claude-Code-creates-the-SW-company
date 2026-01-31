@@ -8,9 +8,11 @@
  * - Protected by INTERNAL_API_KEY environment variable
  * - Should not be exposed to public internet
  * - Use API Gateway or firewall to restrict access
+ * - Uses timing-safe comparison to prevent timing attacks
  */
 
 import { FastifyPluginAsync } from 'fastify';
+import crypto from 'crypto';
 import { WebhookDeliveryService } from '../../services/webhook-delivery.service.js';
 import { logger } from '../../utils/logger.js';
 
@@ -28,7 +30,17 @@ const webhookWorkerRoutes: FastifyPluginAsync = async (fastify) => {
       });
     }
 
-    if (!authHeader || authHeader !== `Bearer ${expectedKey}`) {
+    // Timing-safe comparison to prevent timing attacks (Phase 3.2)
+    const expectedValue = `Bearer ${expectedKey}`;
+    const suppliedValue = authHeader || '';
+    const isValid =
+      suppliedValue.length === expectedValue.length &&
+      crypto.timingSafeEqual(
+        Buffer.from(suppliedValue),
+        Buffer.from(expectedValue),
+      );
+
+    if (!isValid) {
       // Log unauthorized access without sensitive headers
       // SECURITY: Never log Authorization, API keys, or other credentials
       logger.warn('Unauthorized webhook worker access attempt', {

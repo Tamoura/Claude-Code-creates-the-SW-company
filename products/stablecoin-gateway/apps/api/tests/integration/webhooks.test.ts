@@ -28,7 +28,7 @@ describe('Webhook CRUD API', () => {
   afterAll(async () => {
     // Clean up
     await prisma.webhookEndpoint.deleteMany({ where: { userId } });
-    await prisma.user.delete({ where: { id: userId } });
+    await prisma.user.deleteMany({ where: { id: userId } });
     await app.close();
   });
 
@@ -302,7 +302,7 @@ describe('Webhook CRUD API', () => {
 
       // Cleanup
       await prisma.webhookEndpoint.deleteMany({ where: { userId: otherUser.id } });
-      await prisma.user.delete({ where: { id: otherUser.id } });
+      await prisma.user.deleteMany({ where: { id: otherUser.id } });
     });
 
     it('should return 401 for missing authorization', async () => {
@@ -390,8 +390,8 @@ describe('Webhook CRUD API', () => {
       expect(response.statusCode).toBe(404);
 
       // Cleanup
-      await prisma.webhookEndpoint.delete({ where: { id: otherWebhook.id } });
-      await prisma.user.delete({ where: { id: otherUser.id } });
+      await prisma.webhookEndpoint.deleteMany({ where: { id: otherWebhook.id } });
+      await prisma.user.deleteMany({ where: { id: otherUser.id } });
     });
 
     it('should return 401 for missing authorization', async () => {
@@ -581,8 +581,8 @@ describe('Webhook CRUD API', () => {
       expect(response.statusCode).toBe(404);
 
       // Cleanup
-      await prisma.webhookEndpoint.delete({ where: { id: otherWebhook.id } });
-      await prisma.user.delete({ where: { id: otherUser.id } });
+      await prisma.webhookEndpoint.deleteMany({ where: { id: otherWebhook.id } });
+      await prisma.user.deleteMany({ where: { id: otherUser.id } });
     });
 
     it('should return 401 for missing authorization', async () => {
@@ -698,8 +698,8 @@ describe('Webhook CRUD API', () => {
       expect(response.statusCode).toBe(404);
 
       // Cleanup
-      await prisma.webhookEndpoint.delete({ where: { id: otherWebhook.id } });
-      await prisma.user.delete({ where: { id: otherUser.id } });
+      await prisma.webhookEndpoint.deleteMany({ where: { id: otherWebhook.id } });
+      await prisma.user.deleteMany({ where: { id: otherUser.id } });
     });
 
     it('should return 401 for missing authorization', async () => {

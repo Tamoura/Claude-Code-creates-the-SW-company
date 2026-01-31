@@ -77,11 +77,11 @@ const authPlugin: FastifyPluginAsync = async (fastify) => {
         throw new AppError(401, 'unauthorized', 'Invalid API key');
       }
 
-      // Update last used timestamp
-      await fastify.prisma.apiKey.update({
+      // Update last used timestamp (fire-and-forget to avoid blocking the request)
+      fastify.prisma.apiKey.update({
         where: { id: apiKey.id },
         data: { lastUsedAt: new Date() },
-      });
+      }).catch(() => {});
 
       request.currentUser = apiKey.user;
       request.apiKey = apiKey;

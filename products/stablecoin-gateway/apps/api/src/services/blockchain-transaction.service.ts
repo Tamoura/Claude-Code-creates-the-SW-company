@@ -5,13 +5,15 @@
  *
  * Features:
  * - ERC-20 token transfers (USDC, USDT)
- * - Gas fee estimation
  * - Transaction signing via KMS signer abstraction
  * - Multi-network support (Polygon, Ethereum)
  * - RPC provider failover with health checks
  * - Error handling and retry logic
  * - Optional nonce management via NonceManager for concurrent safety
  * - Daily spending limits to prevent unlimited fund drainage
+ *
+ * Read-only queries (gas estimation, balance lookups) have been
+ * extracted to BlockchainQueryService.
  *
  * Security:
  * - Uses KMS signer abstraction (never reads raw private key directly)
@@ -64,46 +66,7 @@ const ERC20_ABI = [
   'function balanceOf(address account) view returns (uint256)',
 ];
 
-/**
- * Build an array of RPC URLs for a network from environment variables.
- * Prefers comma-separated NETWORK_RPC_URLS, falls back to single
- * NETWORK_RPC_URL, then to a public default.
- */
-function getRpcUrls(network: 'polygon' | 'ethereum'): string[] {
-  const multiKey = network.toUpperCase() + '_RPC_URLS';
-  const singleKey = network.toUpperCase() + '_RPC_URL';
-  const defaults: Record<string, string> = {
-    polygon: 'https://polygon-rpc.com',
-    ethereum: 'https://eth.llamarpc.com',
-  };
-
-  const multi = process.env[multiKey];
-  if (multi) {
-    return multi.split(',').map(u => u.trim()).filter(Boolean);
-  }
-
-  const single = process.env[singleKey];
-  if (single) {
-    return [single];
-  }
-
-  return [defaults[network]];
-}
-
-// Token contract addresses by network
-const TOKEN_ADDRESSES = {
-  polygon: {
-    USDC: '0x2791Bca1f2de4661ED88A30C99A7a9449Aa84174',
-    USDT: '0xc2132D05D31c914a87C6611C10748AEb04B58e8F',
-  },
-  ethereum: {
-    USDC: '0xA0b86991c6218b36c1d19D4a2e9Eb0cE3606eB48',
-    USDT: '0xdAC17F958D2ee523a2206206994597C13D831ec7',
-  },
-} as const;
-
-type Network = 'polygon' | 'ethereum';
-type Token = 'USDC' | 'USDT';
+import { TOKEN_ADDRESSES, getRpcUrls, Network, Token } from '../constants/tokens.js';
 
 /**
  * Network-specific confirmation requirements for transaction finality.
@@ -125,6 +88,25 @@ const DEFAULT_DAILY_REFUND_LIMIT = 10_000;
 /** TTL for daily spend keys: 48 hours to survive timezone edge cases */
 const SPEND_KEY_TTL_SECONDS = 48 * 60 * 60; // 172800
 
+/**
+ * Convert a dollar amount to cents using string arithmetic.
+ * Avoids IEEE 754 floating-point errors that affect Math.round().
+ * e.g. Math.round(1.005 * 100) = 100, but dollarsToCents(1.005) = 101
+ */
+function dollarsToCents(amount: number): number {
+  const str = amount.toString();
+  const parts = str.split('.');
+  const dollars = parts[0];
+  const cents = (parts[1] || '').padEnd(2, '0').slice(0, 2);
+  const subCents = (parts[1] || '').slice(2);
+  const base = parseInt(dollars, 10) * 100 + parseInt(cents, 10);
+  // Round up if there are sub-cent digits >= 5
+  if (subCents.length > 0 && parseInt(subCents[0], 10) >= 5) {
+    return base + 1;
+  }
+  return base;
+}
+
 export interface RefundTransactionParams {
   network: Network;
   token: Token;
@@ -141,13 +123,46 @@ export interface RefundTransactionResult {
   pendingConfirmations?: number;
 }
 
-export interface GasEstimate {
-  gasLimit: string;
-  gasPrice: string;
-  estimatedCostWei: string;
-  estimatedCostEth: string;
-}
-
+/**
+ * ADR: Blockchain Transaction Safety Measures
+ *
+ * Spending limits use string-based dollar-to-cents conversion
+ * (dollarsToCents) instead of native JS floating-point arithmetic.
+ * IEEE 754 double-precision cannot represent many decimal values
+ * exactly: Math.round(1.005 * 100) produces 100 instead of 101.
+ * In a refund system, this could allow cumulative over-spending
+ * that bypasses the daily cap. String splitting isolates the integer
+ * and fractional parts, avoiding floating-point multiplication
+ * entirely, and then applies correct sub-cent rounding.
+ *
+ * Nonce management is optional (injected via constructor options)
+ * because not all deployment configurations require it. Single-
+ * instance deployments with sequential refund processing do not
+ * have concurrent nonce contention. Forcing a Redis-backed nonce
+ * manager in those environments adds operational complexity and a
+ * failure mode (Redis outage blocking all refunds) for no benefit.
+ * When multiple API instances process refunds concurrently, the
+ * NonceManager is injected to serialize nonce allocation via Redis
+ * and prevent nonce collisions that cause transaction reverts.
+ *
+ * The service validates network/token combinations against an
+ * explicit TOKEN_ADDRESSES registry rather than accepting arbitrary
+ * contract addresses. Stablecoins are deployed at different
+ * addresses on each network (e.g. USDC on Polygon vs Ethereum).
+ * Sending tokens to the wrong contract address on the wrong network
+ * results in permanent fund loss. The registry acts as an allowlist
+ * so only known-good combinations are executable.
+ *
+ * Alternatives considered:
+ * - BigInt for cent arithmetic: Rejected because the inputs arrive
+ *   as JS numbers from JSON parsing; converting to BigInt still
+ *   requires parsing the decimal, which is what dollarsToCents does.
+ * - Mandatory nonce manager: Rejected because it would require Redis
+ *   in all environments including single-node dev setups.
+ * - Accepting raw contract addresses from callers: Rejected because
+ *   it shifts the burden of address correctness to every caller and
+ *   opens the door to sending funds to arbitrary contracts.
+ */
 export class BlockchainTransactionService {
   private providerManager: ProviderManager;
   private wallets: Map<string, ethers.Wallet> = new Map();
@@ -218,9 +233,10 @@ export class BlockchainTransactionService {
         ? Number(currentSpendStr)
         : 0;
 
-      // Convert amount to cents for integer arithmetic
-      const amountCents = Math.round(amount * 100);
-      const limitCents = Math.round(this.dailyRefundLimit * 100);
+      // Convert amount to cents using string arithmetic to avoid IEEE 754 errors.
+      // Math.round(1.005 * 100) === 100 (wrong), but string split gives 101.
+      const amountCents = dollarsToCents(amount);
+      const limitCents = dollarsToCents(this.dailyRefundLimit);
 
       if (currentSpend + amountCents > limitCents) {
         logger.warn('Daily refund spending limit would be exceeded', {
@@ -254,7 +270,7 @@ export class BlockchainTransactionService {
 
     try {
       const key = this.getDailySpendKey();
-      const amountCents = Math.round(amount * 100);
+      const amountCents = dollarsToCents(amount);
       await this.redis.incrby(key, amountCents);
       await this.redis.expire(key, SPEND_KEY_TTL_SECONDS);
     } catch (error) {
@@ -456,75 +472,5 @@ export class BlockchainTransactionService {
         error: error instanceof Error ? error.message : 'Unknown error',
       };
     }
-  }
-
-  /**
-   * Estimate gas cost for a refund transaction
-   *
-   * Useful for showing estimated fees to merchants before executing
-   */
-  async estimateRefundGas(
-    params: RefundTransactionParams
-  ): Promise<GasEstimate> {
-    const { network, token, recipientAddress, amount } = params;
-
-    const provider = await this.providerManager.getProvider(network);
-
-    const wallet = await this.getWallet(network);
-    const connectedWallet = wallet.connect(provider);
-    const tokenAddress = TOKEN_ADDRESSES[network][token];
-    const tokenContract = new ethers.Contract(
-      tokenAddress,
-      ERC20_ABI,
-      connectedWallet
-    );
-
-    const amountInTokenUnits = BigInt(
-      Math.floor(amount * Math.pow(10, this.decimals))
-    );
-
-    // Estimate gas
-    const gasLimit = await tokenContract.transfer.estimateGas(
-      recipientAddress,
-      amountInTokenUnits
-    );
-    const feeData = await provider.getFeeData();
-    const gasPrice = feeData.gasPrice || BigInt(0);
-
-    const estimatedCostWei = gasLimit * gasPrice;
-    const estimatedCostEth = ethers.formatEther(estimatedCostWei);
-
-    return {
-      gasLimit: gasLimit.toString(),
-      gasPrice: gasPrice.toString(),
-      estimatedCostWei: estimatedCostWei.toString(),
-      estimatedCostEth,
-    };
-  }
-
-  /**
-   * Get merchant wallet balance for a specific token
-   *
-   * Useful for checking if merchant has enough tokens to process refunds
-   */
-  async getMerchantBalance(
-    network: Network,
-    token: Token
-  ): Promise<number> {
-    const provider = await this.providerManager.getProvider(network);
-
-    const wallet = await this.getWallet(network);
-    const tokenAddress = TOKEN_ADDRESSES[network][token];
-    const tokenContract = new ethers.Contract(
-      tokenAddress,
-      ERC20_ABI,
-      provider
-    );
-
-    const balance = await tokenContract.balanceOf(wallet.address);
-    const balanceInUsd =
-      Number(balance) / Math.pow(10, this.decimals);
-
-    return balanceInUsd;
   }
 }

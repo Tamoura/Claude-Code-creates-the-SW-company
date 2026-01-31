@@ -75,6 +75,9 @@ function redactDetails(
   return redacted;
 }
 
+/** Maximum in-memory audit entries (ring buffer). */
+const MAX_BUFFER_SIZE = 10_000;
+
 export class AuditLogService {
   private entries: AuditEntry[] = [];
   private prisma: PrismaClient | null;
@@ -115,17 +118,29 @@ export class AuditLogService {
             timestamp: entry.timestamp,
           },
         }).then(() => {
-          // Also store in memory for fast recent queries
-          this.entries.push(entry);
+          // DB write succeeded -- skip in-memory to avoid duplication
         }).catch((error) => {
+          // DB write failed -- fall back to in-memory
           console.error('Audit log write failed', error);
+          this.pushBounded(entry);
         });
       }
 
-      this.entries.push(entry);
+      this.pushBounded(entry);
     } catch (error) {
       console.error('Audit log write failed', error);
     }
+  }
+
+  /**
+   * Push an entry to the in-memory buffer, evicting the oldest
+   * entry if the buffer is at capacity (ring buffer).
+   */
+  private pushBounded(entry: AuditEntry): void {
+    if (this.entries.length >= MAX_BUFFER_SIZE) {
+      this.entries.shift();
+    }
+    this.entries.push(entry);
   }
 
   /**

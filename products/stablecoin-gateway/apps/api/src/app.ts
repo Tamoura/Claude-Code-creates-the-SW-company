@@ -3,6 +3,8 @@ import cors from '@fastify/cors';
 import jwt from '@fastify/jwt';
 import rateLimit from '@fastify/rate-limit';
 import helmet from '@fastify/helmet';
+import swagger from '@fastify/swagger';
+import swaggerUi from '@fastify/swagger-ui';
 import { ZodError } from 'zod';
 
 // Plugins
@@ -47,7 +49,7 @@ export async function buildApp(): Promise<FastifyInstance> {
       directives: {
         defaultSrc: ["'self'"],
         styleSrc: ["'self'", "'unsafe-inline'"],
-        scriptSrc: ["'self'"],
+        scriptSrc: ["'self'", "'unsafe-inline'"],
         imgSrc: ["'self'", 'data:', 'https:'],
       },
     },
@@ -85,8 +87,11 @@ export async function buildApp(): Promise<FastifyInstance> {
 
   // Register JWT
   // JWT_SECRET is validated in env-validator.ts on startup
+  // Pin JWT algorithm to HS256 to prevent algorithm confusion attacks (Phase 3.6)
   await fastify.register(jwt, {
     secret: process.env.JWT_SECRET!,
+    sign: { algorithm: 'HS256' },
+    verify: { algorithms: ['HS256'] },
   });
 
   // Register plugins
@@ -157,6 +162,44 @@ export async function buildApp(): Promise<FastifyInstance> {
 
   await fastify.register(authPlugin);
 
+
+  // Register OpenAPI / Swagger spec generation
+  await fastify.register(swagger, {
+    openapi: {
+      info: {
+        title: 'Stablecoin Gateway API',
+        description: 'API for processing stablecoin payments (USDC/USDT)',
+        version: '1.0.0',
+      },
+      servers: [{ url: 'http://localhost:5050', description: 'Development' }],
+      tags: [
+        { name: 'payments', description: 'Payment session management' },
+        { name: 'refunds', description: 'Refund processing' },
+        { name: 'webhooks', description: 'Webhook endpoint management' },
+        { name: 'auth', description: 'Authentication and authorization' },
+        { name: 'api-keys', description: 'API key management' },
+        { name: 'internal', description: 'Internal service endpoints' },
+      ],
+      components: {
+        securitySchemes: {
+          bearerAuth: {
+            type: 'http',
+            scheme: 'bearer',
+            bearerFormat: 'JWT',
+          },
+          apiKeyAuth: {
+            type: 'http',
+            scheme: 'bearer',
+            description: 'API key (sk_live_... or sk_test_...)',
+          },
+        },
+      },
+    },
+  });
+
+  await fastify.register(swaggerUi, {
+    routePrefix: '/docs',
+  });
   // Register routes
   await fastify.register(authRoutes, { prefix: '/v1/auth' });
   await fastify.register(paymentSessionRoutes, { prefix: '/v1/payment-sessions' });

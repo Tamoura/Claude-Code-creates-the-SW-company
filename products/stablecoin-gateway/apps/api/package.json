@@ -34,6 +34,8 @@
     "@fastify/helmet": "^13.0.2",
     "@fastify/jwt": "^10.0.0",
     "@fastify/rate-limit": "^10.3.0",
+    "@fastify/swagger": "^9.6.1",
+    "@fastify/swagger-ui": "^5.2.5",
     "@prisma/client": "^5.8.1",
     "asn1.js": "^5.4.1",
     "bcrypt": "^6.0.0",

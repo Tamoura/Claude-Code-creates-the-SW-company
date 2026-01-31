@@ -42,10 +42,10 @@ describe('WebhookDeliveryService', () => {
     await prisma.webhookDelivery.deleteMany({
       where: { endpointId: testEndpointId },
     });
-    await prisma.webhookEndpoint.delete({
+    await prisma.webhookEndpoint.deleteMany({
       where: { id: testEndpointId },
     });
-    await prisma.user.delete({
+    await prisma.user.deleteMany({
       where: { id: testUserId },
     });
     await prisma.$disconnect();
@@ -116,7 +116,7 @@ describe('WebhookDeliveryService', () => {
       await prisma.webhookDelivery.deleteMany({
         where: { endpointId: endpoint2.id },
       });
-      await prisma.webhookEndpoint.delete({ where: { id: endpoint2.id } });
+      await prisma.webhookEndpoint.deleteMany({ where: { id: endpoint2.id } });
     });
 
     it('should not queue webhook if no endpoints subscribed to event', async () => {
@@ -506,7 +506,7 @@ describe('WebhookDeliveryService', () => {
       await prisma.webhookDelivery.deleteMany({
         where: { endpointId: refundEndpoint.id },
       });
-      await prisma.webhookEndpoint.delete({ where: { id: refundEndpoint.id } });
+      await prisma.webhookEndpoint.deleteMany({ where: { id: refundEndpoint.id } });
     });
   });
 });

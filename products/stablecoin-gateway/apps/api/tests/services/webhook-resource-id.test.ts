@@ -51,7 +51,7 @@ describe('Webhook resource ID extraction', () => {
       where: { endpoint: { userId } },
     });
     await prisma.webhookEndpoint.deleteMany({ where: { userId } });
-    await prisma.user.delete({ where: { id: userId } });
+    await prisma.user.deleteMany({ where: { id: userId } });
     await prisma.$disconnect();
   });
 
