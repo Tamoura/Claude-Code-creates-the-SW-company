@@ -119,6 +119,18 @@ export class PaymentService {
     return { data, total };
   }
 
+  /**
+   * Update payment status with database-level locking.
+   *
+   * ADR: Uses SELECT ... FOR UPDATE inside a serializable transaction
+   * to prevent concurrent transitions from both succeeding. Without
+   * this, two blockchain confirmations arriving simultaneously could
+   * both read CONFIRMING, validate the transition, and write COMPLETED,
+   * causing duplicate webhooks and corrupted state.
+   *
+   * Webhook queuing is intentionally outside the transaction to avoid
+   * holding the row lock during HTTP calls.
+   */
   async updatePaymentStatus(
     id: string,
     status: PaymentStatus,
@@ -129,64 +141,70 @@ export class PaymentService {
       customerAddress?: string;
     }
   ): Promise<PaymentSession> {
-    // Enforce state machine: validate transition before any DB writes
-    const existingSession = await this.prisma.paymentSession.findUnique({
-      where: { id },
-    });
-    if (existingSession) {
-      validatePaymentStatusTransition(existingSession.status, status);
-    }
+    // Perform the state transition inside a transaction with row-level lock
+    const session = await this.prisma.$transaction(async (tx) => {
+      // Acquire exclusive lock on the payment row to prevent concurrent updates
+      const rows = await tx.$queryRaw<PaymentSession[]>`
+        SELECT * FROM "payment_sessions"
+        WHERE id = ${id}
+        FOR UPDATE
+      `;
 
-    // Enforce payment session expiry before allowing CONFIRMING or COMPLETED
-    if (status === 'CONFIRMING' || status === 'COMPLETED') {
-      const existingSession = await this.prisma.paymentSession.findUnique({
-        where: { id },
-      });
-      if (
-        existingSession &&
-        existingSession.expiresAt &&
-        existingSession.expiresAt < new Date()
-      ) {
-        await this.prisma.paymentSession.update({
-          where: { id },
-          data: { status: 'FAILED' },
-        });
-        throw new AppError(
-          400,
-          'session-expired',
-          'Payment session has expired'
-        );
+      const existingSession = rows[0];
+      if (!existingSession) {
+        throw new AppError(404, 'not-found', 'Payment session not found');
       }
-    }
 
-    const data: any = { status };
+      // Enforce state machine: validate transition
+      validatePaymentStatusTransition(existingSession.status, status);
 
-    if (updates.txHash) {
-      data.txHash = updates.txHash;
-    }
+      // Enforce payment session expiry before allowing CONFIRMING or COMPLETED
+      if (status === 'CONFIRMING' || status === 'COMPLETED') {
+        if (
+          existingSession.expiresAt &&
+          new Date(existingSession.expiresAt) < new Date()
+        ) {
+          await tx.paymentSession.update({
+            where: { id },
+            data: { status: 'FAILED' },
+          });
+          throw new AppError(
+            400,
+            'session-expired',
+            'Payment session has expired'
+          );
+        }
+      }
 
-    if (updates.blockNumber !== undefined) {
-      data.blockNumber = updates.blockNumber;
-    }
+      const data: any = { status };
 
-    if (updates.confirmations !== undefined) {
-      data.confirmations = updates.confirmations;
-    }
+      if (updates.txHash) {
+        data.txHash = updates.txHash;
+      }
 
-    if (updates.customerAddress) {
-      data.customerAddress = updates.customerAddress;
-    }
+      if (updates.blockNumber !== undefined) {
+        data.blockNumber = updates.blockNumber;
+      }
 
-    if (status === 'COMPLETED') {
-      data.completedAt = new Date();
-    }
+      if (updates.confirmations !== undefined) {
+        data.confirmations = updates.confirmations;
+      }
 
-    const session = await this.prisma.paymentSession.update({
-      where: { id },
-      data,
+      if (updates.customerAddress) {
+        data.customerAddress = updates.customerAddress;
+      }
+
+      if (status === 'COMPLETED') {
+        data.completedAt = new Date();
+      }
+
+      return tx.paymentSession.update({
+        where: { id },
+        data,
+      });
     });
 
-    // Queue webhooks for status changes
+    // Queue webhooks OUTSIDE the transaction (side effects)
     if (status === 'CONFIRMING') {
       await this.webhookService.queueWebhook(session.userId, 'payment.confirming', {
         id: session.id,
