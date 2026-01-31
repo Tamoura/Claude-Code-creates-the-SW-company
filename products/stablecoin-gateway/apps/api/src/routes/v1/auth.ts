@@ -458,8 +458,7 @@ const authRoutes: FastifyPluginAsync = async (fastify) => {
         logger.info('Password reset token generated', {
           userId: user.id,
           email: user.email,
-          // In production this would be emailed, not logged
-          token,
+          // Token sent via email, never logged
         });
       }
 
