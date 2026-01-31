@@ -26,10 +26,13 @@ export function hashApiKey(apiKey: string): string {
   if (hmacSecret) {
     return crypto.createHmac('sha256', hmacSecret).update(apiKey).digest('hex');
   }
-  // Fallback for dev/test - plain SHA-256 (log warning in production)
+  // SEC: In production, HMAC secret is mandatory — fail hard
   if (process.env.NODE_ENV === 'production') {
-    console.warn('WARNING: API_KEY_HMAC_SECRET not set in production - using unsalted SHA-256');
+    throw new Error(
+      'API_KEY_HMAC_SECRET must be configured in production'
+    );
   }
+  // Fallback for dev/test - plain SHA-256
   return crypto.createHash('sha256').update(apiKey).digest('hex');
 }
 

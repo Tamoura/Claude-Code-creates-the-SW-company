@@ -18,6 +18,7 @@
 
 import fp from 'fastify-plugin';
 import { FastifyPluginAsync, FastifyRequest, FastifyReply } from 'fastify';
+import * as crypto from 'crypto';
 import { logger } from '../utils/logger.js';
 
 // Metrics storage (in-memory for simplicity, can be replaced with Prometheus/StatsD)
@@ -183,8 +184,17 @@ const observabilityPlugin: FastifyPluginAsync = async (fastify) => {
       }
       // In development without key configured, allow access for convenience
     } else {
-      // Key is configured - require valid authorization
-      if (!authHeader || authHeader !== `Bearer ${expectedKey}`) {
+      // Key is configured - require valid authorization (timing-safe)
+      const provided = authHeader?.startsWith('Bearer ')
+        ? authHeader.substring(7)
+        : '';
+      const expectedBuf = Buffer.from(expectedKey, 'utf-8');
+      const providedBuf = Buffer.from(provided, 'utf-8');
+      // SEC: Use constant-time comparison to prevent timing attacks
+      const isValid =
+        expectedBuf.length === providedBuf.length &&
+        crypto.timingSafeEqual(expectedBuf, providedBuf);
+      if (!authHeader || !isValid) {
         return reply.code(401).send({ error: 'Unauthorized' });
       }
     }
