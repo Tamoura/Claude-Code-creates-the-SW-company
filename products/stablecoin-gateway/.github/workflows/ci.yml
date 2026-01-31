@@ -65,7 +65,7 @@ jobs:
 
       - name: Run unit tests
         working-directory: products/stablecoin-gateway/apps/api
-        run: npm test -- --coverage
+        run: npm test -- --ci --coverage
         env:
           DATABASE_URL: postgresql://test:test@localhost:5432/stablecoin_gateway_test
           REDIS_URL: redis://localhost:6379
@@ -177,6 +177,7 @@ jobs:
 
   build:
     name: Build
+    needs: [test-api, test-web, lint]
     runs-on: ubuntu-latest
 
     steps:
