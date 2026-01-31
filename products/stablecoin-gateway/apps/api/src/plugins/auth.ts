@@ -40,7 +40,20 @@ const authPlugin: FastifyPluginAsync = async (fastify) => {
             if (redisError instanceof AppError) {
               throw redisError;
             }
-            // Redis error -- degrade gracefully, allow the request
+            // SEC: In production, fail closed — do not allow potentially
+            // revoked tokens through when Redis is unavailable.
+            if (process.env.NODE_ENV === 'production') {
+              logger.error('Redis unavailable during JTI check, failing closed', {
+                jti,
+                error: redisError instanceof Error ? redisError.message : 'unknown',
+              });
+              throw new AppError(
+                503,
+                'service-unavailable',
+                'Authentication service temporarily unavailable'
+              );
+            }
+            // Dev/test: degrade gracefully, allow the request
             logger.warn('Redis unavailable during JTI check, skipping', {
               jti,
               error: redisError instanceof Error ? redisError.message : 'unknown',
