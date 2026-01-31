@@ -138,9 +138,9 @@ When complete, report your results in this format:
 - [What's preventing completion]
 ```
 
-Then update your memory by running:
+Then run the mandatory post-task update (updates memory, audit trail, and task graph):
 ```bash
-.claude/scripts/update-agent-memory.sh [agent-name] [TASK-ID] [product] [success|failure] [minutes] "[summary]"
+.claude/scripts/post-task-update.sh [agent-name] [TASK-ID] [product] [success|failure] [minutes] "[summary]" "[optional-pattern]"
 ```
 
 ---
@@ -252,7 +252,10 @@ Pause and report to CEO at these points:
 .claude/scripts/testing-gate-checklist.sh <product>
 .claude/quality-gates/executor.sh <gate-type> <product>
 
-# Agent memory
+# Post-task update (mandatory - updates memory + audit trail)
+.claude/scripts/post-task-update.sh <agent> <task_id> <product> <status> <minutes> "<summary>" "[pattern]"
+
+# Agent memory (called by post-task-update, but can run standalone)
 .claude/scripts/update-agent-memory.sh <agent> <task_id> <product> <status> <minutes> "<summary>"
 
 # Task status update

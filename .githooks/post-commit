@@ -1,0 +1,25 @@
+#!/bin/bash
+# post-commit hook
+# Passively logs commit metadata to audit-trail.jsonl.
+# Install: git config core.hooksPath .githooks
+
+REPO_ROOT="$(git rev-parse --show-toplevel 2>/dev/null)"
+AUDIT_FILE="$REPO_ROOT/.claude/audit-trail.jsonl"
+
+[ -z "$REPO_ROOT" ] && exit 0
+[ ! -d "$REPO_ROOT/.claude" ] && exit 0
+
+COMMIT_HASH=$(git rev-parse --short HEAD 2>/dev/null || echo "unknown")
+BRANCH=$(git branch --show-current 2>/dev/null || echo "unknown")
+AUTHOR=$(git log -1 --format="%an" 2>/dev/null || echo "unknown")
+MESSAGE=$(git log -1 --format="%s" 2>/dev/null | sed 's/"/\\"/g')
+TIMESTAMP=$(date -u +"%Y-%m-%dT%H:%M:%SZ")
+FILES_CHANGED=$(git diff-tree --no-commit-id --name-only -r HEAD 2>/dev/null | wc -l | tr -d ' ')
+
+# Detect product from changed files
+PRODUCT=$(git diff-tree --no-commit-id --name-only -r HEAD 2>/dev/null | grep "^products/" | head -1 | cut -d'/' -f2)
+[ -z "$PRODUCT" ] && PRODUCT="infrastructure"
+
+ENTRY="{\"timestamp\":\"$TIMESTAMP\",\"type\":\"commit\",\"agent\":\"$AUTHOR\",\"task_id\":\"$COMMIT_HASH\",\"product\":\"$PRODUCT\",\"status\":\"committed\",\"time_minutes\":0,\"summary\":\"$MESSAGE\",\"branch\":\"$BRANCH\",\"commit\":\"$COMMIT_HASH\",\"files_changed\":$FILES_CHANGED}"
+
+echo "$ENTRY" >> "$AUDIT_FILE" 2>/dev/null || true
