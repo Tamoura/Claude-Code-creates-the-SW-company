@@ -1,6 +1,7 @@
 import { PrismaClient, PaymentSession, PaymentStatus, Prisma } from '@prisma/client';
 import { AppError, CreatePaymentSessionRequest, PaymentSessionResponse } from '../types/index.js';
 import { generatePaymentSessionId } from '../utils/crypto.js';
+import { validatePaymentStatusTransition } from '../utils/payment-state-machine.js';
 import { WebhookDeliveryService } from './webhook-delivery.service.js';
 
 export class PaymentService {
@@ -128,6 +129,14 @@ export class PaymentService {
       customerAddress?: string;
     }
   ): Promise<PaymentSession> {
+    // Enforce state machine: validate transition before any DB writes
+    const existingSession = await this.prisma.paymentSession.findUnique({
+      where: { id },
+    });
+    if (existingSession) {
+      validatePaymentStatusTransition(existingSession.status, status);
+    }
+
     // Enforce payment session expiry before allowing CONFIRMING or COMPLETED
     if (status === 'CONFIRMING' || status === 'COMPLETED') {
       const existingSession = await this.prisma.paymentSession.findUnique({
