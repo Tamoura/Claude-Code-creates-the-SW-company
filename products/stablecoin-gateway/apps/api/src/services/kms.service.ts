@@ -23,6 +23,45 @@ interface KMSConfig {
   timeout?: number;
 }
 
+/**
+ * ADR: AWS KMS for Blockchain Key Management
+ *
+ * AWS KMS is used so that private signing keys never leave the
+ * Hardware Security Module (HSM). In a traditional setup, the
+ * merchant wallet private key lives in an environment variable or
+ * config file, meaning any server compromise, memory dump, or log
+ * leak exposes the key and allows unlimited fund drainage. With
+ * KMS, the key is generated inside the HSM and all signing
+ * operations execute within KMS -- the application only ever
+ * receives the signature output, never the raw key material.
+ *
+ * Recovery parameter (v value) calculation is required because AWS
+ * KMS returns a standard DER-encoded ECDSA signature (r, s) without
+ * the Ethereum-specific recovery parameter. EVM transactions and
+ * ecrecover require v (27 or 28) to recover the signer's public key
+ * from the signature. The service tries both values and compares the
+ * recovered address against the known KMS public key address to
+ * determine the correct v. This is a standard technique when using
+ * non-Ethereum-native HSMs for EVM signing.
+ *
+ * Health checks verify both sign and getPublicKey operations because
+ * they exercise different KMS permissions and code paths. A key can
+ * be accessible for public key retrieval (kms:GetPublicKey) but have
+ * its signing permission revoked (kms:Sign), or vice versa. Checking
+ * only one operation would give a false positive if the other is
+ * broken. The health check validates the full operational path that
+ * a real refund transaction would exercise.
+ *
+ * Alternatives considered:
+ * - Local private key in env var: Rejected for production because
+ *   any process with memory access can extract the key.
+ * - HashiCorp Vault transit engine: Viable alternative, but adds
+ *   another infrastructure dependency; AWS KMS is native to our
+ *   deployment environment and provides FIPS 140-2 Level 3 HSMs.
+ * - Fireblocks / institutional custody: Rejected for MVP due to
+ *   cost and integration complexity; KMS provides sufficient
+ *   security for current transaction volumes.
+ */
 export class KMSService {
   private client: KMSClient;
   private keyId: string;

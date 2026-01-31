@@ -120,16 +120,40 @@ export class PaymentService {
   }
 
   /**
-   * Update payment status with database-level locking.
+   * ADR: Concurrent Payment State Transition Safety
    *
-   * ADR: Uses SELECT ... FOR UPDATE inside a serializable transaction
-   * to prevent concurrent transitions from both succeeding. Without
-   * this, two blockchain confirmations arriving simultaneously could
-   * both read CONFIRMING, validate the transition, and write COMPLETED,
-   * causing duplicate webhooks and corrupted state.
+   * SELECT ... FOR UPDATE is used to acquire an exclusive row-level lock
+   * inside the transaction. Without this, two blockchain confirmation
+   * events arriving simultaneously could both read the current status
+   * (e.g. CONFIRMING), both validate the transition to COMPLETED, and
+   * both write COMPLETED -- causing duplicate webhooks, double accounting,
+   * and corrupted state. The pessimistic lock serializes concurrent
+   * writers so only the first succeeds and the second sees the already-
+   * transitioned row.
    *
-   * Webhook queuing is intentionally outside the transaction to avoid
-   * holding the row lock during HTTP calls.
+   * Webhook queuing is intentionally performed OUTSIDE the transaction.
+   * Webhooks involve HTTP calls to merchant endpoints with unpredictable
+   * latency (timeouts up to 30s). Holding a FOR UPDATE row lock during
+   * an outbound HTTP call would block all other transactions touching
+   * that row, creating a bottleneck that could cascade into database
+   * connection pool exhaustion under load.
+   *
+   * The state machine permits idempotent same-state transitions
+   * (e.g. COMPLETED -> COMPLETED) so that duplicate blockchain events
+   * or at-least-once delivery retries are handled gracefully without
+   * throwing errors. This is critical for distributed systems where
+   * exactly-once delivery is impractical.
+   *
+   * Alternatives considered:
+   * - Optimistic locking (version column): Rejected because blockchain
+   *   events arrive in bursts and retry storms would degrade throughput
+   *   more than a brief row lock.
+   * - Application-level mutex (Redis): Rejected because it adds an
+   *   external dependency to a critical path and cannot guarantee
+   *   atomicity with the database write.
+   * - Queuing all updates through a single worker: Rejected because it
+   *   introduces a single point of failure and unnecessary latency for
+   *   the common non-contended case.
    */
   async updatePaymentStatus(
     id: string,

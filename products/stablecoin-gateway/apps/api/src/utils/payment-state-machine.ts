@@ -28,6 +28,47 @@ import { PaymentStatus } from '@prisma/client';
 import { AppError } from '../types/index.js';
 
 /**
+ * ADR: Payment State Machine Design
+ *
+ * Terminal states (COMPLETED, FAILED, REFUNDED) include self-
+ * transitions (e.g. COMPLETED -> COMPLETED) to support idempotent
+ * event processing. In distributed systems, blockchain indexers,
+ * webhook retries, and queue consumers may deliver the same state
+ * change event multiple times. Without self-transitions, a duplicate
+ * "payment completed" event would throw an invalid-transition error,
+ * forcing every caller to wrap status updates in try/catch or pre-
+ * check logic. Allowing self-transitions lets the system absorb
+ * duplicates silently, following the principle that idempotent
+ * operations should be safe to retry.
+ *
+ * The state machine is a separate module rather than being embedded
+ * in PaymentService. This follows single responsibility: the service
+ * handles persistence, webhooks, and business orchestration, while
+ * the state machine encodes only the transition rules. Separation
+ * makes the transition rules independently testable (unit tests
+ * validate every allowed and rejected transition without a database)
+ * and reusable if other services need to validate transitions (e.g.
+ * the refund service checks payment status before allowing refunds).
+ *
+ * Transitions are validated against explicit allow-lists rather than
+ * deny-lists (i.e. "these transitions ARE allowed" vs "these ARE
+ * NOT"). A deny-list approach would silently permit any new status
+ * added in the future unless explicitly blocked. The allow-list
+ * ensures that adding a new PaymentStatus enum value requires a
+ * conscious decision about which transitions to permit, preventing
+ * accidental paths like PENDING -> REFUNDED (refunding before
+ * payment) that could cause financial loss.
+ *
+ * Alternatives considered:
+ * - Deny-list (block specific transitions): Rejected because it
+ *   defaults to open, which is unsafe for a financial state machine.
+ * - Embedded in PaymentService: Rejected because it couples
+ *   transition validation to database/webhook logic, making unit
+ *   tests require a full service setup.
+ * - State machine library (xstate): Rejected as over-engineered
+ *   for a linear 5-state lifecycle; a simple map is more readable
+ *   and has zero dependencies.
+ *
  * Valid state transitions map
  *
  * Key: current status

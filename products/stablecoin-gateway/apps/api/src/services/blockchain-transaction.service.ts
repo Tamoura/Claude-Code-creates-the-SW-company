@@ -123,6 +123,46 @@ export interface RefundTransactionResult {
   pendingConfirmations?: number;
 }
 
+/**
+ * ADR: Blockchain Transaction Safety Measures
+ *
+ * Spending limits use string-based dollar-to-cents conversion
+ * (dollarsToCents) instead of native JS floating-point arithmetic.
+ * IEEE 754 double-precision cannot represent many decimal values
+ * exactly: Math.round(1.005 * 100) produces 100 instead of 101.
+ * In a refund system, this could allow cumulative over-spending
+ * that bypasses the daily cap. String splitting isolates the integer
+ * and fractional parts, avoiding floating-point multiplication
+ * entirely, and then applies correct sub-cent rounding.
+ *
+ * Nonce management is optional (injected via constructor options)
+ * because not all deployment configurations require it. Single-
+ * instance deployments with sequential refund processing do not
+ * have concurrent nonce contention. Forcing a Redis-backed nonce
+ * manager in those environments adds operational complexity and a
+ * failure mode (Redis outage blocking all refunds) for no benefit.
+ * When multiple API instances process refunds concurrently, the
+ * NonceManager is injected to serialize nonce allocation via Redis
+ * and prevent nonce collisions that cause transaction reverts.
+ *
+ * The service validates network/token combinations against an
+ * explicit TOKEN_ADDRESSES registry rather than accepting arbitrary
+ * contract addresses. Stablecoins are deployed at different
+ * addresses on each network (e.g. USDC on Polygon vs Ethereum).
+ * Sending tokens to the wrong contract address on the wrong network
+ * results in permanent fund loss. The registry acts as an allowlist
+ * so only known-good combinations are executable.
+ *
+ * Alternatives considered:
+ * - BigInt for cent arithmetic: Rejected because the inputs arrive
+ *   as JS numbers from JSON parsing; converting to BigInt still
+ *   requires parsing the decimal, which is what dollarsToCents does.
+ * - Mandatory nonce manager: Rejected because it would require Redis
+ *   in all environments including single-node dev setups.
+ * - Accepting raw contract addresses from callers: Rejected because
+ *   it shifts the burden of address correctness to every caller and
+ *   opens the door to sending funds to arbitrary contracts.
+ */
 export class BlockchainTransactionService {
   private providerManager: ProviderManager;
   private wallets: Map<string, ethers.Wallet> = new Map();

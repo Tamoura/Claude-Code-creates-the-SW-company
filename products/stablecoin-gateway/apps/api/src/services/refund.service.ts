@@ -78,9 +78,40 @@ export class RefundService {
   }
 
   /**
-   * Create a refund request for a completed payment.
+   * ADR: Refund Creation Concurrency and Precision
    *
-   * Uses FOR UPDATE lock to prevent concurrent over-refunding.
+   * FOR UPDATE lock on the payment_sessions row is acquired inside the
+   * transaction to prevent concurrent over-refunding. Without this lock,
+   * two simultaneous $60 refund requests against a $100 payment could
+   * both read totalRefunded=0, both validate that $60 <= $100, and both
+   * succeed -- draining $120 from the merchant wallet. The row lock
+   * serializes these checks so the second request correctly sees the
+   * first refund's amount.
+   *
+   * The idempotency check is intentionally placed OUTSIDE and BEFORE
+   * the transaction. It is a read-only lookup on a unique index
+   * (paymentSessionId + idempotencyKey) that does not require a lock.
+   * Performing it before the transaction avoids acquiring the FOR UPDATE
+   * lock when we can short-circuit with an existing result, reducing
+   * contention on the payment row under retry storms.
+   *
+   * Decimal.js is used instead of native JavaScript numbers for all
+   * monetary arithmetic. IEEE 754 double-precision floats cannot
+   * represent values like 0.1 exactly, leading to errors such as
+   * 0.1 + 0.2 = 0.30000000000000004. In a payment system, even
+   * sub-cent rounding errors accumulate into real financial
+   * discrepancies. Decimal.js provides arbitrary-precision decimal
+   * arithmetic that matches how currencies are defined.
+   *
+   * Alternatives considered:
+   * - Native JS number with Math.round: Rejected because rounding
+   *   at each operation compounds errors across partial refund chains.
+   * - Integer cents throughout: Rejected because the API contract
+   *   accepts decimal dollar amounts and converting at boundaries
+   *   still requires precise decimal parsing (which Decimal.js gives).
+   * - PostgreSQL NUMERIC without app-level checks: Rejected because
+   *   the over-refund guard requires comparing sums in application
+   *   logic before the INSERT, not just a DB constraint.
    */
   /**
    * Create a refund request for a completed payment.
@@ -88,10 +119,8 @@ export class RefundService {
    * Supports idempotency via the `idempotencyKey` field. When a key
    * is provided and a refund with the same key + paymentSessionId
    * already exists:
-   * - If the existing refund has matching parameters → return it (200)
-   * - If the parameters differ → throw 409 Conflict
-   *
-   * Uses FOR UPDATE lock to prevent concurrent over-refunding.
+   * - If the existing refund has matching parameters -> return it (200)
+   * - If the parameters differ -> throw 409 Conflict
    */
   async createRefund(
     userId: string,

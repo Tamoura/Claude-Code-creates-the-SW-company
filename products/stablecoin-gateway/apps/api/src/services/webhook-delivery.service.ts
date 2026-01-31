@@ -30,6 +30,44 @@ interface WebhookPayload {
   data: Record<string, any>;
 }
 
+/**
+ * ADR: Webhook Delivery Reliability Architecture
+ *
+ * The circuit breaker uses Redis Lua scripts for atomic check-and-
+ * increment. A non-atomic approach (GET then INCR then conditional SET)
+ * has a race window: two concurrent failures could both read
+ * failures=9, both INCR to 10, but only one SET the circuit-open key.
+ * The Lua script executes INCR, EXPIRE, and conditional SET as a single
+ * atomic Redis operation, guaranteeing the circuit opens at exactly the
+ * threshold regardless of concurrency. A non-atomic fallback is
+ * provided for Redis versions that do not support EVAL.
+ *
+ * HMAC-SHA256 signatures are sent with every webhook delivery so that
+ * merchants can verify authenticity and integrity. Without signatures,
+ * an attacker who discovers the merchant's webhook URL could forge
+ * payment.completed events and trick the merchant into shipping goods
+ * for unpaid orders. The signature uses the endpoint's shared secret
+ * and includes a timestamp to prevent replay attacks.
+ *
+ * Delivery retries use exponential backoff (1m, 5m, 15m, 1h, 2h) with
+ * jitter inherent in queue processing timing. Fixed-interval retries
+ * would cause thundering-herd problems when a merchant endpoint
+ * recovers from an outage -- all queued deliveries would retry
+ * simultaneously, likely overwhelming the endpoint again. Exponential
+ * backoff spreads retries over increasing windows, giving the endpoint
+ * time to recover while still guaranteeing eventual delivery within a
+ * bounded window.
+ *
+ * Alternatives considered:
+ * - In-memory circuit breaker: Rejected because multiple API server
+ *   instances would maintain independent counters, allowing each to
+ *   send up to threshold failures before any trips.
+ * - RSA signatures: Rejected because HMAC-SHA256 is faster, simpler,
+ *   and sufficient for symmetric verification where both sides share
+ *   a secret.
+ * - Linear backoff: Rejected because it does not provide enough
+ *   spacing at higher retry counts to prevent repeated overload.
+ */
 export class WebhookDeliveryService {
   private prisma: PrismaClient;
   private executor: WebhookDeliveryExecutorService;
