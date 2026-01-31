@@ -49,6 +49,24 @@ const paymentSessionRoutes: FastifyPluginAsync = async (fastify) => {
         });
 
         if (existingSession) {
+          // SECURITY (Audit #10): Verify request parameters match the original
+          // to prevent silent parameter manipulation via idempotency key reuse
+          const paramsMismatch =
+            Number(existingSession.amount) !== body.amount ||
+            existingSession.currency !== (body.currency || 'USD') ||
+            existingSession.network !== (body.network || 'polygon') ||
+            existingSession.token !== (body.token || 'USDC') ||
+            existingSession.merchantAddress !== body.merchant_address;
+
+          if (paramsMismatch) {
+            return reply.code(409).send({
+              type: 'https://gateway.io/errors/idempotency-params-mismatch',
+              title: 'Idempotency Params Mismatch',
+              status: 409,
+              detail: 'Idempotency key already used with different parameters',
+            });
+          }
+
           // Return existing payment session (idempotent behavior)
           const baseUrl = process.env.FRONTEND_URL || 'http://localhost:3101';
           const response = paymentService.toResponse(existingSession, baseUrl);
