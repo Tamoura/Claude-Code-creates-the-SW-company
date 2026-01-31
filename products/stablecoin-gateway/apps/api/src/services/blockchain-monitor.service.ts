@@ -45,6 +45,21 @@ function getRpcUrls(network: Network): string[] {
   return [defaults[network]];
 }
 
+const RPC_TIMEOUT_MS = 10_000; // 10 seconds
+
+/**
+ * Wrap a promise with a timeout. Rejects with an error if the
+ * original promise does not settle within the given milliseconds.
+ */
+function withTimeout<T>(promise: Promise<T>, ms: number, label: string): Promise<T> {
+  return Promise.race([
+    promise,
+    new Promise<never>((_, reject) =>
+      setTimeout(() => reject(new Error(`RPC timeout after ${ms}ms: ${label}`)), ms),
+    ),
+  ]);
+}
+
 export interface BlockchainMonitorServiceOptions {
   providerManager?: ProviderManager;
 }
@@ -126,7 +141,11 @@ export class BlockchainMonitorService {
 
     try {
       // Get transaction receipt
-      const receipt = await provider.getTransactionReceipt(txHash);
+      const receipt = await withTimeout(
+        provider.getTransactionReceipt(txHash),
+        RPC_TIMEOUT_MS,
+        'getTransactionReceipt',
+      );
 
       if (!receipt) {
         return {
@@ -139,7 +158,11 @@ export class BlockchainMonitorService {
       }
 
       // Get current block number to calculate confirmations
-      const currentBlock = await provider.getBlockNumber();
+      const currentBlock = await withTimeout(
+        provider.getBlockNumber(),
+        RPC_TIMEOUT_MS,
+        'getBlockNumber',
+      );
       const confirmations = currentBlock - receipt.blockNumber + 1;
 
       // Check minimum confirmations
@@ -297,13 +320,21 @@ export class BlockchainMonitorService {
     }
 
     try {
-      const receipt = await provider.getTransactionReceipt(txHash);
+      const receipt = await withTimeout(
+        provider.getTransactionReceipt(txHash),
+        RPC_TIMEOUT_MS,
+        'getTransactionReceipt',
+      );
 
       if (!receipt) {
         return 0;
       }
 
-      const currentBlock = await provider.getBlockNumber();
+      const currentBlock = await withTimeout(
+        provider.getBlockNumber(),
+        RPC_TIMEOUT_MS,
+        'getBlockNumber',
+      );
       return currentBlock - receipt.blockNumber + 1;
     } catch (error) {
       logger.error('Error getting confirmations', { network, txHash, error });

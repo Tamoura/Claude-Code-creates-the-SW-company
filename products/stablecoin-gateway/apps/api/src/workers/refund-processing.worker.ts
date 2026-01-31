@@ -25,10 +25,18 @@ import { logger } from '../utils/logger.js';
 const BATCH_SIZE = 10;
 const INTERVAL_MS = 30_000; // 30 seconds
 const LOCK_TTL_MS = 60_000; // 60 seconds
+const STALE_THRESHOLD_MS = 60_000; // 60 seconds
+
+export interface WorkerHealthStatus {
+  running: boolean;
+  lastHeartbeat: Date | null;
+  isStale: boolean;
+}
 
 export class RefundProcessingWorker {
   private intervalId: ReturnType<typeof setInterval> | null = null;
   private redis: any | null;
+  private lastHeartbeat: Date | null = null;
 
   constructor(
     private prisma: PrismaClient,
@@ -36,6 +44,23 @@ export class RefundProcessingWorker {
     redis?: any,
   ) {
     this.redis = redis ?? null;
+  }
+
+  /**
+   * Return the health status of this worker including heartbeat
+   * staleness detection for liveness probes.
+   */
+  getHealthStatus(): WorkerHealthStatus {
+    const running = this.intervalId !== null;
+    const isStale =
+      this.lastHeartbeat !== null &&
+      Date.now() - this.lastHeartbeat.getTime() > STALE_THRESHOLD_MS;
+
+    return {
+      running,
+      lastHeartbeat: this.lastHeartbeat,
+      isStale,
+    };
   }
 
   /**
@@ -53,6 +78,7 @@ export class RefundProcessingWorker {
         'Refund worker: Redis unavailable, running without distributed lock',
       );
       await this.processPendingRefundsUnlocked();
+      this.lastHeartbeat = new Date();
       return;
     }
 
@@ -117,6 +143,7 @@ export class RefundProcessingWorker {
         error instanceof Error ? error : undefined,
       );
     } finally {
+      this.lastHeartbeat = new Date();
       // Release lock only if we still own it
       const currentValue = await this.redis.get(lockKey);
       if (currentValue === lockValue) {
