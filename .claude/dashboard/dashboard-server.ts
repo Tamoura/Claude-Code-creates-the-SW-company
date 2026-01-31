@@ -13,7 +13,7 @@ import { promisify } from 'util';
 const execAsync = promisify(exec);
 
 const app = express();
-const PORT = process.env.DASHBOARD_PORT || 3001;
+const PORT = process.env.DASHBOARD_PORT || 3150;
 
 app.use(express.json());
 
