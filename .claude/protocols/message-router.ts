@@ -366,7 +366,7 @@ export class AgentMessageRouter {
 /**
  * CLI interface
  */
-if (require.main === module) {
+async function main() {
   const messageJson = process.argv[2];
   if (!messageJson) {
     console.error('Usage: npx tsx message-router.ts <message-json>');
@@ -376,7 +376,7 @@ if (require.main === module) {
   try {
     const message: AgentMessage = JSON.parse(messageJson);
     const router = new AgentMessageRouter();
-    
+
     const validation = router.validate(message);
     if (!validation.valid) {
       console.error('Validation errors:', validation.errors);
@@ -393,4 +393,9 @@ if (require.main === module) {
     console.error('Error:', error);
     process.exit(1);
   }
+}
+
+const isDirectRun = process.argv[1]?.includes('message-router');
+if (isDirectRun) {
+  main();
 }

@@ -89,7 +89,7 @@ jobs:
       - name: Run security audit
         run: |
           if [ -f "package-lock.json" ]; then
-            npm audit --audit-level=high || true
+            npm audit --audit-level=high
           fi
 
   # Coverage check for products

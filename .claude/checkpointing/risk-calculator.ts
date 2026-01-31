@@ -152,7 +152,7 @@ export function calculateTaskRisk(task: Task, context?: Context): RiskResult {
  * CLI interface for use in scripts
  * Usage: npx tsx .claude/checkpointing/risk-calculator.ts <task-json>
  */
-if (require.main === module) {
+function main() {
   const taskJson = process.argv[2];
   if (!taskJson) {
     console.error('Usage: npx tsx risk-calculator.ts <task-json>');
@@ -167,4 +167,9 @@ if (require.main === module) {
     console.error('Error parsing task JSON:', error);
     process.exit(1);
   }
+}
+
+const isDirectRun = process.argv[1]?.includes('risk-calculator');
+if (isDirectRun) {
+  main();
 }

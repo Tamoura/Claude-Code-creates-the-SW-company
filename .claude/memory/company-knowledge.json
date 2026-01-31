@@ -1,6 +1,6 @@
 {
-  "version": "1.1.0",
-  "updated_at": "2026-01-26T12:00:00Z",
+  "version": "2.0.0",
+  "updated_at": "2026-01-31T00:00:00Z",
   "patterns": [
     {
       "id": "PATTERN-001",
@@ -142,6 +142,150 @@
       "solution": "Group by purpose: layout/, forms/, results/, common/",
       "code_snippet": "src/components/\n├── common/        # Reusable UI components\n│   ├── Tabs.tsx\n│   └── ComingSoon.tsx\n├── forms/         # Input forms\n│   └── TrainingForm.tsx\n├── layout/        # Page structure\n│   ├── Header.tsx\n│   ├── Footer.tsx\n│   └── Layout.tsx\n└── results/       # Output displays\n    ├── ComparisonGrid.tsx\n    └── ProviderCard.tsx",
       "when_to_use": "Any React project with more than 5 components",
+      "confidence": "high",
+      "times_applied": 1,
+      "success_rate": 1.0
+    },
+    {
+      "id": "PATTERN-009",
+      "name": "Fastify Plugin Registration Order",
+      "category": "backend",
+      "description": "Register Fastify plugins in dependency order: observability first, then data (Prisma/Redis), then auth, then rate limiting, then routes",
+      "learned_from": {
+        "product": "stablecoin-gateway",
+        "task": "BACKEND-01",
+        "date": "2026-01-28"
+      },
+      "problem": "Plugin registration order matters for dependency resolution",
+      "solution": "Register observability -> prisma -> redis -> rateLimit -> auth -> routes. Use fastify-plugin with name and dependencies declared.",
+      "code_snippet": "// app.ts\nawait fastify.register(observabilityPlugin);\nawait fastify.register(prismaPlugin);\nawait fastify.register(redisPlugin);\nawait fastify.register(rateLimit, rateLimitConfig);\nawait fastify.register(authPlugin);\n// Then routes:\nawait fastify.register(paymentSessionRoutes, { prefix: '/v1/payment-sessions' });",
+      "when_to_use": "Every Fastify API project",
+      "confidence": "high",
+      "times_applied": 1,
+      "success_rate": 1.0
+    },
+    {
+      "id": "PATTERN-010",
+      "name": "Prisma Service Layer",
+      "category": "backend",
+      "description": "Encapsulate Prisma operations in service classes that accept PrismaClient in constructor. Services own business logic, routes format responses.",
+      "learned_from": {
+        "product": "stablecoin-gateway",
+        "task": "BACKEND-02",
+        "date": "2026-01-28"
+      },
+      "problem": "Business logic mixed with route handlers",
+      "solution": "Create service classes per domain (PaymentService, RefundService). Constructor takes PrismaClient. Services return domain objects, routes format HTTP responses.",
+      "code_snippet": "export class PaymentService {\n  constructor(private prisma: PrismaClient) {}\n\n  async createPaymentSession(userId: string, data: CreateRequest): Promise<PaymentSession> {\n    return this.prisma.paymentSession.create({ data: { userId, ...data } });\n  }\n}",
+      "when_to_use": "Any backend with Prisma ORM",
+      "confidence": "high",
+      "times_applied": 1,
+      "success_rate": 1.0
+    },
+    {
+      "id": "PATTERN-011",
+      "name": "Integration Tests with buildApp()",
+      "category": "testing",
+      "description": "Use buildApp() to create real Fastify instance with real database. Test via app.inject(). No mocks.",
+      "learned_from": {
+        "product": "stablecoin-gateway",
+        "task": "QA-01",
+        "date": "2026-01-28"
+      },
+      "problem": "Need reliable integration tests that test real behavior",
+      "solution": "Create app in beforeAll(), close in afterAll(). Use app.inject() for HTTP calls. Access app.prisma for direct DB manipulation in test setup.",
+      "code_snippet": "let app: FastifyInstance;\nlet token: string;\n\nbeforeAll(async () => {\n  app = await buildApp();\n  const res = await app.inject({ method: 'POST', url: '/v1/auth/signup', payload: { email: 'test@test.com', password: 'Pass123!' } });\n  token = res.json().access_token;\n});\n\nafterAll(async () => { await app.close(); });\n\nit('creates resource', async () => {\n  const res = await app.inject({ method: 'POST', url: '/v1/resource', headers: { authorization: `Bearer ${token}` }, payload: { ... } });\n  expect(res.statusCode).toBe(201);\n});",
+      "when_to_use": "All Fastify API integration tests",
+      "confidence": "high",
+      "times_applied": 5,
+      "success_rate": 1.0
+    },
+    {
+      "id": "PATTERN-012",
+      "name": "Dual Auth: JWT + API Keys",
+      "category": "security",
+      "description": "Support both JWT tokens (user sessions) and API keys (programmatic access) in a single auth plugin",
+      "learned_from": {
+        "product": "stablecoin-gateway",
+        "task": "BACKEND-03",
+        "date": "2026-01-28"
+      },
+      "problem": "Need both interactive and programmatic authentication",
+      "solution": "Auth plugin tries JWT first, falls back to API key lookup. API keys are hashed for secure storage. Permission checks via decorators.",
+      "code_snippet": "fastify.decorate('authenticate', async (request) => {\n  const token = request.headers.authorization?.substring(7);\n  try { await request.jwtVerify(); return; } catch {}\n  const keyHash = hashApiKey(token);\n  const apiKey = await fastify.prisma.apiKey.findUnique({ where: { keyHash } });\n  if (!apiKey) throw new AppError(401, 'unauthorized', 'Invalid credentials');\n  request.currentUser = apiKey.user;\n});",
+      "when_to_use": "APIs that serve both web users and API consumers",
+      "confidence": "high",
+      "times_applied": 1,
+      "success_rate": 1.0
+    },
+    {
+      "id": "PATTERN-013",
+      "name": "AppError with RFC 7807 Problem Details",
+      "category": "backend",
+      "description": "Custom error class with HTTP status, error code, and RFC 7807 formatted JSON response",
+      "learned_from": {
+        "product": "stablecoin-gateway",
+        "task": "BACKEND-01",
+        "date": "2026-01-28"
+      },
+      "problem": "Inconsistent error responses across endpoints",
+      "solution": "AppError class with statusCode, code, message. toJSON() returns RFC 7807 format. Global error handler catches AppError and Zod errors separately.",
+      "code_snippet": "export class AppError extends Error {\n  constructor(public statusCode: number, public code: string, message: string) {\n    super(message);\n  }\n  toJSON() {\n    return { type: `https://api.example.com/errors/${this.code}`, title: this.code, status: this.statusCode, detail: this.message };\n  }\n}\n// Usage: throw new AppError(404, 'not-found', 'Resource not found');",
+      "when_to_use": "Every API project",
+      "confidence": "high",
+      "times_applied": 1,
+      "success_rate": 1.0
+    },
+    {
+      "id": "PATTERN-014",
+      "name": "Webhook Queue with Idempotency",
+      "category": "backend",
+      "description": "Queue webhooks asynchronously with database-level idempotency via composite unique constraints",
+      "learned_from": {
+        "product": "stablecoin-gateway",
+        "task": "BACKEND-05",
+        "date": "2026-01-29"
+      },
+      "problem": "Duplicate webhook deliveries on retry or concurrent requests",
+      "solution": "Use composite unique constraint (endpointId + eventType + resourceId). Catch Prisma P2002 errors as idempotency signals. Queue with status tracking and exponential backoff.",
+      "code_snippet": "try {\n  await prisma.webhookDelivery.create({ data: { endpointId, eventType, resourceId, payload, status: 'PENDING' } });\n} catch (error: any) {\n  if (error.code === 'P2002') { continue; } // Idempotent: already exists\n  throw error;\n}",
+      "when_to_use": "Any system that delivers webhooks or async events",
+      "confidence": "high",
+      "times_applied": 1,
+      "success_rate": 1.0
+    },
+    {
+      "id": "PATTERN-015",
+      "name": "Zod Input Validation with Transforms",
+      "category": "security",
+      "description": "Validate and transform user input at the boundary using Zod schemas",
+      "learned_from": {
+        "product": "stablecoin-gateway",
+        "task": "BACKEND-02",
+        "date": "2026-01-28"
+      },
+      "problem": "Invalid or malformed input reaching business logic",
+      "solution": "Define Zod schemas per endpoint. Use .refine() for custom validation, .transform() for normalization. Validate early in route handlers.",
+      "code_snippet": "const createPaymentSchema = z.object({\n  amount: z.number().min(1).max(10000),\n  merchant_address: z.string()\n    .refine(addr => addr.startsWith('0x'), 'Must start with 0x')\n    .refine(addr => isAddress(addr), 'Invalid address')\n    .transform(addr => getAddress(addr)), // Normalize\n});\n\nconst validated = createPaymentSchema.parse(request.body);",
+      "when_to_use": "All API endpoints that accept user input",
+      "confidence": "high",
+      "times_applied": 3,
+      "success_rate": 1.0
+    },
+    {
+      "id": "PATTERN-016",
+      "name": "Structured Logging with Correlation",
+      "category": "backend",
+      "description": "JSON logging in production with request IDs for correlation, human-readable in development",
+      "learned_from": {
+        "product": "stablecoin-gateway",
+        "task": "BACKEND-01",
+        "date": "2026-01-28"
+      },
+      "problem": "Hard to trace requests across log entries",
+      "solution": "Logger class outputs JSON in production, readable text in dev. Include request_id, user_id, method, url, status, duration_ms in every log entry.",
+      "code_snippet": "// Observability plugin hook\nfastify.addHook('onResponse', async (request, reply) => {\n  const duration = Date.now() - request.startTime;\n  logger.info('Request completed', {\n    request_id: request.id, method: request.method, url: request.url,\n    status: reply.statusCode, duration_ms: duration, user_id: request.currentUser?.id\n  });\n});",
+      "when_to_use": "Every backend service",
       "confidence": "high",
       "times_applied": 1,
       "success_rate": 1.0
