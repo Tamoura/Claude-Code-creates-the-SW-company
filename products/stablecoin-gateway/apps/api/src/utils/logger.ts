@@ -9,6 +9,7 @@ const SENSITIVE_PATTERNS = [
   'password', 'secret', 'token', 'authorization',
   'apikey', 'api_key', 'private_key', 'privatekey',
   'credit_card', 'creditcard', 'ssn', 'cookie',
+  'encryption_key', 'hmac', 'mnemonic', 'seed_phrase',
 ];
 
 /**

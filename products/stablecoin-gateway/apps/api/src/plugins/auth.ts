@@ -29,7 +29,7 @@ const authPlugin: FastifyPluginAsync = async (fastify) => {
         // On logout, the access token's JTI is stored in Redis so
         // it is rejected for the remainder of its 15-minute lifetime.
         // If Redis is unavailable, skip the check (graceful degradation).
-        const jti = (decoded as any).jti;
+        const { jti, userId: decodedUserId } = decoded as { jti?: string; userId?: string };
         if (jti && fastify.redis) {
           try {
             const revoked = await fastify.redis.get(`revoked_jti:${jti}`);
@@ -48,8 +48,12 @@ const authPlugin: FastifyPluginAsync = async (fastify) => {
           }
         }
 
+        if (!decodedUserId || typeof decodedUserId !== 'string') {
+          throw new AppError(401, 'unauthorized', 'Invalid token payload');
+        }
+
         const user = await fastify.prisma.user.findUnique({
-          where: { id: (decoded as any).userId },
+          where: { id: decodedUserId },
         });
 
         if (!user) {
@@ -81,7 +85,7 @@ const authPlugin: FastifyPluginAsync = async (fastify) => {
       fastify.prisma.apiKey.update({
         where: { id: apiKey.id },
         data: { lastUsedAt: new Date() },
-      }).catch(() => {});
+      }).catch((err) => logger.debug('Failed to update API key lastUsedAt', { apiKeyId: apiKey.id, error: err instanceof Error ? err.message : 'unknown' }));
 
       request.currentUser = apiKey.user;
       request.apiKey = apiKey;

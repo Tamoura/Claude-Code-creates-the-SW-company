@@ -25,7 +25,9 @@ const createRefundSchema = z.object({
   amount: z.number().positive('Amount must be greater than 0').refine(
     (val) => {
       // Max 6 decimal places (USDC/USDT precision)
-      const parts = val.toString().split('.');
+      // Use toFixed to prevent scientific notation bypass (e.g. 1.23456789e-10)
+      const fixedStr = val.toFixed(20).replace(/0+$/, '');
+      const parts = fixedStr.split('.');
       return !parts[1] || parts[1].length <= 6;
     },
     { message: 'Amount cannot exceed 6 decimal places (USDC/USDT precision)' }
@@ -61,8 +63,12 @@ const refundRoutes: FastifyPluginAsync = async (fastify) => {
           idempotencyKey,
         });
 
-        // If idempotency key matched an existing refund, return 200 instead of 201
-        const isExisting = idempotencyKey && refund.createdAt < new Date(Date.now() - 1000);
+        // Determine if this was an idempotent return of an existing refund.
+        // The service returns the existing refund when idempotencyKey matches,
+        // so compare the refund's createdAt against the request time.
+        // A refund created before this request started is an idempotent replay.
+        const requestStart = request.startTime ? new Date(request.startTime) : new Date();
+        const isExisting = idempotencyKey && refund.createdAt < requestStart;
         const statusCode = isExisting ? 200 : 201;
 
         logger.info('Refund created', {
@@ -110,9 +116,17 @@ const refundRoutes: FastifyPluginAsync = async (fastify) => {
           offset: query.offset,
         });
 
+        const limit = query.limit || 50;
+        const offset = query.offset || 0;
+
         return reply.send({
           data: result.data.map((r) => refundService.toResponse(r)),
-          total: result.total,
+          pagination: {
+            limit,
+            offset,
+            total: result.total,
+            has_more: offset + limit < result.total,
+          },
         });
       } catch (error) {
         if (error instanceof AppError) {

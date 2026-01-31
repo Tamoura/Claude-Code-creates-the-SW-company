@@ -11,6 +11,7 @@ import { PrismaClient, Refund, RefundStatus, PaymentStatus } from '@prisma/clien
 import Decimal from 'decimal.js';
 import { AppError } from '../types/index.js';
 import { generateRefundId } from '../utils/crypto.js';
+import { logger } from '../utils/logger.js';
 import { WebhookDeliveryService } from './webhook-delivery.service.js';
 import { BlockchainTransactionService } from './blockchain-transaction.service.js';
 import { BlockchainMonitorService } from './blockchain-monitor.service.js';
@@ -65,10 +66,10 @@ export class RefundService {
         );
       }
 
-      console.warn(
-        'BlockchainTransactionService not available. ' +
-        'Refunds will be created but not executed on-chain. ' +
-        'This is only acceptable in development/test environments.'
+      logger.warn(
+        'BlockchainTransactionService not available - refunds will not execute on-chain', {
+          environment: process.env.NODE_ENV || 'unknown',
+        }
       );
     }
   }
@@ -267,7 +268,7 @@ export class RefundService {
       if (process.env.NODE_ENV === 'production') {
         throw new AppError(500, 'blockchain-service-unavailable', 'Cannot process refund: blockchain service unavailable');
       }
-      console.warn(`Skipping on-chain refund for ${id} - no blockchain service`);
+      logger.warn('Skipping on-chain refund - no blockchain service', { refundId: id });
       return refund;
     }
 

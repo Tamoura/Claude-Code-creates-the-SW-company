@@ -308,6 +308,33 @@ function validateApiKeyHmac(): ValidationResult {
 }
 
 /**
+ * Validate internal API key configuration
+ */
+function validateInternalApiKey(): ValidationResult {
+  const errors: string[] = [];
+  const warnings: string[] = [];
+
+  const internalKey = process.env.INTERNAL_API_KEY;
+  const isProduction = process.env.NODE_ENV === 'production';
+
+  if (!internalKey) {
+    if (isProduction) {
+      errors.push('INTERNAL_API_KEY is required in production for metrics and internal endpoints');
+    } else {
+      warnings.push('INTERNAL_API_KEY not set - internal endpoints (metrics) will be unavailable');
+    }
+  } else if (internalKey.length < 32) {
+    warnings.push(`INTERNAL_API_KEY is short (${internalKey.length} chars) - recommend at least 32 characters`);
+  }
+
+  return {
+    valid: errors.length === 0,
+    errors,
+    warnings,
+  };
+}
+
+/**
  * Validate all environment variables
  */
 export function validateEnvironment(): void {
@@ -321,6 +348,7 @@ export function validateEnvironment(): void {
     { name: 'Blockchain Configuration', result: validateBlockchain() },
     { name: 'Webhook Encryption', result: validateWebhookEncryption() },
     { name: 'API Key HMAC', result: validateApiKeyHmac() },
+    { name: 'Internal API Key', result: validateInternalApiKey() },
   ];
 
   let hasErrors = false;

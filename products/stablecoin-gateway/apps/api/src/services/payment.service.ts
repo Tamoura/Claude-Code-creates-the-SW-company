@@ -110,8 +110,8 @@ export class PaymentService {
       this.prisma.paymentSession.findMany({
         where,
         orderBy: { createdAt: 'desc' },
-        take: filters.limit || 50,
-        skip: filters.offset || 0,
+        take: Math.min(filters.limit || 50, 100),
+        skip: Math.max(filters.offset || 0, 0),
       }),
       this.prisma.paymentSession.count({ where }),
     ]);

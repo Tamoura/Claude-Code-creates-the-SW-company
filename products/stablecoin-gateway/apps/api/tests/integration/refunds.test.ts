@@ -280,9 +280,9 @@ describe('Refund API', () => {
       const body = response.json();
 
       expect(body).toHaveProperty('data');
-      expect(body).toHaveProperty('total');
+      expect(body).toHaveProperty('pagination');
       expect(Array.isArray(body.data)).toBe(true);
-      expect(body.total).toBeGreaterThanOrEqual(1);
+      expect(body.pagination.total).toBeGreaterThanOrEqual(1);
 
       // Verify refund structure
       if (body.data.length > 0) {
@@ -367,7 +367,7 @@ describe('Refund API', () => {
       const body = response.json();
 
       // Verify all refunds belong to user 1 (not a perfect test, but reasonable)
-      expect(body.total).toBeGreaterThan(0);
+      expect(body.pagination.total).toBeGreaterThan(0);
     });
   });
 
