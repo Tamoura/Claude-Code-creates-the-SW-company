@@ -1,0 +1,540 @@
+generator client {
+  provider = "prisma-client-js"
+}
+
+datasource db {
+  provider = "postgresql"
+  url      = env("DATABASE_URL")
+}
+
+// ==================== Enums ====================
+
+enum UserRole {
+  INVESTOR
+  ISSUER
+  TENANT_ADMIN
+  SUPER_ADMIN
+}
+
+enum InvestorClassification {
+  RETAIL
+  PROFESSIONAL
+  INSTITUTIONAL
+  QFC
+  FOREIGN
+}
+
+enum DealType {
+  IPO
+  MUTUAL_FUND
+  SUKUK
+  PE_VC
+  PRIVATE_PLACEMENT
+  REAL_ESTATE
+  SAVINGS
+}
+
+enum DealStatus {
+  DRAFT
+  UNDER_REVIEW
+  ACTIVE
+  SUBSCRIPTION_OPEN
+  SUBSCRIPTION_CLOSED
+  ALLOCATION
+  SETTLED
+  CANCELLED
+}
+
+enum SubscriptionStatus {
+  INTENT_EXPRESSED
+  SUBMITTED
+  UNDER_REVIEW
+  APPROVED
+  REJECTED
+  ALLOCATED
+  SETTLED
+  CANCELLED
+}
+
+enum NotificationChannel {
+  IN_APP
+  EMAIL
+  SMS
+  PUSH
+}
+
+enum ShariaCompliance {
+  CERTIFIED
+  NON_CERTIFIED
+  PENDING
+}
+
+// ==================== Multi-Tenancy ====================
+
+/// White-label tenant (QDB, QFC, bank, or default ConnectSW)
+model Tenant {
+  id   String @id @default(cuid())
+  name String
+  slug String @unique // subdomain identifier (e.g. "qdb", "qfc")
+
+  // Status
+  isActive Boolean @default(true) @map("is_active")
+
+  // Timestamps
+  createdAt DateTime @default(now()) @map("created_at")
+  updatedAt DateTime @updatedAt @map("updated_at")
+
+  // Relations
+  config       TenantConfig?
+  branding     TenantBranding?
+  users        User[]
+  deals        Deal[]
+  integrations IntegrationConfig[]
+  webhooks     WebhookEndpoint[]
+
+  @@map("tenants")
+}
+
+/// Tenant feature flags and compliance configuration
+model TenantConfig {
+  id       String @id @default(cuid())
+  tenantId String @unique @map("tenant_id")
+
+  // Feature flags (JSON: { "enableSukuk": true, "enablePEVC": false })
+  features Json @default("{}")
+
+  // Compliance rules (JSON: investor classification thresholds, KYC level)
+  complianceRules Json @default("{}") @map("compliance_rules")
+
+  // Rate limits
+  apiRateLimit Int @default(1000) @map("api_rate_limit") // req/min
+
+  tenant Tenant @relation(fields: [tenantId], references: [id], onDelete: Cascade)
+
+  @@map("tenant_configs")
+}
+
+/// Tenant branding (logo, colors, domain)
+model TenantBranding {
+  id       String @id @default(cuid())
+  tenantId String @unique @map("tenant_id")
+
+  // Visual identity
+  logoUrl     String? @map("logo_url")
+  primaryColor String @default("#1E3A5F") @map("primary_color")
+  accentColor  String @default("#C5A572") @map("accent_color")
+  fontFamily   String @default("Inter") @map("font_family")
+
+  // Domain
+  customDomain String? @unique @map("custom_domain")
+
+  tenant Tenant @relation(fields: [tenantId], references: [id], onDelete: Cascade)
+
+  @@map("tenant_brandings")
+}
+
+// ==================== User Management ====================
+
+model User {
+  id       String @id @default(cuid())
+  tenantId String @map("tenant_id")
+
+  // Auth
+  email        String @unique
+  passwordHash String @map("password_hash")
+  role         UserRole @default(INVESTOR)
+
+  // Profile basics
+  fullNameEn String? @map("full_name_en")
+  fullNameAr String? @map("full_name_ar")
+  phone      String?
+
+  // Preferences
+  preferredLanguage String @default("en") @map("preferred_language")
+
+  // Timestamps
+  createdAt DateTime  @default(now()) @map("created_at")
+  updatedAt DateTime  @updatedAt @map("updated_at")
+  deletedAt DateTime? @map("deleted_at")
+
+  // Relations
+  tenant           Tenant              @relation(fields: [tenantId], references: [id])
+  investorProfile  InvestorProfile?
+  issuerProfile    IssuerProfile?
+  refreshTokens    RefreshToken[]
+  watchlistItems   WatchlistItem[]
+  notifications    Notification[]
+  notificationPrefs NotificationPreference?
+
+  @@index([tenantId])
+  @@index([email])
+  @@map("users")
+}
+
+model RefreshToken {
+  id     String @id @default(cuid())
+  userId String @map("user_id")
+
+  tokenHash String   @unique @map("token_hash")
+  expiresAt DateTime @map("expires_at")
+  revokedAt DateTime? @map("revoked_at")
+  revoked   Boolean  @default(false)
+
+  createdAt DateTime @default(now()) @map("created_at")
+
+  user User @relation(fields: [userId], references: [id], onDelete: Cascade)
+
+  @@index([userId])
+  @@map("refresh_tokens")
+}
+
+// ==================== Investor ====================
+
+model InvestorProfile {
+  id     String @id @default(cuid())
+  userId String @unique @map("user_id")
+
+  // Classification
+  classification InvestorClassification @default(RETAIL)
+
+  // Qatar-specific
+  nin             String? // National Investor Number (QCSD)
+  nationalIdHash  String? @map("national_id_hash") // encrypted Qatar ID
+  isQatariNational Boolean @default(false) @map("is_qatari_national")
+
+  // KYC
+  kycStatus   String @default("PENDING") @map("kyc_status")
+  kycVerifiedAt DateTime? @map("kyc_verified_at")
+
+  // Investment preferences
+  shariaPreference Boolean @default(true) @map("sharia_preference")
+  riskTolerance    String? @map("risk_tolerance") // LOW, MEDIUM, HIGH
+
+  // Timestamps
+  createdAt DateTime @default(now()) @map("created_at")
+  updatedAt DateTime @updatedAt @map("updated_at")
+
+  // Relations
+  user          User           @relation(fields: [userId], references: [id], onDelete: Cascade)
+  subscriptions Subscription[]
+  portfolioItems PortfolioItem[]
+
+  @@map("investor_profiles")
+}
+
+// ==================== Issuer ====================
+
+model IssuerProfile {
+  id     String @id @default(cuid())
+  userId String @unique @map("user_id")
+
+  // Company info
+  companyNameEn  String @map("company_name_en")
+  companyNameAr  String? @map("company_name_ar")
+  registrationType String? @map("registration_type") // QFMA, QFC, COMMERCIAL
+  registrationNumber String? @map("registration_number")
+  sector         String?
+
+  // Contact
+  website   String?
+  contactEmail String? @map("contact_email")
+
+  // Timestamps
+  createdAt DateTime @default(now()) @map("created_at")
+  updatedAt DateTime @updatedAt @map("updated_at")
+
+  // Relations
+  user  User   @relation(fields: [userId], references: [id], onDelete: Cascade)
+  deals Deal[]
+
+  @@map("issuer_profiles")
+}
+
+// ==================== Deals ====================
+
+/// Investment deal (IPO, fund, sukuk, PE/VC, private placement, etc.)
+model Deal {
+  id       String @id @default(cuid())
+  tenantId String @map("tenant_id")
+  issuerId String @map("issuer_id")
+
+  // Deal identity
+  titleEn String @map("title_en")
+  titleAr String? @map("title_ar")
+  descriptionEn String? @map("description_en") @db.Text
+  descriptionAr String? @map("description_ar") @db.Text
+  dealType DealType @map("deal_type")
+
+  // Status
+  status DealStatus @default(DRAFT)
+
+  // Financial terms
+  targetRaise    Decimal? @map("target_raise") @db.Decimal(18, 4)
+  minInvestment  Decimal? @map("min_investment") @db.Decimal(18, 4)
+  maxInvestment  Decimal? @map("max_investment") @db.Decimal(18, 4)
+  currency       String   @default("QAR")
+
+  // Sharia
+  shariaCompliance ShariaCompliance @default(PENDING) @map("sharia_compliance")
+  purificationRatio Decimal? @map("purification_ratio") @db.Decimal(5, 4)
+
+  // Eligibility (JSON array of InvestorClassification values)
+  eligibleClassifications Json @default("[\"RETAIL\",\"PROFESSIONAL\",\"INSTITUTIONAL\"]") @map("eligible_classifications")
+
+  // Sector and categorization
+  sector String?
+
+  // Schedule
+  subscriptionOpenDate  DateTime? @map("subscription_open_date")
+  subscriptionCloseDate DateTime? @map("subscription_close_date")
+
+  // Type-specific metadata (JSON for IPO-specific, fund-specific fields)
+  dealMetadata Json? @map("deal_metadata")
+
+  // Timestamps
+  createdAt DateTime  @default(now()) @map("created_at")
+  updatedAt DateTime  @updatedAt @map("updated_at")
+  deletedAt DateTime? @map("deleted_at")
+
+  // Relations
+  tenant        Tenant         @relation(fields: [tenantId], references: [id])
+  issuer        IssuerProfile  @relation(fields: [issuerId], references: [id])
+  documents     DealDocument[]
+  subscriptions Subscription[]
+  watchlistItems WatchlistItem[]
+
+  @@index([tenantId, status])
+  @@index([tenantId, dealType])
+  @@index([tenantId, sector])
+  @@index([status, subscriptionOpenDate])
+  @@map("deals")
+}
+
+model DealDocument {
+  id     String @id @default(cuid())
+  dealId String @map("deal_id")
+
+  // Document details
+  titleEn  String @map("title_en")
+  titleAr  String? @map("title_ar")
+  fileUrl  String @map("file_url")
+  fileType String @map("file_type") // PDF, XLSX, etc.
+  fileSize Int    @map("file_size") // bytes
+  category String // PROSPECTUS, FACT_SHEET, SHARIA_CERT, FINANCIAL, OTHER
+
+  createdAt DateTime @default(now()) @map("created_at")
+
+  deal Deal @relation(fields: [dealId], references: [id], onDelete: Cascade)
+
+  @@index([dealId])
+  @@map("deal_documents")
+}
+
+// ==================== Subscriptions ====================
+
+model Subscription {
+  id         String @id @default(cuid())
+  investorId String @map("investor_id")
+  dealId     String @map("deal_id")
+
+  // Investment
+  amount   Decimal @db.Decimal(18, 4)
+  currency String  @default("QAR")
+
+  // Status workflow
+  status SubscriptionStatus @default(INTENT_EXPRESSED)
+
+  // Allocation (set by issuer after subscription close)
+  allocatedAmount Decimal? @map("allocated_amount") @db.Decimal(18, 4)
+  allocatedUnits  Decimal? @map("allocated_units") @db.Decimal(18, 6)
+
+  // Compliance
+  acceptedTerms Boolean @default(false) @map("accepted_terms")
+  acceptedRisks Boolean @default(false) @map("accepted_risks")
+
+  // Timestamps
+  createdAt  DateTime  @default(now()) @map("created_at")
+  updatedAt  DateTime  @updatedAt @map("updated_at")
+  settledAt  DateTime? @map("settled_at")
+
+  // Relations
+  investor      InvestorProfile @relation(fields: [investorId], references: [id])
+  deal          Deal            @relation(fields: [dealId], references: [id])
+  portfolioItem PortfolioItem?
+
+  @@index([investorId])
+  @@index([dealId, status])
+  @@map("subscriptions")
+}
+
+// ==================== Portfolio ====================
+
+model PortfolioItem {
+  id             String @id @default(cuid())
+  investorId     String @map("investor_id")
+  subscriptionId String @unique @map("subscription_id")
+
+  // Holdings
+  units        Decimal @db.Decimal(18, 6)
+  costBasis    Decimal @map("cost_basis") @db.Decimal(18, 4)
+  currentValue Decimal? @map("current_value") @db.Decimal(18, 4)
+  currency     String  @default("QAR")
+
+  createdAt DateTime @default(now()) @map("created_at")
+  updatedAt DateTime @updatedAt @map("updated_at")
+
+  investor     InvestorProfile @relation(fields: [investorId], references: [id])
+  subscription Subscription    @relation(fields: [subscriptionId], references: [id])
+
+  @@index([investorId])
+  @@map("portfolio_items")
+}
+
+// ==================== Watchlist ====================
+
+model WatchlistItem {
+  id     String @id @default(cuid())
+  userId String @map("user_id")
+  dealId String @map("deal_id")
+
+  createdAt DateTime @default(now()) @map("created_at")
+
+  user User @relation(fields: [userId], references: [id], onDelete: Cascade)
+  deal Deal @relation(fields: [dealId], references: [id], onDelete: Cascade)
+
+  @@unique([userId, dealId])
+  @@map("watchlist_items")
+}
+
+// ==================== Notifications ====================
+
+model Notification {
+  id     String @id @default(cuid())
+  userId String @map("user_id")
+
+  // Content
+  titleEn   String @map("title_en")
+  titleAr   String? @map("title_ar")
+  bodyEn    String @map("body_en") @db.Text
+  bodyAr    String? @map("body_ar") @db.Text
+  channel   NotificationChannel @default(IN_APP)
+
+  // State
+  isRead Boolean @default(false) @map("is_read")
+  readAt DateTime? @map("read_at")
+
+  // Link
+  actionUrl String? @map("action_url")
+
+  createdAt DateTime @default(now()) @map("created_at")
+
+  user User @relation(fields: [userId], references: [id], onDelete: Cascade)
+
+  @@index([userId, isRead])
+  @@index([userId, createdAt])
+  @@map("notifications")
+}
+
+model NotificationPreference {
+  id     String @id @default(cuid())
+  userId String @unique @map("user_id")
+
+  // Channel preferences (JSON: { "dealAlerts": ["IN_APP","EMAIL"], ... })
+  preferences Json @default("{}")
+
+  user User @relation(fields: [userId], references: [id], onDelete: Cascade)
+
+  @@map("notification_preferences")
+}
+
+// ==================== Audit ====================
+
+/// Immutable audit log -- append-only, no UPDATE or DELETE
+model AuditLog {
+  id String @id @default(cuid())
+
+  // Actor
+  actorId   String? @map("actor_id") // null for system actions
+  actorRole String? @map("actor_role")
+  tenantId  String? @map("tenant_id")
+
+  // Action
+  action     String // CREATE, UPDATE, DELETE, STATUS_CHANGE, LOGIN, etc.
+  resource   String // Deal, Subscription, User, etc.
+  resourceId String @map("resource_id")
+
+  // Change data
+  before Json? // state before change
+  after  Json? // state after change
+
+  // Context
+  ipAddress String? @map("ip_address")
+  userAgent String? @map("user_agent")
+
+  // Integrity
+  previousHash String? @map("previous_hash") // SHA-256 hash of previous entry
+  entryHash    String  @map("entry_hash")    // SHA-256 hash of this entry
+
+  createdAt DateTime @default(now()) @map("created_at")
+
+  @@index([tenantId, createdAt])
+  @@index([resource, resourceId])
+  @@index([actorId])
+  @@map("audit_logs")
+}
+
+// ==================== Integration ====================
+
+/// Per-tenant integration configuration
+model IntegrationConfig {
+  id       String @id @default(cuid())
+  tenantId String @map("tenant_id")
+
+  // System identification
+  systemId   String @map("system_id") // "dynamics365", "qcsd", "lseg", etc.
+  systemName String @map("system_name")
+
+  // Connection (encrypted credentials stored as JSON)
+  credentials Json // { "apiKey": "enc:...", "baseUrl": "..." }
+  settings    Json @default("{}") // adapter-specific config
+
+  // Status
+  isActive      Boolean   @default(false) @map("is_active")
+  lastHealthCheck DateTime? @map("last_health_check")
+  healthStatus  String?   @map("health_status") // HEALTHY, DEGRADED, DOWN
+
+  createdAt DateTime @default(now()) @map("created_at")
+  updatedAt DateTime @updatedAt @map("updated_at")
+
+  tenant Tenant @relation(fields: [tenantId], references: [id], onDelete: Cascade)
+
+  @@unique([tenantId, systemId])
+  @@map("integration_configs")
+}
+
+/// Outbound webhook endpoint for tenant integrations
+model WebhookEndpoint {
+  id       String @id @default(cuid())
+  tenantId String @map("tenant_id")
+
+  // Endpoint
+  url         String
+  description String?
+  secret      String // HMAC signing secret (encrypted)
+
+  // Events to deliver (JSON array: ["deal.published", "subscription.received"])
+  events Json @default("[]")
+
+  // Status
+  isActive       Boolean   @default(true) @map("is_active")
+  lastDeliveryAt DateTime? @map("last_delivery_at")
+  failureCount   Int       @default(0) @map("failure_count")
+
+  createdAt DateTime @default(now()) @map("created_at")
+  updatedAt DateTime @updatedAt @map("updated_at")
+
+  tenant Tenant @relation(fields: [tenantId], references: [id], onDelete: Cascade)
+
+  @@index([tenantId])
+  @@map("webhook_endpoints")
+}
