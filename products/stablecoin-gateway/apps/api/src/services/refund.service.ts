@@ -30,6 +30,7 @@ export type { RefundResponse, ConfirmFinalityResult };
 export interface CreateRefundRequest {
   amount: number;
   reason?: string;
+  idempotencyKey?: string;
 }
 
 export class RefundService {
@@ -81,6 +82,17 @@ export class RefundService {
    *
    * Uses FOR UPDATE lock to prevent concurrent over-refunding.
    */
+  /**
+   * Create a refund request for a completed payment.
+   *
+   * Supports idempotency via the `idempotencyKey` field. When a key
+   * is provided and a refund with the same key + paymentSessionId
+   * already exists:
+   * - If the existing refund has matching parameters → return it (200)
+   * - If the parameters differ → throw 409 Conflict
+   *
+   * Uses FOR UPDATE lock to prevent concurrent over-refunding.
+   */
   async createRefund(
     userId: string,
     paymentSessionId: string,
@@ -88,6 +100,34 @@ export class RefundService {
   ): Promise<Refund> {
     if (data.amount <= 0) {
       throw new AppError(400, 'invalid-refund-amount', 'Refund amount must be greater than 0');
+    }
+
+    // Idempotency check: if key provided, look for existing refund
+    if (data.idempotencyKey) {
+      const existing = await this.prisma.refund.findUnique({
+        where: {
+          refund_idempotency: {
+            paymentSessionId,
+            idempotencyKey: data.idempotencyKey,
+          },
+        },
+      });
+
+      if (existing) {
+        // Verify parameters match (amount and reason)
+        if (
+          !new Decimal(existing.amount).equals(new Decimal(data.amount)) ||
+          (existing.reason || null) !== (data.reason || null)
+        ) {
+          throw new AppError(
+            409,
+            'idempotency-mismatch',
+            'A refund with this idempotency key already exists with different parameters'
+          );
+        }
+        // Same parameters — return existing refund (idempotent)
+        return existing;
+      }
     }
 
     const refund = await this.prisma.$transaction(async (tx) => {
@@ -136,6 +176,7 @@ export class RefundService {
           paymentSessionId,
           amount: data.amount,
           reason: data.reason,
+          idempotencyKey: data.idempotencyKey,
           status: RefundStatus.PENDING,
         },
       });

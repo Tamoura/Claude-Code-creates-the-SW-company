@@ -53,20 +53,27 @@ const refundRoutes: FastifyPluginAsync = async (fastify) => {
       try {
         const body = createRefundSchema.parse(request.body);
         const userId = request.currentUser!.id;
+        const idempotencyKey = (request.headers['idempotency-key'] as string) || undefined;
 
         const refund = await refundService.createRefund(userId, body.payment_session_id, {
           amount: body.amount,
           reason: body.reason,
+          idempotencyKey,
         });
+
+        // If idempotency key matched an existing refund, return 200 instead of 201
+        const isExisting = idempotencyKey && refund.createdAt < new Date(Date.now() - 1000);
+        const statusCode = isExisting ? 200 : 201;
 
         logger.info('Refund created', {
           userId,
           refundId: refund.id,
           paymentSessionId: refund.paymentSessionId,
           amount: Number(refund.amount),
+          idempotent: isExisting || false,
         });
 
-        return reply.code(201).send(refundService.toResponse(refund));
+        return reply.code(statusCode).send(refundService.toResponse(refund));
       } catch (error) {
         if (error instanceof AppError) {
           return reply.code(error.statusCode).send(error.toJSON());
