@@ -4,7 +4,6 @@ import { Button } from '@/components/ui/button';
 
 export default function DealDetailPage({ params }: { params: { id: string } }) {
   const t = useTranslations('deals');
-  const tCommon = useTranslations('common');
 
   return (
     <div className="container mx-auto px-4 py-12">

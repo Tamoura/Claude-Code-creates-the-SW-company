@@ -1,7 +1,4 @@
-import { useTranslations } from 'next-intl';
-
 export function Footer() {
-  const t = useTranslations('common');
   const currentYear = new Date().getFullYear();
 
   return (

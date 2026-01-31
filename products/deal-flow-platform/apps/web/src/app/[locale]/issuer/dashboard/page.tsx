@@ -1,11 +1,9 @@
 import { useTranslations } from 'next-intl';
 import { Card, CardContent, CardHeader, CardTitle } from '@/components/ui/card';
 import { Button } from '@/components/ui/button';
-import { Link } from '@/i18n/routing';
 
 export default function IssuerDashboardPage() {
   const t = useTranslations('issuer');
-  const tCommon = useTranslations('common');
 
   return (
     <div className="container mx-auto px-4 py-12">
@@ -76,7 +74,7 @@ export default function IssuerDashboardPage() {
             <div className="text-center py-8 text-gray-500">
               <p>No deals created yet</p>
               <p className="text-sm mt-2">
-                Click "Create New Deal" to get started
+                Click &quot;Create New Deal&quot; to get started
               </p>
             </div>
           </CardContent>

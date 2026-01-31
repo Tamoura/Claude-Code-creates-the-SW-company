@@ -27,7 +27,7 @@ export default function LoginPage() {
     try {
       await login({ email, password });
       router.push('/');
-    } catch (err) {
+    } catch {
       setError(tErrors('generic'));
     } finally {
       setIsLoading(false);

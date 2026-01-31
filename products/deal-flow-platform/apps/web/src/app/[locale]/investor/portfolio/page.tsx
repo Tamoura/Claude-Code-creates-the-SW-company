@@ -3,7 +3,6 @@ import { Card, CardContent, CardHeader, CardTitle } from '@/components/ui/card';
 
 export default function InvestorPortfolioPage() {
   const t = useTranslations('investor');
-  const tCommon = useTranslations('common');
 
   return (
     <div className="container mx-auto px-4 py-12">

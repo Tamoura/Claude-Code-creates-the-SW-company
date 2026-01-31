@@ -42,6 +42,20 @@ CEO
 - Squash merge for features
 - Conventional commits format
 
+### Git Safety Rules (MANDATORY)
+
+These rules exist because a bad branch base once deleted 600+ files. Follow them exactly.
+
+1. **Verify base branch before creating a new branch.** Before `git checkout -b`, confirm you are on the correct parent branch — the one the PR will target. Run `git branch --show-current` and verify it matches the intended PR base. If you are on `foundation/X` but the PR targets `feature/Y`, switch first.
+
+2. **Never use `git add .` or `git add -A`.** Always stage specific files by name. Broad adds pick up untracked files from branch divergence and cause mass deletions.
+
+3. **Verify staged files before every commit.** Run `git diff --cached --name-only | wc -l` and `git diff --cached --stat` before committing. If more than ~20 files are staged, stop and investigate — something is likely wrong.
+
+4. **Verify after every commit.** Run `git show --stat` to confirm only the intended files were included. If unexpected files appear, revert immediately with `git reset HEAD~1` before the damage propagates.
+
+5. **A pre-commit hook enforces these rules.** It blocks commits with >30 files or >5000 deleted lines. Do not bypass it unless you have verified every staged file. Hooks live in `.githooks/` (version-controlled). After cloning, run: `git config core.hooksPath .githooks`
+
 ### Branch Naming
 
 ```

@@ -4,7 +4,6 @@ import { Button } from '@/components/ui/button';
 import { Card, CardContent, CardDescription, CardHeader, CardTitle } from '@/components/ui/card';
 
 export default function HomePage() {
-  const t = useTranslations('common');
   const tDeals = useTranslations('deals');
 
   return (
@@ -14,7 +13,7 @@ export default function HomePage() {
           {tDeals('marketplace')}
         </h1>
         <p className="text-xl text-gray-600 mb-8 max-w-2xl mx-auto">
-          Discover investment opportunities in Qatar's premier deal flow platform
+          Discover investment opportunities in Qatar&apos;s premier deal flow platform
         </p>
         <Link href="/deals">
           <Button size="lg">
