@@ -68,7 +68,7 @@ const refundRoutes: FastifyPluginAsync = async (fastify) => {
   fastify.get(
     '/',
     {
-      onRequest: [fastify.authenticate, fastify.requirePermission('read')],
+      onRequest: [fastify.authenticate, fastify.requirePermission('refund')],
     },
     async (request, reply) => {
       try {
@@ -110,7 +110,7 @@ const refundRoutes: FastifyPluginAsync = async (fastify) => {
   fastify.get(
     '/:id',
     {
-      onRequest: [fastify.authenticate, fastify.requirePermission('read')],
+      onRequest: [fastify.authenticate, fastify.requirePermission('refund')],
     },
     async (request, reply) => {
       try {
