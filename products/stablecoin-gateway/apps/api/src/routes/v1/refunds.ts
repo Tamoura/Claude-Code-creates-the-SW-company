@@ -17,21 +17,7 @@ import { ZodError } from 'zod';
 import { RefundService } from '../../services/refund.service.js';
 import { AppError } from '../../types/index.js';
 import { logger } from '../../utils/logger.js';
-import { z } from 'zod';
-
-// Validation schemas
-const createRefundSchema = z.object({
-  payment_session_id: z.string().min(1, 'Payment session ID is required'),
-  amount: z.number().positive('Amount must be greater than 0'),
-  reason: z.string().optional(),
-});
-
-const listRefundsSchema = z.object({
-  payment_session_id: z.string().optional(),
-  status: z.enum(['PENDING', 'PROCESSING', 'COMPLETED', 'FAILED']).optional(),
-  limit: z.coerce.number().int().positive().max(100).optional(),
-  offset: z.coerce.number().int().nonnegative().optional(),
-});
+import { createRefundSchema, listRefundsQuerySchema } from '../../utils/validation.js';
 
 const refundRoutes: FastifyPluginAsync = async (fastify) => {
   const refundService = new RefundService(fastify.prisma);
@@ -82,11 +68,11 @@ const refundRoutes: FastifyPluginAsync = async (fastify) => {
   fastify.get(
     '/',
     {
-      onRequest: [fastify.authenticate, fastify.requirePermission('read')],
+      onRequest: [fastify.authenticate, fastify.requirePermission('refund')],
     },
     async (request, reply) => {
       try {
-        const query = listRefundsSchema.parse(request.query);
+        const query = listRefundsQuerySchema.parse(request.query);
         const userId = request.currentUser!.id;
 
         const result = await refundService.listRefunds(userId, {
@@ -99,6 +85,8 @@ const refundRoutes: FastifyPluginAsync = async (fastify) => {
         return reply.send({
           data: result.data.map((r) => refundService.toResponse(r)),
           total: result.total,
+          limit: query.limit,
+          offset: query.offset,
         });
       } catch (error) {
         if (error instanceof AppError) {
@@ -122,7 +110,7 @@ const refundRoutes: FastifyPluginAsync = async (fastify) => {
   fastify.get(
     '/:id',
     {
-      onRequest: [fastify.authenticate, fastify.requirePermission('read')],
+      onRequest: [fastify.authenticate, fastify.requirePermission('refund')],
     },
     async (request, reply) => {
       try {
