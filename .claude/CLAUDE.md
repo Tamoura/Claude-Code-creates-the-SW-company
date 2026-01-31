@@ -54,7 +54,7 @@ These rules exist because a bad branch base once deleted 600+ files. Follow them
 
 4. **Verify after every commit.** Run `git show --stat` to confirm only the intended files were included. If unexpected files appear, revert immediately with `git reset HEAD~1` before the damage propagates.
 
-5. **A pre-commit hook enforces these rules.** It blocks commits with >30 files or >5000 deleted lines. Do not bypass it unless you have verified every staged file.
+5. **A pre-commit hook enforces these rules.** It blocks commits with >30 files or >5000 deleted lines. Do not bypass it unless you have verified every staged file. Hooks live in `.githooks/` (version-controlled). After cloning, run: `git config core.hooksPath .githooks`
 
 ### Branch Naming
 

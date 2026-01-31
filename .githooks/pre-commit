@@ -1,0 +1,44 @@
+#!/bin/bash
+#
+# Pre-commit safety hook
+# Prevents accidental mass file commits that could delete/overwrite the repo.
+#
+# Thresholds:
+#   - More than 30 files staged → requires ALLOW_LARGE_COMMIT=1
+#   - More than 5000 lines deleted → requires ALLOW_LARGE_COMMIT=1
+#
+
+MAX_FILES=30
+MAX_DELETIONS=5000
+
+# Count staged files
+staged_count=$(git diff --cached --name-only | wc -l | tr -d ' ')
+
+# Count total deleted lines in staged changes
+deleted_lines=$(git diff --cached --numstat | awk '{ sum += $2 } END { print sum+0 }')
+
+if [ "$staged_count" -gt "$MAX_FILES" ] && [ "${ALLOW_LARGE_COMMIT:-0}" != "1" ]; then
+  echo ""
+  echo "ERROR: $staged_count files staged (threshold: $MAX_FILES)."
+  echo ""
+  echo "This looks like an accidental mass commit. Common causes:"
+  echo "  - Branch created from wrong parent (e.g. wrong base branch)"
+  echo "  - Used 'git add .' instead of adding specific files"
+  echo ""
+  echo "To verify what's staged:  git diff --cached --stat"
+  echo "To proceed anyway:        ALLOW_LARGE_COMMIT=1 git commit ..."
+  echo ""
+  exit 1
+fi
+
+if [ "$deleted_lines" -gt "$MAX_DELETIONS" ] && [ "${ALLOW_LARGE_COMMIT:-0}" != "1" ]; then
+  echo ""
+  echo "ERROR: $deleted_lines lines deleted in staged changes (threshold: $MAX_DELETIONS)."
+  echo ""
+  echo "This looks like an accidental mass deletion. Please verify:"
+  echo "  git diff --cached --stat"
+  echo ""
+  echo "To proceed anyway:  ALLOW_LARGE_COMMIT=1 git commit ..."
+  echo ""
+  exit 1
+fi
