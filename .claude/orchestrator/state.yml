@@ -30,18 +30,10 @@ products:
     path: "products/basic-calculator"
     status: "maintenance"
     notes: "Starter project. Feature-complete."
-  it4it-dashboard:
-    path: "products/it4it-dashboard"
-    status: "paused"
-    notes: "IT4IT management dashboard."
-  itil-dashboard:
-    path: "products/itil-dashboard"
-    status: "paused"
-    notes: "ITIL service management dashboard."
-  tech-management-helper:
-    path: "products/tech-management-helper"
-    status: "paused"
-    notes: "Technology management helper."
+  deal-flow-platform:
+    path: "products/deal-flow-platform"
+    status: "active"
+    notes: "Qatar deal flow platform for institutional investors."
 
 # Active worktrees (for parallel product development)
 worktrees: {}
