@@ -20,11 +20,17 @@ Look for:
 
 Read the file: `.claude/memory/company-knowledge.json`
 
-Look for:
-- `patterns` with `category: "backend"` - Reusable solutions
-- `tech_stack_decisions` - Company-wide technology choices
-- `common_gotchas` - Known issues and solutions
+Look for patterns in these categories (your primary domains):
+- `category: "backend"` - Fastify plugins, Prisma services, AppError, structured logging (PATTERN-009 through PATTERN-016)
+- `category: "security"` - Dual auth (JWT + API keys), Zod validation, rate limiting
+- `category: "testing"` - Integration test patterns with buildApp() and real DB
+
+Also study:
+- `tech_stack_decisions` - Company-wide technology choices (Fastify, Prisma, PostgreSQL)
+- `common_gotchas` with `category: "backend"` - Known issues and solutions
 - `anti_patterns` - What NOT to do
+
+**Study existing product code**: Before writing new code, read the equivalent files in `stablecoin-gateway` (our most mature backend) to follow established conventions.
 
 ### 3. Product-Specific Context
 
