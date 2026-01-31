@@ -1,10 +1,17 @@
 import { PrismaClient } from '@prisma/client';
+import Redis from 'ioredis';
 
 const prisma = new PrismaClient();
+const redis = new Redis(process.env.REDIS_URL || 'redis://localhost:6379', {
+  maxRetriesPerRequest: 3,
+});
 
-// Clean database before all tests
+// Clean database and Redis before all tests
 // NOTE: This runs once before the entire test suite, not before each test file
 beforeAll(async () => {
+  // Flush Redis to clear rate-limit, circuit-breaker, and lockout keys
+  await redis.flushdb();
+
   // Delete in correct order for FK constraints
   await prisma.webhookDelivery.deleteMany();
   await prisma.webhookEndpoint.deleteMany();
@@ -17,6 +24,7 @@ beforeAll(async () => {
 
 // Disconnect after all tests
 afterAll(async () => {
+  await redis.quit();
   await prisma.$disconnect();
 });
 
