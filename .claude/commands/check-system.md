@@ -9,233 +9,188 @@ Run this command to validate the ConnectSW system is properly configured.
 ```bash
 echo "=== Required Tools ==="
 
-# Check jq (JSON processing)
-if command -v jq &> /dev/null; then
-  echo "✅ jq installed: $(jq --version)"
-else
-  echo "❌ jq missing - Install: brew install jq (macOS) or apt-get install jq (Linux)"
-fi
-
-# Check yq (YAML processing)
-if command -v yq &> /dev/null; then
-  echo "✅ yq installed: $(yq --version)"
-else
-  echo "❌ yq missing - Install: brew install yq (macOS) or apt-get install yq (Linux)"
-fi
-
-# Check git
-if command -v git &> /dev/null; then
-  echo "✅ git installed: $(git --version)"
-else
-  echo "❌ git missing"
-fi
-
-# Check gh (GitHub CLI)
-if command -v gh &> /dev/null; then
-  echo "✅ gh installed: $(gh --version | head -1)"
-  if gh auth status &> /dev/null; then
-    echo "✅ gh authenticated"
+for tool in jq yq git node npm; do
+  if command -v "$tool" &> /dev/null; then
+    version=$("$tool" --version 2>/dev/null | head -1)
+    echo "OK $tool: $version"
   else
-    echo "⚠️  gh not authenticated - Run: gh auth login"
-  fi
-else
-  echo "⚠️  gh missing (optional) - Install: brew install gh"
-fi
-
-# Check Node.js
-if command -v node &> /dev/null; then
-  echo "✅ node installed: $(node --version)"
-else
-  echo "❌ node missing - Install Node.js 20+"
-fi
-
-# Check npm
-if command -v npm &> /dev/null; then
-  echo "✅ npm installed: $(npm --version)"
-else
-  echo "❌ npm missing"
-fi
-```
-
-### 2. Check Directory Structure
-
-```bash
-echo ""
-echo "=== Directory Structure ==="
-
-# Core directories
-dirs=(
-  ".claude/agents"
-  ".claude/commands"
-  ".claude/memory"
-  ".claude/memory/agent-experiences"
-  ".claude/memory/metrics"
-  ".claude/orchestrator"
-  ".claude/protocols"
-  ".claude/engine"
-  ".claude/workflows/templates"
-  ".claude/quality-gates"
-  ".claude/scripts"
-  "products"
-  "docs"
-)
-
-for dir in "${dirs[@]}"; do
-  if [ -d "$dir" ]; then
-    echo "✅ $dir"
-  else
-    echo "❌ $dir missing"
+    echo "MISSING $tool"
   fi
 done
+
+if command -v gh &> /dev/null; then
+  echo "OK gh: $(gh --version | head -1)"
+  gh auth status &> /dev/null && echo "OK gh authenticated" || echo "WARN gh not authenticated"
+else
+  echo "WARN gh missing (optional)"
+fi
 ```
 
-### 3. Check Core Files
+### 2. Check Infrastructure Files
 
 ```bash
 echo ""
-echo "=== Core Files ==="
+echo "=== Infrastructure ==="
 
-files=(
+# Core files that must exist
+core_files=(
   ".claude/CLAUDE.md"
   ".claude/orchestrator/state.yml"
+  ".claude/orchestrator/orchestrator-enhanced.md"
   ".claude/memory/company-knowledge.json"
-  ".claude/memory/decision-log.json"
-  ".claude/protocols/agent-message.schema.yml"
-  ".claude/engine/task-graph.schema.yml"
+  ".claude/engine/task-graph-executor.ts"
+  ".claude/protocols/message-router.ts"
+  ".claude/audit-trail.jsonl"
 )
 
-for file in "${files[@]}"; do
+for file in "${core_files[@]}"; do
   if [ -f "$file" ]; then
-    echo "✅ $file"
+    echo "OK $file"
   else
-    echo "❌ $file missing"
+    echo "MISSING $file"
   fi
 done
 ```
 
-### 4. Check Agent Memory Files
+### 3. Check Scripts Are Executable
 
 ```bash
 echo ""
-echo "=== Agent Memory Files ==="
-
-agents=(
-  "product-manager"
-  "architect"
-  "backend-engineer"
-  "frontend-engineer"
-  "qa-engineer"
-  "devops-engineer"
-  "technical-writer"
-  "support-engineer"
-)
-
-for agent in "${agents[@]}"; do
-  file=".claude/memory/agent-experiences/${agent}.json"
-  if [ -f "$file" ]; then
-    if command -v jq &> /dev/null; then
-      tasks=$(jq '.task_history | length' "$file" 2>/dev/null || echo "0")
-      patterns=$(jq '.learned_patterns | length' "$file" 2>/dev/null || echo "0")
-      echo "✅ $agent (tasks: $tasks, patterns: $patterns)"
-    else
-      echo "✅ $agent"
-    fi
-  else
-    echo "❌ $agent memory file missing"
-  fi
-done
-```
-
-### 5. Check Scripts Are Executable
-
-```bash
-echo ""
-echo "=== Script Permissions ==="
+echo "=== Scripts ==="
 
 scripts=(
-  ".claude/scripts/instantiate-task-graph.sh"
+  ".claude/scripts/post-task-update.sh"
   ".claude/scripts/update-agent-memory.sh"
-  ".claude/scripts/update-task-status.sh"
-  ".claude/scripts/task-graph-status.sh"
+  ".claude/scripts/backfill-history.sh"
   ".claude/scripts/testing-gate-checklist.sh"
-  ".claude/scripts/audit-log.sh"
   ".claude/scripts/generate-dashboard.sh"
+  ".claude/scripts/setup-branch-protection.sh"
   ".claude/quality-gates/executor.sh"
 )
 
-needs_chmod=false
 for script in "${scripts[@]}"; do
   if [ -f "$script" ]; then
     if [ -x "$script" ]; then
-      echo "✅ $script (executable)"
+      echo "OK $script"
     else
-      echo "⚠️  $script (not executable)"
-      needs_chmod=true
+      echo "WARN $script (not executable)"
     fi
   else
-    echo "❌ $script missing"
+    echo "MISSING $script"
   fi
 done
-
-if [ "$needs_chmod" = true ]; then
-  echo ""
-  echo "To fix permissions, run:"
-  echo "  chmod +x .claude/scripts/*.sh .claude/quality-gates/*.sh"
-fi
 ```
 
-### 6. Check Workflow Templates
+### 4. Check TypeScript Infrastructure
 
 ```bash
 echo ""
-echo "=== Workflow Templates ==="
+echo "=== TypeScript Infrastructure ==="
 
-templates=(
-  "new-product-tasks.yml"
-  "new-feature-tasks.yml"
-  "bug-fix-tasks.yml"
-  "release-tasks.yml"
-  "hotfix-tasks.yml"
+# Verify tsx is available
+if npx tsx --version &> /dev/null 2>&1; then
+  echo "OK tsx available"
+else
+  echo "MISSING tsx - run: npm install"
+fi
+
+# Test each TS file can at least parse
+ts_files=(
+  ".claude/engine/task-graph-executor.ts"
+  ".claude/protocols/message-router.ts"
+  ".claude/monitoring/agent-health.ts"
+  ".claude/checkpointing/risk-calculator.ts"
 )
 
-for template in "${templates[@]}"; do
-  file=".claude/workflows/templates/$template"
-  if [ -f "$file" ]; then
-    echo "✅ $template"
+for ts_file in "${ts_files[@]}"; do
+  if [ -f "$ts_file" ]; then
+    if npx tsx --eval "import('$(pwd)/$ts_file')" &> /dev/null 2>&1; then
+      echo "OK $ts_file (parseable)"
+    else
+      echo "WARN $ts_file (parse error)"
+    fi
   else
-    echo "❌ $template missing"
+    echo "MISSING $ts_file"
   fi
 done
 ```
 
-### 7. Check Products
+### 5. Check Products (Filesystem Scan)
 
 ```bash
 echo ""
-echo "=== Products ==="
+echo "=== Products (from filesystem) ==="
 
 if [ -d "products" ]; then
   for product_dir in products/*/; do
-    if [ -d "$product_dir" ]; then
-      product=$(basename "$product_dir")
-      
-      # Check for key product files
-      has_addendum="❌"
-      has_prd="❌"
-      has_web="❌"
-      has_api="❌"
-      
-      [ -f "${product_dir}.claude/addendum.md" ] && has_addendum="✅"
-      [ -f "${product_dir}docs/PRD.md" ] && has_prd="✅"
-      [ -d "${product_dir}apps/web" ] && has_web="✅"
-      [ -d "${product_dir}apps/api" ] && has_api="✅"
-      
-      echo "📦 $product"
-      echo "   Addendum: $has_addendum | PRD: $has_prd | Web: $has_web | API: $has_api"
-    fi
+    [ -d "$product_dir" ] || continue
+    product=$(basename "$product_dir")
+
+    has_api="no"
+    has_web="no"
+    has_addendum="no"
+    has_tests="no"
+    recent_commits=0
+
+    [ -d "${product_dir}apps/api" ] && has_api="yes"
+    [ -d "${product_dir}apps/web" ] && has_web="yes"
+    [ -f "${product_dir}.claude/addendum.md" ] && has_addendum="yes"
+
+    # Check for test files
+    test_count=$(find "$product_dir" -name "*.test.*" -o -name "*.spec.*" 2>/dev/null | wc -l | tr -d ' ')
+    [ "$test_count" -gt 0 ] && has_tests="$test_count files"
+
+    # Recent activity
+    recent_commits=$(git log --oneline --since="30 days ago" -- "$product_dir" 2>/dev/null | wc -l | tr -d ' ')
+
+    echo "$product: api=$has_api web=$has_web tests=$has_tests commits(30d)=$recent_commits"
   done
 else
-  echo "❌ No products directory"
+  echo "MISSING products directory"
+fi
+```
+
+### 6. Check Agent Memory
+
+```bash
+echo ""
+echo "=== Agent Memory ==="
+
+for agent_file in .claude/memory/agent-experiences/*.json; do
+  [ -f "$agent_file" ] || continue
+  agent=$(basename "$agent_file" .json)
+
+  if command -v jq &> /dev/null; then
+    tasks=$(jq '.task_history | length' "$agent_file" 2>/dev/null || echo "0")
+    patterns=$(jq '.learned_patterns | length' "$agent_file" 2>/dev/null || echo "0")
+    echo "$agent: tasks=$tasks patterns=$patterns"
+  else
+    echo "$agent: (install jq for details)"
+  fi
+done
+
+# Audit trail
+if [ -f ".claude/audit-trail.jsonl" ]; then
+  entries=$(wc -l < .claude/audit-trail.jsonl | tr -d ' ')
+  echo ""
+  echo "Audit trail: $entries entries"
+fi
+```
+
+### 7. Check CI/CD
+
+```bash
+echo ""
+echo "=== CI/CD ==="
+
+for wf in .github/workflows/*.yml; do
+  [ -f "$wf" ] || continue
+  echo "OK $(basename "$wf")"
+done
+
+# Check for || true in workflows (bad pattern)
+if grep -r '|| true' .github/workflows/ 2>/dev/null | grep -v '#'; then
+  echo "WARN: Found '|| true' in workflows (bypasses failures)"
 fi
 ```
 
@@ -243,59 +198,34 @@ fi
 
 ```bash
 echo ""
-echo "=== Git Status ==="
-
-if [ -d ".git" ]; then
-  echo "Branch: $(git branch --show-current)"
-  echo "Status:"
-  git status --short
-  
-  echo ""
-  echo "Worktrees:"
-  git worktree list
-else
-  echo "❌ Not a git repository"
-fi
+echo "=== Git ==="
+echo "Branch: $(git branch --show-current)"
+echo "Status: $(git status --porcelain | wc -l | tr -d ' ') uncommitted changes"
+echo "Worktrees: $(git worktree list 2>/dev/null | wc -l | tr -d ' ')"
+echo ""
+echo "Recent commits:"
+git log --oneline -5
 ```
 
 ### 9. Summary
 
-```bash
-echo ""
-echo "=== Summary ==="
-echo "Run '/orchestrator Status update' to see current work status"
-echo "Run '/orchestrator New product: [idea]' to create a new product"
-echo ""
-echo "If any items show ❌, fix them before proceeding."
-```
+After running the checks, present:
+- Count of OK, WARN, and MISSING items
+- Any critical issues that need fixing
+- Quick fix commands for common problems
 
 ## Quick Fixes
 
-If you see issues, here are quick fixes:
-
-### Install Missing Tools (macOS)
 ```bash
+# Install missing tools (macOS)
 brew install jq yq gh
+
+# Fix script permissions
+chmod +x .claude/scripts/*.sh .claude/quality-gates/*.sh
+
+# Install root dependencies (adds tsx)
+npm install
+
+# Activate git hooks
+git config core.hooksPath .githooks
 ```
-
-### Install Missing Tools (Linux)
-```bash
-sudo apt-get install jq
-# yq: https://github.com/mikefarah/yq#install
-# gh: https://github.com/cli/cli#installation
-```
-
-### Fix Script Permissions
-```bash
-chmod +x .claude/scripts/*.sh
-chmod +x .claude/quality-gates/*.sh
-chmod +x .claude/engine/*.sh 2>/dev/null
-chmod +x .claude/dashboard/*.sh 2>/dev/null
-```
-
-### Initialize Missing Memory Files
-If agent memory files are missing, the `update-agent-memory.sh` script will create them automatically when first used.
-
-## Report Issues
-
-If the system check reveals problems that can't be easily fixed, report to the Orchestrator with details about what's missing or broken.
