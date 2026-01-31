@@ -291,9 +291,9 @@ function validateApiKeyHmac(): ValidationResult {
 
   if (!hmacSecret) {
     if (isProduction) {
-      warnings.push('API_KEY_HMAC_SECRET not set - API key hashing will use unsalted SHA-256');
-      warnings.push('Set API_KEY_HMAC_SECRET for HMAC-SHA-256 protection against rainbow table attacks');
-      warnings.push('Generate a secret: openssl rand -hex 64');
+      errors.push('API_KEY_HMAC_SECRET is required in production');
+      errors.push('API key hashing without HMAC is vulnerable to rainbow table attacks');
+      errors.push('Generate a secret: openssl rand -hex 64');
     }
   } else if (hmacSecret.length < 32) {
     warnings.push(`API_KEY_HMAC_SECRET is short (${hmacSecret.length} chars) - recommend at least 32 characters`);
