@@ -12,6 +12,7 @@
  * - Error handling and retry logic
  * - Optional nonce management via NonceManager for concurrent safety
  * - Daily spending limits to prevent unlimited fund drainage
+ * - Idempotency key tracking to prevent duplicate refund transactions
  *
  * Security:
  * - Uses KMS signer abstraction (never reads raw private key directly)
@@ -23,6 +24,7 @@
  * - Redis-based nonce serialization (when NonceManager provided)
  * - Per-network wallet caching (prevents cross-network wallet reuse)
  * - Daily refund spending cap via Redis (prevents unlimited drainage)
+ * - Redis-based idempotency keys (prevents duplicate refund transactions)
  *
  * Environment Variables:
  * - USE_KMS: 'true' for KMS signing, 'false' for env var fallback
@@ -47,8 +49,10 @@ import { NonceManager } from './nonce-manager.service.js';
  */
 export interface SpendingLimitRedis {
   get(key: string): Promise<string | null>;
+  set(key: string, value: string, ...args: (string | number)[]): Promise<unknown>;
   incrby(key: string, increment: number): Promise<number>;
   expire(key: string, seconds: number): Promise<number>;
+  eval(script: string, numkeys: number, ...args: (string | number)[]): Promise<unknown>;
 }
 
 export interface BlockchainTransactionServiceOptions {
@@ -129,6 +133,7 @@ export interface RefundTransactionParams {
   token: Token;
   recipientAddress: string;
   amount: number; // USD amount
+  idempotencyKey?: string; // Optional key for deduplication
 }
 
 export interface RefundTransactionResult {
@@ -155,6 +160,32 @@ export class BlockchainTransactionService {
   private redis: SpendingLimitRedis | null;
   private dailyRefundLimit: number;
   private readonly decimals = 6; // USDC and USDT use 6 decimals
+
+  /**
+   * Lua script that atomically checks the daily spend limit and increments
+   * the counter if within bounds. Redis executes Lua scripts atomically
+   * (single-threaded), preventing two concurrent requests from both passing
+   * the check before either records its spend.
+   *
+   * KEYS[1] = daily spend key (e.g. spend:daily:2026-01-31)
+   * ARGV[1] = limit in cents
+   * ARGV[2] = amount in cents
+   * ARGV[3] = TTL in seconds
+   *
+   * Returns 1 if spend was recorded, 0 if limit would be exceeded.
+   */
+  private static readonly ATOMIC_SPEND_SCRIPT = `
+    local current = tonumber(redis.call('GET', KEYS[1]) or '0')
+    local limit = tonumber(ARGV[1])
+    local amount = tonumber(ARGV[2])
+    local ttl = tonumber(ARGV[3])
+    if current + amount > limit then
+      return 0
+    end
+    redis.call('INCRBY', KEYS[1], amount)
+    redis.call('EXPIRE', KEYS[1], ttl)
+    return 1
+  `;
 
   constructor(options?: BlockchainTransactionServiceOptions) {
     // SECURITY: Use signer provider abstraction instead of direct env var access
@@ -199,31 +230,40 @@ export class BlockchainTransactionService {
   }
 
   /**
-   * Check whether a refund amount would exceed the daily limit.
-   * Returns true if the refund is within the limit.
+   * Atomically check the daily spending limit AND record the spend
+   * in a single Redis Lua script evaluation.
    *
-   * If Redis is unavailable, logs a warning and returns true
-   * (graceful degradation -- do not block refunds on Redis failure).
+   * This prevents the race condition where two concurrent requests
+   * both read a stale spend counter and both pass the check before
+   * either increments.
+   *
+   * Returns true if the spend was within the limit (and recorded),
+   * false if the limit would be exceeded (nothing recorded).
+   *
+   * Graceful degradation: if Redis is unavailable, logs a warning
+   * and returns true (does not block refunds on Redis failure).
    */
-  private async checkSpendingLimit(amount: number): Promise<boolean> {
+  private async checkAndRecordSpend(amount: number): Promise<boolean> {
     if (!this.redis) {
       return true; // No Redis = no enforcement (graceful degradation)
     }
 
     try {
       const key = this.getDailySpendKey();
-      const currentSpendStr = await this.redis.get(key);
-      const currentSpend = currentSpendStr
-        ? Number(currentSpendStr)
-        : 0;
-
-      // Convert amount to cents for integer arithmetic
       const amountCents = Math.round(amount * 100);
       const limitCents = Math.round(this.dailyRefundLimit * 100);
 
-      if (currentSpend + amountCents > limitCents) {
+      const result = await this.redis.eval(
+        BlockchainTransactionService.ATOMIC_SPEND_SCRIPT,
+        1,
+        key,
+        limitCents,
+        amountCents,
+        SPEND_KEY_TTL_SECONDS
+      );
+
+      if (Number(result) === 0) {
         logger.warn('Daily refund spending limit would be exceeded', {
-          currentSpendCents: currentSpend,
           refundAmountCents: amountCents,
           dailyLimitCents: limitCents,
         });
@@ -238,30 +278,6 @@ export class BlockchainTransactionService {
         error
       );
       return true;
-    }
-  }
-
-  /**
-   * Record a successful refund amount against the daily spend counter.
-   * Uses INCRBY for atomic increment (race-condition safe).
-   * Sets a 48-hour TTL so the key auto-expires after the day rolls over.
-   */
-  private async recordSpend(amount: number): Promise<void> {
-    if (!this.redis) {
-      return;
-    }
-
-    try {
-      const key = this.getDailySpendKey();
-      const amountCents = Math.round(amount * 100);
-      await this.redis.incrby(key, amountCents);
-      await this.redis.expire(key, SPEND_KEY_TTL_SECONDS);
-    } catch (error) {
-      // Log but do not fail the refund -- the tx already succeeded
-      logger.warn(
-        'Failed to record spend in Redis after successful refund',
-        error
-      );
     }
   }
 
@@ -315,8 +331,25 @@ export class BlockchainTransactionService {
         };
       }
 
-      // SECURITY: Check daily spending limit before executing
-      const withinLimit = await this.checkSpendingLimit(amount);
+      // SECURITY: Check idempotency key to prevent duplicate blockchain transactions
+      if (params.idempotencyKey && this.redis) {
+        try {
+          const idempotencyRedisKey = `refund_idem:${params.idempotencyKey}`;
+          const existing = await this.redis.get(idempotencyRedisKey);
+          if (existing) {
+            logger.info('Refund already processed (idempotent)', {
+              idempotencyKey: params.idempotencyKey,
+            });
+            return JSON.parse(existing) as RefundTransactionResult;
+          }
+        } catch (error) {
+          // Log but don't block refund if Redis fails
+          logger.warn('Idempotency check failed, proceeding with refund', { error });
+        }
+      }
+
+      // SECURITY: Atomically check AND record daily spending limit
+      const withinLimit = await this.checkAndRecordSpend(amount);
       if (!withinLimit) {
         return {
           success: false,
@@ -422,8 +455,7 @@ export class BlockchainTransactionService {
         };
       }
 
-      // SECURITY: Record the successful spend against the daily limit
-      await this.recordSpend(amount);
+      // NOTE: Spend was already recorded atomically in checkAndRecordSpend()
 
       // Calculate how many more confirmations are needed for finality
       const requiredConfirmations = CONFIRMATION_REQUIREMENTS[network];
@@ -437,13 +469,30 @@ export class BlockchainTransactionService {
         requiredConfirmations,
       });
 
-      return {
+      const result: RefundTransactionResult = {
         success: true,
         txHash: tx.hash,
         blockNumber: receipt.blockNumber,
         gasUsed: receipt.gasUsed.toString(),
         pendingConfirmations,
       };
+
+      // Store result for idempotency (24-hour TTL)
+      if (params.idempotencyKey && this.redis) {
+        try {
+          const idempotencyRedisKey = `refund_idem:${params.idempotencyKey}`;
+          await this.redis.set(
+            idempotencyRedisKey,
+            JSON.stringify(result),
+            'EX',
+            86400
+          );
+        } catch (error) {
+          logger.warn('Failed to store idempotency result', { error });
+        }
+      }
+
+      return result;
     } catch (error) {
       logger.error('Refund transaction failed', error, {
         network,
