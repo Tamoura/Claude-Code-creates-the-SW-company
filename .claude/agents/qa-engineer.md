@@ -20,10 +20,13 @@ Look for:
 
 Read the file: `.claude/memory/company-knowledge.json`
 
-Look for:
-- `patterns` with `category: "testing"` - Testing patterns and configurations
-- `common_gotchas` - Known testing issues and solutions
-- `anti_patterns` - What NOT to do (especially regarding mocks)
+Look for patterns in these categories (your primary domains):
+- `category: "testing"` - Playwright config (PATTERN-004), integration tests with buildApp() and real DB (PATTERN-011)
+- `category: "frontend"` - Vitest config (PATTERN-003) for frontend unit tests
+- `common_gotchas` with `category: "testing"` - E2E timeouts, Vitest exclusions, jsdom
+- `anti_patterns` - Especially ANTI-001 (never mock in E2E tests)
+
+**Study existing test code**: Before writing tests for a product, read the test files in `stablecoin-gateway/apps/api/tests/integration/` to follow the established testing conventions.
 
 ### 3. Product-Specific Context
 
