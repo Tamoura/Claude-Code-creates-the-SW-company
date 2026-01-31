@@ -43,7 +43,7 @@ describe('Pagination: GET /v1/api-keys', () => {
 
   afterAll(async () => {
     await prisma.apiKey.deleteMany({ where: { userId } });
-    await prisma.user.delete({ where: { id: userId } });
+    await prisma.user.deleteMany({ where: { id: userId } });
     await app.close();
   });
 
@@ -186,7 +186,7 @@ describe('Pagination: GET /v1/webhooks', () => {
 
   afterAll(async () => {
     await prisma.webhookEndpoint.deleteMany({ where: { userId } });
-    await prisma.user.delete({ where: { id: userId } });
+    await prisma.user.deleteMany({ where: { id: userId } });
     await app.close();
   });
 

@@ -204,7 +204,7 @@ describe('Payment Session Idempotency', () => {
       expect(body1.id).not.toBe(body2.id); // Different payments
     });
 
-    it('should return original payment even with different request parameters', async () => {
+    it('should return 409 when retrying with same key but different parameters', async () => {
       const idempotencyKey = `test-${Date.now()}-4`;
 
       // Create payment with specific parameters
@@ -223,9 +223,9 @@ describe('Payment Session Idempotency', () => {
       });
 
       expect(response1.statusCode).toBe(201);
-      const body1 = response1.json();
 
-      // Retry with SAME key but DIFFERENT amount and address (simulates client retry with stale data)
+      // Retry with SAME key but DIFFERENT amount and address
+      // Fix #8: This now returns 409 Conflict instead of silently returning the old session
       const response2 = await app.inject({
         method: 'POST',
         url: '/v1/payment-sessions',
@@ -234,20 +234,13 @@ describe('Payment Session Idempotency', () => {
           'idempotency-key': idempotencyKey,
         },
         payload: {
-          amount: 300, // Different valid amount
-          merchant_address: '0x5aAeb6053F3E94C9b9A09f33669435E7Ef1BeAed', // Different valid checksummed address
+          amount: 300,
+          merchant_address: '0x5aAeb6053F3E94C9b9A09f33669435E7Ef1BeAed',
           description: 'Retry attempt',
         },
       });
 
-      expect(response2.statusCode).toBe(200);
-      const body2 = response2.json();
-
-      // Should return ORIGINAL payment (idempotency preserves first request)
-      expect(body2.id).toBe(body1.id);
-      expect(body2.amount).toBe(500); // Original amount
-      expect(body2.description).toBe('First request'); // Original description
-      expect(body2.merchant_address).toBe('0xd8dA6BF26964aF9D7eEd9e03E53415D37aA96045'); // Original address
+      expect(response2.statusCode).toBe(409);
     });
   });
 });

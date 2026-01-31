@@ -5,14 +5,15 @@
  *
  * Features:
  * - ERC-20 token transfers (USDC, USDT)
- * - Gas fee estimation
  * - Transaction signing via KMS signer abstraction
  * - Multi-network support (Polygon, Ethereum)
  * - RPC provider failover with health checks
  * - Error handling and retry logic
  * - Optional nonce management via NonceManager for concurrent safety
  * - Daily spending limits to prevent unlimited fund drainage
- * - Idempotency key tracking to prevent duplicate refund transactions
+ *
+ * Read-only queries (gas estimation, balance lookups) have been
+ * extracted to BlockchainQueryService.
  *
  * Security:
  * - Uses KMS signer abstraction (never reads raw private key directly)
@@ -24,7 +25,6 @@
  * - Redis-based nonce serialization (when NonceManager provided)
  * - Per-network wallet caching (prevents cross-network wallet reuse)
  * - Daily refund spending cap via Redis (prevents unlimited drainage)
- * - Redis-based idempotency keys (prevents duplicate refund transactions)
  *
  * Environment Variables:
  * - USE_KMS: 'true' for KMS signing, 'false' for env var fallback
@@ -40,6 +40,7 @@
 import { ethers } from 'ethers';
 import { logger } from '../utils/logger.js';
 import { ProviderManager } from '../utils/provider-manager.js';
+import { amountToTokenUnits } from '../utils/token-units.js';
 import { createSignerProvider, SignerProvider } from './kms-signer.service.js';
 import { NonceManager } from './nonce-manager.service.js';
 
@@ -49,10 +50,8 @@ import { NonceManager } from './nonce-manager.service.js';
  */
 export interface SpendingLimitRedis {
   get(key: string): Promise<string | null>;
-  set(key: string, value: string, ...args: (string | number)[]): Promise<unknown>;
   incrby(key: string, increment: number): Promise<number>;
   expire(key: string, seconds: number): Promise<number>;
-  eval(script: string, numkeys: number, ...args: (string | number)[]): Promise<unknown>;
 }
 
 export interface BlockchainTransactionServiceOptions {
@@ -67,46 +66,7 @@ const ERC20_ABI = [
   'function balanceOf(address account) view returns (uint256)',
 ];
 
-/**
- * Build an array of RPC URLs for a network from environment variables.
- * Prefers comma-separated NETWORK_RPC_URLS, falls back to single
- * NETWORK_RPC_URL, then to a public default.
- */
-function getRpcUrls(network: 'polygon' | 'ethereum'): string[] {
-  const multiKey = network.toUpperCase() + '_RPC_URLS';
-  const singleKey = network.toUpperCase() + '_RPC_URL';
-  const defaults: Record<string, string> = {
-    polygon: 'https://polygon-rpc.com',
-    ethereum: 'https://eth.llamarpc.com',
-  };
-
-  const multi = process.env[multiKey];
-  if (multi) {
-    return multi.split(',').map(u => u.trim()).filter(Boolean);
-  }
-
-  const single = process.env[singleKey];
-  if (single) {
-    return [single];
-  }
-
-  return [defaults[network]];
-}
-
-// Token contract addresses by network
-const TOKEN_ADDRESSES = {
-  polygon: {
-    USDC: '0x2791Bca1f2de4661ED88A30C99A7a9449Aa84174',
-    USDT: '0xc2132D05D31c914a87C6611C10748AEb04B58e8F',
-  },
-  ethereum: {
-    USDC: '0xA0b86991c6218b36c1d19D4a2e9Eb0cE3606eB48',
-    USDT: '0xdAC17F958D2ee523a2206206994597C13D831ec7',
-  },
-} as const;
-
-type Network = 'polygon' | 'ethereum';
-type Token = 'USDC' | 'USDT';
+import { TOKEN_ADDRESSES, getRpcUrls, Network, Token } from '../constants/tokens.js';
 
 /**
  * Network-specific confirmation requirements for transaction finality.
@@ -128,12 +88,30 @@ const DEFAULT_DAILY_REFUND_LIMIT = 10_000;
 /** TTL for daily spend keys: 48 hours to survive timezone edge cases */
 const SPEND_KEY_TTL_SECONDS = 48 * 60 * 60; // 172800
 
+/**
+ * Convert a dollar amount to cents using string arithmetic.
+ * Avoids IEEE 754 floating-point errors that affect Math.round().
+ * e.g. Math.round(1.005 * 100) = 100, but dollarsToCents(1.005) = 101
+ */
+function dollarsToCents(amount: number): number {
+  const str = amount.toString();
+  const parts = str.split('.');
+  const dollars = parts[0];
+  const cents = (parts[1] || '').padEnd(2, '0').slice(0, 2);
+  const subCents = (parts[1] || '').slice(2);
+  const base = parseInt(dollars, 10) * 100 + parseInt(cents, 10);
+  // Round up if there are sub-cent digits >= 5
+  if (subCents.length > 0 && parseInt(subCents[0], 10) >= 5) {
+    return base + 1;
+  }
+  return base;
+}
+
 export interface RefundTransactionParams {
   network: Network;
   token: Token;
   recipientAddress: string;
-  amount: number; // USD amount
-  idempotencyKey?: string; // Optional key for deduplication
+  amount: number | string; // USD amount (string preserves sub-cent precision)
 }
 
 export interface RefundTransactionResult {
@@ -145,13 +123,46 @@ export interface RefundTransactionResult {
   pendingConfirmations?: number;
 }
 
-export interface GasEstimate {
-  gasLimit: string;
-  gasPrice: string;
-  estimatedCostWei: string;
-  estimatedCostEth: string;
-}
-
+/**
+ * ADR: Blockchain Transaction Safety Measures
+ *
+ * Spending limits use string-based dollar-to-cents conversion
+ * (dollarsToCents) instead of native JS floating-point arithmetic.
+ * IEEE 754 double-precision cannot represent many decimal values
+ * exactly: Math.round(1.005 * 100) produces 100 instead of 101.
+ * In a refund system, this could allow cumulative over-spending
+ * that bypasses the daily cap. String splitting isolates the integer
+ * and fractional parts, avoiding floating-point multiplication
+ * entirely, and then applies correct sub-cent rounding.
+ *
+ * Nonce management is optional (injected via constructor options)
+ * because not all deployment configurations require it. Single-
+ * instance deployments with sequential refund processing do not
+ * have concurrent nonce contention. Forcing a Redis-backed nonce
+ * manager in those environments adds operational complexity and a
+ * failure mode (Redis outage blocking all refunds) for no benefit.
+ * When multiple API instances process refunds concurrently, the
+ * NonceManager is injected to serialize nonce allocation via Redis
+ * and prevent nonce collisions that cause transaction reverts.
+ *
+ * The service validates network/token combinations against an
+ * explicit TOKEN_ADDRESSES registry rather than accepting arbitrary
+ * contract addresses. Stablecoins are deployed at different
+ * addresses on each network (e.g. USDC on Polygon vs Ethereum).
+ * Sending tokens to the wrong contract address on the wrong network
+ * results in permanent fund loss. The registry acts as an allowlist
+ * so only known-good combinations are executable.
+ *
+ * Alternatives considered:
+ * - BigInt for cent arithmetic: Rejected because the inputs arrive
+ *   as JS numbers from JSON parsing; converting to BigInt still
+ *   requires parsing the decimal, which is what dollarsToCents does.
+ * - Mandatory nonce manager: Rejected because it would require Redis
+ *   in all environments including single-node dev setups.
+ * - Accepting raw contract addresses from callers: Rejected because
+ *   it shifts the burden of address correctness to every caller and
+ *   opens the door to sending funds to arbitrary contracts.
+ */
 export class BlockchainTransactionService {
   private providerManager: ProviderManager;
   private wallets: Map<string, ethers.Wallet> = new Map();
@@ -160,32 +171,6 @@ export class BlockchainTransactionService {
   private redis: SpendingLimitRedis | null;
   private dailyRefundLimit: number;
   private readonly decimals = 6; // USDC and USDT use 6 decimals
-
-  /**
-   * Lua script that atomically checks the daily spend limit and increments
-   * the counter if within bounds. Redis executes Lua scripts atomically
-   * (single-threaded), preventing two concurrent requests from both passing
-   * the check before either records its spend.
-   *
-   * KEYS[1] = daily spend key (e.g. spend:daily:2026-01-31)
-   * ARGV[1] = limit in cents
-   * ARGV[2] = amount in cents
-   * ARGV[3] = TTL in seconds
-   *
-   * Returns 1 if spend was recorded, 0 if limit would be exceeded.
-   */
-  private static readonly ATOMIC_SPEND_SCRIPT = `
-    local current = tonumber(redis.call('GET', KEYS[1]) or '0')
-    local limit = tonumber(ARGV[1])
-    local amount = tonumber(ARGV[2])
-    local ttl = tonumber(ARGV[3])
-    if current + amount > limit then
-      return 0
-    end
-    redis.call('INCRBY', KEYS[1], amount)
-    redis.call('EXPIRE', KEYS[1], ttl)
-    return 1
-  `;
 
   constructor(options?: BlockchainTransactionServiceOptions) {
     // SECURITY: Use signer provider abstraction instead of direct env var access
@@ -230,40 +215,32 @@ export class BlockchainTransactionService {
   }
 
   /**
-   * Atomically check the daily spending limit AND record the spend
-   * in a single Redis Lua script evaluation.
+   * Check whether a refund amount would exceed the daily limit.
+   * Returns true if the refund is within the limit.
    *
-   * This prevents the race condition where two concurrent requests
-   * both read a stale spend counter and both pass the check before
-   * either increments.
-   *
-   * Returns true if the spend was within the limit (and recorded),
-   * false if the limit would be exceeded (nothing recorded).
-   *
-   * Graceful degradation: if Redis is unavailable, logs a warning
-   * and returns true (does not block refunds on Redis failure).
+   * If Redis is unavailable, logs a warning and returns true
+   * (graceful degradation -- do not block refunds on Redis failure).
    */
-  private async checkAndRecordSpend(amount: number): Promise<boolean> {
+  private async checkSpendingLimit(amount: number): Promise<boolean> {
     if (!this.redis) {
       return true; // No Redis = no enforcement (graceful degradation)
     }
 
     try {
       const key = this.getDailySpendKey();
-      const amountCents = Math.round(amount * 100);
-      const limitCents = Math.round(this.dailyRefundLimit * 100);
+      const currentSpendStr = await this.redis.get(key);
+      const currentSpend = currentSpendStr
+        ? Number(currentSpendStr)
+        : 0;
 
-      const result = await this.redis.eval(
-        BlockchainTransactionService.ATOMIC_SPEND_SCRIPT,
-        1,
-        key,
-        limitCents,
-        amountCents,
-        SPEND_KEY_TTL_SECONDS
-      );
+      // Convert amount to cents using string arithmetic to avoid IEEE 754 errors.
+      // Math.round(1.005 * 100) === 100 (wrong), but string split gives 101.
+      const amountCents = dollarsToCents(amount);
+      const limitCents = dollarsToCents(this.dailyRefundLimit);
 
-      if (Number(result) === 0) {
+      if (currentSpend + amountCents > limitCents) {
         logger.warn('Daily refund spending limit would be exceeded', {
+          currentSpendCents: currentSpend,
           refundAmountCents: amountCents,
           dailyLimitCents: limitCents,
         });
@@ -278,6 +255,30 @@ export class BlockchainTransactionService {
         error
       );
       return true;
+    }
+  }
+
+  /**
+   * Record a successful refund amount against the daily spend counter.
+   * Uses INCRBY for atomic increment (race-condition safe).
+   * Sets a 48-hour TTL so the key auto-expires after the day rolls over.
+   */
+  private async recordSpend(amount: number): Promise<void> {
+    if (!this.redis) {
+      return;
+    }
+
+    try {
+      const key = this.getDailySpendKey();
+      const amountCents = dollarsToCents(amount);
+      await this.redis.incrby(key, amountCents);
+      await this.redis.expire(key, SPEND_KEY_TTL_SECONDS);
+    } catch (error) {
+      // Log but do not fail the refund -- the tx already succeeded
+      logger.warn(
+        'Failed to record spend in Redis after successful refund',
+        error
+      );
     }
   }
 
@@ -317,7 +318,7 @@ export class BlockchainTransactionService {
 
     try {
       // Validate inputs
-      if (amount <= 0) {
+      if (Number(amount) <= 0) {
         return {
           success: false,
           error: 'Amount must be positive',
@@ -331,25 +332,8 @@ export class BlockchainTransactionService {
         };
       }
 
-      // SECURITY: Check idempotency key to prevent duplicate blockchain transactions
-      if (params.idempotencyKey && this.redis) {
-        try {
-          const idempotencyRedisKey = `refund_idem:${params.idempotencyKey}`;
-          const existing = await this.redis.get(idempotencyRedisKey);
-          if (existing) {
-            logger.info('Refund already processed (idempotent)', {
-              idempotencyKey: params.idempotencyKey,
-            });
-            return JSON.parse(existing) as RefundTransactionResult;
-          }
-        } catch (error) {
-          // Log but don't block refund if Redis fails
-          logger.warn('Idempotency check failed, proceeding with refund', { error });
-        }
-      }
-
-      // SECURITY: Atomically check AND record daily spending limit
-      const withinLimit = await this.checkAndRecordSpend(amount);
+      // SECURITY: Check daily spending limit before executing
+      const withinLimit = await this.checkSpendingLimit(Number(amount));
       if (!withinLimit) {
         return {
           success: false,
@@ -372,10 +356,8 @@ export class BlockchainTransactionService {
         connectedWallet
       );
 
-      // Convert amount to token units (6 decimals for USDC/USDT)
-      const amountInTokenUnits = BigInt(
-        Math.floor(amount * Math.pow(10, this.decimals))
-      );
+      // Convert amount to token units using string arithmetic (precision-safe)
+      const amountInTokenUnits = amountToTokenUnits(amount.toString(), this.decimals);
 
       logger.info('Executing refund transaction', {
         network,
@@ -455,7 +437,8 @@ export class BlockchainTransactionService {
         };
       }
 
-      // NOTE: Spend was already recorded atomically in checkAndRecordSpend()
+      // SECURITY: Record the successful spend against the daily limit
+      await this.recordSpend(Number(amount));
 
       // Calculate how many more confirmations are needed for finality
       const requiredConfirmations = CONFIRMATION_REQUIREMENTS[network];
@@ -469,30 +452,13 @@ export class BlockchainTransactionService {
         requiredConfirmations,
       });
 
-      const result: RefundTransactionResult = {
+      return {
         success: true,
         txHash: tx.hash,
         blockNumber: receipt.blockNumber,
         gasUsed: receipt.gasUsed.toString(),
         pendingConfirmations,
       };
-
-      // Store result for idempotency (24-hour TTL)
-      if (params.idempotencyKey && this.redis) {
-        try {
-          const idempotencyRedisKey = `refund_idem:${params.idempotencyKey}`;
-          await this.redis.set(
-            idempotencyRedisKey,
-            JSON.stringify(result),
-            'EX',
-            86400
-          );
-        } catch (error) {
-          logger.warn('Failed to store idempotency result', { error });
-        }
-      }
-
-      return result;
     } catch (error) {
       logger.error('Refund transaction failed', error, {
         network,
@@ -506,75 +472,5 @@ export class BlockchainTransactionService {
         error: error instanceof Error ? error.message : 'Unknown error',
       };
     }
-  }
-
-  /**
-   * Estimate gas cost for a refund transaction
-   *
-   * Useful for showing estimated fees to merchants before executing
-   */
-  async estimateRefundGas(
-    params: RefundTransactionParams
-  ): Promise<GasEstimate> {
-    const { network, token, recipientAddress, amount } = params;
-
-    const provider = await this.providerManager.getProvider(network);
-
-    const wallet = await this.getWallet(network);
-    const connectedWallet = wallet.connect(provider);
-    const tokenAddress = TOKEN_ADDRESSES[network][token];
-    const tokenContract = new ethers.Contract(
-      tokenAddress,
-      ERC20_ABI,
-      connectedWallet
-    );
-
-    const amountInTokenUnits = BigInt(
-      Math.floor(amount * Math.pow(10, this.decimals))
-    );
-
-    // Estimate gas
-    const gasLimit = await tokenContract.transfer.estimateGas(
-      recipientAddress,
-      amountInTokenUnits
-    );
-    const feeData = await provider.getFeeData();
-    const gasPrice = feeData.gasPrice || BigInt(0);
-
-    const estimatedCostWei = gasLimit * gasPrice;
-    const estimatedCostEth = ethers.formatEther(estimatedCostWei);
-
-    return {
-      gasLimit: gasLimit.toString(),
-      gasPrice: gasPrice.toString(),
-      estimatedCostWei: estimatedCostWei.toString(),
-      estimatedCostEth,
-    };
-  }
-
-  /**
-   * Get merchant wallet balance for a specific token
-   *
-   * Useful for checking if merchant has enough tokens to process refunds
-   */
-  async getMerchantBalance(
-    network: Network,
-    token: Token
-  ): Promise<number> {
-    const provider = await this.providerManager.getProvider(network);
-
-    const wallet = await this.getWallet(network);
-    const tokenAddress = TOKEN_ADDRESSES[network][token];
-    const tokenContract = new ethers.Contract(
-      tokenAddress,
-      ERC20_ABI,
-      provider
-    );
-
-    const balance = await tokenContract.balanceOf(wallet.address);
-    const balanceInUsd =
-      Number(balance) / Math.pow(10, this.decimals);
-
-    return balanceInUsd;
   }
 }

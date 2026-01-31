@@ -8,6 +8,12 @@ import { AppError } from '../../types/index.js';
 import { logger } from '../../utils/logger.js';
 import { validatePaymentStatusTransition } from '../../utils/payment-state-machine.js';
 
+// SSE connection tracking for rate limiting (Phase 3.7)
+const sseConnectionsByUser = new Map<string, number>();
+let sseGlobalConnections = 0;
+const SSE_MAX_PER_USER = 10;
+const SSE_MAX_GLOBAL = parseInt(process.env.SSE_MAX_CONNECTIONS || '100', 10);
+
 const paymentSessionRoutes: FastifyPluginAsync = async (fastify) => {
   // POST /v1/payment-sessions
   fastify.post('/', {
@@ -49,6 +55,24 @@ const paymentSessionRoutes: FastifyPluginAsync = async (fastify) => {
         });
 
         if (existingSession) {
+          // SECURITY (Audit #10): Verify request parameters match the original
+          // to prevent silent parameter manipulation via idempotency key reuse
+          const paramsMismatch =
+            Number(existingSession.amount) !== body.amount ||
+            existingSession.currency !== (body.currency || 'USD') ||
+            existingSession.network !== (body.network || 'polygon') ||
+            existingSession.token !== (body.token || 'USDC') ||
+            existingSession.merchantAddress !== body.merchant_address;
+
+          if (paramsMismatch) {
+            return reply.code(409).send({
+              type: 'https://gateway.io/errors/idempotency-params-mismatch',
+              title: 'Idempotency Params Mismatch',
+              status: 409,
+              detail: 'Idempotency key already used with different parameters',
+            });
+          }
+
           // Return existing payment session (idempotent behavior)
           const baseUrl = process.env.FRONTEND_URL || 'http://localhost:3101';
           const response = paymentService.toResponse(existingSession, baseUrl);
@@ -334,21 +358,25 @@ const paymentSessionRoutes: FastifyPluginAsync = async (fastify) => {
           updateData.completedAt = new Date();
         }
       } else {
-        // No blockchain verification needed for other updates
+        // SECURITY (Audit #1): Reject blockchain field updates without a
+        // status transition to CONFIRMING or COMPLETED. These fields must
+        // only be set via blockchain verification, never by the client.
+        const hasBlockchainFields =
+          updates.tx_hash !== undefined ||
+          updates.block_number !== undefined ||
+          updates.confirmations !== undefined;
+
+        if (hasBlockchainFields) {
+          throw new AppError(
+            400,
+            'blockchain-fields-require-status-transition',
+            'Cannot update blockchain fields (tx_hash, block_number, confirmations) without a status transition to CONFIRMING or COMPLETED'
+          );
+        }
+
+        // Non-blockchain field updates
         if (updates.customer_address !== undefined) {
           updateData.customerAddress = updates.customer_address;
-        }
-
-        if (updates.tx_hash !== undefined) {
-          updateData.txHash = updates.tx_hash;
-        }
-
-        if (updates.block_number !== undefined) {
-          updateData.blockNumber = updates.block_number;
-        }
-
-        if (updates.confirmations !== undefined) {
-          updateData.confirmations = updates.confirmations;
         }
 
         if (updates.status !== undefined) {
@@ -448,14 +476,14 @@ const paymentSessionRoutes: FastifyPluginAsync = async (fastify) => {
       // Verify this is an SSE token (not a regular access token)
       if (decoded.type !== 'sse') {
         reply.raw.writeHead(403, { 'Content-Type': 'text/plain' });
-        reply.raw.end('Access denied: SSE endpoint requires SSE token (use POST /v1/auth/sse-token)');
+        reply.raw.end('Access denied: This endpoint requires an SSE-scoped token');
         return;
       }
 
       // Verify token is scoped to this payment session
       if (decoded.paymentSessionId !== id) {
         reply.raw.writeHead(403, { 'Content-Type': 'text/plain' });
-        reply.raw.end('Access denied: Token not valid for this payment session');
+        reply.raw.end('Access denied');
         return;
       }
 
@@ -478,6 +506,23 @@ const paymentSessionRoutes: FastifyPluginAsync = async (fastify) => {
         reply.raw.end('Access denied to this payment session');
         return;
       }
+
+      // Enforce SSE connection limits (Phase 3.7)
+      const currentUserConnections = sseConnectionsByUser.get(userId) || 0;
+      if (currentUserConnections >= SSE_MAX_PER_USER) {
+        reply.raw.writeHead(429, { 'Content-Type': 'text/plain' });
+        reply.raw.end('Too many SSE connections');
+        return;
+      }
+      if (sseGlobalConnections >= SSE_MAX_GLOBAL) {
+        reply.raw.writeHead(429, { 'Content-Type': 'text/plain' });
+        reply.raw.end('Service at capacity');
+        return;
+      }
+
+      // Track connection
+      sseConnectionsByUser.set(userId, currentUserConnections + 1);
+      sseGlobalConnections++;
 
       // Set up SSE headers
       reply.raw.writeHead(200, {
@@ -503,6 +548,14 @@ const paymentSessionRoutes: FastifyPluginAsync = async (fastify) => {
         connectionClosed = true;
         clearInterval(heartbeat);
         clearTimeout(maxConnectionTimeout);
+        // Decrement connection tracking (Phase 3.7)
+        const count = sseConnectionsByUser.get(userId) || 1;
+        if (count <= 1) {
+          sseConnectionsByUser.delete(userId);
+        } else {
+          sseConnectionsByUser.set(userId, count - 1);
+        }
+        sseGlobalConnections = Math.max(0, sseGlobalConnections - 1);
         reply.raw.end();
       };
 

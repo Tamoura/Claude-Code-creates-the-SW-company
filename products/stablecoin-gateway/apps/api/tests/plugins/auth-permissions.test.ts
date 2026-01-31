@@ -69,7 +69,7 @@ describe('Auth Plugin - Permission Enforcement', () => {
     await app.prisma.apiKey.deleteMany({
       where: { userId: testUserId },
     });
-    await app.prisma.user.delete({
+    await app.prisma.user.deleteMany({
       where: { id: testUserId },
     });
     await app.close();
@@ -282,7 +282,7 @@ describe('Auth Plugin - Permission Enforcement', () => {
     });
 
     afterAll(async () => {
-      await app.prisma.paymentSession.delete({
+      await app.prisma.paymentSession.deleteMany({
         where: { id: paymentSessionId },
       });
     });
@@ -335,7 +335,7 @@ describe('Auth Plugin - Permission Enforcement', () => {
     });
 
     afterAll(async () => {
-      await app.prisma.paymentSession.delete({
+      await app.prisma.paymentSession.deleteMany({
         where: { id: paymentSessionId },
       });
     });

@@ -109,7 +109,7 @@ describe('WebhookDeliveryService - Circuit Breaker', () => {
       });
     }
     if (testUserId) {
-      await prisma.user.delete({ where: { id: testUserId } }).catch(() => {});
+      await prisma.user.deleteMany({ where: { id: testUserId } });
     }
     await prisma.$disconnect();
   });

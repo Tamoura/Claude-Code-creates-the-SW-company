@@ -119,8 +119,9 @@ model Refund {
   paymentSessionId String @map("payment_session_id")
 
   // Refund details
-  amount Decimal @db.Decimal(18, 6)
-  reason String?
+  amount         Decimal @db.Decimal(18, 6)
+  reason         String?
+  idempotencyKey String? @map("idempotency_key")
 
   // Refund state
   status RefundStatus @default(PENDING)
@@ -136,6 +137,8 @@ model Refund {
   // Relations
   paymentSession PaymentSession @relation(fields: [paymentSessionId], references: [id], onDelete: Cascade)
 
+  // Idempotency: same key + same payment = same refund
+  @@unique([paymentSessionId, idempotencyKey], name: "refund_idempotency")
   @@index([paymentSessionId])
   @@index([status, createdAt])
   @@map("refunds")
@@ -237,4 +240,24 @@ enum WebhookStatus {
   DELIVERING
   SUCCEEDED
   FAILED
+}
+
+// ==================== Audit Logs ====================
+
+model AuditLog {
+  id           String   @id @default(cuid())
+  actor        String
+  action       String
+  resourceType String   @map("resource_type")
+  resourceId   String   @map("resource_id")
+  details      Json?
+  ip           String?
+  userAgent    String?  @map("user_agent")
+  timestamp    DateTime @default(now())
+
+  @@index([actor])
+  @@index([action])
+  @@index([resourceType])
+  @@index([timestamp])
+  @@map("audit_logs")
 }

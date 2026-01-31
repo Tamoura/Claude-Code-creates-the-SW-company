@@ -4,21 +4,30 @@ interface LogData {
   [key: string]: unknown;
 }
 
-const SENSITIVE_PATTERNS = ['password', 'secret', 'token', 'key', 'authorization'];
+/** Keys whose values should be redacted from log output. */
+const SENSITIVE_PATTERNS = [
+  'password', 'secret', 'token', 'authorization',
+  'apikey', 'api_key', 'private_key', 'privatekey',
+  'credit_card', 'creditcard', 'ssn', 'cookie',
+];
 
-function redactSensitiveKeys(data: LogData): LogData {
-  const result: LogData = {};
-  for (const [k, v] of Object.entries(data)) {
-    const lower = k.toLowerCase();
-    if (SENSITIVE_PATTERNS.some((p) => lower.includes(p))) {
-      result[k] = '[REDACTED]';
-    } else if (v && typeof v === 'object' && !Array.isArray(v) && !(v instanceof Error)) {
-      result[k] = redactSensitiveKeys(v as LogData);
+/**
+ * Recursively redact sensitive fields from a data object.
+ * Returns a new object with sensitive values replaced by '[REDACTED]'.
+ */
+function redactSensitiveFields(data: LogData): LogData {
+  const redacted: LogData = {};
+  for (const [key, value] of Object.entries(data)) {
+    const lowerKey = key.toLowerCase();
+    if (SENSITIVE_PATTERNS.some((p) => lowerKey.includes(p))) {
+      redacted[key] = '[REDACTED]';
+    } else if (value !== null && typeof value === 'object' && !Array.isArray(value)) {
+      redacted[key] = redactSensitiveFields(value as LogData);
     } else {
-      result[k] = v;
+      redacted[key] = value;
     }
   }
-  return result;
+  return redacted;
 }
 
 class Logger {
@@ -29,8 +38,8 @@ class Logger {
   }
 
   private log(level: LogLevel, message: string, data?: LogData) {
+    const safeData = data ? redactSensitiveFields(data) : undefined;
     const timestamp = new Date().toISOString();
-    const safeData = data ? redactSensitiveKeys(data) : undefined;
     const logEntry = {
       timestamp,
       level,

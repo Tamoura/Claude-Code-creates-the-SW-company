@@ -1,442 +1,367 @@
-# Stablecoin Gateway — Comprehensive Code Audit Report
+# Stablecoin Gateway - Production Code Audit Report
 
-**Product**: Stablecoin Gateway
-**Audit Date**: 2026-01-31
+**Date**: January 31, 2026
 **Auditor**: Code Reviewer Agent (Principal Architect + Security Engineer + Staff Backend Engineer)
-**Scope**: Full backend API, frontend web app, database schema, CI/CD pipelines, tests
-**Codebase Version**: Post-Phase 6 security hardening (770+ tests, 58 audit fix tests)
+**Branch**: `fix/stablecoin-gateway/audit-2026-01-critical`
+**Scope**: Full product audit (API, Frontend, CI/CD, Infrastructure)
 
 ---
 
 ## Executive Summary
 
-**Overall Assessment: GOOD**
+**Overall Assessment: Fair (6.5/10)**
 
-The stablecoin-gateway is a well-engineered payment processing platform with strong security fundamentals. After six phases of security hardening, the codebase demonstrates professional-grade authentication, encryption, input validation, and SSRF protection. The test suite is comprehensive (770+ tests) with real database integration — no mock abuse.
+The Stablecoin Gateway demonstrates strong foundational security with excellent cryptographic implementation (AES-256-GCM, timing-safe HMAC, bcrypt), comprehensive input validation via Zod schemas, and proper SSRF protection. Eight critical security issues identified in the previous audit (Jan 31, 2026 AM) have been fixed on this branch. However, this audit identifies **5 new critical issues**, **8 high-severity findings**, and **12 medium-severity findings** across services, routes, infrastructure, and CI/CD.
 
 **Top 5 Risks (Plain Language)**:
+1. **Race condition in payment completion** - Two simultaneous requests could complete the same payment twice, resulting in double-crediting the merchant.
+2. **DNS rebinding in webhook delivery** - An attacker could trick the system into sending webhook data to internal servers, exposing sensitive payment information.
+3. **No idempotency protection on refunds** - Network retries could create duplicate refund transactions, sending double the money back to customers.
+4. **CI/CD deploys without test gates** - Staging deploys on every push to main with no test verification, risking broken code in production path.
+5. **Timing attack on internal API key** - The webhook worker endpoint uses plain string comparison for authentication, allowing attackers to brute-force the key.
 
-1. **Spending Limit Bypass** — Two simultaneous refund requests can each pass the spending limit check before either is recorded, allowing double the daily limit. Business impact: potential fund drainage.
-2. **Nonce Lock Race Condition** — The mechanism preventing duplicate blockchain transactions has a tiny window where two processes could both proceed. Business impact: failed/duplicate blockchain transactions costing gas fees.
-3. **Floating-Point Precision in Payment Verification** — Large payment amounts lose precision when converted from blockchain format. Business impact: payments near precision boundaries could be wrongly accepted or rejected.
-4. **Missing Refund Idempotency** — No deduplication on blockchain refund transactions. Network retries could process the same refund twice. Business impact: double-spending on refunds.
-5. **Password Reset Token Logged** — Reset tokens appear in application logs, accessible to anyone with log access. Business impact: account takeover within 1-hour window.
-
-**Recommendation**: **Fix First** — Address the top 5 critical issues before production launch. The codebase is architecturally sound and close to production-ready.
+**Recommendation: Fix First** - Address critical and high issues before next production deployment.
 
 ---
 
 ## System Overview
 
-**System Type**: Cryptocurrency payment gateway API with webhook-driven merchant notifications
-
-**Technology Stack**:
-- Runtime: Node.js 20+ / TypeScript 5+
-- Framework: Fastify (HTTP), Prisma (ORM)
-- Database: PostgreSQL 15+ with Redis for caching/rate-limiting
-- Blockchain: ethers.js for EVM chains (Ethereum, Polygon, Arbitrum)
-- Signing: AWS KMS for custodial wallet key management
-- Encryption: AES-256-GCM for webhook secrets, bcrypt for passwords, HMAC-SHA-256 for API keys
-
-**Architecture Pattern**: Layered monolith with service-oriented business logic
+**System Type**: Payment Gateway API + Web Frontend
+**Architecture**: Layered monolith (Routes → Services → Prisma ORM → PostgreSQL)
 
 ```
-┌──────────────────────────────────────────────┐
-│                   Clients                     │
-│         (Merchants, Frontend, SDKs)           │
-└──────────────┬───────────────────────────────┘
-               │ HTTPS + JWT/API Key
-┌──────────────▼───────────────────────────────┐
-│              Fastify Routes Layer             │
-│  /v1/auth, /v1/payment-sessions, /v1/refunds │
-│  /v1/webhooks, /v1/api-keys                  │
-├──────────────────────────────────────────────┤
-│              Service Layer                    │
-│  PaymentService, RefundService,              │
-│  WebhookDeliveryService, BlockchainMonitor,  │
-│  BlockchainTransactionService, KMSService    │
-├──────────────────────────────────────────────┤
-│              Data Layer                       │
-│  Prisma ORM → PostgreSQL                     │
-│  Redis (rate-limit, cache, locks, circuit)   │
-├──────────────────────────────────────────────┤
-│              External Services                │
-│  EVM RPC Providers (Alchemy/Infura)          │
-│  AWS KMS (transaction signing)               │
-│  Merchant Webhook Endpoints                  │
-└──────────────────────────────────────────────┘
+                    ┌─────────────────┐
+                    │   React + Vite  │  Port 3104
+                    │   (Frontend)    │
+                    └────────┬────────┘
+                             │ HTTPS
+                    ┌────────▼────────┐
+                    │  Fastify API    │  Port 5001
+                    │  (Routes)       │
+                    ├─────────────────┤
+                    │  Services       │
+                    │  (Business)     │
+                    ├─────┬─────┬────┤
+                    │Prisma│Redis│RPC │
+                    └──┬───┴──┬──┴──┬─┘
+                       │      │     │
+                  ┌────▼──┐ ┌─▼──┐ ┌▼──────────┐
+                  │Postgres│ │Redis│ │Alchemy/   │
+                  │  15    │ │  7  │ │Infura RPC │
+                  └────────┘ └────┘ └───────────┘
 ```
 
-**Key Business Flows**:
-1. Payment Creation → Blockchain Monitoring → Confirmation → Webhook → Merchant
-2. Refund Request → Spending Limit Check → KMS Signing → Blockchain Submission → Confirmation → Webhook
-3. Webhook Delivery → Retry with Exponential Backoff → Circuit Breaker
+**Technology Stack**: Node.js 20, TypeScript 5, Fastify 4, Prisma ORM, PostgreSQL 15, Redis 7, ethers.js v6
+**Key Flows**: Auth (JWT+API key) → Payment Sessions → Blockchain Verification → Webhooks → Refunds
+**External Dependencies**: Alchemy/Infura RPC, AWS ECS Fargate, SendGrid, Datadog
 
 ---
 
 ## Critical Issues (Top 10)
 
-### Issue #1: Spending Limit Bypass via Concurrent Requests
+### Issue #1: Race Condition in Payment Status Update (Double-Completion)
 
-**Description**: The hot wallet spending limit check and recording are not atomic. Two concurrent refund requests can both pass the check before either records its spend.
+**Description**: `updatePaymentStatus()` performs read-then-write without database locking. Two concurrent blockchain confirmations for the same payment can both complete, triggering duplicate webhooks and double-crediting the merchant.
 
-**File/Location**: `apps/api/src/services/blockchain-transaction.service.ts:208-241`
+**File/Location**: `apps/api/src/services/payment.service.ts:133-160`
 
 **Impact**:
-- Severity: **Critical**
-- Likelihood: **Medium** (requires concurrent requests)
-- Blast Radius: **Organization-wide** (fund drainage)
+- Severity: Critical
+- Likelihood: Medium (requires concurrent blockchain events)
+- Blast Radius: Organization-wide (financial loss)
 
 **Exploit Scenario**:
-1. Attacker sends two refund requests for $5,000 each simultaneously
-2. Request A checks spending limit: $0 spent, $10,000 limit → PASS
-3. Request B checks spending limit: $0 spent, $10,000 limit → PASS
-4. Both execute, total $10,000 spent in what should be a $10,000/day limit
-5. Repeat to drain wallet beyond limits
+1. Customer submits payment. Two blockchain monitor workers detect confirmation simultaneously.
+2. Worker A reads payment status = CONFIRMING, proceeds to update.
+3. Worker B reads payment status = CONFIRMING (not yet updated by A), also proceeds.
+4. Both workers set status = COMPLETED and trigger webhooks.
+5. Merchant receives two `payment.completed` webhooks, fulfills order twice.
 
-**Fix**:
+**Fix**: Wrap in transaction with `FOR UPDATE` lock (pattern already exists in PATCH route):
 ```typescript
-// Use atomic Redis operation
-const result = await redis.eval(`
-  local current = tonumber(redis.call('GET', KEYS[1]) or 0)
-  local limit = tonumber(ARGV[1])
-  local amount = tonumber(ARGV[2])
-  if current + amount > limit then
-    return {0, current}
-  end
-  redis.call('INCRBY', KEYS[1], amount)
-  redis.call('EXPIRE', KEYS[1], ARGV[3])
-  return {1, current + amount}
-`, 1, spendingKey, limitCents, amountCents, ttlSeconds);
+// BEFORE (vulnerable):
+const session = await this.prisma.paymentSession.findUnique({ where: { id } });
+// ... validate transition ...
+await this.prisma.paymentSession.update({ where: { id }, data: { status } });
+
+// AFTER (secure):
+await this.prisma.$transaction(async (tx) => {
+  const session = await tx.$queryRaw`
+    SELECT * FROM "payment_sessions" WHERE id = ${id} FOR UPDATE
+  `;
+  // ... validate transition ...
+  await tx.paymentSession.update({ where: { id }, data: { status } });
+});
 ```
 
 ---
 
-### Issue #2: Nonce Manager TOCTOU Race Condition
+### Issue #2: DNS Rebinding in Webhook Delivery
 
-**Description**: The Redis lock release in NonceManager uses a non-atomic check-then-delete pattern. Between checking the lock value and deleting it, another process could acquire the lock.
+**Description**: Webhook URLs are validated at registration time via DNS resolution, but DNS can change between validation and delivery. An attacker registers a webhook URL that resolves to a public IP during validation, then changes DNS to `127.0.0.1` before delivery.
 
-**File/Location**: `apps/api/src/services/nonce-manager.service.ts:101-107`
+**File/Location**: `apps/api/src/services/webhook-delivery.service.ts:422-457`
 
 **Impact**:
-- Severity: **High**
-- Likelihood: **Low** (requires exact timing in 30s window)
-- Blast Radius: **Product-wide** (failed blockchain transactions)
+- Severity: Critical
+- Likelihood: Low (requires DNS control)
+- Blast Radius: Organization-wide (SSRF to internal services)
 
 **Exploit Scenario**:
-1. Process A holds lock with value "abc123", lock is about to expire
-2. Process A reads lock value: "abc123" → matches
-3. Lock expires, Process B acquires lock with value "def456"
-4. Process A deletes the lock (which now belongs to Process B)
-5. Process C acquires lock while Process B thinks it's still held
-6. Both B and C use same nonce → one transaction fails
+1. Attacker registers webhook `https://evil.example.com/hook` → resolves to `1.2.3.4` (passes validation).
+2. Attacker changes DNS: `evil.example.com` → `127.0.0.1`.
+3. Payment completes, webhook delivery calls `fetch('https://evil.example.com/hook')`.
+4. DNS resolves to `127.0.0.1`, sending payment data to localhost.
+5. Internal services receive sensitive payment data.
+
+**Fix**: Cache resolved IPs at validation time, re-validate resolved IP before fetch:
+```typescript
+// Store resolved IP alongside webhook URL
+const resolvedIp = await resolveAndValidate(url);
+await prisma.webhookEndpoint.create({
+  data: { url, resolvedIp, ... }
+});
+
+// At delivery time, verify current DNS matches stored IP
+const currentIp = await dns.resolve4(new URL(url).hostname);
+if (!currentIp.includes(endpoint.resolvedIp)) {
+  throw new Error('DNS resolution changed - potential rebinding attack');
+}
+```
+
+---
+
+### Issue #3: No Idempotency Protection on Refund Endpoint
+
+**Description**: `POST /v1/refunds` has no idempotency key support. Payment sessions support idempotency keys with parameter mismatch detection, but refunds do not. Network retries or client bugs can create duplicate refund transactions.
+
+**File/Location**: `apps/api/src/routes/v1/refunds.ts:40-78`
+
+**Impact**:
+- Severity: Critical
+- Likelihood: Medium (network retries common)
+- Blast Radius: Product-wide (financial loss via double refund)
+
+**Exploit Scenario**:
+1. Merchant clicks "Refund $100" button.
+2. Network timeout, client retries the same POST.
+3. Both requests create separate refund records.
+4. Both refunds are processed, sending $200 to customer instead of $100.
+
+**Fix**: Add `Idempotency-Key` header support matching the payment session pattern:
+```typescript
+const idempotencyKey = request.headers['idempotency-key'] as string;
+if (idempotencyKey) {
+  const existing = await prisma.refund.findFirst({
+    where: { idempotencyKey, userId: request.user.id }
+  });
+  if (existing) return reply.code(200).send(formatRefund(existing));
+}
+```
+
+---
+
+### Issue #4: Timing Attack on Internal Webhook Worker Authentication
+
+**Description**: The internal webhook worker endpoint uses plain JavaScript string comparison (`!==`) for API key verification, which is vulnerable to timing attacks. An attacker can measure response times to progressively guess the correct `INTERNAL_API_KEY`.
+
+**File/Location**: `apps/api/src/routes/internal/webhook-worker.ts:31`
+
+**Impact**:
+- Severity: Critical
+- Likelihood: Low (requires network timing precision)
+- Blast Radius: Product-wide (webhook queue manipulation)
 
 **Fix**:
 ```typescript
-// Atomic compare-and-delete via Lua script
-private static readonly UNLOCK_SCRIPT = `
+// BEFORE (vulnerable):
+if (!authHeader || authHeader !== `Bearer ${expectedKey}`) {
+
+// AFTER (secure):
+const expected = Buffer.from(`Bearer ${expectedKey}`);
+const actual = Buffer.from(authHeader || '');
+if (expected.length !== actual.length || !crypto.timingSafeEqual(expected, actual)) {
+```
+
+---
+
+### Issue #5: Decimal Precision Loss in Refund Webhook Payload
+
+**Description**: Refund webhook payloads include a Decimal object that serializes as `[object Object]` instead of a numeric string. Merchants parsing webhook data receive corrupted refund amounts.
+
+**File/Location**: `apps/api/src/services/refund.service.ts:738`
+
+**Impact**:
+- Severity: Critical
+- Likelihood: High (every refund webhook)
+- Blast Radius: Product-wide (merchant reconciliation fails)
+
+**Fix**:
+```typescript
+// BEFORE:
+refunded_amount: totalRefunded,  // Decimal object → "[object Object]"
+
+// AFTER:
+refunded_amount: totalRefunded.toString(),  // "100.50"
+```
+
+---
+
+### Issue #6: SSE Endpoint Resource Exhaustion (No Connection Limits)
+
+**Description**: The SSE endpoint (`GET /v1/payment-sessions/:id/events`) has no rate limiting or concurrent connection limit. Each connection holds a 30-minute timeout with 30-second heartbeats. An attacker can open thousands of connections to exhaust server resources.
+
+**File/Location**: `apps/api/src/routes/v1/payment-sessions.ts:426-532`
+
+**Impact**:
+- Severity: High
+- Likelihood: Medium
+- Blast Radius: Product-wide (denial of service)
+
+**Fix**: Add per-user connection limit:
+```typescript
+const MAX_SSE_PER_USER = 5;
+const activeConnections = new Map<string, number>();
+// Check before accepting connection
+if ((activeConnections.get(userId) || 0) >= MAX_SSE_PER_USER) {
+  return reply.code(429).send({ error: 'Too many SSE connections' });
+}
+```
+
+---
+
+### Issue #7: CI/CD Staging Deploys Without Test Gate
+
+**Description**: `deploy-staging.yml` triggers on every push to `main` and deploys directly without running tests, lint, or security checks. Additionally, `ci.yml` runs build in parallel with tests, meaning builds can succeed while tests fail.
+
+**File/Location**: `.github/workflows/deploy-staging.yml:13-110`, `.github/workflows/ci.yml:178-211`
+
+**Impact**:
+- Severity: High
+- Likelihood: High (every merge to main)
+- Blast Radius: Organization-wide (broken staging, path to production)
+
+**Fix**:
+```yaml
+# deploy-staging.yml: Add pre-flight gate
+jobs:
+  test:
+    # ... run tests first ...
+  deploy:
+    needs: [test]  # Block deploy until tests pass
+
+# ci.yml: Add dependency
+  build:
+    needs: [test-api, test-web, lint, security]
+```
+
+---
+
+### Issue #8: Unbounded In-Memory Audit Log Buffer
+
+**Description**: The audit log service maintains an in-memory `entries` array with no maximum size limit. In a long-running process, this grows indefinitely, causing memory exhaustion.
+
+**File/Location**: `apps/api/src/services/audit-log.service.ts:79`
+
+**Impact**:
+- Severity: High
+- Likelihood: Medium (grows over hours/days)
+- Blast Radius: Product-wide (OOM crash)
+
+**Fix**: Implement circular buffer with max size:
+```typescript
+private readonly MAX_ENTRIES = 10_000;
+private entries: AuditEntry[] = [];
+
+record(entry: AuditEntry) {
+  if (this.entries.length >= this.MAX_ENTRIES) {
+    this.entries.shift();
+  }
+  this.entries.push(entry);
+}
+```
+
+---
+
+### Issue #9: Non-Atomic Redis Lock Releases
+
+**Description**: Both the nonce manager and refund processing worker release Redis locks using a non-atomic get-then-delete pattern. Between `GET` and `DEL`, another process could acquire and release the lock, causing incorrect state.
+
+**File/Location**: `apps/api/src/services/nonce-manager.service.ts:102-107`, `apps/api/src/workers/refund-processing.worker.ts:121-123`
+
+**Impact**:
+- Severity: High
+- Likelihood: Low (requires precise timing)
+- Blast Radius: Feature-specific (duplicate transactions)
+
+**Fix**: Use atomic Lua script:
+```typescript
+const UNLOCK_SCRIPT = `
   if redis.call('GET', KEYS[1]) == ARGV[1] then
     return redis.call('DEL', KEYS[1])
   end
   return 0
 `;
-
-// In finally block:
-await this.redis.eval(NonceManager.UNLOCK_SCRIPT, 1, lockKey, lockValue);
+await redis.eval(UNLOCK_SCRIPT, 1, lockKey, lockValue);
 ```
 
 ---
 
-### Issue #3: Floating-Point Precision Loss in Payment Verification
+### Issue #10: SSE Error Messages Leak Internal Endpoint Information
 
-**Description**: After computing payment amount with Decimal.js for precision, the code converts to JavaScript Number via `.toNumber()`, losing precision for amounts near IEEE 754 boundaries.
+**Description**: SSE authentication errors return detailed messages revealing internal endpoint paths (`/v1/auth/sse-token`) and distinguishing between token types, enabling enumeration attacks.
 
-**File/Location**: `apps/api/src/services/blockchain-monitor.service.ts:194`
-
-**Impact**:
-- Severity: **High**
-- Likelihood: **Low** (edge case with very large or precise amounts)
-- Blast Radius: **Feature-specific** (payment verification)
-
-**Exploit Scenario**:
-1. Payment for 99999999.999999 USDC created
-2. Blockchain transfer matches exactly
-3. `new Decimal(amountWei).dividedBy(10^6).toNumber()` → 100000000 (rounding)
-4. Comparison fails: 100000000 !== 99999999.999999
-5. Valid payment rejected
-
-**Fix**:
-```typescript
-// BEFORE (vulnerable):
-const amountUsd = new Decimal(amountWei.toString())
-  .dividedBy(new Decimal(10).pow(decimals))
-  .toNumber();
-
-// AFTER (precise):
-const amountUsd = new Decimal(amountWei.toString())
-  .dividedBy(new Decimal(10).pow(decimals));
-// Use Decimal comparison throughout:
-if (amountUsd.greaterThanOrEqualTo(paymentSession.amount)) { ... }
-```
-
----
-
-### Issue #4: Missing Refund Idempotency on Blockchain
-
-**Description**: The `executeRefund()` method in BlockchainTransactionService has no idempotency key tracking. Network retries or duplicate requests can cause the same refund to be submitted to the blockchain twice.
-
-**File/Location**: `apps/api/src/services/blockchain-transaction.service.ts:297-460`
+**File/Location**: `apps/api/src/routes/v1/payment-sessions.ts:452, 459`
 
 **Impact**:
-- Severity: **High**
-- Likelihood: **Medium** (network timeouts common in blockchain)
-- Blast Radius: **Organization-wide** (double-spending)
+- Severity: High
+- Likelihood: Medium
+- Blast Radius: Feature-specific (information disclosure)
 
-**Exploit Scenario**:
-1. Refund request times out at HTTP level (client receives 504)
-2. Client retries the same refund
-3. Original request was already submitted to blockchain
-4. Second request also submitted — two blockchain transactions for one refund
-5. Double the refund amount sent
-
-**Fix**:
-```typescript
-// Add idempotency key parameter
-async executeRefund(params: RefundParams, idempotencyKey?: string): Promise<Result> {
-  if (idempotencyKey) {
-    const existing = await this.redis.get(`refund_idem:${idempotencyKey}`);
-    if (existing) return JSON.parse(existing);
-  }
-  // ... execute refund ...
-  if (idempotencyKey) {
-    await this.redis.set(`refund_idem:${idempotencyKey}`, JSON.stringify(result), 'EX', 86400);
-  }
-}
-```
-
----
-
-### Issue #5: Password Reset Token Logged in Production
-
-**Description**: Password reset tokens are included in structured log output. In production, logs are shipped to ELK/Splunk/CloudWatch and retained for months.
-
-**File/Location**: `apps/api/src/routes/v1/auth.ts:458-462`
-
-**Impact**:
-- Severity: **High**
-- Likelihood: **Medium** (requires log access)
-- Blast Radius: **Feature-specific** (account takeover)
-
-**Exploit Scenario**:
-1. User requests password reset
-2. Token logged: `{"userId": "...", "email": "user@example.com", "token": "abc123..."}`
-3. Attacker with log access (internal threat, log breach) reads token
-4. Within 1-hour TTL, attacker resets user's password
-5. Account fully compromised
-
-**Fix**:
-```typescript
-// BEFORE (vulnerable):
-logger.info('Password reset token generated', {
-  userId: user.id,
-  email: user.email,
-  token,  // NEVER log tokens
-});
-
-// AFTER (secure):
-logger.info('Password reset token generated', {
-  userId: user.id,
-  email: user.email,
-  // Token sent via email, never logged
-});
-```
-
----
-
-### Issue #6: SSE Endpoint Missing Rate Limiting
-
-**Description**: The Server-Sent Events endpoint for real-time payment updates has no rate limiting or connection cap. All other endpoints are rate-limited.
-
-**File/Location**: `apps/api/src/routes/v1/payment-sessions.ts:404-521`
-
-**Impact**:
-- Severity: **High**
-- Likelihood: **Medium** (requires valid auth token)
-- Blast Radius: **Product-wide** (server resource exhaustion)
-
-**Exploit Scenario**:
-1. Attacker obtains valid SSE token (requires authentication)
-2. Opens 10,000 concurrent SSE connections
-3. Each connection consumes memory for heartbeat intervals
-4. Server runs out of memory/file descriptors
-5. All legitimate SSE connections dropped
-
-**Fix**: Add connection limiting per user and global cap:
-```typescript
-fastify.get('/:id/events', {
-  config: {
-    rateLimit: {
-      max: 5,        // 5 SSE connections per user
-      timeWindow: '1 minute'
-    }
-  }
-}, async (request, reply) => { ... });
-```
-
----
-
-### Issue #7: Refunded Amount Serialized as Decimal Object
-
-**Description**: Webhook payload includes `refunded_amount` as a Decimal.js object instead of a number, causing malformed JSON delivery to merchants.
-
-**File/Location**: `apps/api/src/services/refund.service.ts:737`
-
-**Impact**:
-- Severity: **High**
-- Likelihood: **High** (every refund webhook affected)
-- Blast Radius: **Feature-specific** (webhook data integrity)
-
-**Exploit Scenario**:
-1. Refund processed successfully
-2. Webhook payload built with `refunded_amount: totalRefunded` (Decimal object)
-3. JSON.stringify produces: `{"refunded_amount": {"d": [9,9,9,9], "e": 3, "s": 1}}`
-4. Merchant webhook handler fails to parse amount
-5. Merchant reconciliation breaks
-
-**Fix**:
+**Fix**: Return generic error for all SSE auth failures:
 ```typescript
 // BEFORE:
-refunded_amount: totalRefunded,
+reply.code(403).send('Access denied: SSE endpoint requires SSE token (use POST /v1/auth/sse-token)');
+reply.code(403).send('Access denied: Token not valid for this payment session');
 
 // AFTER:
-refunded_amount: totalRefunded.toNumber(),
-// Or for maximum precision:
-refunded_amount: totalRefunded.toString(),
-```
-
----
-
-### Issue #8: JTI Blacklist Fails Open on Redis Outage
-
-**Description**: When Redis is unavailable, the JTI (JWT ID) revocation check logs a warning and allows the request. Revoked tokens remain valid during Redis outages.
-
-**File/Location**: `apps/api/src/plugins/auth.ts:28-48`
-
-**Impact**:
-- Severity: **Medium**
-- Likelihood: **Low** (requires Redis failure)
-- Blast Radius: **Product-wide** (session revocation bypassed)
-
-**Exploit Scenario**:
-1. User logs out, JTI stored in Redis blacklist
-2. Redis goes down (maintenance, crash, network partition)
-3. User's revoked JWT is presented
-4. JTI check fails, catch block logs warning and continues
-5. Revoked token accepted as valid for remaining JWT lifetime (15 min)
-
-**Fix**: In production, treat Redis failure as hard error for security-critical operations:
-```typescript
-try {
-  const revoked = await fastify.redis.get(`revoked_jti:${jti}`);
-  if (revoked) throw new AppError(401, 'token-revoked', 'Token has been revoked');
-} catch (error) {
-  if (error instanceof AppError) throw error;
-  if (process.env.NODE_ENV === 'production') {
-    throw new AppError(503, 'service-unavailable', 'Authentication service temporarily unavailable');
-  }
-  logger.warn('JTI check skipped - Redis unavailable');
-}
-```
-
----
-
-### Issue #9: IANA Reserved IP Ranges Not Blocked in SSRF Protection
-
-**Description**: The URL validator blocks private (RFC 1918), loopback, and link-local ranges but misses multicast (224.0.0.0/4), reserved (240.0.0.0/4), and broadcast addresses.
-
-**File/Location**: `apps/api/src/utils/url-validator.ts:94-97`
-
-**Impact**:
-- Severity: **Medium**
-- Likelihood: **Low** (requires multicast-routed infrastructure)
-- Blast Radius: **Feature-specific** (SSRF via non-standard ranges)
-
-**Exploit Scenario**:
-1. Attacker registers webhook URL pointing to 224.0.0.1 (multicast)
-2. SSRF filter passes (not in blocked ranges)
-3. Webhook delivery sends HTTP request to multicast address
-4. Depending on network config, could reach internal services
-
-**Fix**:
-```typescript
-// Add to isPrivateIP():
-// 224.0.0.0/4 - Multicast
-if (first >= 224 && first <= 239) return true;
-// 240.0.0.0/4 - Reserved
-if (first >= 240) return true;
-```
-
----
-
-### Issue #10: Refund Error Messages Leak Infrastructure Details
-
-**Description**: When refund processing fails, the raw error message is included in webhook payloads. This can contain AWS KMS ARNs, account IDs, or RPC provider URLs.
-
-**File/Location**: `apps/api/src/services/refund.service.ts:400-412, 476-490`
-
-**Impact**:
-- Severity: **Medium**
-- Likelihood: **Medium** (every failed refund)
-- Blast Radius: **Feature-specific** (information disclosure)
-
-**Exploit Scenario**:
-1. Refund fails due to KMS timeout
-2. Error: `"KMS SignOperation failed: arn:aws:kms:us-east-1:123456789:key/abc-def timeout"`
-3. Webhook delivers error to merchant endpoint
-4. Attacker discovers AWS account ID, region, and key ARN
-
-**Fix**:
-```typescript
-// Sanitize errors before webhook inclusion
-function sanitizeError(error: string): string {
-  return error
-    .replace(/arn:aws:[^\s]+/g, '[REDACTED_ARN]')
-    .replace(/\d{12}/g, '[REDACTED_ACCOUNT]')
-    .replace(/https?:\/\/[^\s]+/g, '[REDACTED_URL]');
-}
+reply.code(403).send('Unauthorized');
+// Log detailed reason internally
+logger.warn('SSE auth failed', { reason: 'wrong-token-type', sessionId: id });
 ```
 
 ---
 
 ## Architecture Problems
 
-### 1. Audit Log Service Uses In-Memory Storage
+### Problem 1: God Classes Exceeding 300 Lines
 
-**Problem**: `AuditLogService` stores entries in `private entries: AuditEntry[] = []`. On process restart, all audit history is lost.
-**File**: `apps/api/src/services/audit-log.service.ts:75-125`
-**Impact**: No persistent audit trail for compliance, security investigations, or incident response. Fatal for a financial services product.
-**Solution**: Persist to dedicated database table (schema already exists in `AuditLog` model). Write entries synchronously to database.
+**Problem**: Three services significantly exceed the 300-line guideline:
+- `refund.service.ts`: 762 lines (2.5x limit)
+- `webhook-delivery.service.ts`: 612 lines (2x limit)
+- `blockchain-transaction.service.ts`: 531 lines (1.8x limit)
 
-### 2. Worker Health Check Missing
+**Impact**: Difficult to test, reason about, and modify. Changes to one responsibility risk breaking others.
 
-**Problem**: Refund processing worker has no health/liveness probe. If the worker hangs on a database lock or blockchain call, it appears healthy but processes nothing.
-**File**: `apps/api/src/workers/refund-processing.worker.ts:29-197`
-**Impact**: Refunds stuck in PENDING indefinitely. Requires manual intervention.
-**Solution**: Add per-refund timeout and expose worker health status.
+**Solution**: Split by responsibility:
+- `RefundService` → `RefundQueryService` + `RefundMutationService` + `RefundProcessingService`
+- `WebhookDeliveryService` → `WebhookQueueService` + `WebhookDeliveryService` + `CircuitBreakerService`
 
-### 3. Encryption Key Derivation Redundant
+### Problem 2: Duplicated Token Address Constants
 
-**Problem**: `WEBHOOK_ENCRYPTION_KEY` is validated as 64 hex chars (32 bytes) but then hashed with SHA-256 to derive the key. The hash treats the hex string as ASCII, not binary.
-**File**: `apps/api/src/utils/encryption.ts:64-66`
-**Impact**: Security is not reduced, but the operation is unnecessary and slightly confusing.
-**Solution**: `Buffer.from(keyString, 'hex')` instead of `crypto.createHash('sha256').update(keyString).digest()`.
+**Problem**: `TOKEN_ADDRESSES` map is defined in both `blockchain-monitor.service.ts:7-17` and `blockchain-transaction.service.ts:94-103`. Updates require changing both files.
 
-### 4. Inconsistent Pagination in Refunds Route
+**Impact**: Inconsistency risk when adding new tokens or networks.
 
-**Problem**: The refunds list endpoint defines its own local schemas instead of using centralized schemas from `validation.ts`. Response format differs from other list endpoints.
-**File**: `apps/api/src/routes/v1/refunds.ts:29-34, 99-102`
-**Impact**: Inconsistent API contract. Clients must handle two different pagination response formats.
-**Solution**: Use `listRefundsQuerySchema` from `validation.ts` with proper defaults and return standard `{ data, pagination: { limit, offset, total, has_more } }` format.
+**Solution**: Extract to `src/utils/token-addresses.ts` shared constant.
+
+### Problem 3: Two Database Queries Per API Key Auth
+
+**Problem**: Every API-key-authenticated request performs a `findUnique` + `update(lastUsedAt)`, creating unnecessary write load.
+
+**Impact**: At 100 req/s, this is 200 DB queries/s just for authentication, with write contention on the `api_keys` table.
+
+**Solution**: Cache API key lookups in Redis (60s TTL). Batch `lastUsedAt` updates via background job every 30 seconds.
 
 ---
 
@@ -444,98 +369,92 @@ function sanitizeError(error: string): string {
 
 ### Authentication & Authorization
 
-| Finding | Severity | File | CWE |
-|---------|----------|------|-----|
-| JTI blacklist fails open on Redis outage | Medium | `plugins/auth.ts:28-48` | CWE-287 |
-| Refunds list requires `read` but not `refund` permission | Medium | `routes/v1/refunds.ts:85` | CWE-863 |
-| Logout endpoint has no request body validation | Low | `routes/v1/auth.ts:302-365` | CWE-20 |
-| API_KEY_HMAC_SECRET not enforced at startup | Medium | `utils/crypto.ts:24-34` | CWE-327 |
+| Finding | Severity | Location | Status |
+|---------|----------|----------|--------|
+| JWT algorithm not pinned (accepts any algorithm) | High | `app.ts:86-90` | Open |
+| API key HMAC fallback to unsalted SHA-256 in production | High | `crypto.ts:24-34` | Partially fixed (warns but doesn't fail) |
+| Account lockout: 5 attempts/15 min with Redis tracking | N/A | `auth.ts` | Secure |
+| Refresh token rotation with JTI blacklisting | N/A | `auth.ts` | Secure |
+| API key permission enforcement (read/write/refund) | N/A | Routes | Secure |
+
+### Injection Vulnerabilities
+
+| Finding | Severity | Location | Status |
+|---------|----------|----------|--------|
+| All queries via Prisma ORM (parameterized) | N/A | All services | Secure |
+| Zod schema validation on all inputs | N/A | `validation.ts` | Secure |
+| Ethereum address validation with ethers.js | N/A | `validation.ts:6-17` | Secure |
+| Metadata size limits (50 keys, 16KB) | N/A | `validation.ts:66-92` | Secure |
 
 ### Data Security
 
-| Finding | Severity | File | CWE |
-|---------|----------|------|-----|
-| Password reset token logged | High | `routes/v1/auth.ts:458-462` | CWE-532 |
-| Refund error messages leak infrastructure details | Medium | `services/refund.service.ts:400-412` | CWE-209 |
-| URL validator leaks resolved IP in error messages | Low | `utils/url-validator.ts:228` | CWE-209 |
-| Logger does not auto-redact PII | Low | `utils/logger.ts:14-27` | CWE-532 |
+| Finding | Severity | Location | Status |
+|---------|----------|----------|--------|
+| Webhook secrets encrypted AES-256-GCM | N/A | `encryption.ts` | Secure |
+| Passwords bcrypt-12 with 12-char minimum | N/A | `crypto.ts` | Secure |
+| Logger does not sanitize sensitive data | Medium | `logger.ts:14-28` | Open |
+| Silent audit log write failures | Medium | `audit-log.service.ts:120-122` | Open |
 
 ### API Security
 
-| Finding | Severity | File | CWE |
-|---------|----------|------|-----|
-| SSE endpoint has no rate limiting | High | `routes/v1/payment-sessions.ts:404-521` | CWE-770 |
-| CORS allows null origin with credentials | Medium | `app.ts:66-84` | CWE-942 |
-| Metrics endpoint unauthenticated in dev | Medium | `plugins/observability.ts:174-224` | CWE-306 |
-| Missing multicast/reserved IP in SSRF filter | Medium | `utils/url-validator.ts:94-97` | CWE-918 |
+| Finding | Severity | Location | Status |
+|---------|----------|----------|--------|
+| CORS origin validation with callback | N/A | `app.ts:62-84` | Secure |
+| Helmet security headers (HSTS, CSP, X-Frame) | N/A | `app.ts` | Secure |
+| SSRF protection with DNS resolution | N/A | `url-validator.ts` | Secure |
+| Rate limiting: 100/min per user, 5/min on auth | N/A | `app.ts` | Secure |
+| No rate limit on SSE endpoint | High | `payment-sessions.ts:426` | Open |
+| No rate limit on internal webhook worker | Medium | `webhook-worker.ts:19` | Open |
 
 ### Infrastructure
 
-| Finding | Severity | File | CWE |
-|---------|----------|------|-----|
-| Webhook encryption optional at startup | Medium | `index.ts:16-20` | CWE-311 |
-| No container image scanning in CI/CD | Medium | `deploy-production.yml` | CWE-1395 |
-| Database backup placeholder not implemented | Low | `deploy-production.yml:78-82` | N/A |
+| Finding | Severity | Location | Status |
+|---------|----------|----------|--------|
+| Redis TLS configurable | N/A | `redis.ts` | Secure |
+| Env validation with entropy checks | N/A | `env-validator.ts` | Secure |
+| ALLOWED_ORIGINS not validated in production | Medium | `app.ts:62` | Open |
+| Metrics endpoint open in development | Medium | `observability.ts:174-190` | Open |
 
 ---
 
 ## Performance & Scalability
 
-### 1. Missing Timeout in Blockchain RPC Calls
-
-**Issue**: `getTransactionReceipt()` has no explicit timeout. Slow or hung RPC providers block indefinitely.
-**File**: `apps/api/src/services/blockchain-monitor.service.ts:110-285`
-**Impact**: Payment verification worker threads exhausted during RPC outages.
-**Fix**: Wrap with `Promise.race()` and 5-second timeout.
-
-### 2. Nonce Gap Handling
-
-**Issue**: When tracked nonce falls behind blockchain pending nonce, code jumps forward but doesn't handle stuck intermediate transactions.
-**File**: `apps/api/src/services/nonce-manager.service.ts:85-88`
-**Impact**: Stuck transactions at intermediate nonces prevent subsequent transactions.
-**Fix**: Add monitoring for nonce gaps > 2 and automatic replacement transaction logic.
-
-### 3. Request Size Limiting Incomplete
-
-**Issue**: Body limit set to 1MB but query string, headers, and URL length are not explicitly limited.
-**File**: `apps/api/src/app.ts:28-29`
-**Impact**: Memory exhaustion via very large URLs or headers.
-**Fix**: Add `maxParamLength` and `maxHeaderSize` to Fastify server options.
+| Issue | Impact | Fix |
+|-------|--------|-----|
+| 2 DB queries per API key auth (findUnique + update lastUsedAt) | 200 queries/s at 100 req/s | Redis cache + batched writes |
+| Daily spending limit uses `Math.round()` on floats | Rounding bias accumulates | Use `Decimal.js` for limit checks |
+| Gas estimation has no upper bound | Could waste all gas on malformed tx | Cap to 100,000 for ERC-20 transfers |
+| Overpayment accepted without limit | Customer could overpay 10x | Cap acceptance to 1% tolerance + warning |
+| Observability metrics use single array for p50/p95/p99 | Incorrect percentile calculations | Use tdigest or separate sorted arrays |
 
 ---
 
 ## Testing Gaps
 
-### Coverage Summary
+**Test Count**: 809 tests across 82 API + 6 frontend test files
+**Current Pass Rate**: ~72% (579 passing, 229 failing, 1 skipped)
+**Failure Root Causes**: Rate limit accumulation (63%), test cleanup cascades, security fix behavioral changes
 
-| Category | Files | Tests | Coverage |
-|----------|-------|-------|----------|
-| Integration | 22 | 200+ | Excellent |
-| Services | 20+ | 300+ | Excellent |
-| Routes | 6 | 80+ | Good |
-| Unit | 8 | 90+ | Good |
-| Plugins | 4 | 40+ | Good |
-| Workers | 2 | 30+ | Moderate |
-| CI | 2 | 20+ | Good |
-| Schema | 1 | 3 | Adequate |
-| **Total** | **65+** | **770+** | **80%+** |
+### Coverage Gaps
 
-### Strengths
+| Area | Coverage | Gap |
+|------|----------|-----|
+| Auth routes (signup/login) | Strong (20+ tests) | Missing: JWT algorithm tampering, refresh token expiry race |
+| Payment sessions | Strong (27+ integration tests) | Missing: concurrent completion, SSE connection exhaustion |
+| Refunds | Moderate (17 tests) | Missing: idempotency, amount bounds, double-refund race |
+| Webhooks | Strong (42+ tests) | Missing: DNS rebinding, large payload, timeout handling |
+| Frontend dashboard | None | No tests for DashboardHome, PaymentsList, Settings |
+| Frontend wallet integration | None | wallet.ts contains TODO markers |
+| E2E flows | None | No Playwright tests in CI |
+| SQL injection attempts | None | Relying on Prisma parameterization (correct but untested) |
+| Rate limit bypass (X-Forwarded-For) | None | No tests for header spoofing |
 
-- **Real database integration** — no mock abuse. All integration tests use actual PostgreSQL and Redis.
-- **Security-focused tests** — permission boundaries, rate limit isolation, token expiration, SSRF.
-- **Race condition tests** — concurrent payment and refund tests with real DB locks.
-- **Rate limit test isolation** — unique User-Agent per describe block prevents bucket collisions.
-- **Proper cleanup** — all tests include `afterAll` with `app.close()`.
+### Test Quality Issues
 
-### Missing Scenarios
-
-1. **Redis failure paths** — no tests for Redis connection loss during auth, rate limiting, or circuit breaker
-2. **KMS timeout handling** — no tests for AWS KMS being slow or unavailable
-3. **Blockchain RPC 502/timeout** — no tests for provider failure during payment verification
-4. **Worker integration test** — worker tests mock everything; need one real-DB worker test
-5. **Error path matrix** — most tests verify happy paths with limited error scenario coverage
-6. **E2E tests in CI** — not currently run in CI pipeline
+1. **Brittle cleanup**: `webhook-resource-id.test.ts:54` fails on `prisma.user.delete()` when user already cascade-deleted
+2. **Rate limit contamination**: Shared Redis between test files causes cascading 429 errors
+3. **Frontend over-mocking**: `api-client.test.ts` mocks global fetch, never hits real backend
+4. **Missing scenarios**: No tests for database connection pool exhaustion, Redis failure graceful degradation, or blockchain RPC provider failure
 
 ---
 
@@ -543,44 +462,45 @@ function sanitizeError(error: string): string {
 
 ### CI/CD Pipeline
 
-| Check | Status | File |
-|-------|--------|------|
-| Tests run before deploy | PASS | `ci.yml:66-73` |
-| Lint enforcement | PASS | `deploy-production.yml:68-70` |
-| Security scanning (npm audit) | PASS | `ci.yml:145-176` |
-| Pre-flight gate before production | PASS | `deploy-production.yml:58-70` |
-| Container image scanning | **MISSING** | `deploy-production.yml` |
-| Coverage threshold enforcement | **MISSING** | `ci.yml:75-80` |
-| Database backup before migration | **PLACEHOLDER** | `deploy-production.yml:78-82` |
-| Post-deployment smoke tests | **PLACEHOLDER** | `deploy-production.yml:160-164` |
-| Rollback strategy | Manual (git tag) | `deploy-production.yml:175` |
+| Issue | Severity | Location |
+|-------|----------|----------|
+| Staging deploys without test gate | High | `deploy-staging.yml` |
+| Build runs parallel to tests (can succeed while tests fail) | High | `ci.yml:178-211` |
+| No SAST/DAST scanning (CodeQL, Snyk, Trivy) | Medium | Missing |
+| No E2E tests in pipeline | Medium | Missing |
+| No type checking (`tsc --noEmit`) in CI | Medium | Missing from `ci.yml` |
+| Hardcoded test JWT secret in YAML | Low | `ci.yml:72` |
+| Database backup step commented out | Medium | `deploy-production.yml:78-82` |
+| No automated rollback on deploy failure | Medium | `deploy-production.yml` |
+| No canary deployment strategy | Low | Full rollout to all instances |
 
-### Recommendations
+### Monitoring & Observability
 
-1. Add Trivy container scanning before ECR push
-2. Enforce 80% coverage minimum in CI with codecov threshold
-3. Implement database backup script (or document RDS snapshot policy)
-4. Add post-deployment E2E smoke test suite
-5. Replace regex-based secret detection with `gitleaks` GitHub Action
+| Issue | Severity | Description |
+|-------|----------|-------------|
+| Silent audit log failures | Medium | `console.error` instead of structured logger with alerts |
+| Metrics endpoint unprotected in dev | Medium | Exposes error rates, performance data |
+| No alerting on blockchain node failures | Medium | Provider failover works but no notification |
 
 ---
 
 ## AI-Readiness Score
 
-**Score: 8.5 / 10**
+**Score: 7.0 / 10**
 
-| Dimension | Score | Rationale |
-|-----------|-------|-----------|
-| **Modularity** | 2.0/2 | Clean layered architecture. Services, routes, utils, workers are independent. Agents can modify one layer without affecting others. |
-| **API Design** | 1.5/2 | Strong Zod schemas, consistent REST patterns. Minor inconsistency in refunds pagination format. |
-| **Testability** | 2.0/2 | Real database integration tests. Agents can write a test, run it, and verify behavior immediately. No mock setup required. |
-| **Observability** | 1.5/2 | Structured logging, metrics endpoint, audit log. Missing: auto-PII redaction, distributed tracing (OpenTelemetry). |
-| **Documentation** | 1.5/2 | Good PRD, README, SECURITY.md. Code comments explain security decisions. Missing: API reference (OpenAPI spec). |
+| Dimension | Score | Notes |
+|-----------|-------|-------|
+| Modularity | 1.2/2 | Good service separation, but god classes (762 lines) hinder agent comprehension. Split services would score 1.8/2. |
+| API Design | 1.6/2 | Consistent REST conventions, Zod schemas, clear error format. Missing OpenAPI auto-generation. |
+| Testability | 1.4/2 | Real DB tests (excellent), but rate limit contamination and cleanup issues create unreliable feedback loops for agents. |
+| Observability | 1.2/2 | Request correlation IDs, structured logging in prod. But logger doesn't redact sensitive data, metrics incomplete. |
+| Documentation | 1.6/2 | Strong README, PRD, API docs. Missing inline ADRs for complex business logic decisions (e.g., overpayment acceptance policy). |
 
-**Recommendations for Improving AI-Readiness**:
-- Generate OpenAPI spec from Zod schemas for agent-consumable API docs
-- Add OpenTelemetry tracing for cross-service debugging
-- Create `.claude/addendum.md` with product-specific context for audit agents
+**Recommendations**:
+- Split god classes to help agents work on isolated components
+- Add OpenAPI spec auto-generation from Zod schemas
+- Fix test reliability so agents get consistent pass/fail signals
+- Add inline decision docs (`// ADR: We accept overpayments because...`)
 
 ---
 
@@ -590,26 +510,27 @@ function sanitizeError(error: string): string {
 
 | Debt | Interest | Payoff |
 |------|----------|--------|
-| Audit log in-memory only | Every restart loses compliance data | Persistent audit trail for investigations |
-| Spending limit race condition | Active vulnerability in production | Prevents fund drainage |
-| No refund idempotency | Every network retry risks double-spend | Safe retry handling |
+| Race condition in payment status update | Double-completion risk on every concurrent event | Prevents financial loss |
+| No refund idempotency | Double refund on every network retry | Prevents financial loss |
+| Test suite 28% failure rate | Cannot trust CI signal; broken tests mask real regressions | Reliable deployments |
+| CI build-without-test-gate | Can deploy broken code | Deployment safety |
 
-### Medium-Interest Debt (fix next quarter)
+### Medium-Interest Debt (fix within 60 days)
 
 | Debt | Interest | Payoff |
 |------|----------|--------|
-| Refunds route uses local schemas | API inconsistency, maintenance burden | Unified validation layer |
-| No container scanning in CI | Undetected CVEs in base images | Automated vulnerability detection |
-| Worker lacks health check | Silent failures require manual intervention | Self-healing infrastructure |
-| Missing RPC timeout | Hung connections during outages | Graceful degradation |
+| God classes (3 services >300 lines) | Every feature change risks side effects | Faster development, fewer bugs |
+| Duplicated token address constants | Must update 2 files for new token | Maintenance simplicity |
+| API key auth: 2 DB queries per request | Performance drag at scale | 2x fewer DB queries |
+| No frontend component tests | Regressions go undetected | Frontend quality |
 
 ### Low-Interest Debt (monitor)
 
 | Debt | Interest | Payoff |
 |------|----------|--------|
-| Magic numbers in blockchain service | Minor readability issue | Self-documenting constants |
-| Recovery param not cached in KMS | Slight CPU waste per signing | Marginal performance gain |
-| No E2E tests in CI | Manual verification needed | Full automation |
+| SSE requires fetch (not EventSource API) | Developer friction | Better DX |
+| Frontend mock code bundled in production | Dead code in bundle | Smaller bundle |
+| Incomplete wallet integration (TODOs) | Feature not complete | Feature completeness |
 
 ---
 
@@ -617,62 +538,65 @@ function sanitizeError(error: string): string {
 
 ### 30-Day Plan (Critical Fixes)
 
-1. **Fix spending limit race condition** — Atomic Redis check-and-increment. Prevents fund drainage.
-2. **Add refund idempotency** — Redis-based dedup key for blockchain transactions. Prevents double-spend.
-3. **Fix nonce manager TOCTOU** — Lua script for atomic compare-and-delete. Prevents duplicate nonces.
-4. **Remove password reset token from logs** — One-line fix. Prevents account takeover.
-5. **Fix Decimal serialization in webhooks** — Add `.toNumber()` call. Fixes merchant integration.
-6. **Add SSE rate limiting** — Configure Fastify rate limit on SSE endpoint. Prevents DoS.
-7. **Persist audit log to database** — Write to AuditLog table. Enables compliance.
+1. **Fix payment status race condition** — Add FOR UPDATE lock to `updatePaymentStatus()` (`payment.service.ts`)
+2. **Fix DNS rebinding** — Cache resolved IPs, re-validate before webhook fetch (`webhook-delivery.service.ts`)
+3. **Add refund idempotency** — Support `Idempotency-Key` header on `POST /v1/refunds` (`refunds.ts`)
+4. **Fix timing attack** — Use `crypto.timingSafeEqual` in webhook worker auth (`webhook-worker.ts`)
+5. **Fix refund webhook decimal** — Call `.toString()` on Decimal in webhook payload (`refund.service.ts:738`)
+6. **Add SSE rate limiting** — Per-user connection limit of 5 (`payment-sessions.ts`)
+7. **Fix CI pipeline** — Add `needs: [test]` to build and staging deploy stages
+8. **Fix test cleanup** — Use `deleteMany` with `where` filter, handle NotFound errors
+9. **Cap audit log buffer** — Implement circular buffer with 10,000 max entries
+10. **Fix atomic lock release** — Use Lua script in nonce manager and refund worker
 
 ### 60-Day Plan (Important Improvements)
 
-1. **Add container image scanning** — Trivy in deploy-production.yml
-2. **Enforce coverage threshold** — 80% minimum in CI
-3. **Add RPC timeout** — Promise.race wrapper for blockchain calls
-4. **Fix SSRF multicast ranges** — Add 224.0.0.0/4 and 240.0.0.0/4
-5. **Sanitize refund error webhooks** — Strip AWS ARNs and account IDs
-6. **Add worker health checks** — Liveness probe with per-refund timeout
-7. **Unify refunds route schemas** — Use centralized validation.ts
+1. **Pin JWT algorithm** — Explicitly set `HS256` in JWT plugin registration
+2. **Add SAST to CI** — GitHub CodeQL or Snyk for static analysis
+3. **Split god classes** — Refund, webhook, blockchain services into single-responsibility classes
+4. **Add E2E tests** — Playwright tests for auth flow, payment flow, webhook delivery
+5. **Redis cache API keys** — Cache lookups with 60s TTL, batch lastUsedAt writes
+6. **Consolidate token addresses** — Move to shared utility file
+7. **Fix logger redaction** — Add sensitive field masking (tokens, keys, passwords)
+8. **Frontend dashboard tests** — Add component tests for DashboardHome, PaymentsList, Settings
 
 ### 90-Day Plan (Strategic Improvements)
 
-1. **Add OpenTelemetry tracing** — Distributed tracing across services
-2. **Generate OpenAPI spec** — From Zod schemas for documentation
-3. **Add E2E smoke tests to CI** — Post-deployment verification
-4. **Implement PII redaction in logger** — Automatic pattern matching
-5. **Add nonce gap monitoring** — Alert on gaps > 2
-6. **Load testing suite** — k6 scripts for rate limiting validation
+1. **Canary deployments** — Deploy to 10% of instances, monitor, then full rollout
+2. **Automated rollback** — Revert on health check failure
+3. **OpenAPI auto-generation** — Generate from Zod schemas for API docs
+4. **Per-route rate limiting** — Different limits for auth, payment, webhook endpoints
+5. **Test parallelization** — Isolated Redis/Postgres per test suite in Docker
+6. **Frontend mock removal** — Tree-shake mock code from production builds
+7. **Webhook secret rotation grace period** — Keep old secret for 24h during rotation
 
 ---
 
 ## Quick Wins (1-Day Fixes)
 
-1. **Remove token from password reset log** — `auth.ts:462` — delete `token` from log object
-2. **Fix Decimal.toNumber() in refund webhook** — `refund.service.ts:737` — add `.toNumber()`
-3. **Add multicast IP range to SSRF filter** — `url-validator.ts:94-97` — 2 lines
-4. **Redact resolved IP from error message** — `url-validator.ts:228` — replace `(${ip})` with generic text
-5. **Add refund pagination defaults** — `refunds.ts:31-32` — add `.default(50)` and `.default(0)`
-6. **Add `noSniff` to Helmet config** — `app.ts:45-59` — explicit header setting
-7. **Fix encryption key derivation** — `encryption.ts:64-66` — use `Buffer.from(key, 'hex')`
-8. **Add metrics endpoint to rate limit allowlist** — `app.ts:108-111` — add path check
-9. **Use timing-safe comparison for internal API key** — `observability.ts:184` — `crypto.timingSafeEqual()`
-10. **Add body validation to logout endpoint** — `auth.ts:302` — wrap with `z.object({ refresh_token: z.string() })`
+1. **Fix refund webhook decimal**: Change `totalRefunded` to `totalRefunded.toString()` in `refund.service.ts:738` (1 line)
+2. **Fix timing attack**: Replace `!==` with `crypto.timingSafeEqual` in `webhook-worker.ts:31` (3 lines)
+3. **Fix SSE error messages**: Replace specific messages with generic "Unauthorized" in `payment-sessions.ts:452,459` (2 lines)
+4. **Cap audit log buffer**: Add `if (this.entries.length >= 10000) this.entries.shift()` in `audit-log.service.ts` (2 lines)
+5. **Fix CI build gate**: Add `needs: [test-api, test-web, lint, security]` to build job in `ci.yml` (1 line)
+6. **Pin JWT algorithm**: Add `sign: { algorithm: 'HS256' }` to JWT plugin registration in `app.ts` (1 line)
+7. **Fix test cleanup**: Use `deleteMany` with filter instead of `delete` in `webhook-resource-id.test.ts:54` (3 lines)
+8. **Add ALLOWED_ORIGINS validation**: Add production check to `env-validator.ts` (5 lines)
+9. **Fix Decimal in blockchain monitor**: Change `.toNumber()` to `.toString()` in `blockchain-monitor.service.ts:194` (1 line)
+10. **Use structured logger for audit failures**: Replace `console.error` with `logger.error` in `audit-log.service.ts:120` (1 line)
 
 ---
 
 ## Scores Summary
 
-| Category | Score |
-|----------|-------|
-| Security | 8/10 |
-| Architecture | 8.5/10 |
-| Test Coverage | 9/10 |
-| AI-Readiness | 8.5/10 |
-| DevOps | 7.5/10 |
-| **Overall** | **8.3/10** |
+| Area | Score | Notes |
+|------|-------|-------|
+| Security | 7/10 | Strong crypto & validation, but race conditions and timing attacks remain |
+| Architecture | 6/10 | Clean layering, but god classes and duplicated constants |
+| Test Coverage | 5/10 | 809 tests but 28% failing, no E2E, no frontend component tests |
+| AI-Readiness | 7/10 | Good modularity, needs service splits and test reliability |
 
 ---
 
-*Report generated by Code Reviewer Agent on 2026-01-31*
-*Methodology: 6-phase audit (System Understanding → Static Analysis → Risk Analysis → Architecture Evaluation → Security Review → Recommendations)*
+*Report generated by Code Reviewer Agent on January 31, 2026.*
+*Full codebase analysis: 34 source files, 82 test files, 4 CI/CD workflows, 15 frontend components.*
