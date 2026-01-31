@@ -81,3 +81,32 @@ Chose next-intl over react-i18next or custom solution.
 5. **Hijri calendar**: Intl.DateTimeFormat supports Hijri via
    ar-SA-u-ca-islamic locale, but rendering quality varies by browser.
    Need to verify behavior and consider a polyfill.
+
+---
+
+## Task: FOUNDATION-BE-01 -- Backend Foundation
+
+**Status**: Complete
+**Date**: 2026-01-31
+**Tests**: 49/49 passing
+
+### What Was Built
+- Fastify app on port 5003 with JWT, CORS, rate limiting
+- Auth routes: register, login, refresh (rotation), logout
+- Deal routes: CRUD, search/filter, cursor pagination, status transitions
+- Subscription routes: create intent, list, detail, eligibility checks
+- Investor routes: profile get/update, portfolio summary
+- Watchlist routes: add, list, remove
+- Notification routes: list, mark read, mark all read
+- Health check endpoint
+- Zod validation via validate() helper (converts to AppError)
+- Audit logging with SHA-256 hash chain
+- Seed script: 15 deals, 5 users, Qatar market data
+
+### Lessons Learned
+- ZodError does not propagate through Fastify v5 error handler;
+  use validate() helper that catches and converts to AppError(400)
+- Bcrypt rounds: 12 for password hashing
+- Cursor-based pagination: Prisma cursor + skip(1) pattern
+- Deal status transitions validated against a VALID_TRANSITIONS map
+- Tenant resolution: X-Tenant-ID header > JWT > subdomain > default

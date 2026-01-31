@@ -2,8 +2,6 @@ import Fastify, { FastifyInstance } from 'fastify';
 import cors from '@fastify/cors';
 import jwt from '@fastify/jwt';
 import rateLimit from '@fastify/rate-limit';
-import { ZodError } from 'zod';
-
 // Plugins
 import prismaPlugin from './lib/prisma';
 import redisPlugin from './lib/redis';
@@ -92,13 +90,9 @@ export async function buildApp(): Promise<FastifyInstance> {
       return reply.code(error.statusCode).send(error.toJSON());
     }
 
-    if (
-      error instanceof ZodError ||
-      (error as any).name === 'ZodError' ||
-      Array.isArray((error as any).issues)
-    ) {
-      const zodErr = error as any;
-      const issues = zodErr.issues || zodErr.errors || [];
+    // Zod validation errors (caught as safety net)
+    if ((error as any).name === 'ZodError' || Array.isArray((error as any).issues)) {
+      const issues = (error as any).issues || [];
       const messages = issues.length > 0
         ? issues.map((e: any) => e.message).join(', ')
         : error.message;
