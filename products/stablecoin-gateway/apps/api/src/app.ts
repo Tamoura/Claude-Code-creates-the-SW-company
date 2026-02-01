@@ -64,7 +64,7 @@ export async function buildApp(): Promise<FastifyInstance> {
   });
 
   // Register CORS with multiple allowed origins
-  const allowedOrigins = (process.env.ALLOWED_ORIGINS || 'http://localhost:3101')
+  const allowedOrigins = (process.env.ALLOWED_ORIGINS || 'http://localhost:3104')
     .split(',')
     .map((origin) => origin.trim());
 
