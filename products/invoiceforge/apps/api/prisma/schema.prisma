@@ -1,0 +1,132 @@
+generator client {
+  provider = "prisma-client-js"
+}
+
+datasource db {
+  provider = "postgresql"
+  url      = env("DATABASE_URL")
+}
+
+enum SubscriptionTier {
+  free
+  pro
+  team
+}
+
+enum InvoiceStatus {
+  draft
+  sent
+  paid
+  overdue
+}
+
+model User {
+  id                    String           @id @default(uuid())
+  email                 String           @unique
+  name                  String
+  businessName          String?          @map("business_name")
+  passwordHash          String?          @map("password_hash")
+  googleId              String?          @unique @map("google_id")
+  subscriptionTier      SubscriptionTier @default(free) @map("subscription_tier")
+  invoiceCountThisMonth Int              @default(0) @map("invoice_count_this_month")
+  counterResetAt        DateTime         @default(now()) @map("counter_reset_at")
+  invoiceCounter        Int              @default(0) @map("invoice_counter")
+  stripeCustomerId      String?          @map("stripe_customer_id")
+  stripeAccountId       String?          @map("stripe_account_id")
+  createdAt             DateTime         @default(now()) @map("created_at")
+  updatedAt             DateTime         @updatedAt @map("updated_at")
+
+  clients  Client[]
+  invoices Invoice[]
+  sessions Session[]
+
+  @@map("users")
+}
+
+model Client {
+  id        String   @id @default(uuid())
+  userId    String   @map("user_id")
+  name      String
+  email     String?
+  address   String?
+  city      String?
+  state     String?
+  zip       String?
+  country   String?  @default("US")
+  phone     String?
+  notes     String?
+  createdAt DateTime @default(now()) @map("created_at")
+  updatedAt DateTime @updatedAt @map("updated_at")
+
+  user     User      @relation(fields: [userId], references: [id], onDelete: Cascade)
+  invoices Invoice[]
+
+  @@map("clients")
+}
+
+model Invoice {
+  id              String        @id @default(uuid())
+  userId          String        @map("user_id")
+  clientId        String?       @map("client_id")
+  invoiceNumber   String        @map("invoice_number")
+  status          InvoiceStatus @default(draft)
+  invoiceDate     DateTime      @map("invoice_date") @db.Date
+  dueDate         DateTime      @map("due_date") @db.Date
+  subtotal        Int           @default(0)
+  taxRate         Int           @default(0) @map("tax_rate")
+  taxAmount       Int           @default(0) @map("tax_amount")
+  total           Int           @default(0)
+  currency        String        @default("USD")
+  notes           String?
+  aiPrompt        String?       @map("ai_prompt")
+  shareToken      String?       @unique @default(uuid()) @map("share_token")
+  paymentLink     String?       @map("payment_link")
+  stripeSessionId String?       @map("stripe_session_id")
+  paidAt          DateTime?     @map("paid_at")
+  sentAt          DateTime?     @map("sent_at")
+  createdAt       DateTime      @default(now()) @map("created_at")
+  updatedAt       DateTime      @updatedAt @map("updated_at")
+
+  user   User          @relation(fields: [userId], references: [id], onDelete: Cascade)
+  client Client?       @relation(fields: [clientId], references: [id], onDelete: SetNull)
+  items  InvoiceItem[]
+
+  @@map("invoices")
+}
+
+model InvoiceItem {
+  id          String @id @default(uuid())
+  invoiceId   String @map("invoice_id")
+  description String
+  quantity    Int    @default(1)
+  unitPrice   Int    @map("unit_price")
+  amount      Int
+  sortOrder   Int    @default(0) @map("sort_order")
+
+  invoice Invoice @relation(fields: [invoiceId], references: [id], onDelete: Cascade)
+
+  @@map("invoice_items")
+}
+
+model Session {
+  id        String   @id @default(uuid())
+  userId    String   @map("user_id")
+  token     String   @unique
+  expiresAt DateTime @map("expires_at")
+  createdAt DateTime @default(now()) @map("created_at")
+
+  user User @relation(fields: [userId], references: [id], onDelete: Cascade)
+
+  @@map("sessions")
+}
+
+model PasswordResetToken {
+  id        String    @id @default(uuid())
+  userId    String    @map("user_id")
+  token     String    @unique
+  expiresAt DateTime  @map("expires_at")
+  usedAt    DateTime? @map("used_at")
+  createdAt DateTime  @default(now()) @map("created_at")
+
+  @@map("password_reset_tokens")
+}
