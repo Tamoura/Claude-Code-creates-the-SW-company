@@ -148,17 +148,49 @@ fi
 echo ""
 
 # ============================================================================
-# PHASE 3: E2E Tests
+# PHASE 3: E2E Tests (MANDATORY — every product must have E2E tests)
 # ============================================================================
 echo "┌──────────────────────────────────────────────────────────────┐"
-echo "│ Phase 3: E2E Tests                                           │"
+echo "│ Phase 3: E2E Tests (MANDATORY)                               │"
 echo "└──────────────────────────────────────────────────────────────┘"
 
-if [ -d "e2e" ]; then
-  check "E2E test directory exists" "test -d e2e"
-  check "E2E tests pass" "npm run test:e2e 2>/dev/null || npx playwright test 2>/dev/null" false
+# Search for E2E tests in multiple locations
+E2E_DIR=""
+for candidate in "apps/web/e2e" "e2e" "apps/web/tests/e2e"; do
+  if [ -d "$candidate" ]; then
+    E2E_DIR="$candidate"
+    break
+  fi
+done
+
+if [ -n "$E2E_DIR" ]; then
+  E2E_FILE_COUNT=$(find "$E2E_DIR" -name "*.spec.ts" -o -name "*.spec.js" -o -name "*.test.ts" -o -name "*.test.js" 2>/dev/null | wc -l | tr -d ' ')
+  check "E2E test directory exists ($E2E_DIR)" "test -d $E2E_DIR"
+
+  if [ "$E2E_FILE_COUNT" -lt 3 ]; then
+    printf "Checking: %-50s" "Minimum E2E test files (>= 3)..."
+    echo "❌ FAIL (found $E2E_FILE_COUNT)"
+    ((FAILED++))
+  else
+    printf "Checking: %-50s" "Minimum E2E test files (>= 3)..."
+    echo "✅ PASS ($E2E_FILE_COUNT files)"
+    ((PASSED++))
+  fi
+
+  # Run E2E tests — REQUIRED, not optional
+  if [ "$HAS_WEB" = true ]; then
+    cd "$PRODUCT_DIR/apps/web"
+    check "E2E tests pass" "npx playwright test 2>/dev/null || npm run test:e2e 2>/dev/null"
+    cd "$PRODUCT_DIR"
+  else
+    check "E2E tests pass" "npm run test:e2e 2>/dev/null || npx playwright test 2>/dev/null"
+  fi
 else
-  warn "E2E tests" "No e2e directory found"
+  printf "Checking: %-50s" "E2E test directory exists..."
+  echo "❌ FAIL (no e2e/ directory found)"
+  ((FAILED++))
+  echo "  Every product must have Playwright E2E tests."
+  echo "  Create an e2e/ directory with .spec.ts files."
 fi
 
 echo ""
