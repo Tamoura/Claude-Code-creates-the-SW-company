@@ -1,0 +1,156 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0">
+  <title>Stablecoin Gateway Widget Demo</title>
+  <style>
+    body {
+      font-family: -apple-system, BlinkMacSystemFont, 'Segoe UI', Roboto, sans-serif;
+      max-width: 800px;
+      margin: 50px auto;
+      padding: 20px;
+      line-height: 1.6;
+    }
+    h1 {
+      color: #333;
+    }
+    .demo-section {
+      margin: 40px 0;
+      padding: 20px;
+      border: 1px solid #e5e7eb;
+      border-radius: 8px;
+    }
+    .demo-section h2 {
+      margin-top: 0;
+      color: #4F46E5;
+    }
+    .log {
+      background: #f9fafb;
+      border: 1px solid #e5e7eb;
+      border-radius: 4px;
+      padding: 12px;
+      margin-top: 16px;
+      font-family: 'Courier New', monospace;
+      font-size: 14px;
+      max-height: 200px;
+      overflow-y: auto;
+    }
+    .log-entry {
+      margin: 4px 0;
+    }
+    .success { color: #10B981; }
+    .error { color: #EF4444; }
+    .info { color: #6B7280; }
+  </style>
+</head>
+<body>
+  <h1>🚀 Stablecoin Gateway Widget Demo</h1>
+  <p>This page demonstrates different integration patterns for the checkout widget.</p>
+
+  <div class="demo-section">
+    <h2>Example 1: Payment Link with Custom Styling</h2>
+    <p>Pre-configured payment link with brand color.</p>
+    <div id="payment-button-1"></div>
+    <div id="log-1" class="log"></div>
+  </div>
+
+  <div class="demo-section">
+    <h2>Example 2: Dynamic Amount</h2>
+    <p>Specify amount, network, and token at runtime.</p>
+    <div id="payment-button-2"></div>
+    <div id="log-2" class="log"></div>
+  </div>
+
+  <div class="demo-section">
+    <h2>Example 3: Modal Mode (Programmatic)</h2>
+    <p>Open checkout modal without rendering a button.</p>
+    <button onclick="openCheckoutModal()" style="
+      background: #10B981;
+      color: white;
+      padding: 12px 24px;
+      border: none;
+      border-radius: 8px;
+      font-size: 16px;
+      cursor: pointer;
+    ">
+      Open Checkout Modal
+    </button>
+    <div id="log-3" class="log"></div>
+  </div>
+
+  <!-- Load the widget -->
+  <script src="dist/widget.js"></script>
+
+  <script>
+    // Helper to log events
+    function log(containerId, message, type = 'info') {
+      const logContainer = document.getElementById(containerId);
+      const entry = document.createElement('div');
+      entry.className = `log-entry ${type}`;
+      entry.textContent = `[${new Date().toLocaleTimeString()}] ${message}`;
+      logContainer.appendChild(entry);
+      logContainer.scrollTop = logContainer.scrollHeight;
+    }
+
+    // Example 1: Payment Link
+    StablecoinGateway.render('payment-button-1', {
+      apiUrl: 'http://localhost:5003', // Use local dev server
+      paymentLinkId: 'demo-link-123',
+      primaryColor: '#4F46E5',
+      buttonText: 'Pay with Crypto',
+      onComplete: (data) => {
+        log('log-1', `Payment completed! ID: ${data.paymentId}, TX: ${data.txHash}`, 'success');
+      },
+      onFailed: (error) => {
+        log('log-1', `Payment failed: ${error.message}`, 'error');
+      },
+      onCancel: () => {
+        log('log-1', 'Payment cancelled by user', 'info');
+      }
+    });
+
+    // Example 2: Dynamic Amount
+    StablecoinGateway.render('payment-button-2', {
+      apiUrl: 'http://localhost:5003',
+      amount: 99.99,
+      currency: 'USD',
+      merchantAddress: '0x742d35Cc6634C0532925a3b844Bc9e7595f0bEb',
+      network: 'polygon',
+      token: 'USDC',
+      primaryColor: '#FF6B6B',
+      buttonText: 'Pay $99.99',
+      onComplete: (data) => {
+        log('log-2', `Payment completed! ID: ${data.paymentId}`, 'success');
+      },
+      onFailed: (error) => {
+        log('log-2', `Payment failed: ${error.message}`, 'error');
+      },
+      onCancel: () => {
+        log('log-2', 'Payment cancelled', 'info');
+      }
+    });
+
+    // Example 3: Modal Mode
+    function openCheckoutModal() {
+      log('log-3', 'Opening checkout modal...', 'info');
+      StablecoinGateway.openModal({
+        apiUrl: 'http://localhost:5003',
+        amount: 49.99,
+        currency: 'USD',
+        merchantAddress: '0x742d35Cc6634C0532925a3b844Bc9e7595f0bEb',
+        primaryColor: '#10B981',
+        onComplete: (data) => {
+          log('log-3', `Payment completed! TX: ${data.txHash}`, 'success');
+        },
+        onFailed: (error) => {
+          log('log-3', `Payment failed: ${error.message}`, 'error');
+        },
+        onCancel: () => {
+          log('log-3', 'Modal closed', 'info');
+        }
+      });
+    }
+  </script>
+</body>
+</html>

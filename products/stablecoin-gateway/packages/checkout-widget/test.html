@@ -1,0 +1,325 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0">
+  <title>Widget Test Suite</title>
+  <style>
+    * { margin: 0; padding: 0; box-sizing: border-box; }
+    body {
+      font-family: -apple-system, BlinkMacSystemFont, 'Segoe UI', Roboto, sans-serif;
+      padding: 40px;
+      background: #f9fafb;
+    }
+    h1 { margin-bottom: 30px; color: #111827; }
+    .test-grid {
+      display: grid;
+      grid-template-columns: repeat(auto-fit, minmax(300px, 1fr));
+      gap: 20px;
+      margin-bottom: 40px;
+    }
+    .test-card {
+      background: white;
+      border: 2px solid #e5e7eb;
+      border-radius: 12px;
+      padding: 24px;
+    }
+    .test-card h3 {
+      margin-bottom: 12px;
+      color: #1f2937;
+      font-size: 18px;
+    }
+    .test-card p {
+      margin-bottom: 16px;
+      color: #6b7280;
+      font-size: 14px;
+      line-height: 1.5;
+    }
+    .status {
+      margin-top: 16px;
+      padding: 12px;
+      border-radius: 8px;
+      font-size: 13px;
+      font-family: 'Courier New', monospace;
+    }
+    .status.pending { background: #fef3c7; color: #92400e; }
+    .status.success { background: #d1fae5; color: #065f46; }
+    .status.error { background: #fee2e2; color: #991b1b; }
+    .status.info { background: #dbeafe; color: #1e40af; }
+    .controls {
+      margin: 30px 0;
+      padding: 20px;
+      background: white;
+      border-radius: 12px;
+      border: 2px solid #e5e7eb;
+    }
+    .controls h2 {
+      margin-bottom: 16px;
+      color: #111827;
+    }
+    .controls button {
+      margin: 8px 8px 8px 0;
+      padding: 10px 20px;
+      background: #3b82f6;
+      color: white;
+      border: none;
+      border-radius: 8px;
+      cursor: pointer;
+      font-size: 14px;
+      font-weight: 500;
+    }
+    .controls button:hover {
+      background: #2563eb;
+    }
+  </style>
+</head>
+<body>
+  <h1>🧪 Checkout Widget Test Suite</h1>
+
+  <div class="controls">
+    <h2>Manual Tests</h2>
+    <button onclick="testModalOpen()">Test Modal Open</button>
+    <button onclick="testMultipleInstances()">Test Multiple Instances</button>
+    <button onclick="simulateSuccess()">Simulate Success Event</button>
+    <button onclick="simulateFailed()">Simulate Failed Event</button>
+    <button onclick="simulateCancel()">Simulate Cancel Event</button>
+  </div>
+
+  <div class="test-grid">
+    <!-- Test 1: Payment Link -->
+    <div class="test-card">
+      <h3>Test 1: Payment Link</h3>
+      <p>Renders a button with payment link configuration.</p>
+      <div id="test-1"></div>
+      <div id="status-1" class="status pending">Waiting for interaction...</div>
+    </div>
+
+    <!-- Test 2: Dynamic Amount -->
+    <div class="test-card">
+      <h3>Test 2: Dynamic Amount</h3>
+      <p>Renders with custom amount and merchant address.</p>
+      <div id="test-2"></div>
+      <div id="status-2" class="status pending">Waiting for interaction...</div>
+    </div>
+
+    <!-- Test 3: Custom Styling -->
+    <div class="test-card">
+      <h3>Test 3: Custom Styling</h3>
+      <p>Tests custom colors and button text.</p>
+      <div id="test-3"></div>
+      <div id="status-3" class="status pending">Waiting for interaction...</div>
+    </div>
+
+    <!-- Test 4: Dark Theme -->
+    <div class="test-card" style="background: #1f2937;">
+      <h3 style="color: white;">Test 4: Dark Theme</h3>
+      <p style="color: #d1d5db;">Dark theme configuration.</p>
+      <div id="test-4"></div>
+      <div id="status-4" class="status pending">Waiting for interaction...</div>
+    </div>
+
+    <!-- Test 5: Ethereum Network -->
+    <div class="test-card">
+      <h3>Test 5: Ethereum Network</h3>
+      <p>Tests Ethereum network with USDT token.</p>
+      <div id="test-5"></div>
+      <div id="status-5" class="status pending">Waiting for interaction...</div>
+    </div>
+
+    <!-- Test 6: Minimal Config -->
+    <div class="test-card">
+      <h3>Test 6: Minimal Config</h3>
+      <p>Tests with minimal required configuration.</p>
+      <div id="test-6"></div>
+      <div id="status-6" class="status pending">Waiting for interaction...</div>
+    </div>
+  </div>
+
+  <!-- Load the widget -->
+  <script src="dist/widget.js"></script>
+
+  <script>
+    // Test utilities
+    function updateStatus(testId, message, type = 'info') {
+      const status = document.getElementById(`status-${testId}`);
+      status.className = `status ${type}`;
+      status.textContent = message;
+    }
+
+    // Test 1: Payment Link
+    StablecoinGateway.render('test-1', {
+      apiUrl: 'http://localhost:5003',
+      paymentLinkId: 'test-link-001',
+      primaryColor: '#4F46E5',
+      onComplete: (data) => {
+        updateStatus(1, `✓ Success: ${data.paymentId}`, 'success');
+      },
+      onFailed: (error) => {
+        updateStatus(1, `✗ Failed: ${error.message}`, 'error');
+      },
+      onCancel: () => {
+        updateStatus(1, '⊗ Cancelled by user', 'info');
+      }
+    });
+
+    // Test 2: Dynamic Amount
+    StablecoinGateway.render('test-2', {
+      apiUrl: 'http://localhost:5003',
+      amount: 149.99,
+      currency: 'USD',
+      merchantAddress: '0x742d35Cc6634C0532925a3b844Bc9e7595f0bEb',
+      network: 'polygon',
+      token: 'USDC',
+      buttonText: 'Pay $149.99',
+      onComplete: (data) => {
+        updateStatus(2, `✓ TX: ${data.txHash.slice(0, 10)}...`, 'success');
+      },
+      onFailed: (error) => {
+        updateStatus(2, `✗ ${error.message}`, 'error');
+      },
+      onCancel: () => {
+        updateStatus(2, '⊗ User cancelled', 'info');
+      }
+    });
+
+    // Test 3: Custom Styling
+    StablecoinGateway.render('test-3', {
+      apiUrl: 'http://localhost:5003',
+      amount: 29.99,
+      merchantAddress: '0x742d35Cc6634C0532925a3b844Bc9e7595f0bEb',
+      primaryColor: '#10B981',
+      buttonText: '🚀 Buy Now - $29.99',
+      onComplete: (data) => {
+        updateStatus(3, '✓ Payment completed', 'success');
+      },
+      onFailed: (error) => {
+        updateStatus(3, `✗ ${error.message}`, 'error');
+      },
+      onCancel: () => {
+        updateStatus(3, '⊗ Cancelled', 'info');
+      }
+    });
+
+    // Test 4: Dark Theme
+    StablecoinGateway.render('test-4', {
+      apiUrl: 'http://localhost:5003',
+      paymentLinkId: 'dark-theme-test',
+      theme: 'dark',
+      primaryColor: '#8B5CF6',
+      buttonText: 'Pay with Crypto',
+      onComplete: (data) => {
+        updateStatus(4, '✓ Dark theme success', 'success');
+      },
+      onFailed: (error) => {
+        updateStatus(4, `✗ ${error.message}`, 'error');
+      },
+      onCancel: () => {
+        updateStatus(4, '⊗ Cancelled', 'info');
+      }
+    });
+
+    // Test 5: Ethereum Network
+    StablecoinGateway.render('test-5', {
+      apiUrl: 'http://localhost:5003',
+      amount: 500,
+      merchantAddress: '0x742d35Cc6634C0532925a3b844Bc9e7595f0bEb',
+      network: 'ethereum',
+      token: 'USDT',
+      primaryColor: '#EF4444',
+      buttonText: 'Pay with USDT (Ethereum)',
+      onComplete: (data) => {
+        updateStatus(5, '✓ Ethereum payment OK', 'success');
+      },
+      onFailed: (error) => {
+        updateStatus(5, `✗ ${error.message}`, 'error');
+      },
+      onCancel: () => {
+        updateStatus(5, '⊗ Cancelled', 'info');
+      }
+    });
+
+    // Test 6: Minimal Config
+    StablecoinGateway.render('test-6', {
+      apiUrl: 'http://localhost:5003',
+      paymentLinkId: 'minimal-test',
+      onComplete: (data) => {
+        updateStatus(6, '✓ Minimal config works', 'success');
+      },
+      onFailed: (error) => {
+        updateStatus(6, `✗ ${error.message}`, 'error');
+      },
+      onCancel: () => {
+        updateStatus(6, '⊗ User closed', 'info');
+      }
+    });
+
+    // Manual test functions
+    function testModalOpen() {
+      StablecoinGateway.openModal({
+        apiUrl: 'http://localhost:5003',
+        amount: 99,
+        merchantAddress: '0x742d35Cc6634C0532925a3b844Bc9e7595f0bEb',
+        primaryColor: '#F59E0B',
+        onComplete: (data) => alert('Modal test: Success!'),
+        onFailed: (error) => alert('Modal test: Failed - ' + error.message),
+        onCancel: () => alert('Modal test: Cancelled')
+      });
+    }
+
+    function testMultipleInstances() {
+      const container = document.createElement('div');
+      container.style.cssText = 'position: fixed; top: 20px; right: 20px; background: white; padding: 20px; border-radius: 8px; box-shadow: 0 4px 6px rgba(0,0,0,0.1); z-index: 1000;';
+      container.innerHTML = '<h3 style="margin-bottom: 12px;">Multiple Instances</h3><div id="multi-1"></div><div id="multi-2" style="margin-top: 8px;"></div><button onclick="this.parentElement.remove()" style="margin-top: 12px; padding: 6px 12px; background: #ef4444; color: white; border: none; border-radius: 4px; cursor: pointer;">Close</button>';
+      document.body.appendChild(container);
+
+      StablecoinGateway.render('multi-1', {
+        apiUrl: 'http://localhost:5003',
+        amount: 10,
+        merchantAddress: '0x742d35Cc6634C0532925a3b844Bc9e7595f0bEb',
+        buttonText: 'Pay $10',
+        primaryColor: '#3b82f6',
+        onComplete: () => alert('Instance 1: Success')
+      });
+
+      StablecoinGateway.render('multi-2', {
+        apiUrl: 'http://localhost:5003',
+        amount: 20,
+        merchantAddress: '0x742d35Cc6634C0532925a3b844Bc9e7595f0bEb',
+        buttonText: 'Pay $20',
+        primaryColor: '#10b981',
+        onComplete: () => alert('Instance 2: Success')
+      });
+    }
+
+    // Simulate events for testing
+    function simulateSuccess() {
+      window.postMessage({
+        type: 'payment.completed',
+        data: {
+          paymentId: 'test_' + Date.now(),
+          txHash: '0x' + Math.random().toString(36).substring(2, 15)
+        }
+      }, window.location.origin);
+    }
+
+    function simulateFailed() {
+      window.postMessage({
+        type: 'payment.failed',
+        data: {
+          message: 'Test error: Insufficient balance'
+        }
+      }, window.location.origin);
+    }
+
+    function simulateCancel() {
+      window.postMessage({
+        type: 'payment.cancelled'
+      }, window.location.origin);
+    }
+
+    // Log widget load
+    console.log('✅ Widget loaded successfully');
+    console.log('StablecoinGateway API:', window.StablecoinGateway);
+  </script>
+</body>
+</html>

@@ -22,6 +22,8 @@ import apiKeyRoutes from './routes/v1/api-keys.js';
 import refundRoutes from './routes/v1/refunds.js';
 import adminRoutes from './routes/v1/admin.js';
 import checkoutRoutes from './routes/v1/checkout.js';
+import paymentLinkRoutes from './routes/v1/payment-links.js';
+import notificationRoutes from './routes/v1/notifications.js';
 import webhookWorkerRoutes from './routes/internal/webhook-worker.js';
 
 // Utils
@@ -230,6 +232,8 @@ export async function buildApp(): Promise<FastifyInstance> {
   await fastify.register(refundRoutes, { prefix: '/v1/refunds' });
   await fastify.register(adminRoutes, { prefix: '/v1/admin' });
   await fastify.register(checkoutRoutes, { prefix: '/v1/checkout' });
+  await fastify.register(paymentLinkRoutes, { prefix: '/v1/payment-links' });
+  await fastify.register(notificationRoutes, { prefix: '/v1/notifications' });
 
   // Dev-only routes (never registered in production)
   if (process.env.NODE_ENV !== 'production') {

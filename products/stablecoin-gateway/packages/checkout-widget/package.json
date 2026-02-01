@@ -1,0 +1,31 @@
+{
+  "name": "@stablecoin-gateway/checkout-widget",
+  "version": "1.0.0",
+  "description": "Embeddable checkout widget for Stablecoin Gateway",
+  "main": "dist/widget.js",
+  "types": "dist/widget.d.ts",
+  "scripts": {
+    "build": "esbuild src/widget.ts --bundle --minify --outfile=dist/widget.js --global-name=StablecoinGateway",
+    "build:dev": "esbuild src/widget.ts --bundle --sourcemap --outfile=dist/widget.js --global-name=StablecoinGateway",
+    "watch": "esbuild src/widget.ts --bundle --sourcemap --outfile=dist/widget.js --global-name=StablecoinGateway --watch",
+    "serve": "node serve.js",
+    "dev": "npm run build:dev && npm run serve",
+    "test": "npm run build:dev && node serve.js 8080"
+  },
+  "keywords": [
+    "stablecoin",
+    "payment",
+    "widget",
+    "checkout",
+    "crypto"
+  ],
+  "author": "ConnectSW",
+  "license": "MIT",
+  "devDependencies": {
+    "esbuild": "^0.19.0",
+    "typescript": "^5.0.0"
+  },
+  "files": [
+    "dist"
+  ]
+}
