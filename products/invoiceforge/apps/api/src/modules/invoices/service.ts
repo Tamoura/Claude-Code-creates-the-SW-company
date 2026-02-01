@@ -74,6 +74,59 @@ export async function getInvoice(
   return invoice;
 }
 
+export async function getPublicInvoice(
+  db: PrismaClient,
+  shareToken: string
+) {
+  const invoice = await db.invoice.findFirst({
+    where: { shareToken },
+    include: {
+      client: true,
+      items: { orderBy: { sortOrder: 'asc' } },
+      user: {
+        select: { name: true, businessName: true },
+      },
+    },
+  });
+
+  if (!invoice) {
+    throw new NotFoundError('Invoice not found');
+  }
+
+  return {
+    invoiceNumber: invoice.invoiceNumber,
+    status: invoice.status,
+    fromName: invoice.user.name,
+    fromBusinessName: invoice.user.businessName,
+    client: invoice.client
+      ? {
+          name: invoice.client.name,
+          email: invoice.client.email,
+          address: invoice.client.address,
+          city: invoice.client.city,
+          state: invoice.client.state,
+          zip: invoice.client.zip,
+          country: invoice.client.country,
+        }
+      : null,
+    items: invoice.items.map((item) => ({
+      description: item.description,
+      quantity: item.quantity,
+      unitPrice: item.unitPrice,
+      amount: item.amount,
+    })),
+    subtotal: invoice.subtotal,
+    taxRate: invoice.taxRate,
+    taxAmount: invoice.taxAmount,
+    total: invoice.total,
+    currency: invoice.currency,
+    invoiceDate: invoice.invoiceDate,
+    dueDate: invoice.dueDate,
+    notes: invoice.notes,
+    paymentLink: invoice.paymentLink,
+  };
+}
+
 function calculateInvoiceMath(
   items: Array<{ quantity: number; unitPrice: number }>,
   taxRate: number

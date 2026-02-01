@@ -1,4 +1,5 @@
 import { FastifyRequest, FastifyReply } from 'fastify';
+import { z } from 'zod';
 import {
   generateInvoiceSchema,
   updateInvoiceSchema,
@@ -8,6 +9,10 @@ import {
 import * as invoiceService from './service';
 import { generateInvoice as generateInvoiceAI } from './ai-service';
 import { BadRequestError } from '../../lib/errors';
+
+const shareTokenParamSchema = z.object({
+  token: z.string().uuid(),
+});
 
 export async function generateInvoice(
   request: FastifyRequest,
@@ -136,6 +141,23 @@ export async function sendInvoice(
     request.server.db,
     request.userId,
     params.data.id
+  );
+
+  reply.send(invoice);
+}
+
+export async function getPublicInvoice(
+  request: FastifyRequest,
+  reply: FastifyReply
+): Promise<void> {
+  const params = shareTokenParamSchema.safeParse(request.params);
+  if (!params.success) {
+    throw new BadRequestError('Invalid share token');
+  }
+
+  const invoice = await invoiceService.getPublicInvoice(
+    request.server.db,
+    params.data.token
   );
 
   reply.send(invoice);

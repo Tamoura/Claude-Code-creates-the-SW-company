@@ -8,6 +8,7 @@ import authPlugin from './plugins/auth';
 import { healthRoutes } from './modules/health/routes';
 import { authRoutes } from './modules/auth/routes';
 import { invoiceRoutes } from './modules/invoices/routes';
+import { publicInvoiceRoutes } from './modules/invoices/public-routes';
 import { clientRoutes } from './modules/clients/routes';
 import { userRoutes } from './modules/users/routes';
 import { AppError } from './lib/errors';
@@ -87,7 +88,10 @@ export async function buildApp(
     });
   });
 
-  // Routes (registered after error handler so they inherit it)
+  // Public routes (no auth required)
+  await app.register(publicInvoiceRoutes);
+
+  // Auth-protected routes
   await app.register(healthRoutes);
   await app.register(authRoutes);
   await app.register(invoiceRoutes);
