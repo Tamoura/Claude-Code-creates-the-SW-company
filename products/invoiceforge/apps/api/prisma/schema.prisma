@@ -61,6 +61,7 @@ model Client {
   user     User      @relation(fields: [userId], references: [id], onDelete: Cascade)
   invoices Invoice[]
 
+  @@index([userId])
   @@map("clients")
 }
 
@@ -91,6 +92,9 @@ model Invoice {
   client Client?       @relation(fields: [clientId], references: [id], onDelete: SetNull)
   items  InvoiceItem[]
 
+  @@index([userId])
+  @@index([clientId])
+  @@index([userId, status])
   @@map("invoices")
 }
 

@@ -29,8 +29,16 @@ export async function generateInvoice(
     request.server.db
   );
 
-  // If clientId was explicitly provided, override AI match
+  // If clientId was explicitly provided, verify ownership then override
   if (parsed.data.clientId) {
+    const clientOwned = await request.server.db.client.findFirst({
+      where: { id: parsed.data.clientId, userId: request.userId },
+    });
+    if (!clientOwned) {
+      throw new BadRequestError(
+        'Client not found or does not belong to your account'
+      );
+    }
     aiResult.clientId = parsed.data.clientId;
   }
 

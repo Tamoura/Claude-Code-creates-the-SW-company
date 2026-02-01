@@ -2,7 +2,7 @@ name: InvoiceForge CI
 
 on:
   push:
-    branches: [main, 'foundation/invoiceforge', 'feature/invoiceforge/**', 'fix/invoiceforge/**', 'release/invoiceforge/**']
+    branches: [main, 'feature/invoiceforge/**', 'fix/invoiceforge/**']
     paths:
       - 'products/invoiceforge/**'
   pull_request:
@@ -11,8 +11,37 @@ on:
       - 'products/invoiceforge/**'
 
 jobs:
-  lint-and-test-api:
-    name: API - Lint & Test
+  lint-and-typecheck:
+    name: API - Lint & Typecheck
+    runs-on: ubuntu-latest
+
+    defaults:
+      run:
+        working-directory: products/invoiceforge/apps/api
+
+    steps:
+      - uses: actions/checkout@v4
+
+      - uses: actions/setup-node@v4
+        with:
+          node-version: 20
+          cache: 'npm'
+          cache-dependency-path: products/invoiceforge/apps/api/package-lock.json
+
+      - name: Install dependencies
+        run: npm ci
+
+      - name: Generate Prisma client
+        run: npx prisma generate
+
+      - name: Run ESLint
+        run: npm run lint --if-present
+
+      - name: TypeScript typecheck
+        run: npx tsc --noEmit --pretty
+
+  test-api:
+    name: API - Test
     runs-on: ubuntu-latest
 
     services:
@@ -43,15 +72,19 @@ jobs:
           cache: 'npm'
           cache-dependency-path: products/invoiceforge/apps/api/package-lock.json
 
-      - run: npm ci
+      - name: Install dependencies
+        run: npm ci
 
-      - run: npx prisma generate
+      - name: Generate Prisma client
+        run: npx prisma generate
 
-      - run: npx prisma migrate deploy
+      - name: Run database migrations
+        run: npx prisma migrate deploy
         env:
           DATABASE_URL: postgresql://postgres:postgres@localhost:5432/invoiceforge_test
 
-      - run: npm test
+      - name: Run tests
+        run: npm test
         env:
           DATABASE_URL: postgresql://postgres:postgres@localhost:5432/invoiceforge_test
           JWT_SECRET: test-jwt-secret
@@ -75,8 +108,34 @@ jobs:
           cache: 'npm'
           cache-dependency-path: products/invoiceforge/apps/web/package-lock.json
 
-      - run: npm ci
+      - name: Install dependencies
+        run: npm ci
 
-      - run: npm run build
+      - name: Build Next.js app
+        run: npm run build
         env:
           NEXT_PUBLIC_API_URL: http://localhost:5004
+
+  security-scan:
+    name: Security - npm audit
+    runs-on: ubuntu-latest
+
+    steps:
+      - uses: actions/checkout@v4
+
+      - name: Audit API dependencies
+        run: npm audit --audit-level=high || true
+        working-directory: products/invoiceforge/apps/api
+
+      - name: Audit Web dependencies
+        run: npm audit --audit-level=high || true
+        working-directory: products/invoiceforge/apps/web
+
+      - name: Strict audit (fail on critical)
+        run: |
+          echo "Checking API for critical vulnerabilities..."
+          npm audit --audit-level=critical --omit=dev
+          echo "Checking Web for critical vulnerabilities..."
+          cd ../../apps/web
+          npm audit --audit-level=critical --omit=dev
+        working-directory: products/invoiceforge/apps/api

@@ -148,19 +148,35 @@ export async function createInvoiceFromAI(
   prompt: string
 ) {
   return db.$transaction(async (tx) => {
-    // Get user and check subscription limit
-    const user = await tx.user.findUniqueOrThrow({
-      where: { id: userId },
-    });
+    // Lock the user row to prevent race conditions on
+    // subscription limit checks and counter increments.
+    const lockedUsers = await tx.$queryRawUnsafe<Array<{
+      id: string;
+      subscription_tier: string;
+      invoice_count_this_month: number;
+      counter_reset_at: Date;
+      invoice_counter: number;
+    }>>(
+      'SELECT id, subscription_tier, invoice_count_this_month, '
+      + 'counter_reset_at, invoice_counter '
+      + 'FROM users WHERE id = $1 FOR UPDATE',
+      userId
+    );
+
+    if (!lockedUsers || lockedUsers.length === 0) {
+      throw new NotFoundError('User not found');
+    }
+
+    const user = lockedUsers[0];
 
     // Check if counter needs reset (different month)
     const now = new Date();
-    const resetAt = new Date(user.counterResetAt);
+    const resetAt = new Date(user.counter_reset_at);
     const needsReset =
       resetAt.getFullYear() !== now.getFullYear() ||
       resetAt.getMonth() !== now.getMonth();
 
-    let currentMonthCount = user.invoiceCountThisMonth;
+    let currentMonthCount = user.invoice_count_this_month;
     if (needsReset) {
       currentMonthCount = 0;
       await tx.user.update({
@@ -173,7 +189,7 @@ export async function createInvoiceFromAI(
     }
 
     // Free tier: 5 invoices/month
-    if (user.subscriptionTier === 'free' && currentMonthCount >= 5) {
+    if (user.subscription_tier === 'free' && currentMonthCount >= 5) {
       throw new AppError(
         'Monthly invoice limit reached. '
         + 'Upgrade to Pro for unlimited invoices.',
@@ -182,8 +198,8 @@ export async function createInvoiceFromAI(
       );
     }
 
-    // Increment counters
-    const newCounter = user.invoiceCounter + 1;
+    // Increment counters atomically
+    const newCounter = user.invoice_counter + 1;
     await tx.user.update({
       where: { id: userId },
       data: {

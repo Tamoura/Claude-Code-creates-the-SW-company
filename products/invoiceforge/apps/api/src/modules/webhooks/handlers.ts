@@ -16,29 +16,32 @@ export async function handleStripeWebhook(
   const isTest = config.nodeEnv === 'test';
   let event: Record<string, unknown>;
 
-  if (isTest) {
-    // Test mode only: skip Stripe signature verification
-    event = request.body as Record<string, unknown>;
-  } else if (!config.stripeWebhookSecret || !request.server.stripe) {
+  // Determine the webhook secret: use test secret in test mode,
+  // production secret otherwise. Always verify signatures.
+  const webhookSecret = isTest
+    ? config.stripeTestWebhookSecret
+    : config.stripeWebhookSecret;
+
+  if (!webhookSecret || !request.server.stripe) {
     throw new BadRequestError(
       'Stripe webhook not configured'
     );
-  } else {
-    try {
-      const rawBody =
-        typeof request.body === 'string'
-          ? request.body
-          : JSON.stringify(request.body);
-      event = request.server.stripe.webhooks.constructEvent(
-        rawBody,
-        signature as string,
-        config.stripeWebhookSecret
-      ) as unknown as Record<string, unknown>;
-    } catch {
-      throw new BadRequestError(
-        'Invalid webhook signature'
-      );
-    }
+  }
+
+  try {
+    const rawBody =
+      typeof request.body === 'string'
+        ? request.body
+        : JSON.stringify(request.body);
+    event = request.server.stripe.webhooks.constructEvent(
+      rawBody,
+      signature as string,
+      webhookSecret
+    ) as unknown as Record<string, unknown>;
+  } catch {
+    throw new BadRequestError(
+      'Invalid webhook signature'
+    );
   }
 
   // Handle checkout.session.completed
