@@ -1,335 +1,220 @@
 /**
- * Home Page with API Integration
+ * Landing Page
  *
- * Features:
- * - Payment link generation via API
- * - Form validation
- * - Error handling
- * - Copy to clipboard
+ * Public-facing page for non-authenticated users.
+ * Showcases StableFlow features and directs users to sign up or log in.
  */
 
-import { useState } from 'react';
 import { useNavigate } from 'react-router-dom';
-import { useForm } from 'react-hook-form';
-import { apiClient, ApiClientError } from '../lib/api-client';
-import type { CreatePaymentSessionRequest } from '../lib/api-client';
-
-interface PaymentFormData {
-  amount: string;
-  description?: string;
-  network?: 'polygon' | 'ethereum';
-  token?: 'USDC' | 'USDT';
-}
 
 export default function HomePageNew() {
   const navigate = useNavigate();
-  const [generatedLink, setGeneratedLink] = useState<string | null>(null);
-  const [isCreating, setIsCreating] = useState(false);
-  const [error, setError] = useState<string | null>(null);
-
-  const {
-    register,
-    handleSubmit,
-    formState: { errors },
-    reset,
-  } = useForm<PaymentFormData>({
-    defaultValues: {
-      network: 'polygon',
-      token: 'USDC',
-    },
-  });
-
-  const onSubmit = async (data: PaymentFormData) => {
-    const amount = parseFloat(data.amount);
-    if (isNaN(amount) || amount < 1 || amount > 10000) {
-      setError('Amount must be between $1 and $10,000');
-      return;
-    }
-
-    setIsCreating(true);
-    setError(null);
-
-    try {
-      // For demo purposes, use a hardcoded merchant address
-      // In production, this would come from the authenticated user's profile
-      const merchantAddress = '0x742d35Cc6634C0532925a3b844Bc9e7595f0bEb';
-
-      const requestData: CreatePaymentSessionRequest = {
-        amount,
-        description: data.description,
-        network: data.network || 'polygon',
-        token: data.token || 'USDC',
-        merchant_address: merchantAddress,
-      };
-
-      const payment = await apiClient.createPaymentSession(requestData);
-      setGeneratedLink(payment.checkout_url);
-      reset();
-    } catch (err) {
-      console.error('Failed to create payment:', err);
-      if (err instanceof ApiClientError) {
-        setError(err.detail);
-      } else {
-        setError('Failed to create payment. Please try again.');
-      }
-    } finally {
-      setIsCreating(false);
-    }
-  };
-
-  const copyToClipboard = () => {
-    if (generatedLink) {
-      navigator.clipboard.writeText(generatedLink);
-    }
-  };
 
   return (
-    <div className="min-h-screen bg-gradient-to-br from-blue-50 to-blue-100">
-      <div className="container mx-auto px-4 py-16">
-        <div className="max-w-2xl mx-auto">
-          {/* Header */}
-          <div className="text-center mb-12">
-            <h1 className="text-4xl font-bold text-gray-900 mb-4">
-              Stablecoin Gateway
-            </h1>
-            <p className="text-xl text-gray-600">
-              Accept USDC/USDT payments with 0.5% fees. Get paid in 5 minutes.
+    <div className="min-h-screen bg-page-bg text-text-primary">
+      {/* Navigation Bar */}
+      <nav className="border-b border-card-border">
+        <div className="max-w-6xl mx-auto px-6 py-4 flex items-center justify-between">
+          <div className="flex items-center gap-2">
+            <div className="w-8 h-8 rounded-lg bg-gradient-to-br from-pink-500 to-blue-500 flex items-center justify-center">
+              <span className="text-white text-sm font-bold">SF</span>
+            </div>
+            <span className="text-lg font-bold text-text-primary">StableFlow</span>
+          </div>
+          <div className="flex items-center gap-3">
+            <button
+              onClick={() => navigate('/login')}
+              className="px-4 py-2 text-sm font-medium text-text-secondary border border-card-border rounded-lg hover:text-text-primary hover:border-text-muted transition-colors"
+            >
+              Sign In
+            </button>
+            <button
+              onClick={() => navigate('/signup')}
+              className="px-4 py-2 text-sm font-medium text-white bg-gradient-to-r from-pink-500 to-pink-600 rounded-lg hover:from-pink-600 hover:to-pink-700 transition-all"
+            >
+              Get Started
+            </button>
+          </div>
+        </div>
+      </nav>
+
+      {/* Hero Section */}
+      <section className="max-w-6xl mx-auto px-6 pt-20 pb-16 text-center">
+        <div className="inline-block px-3 py-1 rounded-full text-xs font-semibold bg-pink-500/15 text-accent-pink border border-pink-500/30 mb-6">
+          Stablecoin Payment Infrastructure
+        </div>
+        <h1 className="text-5xl font-bold mb-6 leading-tight">
+          Accept crypto payments.
+          <br />
+          <span className="bg-gradient-to-r from-pink-500 to-blue-500 bg-clip-text text-transparent">
+            Settle in stablecoins.
+          </span>
+        </h1>
+        <p className="text-lg text-text-secondary max-w-2xl mx-auto mb-10">
+          USDC and USDT payment gateway with 0.5% fees, 5-minute settlements,
+          and zero crypto volatility. Built for merchants who want simplicity.
+        </p>
+        <div className="flex items-center justify-center gap-4">
+          <button
+            onClick={() => navigate('/signup')}
+            className="px-8 py-3 text-sm font-semibold text-white bg-gradient-to-r from-pink-500 to-pink-600 rounded-lg hover:from-pink-600 hover:to-pink-700 transition-all"
+          >
+            Start Accepting Payments
+          </button>
+          <button
+            onClick={() => navigate('/login')}
+            className="px-8 py-3 text-sm font-semibold text-text-secondary border border-card-border rounded-lg hover:text-text-primary hover:border-text-muted transition-colors"
+          >
+            Merchant Dashboard
+          </button>
+        </div>
+      </section>
+
+      {/* Feature Cards */}
+      <section className="max-w-6xl mx-auto px-6 py-16">
+        <div className="grid md:grid-cols-3 gap-6">
+          <div className="bg-card-bg border border-card-border rounded-xl p-6">
+            <div className="w-10 h-10 rounded-lg bg-green-500/15 flex items-center justify-center mb-4">
+              <svg className="w-5 h-5 text-accent-green" fill="none" viewBox="0 0 24 24" stroke="currentColor">
+                <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M12 8c-1.657 0-3 .895-3 2s1.343 2 3 2 3 .895 3 2-1.343 2-3 2m0-8c1.11 0 2.08.402 2.599 1M12 8V7m0 1v8m0 0v1m0-1c-1.11 0-2.08-.402-2.599-1M21 12a9 9 0 11-18 0 9 9 0 0118 0z" />
+              </svg>
+            </div>
+            <h3 className="text-lg font-semibold text-text-primary mb-2">0.5% Fees</h3>
+            <p className="text-sm text-text-secondary">
+              The lowest fees in crypto payments. No hidden charges, no monthly minimums.
+              Pay only when you get paid.
             </p>
           </div>
 
-          {/* Payment Link Generator */}
-          <div className="bg-white rounded-lg shadow-lg p-8 mb-8">
-            <h2 className="text-2xl font-semibold text-gray-900 mb-6">
-              Create Payment Link
-            </h2>
-
-            <form onSubmit={handleSubmit(onSubmit)} className="space-y-4">
-              <div>
-                <label
-                  htmlFor="amount"
-                  className="block text-sm font-medium text-gray-700 mb-2"
-                >
-                  Amount (USD)
-                </label>
-                <div className="relative">
-                  <span className="absolute left-3 top-1/2 -translate-y-1/2 text-gray-500">
-                    $
-                  </span>
-                  <input
-                    id="amount"
-                    type="number"
-                    step="0.01"
-                    min="1"
-                    max="10000"
-                    {...register('amount', {
-                      required: 'Amount is required',
-                      min: { value: 1, message: 'Minimum $1' },
-                      max: { value: 10000, message: 'Maximum $10,000' },
-                    })}
-                    className="w-full pl-8 pr-4 py-3 border border-gray-300 rounded-lg focus:ring-2 focus:ring-blue-500 focus:border-transparent"
-                    placeholder="100.00"
-                  />
-                </div>
-                {errors.amount && (
-                  <p className="mt-1 text-sm text-red-600" role="alert">
-                    {errors.amount.message}
-                  </p>
-                )}
-              </div>
-
-              <div>
-                <label
-                  htmlFor="description"
-                  className="block text-sm font-medium text-gray-700 mb-2"
-                >
-                  Description (optional)
-                </label>
-                <input
-                  id="description"
-                  type="text"
-                  {...register('description')}
-                  className="w-full px-4 py-3 border border-gray-300 rounded-lg focus:ring-2 focus:ring-blue-500 focus:border-transparent"
-                  placeholder="e.g., Order #1234"
-                />
-              </div>
-
-              <div className="grid grid-cols-2 gap-4">
-                <div>
-                  <label
-                    htmlFor="network"
-                    className="block text-sm font-medium text-gray-700 mb-2"
-                  >
-                    Network
-                  </label>
-                  <select
-                    id="network"
-                    {...register('network')}
-                    className="w-full px-4 py-3 border border-gray-300 rounded-lg focus:ring-2 focus:ring-blue-500 focus:border-transparent"
-                  >
-                    <option value="polygon">Polygon (low fees)</option>
-                    <option value="ethereum">Ethereum</option>
-                  </select>
-                </div>
-
-                <div>
-                  <label
-                    htmlFor="token"
-                    className="block text-sm font-medium text-gray-700 mb-2"
-                  >
-                    Token
-                  </label>
-                  <select
-                    id="token"
-                    {...register('token')}
-                    className="w-full px-4 py-3 border border-gray-300 rounded-lg focus:ring-2 focus:ring-blue-500 focus:border-transparent"
-                  >
-                    <option value="USDC">USDC</option>
-                    <option value="USDT">USDT</option>
-                  </select>
-                </div>
-              </div>
-
-              {error && (
-                <div className="bg-red-50 border border-red-200 rounded-lg p-4">
-                  <p className="text-sm text-red-700">{error}</p>
-                </div>
-              )}
-
-              <button
-                type="submit"
-                disabled={isCreating}
-                className="w-full bg-blue-600 text-white py-3 px-6 rounded-lg font-semibold hover:bg-blue-700 transition-colors focus:ring-2 focus:ring-blue-500 focus:ring-offset-2 disabled:opacity-50 disabled:cursor-not-allowed flex items-center justify-center"
-              >
-                {isCreating ? (
-                  <>
-                    <svg
-                      className="animate-spin -ml-1 mr-3 h-5 w-5 text-white"
-                      fill="none"
-                      viewBox="0 0 24 24"
-                    >
-                      <circle
-                        className="opacity-25"
-                        cx="12"
-                        cy="12"
-                        r="10"
-                        stroke="currentColor"
-                        strokeWidth="4"
-                      ></circle>
-                      <path
-                        className="opacity-75"
-                        fill="currentColor"
-                        d="M4 12a8 8 0 018-8V0C5.373 0 0 5.373 0 12h4zm2 5.291A7.962 7.962 0 014 12H0c0 3.042 1.135 5.824 3 7.938l3-2.647z"
-                      ></path>
-                    </svg>
-                    Creating...
-                  </>
-                ) : (
-                  'Generate Payment Link'
-                )}
-              </button>
-            </form>
+          <div className="bg-card-bg border border-card-border rounded-xl p-6">
+            <div className="w-10 h-10 rounded-lg bg-blue-500/15 flex items-center justify-center mb-4">
+              <svg className="w-5 h-5 text-accent-blue" fill="none" viewBox="0 0 24 24" stroke="currentColor">
+                <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M13 10V3L4 14h7v7l9-11h-7z" />
+              </svg>
+            </div>
+            <h3 className="text-lg font-semibold text-text-primary mb-2">5-Minute Settlement</h3>
+            <p className="text-sm text-text-secondary">
+              On-chain confirmation in minutes, not days. Polygon and Ethereum
+              supported with automatic network detection.
+            </p>
           </div>
 
-          {/* Generated Link Display */}
-          {generatedLink && (
-            <div className="bg-green-50 border border-green-200 rounded-lg p-6">
-              <h3 className="text-lg font-semibold text-green-900 mb-3">
-                Payment Link Created!
-              </h3>
-              <div className="bg-white rounded-lg p-3 mb-4 break-all">
-                <code className="text-sm text-gray-800">{generatedLink}</code>
-              </div>
-              <div className="flex gap-3">
-                <button
-                  onClick={copyToClipboard}
-                  className="flex-1 bg-green-600 text-white py-2 px-4 rounded-lg font-medium hover:bg-green-700 transition-colors"
-                >
-                  Copy Link
-                </button>
-                <button
-                  onClick={() =>
-                    navigate(generatedLink.replace(window.location.origin, ''))
-                  }
-                  className="flex-1 bg-blue-600 text-white py-2 px-4 rounded-lg font-medium hover:bg-blue-700 transition-colors"
-                >
-                  View Payment Page
-                </button>
-              </div>
+          <div className="bg-card-bg border border-card-border rounded-xl p-6">
+            <div className="w-10 h-10 rounded-lg bg-pink-500/15 flex items-center justify-center mb-4">
+              <svg className="w-5 h-5 text-accent-pink" fill="none" viewBox="0 0 24 24" stroke="currentColor">
+                <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M9 12l2 2 4-4m5.618-4.016A11.955 11.955 0 0112 2.944a11.955 11.955 0 01-8.618 3.04A12.02 12.02 0 003 9c0 5.591 3.824 10.29 9 11.622 5.176-1.332 9-6.03 9-11.622 0-1.042-.133-2.052-.382-3.016z" />
+              </svg>
             </div>
-          )}
-
-          {/* Feature Highlights */}
-          <div className="grid md:grid-cols-3 gap-6 mt-12">
-            <div className="text-center">
-              <div className="w-12 h-12 bg-blue-100 rounded-full flex items-center justify-center mx-auto mb-3">
-                <svg
-                  className="w-6 h-6 text-blue-600"
-                  fill="none"
-                  viewBox="0 0 24 24"
-                  stroke="currentColor"
-                >
-                  <path
-                    strokeLinecap="round"
-                    strokeLinejoin="round"
-                    strokeWidth={2}
-                    d="M12 8c-1.657 0-3 .895-3 2s1.343 2 3 2 3 .895 3 2-1.343 2-3 2m0-8c1.11 0 2.08.402 2.599 1M12 8V7m0 1v8m0 0v1m0-1c-1.11 0-2.08-.402-2.599-1M21 12a9 9 0 11-18 0 9 9 0 0118 0z"
-                  />
-                </svg>
-              </div>
-              <h3 className="font-semibold text-gray-900 mb-1">Low Fees</h3>
-              <p className="text-sm text-gray-600">Only 0.5% per transaction</p>
-            </div>
-            <div className="text-center">
-              <div className="w-12 h-12 bg-blue-100 rounded-full flex items-center justify-center mx-auto mb-3">
-                <svg
-                  className="w-6 h-6 text-blue-600"
-                  fill="none"
-                  viewBox="0 0 24 24"
-                  stroke="currentColor"
-                >
-                  <path
-                    strokeLinecap="round"
-                    strokeLinejoin="round"
-                    strokeWidth={2}
-                    d="M13 10V3L4 14h7v7l9-11h-7z"
-                  />
-                </svg>
-              </div>
-              <h3 className="font-semibold text-gray-900 mb-1">Fast Settlement</h3>
-              <p className="text-sm text-gray-600">Get paid in 5 minutes</p>
-            </div>
-            <div className="text-center">
-              <div className="w-12 h-12 bg-blue-100 rounded-full flex items-center justify-center mx-auto mb-3">
-                <svg
-                  className="w-6 h-6 text-blue-600"
-                  fill="none"
-                  viewBox="0 0 24 24"
-                  stroke="currentColor"
-                >
-                  <path
-                    strokeLinecap="round"
-                    strokeLinejoin="round"
-                    strokeWidth={2}
-                    d="M9 12l2 2 4-4m5.618-4.016A11.955 11.955 0 0112 2.944a11.955 11.955 0 01-8.618 3.04A12.02 12.02 0 003 9c0 5.591 3.824 10.29 9 11.622 5.176-1.332 9-6.03 9-11.622 0-1.042-.133-2.052-.382-3.016z"
-                  />
-                </svg>
-              </div>
-              <h3 className="font-semibold text-gray-900 mb-1">Stablecoin Only</h3>
-              <p className="text-sm text-gray-600">No crypto volatility</p>
-            </div>
-          </div>
-
-          {/* Navigation to Dashboard */}
-          <div className="mt-12 text-center">
-            <a
-              href="/dashboard"
-              className="inline-block text-blue-600 hover:text-blue-700 font-medium"
-            >
-              Go to Merchant Dashboard →
-            </a>
+            <h3 className="text-lg font-semibold text-text-primary mb-2">Zero Volatility</h3>
+            <p className="text-sm text-text-secondary">
+              Stablecoins only — USDC and USDT pegged 1:1 to USD.
+              No Bitcoin price swings. What you see is what you get.
+            </p>
           </div>
         </div>
-      </div>
+      </section>
+
+      {/* How It Works */}
+      <section className="max-w-6xl mx-auto px-6 py-16">
+        <h2 className="text-2xl font-bold text-text-primary text-center mb-12">How It Works</h2>
+        <div className="grid md:grid-cols-4 gap-8">
+          {[
+            { step: '1', title: 'Sign Up', desc: 'Create your merchant account in seconds' },
+            { step: '2', title: 'Integrate', desc: 'Add your API key and webhook endpoint' },
+            { step: '3', title: 'Accept Payments', desc: 'Create payment sessions via API or dashboard' },
+            { step: '4', title: 'Get Paid', desc: 'Stablecoins settle directly to your wallet' },
+          ].map((item) => (
+            <div key={item.step} className="text-center">
+              <div className="w-10 h-10 rounded-full bg-gradient-to-r from-pink-500 to-blue-500 flex items-center justify-center mx-auto mb-4">
+                <span className="text-white text-sm font-bold">{item.step}</span>
+              </div>
+              <h3 className="text-sm font-semibold text-text-primary mb-1">{item.title}</h3>
+              <p className="text-xs text-text-secondary">{item.desc}</p>
+            </div>
+          ))}
+        </div>
+      </section>
+
+      {/* Developer Section */}
+      <section className="max-w-6xl mx-auto px-6 py-16">
+        <div className="bg-card-bg border border-card-border rounded-xl p-8">
+          <div className="grid md:grid-cols-2 gap-8 items-center">
+            <div>
+              <h2 className="text-2xl font-bold text-text-primary mb-4">Developer Friendly</h2>
+              <p className="text-text-secondary mb-6">
+                RESTful API with webhook notifications. Create payment sessions,
+                manage API keys, and monitor transactions from a single dashboard.
+              </p>
+              <ul className="space-y-3 text-sm text-text-secondary">
+                <li className="flex items-center gap-2">
+                  <svg className="w-4 h-4 text-accent-green flex-shrink-0" fill="none" viewBox="0 0 24 24" stroke="currentColor">
+                    <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M5 13l4 4L19 7" />
+                  </svg>
+                  RESTful API with OpenAPI spec
+                </li>
+                <li className="flex items-center gap-2">
+                  <svg className="w-4 h-4 text-accent-green flex-shrink-0" fill="none" viewBox="0 0 24 24" stroke="currentColor">
+                    <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M5 13l4 4L19 7" />
+                  </svg>
+                  Webhook notifications with HMAC signatures
+                </li>
+                <li className="flex items-center gap-2">
+                  <svg className="w-4 h-4 text-accent-green flex-shrink-0" fill="none" viewBox="0 0 24 24" stroke="currentColor">
+                    <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M5 13l4 4L19 7" />
+                  </svg>
+                  API key management with granular permissions
+                </li>
+                <li className="flex items-center gap-2">
+                  <svg className="w-4 h-4 text-accent-green flex-shrink-0" fill="none" viewBox="0 0 24 24" stroke="currentColor">
+                    <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M5 13l4 4L19 7" />
+                  </svg>
+                  Real-time payment status via SSE
+                </li>
+              </ul>
+            </div>
+            <div className="bg-code-bg rounded-lg p-5 font-mono text-sm overflow-x-auto">
+              <div className="text-text-muted mb-2">// Create a payment session</div>
+              <div className="text-text-secondary">
+                <span className="text-accent-blue">const</span> session = <span className="text-accent-blue">await</span> fetch(
+              </div>
+              <div className="text-accent-green pl-4">'/v1/payments/sessions'</div>
+              <div className="text-text-secondary">, {'{'}</div>
+              <div className="text-text-secondary pl-4">method: <span className="text-accent-green">'POST'</span>,</div>
+              <div className="text-text-secondary pl-4">headers: {'{'}</div>
+              <div className="text-text-secondary pl-8"><span className="text-accent-green">'X-API-Key'</span>: apiKey,</div>
+              <div className="text-text-secondary pl-4">{'}'},</div>
+              <div className="text-text-secondary pl-4">body: JSON.stringify({'{'}</div>
+              <div className="text-text-secondary pl-8">amount: <span className="text-accent-pink">10000</span>,</div>
+              <div className="text-text-secondary pl-8">currency: <span className="text-accent-green">'USD'</span>,</div>
+              <div className="text-text-secondary pl-8">network: <span className="text-accent-green">'polygon'</span>,</div>
+              <div className="text-text-secondary pl-4">{'}'}),</div>
+              <div className="text-text-secondary">{'}'});</div>
+            </div>
+          </div>
+        </div>
+      </section>
+
+      {/* CTA */}
+      <section className="max-w-6xl mx-auto px-6 py-16 text-center">
+        <h2 className="text-3xl font-bold text-text-primary mb-4">Ready to get started?</h2>
+        <p className="text-text-secondary mb-8">
+          Create your merchant account and start accepting stablecoin payments today.
+        </p>
+        <button
+          onClick={() => navigate('/signup')}
+          className="px-8 py-3 text-sm font-semibold text-white bg-gradient-to-r from-pink-500 to-pink-600 rounded-lg hover:from-pink-600 hover:to-pink-700 transition-all"
+        >
+          Create Free Account
+        </button>
+      </section>
+
+      {/* Footer */}
+      <footer className="border-t border-card-border">
+        <div className="max-w-6xl mx-auto px-6 py-6 flex items-center justify-between text-xs text-text-muted">
+          <span>StableFlow &mdash; Stablecoin Payment Infrastructure</span>
+          <span>Polygon &middot; Ethereum &middot; USDC &middot; USDT</span>
+        </div>
+      </footer>
     </div>
   );
 }

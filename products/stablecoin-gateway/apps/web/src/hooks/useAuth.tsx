@@ -1,7 +1,9 @@
 /**
  * useAuth Hook
  *
- * Provides authentication state and methods for the application
+ * Provides authentication state and methods for the application.
+ * User info (email) is stored alongside the token so it persists
+ * across component re-renders without needing a /me endpoint.
  */
 
 import { useState, useEffect, useCallback } from 'react';
@@ -16,9 +18,12 @@ interface AuthState {
   error: string | null;
 }
 
+// Store minimal user info in memory alongside token
+let storedUser: User | null = null;
+
 export function useAuth() {
   const [state, setState] = useState<AuthState>({
-    user: null,
+    user: storedUser,
     isAuthenticated: false,
     isLoading: false,
     error: null,
@@ -28,9 +33,11 @@ export function useAuth() {
   useEffect(() => {
     const token = TokenManager.getToken();
     if (token) {
-      // Token exists, consider user authenticated
-      // In a full implementation, we'd validate the token with the backend
-      setState(prev => ({ ...prev, isAuthenticated: true }));
+      setState(prev => ({
+        ...prev,
+        isAuthenticated: true,
+        user: storedUser,
+      }));
     }
   }, []);
 
@@ -40,8 +47,11 @@ export function useAuth() {
     try {
       const result = await apiClient.login(email, password);
 
+      const user = { id: result.id, email: result.email };
+      storedUser = user;
+
       setState({
-        user: { id: result.id, email: result.email },
+        user,
         isAuthenticated: true,
         isLoading: false,
         error: null,
@@ -68,6 +78,7 @@ export function useAuth() {
     try {
       await apiClient.logout();
     } finally {
+      storedUser = null;
       setState({
         user: null,
         isAuthenticated: false,
