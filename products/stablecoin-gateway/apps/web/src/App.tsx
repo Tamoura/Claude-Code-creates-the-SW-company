@@ -1,7 +1,8 @@
-import { BrowserRouter as Router, Routes, Route } from 'react-router-dom';
+import { BrowserRouter as Router, Routes, Route, Navigate } from 'react-router-dom';
 import { WagmiProvider } from 'wagmi';
 import { QueryClient, QueryClientProvider } from '@tanstack/react-query';
 import { config } from './lib/wagmi-config';
+import { TokenManager } from './lib/token-manager';
 // Use new production pages (old prototype pages kept for reference)
 import HomePage from './pages/HomePageNew';
 import PaymentPage from './pages/PaymentPageNew';
@@ -37,7 +38,7 @@ function App() {
           <Router>
             <Routes>
               {/* Public routes */}
-              <Route path="/" element={<HomePage />} />
+              <Route path="/" element={TokenManager.hasToken() ? <Navigate to="/dashboard" replace /> : <HomePage />} />
               <Route path="/pay/:id" element={<PaymentPage />} />
               <Route path="/status/:id" element={<StatusPage />} />
               <Route path="/login" element={<Login />} />

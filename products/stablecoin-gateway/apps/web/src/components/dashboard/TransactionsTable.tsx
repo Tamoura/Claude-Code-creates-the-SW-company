@@ -1,3 +1,5 @@
+import { useNavigate } from 'react-router-dom';
+
 export interface TransactionRow {
   id: string;
   customer: string;
@@ -27,11 +29,16 @@ interface TransactionsTableProps {
 }
 
 export default function TransactionsTable({ transactions, isLoading }: TransactionsTableProps) {
+  const navigate = useNavigate();
+
   return (
     <div>
       <div className="flex items-center justify-between mb-4">
         <h3 className="text-lg font-bold text-text-primary">Recent Transactions</h3>
-        <button className="px-4 py-1.5 text-sm font-medium text-text-secondary border border-card-border rounded-lg hover:text-text-primary hover:border-text-muted transition-colors">
+        <button
+          onClick={() => navigate('/dashboard/payments')}
+          className="px-4 py-1.5 text-sm font-medium text-text-secondary border border-card-border rounded-lg hover:text-text-primary hover:border-text-muted transition-colors"
+        >
           View All
         </button>
       </div>
