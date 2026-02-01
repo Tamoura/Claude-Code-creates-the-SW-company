@@ -23,6 +23,7 @@ import { z } from 'zod';
 import { AppError } from '../../types/index.js';
 import { EmailService } from '../../services/email.service.js';
 import { logger } from '../../utils/logger.js';
+import { validateBody } from '../../utils/validation.js';
 
 /**
  * Validation schema for updating notification preferences
@@ -35,13 +36,6 @@ const updatePreferencesSchema = z.object({
   emailOnPaymentFailed: z.boolean().optional(),
   sendCustomerReceipt: z.boolean().optional(),
 });
-
-/**
- * Validate request body against schema
- */
-function validateBody<T>(schema: z.ZodSchema<T>, data: unknown): T {
-  return schema.parse(data);
-}
 
 /**
  * Format notification preference response
