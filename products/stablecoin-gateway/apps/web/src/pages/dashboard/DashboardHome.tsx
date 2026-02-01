@@ -2,9 +2,11 @@ import StatCard from '../../components/dashboard/StatCard';
 import DeveloperIntegration from '../../components/dashboard/DeveloperIntegration';
 import CheckoutPreview from '../../components/dashboard/CheckoutPreview';
 import TransactionsTable from '../../components/dashboard/TransactionsTable';
-import { stats } from '../../data/dashboard-mock';
+import { useDashboardData } from '../../hooks/useDashboardData';
 
 export default function DashboardHome() {
+  const { stats, transactions, isLoading } = useDashboardData();
+
   return (
     <div className="space-y-8">
       {/* Stats Row */}
@@ -33,7 +35,7 @@ export default function DashboardHome() {
       </div>
 
       {/* Recent Transactions */}
-      <TransactionsTable />
+      <TransactionsTable transactions={transactions} isLoading={isLoading} />
     </div>
   );
 }
