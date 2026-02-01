@@ -26,7 +26,8 @@
 | 3106 | meetingmind | 🟢 Active | http://localhost:3106 |
 | 3107 | itil-dashboard | 🟢 Active | http://localhost:3107 |
 | 3108 | deal-flow-platform | 🟢 Active | http://localhost:3108 |
-| 3109-3199 | *Available* | 🔵 Free | - |
+| 3109 | invoiceforge | 🟢 Active | http://localhost:3109 |
+| 3110-3199 | *Available* | 🔵 Free | - |
 
 ### Backend APIs (5000-5099)
 
@@ -36,7 +37,8 @@
 | 5001 | stablecoin-gateway | 🟢 Active | http://localhost:5001 |
 | 5002 | itil-dashboard | 🟢 Active | http://localhost:5002 |
 | 5003 | deal-flow-platform | 🟢 Active | http://localhost:5003 |
-| 5004-5099 | *Available* | 🔵 Free | - |
+| 5004 | invoiceforge | 🟢 Active | http://localhost:5004 |
+| 5005-5099 | *Available* | 🔵 Free | - |
 
 ### Mobile Development (8081-8099)
 
@@ -109,12 +111,14 @@ cd products/quantum-computing-usecases/apps/web && npm run dev &# :3105
 cd products/meetingmind/apps/web && npm run dev &               # :3106
 cd products/itil-dashboard/apps/web && npm run dev &            # :3107
 cd products/deal-flow-platform/apps/web && npm run dev &        # :3108
+cd products/invoiceforge/apps/web && npm run dev &              # :3109
 
 # Backend APIs
 cd products/tech-management-helper/apps/api && npm run dev &    # :5000
 cd products/stablecoin-gateway/apps/api && npm run dev &        # :5001
 cd products/itil-dashboard/apps/api && npm run dev &            # :5002
 cd products/deal-flow-platform/apps/api && npm run dev &        # :5003
+cd products/invoiceforge/apps/api && npm run dev &              # :5004
 ```
 
 ### Check Port Availability
@@ -137,7 +141,7 @@ pkill -f "next dev"
 pkill -f "fastify"
 
 # Or kill by port
-lsof -ti:3100,3101,3102,3103,3104,3105,3106,3107,3108,5000,5001,5002,5003 | xargs kill -9
+lsof -ti:3100,3101,3102,3103,3104,3105,3106,3107,3108,3109,5000,5001,5002,5003,5004 | xargs kill -9
 ```
 
 ## Port Conflict Resolution
