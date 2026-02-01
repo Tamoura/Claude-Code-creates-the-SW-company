@@ -96,6 +96,25 @@ services:
       - /app/node_modules
     command: sh -c "npm install && npm run dev -- --host 0.0.0.0 --port 3104"
 
+  # Optional: Merchant Demo App (port 3105)
+  # A standalone page simulating a merchant checkout flow
+  merchant-demo:
+    image: node:20-alpine
+    container_name: stablecoin-gateway-merchant-demo
+    working_dir: /app
+    ports:
+      - "3105:3105"
+    environment:
+      - NODE_ENV=${NODE_ENV:-development}
+    depends_on:
+      - api
+    volumes:
+      - ./apps/merchant-demo:/app
+      - /app/node_modules
+    command: sh -c "npm install && npm run dev -- --host 0.0.0.0"
+    profiles:
+      - demo
+
 volumes:
   postgres_data:
     driver: local
