@@ -207,14 +207,24 @@ fi
 echo ""
 
 # ============================================================================
-# PHASE 6: Dev Server
+# PHASE 6: Smoke Test (Does it actually run?)
 # ============================================================================
 echo "┌──────────────────────────────────────────────────────────────┐"
-echo "│ Phase 6: Development Server                                  │"
+echo "│ Phase 6: Smoke Test (Live Server Verification)               │"
 echo "└──────────────────────────────────────────────────────────────┘"
 
-# This is informational - we can't easily test dev server in script
-warn "Dev server" "Manual verification required - run 'npm run dev' and check http://localhost:3100+"
+SMOKE_SCRIPT="$SCRIPT_DIR/smoke-test-gate.sh"
+if [ -x "$SMOKE_SCRIPT" ]; then
+  if "$SMOKE_SCRIPT" "$PRODUCT" 30; then
+    check "Smoke test (servers start, health OK, UI loads)" "true"
+  else
+    echo "❌ FAIL"
+    ((FAILED++))
+    echo "  Smoke test failed — product does not run end-to-end."
+  fi
+else
+  warn "Smoke test" "smoke-test-gate.sh not found"
+fi
 
 echo ""
 

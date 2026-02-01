@@ -71,6 +71,13 @@ Produce scores for each dimension (0-10 scale):
 - **Code Quality**: readability, DRY, error handling, logging
 - **Performance**: query efficiency, caching, resource usage
 - **DevOps**: CI/CD, monitoring, deployment safety
+- **Runability**: does it actually start and serve real responses? Scoring guide:
+  - 0: No start script, missing deps, immediate crash
+  - 2: Starts but crashes within seconds
+  - 4: Starts but /health or frontend returns errors
+  - 6: Starts and /health passes, but frontend has placeholder pages
+  - 8: Full stack starts, health OK, UI loads real data, no placeholders
+  - 10: Full stack starts, health OK, real data, no placeholders, production build succeeds, zero console errors
 
 **Overall Score** = average of all dimension scores.
 
@@ -116,6 +123,7 @@ DIMENSION SCORES:
 - Code Quality: X/10 [PASS/BELOW THRESHOLD]
 - Performance:  X/10 [PASS/BELOW THRESHOLD]
 - DevOps:       X/10 [PASS/BELOW THRESHOLD]
+- Runability:   X/10 [PASS/BELOW THRESHOLD]
 
 TOP CRITICAL ISSUES:
 1. [P0] [Issue title] (file:line)

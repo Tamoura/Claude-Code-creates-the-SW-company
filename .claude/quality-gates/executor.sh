@@ -230,15 +230,57 @@ case $GATE_TYPE in
     done
     echo "" >> "$REPORT_FILE"
     
-    # Check for health endpoint (if backend exists)
+    # Live health check (if backend exists)
     if [ -f "$PRODUCT_PATH/apps/api/package.json" ]; then
-      echo "### Health Check Endpoint" >> "$REPORT_FILE"
-      # This would need the API running, so we just check if route exists
-      if grep -r "health" "$PRODUCT_PATH/apps/api/src" > /dev/null 2>&1; then
-        echo "✅ Health check endpoint found" >> "$REPORT_FILE"
+      echo "### Health Check Endpoint (Live Verification)" >> "$REPORT_FILE"
+      # Start API server, wait for port, curl /health, verify 200+healthy
+      API_PORT=""
+      for envfile in "$PRODUCT_PATH/.env" "$PRODUCT_PATH/.env.docker" "$PRODUCT_PATH/apps/api/.env"; do
+        if [ -f "$envfile" ]; then
+          API_PORT=$(grep -oE 'PORT=5[0-9]{3}' "$envfile" | grep -oE '[0-9]+' | head -1 || true)
+          [ -n "$API_PORT" ] && break
+        fi
+      done
+      [ -z "$API_PORT" ] && API_PORT="5001"
+
+      echo "Starting API server on port $API_PORT..." >> "$REPORT_FILE"
+      cd "$PRODUCT_PATH/apps/api"
+      npm run dev > /tmp/prod-gate-api-$PRODUCT.log 2>&1 &
+      API_PID=$!
+      cd - > /dev/null
+
+      HEALTH_OK=false
+      ELAPSED=0
+      while [ $ELAPSED -lt 30 ]; do
+        if curl -s -o /dev/null -w '' "http://localhost:$API_PORT" 2>/dev/null; then
+          break
+        fi
+        sleep 1
+        ELAPSED=$((ELAPSED + 1))
+      done
+
+      if [ $ELAPSED -lt 30 ]; then
+        HEALTH_RESPONSE=$(curl -s -w "\n%{http_code}" "http://localhost:$API_PORT/health" 2>/dev/null || echo -e "\n000")
+        HEALTH_BODY=$(echo "$HEALTH_RESPONSE" | head -n -1)
+        HEALTH_STATUS=$(echo "$HEALTH_RESPONSE" | tail -1)
+
+        if [ "$HEALTH_STATUS" = "200" ] && echo "$HEALTH_BODY" | grep -qi "healthy\|ok\|status"; then
+          echo "✅ Health check endpoint responds: HTTP 200 — $HEALTH_BODY" >> "$REPORT_FILE"
+          HEALTH_OK=true
+        else
+          echo "❌ FAIL: /health returned HTTP $HEALTH_STATUS" >> "$REPORT_FILE"
+          GATE_PASSED=false
+          GATE_FAILURES+=("Health check: HTTP $HEALTH_STATUS")
+        fi
       else
-        echo "⚠️  WARN: Health check endpoint not found" >> "$REPORT_FILE"
+        echo "❌ FAIL: API server did not start within 30s" >> "$REPORT_FILE"
+        GATE_PASSED=false
+        GATE_FAILURES+=("API server failed to start")
       fi
+
+      # Kill the API server we started
+      kill "$API_PID" 2>/dev/null || true
+      wait "$API_PID" 2>/dev/null || true
       echo "" >> "$REPORT_FILE"
     fi
     ;;
