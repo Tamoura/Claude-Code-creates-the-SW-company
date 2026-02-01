@@ -6,6 +6,7 @@ export default defineConfig({
   define: {
     // Enable mock mode for tests
     'import.meta.env.VITE_USE_MOCK': JSON.stringify('true'),
+    'import.meta.env.VITE_USE_MOCK_API': JSON.stringify('true'),
     'import.meta.env.DEV': JSON.stringify(true),
     'import.meta.env.PROD': JSON.stringify(false),
   },

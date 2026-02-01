@@ -1,4 +1,5 @@
 import { NavLink } from 'react-router-dom';
+import ThemeToggle from './ThemeToggle';
 
 const mainNav = [
   {
@@ -110,6 +111,10 @@ export default function Sidebar() {
           <NavItem key={item.to} {...item} />
         ))}
       </nav>
+
+      <div className="px-3 py-4 border-t border-card-border">
+        <ThemeToggle />
+      </div>
     </aside>
   );
 }

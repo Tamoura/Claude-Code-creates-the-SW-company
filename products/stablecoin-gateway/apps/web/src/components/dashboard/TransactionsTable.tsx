@@ -1,10 +1,18 @@
-import { recentTransactions } from '../../data/dashboard-mock';
+export interface TransactionRow {
+  id: string;
+  customer: string;
+  date: string;
+  amount: string;
+  asset: string;
+  status: 'SUCCESS' | 'PENDING' | 'FAILED';
+}
 
-function StatusBadge({ status }: { status: 'SUCCESS' | 'PENDING' }) {
-  const styles =
-    status === 'SUCCESS'
-      ? 'bg-green-500/15 text-accent-green border-green-500/30'
-      : 'bg-yellow-500/15 text-accent-yellow border-yellow-500/30';
+function StatusBadge({ status }: { status: TransactionRow['status'] }) {
+  const styles = {
+    SUCCESS: 'bg-green-500/15 text-accent-green border-green-500/30',
+    PENDING: 'bg-yellow-500/15 text-accent-yellow border-yellow-500/30',
+    FAILED: 'bg-red-500/15 text-red-400 border-red-500/30',
+  }[status];
 
   return (
     <span className={`inline-block px-2.5 py-0.5 rounded-full text-xs font-semibold border ${styles}`}>
@@ -13,7 +21,12 @@ function StatusBadge({ status }: { status: 'SUCCESS' | 'PENDING' }) {
   );
 }
 
-export default function TransactionsTable() {
+interface TransactionsTableProps {
+  transactions?: TransactionRow[];
+  isLoading?: boolean;
+}
+
+export default function TransactionsTable({ transactions, isLoading }: TransactionsTableProps) {
   return (
     <div>
       <div className="flex items-center justify-between mb-4">
@@ -36,18 +49,32 @@ export default function TransactionsTable() {
             </tr>
           </thead>
           <tbody>
-            {recentTransactions.map((tx) => (
-              <tr key={tx.id} className="border-b border-card-border last:border-b-0">
-                <td className="px-6 py-4 text-text-primary font-mono">{tx.id}</td>
-                <td className="px-6 py-4 text-text-secondary">{tx.customer}</td>
-                <td className="px-6 py-4 text-text-secondary">{tx.date}</td>
-                <td className="px-6 py-4 text-text-primary font-medium">{tx.amount}</td>
-                <td className="px-6 py-4 text-text-secondary">{tx.asset}</td>
-                <td className="px-6 py-4">
-                  <StatusBadge status={tx.status} />
+            {isLoading ? (
+              <tr>
+                <td colSpan={6} className="px-6 py-8 text-center text-text-secondary">
+                  Loading transactions...
                 </td>
               </tr>
-            ))}
+            ) : !transactions || transactions.length === 0 ? (
+              <tr>
+                <td colSpan={6} className="px-6 py-8 text-center text-text-secondary">
+                  No transactions yet
+                </td>
+              </tr>
+            ) : (
+              transactions.map((tx) => (
+                <tr key={tx.id} className="border-b border-card-border last:border-b-0">
+                  <td className="px-6 py-4 text-text-primary font-mono">{tx.id}</td>
+                  <td className="px-6 py-4 text-text-secondary">{tx.customer}</td>
+                  <td className="px-6 py-4 text-text-secondary">{tx.date}</td>
+                  <td className="px-6 py-4 text-text-primary font-medium">{tx.amount}</td>
+                  <td className="px-6 py-4 text-text-secondary">{tx.asset}</td>
+                  <td className="px-6 py-4">
+                    <StatusBadge status={tx.status} />
+                  </td>
+                </tr>
+              ))
+            )}
           </tbody>
         </table>
       </div>

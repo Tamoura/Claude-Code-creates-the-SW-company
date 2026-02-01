@@ -39,3 +39,30 @@ Rebuilt the stablecoin-gateway web dashboard from a light-themed placeholder to 
 - Vite build: passes
 - All existing tests: pass (20/20 relevant tests, pre-existing failures in auth-lifecycle unrelated)
 - Visual: Dark sidebar, stats cards, code panel, checkout preview, transactions table
+
+---
+
+## Phase 2: Real Data, Light Mode, Tests (current work)
+
+### Baseline
+- 11 passing test files, 91 passing tests
+- 2 pre-existing failures in auth tests (mock login not wired)
+
+### Phase 1: Component Tests
+- 7 test files for all dashboard components + DashboardHome
+- Pattern: MemoryRouter wrapper, @testing-library/react
+
+### Phase 2: Light/Dark Theme
+- useTheme hook + ThemeToggle component
+- Dual classes: light base + dark: prefix
+- Flash prevention script in index.html
+
+### Phase 3: API Wiring
+- useDashboardData hook computes stats from PaymentSession[]
+- Add mock list handler to api-client.ts
+- TransactionsTable becomes props-driven
+
+### Phase 4: Verify
+- Build: passes (vite build, 4.14s)
+- Tests: 139 passing (51 new), 11 pre-existing auth failures (unchanged)
+- 21 passing test files, 2 pre-existing failures
