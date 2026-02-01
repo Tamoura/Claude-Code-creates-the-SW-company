@@ -1,6 +1,7 @@
 import { buildApp } from './app.js';
 import { logger } from './utils/logger.js';
 import { validateEnvironment } from './utils/env-validator.js';
+import { enforceProductionEncryption } from './utils/startup-checks.js';
 import { initializeEncryption } from './utils/encryption.js';
 import { PrismaClient } from '@prisma/client';
 import { RefundService } from './services/refund.service.js';
@@ -8,6 +9,9 @@ import { RefundProcessingWorker } from './workers/refund-processing.worker.js';
 
 async function start() {
   try {
+    // Fail fast: enforce critical production requirements before anything else
+    enforceProductionEncryption();
+
     // Validate environment variables before starting
     validateEnvironment();
 
