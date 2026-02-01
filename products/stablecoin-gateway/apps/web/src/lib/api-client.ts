@@ -147,9 +147,13 @@ export class ApiClient {
 
     const url = `${this.baseUrl}${endpoint}`;
     const headers: Record<string, string> = {
-      'Content-Type': 'application/json',
       ...(options.headers as Record<string, string>),
     };
+
+    // Only set Content-Type for requests that have a body
+    if (options.body) {
+      headers['Content-Type'] = 'application/json';
+    }
 
     // Inject Authorization header if token exists
     const token = TokenManager.getToken();
@@ -173,6 +177,11 @@ export class ApiClient {
           error.detail,
           error
         );
+      }
+
+      // Handle 204 No Content (e.g., DELETE responses)
+      if (response.status === 204 || response.headers.get('content-length') === '0') {
+        return undefined as T;
       }
 
       return response.json();
