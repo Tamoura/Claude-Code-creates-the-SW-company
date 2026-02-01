@@ -162,3 +162,94 @@ export async function getPublicInvoice(
 
   reply.send(invoice);
 }
+
+// PDF generation function - replaceable for testing
+let pdfGenerator: {
+  generatePDF: (data: any) => Promise<Buffer>;
+  generateFilename: (num: string, name: string | null) => string;
+} | null = null;
+
+async function getPdfModule() {
+  if (!pdfGenerator) {
+    const mod = await import('./pdf-service');
+    pdfGenerator = mod;
+  }
+  return pdfGenerator;
+}
+
+/** Allow tests to replace the PDF generator */
+export function setPdfGenerator(gen: typeof pdfGenerator): void {
+  pdfGenerator = gen;
+}
+
+export async function getInvoicePdf(
+  request: FastifyRequest,
+  reply: FastifyReply
+): Promise<void> {
+  const params = invoiceIdParamSchema.safeParse(request.params);
+  if (!params.success) {
+    throw new BadRequestError('Invalid invoice ID');
+  }
+
+  const invoice = await invoiceService.getInvoice(
+    request.server.db,
+    request.userId,
+    params.data.id
+  );
+
+  const user = await request.server.db.user.findUnique({
+    where: { id: request.userId },
+    select: { name: true, businessName: true },
+  });
+
+  const pdf = await getPdfModule();
+
+  const pdfData = {
+    invoiceNumber: invoice.invoiceNumber,
+    status: invoice.status,
+    invoiceDate: invoice.invoiceDate,
+    dueDate: invoice.dueDate,
+    currency: invoice.currency,
+    subtotal: invoice.subtotal,
+    taxRate: invoice.taxRate,
+    taxAmount: invoice.taxAmount,
+    total: invoice.total,
+    notes: invoice.notes,
+    paymentLink: invoice.paymentLink,
+    user: {
+      name: user!.name,
+      businessName: user!.businessName,
+    },
+    client: invoice.client
+      ? {
+          name: invoice.client.name,
+          email: invoice.client.email,
+          address: invoice.client.address,
+          city: invoice.client.city,
+          state: invoice.client.state,
+          zip: invoice.client.zip,
+          country: invoice.client.country,
+        }
+      : null,
+    items: invoice.items.map((item) => ({
+      description: item.description,
+      quantity: item.quantity,
+      unitPrice: item.unitPrice,
+      amount: item.amount,
+    })),
+  };
+
+  const pdfBuffer = await pdf.generatePDF(pdfData);
+  const filename = pdf.generateFilename(
+    invoice.invoiceNumber,
+    invoice.client?.name || null
+  );
+
+  reply
+    .header('Content-Type', 'application/pdf')
+    .header(
+      'Content-Disposition',
+      `attachment; filename="${filename}"`
+    )
+    .send(pdfBuffer);
+}

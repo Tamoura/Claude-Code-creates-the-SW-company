@@ -6,6 +6,7 @@ import {
   updateInvoice,
   deleteInvoice,
   sendInvoice,
+  getInvoicePdf,
 } from './handlers';
 
 export async function invoiceRoutes(
@@ -19,4 +20,5 @@ export async function invoiceRoutes(
   fastify.put('/api/invoices/:id', updateInvoice);
   fastify.delete('/api/invoices/:id', deleteInvoice);
   fastify.post('/api/invoices/:id/send', sendInvoice);
+  fastify.get('/api/invoices/:id/pdf', getInvoicePdf);
 }
