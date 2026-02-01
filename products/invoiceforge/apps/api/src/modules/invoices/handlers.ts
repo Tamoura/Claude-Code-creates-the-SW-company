@@ -1,19 +1,15 @@
 import { FastifyRequest, FastifyReply } from 'fastify';
-import { z } from 'zod';
 import {
   generateInvoiceSchema,
   updateInvoiceSchema,
   listInvoicesSchema,
   invoiceIdParamSchema,
+  shareTokenParamSchema,
 } from './schemas';
 import * as invoiceService from './service';
 import { generateInvoice as generateInvoiceAI } from './ai-service';
 import { BadRequestError } from '../../lib/errors';
 import { config } from '../../config';
-
-const shareTokenParamSchema = z.object({
-  token: z.string().uuid(),
-});
 
 export async function generateInvoice(
   request: FastifyRequest,

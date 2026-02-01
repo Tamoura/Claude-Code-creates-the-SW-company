@@ -34,5 +34,9 @@ export const invoiceIdParamSchema = z.object({
   id: z.string().uuid(),
 });
 
+export const shareTokenParamSchema = z.object({
+  token: z.string().uuid(),
+});
+
 export type GenerateInvoiceInput = z.infer<typeof generateInvoiceSchema>;
 export type UpdateInvoiceInput = z.infer<typeof updateInvoiceSchema>;
