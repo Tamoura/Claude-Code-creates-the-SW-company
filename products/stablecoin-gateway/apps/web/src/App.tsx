@@ -10,6 +10,10 @@ import DashboardLayout from './pages/dashboard/DashboardLayout';
 import DashboardHome from './pages/dashboard/DashboardHome';
 import PaymentsList from './pages/dashboard/PaymentsList';
 import Settings from './pages/dashboard/Settings';
+import Invoices from './pages/dashboard/Invoices';
+import ApiKeys from './pages/dashboard/ApiKeys';
+import Webhooks from './pages/dashboard/Webhooks';
+import Security from './pages/dashboard/Security';
 import Login from './pages/auth/Login';
 import ErrorBoundary from './components/ErrorBoundary';
 
@@ -40,6 +44,10 @@ function App() {
               <Route path="/dashboard" element={<DashboardLayout />}>
                 <Route index element={<DashboardHome />} />
                 <Route path="payments" element={<PaymentsList />} />
+                <Route path="invoices" element={<Invoices />} />
+                <Route path="api-keys" element={<ApiKeys />} />
+                <Route path="webhooks" element={<Webhooks />} />
+                <Route path="security" element={<Security />} />
                 <Route path="settings" element={<Settings />} />
               </Route>
             </Routes>

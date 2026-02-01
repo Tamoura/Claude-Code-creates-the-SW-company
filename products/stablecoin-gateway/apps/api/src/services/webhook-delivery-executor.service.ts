@@ -68,9 +68,21 @@ export class WebhookDeliveryExecutorService {
         return;
       }
 
-      const secret = process.env.WEBHOOK_ENCRYPTION_KEY
-        ? decryptSecret(endpoint.secret)
-        : endpoint.secret;
+      let secret: string;
+      try {
+        secret = process.env.WEBHOOK_ENCRYPTION_KEY
+          ? decryptSecret(endpoint.secret)
+          : endpoint.secret;
+      } catch (decryptError) {
+        logger.error('Failed to decrypt webhook secret', {
+          deliveryId: id,
+          endpointId: endpoint.id,
+          error: decryptError instanceof Error ? decryptError.message : 'Unknown error',
+        });
+        await this.handleDeliveryFailure(id, attempts + 1, null, null, 'Webhook secret decryption failed');
+        await this.circuitBreaker.recordFailure(endpoint.id);
+        return;
+      }
 
       const timestamp = Math.floor(Date.now() / 1000);
       const payloadString = JSON.stringify(payload);

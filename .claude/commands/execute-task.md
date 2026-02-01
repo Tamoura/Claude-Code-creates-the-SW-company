@@ -10,7 +10,7 @@ You are executing a specific task from a task graph in the current repo.
 
 Example:
 ```
-/execute-task gpu-calculator BACKEND-01
+/execute-task stablecoin-gateway BACKEND-01
 ```
 
 ## Arguments

@@ -94,8 +94,6 @@ release/[product]/v[X.Y.Z]       # Releases
 
 ```
 /products/[name]/        # Individual products
-/shared/                 # Cross-product code
-/infrastructure/         # IaC, Docker configs
 /docs/                   # Company documentation
 /notes/                  # CEO briefs, decisions
 /.claude/                # Agent definitions, workflows
@@ -168,10 +166,10 @@ Use the `/orchestrator` command followed by your request:
 
 ```
 /orchestrator New product: task management app for teams
-/orchestrator Add dark mode to gpu-calculator
-/orchestrator Fix the login bug in user-portal
+/orchestrator Add dark mode to stablecoin-gateway
+/orchestrator Fix the login bug in deal-flow-platform
 /orchestrator Status update on all products
-/orchestrator Ship gpu-calculator to production
+/orchestrator Ship stablecoin-gateway to production
 ```
 
 ### Example Requests

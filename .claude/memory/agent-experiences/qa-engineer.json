@@ -8,8 +8,8 @@
       "description": "Vitest Configuration for React",
       "first_applied": "2026-01-25",
       "products_applied": [
-        "gpu-calculator",
-        "basic-calculator"
+        "gpu-calculator (deleted)",
+        "basic-calculator (deleted)"
       ],
       "notes": "Exclude e2e/ directory to avoid running Playwright tests with Vitest"
     },
@@ -18,8 +18,8 @@
       "description": "Playwright E2E Configuration",
       "first_applied": "2026-01-25",
       "products_applied": [
-        "gpu-calculator",
-        "basic-calculator"
+        "gpu-calculator (deleted)",
+        "basic-calculator (deleted)"
       ],
       "notes": "webServer config auto-starts dev server, use 120s timeout"
     },
@@ -28,7 +28,7 @@
       "description": "React Rendering Diagnosis Pattern",
       "first_applied": "2026-01-27",
       "products_applied": [
-        "basic-calculator"
+        "basic-calculator (deleted)"
       ],
       "notes": "When E2E tests fail with 'element not found': 1) Check HTML loads 2) Check CSS processes 3) Check data-testid exists in source 4) Suspect JS runtime error 5) Route to Frontend Engineer to check browser console"
     }
@@ -36,7 +36,7 @@
   "task_history": [
     {
       "task_id": "QA-01",
-      "product": "gpu-calculator",
+      "product": "gpu-calculator (deleted)",
       "task_type": "testing-setup",
       "started_at": "2026-01-25T14:00:00Z",
       "completed_at": "2026-01-25T15:00:00Z",
@@ -61,7 +61,7 @@
     },
     {
       "task_id": "QA-02",
-      "product": "gpu-calculator",
+      "product": "gpu-calculator (deleted)",
       "task_type": "testing-gate",
       "started_at": "2026-01-25T17:00:00Z",
       "completed_at": "2026-01-25T17:30:00Z",
@@ -78,7 +78,7 @@
     },
     {
       "task_id": "QA-02",
-      "product": "basic-calculator",
+      "product": "basic-calculator (deleted)",
       "task_type": "testing-gate",
       "started_at": "2026-01-27T08:00:00Z",
       "completed_at": "2026-01-27T08:15:00Z",

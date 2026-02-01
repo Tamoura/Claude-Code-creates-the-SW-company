@@ -150,8 +150,8 @@ describe('Observability - Development Mode', () => {
     process.env = originalEnv;
   });
 
-  it('should allow access without key in development when INTERNAL_API_KEY is not set', async () => {
-    // Development environment without INTERNAL_API_KEY
+  it('should return 500 when INTERNAL_API_KEY is not set (even in development)', async () => {
+    // Metrics endpoint requires INTERNAL_API_KEY in all environments
     process.env = {
       ...originalEnv,
       NODE_ENV: 'development',
@@ -167,10 +167,10 @@ describe('Observability - Development Mode', () => {
         url: '/internal/metrics',
       });
 
-      // In development without key set, should allow access
-      expect(response.statusCode).toBe(200);
-      const metrics = response.json();
-      expect(metrics).toHaveProperty('requests');
+      // Without key set, should return 500 (endpoint not configured)
+      expect(response.statusCode).toBe(500);
+      const body = response.json();
+      expect(body.error).toBe('Metrics endpoint not configured');
     } finally {
       await app.close();
     }

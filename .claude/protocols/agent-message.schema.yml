@@ -154,17 +154,17 @@ example_task_complete:
     to: "orchestrator"
     timestamp: "2025-01-26T10:30:00Z"
     message_type: "task_complete"
-    product: "gpu-calculator"
+    product: "stablecoin-gateway"
     task_id: "TASK-042"
 
   payload:
     status: "success"
     summary: "Implemented API endpoint for GPU pricing with comprehensive tests"
     artifacts:
-      - path: "products/gpu-calculator/apps/api/src/routes/pricing.ts"
+      - path: "products/stablecoin-gateway/apps/api/src/routes/pricing.ts"
         type: "file"
         description: "Main API endpoint implementation"
-      - path: "products/gpu-calculator/apps/api/tests/pricing.test.ts"
+      - path: "products/stablecoin-gateway/apps/api/tests/pricing.test.ts"
         type: "file"
         description: "Unit tests for pricing endpoint"
       - path: "#42"
@@ -192,7 +192,7 @@ example_task_complete:
     next_agent: "qa-engineer"
     required_context:
       - "API endpoint is at POST /api/pricing"
-      - "Test user credentials in products/gpu-calculator/docs/TEST-USERS.md"
+      - "Test user credentials in products/stablecoin-gateway/docs/TEST-USERS.md"
       - "Pricing data is cached for 5 minutes"
     suggested_task: "Create E2E tests for pricing flow and verify caching behavior"
 

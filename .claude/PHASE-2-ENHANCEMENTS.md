@@ -256,8 +256,8 @@ Updated: 2026-01-26 14:30:00
 - Tokens: 1.6M/2M (80%) ⚠️
 
 ## 🏗️ Products
-│ gpu-calculator      │ Prod │ 🟢 Healthy │
-│ it4it-dashboard     │ Dev  │ 🟡 InTest  │
+│ stablecoin-gateway      │ Prod │ 🟢 Healthy │
+│ deal-flow-platform     │ Dev  │ 🟡 InTest  │
 │ analytics-dashboard │ Plan │ 🟢 OnTrack │
 
 ## ⚠️ Alerts

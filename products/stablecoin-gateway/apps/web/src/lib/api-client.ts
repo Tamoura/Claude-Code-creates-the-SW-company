@@ -7,6 +7,7 @@
 
 import { EventSourcePolyfill } from 'event-source-polyfill';
 import { TokenManager } from './token-manager';
+import { mockPaymentSessions } from '../data/dashboard-mock';
 
 const API_BASE_URL = import.meta.env.VITE_API_URL || 'http://localhost:5001';
 const USE_MOCK_API = import.meta.env.VITE_USE_MOCK_API === 'true';
@@ -166,6 +167,26 @@ export class ApiClient {
       }
 
       return JSON.parse(stored) as T;
+    }
+
+    // List payment sessions (GET /v1/payment-sessions or /v1/payment-sessions?...)
+    if (endpoint.startsWith('/v1/payment-sessions') && (!options.method || options.method === 'GET')) {
+      const url = new URL(endpoint, 'http://localhost');
+      const statusFilter = url.searchParams.get('status');
+      let sessions = [...mockPaymentSessions];
+
+      if (statusFilter) {
+        sessions = sessions.filter(s => s.status === statusFilter);
+      }
+
+      const limit = parseInt(url.searchParams.get('limit') || '20', 10);
+      const offset = parseInt(url.searchParams.get('offset') || '0', 10);
+      const page = sessions.slice(offset, offset + limit);
+
+      return {
+        data: page,
+        pagination: { total: sessions.length, has_more: offset + limit < sessions.length },
+      } as T;
     }
 
     throw new ApiClientError(501, 'Not Implemented', 'Mock endpoint not implemented');
