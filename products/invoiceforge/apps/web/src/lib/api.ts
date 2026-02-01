@@ -150,5 +150,83 @@ export async function deleteClient(id: string): Promise<void> {
   });
 }
 
+// Public API (no auth required)
+export async function getPublicInvoice(token: string): Promise<import('./types').PublicInvoice> {
+  const API_BASE = process.env.NEXT_PUBLIC_API_URL || 'http://localhost:5004/api';
+  const res = await fetch(`${API_BASE}/invoices/public/${token}`);
+
+  if (!res.ok) {
+    const error = await res.json().catch(() => ({ message: 'Invoice not found' }));
+    throw new Error(error.message || 'Failed to load invoice');
+  }
+
+  return res.json();
+}
+
+// User Profile API
+export async function getProfile(): Promise<import('./types').UserProfile> {
+  return apiFetch('/users/me');
+}
+
+export async function updateProfile(data: {
+  name?: string;
+  businessName?: string;
+}): Promise<import('./types').UserProfile> {
+  return apiFetch('/users/me', {
+    method: 'PATCH',
+    body: JSON.stringify(data),
+  });
+}
+
+export async function getSubscription(): Promise<import('./types').Subscription> {
+  return apiFetch('/users/me/subscription');
+}
+
+// Stripe Connect API
+export async function getStripeConnectUrl(): Promise<{ url: string }> {
+  return apiFetch('/users/me/stripe/connect');
+}
+
+export async function handleStripeCallback(code: string): Promise<{ connected: boolean }> {
+  return apiFetch('/users/me/stripe/callback', {
+    method: 'POST',
+    body: JSON.stringify({ code }),
+  });
+}
+
+export async function disconnectStripe(): Promise<{ disconnected: boolean }> {
+  return apiFetch('/users/me/stripe/disconnect', {
+    method: 'POST',
+  });
+}
+
+// PDF Download API
+export async function downloadInvoicePdf(id: string): Promise<Blob> {
+  const token = typeof window !== 'undefined' ? localStorage.getItem('accessToken') : null;
+  const API_BASE = process.env.NEXT_PUBLIC_API_URL || 'http://localhost:5004/api';
+
+  const res = await fetch(`${API_BASE}/invoices/${id}/pdf`, {
+    headers: {
+      ...(token ? { Authorization: `Bearer ${token}` } : {}),
+    },
+  });
+
+  if (!res.ok) {
+    throw new Error('Failed to download PDF');
+  }
+
+  return res.blob();
+}
+
+// Payment Link API
+export async function createPaymentLink(id: string): Promise<{
+  paymentLink: string;
+  stripeSessionId: string;
+}> {
+  return apiFetch(`/invoices/${id}/payment-link`, {
+    method: 'POST',
+  });
+}
+
 // Legacy export for compatibility
 export { apiFetch };

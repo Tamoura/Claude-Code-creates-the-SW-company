@@ -6,7 +6,15 @@ import Link from 'next/link';
 import { Button } from '@/components/Button';
 import { Card, CardContent, CardHeader, CardTitle } from '@/components/Card';
 import { Badge } from '@/components/Badge';
-import { getInvoice, deleteInvoice, sendInvoice, updateInvoice } from '@/lib/api';
+import {
+  getInvoice,
+  deleteInvoice,
+  sendInvoice,
+  updateInvoice,
+  downloadInvoicePdf,
+  createPaymentLink,
+  getProfile,
+} from '@/lib/api';
 import { formatCents, formatTaxRate, formatDate } from '@/lib/format';
 import type { Invoice } from '@/lib/types';
 import {
@@ -18,6 +26,9 @@ import {
   Download,
   CheckCircle2,
   ExternalLink,
+  CreditCard,
+  Share2,
+  Copy,
 } from 'lucide-react';
 
 export default function InvoiceDetailPage() {
@@ -30,9 +41,11 @@ export default function InvoiceDetailPage() {
   const [error, setError] = useState<string | null>(null);
   const [actionLoading, setActionLoading] = useState<string | null>(null);
   const [shareableLink, setShareableLink] = useState<string | null>(null);
+  const [stripeConnected, setStripeConnected] = useState(false);
 
   useEffect(() => {
     loadInvoice();
+    loadProfile();
     // eslint-disable-next-line react-hooks/exhaustive-deps
   }, [id]);
 
@@ -40,11 +53,22 @@ export default function InvoiceDetailPage() {
     try {
       const data = await getInvoice(id);
       setInvoice(data);
-      setShareableLink(data.shareToken ? `${window.location.origin}/invoice/${data.shareToken}` : null);
+      setShareableLink(
+        data.shareToken ? `${window.location.origin}/invoice/${data.shareToken}/view` : null
+      );
     } catch (err) {
       setError(err instanceof Error ? err.message : 'Failed to load invoice');
     } finally {
       setLoading(false);
+    }
+  };
+
+  const loadProfile = async () => {
+    try {
+      const profile = await getProfile();
+      setStripeConnected(profile.stripeConnected);
+    } catch (err) {
+      console.error('Failed to load profile:', err);
     }
   };
 
@@ -89,6 +113,50 @@ export default function InvoiceDetailPage() {
     }
   };
 
+  const handleDownloadPdf = async () => {
+    setActionLoading('pdf');
+    try {
+      const blob = await downloadInvoicePdf(id);
+      const url = window.URL.createObjectURL(blob);
+      const a = document.createElement('a');
+      a.href = url;
+      a.download = `invoice-${invoice?.invoiceNumber || id}.pdf`;
+      document.body.appendChild(a);
+      a.click();
+      window.URL.revokeObjectURL(url);
+      document.body.removeChild(a);
+    } catch (err) {
+      alert(err instanceof Error ? err.message : 'Failed to download PDF');
+    } finally {
+      setActionLoading(null);
+    }
+  };
+
+  const handleCreatePaymentLink = async () => {
+    if (!stripeConnected) {
+      if (confirm('You need to connect your Stripe account first. Go to Settings?')) {
+        router.push('/dashboard/settings');
+      }
+      return;
+    }
+
+    setActionLoading('payment');
+    try {
+      await createPaymentLink(id);
+      await loadInvoice(); // Refresh to get the payment link
+      alert('Payment link created successfully!');
+    } catch (err) {
+      alert(err instanceof Error ? err.message : 'Failed to create payment link');
+    } finally {
+      setActionLoading(null);
+    }
+  };
+
+  const handleCopyLink = (link: string, type: string) => {
+    navigator.clipboard.writeText(link);
+    alert(`${type} copied to clipboard!`);
+  };
+
   if (loading) {
     return (
       <div className="flex items-center justify-center min-h-[400px]">
@@ -129,22 +197,49 @@ export default function InvoiceDetailPage() {
             <CheckCircle2 className="h-5 w-5 text-green-600 mt-0.5" />
             <div className="flex-1">
               <p className="text-sm font-medium text-green-900">Invoice sent!</p>
-              <p className="text-sm text-green-700 mt-1">Shareable link:</p>
+              <p className="text-sm text-green-700 mt-1">Public invoice link:</p>
               <div className="flex items-center gap-2 mt-2">
-                <code className="text-xs bg-white px-3 py-1 rounded border border-green-200 flex-1">
+                <code className="text-xs bg-white px-3 py-1 rounded border border-green-200 flex-1 overflow-x-auto">
                   {shareableLink}
                 </code>
                 <Button
                   size="sm"
                   variant="outline"
-                  onClick={() => {
-                    navigator.clipboard.writeText(shareableLink);
-                    alert('Link copied to clipboard!');
-                  }}
+                  onClick={() => handleCopyLink(shareableLink, 'Invoice link')}
                 >
-                  Copy
+                  <Copy className="h-4 w-4" />
                 </Button>
                 <a href={shareableLink} target="_blank" rel="noopener noreferrer">
+                  <Button size="sm" variant="outline">
+                    <ExternalLink className="h-4 w-4" />
+                  </Button>
+                </a>
+              </div>
+            </div>
+          </div>
+        </div>
+      )}
+
+      {/* Payment Link */}
+      {invoice?.paymentLink && (
+        <div className="bg-blue-50 border border-blue-200 rounded-lg p-4">
+          <div className="flex items-start gap-3">
+            <CreditCard className="h-5 w-5 text-blue-600 mt-0.5" />
+            <div className="flex-1">
+              <p className="text-sm font-medium text-blue-900">Payment link active</p>
+              <p className="text-sm text-blue-700 mt-1">Clients can pay directly via Stripe:</p>
+              <div className="flex items-center gap-2 mt-2">
+                <code className="text-xs bg-white px-3 py-1 rounded border border-blue-200 flex-1 overflow-x-auto">
+                  {invoice.paymentLink}
+                </code>
+                <Button
+                  size="sm"
+                  variant="outline"
+                  onClick={() => handleCopyLink(invoice.paymentLink!, 'Payment link')}
+                >
+                  <Copy className="h-4 w-4" />
+                </Button>
+                <a href={invoice.paymentLink} target="_blank" rel="noopener noreferrer">
                   <Button size="sm" variant="outline">
                     <ExternalLink className="h-4 w-4" />
                   </Button>
@@ -272,8 +367,8 @@ export default function InvoiceDetailPage() {
       </Card>
 
       {/* Actions */}
-      <div className="flex items-center justify-between gap-4">
-        <div className="flex items-center gap-2">
+      <div className="flex items-center justify-between gap-4 flex-wrap">
+        <div className="flex items-center gap-2 flex-wrap">
           {invoice.status === 'draft' && (
             <>
               <Link href={`/dashboard/invoices/${id}/edit`}>
@@ -282,10 +377,7 @@ export default function InvoiceDetailPage() {
                   Edit
                 </Button>
               </Link>
-              <Button
-                onClick={handleSend}
-                disabled={actionLoading === 'send'}
-              >
+              <Button onClick={handleSend} disabled={actionLoading === 'send'}>
                 {actionLoading === 'send' ? (
                   <Loader2 className="mr-2 h-4 w-4 animate-spin" />
                 ) : (
@@ -296,20 +388,50 @@ export default function InvoiceDetailPage() {
             </>
           )}
           {(invoice.status === 'sent' || invoice.status === 'overdue') && (
-            <Button
-              onClick={handleMarkPaid}
-              disabled={actionLoading === 'markpaid'}
-            >
-              {actionLoading === 'markpaid' ? (
-                <Loader2 className="mr-2 h-4 w-4 animate-spin" />
-              ) : (
-                <CheckCircle2 className="mr-2 h-4 w-4" />
+            <>
+              <Button onClick={handleMarkPaid} disabled={actionLoading === 'markpaid'}>
+                {actionLoading === 'markpaid' ? (
+                  <Loader2 className="mr-2 h-4 w-4 animate-spin" />
+                ) : (
+                  <CheckCircle2 className="mr-2 h-4 w-4" />
+                )}
+                Mark as Paid
+              </Button>
+              {!invoice.paymentLink && stripeConnected && (
+                <Button
+                  variant="outline"
+                  onClick={handleCreatePaymentLink}
+                  disabled={actionLoading === 'payment'}
+                >
+                  {actionLoading === 'payment' ? (
+                    <Loader2 className="mr-2 h-4 w-4 animate-spin" />
+                  ) : (
+                    <CreditCard className="mr-2 h-4 w-4" />
+                  )}
+                  Create Payment Link
+                </Button>
               )}
-              Mark as Paid
+            </>
+          )}
+          {shareableLink && (
+            <Button
+              variant="outline"
+              onClick={() => handleCopyLink(shareableLink, 'Share link')}
+            >
+              <Share2 className="mr-2 h-4 w-4" />
+              Share Invoice
             </Button>
           )}
-          <Button variant="outline" disabled>
-            <Download className="mr-2 h-4 w-4" />
+          <Button
+            variant="outline"
+            onClick={handleDownloadPdf}
+            disabled={actionLoading === 'pdf'}
+          >
+            {actionLoading === 'pdf' ? (
+              <Loader2 className="mr-2 h-4 w-4 animate-spin" />
+            ) : (
+              <Download className="mr-2 h-4 w-4" />
+            )}
             Download PDF
           </Button>
         </div>

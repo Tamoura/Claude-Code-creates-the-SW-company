@@ -97,3 +97,47 @@ export interface CreateClientRequest {
 }
 
 export type UpdateClientRequest = Partial<CreateClientRequest>;
+
+export interface PublicInvoice {
+  invoiceNumber: string;
+  status: InvoiceStatus;
+  fromBusinessName: string | null;
+  fromName: string;
+  client: {
+    id: string | null;
+    name: string;
+    email: string | null;
+    address: string | null;
+  } | null;
+  items: InvoiceItem[];
+  subtotal: number;
+  taxRate: number;
+  taxAmount: number;
+  total: number;
+  currency: string;
+  invoiceDate: string;
+  dueDate: string;
+  notes: string | null;
+  paymentLink: string | null;
+}
+
+export interface UserProfile {
+  id: string;
+  email: string;
+  name: string;
+  businessName: string | null;
+  subscriptionTier: 'free' | 'pro' | 'team';
+  invoiceCountThisMonth: number;
+  invoiceLimitThisMonth: number | null;
+  stripeConnected: boolean;
+  createdAt: string;
+}
+
+export interface Subscription {
+  tier: 'free' | 'pro' | 'team';
+  invoicesUsedThisMonth: number;
+  invoicesRemainingThisMonth: number | null;
+  resetDate: string;
+  stripeCustomerId: string | null;
+  stripeSubscriptionId: string | null;
+}
