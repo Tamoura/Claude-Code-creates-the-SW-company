@@ -97,6 +97,7 @@ model PaymentSession {
   @@index([userId, status])
   @@index([status, createdAt])
   @@index([txHash])
+  @@index([idempotencyKey])
 
   // Composite unique constraint for idempotency scoped to user
   @@unique([userId, idempotencyKey], name: "userId_idempotencyKey")
@@ -140,6 +141,7 @@ model Refund {
   // Idempotency: same key + same payment = same refund
   @@unique([paymentSessionId, idempotencyKey], name: "refund_idempotency")
   @@index([paymentSessionId])
+  @@index([idempotencyKey])
   @@index([status, createdAt])
   @@map("refunds")
 }
