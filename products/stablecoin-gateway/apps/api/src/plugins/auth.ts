@@ -4,6 +4,12 @@ import { AppError } from '../types/index.js';
 import { hashApiKey } from '../utils/crypto.js';
 import { logger } from '../utils/logger.js';
 
+// Circuit breaker: track Redis health for token revocation checks.
+// If Redis has been unavailable for longer than the threshold, reject
+// all JWT requests with 503 rather than silently accepting revoked tokens.
+let redisFailedSince: number | null = null;
+const REDIS_FAIL_THRESHOLD_MS = 30000;
+
 const authPlugin: FastifyPluginAsync = async (fastify) => {
   // Decorator for authentication check
   fastify.decorate('authenticate', async (request: FastifyRequest) => {
@@ -31,20 +37,41 @@ const authPlugin: FastifyPluginAsync = async (fastify) => {
         // If Redis is unavailable, skip the check (graceful degradation).
         const { jti, userId: decodedUserId } = decoded as { jti?: string; userId?: string };
         if (jti && fastify.redis) {
+          // Circuit breaker: if Redis has been down too long, reject the request
+          if (
+            redisFailedSince !== null &&
+            Date.now() - redisFailedSince > REDIS_FAIL_THRESHOLD_MS
+          ) {
+            logger.error('Redis circuit breaker open: rejecting token validation', {
+              jti,
+              redisDownSince: new Date(redisFailedSince).toISOString(),
+            });
+            throw new AppError(503, 'service-unavailable', 'Service temporarily unavailable');
+          }
+
           try {
             const revoked = await fastify.redis.get(`revoked_jti:${jti}`);
             if (revoked) {
               throw new AppError(401, 'token-revoked', 'Token has been revoked');
             }
+            // Redis responded successfully -- reset circuit breaker
+            redisFailedSince = null;
           } catch (redisError) {
             if (redisError instanceof AppError) {
               throw redisError;
             }
-            // Redis error -- degrade gracefully, allow the request
-            logger.warn('Redis unavailable during JTI check, skipping', {
-              jti,
-              error: redisError instanceof Error ? redisError.message : 'unknown',
-            });
+            // Redis error -- record the failure timestamp for circuit breaker
+            if (redisFailedSince === null) {
+              redisFailedSince = Date.now();
+            }
+            logger.warn(
+              'Redis unavailable during JTI check, allowing request (circuit breaker window open)',
+              {
+                jti,
+                redisFailedSince: new Date(redisFailedSince).toISOString(),
+                error: redisError instanceof Error ? redisError.message : 'unknown',
+              },
+            );
           }
         }
 
@@ -63,8 +90,11 @@ const authPlugin: FastifyPluginAsync = async (fastify) => {
         request.currentUser = user;
         return;
       } catch (jwtError) {
-        // If it's a token-revoked error, re-throw immediately
-        if (jwtError instanceof AppError && jwtError.code === 'token-revoked') {
+        // Re-throw security and availability errors immediately
+        if (
+          jwtError instanceof AppError &&
+          (jwtError.code === 'token-revoked' || jwtError.code === 'service-unavailable')
+        ) {
           throw jwtError;
         }
         // If JWT fails for other reasons, try API key

@@ -87,15 +87,56 @@ jobs:
     steps:
       - uses: actions/checkout@v4
 
-      - name: Run security audit
-        run: npm audit --audit-level=high
+      - name: Setup Node.js
+        uses: actions/setup-node@v4
+        with:
+          node-version: '20'
+
+      - name: Install dependencies
+        run: npm ci
         working-directory: products/stablecoin-gateway/apps/api
 
-  quality-gate:
-    needs: [test, lint, security]
+      - name: Run security audit
+        run: npm audit --audit-level=high --production || exit 1
+        working-directory: products/stablecoin-gateway/apps/api
+
+  test-frontend:
     runs-on: ubuntu-latest
     steps:
       - uses: actions/checkout@v4
 
-      - name: Quality gate passed
-        run: echo "All quality gates passed for stablecoin-gateway"
+      - name: Setup Node.js
+        uses: actions/setup-node@v4
+        with:
+          node-version: '20'
+          cache: 'npm'
+          cache-dependency-path: products/stablecoin-gateway/apps/web/package-lock.json
+
+      - name: Install dependencies
+        run: npm ci
+        working-directory: products/stablecoin-gateway/apps/web
+
+      - name: Run frontend tests
+        run: npm test
+        working-directory: products/stablecoin-gateway/apps/web
+
+  quality-gate:
+    needs: [test, lint, security, test-frontend]
+    runs-on: ubuntu-latest
+    if: always()
+    steps:
+      - name: Verify all jobs succeeded
+        run: |
+          echo "Job results:"
+          echo "  test:           ${{ needs.test.result }}"
+          echo "  lint:           ${{ needs.lint.result }}"
+          echo "  security:       ${{ needs.security.result }}"
+          echo "  test-frontend:  ${{ needs.test-frontend.result }}"
+          if [ "${{ needs.test.result }}" != "success" ] || \
+             [ "${{ needs.lint.result }}" != "success" ] || \
+             [ "${{ needs.security.result }}" != "success" ] || \
+             [ "${{ needs.test-frontend.result }}" != "success" ]; then
+            echo "Quality gate FAILED: one or more jobs did not succeed"
+            exit 1
+          fi
+          echo "All quality gates passed for stablecoin-gateway"
