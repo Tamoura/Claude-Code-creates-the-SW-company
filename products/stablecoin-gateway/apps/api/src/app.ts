@@ -20,6 +20,7 @@ import paymentSessionRoutes from './routes/v1/payment-sessions.js';
 import webhookRoutes from './routes/v1/webhooks.js';
 import apiKeyRoutes from './routes/v1/api-keys.js';
 import refundRoutes from './routes/v1/refunds.js';
+import adminRoutes from './routes/v1/admin.js';
 import webhookWorkerRoutes from './routes/internal/webhook-worker.js';
 
 // Utils
@@ -29,6 +30,7 @@ import { RedisRateLimitStore } from './utils/redis-rate-limit-store.js';
 
 export async function buildApp(): Promise<FastifyInstance> {
   const fastify = Fastify({
+    trustProxy: true, // Required behind load balancers for correct request.ip
     bodyLimit: 1048576, // 1MB - prevent oversized request payloads
     logger: process.env.NODE_ENV === 'development' ? {
       level: 'info',
@@ -190,7 +192,7 @@ export async function buildApp(): Promise<FastifyInstance> {
         description: 'API for processing stablecoin payments (USDC/USDT)',
         version: '1.0.0',
       },
-      servers: [{ url: 'http://localhost:5050', description: 'Development' }],
+      servers: [{ url: 'http://localhost:5001', description: 'Development' }],
       tags: [
         { name: 'payments', description: 'Payment session management' },
         { name: 'refunds', description: 'Refund processing' },
@@ -225,6 +227,7 @@ export async function buildApp(): Promise<FastifyInstance> {
   await fastify.register(webhookRoutes, { prefix: '/v1/webhooks' });
   await fastify.register(apiKeyRoutes, { prefix: '/v1/api-keys' });
   await fastify.register(refundRoutes, { prefix: '/v1/refunds' });
+  await fastify.register(adminRoutes, { prefix: '/v1/admin' });
 
   // Internal routes (for cron jobs, workers, etc.)
   await fastify.register(webhookWorkerRoutes, { prefix: '/internal' });

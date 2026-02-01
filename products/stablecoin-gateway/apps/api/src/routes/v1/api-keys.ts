@@ -6,9 +6,9 @@ import { AppError, ApiKeyResponse } from '../../types/index.js';
 import { logger } from '../../utils/logger.js';
 
 const apiKeyRoutes: FastifyPluginAsync = async (fastify) => {
-  // POST /v1/api-keys - Create new API key
+  // POST /v1/api-keys - Create new API key (requires write permission)
   fastify.post('/', {
-    onRequest: [fastify.authenticate],
+    onRequest: [fastify.authenticate, fastify.requirePermission('write')],
   }, async (request, reply) => {
     try {
       const body = validateBody(createApiKeySchema, request.body);
@@ -156,9 +156,9 @@ const apiKeyRoutes: FastifyPluginAsync = async (fastify) => {
     }
   });
 
-  // DELETE /v1/api-keys/:id - Revoke/delete API key
+  // DELETE /v1/api-keys/:id - Revoke/delete API key (requires write permission)
   fastify.delete('/:id', {
-    onRequest: [fastify.authenticate],
+    onRequest: [fastify.authenticate, fastify.requirePermission('write')],
   }, async (request, reply) => {
     try {
       const { id } = request.params as { id: string };

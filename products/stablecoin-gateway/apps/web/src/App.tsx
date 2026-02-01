@@ -15,6 +15,8 @@ import Invoices from './pages/dashboard/Invoices';
 import ApiKeys from './pages/dashboard/ApiKeys';
 import Webhooks from './pages/dashboard/Webhooks';
 import Security from './pages/dashboard/Security';
+import MerchantsList from './pages/dashboard/admin/MerchantsList';
+import MerchantPayments from './pages/dashboard/admin/MerchantPayments';
 import Login from './pages/auth/Login';
 import Signup from './pages/auth/Signup';
 import ProtectedRoute from './components/ProtectedRoute';
@@ -54,6 +56,8 @@ function App() {
                   <Route path="webhooks" element={<Webhooks />} />
                   <Route path="security" element={<Security />} />
                   <Route path="settings" element={<Settings />} />
+                  <Route path="admin/merchants" element={<MerchantsList />} />
+                  <Route path="admin/merchants/:id/payments" element={<MerchantPayments />} />
                 </Route>
               </Route>
             </Routes>

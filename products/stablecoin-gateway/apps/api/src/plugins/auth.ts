@@ -127,6 +127,17 @@ const authPlugin: FastifyPluginAsync = async (fastify) => {
       }
     };
   });
+
+  // Admin role enforcement decorator
+  fastify.decorate('requireAdmin', async (request: FastifyRequest) => {
+    if (!request.currentUser) {
+      throw new AppError(401, 'unauthorized', 'Authentication required');
+    }
+
+    if (request.currentUser.role !== 'ADMIN') {
+      throw new AppError(403, 'forbidden', 'Admin access required');
+    }
+  });
 };
 
 export default fp(authPlugin, {

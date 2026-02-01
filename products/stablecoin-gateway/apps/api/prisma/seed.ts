@@ -12,6 +12,17 @@ async function main() {
     create: {
       email: 'merchant@test.com',
       passwordHash,
+      role: 'MERCHANT',
+    },
+  });
+
+  const admin = await prisma.user.upsert({
+    where: { email: 'admin@test.com' },
+    update: { role: 'ADMIN' },
+    create: {
+      email: 'admin@test.com',
+      passwordHash,
+      role: 'ADMIN',
     },
   });
 
@@ -19,6 +30,13 @@ async function main() {
     id: merchant.id,
     email: merchant.email,
     createdAt: merchant.createdAt,
+  });
+
+  console.log('Seeded test admin user:', {
+    id: admin.id,
+    email: admin.email,
+    role: admin.role,
+    createdAt: admin.createdAt,
   });
 }
 

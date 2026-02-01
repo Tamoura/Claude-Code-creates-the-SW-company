@@ -207,5 +207,6 @@ declare module 'fastify' {
     authenticate: (request: FastifyRequest) => Promise<void>;
     optionalAuth: (request: FastifyRequest) => Promise<void>;
     requirePermission: (permission: 'read' | 'write' | 'refund') => (request: FastifyRequest) => Promise<void>;
+    requireAdmin: (request: FastifyRequest) => Promise<void>;
   }
 }

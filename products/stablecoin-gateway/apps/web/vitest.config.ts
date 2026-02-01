@@ -20,5 +20,11 @@ export default defineConfig({
       '**/e2e/**',
       '**/*.spec.ts',
     ],
+    coverage: {
+      provider: 'v8',
+      reporter: ['text', 'json', 'lcov'],
+      include: ['src/**/*.{ts,tsx}'],
+      exclude: ['src/test/**', 'src/**/*.d.ts', 'src/main.tsx'],
+    },
   },
 })
