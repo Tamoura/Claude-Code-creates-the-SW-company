@@ -1,57 +1,30 @@
-import { Outlet, NavLink } from 'react-router-dom';
+import { Outlet, useLocation } from 'react-router-dom';
+import Sidebar from '../../components/dashboard/Sidebar';
+import TopHeader from '../../components/dashboard/TopHeader';
+
+const pageTitles: Record<string, string> = {
+  '/dashboard': 'Dashboard',
+  '/dashboard/payments': 'Payments',
+  '/dashboard/invoices': 'Invoices',
+  '/dashboard/api-keys': 'API Keys',
+  '/dashboard/webhooks': 'Webhooks & Docs',
+  '/dashboard/security': 'Security',
+  '/dashboard/settings': 'Settings',
+};
 
 export default function DashboardLayout() {
-  return (
-    <div className="min-h-screen bg-gray-50">
-      {/* Header */}
-      <header className="bg-white shadow-sm">
-        <div className="container mx-auto px-4 py-4">
-          <div className="flex items-center justify-between">
-            <div>
-              <h1 className="text-xl font-bold text-gray-900">Stablecoin Gateway</h1>
-              <p className="text-sm text-gray-600">Merchant Dashboard</p>
-            </div>
-            <nav className="flex gap-6">
-              <NavLink
-                to="/dashboard"
-                end
-                className={({ isActive }) =>
-                  `text-sm font-medium transition-colors ${
-                    isActive ? 'text-blue-600' : 'text-gray-600 hover:text-gray-900'
-                  }`
-                }
-              >
-                Overview
-              </NavLink>
-              <NavLink
-                to="/dashboard/payments"
-                className={({ isActive }) =>
-                  `text-sm font-medium transition-colors ${
-                    isActive ? 'text-blue-600' : 'text-gray-600 hover:text-gray-900'
-                  }`
-                }
-              >
-                Payments
-              </NavLink>
-              <NavLink
-                to="/dashboard/settings"
-                className={({ isActive }) =>
-                  `text-sm font-medium transition-colors ${
-                    isActive ? 'text-blue-600' : 'text-gray-600 hover:text-gray-900'
-                  }`
-                }
-              >
-                Settings
-              </NavLink>
-            </nav>
-          </div>
-        </div>
-      </header>
+  const location = useLocation();
+  const title = pageTitles[location.pathname] || 'Dashboard';
 
-      {/* Main Content */}
-      <main className="container mx-auto px-4 py-8">
-        <Outlet />
-      </main>
+  return (
+    <div className="flex min-h-screen bg-page-bg">
+      <Sidebar />
+      <div className="flex-1 ml-56 flex flex-col">
+        <TopHeader title={title} />
+        <main className="flex-1 p-8">
+          <Outlet />
+        </main>
+      </div>
     </div>
   );
 }
