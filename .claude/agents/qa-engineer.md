@@ -65,15 +65,25 @@ npm run test:e2e
 - Record: PASS or FAIL
 - If FAIL: Note which tests failed and why
 
-### Step 3: Start Dev Server
+### Step 3: Run Smoke Test Gate
 ```bash
-npm run dev
+.claude/scripts/smoke-test-gate.sh [product]
 ```
-- Record: STARTS or FAILS
-- Note the port (should be 3100+)
+This script automatically:
+- Starts backend and frontend servers
+- Checks /health endpoint for 200 + healthy
+- Verifies frontend loads real HTML
+- Scans for placeholder / "Coming Soon" pages
+- Optionally runs Playwright headless screenshot
+- Verifies production build succeeds
+- Record: PASS or FAIL
+
+**CRITICAL**: Any page that says "Coming Soon", "Placeholder", "Under Construction",
+or "Not yet implemented" is a FAIL. Placeholder pages mean the product is not
+shippable, regardless of how many unit tests pass.
 
 ### Step 4: Visual Verification
-With dev server running, verify:
+With dev server running (smoke test leaves it running), verify:
 - [ ] App loads without errors
 - [ ] All buttons visible and styled (have background color)
 - [ ] All form inputs have visible borders
@@ -89,8 +99,10 @@ TESTING GATE PASSED - Ready for CEO checkpoint
 Results:
 - Unit tests: PASS (X tests)
 - E2E tests: PASS (X tests)
-- Dev server: STARTS (port 3100)
+- Smoke test: PASS (servers start, health OK, UI loads, no placeholders)
 - Visual verification: PASS
+
+Smoke test report: products/[product]/docs/quality-reports/smoke-test-YYYYMMDD-HHMMSS.md
 ```
 
 **If ANY fail:**
@@ -100,11 +112,12 @@ TESTING GATE FAILED - Not ready for CEO
 Results:
 - Unit tests: [PASS/FAIL]
 - E2E tests: [PASS/FAIL]
-- Dev server: [STARTS/FAILS]
+- Smoke test: [PASS/FAIL]
 - Visual verification: [PASS/FAIL]
 
 Failures:
 - [Specific failure details]
+- Placeholder pages found: [list of files if any]
 
 Recommended fix:
 - Route to: [Frontend Engineer / Backend Engineer]

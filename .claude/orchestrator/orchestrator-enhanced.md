@@ -241,6 +241,12 @@ E. UPDATE TASK GRAPH
 
 F. CHECK FOR CHECKPOINT
    If completed task has checkpoint = true:
+     - **Smoke Test (FIRST)**: `.claude/scripts/smoke-test-gate.sh [product]`
+       - If FAIL: DO NOT proceed. Route to appropriate engineer.
+       - If placeholder/Coming Soon pages found: BLOCK checkpoint.
+         Placeholder pages mean the product is not shippable.
+         Route to Frontend Engineer to replace with real UI.
+       - If PASS: continue to testing gate.
      - Run Testing Gate: `.claude/scripts/testing-gate-checklist.sh [product]`
      - Run Audit Gate: `/audit [product]`
      - If any audit dimension score < 8/10:
@@ -250,9 +256,10 @@ F. CHECK FOR CHECKPOINT
        - Continue execution loop (improvements first)
        - Re-audit after improvements
        - Repeat until all scores >= 8/10
-     - Once all scores >= 8/10:
+     - **All pass condition**: smoke test PASS + no placeholders + testing gate PASS + all audit scores >= 8/10
+     - Once all pass:
        - PAUSE execution loop
-       - Generate CEO report with audit scores
+       - Generate CEO report with audit scores + smoke test report
        - Wait for CEO approval
        - CEO may request higher scores (9-10) or accept
        - On approval: continue loop
