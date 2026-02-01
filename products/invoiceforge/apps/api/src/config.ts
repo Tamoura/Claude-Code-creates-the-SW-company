@@ -14,6 +14,7 @@ export interface AppConfig {
   jwtAccessExpiresIn: string;
   jwtRefreshExpiresIn: string;
   bcryptRounds: number;
+  anthropicApiKey: string;
 }
 
 function requireEnv(name: string): string {
@@ -35,6 +36,9 @@ export function loadConfig(): AppConfig {
     jwtAccessExpiresIn: process.env.JWT_ACCESS_EXPIRES_IN || '1h',
     jwtRefreshExpiresIn: process.env.JWT_REFRESH_EXPIRES_IN || '7d',
     bcryptRounds: parseInt(process.env.BCRYPT_ROUNDS || '12', 10),
+    anthropicApiKey: process.env.NODE_ENV === 'test'
+      ? (process.env.ANTHROPIC_API_KEY || 'test-key-not-used')
+      : requireEnv('ANTHROPIC_API_KEY'),
   };
 }
 
