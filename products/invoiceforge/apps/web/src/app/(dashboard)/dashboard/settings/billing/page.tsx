@@ -84,8 +84,8 @@ export default function BillingPage() {
     }
   };
 
+  // eslint-disable-next-line @typescript-eslint/no-unused-vars
   const handleUpgrade = (_planId: string) => {
-    // For MVP, show a toast/modal that this is coming soon
     alert('Stripe Billing integration coming soon! You will be able to upgrade your plan here.');
   };
 

@@ -2,9 +2,5 @@
   "buildCommand": "npm run build",
   "outputDirectory": ".next",
   "framework": "nextjs",
-  "regions": ["pdx1"],
-  "env": {
-    "NEXT_PUBLIC_API_URL": "@invoiceforge-api-url",
-    "NEXT_PUBLIC_APP_URL": "@invoiceforge-app-url"
-  }
+  "regions": ["pdx1"]
 }
