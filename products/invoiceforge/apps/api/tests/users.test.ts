@@ -102,7 +102,7 @@ describe('PUT /api/users/me', () => {
 
   it('should update name', async () => {
     const response = await app.inject({
-      method: 'PUT',
+      method: 'PATCH',
       url: '/api/users/me',
       headers: authHeader(accessToken),
       payload: { name: 'Updated Name' },
@@ -114,7 +114,7 @@ describe('PUT /api/users/me', () => {
 
   it('should update businessName', async () => {
     const response = await app.inject({
-      method: 'PUT',
+      method: 'PATCH',
       url: '/api/users/me',
       headers: authHeader(accessToken),
       payload: { businessName: 'My Business LLC' },
@@ -126,7 +126,7 @@ describe('PUT /api/users/me', () => {
 
   it('should update both name and businessName', async () => {
     const response = await app.inject({
-      method: 'PUT',
+      method: 'PATCH',
       url: '/api/users/me',
       headers: authHeader(accessToken),
       payload: {
@@ -143,7 +143,7 @@ describe('PUT /api/users/me', () => {
 
   it('should reject empty name', async () => {
     const response = await app.inject({
-      method: 'PUT',
+      method: 'PATCH',
       url: '/api/users/me',
       headers: authHeader(accessToken),
       payload: { name: '' },
@@ -154,7 +154,7 @@ describe('PUT /api/users/me', () => {
 
   it('should require authentication', async () => {
     const response = await app.inject({
-      method: 'PUT',
+      method: 'PATCH',
       url: '/api/users/me',
       payload: { name: 'Nope' },
     });

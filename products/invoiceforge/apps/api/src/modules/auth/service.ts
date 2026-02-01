@@ -36,6 +36,7 @@ export async function verifyPassword(
 
 export function generateAccessToken(payload: JwtPayload): string {
   const options: SignOptions = {
+    algorithm: 'HS256',
     expiresIn: config.jwtAccessExpiresIn as SignOptions['expiresIn'],
   };
   return jwt.sign(payload, config.jwtSecret, options);
@@ -46,7 +47,7 @@ export function generateRefreshToken(): string {
 }
 
 export function verifyAccessToken(token: string): JwtPayload {
-  return jwt.verify(token, config.jwtSecret) as JwtPayload;
+  return jwt.verify(token, config.jwtSecret, { algorithms: ['HS256'] }) as JwtPayload;
 }
 
 export function toUserResponse(user: {

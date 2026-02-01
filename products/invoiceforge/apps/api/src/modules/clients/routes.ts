@@ -13,6 +13,6 @@ export async function clientRoutes(fastify: FastifyInstance): Promise<void> {
   fastify.get('/api/clients', listClients);
   fastify.get('/api/clients/:id', getClient);
   fastify.post('/api/clients', createClient);
-  fastify.put('/api/clients/:id', updateClient);
+  fastify.patch('/api/clients/:id', updateClient);
   fastify.delete('/api/clients/:id', deleteClient);
 }

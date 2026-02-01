@@ -33,7 +33,8 @@ async function authPlugin(fastify: FastifyInstance): Promise<void> {
       try {
         const decoded = jwt.verify(
           token,
-          config.jwtSecret
+          config.jwtSecret,
+          { algorithms: ['HS256'] }
         ) as JwtPayload;
         request.userId = decoded.userId;
         request.userEmail = decoded.email;

@@ -420,7 +420,7 @@ describe('Get, update, delete, send invoice', () => {
     const invoiceId = genRes.json().id;
 
     const response = await app.inject({
-      method: 'PUT',
+      method: 'PATCH',
       url: `/api/invoices/${invoiceId}`,
       headers: authHeader(accessToken),
       payload: {
@@ -457,7 +457,7 @@ describe('Get, update, delete, send invoice', () => {
     });
 
     const response = await app.inject({
-      method: 'PUT',
+      method: 'PATCH',
       url: `/api/invoices/${invoiceId}`,
       headers: authHeader(accessToken),
       payload: { notes: 'Cannot update' },
