@@ -6,8 +6,6 @@
  * Uses Lua script for atomic increment + open in a single round-trip.
  */
 
-import { logger } from '../utils/logger.js';
-
 /**
  * Minimal Redis interface required by the circuit breaker.
  */

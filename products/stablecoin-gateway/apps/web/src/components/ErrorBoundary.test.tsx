@@ -3,8 +3,9 @@ import { describe, it, expect, vi } from 'vitest';
 import ErrorBoundary from './ErrorBoundary';
 
 // A helper component that throws on render
-function ThrowingChild({ message }: { message: string }) {
+function ThrowingChild({ message }: { message: string }): null {
   throw new Error(message);
+  return null; // This line is never reached, but satisfies TypeScript
 }
 
 describe('ErrorBoundary', () => {

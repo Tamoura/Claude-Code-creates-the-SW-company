@@ -15,6 +15,7 @@ export interface PaymentSessionForVerification {
   token: Token;
   amount: number;
   merchantAddress: string;
+  customerAddress?: string;
 }
 
 export interface VerificationResult {

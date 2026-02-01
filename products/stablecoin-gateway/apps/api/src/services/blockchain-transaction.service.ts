@@ -248,11 +248,11 @@ export class BlockchainTransactionService {
       }
 
       return true;
-    } catch (error) {
+    } catch (error: unknown) {
       // Graceful degradation: if Redis is broken, allow the refund
       logger.warn(
         'Redis unavailable for spending limit check, allowing refund',
-        error
+        { error } as Record<string, unknown>
       );
       return true;
     }
@@ -273,11 +273,11 @@ export class BlockchainTransactionService {
       const amountCents = dollarsToCents(amount);
       await this.redis.incrby(key, amountCents);
       await this.redis.expire(key, SPEND_KEY_TTL_SECONDS);
-    } catch (error) {
+    } catch (error: unknown) {
       // Log but do not fail the refund -- the tx already succeeded
       logger.warn(
         'Failed to record spend in Redis after successful refund',
-        error
+        { error } as Record<string, unknown>
       );
     }
   }

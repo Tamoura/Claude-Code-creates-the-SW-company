@@ -220,7 +220,7 @@ const webhookRoutes: FastifyPluginAsync = async (fastify) => {
           limit: query.limit,
           offset: query.offset,
           total,
-          has_more: query.offset + query.limit < total,
+          has_more: (query.offset ?? 0) + (query.limit ?? 20) < total,
         },
       });
     } catch (error) {

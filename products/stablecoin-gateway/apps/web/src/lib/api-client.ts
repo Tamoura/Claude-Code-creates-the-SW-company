@@ -79,6 +79,7 @@ export interface ApiKeyPermissions {
   read: boolean;
   write: boolean;
   refund: boolean;
+  [key: string]: boolean;
 }
 
 export interface CreateApiKeyRequest {
