@@ -62,7 +62,7 @@ const authRoutes: FastifyPluginAsync = async (fastify) => {
 
       // Generate tokens
       const accessToken = fastify.jwt.sign(
-        { userId: user.id, jti: randomUUID() },
+        { userId: user.id, role: user.role, jti: randomUUID() },
         { expiresIn: process.env.JWT_EXPIRES_IN || '15m' }
       );
 
@@ -87,6 +87,7 @@ const authRoutes: FastifyPluginAsync = async (fastify) => {
       return reply.code(201).send({
         id: user.id,
         email: user.email,
+        role: user.role,
         created_at: user.createdAt.toISOString(),
         access_token: accessToken,
         refresh_token: refreshToken,
@@ -173,7 +174,7 @@ const authRoutes: FastifyPluginAsync = async (fastify) => {
 
       // Generate tokens
       const accessToken = fastify.jwt.sign(
-        { userId: user.id, jti: randomUUID() },
+        { userId: user.id, role: user.role, jti: randomUUID() },
         { expiresIn: process.env.JWT_EXPIRES_IN || '15m' }
       );
 
@@ -198,6 +199,7 @@ const authRoutes: FastifyPluginAsync = async (fastify) => {
       return reply.send({
         id: user.id,
         email: user.email,
+        role: user.role,
         access_token: accessToken,
         refresh_token: refreshToken,
       });
