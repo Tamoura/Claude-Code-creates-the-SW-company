@@ -1,17 +1,14 @@
-name: InvoiceForge CI
+name: InvoiceForge Deploy
 
 on:
   push:
-    branches: [main, 'foundation/invoiceforge', 'feature/invoiceforge/**', 'fix/invoiceforge/**', 'release/invoiceforge/**']
-    paths:
-      - 'products/invoiceforge/**'
-  pull_request:
     branches: [main]
     paths:
       - 'products/invoiceforge/**'
+  workflow_dispatch:
 
 jobs:
-  lint-and-test-api:
+  test:
     name: API - Lint & Test
     runs-on: ubuntu-latest
 
@@ -80,3 +77,39 @@ jobs:
       - run: npm run build
         env:
           NEXT_PUBLIC_API_URL: http://localhost:5004
+
+  deploy-api:
+    name: Deploy API to Render
+    needs: [test, build-web]
+    runs-on: ubuntu-latest
+    if: github.ref == 'refs/heads/main'
+
+    steps:
+      - name: Trigger Render Deploy
+        run: |
+          curl -s -o /dev/null -w "%{http_code}" -X POST "${{ secrets.RENDER_DEPLOY_HOOK_INVOICEFORGE }}" | grep -q "200" || exit 1
+          echo "Render deploy triggered successfully"
+
+  deploy-web:
+    name: Deploy Web to Vercel
+    needs: [test, build-web]
+    runs-on: ubuntu-latest
+    if: github.ref == 'refs/heads/main'
+
+    steps:
+      - uses: actions/checkout@v4
+
+      - uses: actions/setup-node@v4
+        with:
+          node-version: 20
+
+      - name: Install Vercel CLI
+        run: npm install -g vercel
+
+      - name: Deploy to Vercel
+        run: |
+          cd products/invoiceforge/apps/web
+          vercel --prod --token ${{ secrets.VERCEL_TOKEN }}
+        env:
+          VERCEL_ORG_ID: ${{ secrets.VERCEL_ORG_ID }}
+          VERCEL_PROJECT_ID: ${{ secrets.VERCEL_PROJECT_ID_INVOICEFORGE }}

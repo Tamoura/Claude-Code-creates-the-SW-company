@@ -17,6 +17,7 @@ export async function healthCheck(
 
   reply.status(statusCode).send({
     status: dbStatus === 'connected' ? 'ok' : 'degraded',
+    version: '1.0.0',
     timestamp: new Date().toISOString(),
     database: dbStatus,
   });

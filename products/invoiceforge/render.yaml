@@ -1,0 +1,36 @@
+services:
+  - type: web
+    name: invoiceforge-api
+    runtime: docker
+    dockerfilePath: ./products/invoiceforge/Dockerfile
+    dockerContext: ./products/invoiceforge
+    region: oregon
+    plan: starter
+    healthCheckPath: /api/health
+    envVars:
+      - key: NODE_ENV
+        value: production
+      - key: PORT
+        value: 5004
+      - key: DATABASE_URL
+        fromDatabase:
+          name: invoiceforge-db
+          property: connectionString
+      - key: JWT_SECRET
+        generateValue: true
+      - key: JWT_REFRESH_SECRET
+        generateValue: true
+      - key: ANTHROPIC_API_KEY
+        sync: false
+      - key: STRIPE_SECRET_KEY
+        sync: false
+      - key: STRIPE_WEBHOOK_SECRET
+        sync: false
+      - key: APP_URL
+        sync: false
+
+databases:
+  - name: invoiceforge-db
+    databaseName: invoiceforge_prod
+    plan: starter
+    region: oregon
