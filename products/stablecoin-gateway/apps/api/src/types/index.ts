@@ -193,6 +193,46 @@ export interface EmailJob {
   data: Record<string, unknown>;
 }
 
+// ==================== Payment Links ====================
+
+export interface CreatePaymentLinkRequest {
+  name?: string;
+  amount?: number | null;
+  currency?: string;
+  network?: 'polygon' | 'ethereum';
+  token?: 'USDC' | 'USDT';
+  merchant_address: string;
+  success_url?: string;
+  cancel_url?: string;
+  description?: string;
+  metadata?: Record<string, unknown>;
+  max_usages?: number | null;
+  expires_at?: string;
+}
+
+export interface PaymentLinkResponse {
+  id: string;
+  short_code: string;
+  name: string | null;
+  amount: number | null;
+  currency: string;
+  network: string;
+  token: string;
+  merchant_address: string;
+  success_url: string | null;
+  cancel_url: string | null;
+  description: string | null;
+  metadata: Record<string, unknown> | null;
+  active: boolean;
+  usage_count: number;
+  max_usages: number | null;
+  payment_url: string;
+  qr_code_url: string;
+  created_at: string;
+  updated_at: string;
+  expires_at: string | null;
+}
+
 // ==================== Fastify Extensions ====================
 
 declare module 'fastify' {

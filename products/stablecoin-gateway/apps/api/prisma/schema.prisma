@@ -25,10 +25,12 @@ model User {
   updatedAt DateTime @updatedAt @map("updated_at")
 
   // Relations
-  apiKeys          ApiKey[]
-  paymentSessions  PaymentSession[]
-  webhookEndpoints WebhookEndpoint[]
-  refreshTokens    RefreshToken[]
+  apiKeys                ApiKey[]
+  paymentSessions        PaymentSession[]
+  webhookEndpoints       WebhookEndpoint[]
+  refreshTokens          RefreshToken[]
+  paymentLinks           PaymentLink[]
+  notificationPreference NotificationPreference?
 
   @@map("users")
 }
@@ -251,6 +253,68 @@ enum WebhookStatus {
   DELIVERING
   SUCCEEDED
   FAILED
+}
+
+// ==================== Payment Links ====================
+
+model PaymentLink {
+  id     String @id @default(cuid())
+  userId String @map("user_id")
+
+  // Link details
+  shortCode String  @unique @map("short_code")
+  name      String?
+  amount    Decimal? @db.Decimal(18, 6) // null = customer chooses amount
+  currency  String   @default("USD")
+
+  // Payment config
+  network         String  @default("polygon")
+  token           String  @default("USDC")
+  merchantAddress String  @map("merchant_address")
+  successUrl      String? @map("success_url")
+  cancelUrl       String? @map("cancel_url")
+  description     String?
+  metadata        Json?
+
+  // Link state
+  active    Boolean @default(true)
+  usageCount Int    @default(0) @map("usage_count")
+  maxUsages  Int?   @map("max_usages") // null = unlimited
+
+  // Timestamps
+  createdAt DateTime  @default(now()) @map("created_at")
+  updatedAt DateTime  @updatedAt @map("updated_at")
+  expiresAt DateTime? @map("expires_at")
+
+  // Relations
+  user User @relation(fields: [userId], references: [id], onDelete: Cascade)
+
+  @@index([userId])
+  @@index([shortCode])
+  @@index([active, createdAt])
+  @@map("payment_links")
+}
+
+// ==================== Notification Preferences ====================
+
+model NotificationPreference {
+  id     String @id @default(cuid())
+  userId String @unique @map("user_id")
+
+  // Email notifications
+  emailOnPaymentReceived  Boolean @default(true) @map("email_on_payment_received")
+  emailOnRefundProcessed  Boolean @default(true) @map("email_on_refund_processed")
+  emailOnPaymentFailed    Boolean @default(false) @map("email_on_payment_failed")
+  sendCustomerReceipt     Boolean @default(true)  @map("send_customer_receipt")
+
+  // Timestamps
+  createdAt DateTime @default(now()) @map("created_at")
+  updatedAt DateTime @updatedAt @map("updated_at")
+
+  // Relations
+  user User @relation(fields: [userId], references: [id], onDelete: Cascade)
+
+  @@map("notification_preferences")
 }
 
 // ==================== Audit Logs ====================
