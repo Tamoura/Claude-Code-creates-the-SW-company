@@ -23,7 +23,7 @@ services:
       - key: ANTHROPIC_API_KEY
         sync: false
       - key: ANTHROPIC_BASE_URL
-        value: https://openrouter.ai/api/v1
+        value: https://openrouter.ai/api
       - key: AI_MODEL
         value: anthropic/claude-sonnet-4-20250514
       - key: STRIPE_SECRET_KEY
