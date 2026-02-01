@@ -184,6 +184,100 @@ const paymentLinkRoutes: FastifyPluginAsync = async (fastify) => {
     }
   );
 
+  // GET /v1/payment-links/resolve/:shortCode - Resolve short code (public)
+  // Registered before /:id to prevent Fastify from matching "resolve" as an :id param
+  fastify.get('/resolve/:shortCode', async (request, reply) => {
+    try {
+      const { shortCode } = request.params as { shortCode: string };
+
+      const paymentLinkService = new PaymentLinkService(fastify.prisma);
+      const link = await paymentLinkService.getPaymentLinkByShortCode(shortCode);
+
+      const baseUrl = process.env.FRONTEND_URL || 'http://localhost:3101';
+      const response = paymentLinkService.toResponse(link, baseUrl);
+
+      return reply.send(response);
+    } catch (error) {
+      if (error instanceof AppError) {
+        return reply.code(error.statusCode).send(error.toJSON());
+      }
+      logger.error('Error resolving payment link', error);
+      throw error;
+    }
+  });
+
+  // GET /v1/payment-links/:id/qr - Generate QR code (public)
+  // Registered before /:id to prevent Fastify from matching QR path segments incorrectly
+  fastify.get('/:id/qr', async (request, reply) => {
+    try {
+      const { id } = request.params as { id: string };
+
+      // First, try to find by ID (for authenticated merchants)
+      let link = await fastify.prisma.paymentLink.findUnique({
+        where: { id },
+      });
+
+      // If not found by ID, try as a short code (for public access)
+      if (!link) {
+        link = await fastify.prisma.paymentLink.findUnique({
+          where: { shortCode: id },
+        });
+      }
+
+      if (!link) {
+        throw new AppError(404, 'not-found', 'Payment link not found');
+      }
+
+      // Validate link is still usable
+      if (!link.active) {
+        throw new AppError(400, 'link-inactive', 'Payment link is no longer active');
+      }
+
+      if (link.expiresAt && link.expiresAt < new Date()) {
+        throw new AppError(400, 'link-expired', 'Payment link has expired');
+      }
+
+      if (link.maxUsages !== null && link.usageCount >= link.maxUsages) {
+        throw new AppError(
+          400,
+          'link-max-usage-reached',
+          'Payment link has reached maximum usage limit'
+        );
+      }
+
+      // Generate checkout URL
+      const baseUrl = process.env.FRONTEND_URL || 'http://localhost:3101';
+      const checkoutUrl = `${baseUrl}/pay/${link.shortCode}`;
+
+      // Generate QR code as data URL
+      const qrDataUrl = await QRCode.toDataURL(checkoutUrl, {
+        errorCorrectionLevel: 'M',
+        margin: 2,
+        width: 300,
+        color: {
+          dark: '#000000',
+          light: '#FFFFFF',
+        },
+      });
+
+      logger.info('QR code generated for payment link', {
+        paymentLinkId: link.id,
+        shortCode: link.shortCode,
+      });
+
+      return reply.send({
+        qr_code: qrDataUrl,
+        payment_url: checkoutUrl,
+      });
+    } catch (error) {
+      if (error instanceof AppError) {
+        return reply.code(error.statusCode).send(error.toJSON());
+      }
+      logger.error('Error generating QR code', error);
+      throw error;
+    }
+  });
+
   // GET /v1/payment-links/:id - Get payment link by ID
   fastify.get(
     '/:id',
@@ -312,97 +406,6 @@ const paymentLinkRoutes: FastifyPluginAsync = async (fastify) => {
     }
   );
 
-  // GET /v1/payment-links/resolve/:shortCode - Resolve short code (public)
-  fastify.get('/resolve/:shortCode', async (request, reply) => {
-    try {
-      const { shortCode } = request.params as { shortCode: string };
-
-      const paymentLinkService = new PaymentLinkService(fastify.prisma);
-      const link = await paymentLinkService.getPaymentLinkByShortCode(shortCode);
-
-      const baseUrl = process.env.FRONTEND_URL || 'http://localhost:3101';
-      const response = paymentLinkService.toResponse(link, baseUrl);
-
-      return reply.send(response);
-    } catch (error) {
-      if (error instanceof AppError) {
-        return reply.code(error.statusCode).send(error.toJSON());
-      }
-      logger.error('Error resolving payment link', error);
-      throw error;
-    }
-  });
-
-  // GET /v1/payment-links/:id/qr - Generate QR code (public)
-  fastify.get('/:id/qr', async (request, reply) => {
-    try {
-      const { id } = request.params as { id: string };
-
-      // First, try to find by ID (for authenticated merchants)
-      let link = await fastify.prisma.paymentLink.findUnique({
-        where: { id },
-      });
-
-      // If not found by ID, try as a short code (for public access)
-      if (!link) {
-        link = await fastify.prisma.paymentLink.findUnique({
-          where: { shortCode: id },
-        });
-      }
-
-      if (!link) {
-        throw new AppError(404, 'not-found', 'Payment link not found');
-      }
-
-      // Validate link is still usable
-      if (!link.active) {
-        throw new AppError(400, 'link-inactive', 'Payment link is no longer active');
-      }
-
-      if (link.expiresAt && link.expiresAt < new Date()) {
-        throw new AppError(400, 'link-expired', 'Payment link has expired');
-      }
-
-      if (link.maxUsages !== null && link.usageCount >= link.maxUsages) {
-        throw new AppError(
-          400,
-          'link-max-usage-reached',
-          'Payment link has reached maximum usage limit'
-        );
-      }
-
-      // Generate checkout URL
-      const baseUrl = process.env.FRONTEND_URL || 'http://localhost:3101';
-      const checkoutUrl = `${baseUrl}/pay/${link.shortCode}`;
-
-      // Generate QR code as data URL
-      const qrDataUrl = await QRCode.toDataURL(checkoutUrl, {
-        errorCorrectionLevel: 'M',
-        margin: 2,
-        width: 300,
-        color: {
-          dark: '#000000',
-          light: '#FFFFFF',
-        },
-      });
-
-      logger.info('QR code generated for payment link', {
-        paymentLinkId: link.id,
-        shortCode: link.shortCode,
-      });
-
-      return reply.send({
-        qr_code: qrDataUrl,
-        payment_url: checkoutUrl,
-      });
-    } catch (error) {
-      if (error instanceof AppError) {
-        return reply.code(error.statusCode).send(error.toJSON());
-      }
-      logger.error('Error generating QR code', error);
-      throw error;
-    }
-  });
 };
 
 export default paymentLinkRoutes;
