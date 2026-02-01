@@ -228,5 +228,52 @@ export async function createPaymentLink(id: string): Promise<{
   });
 }
 
+// Auth API
+export async function login(
+  email: string,
+  password: string
+): Promise<{ user: import('./types').UserProfile; accessToken: string }> {
+  const res = await fetch(`${API_BASE}/auth/login`, {
+    method: 'POST',
+    headers: { 'Content-Type': 'application/json' },
+    body: JSON.stringify({ email, password }),
+  });
+  if (!res.ok) {
+    const error = await res.json().catch(() => ({ message: 'Login failed' }));
+    throw new Error(error.message || 'Invalid email or password');
+  }
+  const data = await res.json();
+  localStorage.setItem('accessToken', data.accessToken);
+  return data;
+}
+
+export async function register(
+  name: string,
+  email: string,
+  password: string
+): Promise<{ user: import('./types').UserProfile; accessToken: string }> {
+  const res = await fetch(`${API_BASE}/auth/register`, {
+    method: 'POST',
+    headers: { 'Content-Type': 'application/json' },
+    body: JSON.stringify({ name, email, password }),
+  });
+  if (!res.ok) {
+    const error = await res.json().catch(() => ({ message: 'Registration failed' }));
+    throw new Error(error.message || 'Registration failed');
+  }
+  const data = await res.json();
+  localStorage.setItem('accessToken', data.accessToken);
+  return data;
+}
+
+export async function logout(): Promise<void> {
+  try {
+    await apiFetch('/auth/logout', { method: 'POST' });
+  } catch {
+    // Clear token regardless
+  }
+  localStorage.removeItem('accessToken');
+}
+
 // Legacy export for compatibility
 export { apiFetch };
