@@ -10,11 +10,14 @@ const pageTitles: Record<string, string> = {
   '/dashboard/webhooks': 'Webhooks & Docs',
   '/dashboard/security': 'Security',
   '/dashboard/settings': 'Settings',
+  '/dashboard/admin/merchants': 'Merchants',
 };
 
 export default function DashboardLayout() {
   const location = useLocation();
-  const title = pageTitles[location.pathname] || 'Dashboard';
+  const title = pageTitles[location.pathname]
+    || (location.pathname.match(/^\/dashboard\/admin\/merchants\/.+\/payments$/) ? 'Merchant Payments' : null)
+    || 'Dashboard';
 
   return (
     <div className="flex min-h-screen bg-page-bg">

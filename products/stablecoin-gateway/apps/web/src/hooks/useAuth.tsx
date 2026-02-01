@@ -47,7 +47,7 @@ export function useAuth() {
     try {
       const result = await apiClient.login(email, password);
 
-      const user = { id: result.id, email: result.email };
+      const user = { id: result.id, email: result.email, role: result.role };
       storedUser = user;
 
       setState({

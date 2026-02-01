@@ -55,9 +55,12 @@ export interface ApiError {
   request_id?: string;
 }
 
+export type Role = 'MERCHANT' | 'ADMIN';
+
 export interface LoginResponse {
   id: string;
   email: string;
+  role: Role;
   access_token: string;
   refresh_token: string;
 }
@@ -65,6 +68,7 @@ export interface LoginResponse {
 export interface SignupResponse {
   id: string;
   email: string;
+  role: Role;
   created_at: string;
   access_token: string;
   refresh_token: string;
@@ -73,6 +77,32 @@ export interface SignupResponse {
 export interface User {
   id: string;
   email: string;
+  role?: Role;
+}
+
+export interface MerchantSummary {
+  id: string;
+  email: string;
+  role: Role;
+  created_at: string;
+  payment_count: number;
+  total_volume: number;
+  status_summary: Record<string, number>;
+}
+
+export interface MerchantPayment {
+  id: string;
+  amount: number;
+  currency: string;
+  description: string | null;
+  status: string;
+  network: string;
+  token: string;
+  merchant_address: string;
+  customer_address: string | null;
+  tx_hash: string | null;
+  created_at: string;
+  completed_at: string | null;
 }
 
 export interface ApiKeyPermissions {
@@ -543,6 +573,7 @@ export class ApiClient {
     return {
       id: response.id,
       email: response.email,
+      role: response.role,
       accessToken: response.access_token,
       refreshToken: response.refresh_token,
     };
@@ -584,6 +615,7 @@ export class ApiClient {
     return {
       id: response.id,
       email: response.email,
+      role: response.role,
       accessToken: response.access_token,
       refreshToken: response.refresh_token,
     };
@@ -665,6 +697,34 @@ export class ApiClient {
     return this.request<RotateWebhookSecretResponse>(`/v1/webhooks/${id}/rotate-secret`, {
       method: 'POST',
     });
+  }
+
+  // Admin methods
+
+  async listMerchants(params?: {
+    limit?: number;
+    offset?: number;
+    search?: string;
+  }): Promise<{ data: MerchantSummary[]; pagination: { total: number; has_more: boolean; limit: number; offset: number } }> {
+    const query = new URLSearchParams();
+    if (params?.limit) query.set('limit', String(params.limit));
+    if (params?.offset) query.set('offset', String(params.offset));
+    if (params?.search) query.set('search', params.search);
+    const qs = query.toString();
+    return this.request(`/v1/admin/merchants${qs ? `?${qs}` : ''}`);
+  }
+
+  async getMerchantPayments(merchantId: string, params?: {
+    limit?: number;
+    offset?: number;
+    status?: string;
+  }): Promise<{ data: MerchantPayment[]; pagination: { total: number; has_more: boolean; limit: number; offset: number } }> {
+    const query = new URLSearchParams();
+    if (params?.limit) query.set('limit', String(params.limit));
+    if (params?.offset) query.set('offset', String(params.offset));
+    if (params?.status) query.set('status', params.status);
+    const qs = query.toString();
+    return this.request(`/v1/admin/merchants/${merchantId}/payments${qs ? `?${qs}` : ''}`);
   }
 }
 
