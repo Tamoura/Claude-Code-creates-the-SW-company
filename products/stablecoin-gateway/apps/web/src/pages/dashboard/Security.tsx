@@ -1,8 +1,10 @@
 import { useState, type FormEvent } from 'react';
+import { useNavigate } from 'react-router-dom';
 import { useAuth } from '../../hooks/useAuth';
 import { apiClient } from '../../lib/api-client';
 
 export default function Security() {
+  const navigate = useNavigate();
   const { user, logout } = useAuth();
   const [showSessions, setShowSessions] = useState(false);
   const [showPasswordForm, setShowPasswordForm] = useState(false);
@@ -162,7 +164,7 @@ export default function Security() {
             <p className="text-xs text-text-muted">End your current session</p>
           </div>
           <button
-            onClick={() => logout()}
+            onClick={async () => { await logout(); navigate('/login'); }}
             className="px-4 py-2 text-sm font-medium text-red-400 border border-red-500/30 rounded-lg hover:bg-red-500/10 transition-colors"
           >
             Sign Out

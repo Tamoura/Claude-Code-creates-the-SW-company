@@ -17,7 +17,7 @@ export default function App() {
   const [step, setStep] = useState<Step>('config');
   const [apiUrl, setApiUrl] = useState(DEFAULT_API_URL);
   const [apiKey, setApiKey] = useState('');
-  const [merchantAddress, setMerchantAddress] = useState('');
+  const [merchantAddress, setMerchantAddress] = useState('0xdAC17F958D2ee523a2206206994597C13D831ec7');
   const [payment, setPayment] = useState<PaymentSession | null>(null);
   const [error, setError] = useState<string | null>(null);
   const [isLoading, setIsLoading] = useState(false);
