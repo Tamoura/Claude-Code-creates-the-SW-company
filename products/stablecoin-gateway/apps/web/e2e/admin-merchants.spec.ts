@@ -17,6 +17,10 @@ const ADMIN_PASSWORD = 'Test123!@#';
  */
 
 test.describe('Admin Merchant Management', () => {
+  // Run serially — all tests login to the same admin account,
+  // and the auth rate limiter (5 req / 15 min) rejects parallel logins.
+  test.describe.configure({ mode: 'serial' });
+
   let merchantEmail: string;
   const merchantPassword = 'TestPassword123!@#';
 
@@ -112,7 +116,7 @@ test.describe('Admin Merchant Management', () => {
     await page.waitForURL(/\/dashboard\/admin\/merchants\/.*\/payments/, { timeout: 10000 });
 
     // Page header and navigation
-    await expect(page.locator('text=Merchant Payments')).toBeVisible();
+    await expect(page.locator('h2:has-text("Merchant Payments")')).toBeVisible();
     await expect(page.locator('a:has-text("Back to Merchants")')).toBeVisible();
 
     // Payment table should render
@@ -121,8 +125,8 @@ test.describe('Admin Merchant Management', () => {
     // Our payment amount ($99.99) should appear
     await expect(page.locator('td:has-text("$99.99")')).toBeVisible({ timeout: 5000 });
 
-    // PENDING status badge
-    await expect(page.locator('text=PENDING')).toBeVisible();
+    // PENDING status badge in the table (not the filter button)
+    await expect(page.locator('td span:has-text("PENDING")')).toBeVisible();
 
     // Asset info (USDC / polygon)
     await expect(page.locator('td:has-text("USDC")')).toBeVisible();
