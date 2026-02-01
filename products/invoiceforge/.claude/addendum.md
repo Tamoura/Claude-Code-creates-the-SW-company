@@ -173,14 +173,131 @@ The prompt should use structured output (JSON mode) to ensure consistent parsing
 
 ## Tech Stack
 
-_To be filled by Architect._
+| Layer | Technology | Version | Notes |
+|-------|-----------|---------|-------|
+| Runtime | Node.js | 20+ | LTS |
+| Language | TypeScript | 5+ | All code |
+| Frontend | Next.js 14 + React 18 | 14.x / 18.x | App Router, SSR for public pages |
+| Styling | Tailwind CSS | 3.x | Utility-first |
+| Components | shadcn/ui | latest | Built on Radix UI, accessible |
+| Backend | Fastify | 4.x | Monolith with module separation |
+| ORM | Prisma | 5.x | Type-safe DB access |
+| Database | PostgreSQL | 15+ | Database name: `invoiceforge_dev` |
+| AI | Anthropic Claude API | claude-sonnet-4-20250514 | Invoice generation from natural language |
+| Payments | Stripe | latest | Connect (Express), Checkout, Billing |
+| PDF | @react-pdf/renderer | 3.x | Server-side, no headless browser |
+| Auth | Custom JWT + bcrypt | - | 1hr access, 7d refresh, cost-12 bcrypt |
+| Validation | Zod | 3.x | API input + AI output validation |
+| Testing | Jest + RTL + Playwright | - | Unit, component, E2E |
+| Linting | ESLint + Prettier | - | Company standard |
+
+### Libraries
+
+| Package | Purpose |
+|---------|---------|
+| `@anthropic-ai/sdk` | Claude API SDK |
+| `stripe` | Stripe SDK (Connect, Checkout, Billing, Webhooks) |
+| `@react-pdf/renderer` | PDF generation from React components |
+| `bcrypt` | Password hashing |
+| `jsonwebtoken` | JWT creation/verification |
+| `zod` | Schema validation |
+| `date-fns` | Date calculations (Net 30, etc.) |
+| `fuse.js` | Fuzzy matching for client name auto-match |
+| `@fastify/cors` | CORS |
+| `@fastify/helmet` | Security headers |
+| `@fastify/rate-limit` | Rate limiting |
+| `@fastify/cookie` | Cookie handling (refresh tokens) |
+| `google-auth-library` | Google OAuth token verification |
+| `slugify` | Filename generation for PDFs |
+
+### Ports
+
+- **Frontend**: 3109 (http://localhost:3109)
+- **Backend**: 5004 (http://localhost:5004)
+- **Database**: 5432 (shared PostgreSQL instance)
 
 ## Architecture
 
-_To be filled by Architect._
+### System Design
+
+Monolith backend with clean module separation. No microservices.
+
+```
+Browser -> Next.js (3109) -> Fastify API (5004) -> PostgreSQL
+                                  |
+                          +-------+-------+
+                          |       |       |
+                       Claude   Stripe  SendGrid
+                        API      API     (email)
+```
+
+### Backend Module Structure
+
+```
+apps/api/src/modules/
+  auth/        - Registration, login, JWT, Google OAuth, password reset
+  invoices/    - CRUD, AI generation, PDF export, payment links
+  clients/     - CRUD, fuzzy matching
+  users/       - Profile, subscription management
+  webhooks/    - Stripe event processing
+  health/      - Readiness/liveness checks
+```
+
+Each module has: `routes.ts`, `handlers.ts`, `service.ts`, `schemas.ts`, `test.ts`
+
+### Design Patterns
+
+- **Route-Handler-Service**: Routes define endpoints, handlers parse
+  requests, services contain business logic. Services are testable
+  independently.
+- **Zod schemas at boundaries**: All API inputs validated with Zod
+  before reaching handlers. AI output validated with Zod before
+  processing.
+- **Integer money**: All monetary values stored and transmitted as
+  cents (integers). Frontend converts for display. Eliminates
+  floating-point errors.
+- **Server-side calculation**: Backend recalculates all invoice math.
+  AI output is used for structure only, never trusted for arithmetic.
+- **Token-based public access**: Public invoice views use UUID share
+  tokens, separate from primary keys. No auth required.
+
+### Data Models (Key Entities)
+
+| Entity | Key Fields | Relationships |
+|--------|-----------|---------------|
+| User | email, name, subscription_tier, invoice_counter, stripe_account_id | has many Clients, Invoices, Sessions |
+| Client | name, email, address fields | belongs to User, has many Invoices |
+| Invoice | invoice_number, status, subtotal/tax/total (cents), share_token | belongs to User + Client, has many InvoiceItems |
+| InvoiceItem | description, quantity, unit_price, amount (cents), sort_order | belongs to Invoice |
+| Session | token, expires_at | belongs to User |
+
+### Security
+
+- JWT access tokens (1hr) + HttpOnly refresh token cookies (7d)
+- bcrypt cost factor 12 for passwords
+- Rate limiting on auth (10-20/min) and AI generation (60/min)
+- Stripe webhook signature verification
+- All queries filtered by user_id (resource ownership)
+- Input validation (Zod) + output escaping (XSS prevention)
+- Security headers via @fastify/helmet
+
+### Architecture Decision Records
+
+- **ADR-001**: Anthropic Claude for AI generation (vs OpenAI, local models)
+- **ADR-002**: @react-pdf/renderer for PDF generation (vs Puppeteer, pdf-lib)
+- **ADR-003**: Stripe Connect + Checkout for payments (vs PayPal, custom)
+
+Full ADRs at: `products/invoiceforge/docs/ADRs/`
+
+### Key Documents
+
+- Architecture: `products/invoiceforge/docs/architecture.md`
+- API Schema: `products/invoiceforge/docs/api-schema.yml`
+- DB Schema: `products/invoiceforge/docs/db-schema.sql`
+- PRD: `products/invoiceforge/docs/PRD.md`
 
 ---
 
-**Created by**: Product Manager
+**Created by**: Product Manager + Architect
 **Last Updated**: 2026-02-01
-**Status**: PRD complete, awaiting Architecture
+**Status**: Architecture complete, ready for implementation
