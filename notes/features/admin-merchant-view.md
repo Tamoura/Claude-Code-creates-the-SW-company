@@ -20,8 +20,8 @@ drills into a merchant's payments.
 3. Frontend — Sidebar, hooks, pages
 
 ## Progress
-- [ ] Phase 1: Database — Role enum + migration
-- [ ] Phase 2: Backend auth — requireAdmin + role in JWT
-- [ ] Phase 3: Backend admin routes
-- [ ] Phase 4-6: Frontend — API client, routing, sidebar, pages
-- [ ] PR
+- [x] Phase 1: Database — Role enum + migration
+- [x] Phase 2: Backend auth — requireAdmin + role in JWT
+- [x] Phase 3: Backend admin routes (12 tests passing)
+- [x] Phase 4-6: Frontend — API client, routing, sidebar, pages
+- [x] PR
