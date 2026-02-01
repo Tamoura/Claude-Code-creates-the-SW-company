@@ -7,45 +7,35 @@
       "pattern_id": "PATTERN-006",
       "description": "Calculation Module Separation",
       "first_applied": "2026-01-25",
-      "products_applied": [
-        "gpu-calculator",
-        "basic-calculator"
-      ],
-      "notes": "Pure functions in calculators/ directory, easy to test, reusable"
+      "products_applied": [],
+      "notes": "Pure functions in calculators/ directory, easy to test, reusable. Originally applied in gpu-calculator and basic-calculator (now deleted)."
     },
     {
       "pattern_id": "DECISION-VITE-VS-NEXTJS",
       "description": "Choose Vite for client-side only apps, Next.js for SSR",
       "first_applied": "2026-01-25",
-      "products_applied": [
-        "gpu-calculator",
-        "basic-calculator"
-      ],
+      "products_applied": [],
       "notes": "Documented in ADR-001 for both products"
     },
     {
       "pattern_id": "PATTERN-009",
       "description": "Bundle Size vs Library Trade-off",
       "first_applied": "2026-01-27",
-      "products_applied": [
-        "basic-calculator"
-      ],
-      "notes": "For basic arithmetic, custom rounding (20 LOC) can replace decimal.js (32KB). Only use heavy libraries when precision requirements justify the bundle cost."
+      "products_applied": [],
+      "notes": "For basic arithmetic, custom rounding (20 LOC) can replace decimal.js (32KB). Only use heavy libraries when precision requirements justify the bundle cost. Originally applied in basic-calculator (now deleted)."
     },
     {
       "pattern_id": "PATTERN-010",
       "description": "Accessibility as Architecture",
       "first_applied": "2026-01-27",
-      "products_applied": [
-        "basic-calculator"
-      ],
+      "products_applied": [],
       "notes": "Design accessibility from start (semantic HTML, ARIA, keyboard nav) rather than retrofitting. 10x easier upfront. Create ADR for accessibility strategy."
     }
   ],
   "task_history": [
     {
       "task_id": "ARCH-01",
-      "product": "gpu-calculator",
+      "product": "gpu-calculator (deleted)",
       "task_type": "architecture",
       "started_at": "2026-01-25T08:00:00Z",
       "completed_at": "2026-01-25T10:00:00Z",
@@ -72,7 +62,7 @@
     },
     {
       "task_id": "ARCH-01",
-      "product": "basic-calculator",
+      "product": "basic-calculator (deleted)",
       "task_type": "architecture",
       "started_at": "2026-01-27T10:00:00Z",
       "completed_at": "2026-01-27T12:00:00Z",
@@ -101,7 +91,7 @@
     },
     {
       "task_id": "ARCH-01",
-      "product": "basic-calculator",
+      "product": "basic-calculator (deleted)",
       "timestamp": "2026-01-27T04:50:11Z",
       "status": "success",
       "time_minutes": 120,

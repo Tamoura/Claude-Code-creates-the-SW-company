@@ -8,7 +8,7 @@
       "description": "Vite + React + TypeScript Setup",
       "first_applied": "2026-01-25",
       "products_applied": [
-        "gpu-calculator"
+        "gpu-calculator (deleted)"
       ],
       "notes": "Always configure port to 3100+ to avoid conflicts"
     },
@@ -17,7 +17,7 @@
       "description": "Tailwind CSS Content Paths",
       "first_applied": "2026-01-25",
       "products_applied": [
-        "gpu-calculator"
+        "gpu-calculator (deleted)"
       ],
       "notes": "Must include index.html for Vite projects"
     },
@@ -26,7 +26,7 @@
       "description": "Custom Hook Pattern for Business Logic",
       "first_applied": "2026-01-25",
       "products_applied": [
-        "gpu-calculator"
+        "gpu-calculator (deleted)"
       ],
       "notes": "useCalculator hook pattern works well for stateful operations"
     },
@@ -35,7 +35,7 @@
       "description": "Component Folder Structure",
       "first_applied": "2026-01-25",
       "products_applied": [
-        "gpu-calculator"
+        "gpu-calculator (deleted)"
       ],
       "notes": "layout/, forms/, results/, common/ organization"
     }
@@ -43,7 +43,7 @@
   "task_history": [
     {
       "task_id": "FRONTEND-01",
-      "product": "gpu-calculator",
+      "product": "gpu-calculator (deleted)",
       "task_type": "foundation",
       "started_at": "2026-01-25T09:00:00Z",
       "completed_at": "2026-01-25T11:00:00Z",
@@ -68,7 +68,7 @@
     },
     {
       "task_id": "FRONTEND-02",
-      "product": "gpu-calculator",
+      "product": "gpu-calculator (deleted)",
       "task_type": "feature",
       "started_at": "2026-01-25T13:00:00Z",
       "completed_at": "2026-01-25T16:00:00Z",
@@ -93,7 +93,7 @@
     },
     {
       "task_id": "FRONTEND-01",
-      "product": "basic-calculator",
+      "product": "basic-calculator (deleted)",
       "timestamp": "2026-01-27T05:09:19Z",
       "status": "success",
       "time_minutes": 90,

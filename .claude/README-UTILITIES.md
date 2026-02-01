@@ -12,16 +12,16 @@ Run quality gates for any product:
 
 ```bash
 # Security gate
-.claude/quality-gates/executor.sh security gpu-calculator
+.claude/quality-gates/executor.sh security stablecoin-gateway
 
 # Performance gate
-.claude/quality-gates/executor.sh performance gpu-calculator
+.claude/quality-gates/executor.sh performance stablecoin-gateway
 
 # Testing gate
-.claude/quality-gates/executor.sh testing gpu-calculator
+.claude/quality-gates/executor.sh testing stablecoin-gateway
 
 # Production readiness gate
-.claude/quality-gates/executor.sh production gpu-calculator
+.claude/quality-gates/executor.sh production stablecoin-gateway
 ```
 
 **Output**: Report saved to `products/[product]/docs/gates/[gate-type]-gate-[timestamp].md`
@@ -126,19 +126,19 @@ Helper functions for task graph operations.
 source .claude/engine/task-graph-utils.sh
 
 # Get ready tasks
-get_ready_tasks "products/gpu-calculator"
+get_ready_tasks "products/stablecoin-gateway"
 
 # Get parallel tasks
-get_parallel_tasks "products/gpu-calculator"
+get_parallel_tasks "products/stablecoin-gateway"
 
 # Update task status
-update_task_status "products/gpu-calculator" "TASK-01" "completed"
+update_task_status "products/stablecoin-gateway" "TASK-01" "completed"
 
 # Validate task graph
-validate_task_graph "products/gpu-calculator"
+validate_task_graph "products/stablecoin-gateway"
 
 # List all tasks
-list_tasks "products/gpu-calculator"
+list_tasks "products/stablecoin-gateway"
 ```
 
 **Requirements**: `yq` (YAML processor)
@@ -157,9 +157,9 @@ These utilities are designed to be invoked by Claude Code agents using the Task 
 Task(
   subagent_type: "general-purpose",
   prompt: `
-    Run the testing gate for gpu-calculator:
+    Run the testing gate for stablecoin-gateway:
     
-    Execute: .claude/quality-gates/executor.sh testing gpu-calculator
+    Execute: .claude/quality-gates/executor.sh testing stablecoin-gateway
     
     Report the results back.
   `,

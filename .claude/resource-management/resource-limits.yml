@@ -69,7 +69,7 @@ products:
 
   # Product-specific allocations (CEO can override)
   # Example:
-  # gpu-calculator:
+  # stablecoin-gateway:
   #   priority: "high"
   #   max_concurrent_agents: 5
   #   token_budget_daily: 1000000

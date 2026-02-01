@@ -251,7 +251,7 @@ Product B needs auth:
 Your commands stay the same:
 ```
 /orchestrator New product: analytics dashboard
-/orchestrator Fix bug in gpu-calculator
+/orchestrator Fix bug in stablecoin-gateway
 /orchestrator Status update
 ```
 

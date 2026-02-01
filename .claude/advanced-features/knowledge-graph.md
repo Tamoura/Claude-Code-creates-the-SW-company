@@ -44,7 +44,7 @@ RELATIONSHIPS:
 
 ```typescript
 interface ProductNode {
-  id: string;                    // "gpu-calculator"
+  id: string;                    // "stablecoin-gateway"
   type: "Product";
   name: string;
   status: "planning" | "development" | "production";
@@ -192,17 +192,17 @@ BUG --CAUSED_BY--> COMPONENT
 ### Query 1: Product Dependencies
 
 ```cypher
-// "What does gpu-calculator depend on?"
+// "What does stablecoin-gateway depend on?"
 
-MATCH (p:Product {id: 'gpu-calculator'})-[:USES]->(pattern:Pattern)
+MATCH (p:Product {id: 'stablecoin-gateway'})-[:USES]->(pattern:Pattern)
 RETURN p.name, pattern.name, pattern.category
 
 RESULT:
 | Product          | Pattern                | Category  |
 |------------------|------------------------|-----------|
-| gpu-calculator   | Next.js 14 Setup       | frontend  |
-| gpu-calculator   | Tailwind Configuration | frontend  |
-| gpu-calculator   | Vitest Testing         | testing   |
+| stablecoin-gateway   | Next.js 14 Setup       | frontend  |
+| stablecoin-gateway   | Tailwind Configuration | frontend  |
+| stablecoin-gateway   | Vitest Testing         | testing   |
 ```
 
 ### Query 2: Agent Expertise
@@ -217,7 +217,7 @@ RETURN agent.name, product.name, feature.name, feature.status
 RESULT:
 | Agent             | Product              | Feature           | Status   |
 |-------------------|----------------------|-------------------|----------|
-| backend-engineer  | gpu-calculator       | Calculator API    | complete |
+| backend-engineer  | stablecoin-gateway       | Calculator API    | complete |
 | backend-engineer  | analytics-dashboard  | Pricing Endpoint  | complete |
 | backend-engineer  | user-portal          | Auth Middleware   | complete |
 ```
@@ -235,7 +235,7 @@ RESULT:
 |----------------------------|----------------------|------------|
 | Prisma Connection Pooling  | user-portal          | 1.0        |
 | Prisma Connection Pooling  | analytics-dashboard  | 1.0        |
-| Prisma Connection Pooling  | tech-mgmt-helper     | 1.0        |
+| Prisma Connection Pooling  | meetingmind     | 1.0        |
 ```
 
 ### Query 4: Feature Dependencies
@@ -302,9 +302,9 @@ ORDER BY pattern.learned_from DESC
 RESULT:
 | Pattern                    | Learned From         | Times Applied |
 |----------------------------|----------------------|---------------|
-| Tailwind Config Fix        | gpu-calculator       | 3             |
-| Component Memo Optimization| it4it-dashboard      | 2             |
-| E2E Test Flakiness Fix     | tech-mgmt-helper     | 1             |
+| Tailwind Config Fix        | stablecoin-gateway       | 3             |
+| Component Memo Optimization| deal-flow-platform      | 2             |
+| E2E Test Flakiness Fix     | meetingmind     | 1             |
 ```
 
 ## Visualization
@@ -312,7 +312,7 @@ RESULT:
 ### Product Ecosystem Map
 
 ```
-      gpu-calculator
+      stablecoin-gateway
           ├─ Features
           │   ├─ Training Calculator
           │   ├─ Inference Calculator
@@ -452,7 +452,7 @@ fixBug(bug) {
 /orchestrator knowledge graph [query]
 
 # Examples:
-/orchestrator knowledge graph "What does gpu-calculator depend on?"
+/orchestrator knowledge graph "What does stablecoin-gateway depend on?"
 /orchestrator knowledge graph "Show me all bugs in user-authentication"
 /orchestrator knowledge graph "Which patterns are used most?"
 /orchestrator knowledge graph "What has backend-engineer created?"
@@ -592,9 +592,9 @@ For simpler implementation without Neo4j:
 {
   "nodes": [
     {
-      "id": "gpu-calculator",
+      "id": "stablecoin-gateway",
       "type": "Product",
-      "properties": { "name": "GPU Calculator", "status": "production" }
+      "properties": { "name": "Stablecoin Gateway", "status": "production" }
     },
     {
       "id": "PATTERN-001",
@@ -604,7 +604,7 @@ For simpler implementation without Neo4j:
   ],
   "relationships": [
     {
-      "from": "gpu-calculator",
+      "from": "stablecoin-gateway",
       "to": "PATTERN-001",
       "type": "USES"
     }

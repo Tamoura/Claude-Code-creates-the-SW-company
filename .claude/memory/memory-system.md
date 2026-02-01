@@ -65,7 +65,7 @@ Agents learn from experience and share knowledge across products to become more 
       "category": "frontend",
       "description": "Proper Tailwind setup for Next.js 14+ with TypeScript",
       "learned_from": {
-        "product": "gpu-calculator",
+        "product": "stablecoin-gateway",
         "task": "FRONTEND-01",
         "date": "2025-01-25"
       },
@@ -148,7 +148,7 @@ Agents learn from experience and share knowledge across products to become more 
   "task_history": [
     {
       "task_id": "BACKEND-01",
-      "product": "gpu-calculator",
+      "product": "stablecoin-gateway",
       "task_type": "foundation",
       "started_at": "2025-01-25T09:00:00Z",
       "completed_at": "2025-01-25T11:30:00Z",
@@ -164,8 +164,8 @@ Agents learn from experience and share knowledge across products to become more 
         "Added prisma generate to package.json postinstall script"
       ],
       "artifacts": [
-        "products/gpu-calculator/apps/api/src/index.ts",
-        "products/gpu-calculator/apps/api/prisma/schema.prisma"
+        "products/stablecoin-gateway/apps/api/src/index.ts",
+        "products/stablecoin-gateway/apps/api/prisma/schema.prisma"
       ],
       "tests_added": 15,
       "coverage_percent": 92
@@ -238,7 +238,7 @@ Agents learn from experience and share knowledge across products to become more 
     {
       "id": "DEC-001",
       "date": "2025-01-25",
-      "product": "gpu-calculator",
+      "product": "stablecoin-gateway",
       "context": "Choosing state management for calculator form",
       "decision": "Use React useState (no Redux/Zustand)",
       "made_by": "frontend-engineer",

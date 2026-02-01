@@ -6,7 +6,7 @@
   "task_history": [
     {
       "task_id": "PRD-01",
-      "product": "basic-calculator",
+      "product": "basic-calculator (deleted)",
       "timestamp": "2026-01-27T04:36:50Z",
       "status": "success",
       "time_minutes": 45,
@@ -14,7 +14,7 @@
     },
     {
       "task_id": "PRD-01",
-      "product": "basic-calculator",
+      "product": "basic-calculator (deleted)",
       "timestamp": "2026-01-27T04:37:26Z",
       "status": "success",
       "time_minutes": 45,

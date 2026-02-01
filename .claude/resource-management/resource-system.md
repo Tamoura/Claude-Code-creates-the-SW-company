@@ -329,9 +329,10 @@ Resource metrics feed into CEO dashboard:
 - Opus: 2 tasks (critical), $6.00
 
 ### By Product
-- gpu-calculator: 35% of tokens
-- it4it-dashboard: 45% of tokens
-- tech-management-helper: 20% of tokens
+- stablecoin-gateway: 40% of tokens
+- deal-flow-platform: 30% of tokens
+- meetingmind: 15% of tokens
+- quantum-computing-usecases: 15% of tokens
 ```
 
 ## Benefits

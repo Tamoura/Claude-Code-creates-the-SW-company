@@ -274,7 +274,7 @@ Visual representation of all company knowledge, relationships, and dependencies.
 
 ```
 NODES:
-├── Product (gpu-calculator, analytics-dashboard)
+├── Product (stablecoin-gateway, analytics-dashboard)
 ├── Feature (user-auth, calculator-ui)
 ├── Component (LoginForm, NavBar)
 ├── Agent (backend-engineer, frontend-engineer)
@@ -298,9 +298,9 @@ RELATIONSHIPS:
 
 **Example Queries**:
 
-**Query 1**: "What does gpu-calculator depend on?"
+**Query 1**: "What does stablecoin-gateway depend on?"
 ```cypher
-MATCH (p:Product {id: 'gpu-calculator'})-[:USES]->(pattern:Pattern)
+MATCH (p:Product {id: 'stablecoin-gateway'})-[:USES]->(pattern:Pattern)
 RETURN pattern.name, pattern.category
 ```
 Result: Next.js Setup, Tailwind Config, Vitest Testing
@@ -349,7 +349,7 @@ Result: Ranked list of agents by expertise
 
 **Dashboard Integration**:
 ```bash
-/orchestrator knowledge graph "What does gpu-calculator depend on?"
+/orchestrator knowledge graph "What does stablecoin-gateway depend on?"
 /orchestrator knowledge graph "Show bugs in user-authentication"
 /orchestrator knowledge graph "Which patterns are used most?"
 ```
@@ -563,7 +563,7 @@ Your AI software company now has:
 /orchestrator "A/B test: PostgreSQL vs MongoDB for customer-portal"
 
 # Query knowledge graph
-/orchestrator knowledge graph "What does gpu-calculator depend on?"
+/orchestrator knowledge graph "What does stablecoin-gateway depend on?"
 /orchestrator knowledge graph "Who has worked on authentication?"
 
 # View dashboard with Phase 3 enhancements

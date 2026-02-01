@@ -15,7 +15,7 @@ Example:
 
 ## Arguments
 
-- **product-name**: Product directory name under `products/` (e.g., `stablecoin-gateway`, `gpu-calculator`)
+- **product-name**: Product directory name under `products/` (e.g., `stablecoin-gateway`, `deal-flow-platform`)
 
 ## What This Command Does
 

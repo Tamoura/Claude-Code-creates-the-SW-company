@@ -48,14 +48,14 @@ Give CEO instant visibility into:
 - Projected EOD: $95
 
 ## 🏗️ Products
-┌────────────────────────┬──────────┬───────────┐
-│ Product                │ Phase    │ Health    │
-├────────────────────────┼──────────┼───────────┤
-│ gpu-calculator         │ Prod     │ 🟢 Healthy│
-│ it4it-dashboard        │ Dev      │ 🟡 InTest │
-│ tech-mgmt-helper       │ Dev      │ 🟢 OnTrack│
-│ analytics-dashboard    │ Planning │ 🟢 OnTrack│
-└────────────────────────┴──────────┴───────────┘
+┌────────────────────────────────┬──────────┬───────────┐
+│ Product                        │ Phase    │ Health    │
+├────────────────────────────────┼──────────┼───────────┤
+│ stablecoin-gateway             │ Active   │ 🟢 Healthy│
+│ deal-flow-platform             │ Active   │ 🟢 OnTrack│
+│ meetingmind                    │ Planned  │ 🔵 Planned│
+│ quantum-computing-usecases     │ Planned  │ 🔵 Planned│
+└────────────────────────────────┴──────────┴───────────┘
 
 ## ⚠️ Alerts
 - Approaching daily token limit (80%)
@@ -84,14 +84,14 @@ Give CEO instant visibility into:
 - Progress: 65% (based on estimated time)
 
 ### Frontend Engineer #1
-- Product: it4it-dashboard
+- Product: deal-flow-platform
 - Task: FRONTEND-12 - D2C incident detail page
 - Started: 14:15 (15 min ago)
 - Estimated completion: 15:00 (30 min)
 - Progress: 33%
 
 ### QA Engineer #1
-- Product: gpu-calculator
+- Product: stablecoin-gateway
 - Task: QA-03 - Testing gate for feature X
 - Started: 14:20 (10 min ago)
 - Estimated completion: 14:50 (20 min)
@@ -99,7 +99,7 @@ Give CEO instant visibility into:
 
 ## 📋 Queue (2 tasks)
 
-1. **HIGH** - Backend Engineer for tech-mgmt-helper
+1. **HIGH** - Backend Engineer for meetingmind
    - Task: Implement auth middleware
    - Waiting: 12 min
    - Expected start: 14:45 (when Backend #1 finishes)
@@ -115,7 +115,7 @@ No tasks currently blocked.
 ## ✅ Recently Completed (last hour)
 - 14:15 - Frontend Engineer: Calculator page layout (45 min)
 - 14:00 - Architect: API contract for analytics (90 min)
-- 13:45 - DevOps: CI pipeline for tech-mgmt (60 min)
+- 13:45 - DevOps: CI pipeline for meetingmind (60 min)
 ```
 
 ### 3. Performance View
@@ -209,9 +209,9 @@ DevOps      ██████████████░░░░░░░ 71%
 │ Product              │ Tasks │ Tokens  │ Cost     │ % Total │
 ├──────────────────────┼───────┼─────────┼──────────┼─────────┤
 │ analytics-dashboard  │ 6     │ 720K    │ $36.00   │ 45%     │
-│ it4it-dashboard      │ 5     │ 560K    │ $28.00   │ 35%     │
-│ gpu-calculator       │ 2     │ 160K    │ $8.00    │ 10%     │
-│ tech-mgmt-helper     │ 2     │ 160K    │ $8.00    │ 10%     │
+│ deal-flow-platform      │ 5     │ 560K    │ $28.00   │ 35%     │
+│ stablecoin-gateway       │ 2     │ 160K    │ $8.00    │ 10%     │
+│ meetingmind     │ 2     │ 160K    │ $8.00    │ 10%     │
 └──────────────────────┴───────┴─────────┴──────────┴─────────┘
 
 ## 🤖 By Agent Type
@@ -256,60 +256,39 @@ $100 ┤
 # Product Health Dashboard
 **Updated**: 2026-01-26 14:30:00
 
-## 📦 gpu-calculator
-**Status**: 🟢 Production | **Health**: Healthy
+## 📦 stablecoin-gateway
+**Status**: 🟢 Active | **Health**: Healthy
 
-- **Phase**: Production
-- **Last deploy**: 2026-01-20 (6 days ago)
-- **Test status**: ✅ 125/125 passing (100%)
+- **Phase**: Active development
+- **Test status**: ✅ All tests passing
 - **Recent activity**:
-  - 2 features added this week
-  - 0 bugs reported
-  - Performance: Lighthouse 94
-- **Resource usage**: 10% of company total
+  - Security audit completed
+  - Dashboard UI rebuilt
+- **Resource usage**: 40% of company total
 
-## 📦 it4it-dashboard
-**Status**: 🟡 Development | **Health**: In Testing
+## 📦 deal-flow-platform
+**Status**: 🟢 Active | **Health**: On Track
 
-- **Phase**: Development (Sprint 2.3)
-- **Progress**: 65% complete
-- **Test status**: ⚠️ 180/185 passing (97%)
-  - 5 E2E tests failing (Frontend working on fix)
+- **Phase**: Active development
 - **Recent activity**:
-  - Testing Gate ran 2h ago: FAIL (E2E issues)
-  - Frontend Engineer fixing issues now
-  - Expected fix: 30 min
-- **Resource usage**: 35% of company total
+  - Platform under development
+- **Resource usage**: 30% of company total
 
-## 📦 tech-management-helper
-**Status**: 🟢 Development | **Health**: On Track
+## 📦 meetingmind
+**Status**: 🔵 Planned | **Health**: Not Started
 
-- **Phase**: Development (Foundation complete)
-- **Progress**: 80% complete
-- **Test status**: ✅ 95/95 passing (100%)
-- **Recent activity**:
-  - Foundation passed Testing Gate
-  - CEO approved yesterday
-  - Backend Engineer implementing auth (in queue)
-- **Resource usage**: 20% of company total
+- **Phase**: Planning
+- **Resource usage**: 0%
 
-## 📦 analytics-dashboard
-**Status**: 🟢 Planning | **Health**: On Track
+## 📦 quantum-computing-usecases
+**Status**: 🔵 Planned | **Health**: Not Started
 
-- **Phase**: Architecture
-- **Progress**: 20% complete
-- **Test status**: N/A (no code yet)
-- **Recent activity**:
-  - Architect finished API contracts 30min ago
-  - DevOps starting CI/CD setup
-  - Backend + Frontend foundation starting soon (parallel)
-- **Resource usage**: 35% of company total
+- **Phase**: Planning
+- **Resource usage**: 0%
 
 ## 🔍 Overall Health
-- Products in production: 1
-- Products in development: 2
-- Products in planning: 1
-- All tests passing: 3/4 (75%)
+- Products active: 2
+- Products planned: 2
 - Blockers: 0
 - CEO approvals pending: 0
 ```
@@ -342,7 +321,7 @@ CHECKPOINT ⏳ Pending (CEO review after Testing Gate)
 **Status**: 2/10 tasks complete (20%)
 **ETA**: Foundation complete in 2 hours
 
-## it4it-dashboard
+## deal-flow-platform
 
 ### Active Tasks
 ```

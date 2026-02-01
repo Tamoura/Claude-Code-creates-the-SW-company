@@ -22,14 +22,6 @@ products:
     path: "products/quantum-computing-usecases"
     status: "planned"
     notes: "Quantum computing use case explorer."
-  gpu-calculator:
-    path: "products/gpu-calculator"
-    status: "maintenance"
-    notes: "GPU cost calculator. Feature-complete for v1."
-  basic-calculator:
-    path: "products/basic-calculator"
-    status: "maintenance"
-    notes: "Starter project. Feature-complete."
   deal-flow-platform:
     path: "products/deal-flow-platform"
     status: "active"
@@ -45,4 +37,4 @@ pending_decisions: []
 checkpoints: []
 
 # Last updated
-last_updated: "2026-01-31T00:00:00Z"
+last_updated: "2026-02-01T00:00:00Z"
