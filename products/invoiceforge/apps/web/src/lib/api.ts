@@ -10,19 +10,20 @@ import type {
 
 const API_BASE = process.env.NEXT_PUBLIC_API_URL || 'http://localhost:5004/api';
 
-function getAuthHeaders(): HeadersInit {
+function getAuthHeaders(hasBody: boolean): HeadersInit {
   const token = typeof window !== 'undefined' ? localStorage.getItem('accessToken') : null;
   return {
-    'Content-Type': 'application/json',
+    ...(hasBody ? { 'Content-Type': 'application/json' } : {}),
     ...(token ? { Authorization: `Bearer ${token}` } : {}),
   };
 }
 
 async function apiFetch(path: string, options?: RequestInit) {
+  const hasBody = options?.body != null;
   const res = await fetch(`${API_BASE}${path}`, {
     ...options,
     headers: {
-      ...getAuthHeaders(),
+      ...getAuthHeaders(hasBody),
       ...options?.headers,
     },
   });
