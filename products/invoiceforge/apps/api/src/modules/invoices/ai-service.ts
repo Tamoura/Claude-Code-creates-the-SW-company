@@ -112,9 +112,22 @@ let anthropicClient: Anthropic | null = null;
 
 function getAnthropicClient(): Anthropic {
   if (!anthropicClient) {
-    anthropicClient = new Anthropic({
+    const options: Record<string, unknown> = {
       apiKey: config.anthropicApiKey,
-    });
+    };
+
+    // Support OpenRouter or other Anthropic-compatible providers
+    if (config.anthropicBaseUrl) {
+      options.baseURL = config.anthropicBaseUrl;
+      options.defaultHeaders = {
+        'HTTP-Referer': config.appUrl,
+        'X-Title': 'InvoiceForge',
+      };
+    }
+
+    anthropicClient = new Anthropic(
+      options as ConstructorParameters<typeof Anthropic>[0]
+    );
   }
   return anthropicClient;
 }
@@ -134,7 +147,7 @@ export async function generateInvoice(
   const client = getAnthropicClient();
 
   const response = await client.messages.create({
-    model: 'claude-sonnet-4-20250514',
+    model: config.aiModel,
     max_tokens: 1024,
     system: SYSTEM_PROMPT,
     tools: [TOOL_SCHEMA],
