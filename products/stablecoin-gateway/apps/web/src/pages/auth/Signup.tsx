@@ -57,13 +57,19 @@ export default function Signup() {
   };
 
   return (
-    <div className="min-h-screen bg-gray-50 flex items-center justify-center py-12 px-4 sm:px-6 lg:px-8">
+    <div className="min-h-screen bg-page-bg flex items-center justify-center py-12 px-4 sm:px-6 lg:px-8">
       <div className="max-w-md w-full space-y-8">
-        <div>
-          <h2 className="mt-6 text-center text-3xl font-extrabold text-gray-900">
+        <div className="text-center">
+          <Link to="/" className="inline-flex items-center gap-2 mb-8">
+            <div className="w-8 h-8 rounded-lg bg-gradient-to-br from-pink-500 to-blue-500 flex items-center justify-center">
+              <span className="text-white text-sm font-bold">SF</span>
+            </div>
+            <span className="text-lg font-bold text-text-primary">StableFlow</span>
+          </Link>
+          <h2 className="text-3xl font-bold text-text-primary">
             Create your account
           </h2>
-          <p className="mt-2 text-center text-sm text-gray-600">
+          <p className="mt-2 text-sm text-text-secondary">
             Get started with your merchant dashboard
           </p>
         </div>
@@ -71,16 +77,16 @@ export default function Signup() {
         <form className="mt-8 space-y-6" onSubmit={handleSubmit}>
           {error && (
             <div
-              className="bg-red-50 border border-red-200 text-red-700 px-4 py-3 rounded relative"
+              className="bg-red-500/10 border border-red-500/30 text-red-400 px-4 py-3 rounded-lg"
               role="alert"
             >
-              <span className="block sm:inline">{error}</span>
+              <span className="block sm:inline text-sm">{error}</span>
             </div>
           )}
 
-          <div className="rounded-md shadow-sm -space-y-px">
+          <div className="space-y-4">
             <div>
-              <label htmlFor="email" className="sr-only">
+              <label htmlFor="email" className="block text-sm font-medium text-text-secondary mb-1">
                 Email address
               </label>
               <input
@@ -89,15 +95,15 @@ export default function Signup() {
                 type="email"
                 autoComplete="email"
                 required
-                className="appearance-none rounded-none relative block w-full px-3 py-2 border border-gray-300 placeholder-gray-500 text-gray-900 rounded-t-md focus:outline-none focus:ring-blue-500 focus:border-blue-500 focus:z-10 sm:text-sm"
-                placeholder="Email address"
+                className="w-full px-3 py-2.5 bg-card-bg border border-card-border rounded-lg text-text-primary placeholder:text-text-muted focus:outline-none focus:border-accent-blue text-sm"
+                placeholder="you@company.com"
                 value={email}
                 onChange={(e) => setEmail(e.target.value)}
                 disabled={isLoading}
               />
             </div>
             <div>
-              <label htmlFor="password" className="sr-only">
+              <label htmlFor="password" className="block text-sm font-medium text-text-secondary mb-1">
                 Password
               </label>
               <input
@@ -106,15 +112,15 @@ export default function Signup() {
                 type="password"
                 autoComplete="new-password"
                 required
-                className="appearance-none rounded-none relative block w-full px-3 py-2 border border-gray-300 placeholder-gray-500 text-gray-900 focus:outline-none focus:ring-blue-500 focus:border-blue-500 focus:z-10 sm:text-sm"
-                placeholder="Password"
+                className="w-full px-3 py-2.5 bg-card-bg border border-card-border rounded-lg text-text-primary placeholder:text-text-muted focus:outline-none focus:border-accent-blue text-sm"
+                placeholder="Create a strong password"
                 value={password}
                 onChange={(e) => setPassword(e.target.value)}
                 disabled={isLoading}
               />
             </div>
             <div>
-              <label htmlFor="confirm-password" className="sr-only">
+              <label htmlFor="confirm-password" className="block text-sm font-medium text-text-secondary mb-1">
                 Confirm password
               </label>
               <input
@@ -123,8 +129,8 @@ export default function Signup() {
                 type="password"
                 autoComplete="new-password"
                 required
-                className="appearance-none rounded-none relative block w-full px-3 py-2 border border-gray-300 placeholder-gray-500 text-gray-900 rounded-b-md focus:outline-none focus:ring-blue-500 focus:border-blue-500 focus:z-10 sm:text-sm"
-                placeholder="Confirm password"
+                className="w-full px-3 py-2.5 bg-card-bg border border-card-border rounded-lg text-text-primary placeholder:text-text-muted focus:outline-none focus:border-accent-blue text-sm"
+                placeholder="Confirm your password"
                 value={confirmPassword}
                 onChange={(e) => setConfirmPassword(e.target.value)}
                 disabled={isLoading}
@@ -133,8 +139,8 @@ export default function Signup() {
           </div>
 
           {/* Password requirements */}
-          <div className="bg-gray-50 border border-gray-200 rounded-md p-4">
-            <p className="text-xs font-medium text-gray-700 mb-2">Password requirements:</p>
+          <div className="bg-card-bg border border-card-border rounded-lg p-4">
+            <p className="text-xs font-medium text-text-secondary mb-2">Password requirements:</p>
             <ul className="space-y-1">
               {PASSWORD_REQUIREMENTS.map((req) => {
                 const met = req.test(password);
@@ -142,7 +148,7 @@ export default function Signup() {
                   <li
                     key={req.label}
                     className={`text-xs flex items-center gap-1.5 ${
-                      met ? 'text-green-600' : 'text-gray-500'
+                      met ? 'text-accent-green' : 'text-text-muted'
                     }`}
                   >
                     <span>{met ? '\u2713' : '\u2022'}</span>
@@ -154,7 +160,7 @@ export default function Signup() {
             {confirmPassword.length > 0 && (
               <p
                 className={`text-xs mt-2 ${
-                  passwordsMatch ? 'text-green-600' : 'text-red-500'
+                  passwordsMatch ? 'text-accent-green' : 'text-red-400'
                 }`}
               >
                 {passwordsMatch ? '\u2713 Passwords match' : 'Passwords do not match'}
@@ -166,13 +172,12 @@ export default function Signup() {
             <button
               type="submit"
               disabled={isLoading || !allRequirementsMet || !passwordsMatch}
-              className="group relative w-full flex justify-center py-2 px-4 border border-transparent text-sm font-medium rounded-md text-white bg-blue-600 hover:bg-blue-700 focus:outline-none focus:ring-2 focus:ring-offset-2 focus:ring-blue-500 disabled:opacity-50 disabled:cursor-not-allowed"
+              className="w-full flex justify-center py-2.5 px-4 text-sm font-semibold rounded-lg text-white bg-gradient-to-r from-pink-500 to-pink-600 hover:from-pink-600 hover:to-pink-700 focus:outline-none focus:ring-2 focus:ring-offset-2 focus:ring-pink-500 disabled:opacity-50 disabled:cursor-not-allowed transition-all"
             >
               {isLoading ? (
                 <span className="flex items-center">
                   <svg
                     className="animate-spin -ml-1 mr-3 h-5 w-5 text-white"
-                    xmlns="http://www.w3.org/2000/svg"
                     fill="none"
                     viewBox="0 0 24 24"
                   >
@@ -199,9 +204,9 @@ export default function Signup() {
           </div>
 
           <div className="text-center">
-            <p className="text-sm text-gray-600">
+            <p className="text-sm text-text-secondary">
               Already have an account?{' '}
-              <Link to="/login" className="font-medium text-blue-600 hover:text-blue-500">
+              <Link to="/login" className="font-medium text-accent-pink hover:text-pink-400">
                 Sign in
               </Link>
             </p>
