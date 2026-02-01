@@ -1,7 +1,7 @@
 "use client";
 
 import Link from "next/link";
-import { usePathname } from "next/navigation";
+import { usePathname, useRouter } from "next/navigation";
 import { Logo } from "@/components/Logo";
 import { Button } from "@/components/Button";
 import {
@@ -13,7 +13,8 @@ import {
   Menu,
 } from "lucide-react";
 import { cn } from "@/lib/utils";
-import { useState } from "react";
+import { useState, useEffect } from "react";
+import { getProfile, logout } from "@/lib/api";
 
 const navigation = [
   { name: "Dashboard", href: "/dashboard", icon: LayoutDashboard },
@@ -28,7 +29,40 @@ export default function DashboardLayout({
   children: React.ReactNode;
 }) {
   const pathname = usePathname();
+  const router = useRouter();
   const [sidebarOpen, setSidebarOpen] = useState(false);
+  const [user, setUser] = useState<{ name: string; email: string } | null>(null);
+
+  useEffect(() => {
+    const token = localStorage.getItem("accessToken");
+    if (!token) {
+      router.replace("/login");
+      return;
+    }
+    getProfile()
+      .then((profile) => setUser({ name: profile.name, email: profile.email }))
+      .catch(() => {
+        localStorage.removeItem("accessToken");
+        router.replace("/login");
+      });
+  }, [router]);
+
+  const handleLogout = async () => {
+    await logout();
+    router.replace("/login");
+  };
+
+  const initials = user?.name
+    ? user.name.split(" ").map((n) => n[0]).join("").toUpperCase().slice(0, 2)
+    : "..";
+
+  if (!user) {
+    return (
+      <div className="flex min-h-screen items-center justify-center bg-gray-50">
+        <div className="text-gray-500">Loading...</div>
+      </div>
+    );
+  }
 
   return (
     <div className="flex min-h-screen bg-gray-50">
@@ -67,10 +101,7 @@ export default function DashboardLayout({
             <Button
               variant="ghost"
               className="w-full justify-start"
-              onClick={() => {
-                // TODO: Implement logout
-                window.location.href = "/login";
-              }}
+              onClick={handleLogout}
             >
               <LogOut className="mr-3 h-5 w-5" />
               Logout
@@ -116,6 +147,16 @@ export default function DashboardLayout({
                 );
               })}
             </nav>
+            <div className="flex-shrink-0 border-t border-gray-200 p-4">
+              <Button
+                variant="ghost"
+                className="w-full justify-start"
+                onClick={handleLogout}
+              >
+                <LogOut className="mr-3 h-5 w-5" />
+                Logout
+              </Button>
+            </div>
           </div>
         </div>
       )}
@@ -133,17 +174,15 @@ export default function DashboardLayout({
             <Menu className="h-6 w-6" />
           </button>
           <div className="flex flex-1 justify-between px-4">
-            <div className="flex flex-1 items-center">
-              {/* Search bar or breadcrumbs could go here */}
-            </div>
+            <div className="flex flex-1 items-center" />
             <div className="ml-4 flex items-center gap-4">
               <div className="flex items-center gap-3">
                 <div className="hidden sm:block text-right">
-                  <p className="text-sm font-medium text-gray-900">Demo User</p>
-                  <p className="text-xs text-gray-500">demo@invoiceforge.com</p>
+                  <p className="text-sm font-medium text-gray-900">{user.name}</p>
+                  <p className="text-xs text-gray-500">{user.email}</p>
                 </div>
                 <div className="h-10 w-10 rounded-full bg-indigo-600 flex items-center justify-center text-white font-semibold">
-                  DU
+                  {initials}
                 </div>
               </div>
             </div>
