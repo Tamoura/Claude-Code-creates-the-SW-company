@@ -72,7 +72,18 @@ export async function listInvoices(params?: {
   if (params?.search) query.set('search', params.search);
 
   const queryString = query.toString();
-  return apiFetch(`/invoices${queryString ? `?${queryString}` : ''}`);
+  const result = await apiFetch(`/invoices${queryString ? `?${queryString}` : ''}`);
+
+  // API returns { data, pagination } but frontend expects { invoices, pagination, summary }
+  return {
+    invoices: result.data || result.invoices || [],
+    pagination: result.pagination,
+    summary: result.summary || {
+      totalOutstanding: 0,
+      paidThisMonth: 0,
+      invoicesThisMonth: 0,
+    },
+  };
 }
 
 export async function getInvoice(id: string): Promise<Invoice> {
@@ -118,7 +129,13 @@ export async function listClients(params?: {
   if (params?.search) query.set('search', params.search);
 
   const queryString = query.toString();
-  return apiFetch(`/clients${queryString ? `?${queryString}` : ''}`);
+  const result = await apiFetch(`/clients${queryString ? `?${queryString}` : ''}`);
+
+  // API returns { data, pagination } but frontend expects { clients, pagination }
+  return {
+    clients: result.data || result.clients || [],
+    pagination: result.pagination,
+  };
 }
 
 export async function getClient(
