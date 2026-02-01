@@ -19,6 +19,8 @@ export interface AppConfig {
   aiModel: string;
   stripeSecretKey: string;
   stripeWebhookSecret: string;
+  stripeTestWebhookSecret: string;
+  stripeConnectClientId: string;
   appUrl: string;
 }
 
@@ -52,6 +54,8 @@ export function loadConfig(): AppConfig {
     stripeWebhookSecret: process.env.NODE_ENV === 'test'
       ? (process.env.STRIPE_WEBHOOK_SECRET || 'whsec_fake')
       : (process.env.STRIPE_WEBHOOK_SECRET || ''),
+    stripeTestWebhookSecret: process.env.STRIPE_TEST_WEBHOOK_SECRET || 'whsec_test_default',
+    stripeConnectClientId: process.env.STRIPE_CONNECT_CLIENT_ID || '',
     appUrl: process.env.APP_URL || 'http://localhost:3109',
   };
 }

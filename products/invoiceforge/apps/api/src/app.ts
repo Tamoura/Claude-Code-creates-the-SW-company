@@ -1,5 +1,6 @@
 import Fastify, { FastifyInstance, FastifyError } from 'fastify';
 import cors from '@fastify/cors';
+import compress from '@fastify/compress';
 import helmet from '@fastify/helmet';
 import rateLimit from '@fastify/rate-limit';
 import cookie from '@fastify/cookie';
@@ -25,7 +26,12 @@ export async function buildApp(
 ): Promise<FastifyInstance> {
   const app = Fastify({
     logger: opts.logger ?? false,
+    bodyLimit: 524288, // 512KB
+    requestTimeout: 30000, // 30 seconds
   });
+
+  // Response compression (register early, before other plugins)
+  await app.register(compress, { threshold: 1024 });
 
   // Plugins
   const allowedOrigins = config.nodeEnv === 'production'
@@ -51,7 +57,7 @@ export async function buildApp(
   });
 
   await app.register(rateLimit, {
-    max: 100,
+    max: 200,
     timeWindow: '1 minute',
   });
 

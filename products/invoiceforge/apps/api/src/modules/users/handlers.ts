@@ -7,6 +7,7 @@ import { config } from '../../config';
 
 const stripeCallbackSchema = z.object({
   code: z.string().min(1, 'Authorization code is required'),
+  state: z.string().min(1, 'State parameter is required'),
 });
 
 export async function getProfile(
@@ -55,9 +56,7 @@ export async function getStripeConnectUrl(
   request: FastifyRequest,
   reply: FastifyReply
 ): Promise<void> {
-  const clientId = config.stripeSecretKey
-    ? 'ca_stripe_connect_placeholder'
-    : '';
+  const clientId = config.stripeConnectClientId || '';
 
   const redirectUri = `${config.appUrl}/api/users/me/stripe/callback`;
   const url =
@@ -80,6 +79,13 @@ export async function handleStripeCallback(
     const messages = parsed.error.issues.map((i) => i.message);
     throw new BadRequestError(
       `Validation failed: ${messages.join(', ')}`
+    );
+  }
+
+  // Validate CSRF: state parameter must match authenticated user's ID
+  if (parsed.data.state !== request.userId) {
+    throw new BadRequestError(
+      'Invalid state parameter — possible CSRF attack'
     );
   }
 
