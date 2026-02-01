@@ -3,6 +3,7 @@ import cors from '@fastify/cors';
 import jwt from '@fastify/jwt';
 import rateLimit from '@fastify/rate-limit';
 import helmet from '@fastify/helmet';
+import compress from '@fastify/compress';
 import swagger from '@fastify/swagger';
 import swaggerUi from '@fastify/swagger-ui';
 import { ZodError } from 'zod';
@@ -44,6 +45,12 @@ export async function buildApp(): Promise<FastifyInstance> {
     routerOptions: {
       maxParamLength: 256, // Reject overly long URL parameters
     },
+  });
+
+  // Register response compression (gzip/deflate)
+  await fastify.register(compress, {
+    threshold: 1024,
+    encodings: ['gzip', 'deflate'],
   });
 
   // Register security headers (helmet)
