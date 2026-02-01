@@ -9,7 +9,7 @@
  * - Error handling
  */
 
-import { useEffect, useState } from 'react';
+import { useEffect, useState, useMemo } from 'react';
 import { useParams, useNavigate } from 'react-router-dom';
 import { useAccount, useConnect, useDisconnect, useSwitchChain, useBalance, useWriteContract, useWaitForTransactionReceipt } from 'wagmi';
 import { parseUnits, formatUnits } from 'viem';
@@ -17,20 +17,35 @@ import { apiClient } from '../lib/api-client';
 import { TOKEN_ADDRESSES, NETWORK_IDS, ERC20_ABI } from '../lib/wagmi-config';
 import type { PaymentSession } from '../lib/api-client';
 
+const IS_DEV = import.meta.env.DEV;
+
 export default function PaymentPageNew() {
   const { id } = useParams<{ id: string }>();
   const navigate = useNavigate();
 
   // Wagmi hooks
   const { address, isConnected, chainId } = useAccount();
-  const { connectors, connect, isPending: isConnecting } = useConnect();
+  const { connectors, connect, isPending: isConnecting, error: connectError } = useConnect();
   const { disconnect } = useDisconnect();
   const { switchChain } = useSwitchChain();
+
+  // Find connectors by ID instead of array index
+  const metaMaskConnector = useMemo(
+    () => connectors.find(c => c.id === 'injected' || c.name.toLowerCase().includes('metamask')),
+    [connectors]
+  );
+  const walletConnectConnector = useMemo(
+    () => connectors.find(c => c.id === 'walletConnect'),
+    [connectors]
+  );
 
   // State
   const [payment, setPayment] = useState<PaymentSession | null>(null);
   const [error, setError] = useState<string | null>(null);
   const [isLoading, setIsLoading] = useState(true);
+  const [devWalletConnected, setDevWalletConnected] = useState(false);
+  const [isSimulating, setIsSimulating] = useState(false);
+  const devAddress = '0x742d35Cc6634C0532925a3b844Bc9e7595f2bD18';
 
   // Get required chain ID for this payment
   const requiredChainId = payment ? NETWORK_IDS[payment.network] : undefined;
@@ -60,7 +75,7 @@ export default function PaymentPageNew() {
     if (id) {
       setIsLoading(true);
       apiClient
-        .getPaymentSession(id)
+        .getCheckoutSession(id)
         .then(setPayment)
         .catch((err) => {
           console.error('Failed to load payment:', err);
@@ -77,9 +92,37 @@ export default function PaymentPageNew() {
     }
   }, [isConfirmed, id, navigate]);
 
-  const handleConnectWallet = (connectorIndex: number) => {
+  // Surface wagmi connect errors
+  useEffect(() => {
+    if (connectError) {
+      setError(connectError.message.includes('rejected')
+        ? 'Connection rejected by user'
+        : `Wallet connection failed: ${connectError.message}`
+      );
+    }
+  }, [connectError]);
+
+  const handleConnectMetaMask = () => {
     setError(null);
-    connect({ connector: connectors[connectorIndex] });
+    if (!metaMaskConnector) {
+      setError('MetaMask not detected. Please install the MetaMask browser extension.');
+      return;
+    }
+    connect({ connector: metaMaskConnector });
+  };
+
+  const handleConnectWalletConnect = () => {
+    setError(null);
+    if (!walletConnectConnector) {
+      setError('WalletConnect not available.');
+      return;
+    }
+    connect({ connector: walletConnectConnector });
+  };
+
+  const handleDevWallet = () => {
+    setError(null);
+    setDevWalletConnected(true);
   };
 
   const handleSwitchNetwork = () => {
@@ -194,7 +237,7 @@ export default function PaymentPageNew() {
           </div>
 
           {/* Wallet Connection */}
-          {!isConnected ? (
+          {!isConnected && !devWalletConnected ? (
             <div className="space-y-4">
               <div className="bg-blue-50 rounded-lg p-4 mb-4">
                 <p className="text-sm text-blue-900">
@@ -203,7 +246,7 @@ export default function PaymentPageNew() {
               </div>
 
               <button
-                onClick={() => handleConnectWallet(0)}
+                onClick={handleConnectMetaMask}
                 disabled={isConnecting}
                 className="w-full bg-blue-600 text-white py-3 px-6 rounded-lg font-semibold hover:bg-blue-700 transition-colors disabled:opacity-50 disabled:cursor-not-allowed flex items-center justify-center"
               >
@@ -211,11 +254,66 @@ export default function PaymentPageNew() {
               </button>
 
               <button
-                onClick={() => handleConnectWallet(1)}
+                onClick={handleConnectWalletConnect}
                 disabled={isConnecting}
                 className="w-full bg-purple-600 text-white py-3 px-6 rounded-lg font-semibold hover:bg-purple-700 transition-colors disabled:opacity-50 disabled:cursor-not-allowed flex items-center justify-center"
               >
                 {isConnecting ? 'Connecting...' : 'Connect Mobile Wallet'}
+              </button>
+
+              {IS_DEV && (
+                <button
+                  onClick={handleDevWallet}
+                  className="w-full bg-gray-700 text-white py-3 px-6 rounded-lg font-semibold hover:bg-gray-800 transition-colors flex items-center justify-center"
+                >
+                  Dev: Simulate Wallet
+                </button>
+              )}
+            </div>
+          ) : devWalletConnected ? (
+            /* Dev wallet connected - simulate the payment flow */
+            <div className="space-y-4">
+              <div className="bg-green-50 rounded-lg p-4">
+                <div className="flex items-center justify-between">
+                  <div>
+                    <p className="text-sm font-medium text-green-900">Dev Wallet Connected</p>
+                    <p className="text-xs text-green-700 mt-1 font-mono">
+                      {devAddress.slice(0, 6)}...{devAddress.slice(-4)}
+                    </p>
+                  </div>
+                  <div className="text-right">
+                    <p className="text-xs text-green-700">Balance</p>
+                    <p className="text-sm font-semibold text-green-900">
+                      10,000.00 {payment.token}
+                    </p>
+                  </div>
+                </div>
+              </div>
+
+              <button
+                onClick={async () => {
+                  setError(null);
+                  setIsSimulating(true);
+                  try {
+                    await apiClient.simulatePayment(id!);
+                    navigate(`/status/${id}`);
+                  } catch (err) {
+                    setError(err instanceof Error ? err.message : 'Simulation failed');
+                  } finally {
+                    setIsSimulating(false);
+                  }
+                }}
+                disabled={isSimulating}
+                className="w-full bg-green-600 text-white py-3 px-6 rounded-lg font-semibold hover:bg-green-700 transition-colors disabled:opacity-50 disabled:cursor-not-allowed"
+              >
+                {isSimulating ? 'Simulating Payment...' : `Pay ${payment.amount} ${payment.token} (Simulated)`}
+              </button>
+
+              <button
+                onClick={() => setDevWalletConnected(false)}
+                className="w-full border border-gray-300 text-gray-700 py-2 px-4 rounded-lg hover:bg-gray-50 transition-colors text-sm"
+              >
+                Disconnect Wallet
               </button>
             </div>
           ) : !isCorrectNetwork ? (

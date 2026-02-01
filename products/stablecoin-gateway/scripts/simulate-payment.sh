@@ -27,6 +27,7 @@ EMAIL="${EMAIL:-}"
 PASSWORD="${PASSWORD:-}"
 ACCESS_TOKEN="${ACCESS_TOKEN:-}"
 API_KEY="${API_KEY:-}"
+SESSION_ID="${SESSION_ID:-}"
 AMOUNT="10.00"
 MERCHANT_ADDRESS="0x742d35Cc6634C0532925a3b844Bc9e7595f0bEb"
 
@@ -35,18 +36,20 @@ MERCHANT_ADDRESS="0x742d35Cc6634C0532925a3b844Bc9e7595f0bEb"
 # -------------------------------------------------------------------
 while [[ $# -gt 0 ]]; do
   case "$1" in
-    --api-url)   API_URL="$2";   shift 2 ;;
-    --email)     EMAIL="$2";     shift 2 ;;
-    --password)  PASSWORD="$2";  shift 2 ;;
-    --token)     ACCESS_TOKEN="$2"; shift 2 ;;
-    --api-key)   API_KEY="$2";   shift 2 ;;
-    --amount)    AMOUNT="$2";    shift 2 ;;
-    --merchant)  MERCHANT_ADDRESS="$2"; shift 2 ;;
+    --api-url)    API_URL="$2";    shift 2 ;;
+    --email)      EMAIL="$2";      shift 2 ;;
+    --password)   PASSWORD="$2";   shift 2 ;;
+    --token)      ACCESS_TOKEN="$2"; shift 2 ;;
+    --api-key)    API_KEY="$2";    shift 2 ;;
+    --session-id) SESSION_ID="$2"; shift 2 ;;
+    --amount)     AMOUNT="$2";     shift 2 ;;
+    --merchant)   MERCHANT_ADDRESS="$2"; shift 2 ;;
     -h|--help)
       echo "Usage: $0 [OPTIONS]"
       echo ""
       echo "Options:"
       echo "  --api-url URL       API base URL (default: http://localhost:5001)"
+      echo "  --session-id ID     Advance an existing payment session (uses dev endpoint)"
       echo "  --email EMAIL       Login email"
       echo "  --password PASS     Login password"
       echo "  --token TOKEN       Existing access token (skips login)"
@@ -57,6 +60,7 @@ while [[ $# -gt 0 ]]; do
       echo ""
       echo "Environment variables:"
       echo "  API_URL             Same as --api-url"
+      echo "  SESSION_ID          Same as --session-id"
       echo "  EMAIL               Same as --email"
       echo "  PASSWORD            Same as --password"
       echo "  ACCESS_TOKEN        Same as --token"
@@ -111,6 +115,32 @@ for cmd in curl jq; do
     exit 1
   fi
 done
+
+# -------------------------------------------------------------------
+# Fast path: --session-id uses the dev simulate endpoint
+# -------------------------------------------------------------------
+if [[ -n "$SESSION_ID" ]]; then
+  step "Simulating payment via dev endpoint"
+  echo "    Session ID: ${SESSION_ID}"
+  show_curl "-s -X POST ${API_URL}/v1/dev/simulate/${SESSION_ID}"
+
+  SIM_RESPONSE=$(curl -s -X POST "${API_URL}/v1/dev/simulate/${SESSION_ID}")
+  SIM_STATUS=$(echo "$SIM_RESPONSE" | jq -r '.status // empty')
+
+  if [[ "$SIM_STATUS" == "COMPLETED" ]]; then
+    echo ""
+    show_response "$SIM_RESPONSE"
+    echo ""
+    echo -e "${GREEN}    Payment ${SESSION_ID} simulated to COMPLETED.${RESET}"
+  else
+    echo ""
+    show_response "$SIM_RESPONSE"
+    echo ""
+    echo -e "${RED}    Simulation returned status: ${SIM_STATUS}${RESET}"
+  fi
+  echo ""
+  exit 0
+fi
 
 # -------------------------------------------------------------------
 # Step 0: Health check

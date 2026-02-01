@@ -491,6 +491,37 @@ export class ApiClient {
     return this.request<PaymentSession>(`/v1/payment-sessions/${id}`);
   }
 
+  /**
+   * Get payment session for checkout (public, no auth required)
+   */
+  async getCheckoutSession(id: string): Promise<PaymentSession> {
+    // Public endpoint - bypass auth header injection
+    const url = `${this.baseUrl}/v1/checkout/${id}`;
+    const response = await fetch(url);
+
+    if (!response.ok) {
+      const error: ApiError = await response.json();
+      throw new ApiClientError(error.status, error.title, error.detail, error);
+    }
+
+    return response.json();
+  }
+
+  /**
+   * Dev-only: simulate payment completion (bypasses blockchain verification)
+   */
+  async simulatePayment(id: string): Promise<PaymentSession> {
+    const url = `${this.baseUrl}/v1/dev/simulate/${id}`;
+    const response = await fetch(url, { method: 'POST' });
+
+    if (!response.ok) {
+      const error: ApiError = await response.json();
+      throw new ApiClientError(error.status, error.title, error.detail, error);
+    }
+
+    return response.json();
+  }
+
   async updatePaymentSession(
     id: string,
     data: Partial<PaymentSession>

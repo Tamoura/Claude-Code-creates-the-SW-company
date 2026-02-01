@@ -1,47 +1,93 @@
 import { useEffect, useState } from 'react';
 import { useParams, useNavigate } from 'react-router-dom';
-import { getPayment } from '../lib/payments';
-import type { Payment, PaymentStatus } from '../types/payment';
+import { apiClient } from '../lib/api-client';
+import type { PaymentSession } from '../lib/api-client';
+
+type DisplayStatus = 'pending' | 'confirming' | 'completed' | 'failed';
+
+function mapStatus(apiStatus: string): DisplayStatus {
+  switch (apiStatus.toUpperCase()) {
+    case 'CONFIRMING': return 'confirming';
+    case 'COMPLETED': return 'completed';
+    case 'FAILED':
+    case 'REFUNDED': return 'failed';
+    default: return 'pending';
+  }
+}
 
 export default function StatusPage() {
   const { id } = useParams<{ id: string }>();
   const navigate = useNavigate();
-  const [payment, setPayment] = useState<Payment | null>(null);
+  const [payment, setPayment] = useState<PaymentSession | null>(null);
+  const [isLoading, setIsLoading] = useState(true);
+  const [error, setError] = useState<string | null>(null);
 
   useEffect(() => {
     if (!id) return;
 
-    // Initial load
-    setPayment(getPayment(id));
+    let cancelled = false;
 
-    // Poll for updates every 500ms
-    const interval = setInterval(() => {
-      const updated = getPayment(id);
-      setPayment(updated);
-    }, 500);
+    const fetchPayment = async () => {
+      try {
+        const session = await apiClient.getCheckoutSession(id);
+        if (!cancelled) setPayment(session);
+      } catch (err) {
+        if (!cancelled) setError('Payment not found or has expired');
+      } finally {
+        if (!cancelled) setIsLoading(false);
+      }
+    };
 
-    return () => clearInterval(interval);
+    fetchPayment();
+
+    // Poll for updates every 3 seconds while payment is in progress
+    const interval = setInterval(async () => {
+      try {
+        const session = await apiClient.getCheckoutSession(id);
+        if (!cancelled) setPayment(session);
+      } catch {
+        // Silently ignore poll errors
+      }
+    }, 3000);
+
+    return () => {
+      cancelled = true;
+      clearInterval(interval);
+    };
   }, [id]);
+
+  if (isLoading) {
+    return (
+      <div className="min-h-screen bg-gray-50 flex items-center justify-center">
+        <div className="text-center">
+          <div className="animate-spin rounded-full h-12 w-12 border-b-2 border-blue-600 mx-auto mb-4"></div>
+          <p className="text-gray-600">Loading payment status...</p>
+        </div>
+      </div>
+    );
+  }
 
   if (!payment) {
     return (
       <div className="min-h-screen bg-gray-50 flex items-center justify-center">
         <div className="bg-white rounded-lg shadow-lg p-8 max-w-md w-full text-center">
           <h1 className="text-2xl font-bold text-gray-900 mb-4">Payment Not Found</h1>
-          <p className="text-gray-600 mb-6">This payment link is invalid.</p>
+          <p className="text-gray-600 mb-6">{error || 'This payment link is invalid or has expired.'}</p>
           <button
             onClick={() => navigate('/')}
             className="bg-blue-600 text-white py-2 px-6 rounded-lg hover:bg-blue-700 transition-colors"
           >
-            Create New Payment
+            Go Home
           </button>
         </div>
       </div>
     );
   }
 
-  const getStatusIcon = (status: PaymentStatus) => {
-    switch (status) {
+  const status = mapStatus(payment.status);
+
+  const getStatusIcon = (s: DisplayStatus) => {
+    switch (s) {
       case 'pending':
         return (
           <svg className="w-16 h-16 text-yellow-500" fill="none" viewBox="0 0 24 24" stroke="currentColor">
@@ -55,29 +101,39 @@ export default function StatusPage() {
             <path className="opacity-75" fill="currentColor" d="M4 12a8 8 0 018-8V0C5.373 0 0 5.373 0 12h4zm2 5.291A7.962 7.962 0 014 12H0c0 3.042 1.135 5.824 3 7.938l3-2.647z"></path>
           </svg>
         );
-      case 'complete':
+      case 'completed':
         return (
           <svg className="w-16 h-16 text-green-500" fill="none" viewBox="0 0 24 24" stroke="currentColor">
             <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M9 12l2 2 4-4m6 2a9 9 0 11-18 0 9 9 0 0118 0z" />
           </svg>
         );
+      case 'failed':
+        return (
+          <svg className="w-16 h-16 text-red-500" fill="none" viewBox="0 0 24 24" stroke="currentColor">
+            <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M10 14l2-2m0 0l2-2m-2 2l-2-2m2 2l2 2m7-2a9 9 0 11-18 0 9 9 0 0118 0z" />
+          </svg>
+        );
     }
   };
 
-  const getStatusText = (status: PaymentStatus): string => {
-    switch (status) {
-      case 'pending': return 'Waiting for Payment';
-      case 'confirming': return 'Confirming on Blockchain';
-      case 'complete': return 'Payment Complete';
-    }
+  const statusText: Record<DisplayStatus, string> = {
+    pending: 'Waiting for Payment',
+    confirming: 'Confirming on Blockchain',
+    completed: 'Payment Complete',
+    failed: 'Payment Failed',
   };
 
-  const getStatusDescription = (status: PaymentStatus): string => {
-    switch (status) {
-      case 'pending': return 'Customer has not yet sent payment';
-      case 'confirming': return 'Transaction is being confirmed on the blockchain...';
-      case 'complete': return 'Payment successfully received!';
-    }
+  const statusDescription: Record<DisplayStatus, string> = {
+    pending: 'Customer has not yet sent payment',
+    confirming: 'Transaction is being confirmed on the blockchain...',
+    completed: 'Payment successfully received!',
+    failed: 'This payment could not be completed.',
+  };
+
+  const stepDone = (step: number) => {
+    const order: DisplayStatus[] = ['pending', 'confirming', 'completed'];
+    const current = order.indexOf(status);
+    return current >= step;
   };
 
   return (
@@ -87,94 +143,92 @@ export default function StatusPage() {
         <div className="bg-white rounded-lg shadow-lg p-8 mb-6">
           {/* Status Icon */}
           <div className="flex justify-center mb-6">
-            {getStatusIcon(payment.status)}
+            {getStatusIcon(status)}
           </div>
 
           {/* Status Text */}
           <div className="text-center mb-8">
             <h1 className="text-3xl font-bold text-gray-900 mb-2">
-              {getStatusText(payment.status)}
+              {statusText[status]}
             </h1>
             <p className="text-gray-600">
-              {getStatusDescription(payment.status)}
+              {statusDescription[status]}
             </p>
           </div>
 
           {/* Progress Steps */}
-          <div className="mb-8">
-            <div className="flex justify-between items-center">
-              {/* Step 1: Pending */}
-              <div className="flex flex-col items-center flex-1">
-                <div className={`w-10 h-10 rounded-full flex items-center justify-center ${
-                  payment.status !== 'pending' ? 'bg-green-500' : 'bg-yellow-500'
-                }`}>
-                  <span className="text-white font-semibold">1</span>
+          {status !== 'failed' && (
+            <div className="mb-8">
+              <div className="flex justify-between items-center">
+                <div className="flex flex-col items-center flex-1">
+                  <div className={`w-10 h-10 rounded-full flex items-center justify-center ${
+                    stepDone(1) ? 'bg-green-500' : 'bg-yellow-500'
+                  }`}>
+                    <span className="text-white font-semibold">1</span>
+                  </div>
+                  <span className="text-xs mt-2 text-gray-600">Initiated</span>
                 </div>
-                <span className="text-xs mt-2 text-gray-600">Initiated</span>
-              </div>
-
-              {/* Connector */}
-              <div className={`flex-1 h-1 mx-2 ${
-                payment.status !== 'pending' ? 'bg-green-500' : 'bg-gray-200'
-              }`}></div>
-
-              {/* Step 2: Confirming */}
-              <div className="flex flex-col items-center flex-1">
-                <div className={`w-10 h-10 rounded-full flex items-center justify-center ${
-                  payment.status === 'complete' ? 'bg-green-500' :
-                  payment.status === 'confirming' ? 'bg-blue-500' : 'bg-gray-200'
-                }`}>
-                  <span className="text-white font-semibold">2</span>
+                <div className={`flex-1 h-1 mx-2 ${stepDone(1) ? 'bg-green-500' : 'bg-gray-200'}`}></div>
+                <div className="flex flex-col items-center flex-1">
+                  <div className={`w-10 h-10 rounded-full flex items-center justify-center ${
+                    stepDone(2) ? 'bg-green-500' : status === 'confirming' ? 'bg-blue-500' : 'bg-gray-200'
+                  }`}>
+                    <span className="text-white font-semibold">2</span>
+                  </div>
+                  <span className="text-xs mt-2 text-gray-600">Confirming</span>
                 </div>
-                <span className="text-xs mt-2 text-gray-600">Confirming</span>
-              </div>
-
-              {/* Connector */}
-              <div className={`flex-1 h-1 mx-2 ${
-                payment.status === 'complete' ? 'bg-green-500' : 'bg-gray-200'
-              }`}></div>
-
-              {/* Step 3: Complete */}
-              <div className="flex flex-col items-center flex-1">
-                <div className={`w-10 h-10 rounded-full flex items-center justify-center ${
-                  payment.status === 'complete' ? 'bg-green-500' : 'bg-gray-200'
-                }`}>
-                  <span className="text-white font-semibold">3</span>
+                <div className={`flex-1 h-1 mx-2 ${stepDone(2) ? 'bg-green-500' : 'bg-gray-200'}`}></div>
+                <div className="flex flex-col items-center flex-1">
+                  <div className={`w-10 h-10 rounded-full flex items-center justify-center ${
+                    stepDone(2) ? 'bg-green-500' : 'bg-gray-200'
+                  }`}>
+                    <span className="text-white font-semibold">3</span>
+                  </div>
+                  <span className="text-xs mt-2 text-gray-600">Complete</span>
                 </div>
-                <span className="text-xs mt-2 text-gray-600">Complete</span>
               </div>
             </div>
-          </div>
+          )}
 
           {/* Payment Details */}
           <div className="border-t border-gray-200 pt-6 space-y-3">
             <div className="flex justify-between items-center">
               <span className="text-gray-600">Amount</span>
-              <span className="font-semibold text-gray-900">${payment.amount.toFixed(2)}</span>
+              <span className="font-semibold text-gray-900">${payment.amount.toFixed(2)} {payment.token}</span>
             </div>
             <div className="flex justify-between items-center">
               <span className="text-gray-600">Payment ID</span>
-              <span className="text-sm font-mono text-gray-700">{payment.id.slice(0, 8)}...</span>
+              <span className="text-sm font-mono text-gray-700">{payment.id.slice(0, 16)}...</span>
             </div>
-            {payment.txHash && (
+            <div className="flex justify-between items-center text-sm text-gray-500">
+              <span>Network</span>
+              <span className="capitalize">{payment.network}</span>
+            </div>
+            {payment.tx_hash && (
               <div className="flex justify-between items-center">
                 <span className="text-gray-600">Transaction Hash</span>
-                <span className="text-sm font-mono text-blue-600 cursor-pointer hover:underline">
-                  {payment.txHash.slice(0, 10)}...
+                <span className="text-sm font-mono text-blue-600">
+                  {payment.tx_hash.slice(0, 14)}...
                 </span>
+              </div>
+            )}
+            {payment.confirmations !== undefined && payment.confirmations > 0 && (
+              <div className="flex justify-between items-center">
+                <span className="text-gray-600">Confirmations</span>
+                <span className="text-sm text-gray-700">{payment.confirmations}</span>
               </div>
             )}
             <div className="flex justify-between items-center">
               <span className="text-gray-600">Created</span>
               <span className="text-sm text-gray-700">
-                {new Date(payment.createdAt).toLocaleString()}
+                {new Date(payment.created_at).toLocaleString()}
               </span>
             </div>
-            {payment.completedAt && (
+            {payment.completed_at && (
               <div className="flex justify-between items-center">
                 <span className="text-gray-600">Completed</span>
                 <span className="text-sm text-gray-700">
-                  {new Date(payment.completedAt).toLocaleString()}
+                  {new Date(payment.completed_at).toLocaleString()}
                 </span>
               </div>
             )}
@@ -182,13 +236,13 @@ export default function StatusPage() {
         </div>
 
         {/* Actions */}
-        {payment.status === 'complete' && (
+        {status === 'completed' && (
           <div className="text-center">
             <button
               onClick={() => navigate('/')}
               className="bg-blue-600 text-white py-3 px-8 rounded-lg font-semibold hover:bg-blue-700 transition-colors"
             >
-              Create New Payment
+              Done
             </button>
           </div>
         )}

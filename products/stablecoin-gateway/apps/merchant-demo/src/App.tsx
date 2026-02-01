@@ -39,10 +39,10 @@ export default function App() {
         method: 'POST',
         headers: {
           'Content-Type': 'application/json',
-          'X-API-Key': apiKey,
+          'Authorization': `Bearer ${apiKey}`,
         },
         body: JSON.stringify({
-          amount: 2500,
+          amount: 25,
           currency: 'USD',
           description: 'Premium Widget',
           network: 'polygon',
@@ -74,7 +74,7 @@ export default function App() {
     setIsLoading(true);
     try {
       const response = await fetch(`${apiUrl}/v1/payment-sessions/${payment.id}`, {
-        headers: { 'X-API-Key': apiKey },
+        headers: { 'Authorization': `Bearer ${apiKey}` },
       });
       const updated: PaymentSession = await response.json();
       setPayment(updated);
@@ -225,7 +225,7 @@ export default function App() {
 
           <div style={{ background: 'white', border: '1px solid #e5e7eb', borderRadius: 8, padding: '1rem', marginTop: '1rem', fontFamily: 'monospace', fontSize: '0.8rem' }}>
             <div><strong>Session ID:</strong> {payment.id}</div>
-            <div><strong>Amount:</strong> ${(payment.amount / 100).toFixed(2)} {payment.currency}</div>
+            <div><strong>Amount:</strong> ${payment.amount.toFixed(2)} {payment.currency}</div>
             <div><strong>Status:</strong> <span style={{ color: payment.status === 'completed' ? '#16a34a' : '#d97706' }}>{payment.status.toUpperCase()}</span></div>
             <div><strong>Checkout URL:</strong> <a href={payment.checkout_url} target="_blank" rel="noreferrer" style={{ color: '#3b82f6', wordBreak: 'break-all' }}>{payment.checkout_url}</a></div>
             <div><strong>Created:</strong> {new Date(payment.created_at).toLocaleString()}</div>
@@ -262,7 +262,7 @@ export default function App() {
             Payment <code>{payment.id}</code> has been confirmed on-chain.
           </p>
           <p style={{ color: '#6b7280', fontSize: '0.875rem' }}>
-            Amount: <strong>${(payment.amount / 100).toFixed(2)} USDC</strong>
+            Amount: <strong>${payment.amount.toFixed(2)} USDC</strong>
           </p>
           <button
             onClick={handleReset}
