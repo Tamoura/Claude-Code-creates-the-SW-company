@@ -15,6 +15,9 @@ export interface AppConfig {
   jwtRefreshExpiresIn: string;
   bcryptRounds: number;
   anthropicApiKey: string;
+  stripeSecretKey: string;
+  stripeWebhookSecret: string;
+  appUrl: string;
 }
 
 function requireEnv(name: string): string {
@@ -39,6 +42,13 @@ export function loadConfig(): AppConfig {
     anthropicApiKey: process.env.NODE_ENV === 'test'
       ? (process.env.ANTHROPIC_API_KEY || 'test-key-not-used')
       : requireEnv('ANTHROPIC_API_KEY'),
+    stripeSecretKey: process.env.NODE_ENV === 'test'
+      ? (process.env.STRIPE_SECRET_KEY || 'sk_test_fake')
+      : (process.env.STRIPE_SECRET_KEY || ''),
+    stripeWebhookSecret: process.env.NODE_ENV === 'test'
+      ? (process.env.STRIPE_WEBHOOK_SECRET || 'whsec_fake')
+      : (process.env.STRIPE_WEBHOOK_SECRET || ''),
+    appUrl: process.env.APP_URL || 'http://localhost:3109',
   };
 }
 
