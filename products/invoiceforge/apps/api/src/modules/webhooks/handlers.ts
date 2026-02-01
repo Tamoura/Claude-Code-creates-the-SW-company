@@ -13,11 +13,17 @@ export async function handleStripeWebhook(
     );
   }
 
-  // In test env with fake key, skip real verification
   const isTest = config.nodeEnv === 'test';
-  let event: any;
+  let event: Record<string, unknown>;
 
-  if (!isTest && config.stripeWebhookSecret && request.server.stripe) {
+  if (isTest) {
+    // Test mode only: skip Stripe signature verification
+    event = request.body as Record<string, unknown>;
+  } else if (!config.stripeWebhookSecret || !request.server.stripe) {
+    throw new BadRequestError(
+      'Stripe webhook not configured'
+    );
+  } else {
     try {
       const rawBody =
         typeof request.body === 'string'
@@ -27,21 +33,20 @@ export async function handleStripeWebhook(
         rawBody,
         signature as string,
         config.stripeWebhookSecret
-      );
-    } catch (err) {
+      ) as unknown as Record<string, unknown>;
+    } catch {
       throw new BadRequestError(
         'Invalid webhook signature'
       );
     }
-  } else {
-    // Test mode: use the body directly
-    event = request.body as any;
   }
 
   // Handle checkout.session.completed
   if (event && event.type === 'checkout.session.completed') {
-    const session = event.data?.object;
-    const invoiceId = session?.metadata?.invoiceId;
+    const data = event.data as Record<string, unknown> | undefined;
+    const session = data?.object as Record<string, unknown> | undefined;
+    const metadata = session?.metadata as Record<string, string> | undefined;
+    const invoiceId = metadata?.invoiceId;
 
     if (invoiceId) {
       // Idempotent: only update if not already paid

@@ -311,7 +311,7 @@ describe('PUT /api/clients/:id', () => {
     const clientId = createRes.json().id;
 
     const response = await app.inject({
-      method: 'PUT',
+      method: 'PATCH',
       url: `/api/clients/${clientId}`,
       headers: authHeader(accessToken),
       payload: { name: 'New Name', email: 'updated@test.com' },
@@ -325,7 +325,7 @@ describe('PUT /api/clients/:id', () => {
 
   it('should return 404 for non-existent client', async () => {
     const response = await app.inject({
-      method: 'PUT',
+      method: 'PATCH',
       url: '/api/clients/00000000-0000-0000-0000-000000000000',
       headers: authHeader(accessToken),
       payload: { name: 'Ghost' },

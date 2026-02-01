@@ -28,13 +28,25 @@ export async function buildApp(
   });
 
   // Plugins
+  const allowedOrigins = config.nodeEnv === 'production'
+    ? [config.appUrl]
+    : ['http://localhost:3109', 'http://localhost:3100', config.appUrl];
+
   await app.register(cors, {
-    origin: true,
+    origin: allowedOrigins,
     credentials: true,
   });
 
   await app.register(helmet, {
-    contentSecurityPolicy: false,
+    contentSecurityPolicy: {
+      directives: {
+        defaultSrc: ["'self'"],
+        scriptSrc: ["'self'", "'unsafe-inline'"],
+        styleSrc: ["'self'", "'unsafe-inline'"],
+        imgSrc: ["'self'", 'data:', 'https:'],
+        connectSrc: ["'self'", config.appUrl],
+      },
+    },
   });
 
   await app.register(rateLimit, {
