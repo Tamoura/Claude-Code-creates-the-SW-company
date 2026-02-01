@@ -11,7 +11,10 @@ import { invoiceRoutes } from './modules/invoices/routes';
 import { publicInvoiceRoutes } from './modules/invoices/public-routes';
 import { clientRoutes } from './modules/clients/routes';
 import { userRoutes } from './modules/users/routes';
+import { webhookRoutes } from './modules/webhooks/routes';
+import stripePlugin from './plugins/stripe';
 import { AppError } from './lib/errors';
+import { config } from './config';
 
 export interface BuildAppOptions {
   logger?: boolean | object;
@@ -46,6 +49,11 @@ export async function buildApp(
 
   // Auth middleware
   await app.register(authPlugin);
+
+  // Stripe (only if configured)
+  if (config.stripeSecretKey && config.stripeSecretKey !== 'sk_test_fake') {
+    await app.register(stripePlugin);
+  }
 
   // Global error handler (set before routes so encapsulated contexts inherit it)
   app.setErrorHandler((error: FastifyError | AppError, _request, reply) => {
@@ -90,6 +98,7 @@ export async function buildApp(
 
   // Public routes (no auth required)
   await app.register(publicInvoiceRoutes);
+  await app.register(webhookRoutes);
 
   // Auth-protected routes
   await app.register(healthRoutes);

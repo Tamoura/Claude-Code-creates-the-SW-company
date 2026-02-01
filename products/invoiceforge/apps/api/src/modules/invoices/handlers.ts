@@ -9,6 +9,7 @@ import {
 import * as invoiceService from './service';
 import { generateInvoice as generateInvoiceAI } from './ai-service';
 import { BadRequestError } from '../../lib/errors';
+import { config } from '../../config';
 
 const shareTokenParamSchema = z.object({
   token: z.string().uuid(),
@@ -252,4 +253,74 @@ export async function getInvoicePdf(
       `attachment; filename="${filename}"`
     )
     .send(pdfBuffer);
+}
+
+export async function createPaymentLink(
+  request: FastifyRequest,
+  reply: FastifyReply
+): Promise<void> {
+  const params = invoiceIdParamSchema.safeParse(request.params);
+  if (!params.success) {
+    throw new BadRequestError('Invalid invoice ID');
+  }
+
+  const invoice = await invoiceService.getInvoice(
+    request.server.db,
+    request.userId,
+    params.data.id
+  );
+
+  if (invoice.status !== 'sent') {
+    throw new BadRequestError(
+      'Payment links can only be created for sent invoices'
+    );
+  }
+
+  const user = await request.server.db.user.findUnique({
+    where: { id: request.userId },
+    select: { stripeAccountId: true },
+  });
+
+  if (!user?.stripeAccountId) {
+    throw new BadRequestError(
+      'Connect your Stripe account first to accept payments'
+    );
+  }
+
+  const stripe = request.server.stripe;
+  const session = await stripe.checkout.sessions.create(
+    {
+      payment_method_types: ['card'],
+      line_items: [
+        {
+          price_data: {
+            currency: invoice.currency.toLowerCase(),
+            product_data: {
+              name: `Invoice ${invoice.invoiceNumber}`,
+            },
+            unit_amount: invoice.total,
+          },
+          quantity: 1,
+        },
+      ],
+      mode: 'payment',
+      success_url: `${config.appUrl}/invoice/${invoice.shareToken}/pay?success=true`,
+      cancel_url: `${config.appUrl}/invoice/${invoice.shareToken}/view`,
+      metadata: { invoiceId: invoice.id },
+    },
+    { stripeAccount: user.stripeAccountId }
+  );
+
+  await request.server.db.invoice.update({
+    where: { id: invoice.id },
+    data: {
+      paymentLink: session.url,
+      stripeSessionId: session.id,
+    },
+  });
+
+  reply.send({
+    paymentLink: session.url,
+    stripeSessionId: session.id,
+  });
 }
