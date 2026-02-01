@@ -15,6 +15,8 @@ import ApiKeys from './pages/dashboard/ApiKeys';
 import Webhooks from './pages/dashboard/Webhooks';
 import Security from './pages/dashboard/Security';
 import Login from './pages/auth/Login';
+import Signup from './pages/auth/Signup';
+import ProtectedRoute from './components/ProtectedRoute';
 import ErrorBoundary from './components/ErrorBoundary';
 
 // Create a query client for React Query
@@ -39,16 +41,19 @@ function App() {
               <Route path="/pay/:id" element={<PaymentPage />} />
               <Route path="/status/:id" element={<StatusPage />} />
               <Route path="/login" element={<Login />} />
+              <Route path="/signup" element={<Signup />} />
 
-              {/* Dashboard routes */}
-              <Route path="/dashboard" element={<DashboardLayout />}>
-                <Route index element={<DashboardHome />} />
-                <Route path="payments" element={<PaymentsList />} />
-                <Route path="invoices" element={<Invoices />} />
-                <Route path="api-keys" element={<ApiKeys />} />
-                <Route path="webhooks" element={<Webhooks />} />
-                <Route path="security" element={<Security />} />
-                <Route path="settings" element={<Settings />} />
+              {/* Dashboard routes (protected) */}
+              <Route element={<ProtectedRoute />}>
+                <Route path="/dashboard" element={<DashboardLayout />}>
+                  <Route index element={<DashboardHome />} />
+                  <Route path="payments" element={<PaymentsList />} />
+                  <Route path="invoices" element={<Invoices />} />
+                  <Route path="api-keys" element={<ApiKeys />} />
+                  <Route path="webhooks" element={<Webhooks />} />
+                  <Route path="security" element={<Security />} />
+                  <Route path="settings" element={<Settings />} />
+                </Route>
               </Route>
             </Routes>
           </Router>

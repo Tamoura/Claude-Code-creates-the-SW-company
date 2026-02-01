@@ -62,9 +62,68 @@ export interface LoginResponse {
   refresh_token: string;
 }
 
+export interface SignupResponse {
+  id: string;
+  email: string;
+  created_at: string;
+  access_token: string;
+  refresh_token: string;
+}
+
 export interface User {
   id: string;
   email: string;
+}
+
+export interface ApiKeyPermissions {
+  read: boolean;
+  write: boolean;
+  refund: boolean;
+}
+
+export interface CreateApiKeyRequest {
+  name: string;
+  permissions: ApiKeyPermissions;
+}
+
+export interface ApiKeyResponse {
+  id: string;
+  name: string;
+  key?: string;
+  key_prefix: string;
+  permissions: Record<string, boolean>;
+  last_used_at: string | null;
+  created_at: string;
+}
+
+export interface CreateWebhookRequest {
+  url: string;
+  events: string[];
+  description?: string;
+}
+
+export interface UpdateWebhookRequest {
+  url?: string;
+  events?: string[];
+  description?: string;
+  enabled?: boolean;
+}
+
+export interface WebhookResponse {
+  id: string;
+  url: string;
+  events: string[];
+  enabled: boolean;
+  description: string | null;
+  created_at: string;
+  updated_at: string;
+  secret?: string;
+}
+
+export interface RotateWebhookSecretResponse {
+  id: string;
+  secret: string;
+  rotatedAt: string;
 }
 
 export class ApiClient {
@@ -189,6 +248,193 @@ export class ApiClient {
       } as T;
     }
 
+    // Mock: POST /v1/auth/signup
+    if (endpoint === '/v1/auth/signup' && options.method === 'POST') {
+      const body = JSON.parse(options.body as string) as { email: string; password: string };
+      const mockUsers = JSON.parse(localStorage.getItem('mock_users') || '[]') as Array<{ id: string; email: string }>;
+
+      if (mockUsers.some(u => u.email === body.email)) {
+        throw new ApiClientError(409, 'User Exists', 'User with this email already exists');
+      }
+
+      const id = 'usr_' + crypto.randomUUID().substring(0, 8);
+      const accessToken = 'mock_access_' + crypto.randomUUID();
+      const refreshToken = 'mock_refresh_' + crypto.randomUUID();
+
+      mockUsers.push({ id, email: body.email });
+      localStorage.setItem('mock_users', JSON.stringify(mockUsers));
+
+      return {
+        id,
+        email: body.email,
+        created_at: new Date().toISOString(),
+        access_token: accessToken,
+        refresh_token: refreshToken,
+      } as T;
+    }
+
+    // Mock: POST /v1/auth/login
+    if (endpoint === '/v1/auth/login' && options.method === 'POST') {
+      const body = JSON.parse(options.body as string) as { email: string; password: string };
+      const mockUsers = JSON.parse(localStorage.getItem('mock_users') || '[]') as Array<{ id: string; email: string }>;
+      const user = mockUsers.find(u => u.email === body.email);
+
+      if (!user) {
+        throw new ApiClientError(401, 'Invalid Credentials', 'Invalid email or password');
+      }
+
+      return {
+        id: user.id,
+        email: user.email,
+        access_token: 'mock_access_' + crypto.randomUUID(),
+        refresh_token: 'mock_refresh_' + crypto.randomUUID(),
+      } as T;
+    }
+
+    // Mock: POST /v1/api-keys
+    if (endpoint === '/v1/api-keys' && options.method === 'POST') {
+      const body = JSON.parse(options.body as string) as CreateApiKeyRequest;
+      const id = 'key_' + crypto.randomUUID().substring(0, 8);
+      const key = 'sk_live_' + crypto.randomUUID().replace(/-/g, '');
+
+      const apiKey: ApiKeyResponse = {
+        id,
+        name: body.name,
+        key,
+        key_prefix: key.substring(0, 12) + '...',
+        permissions: body.permissions,
+        last_used_at: null,
+        created_at: new Date().toISOString(),
+      };
+
+      const stored = JSON.parse(localStorage.getItem('mock_api_keys') || '[]') as ApiKeyResponse[];
+      stored.push(apiKey);
+      localStorage.setItem('mock_api_keys', JSON.stringify(stored));
+
+      return apiKey as T;
+    }
+
+    // Mock: GET /v1/api-keys
+    if (endpoint === '/v1/api-keys' && (!options.method || options.method === 'GET')) {
+      const stored = JSON.parse(localStorage.getItem('mock_api_keys') || '[]') as ApiKeyResponse[];
+      // Strip the full key from list responses
+      const data = stored.map(({ key: _key, ...rest }) => rest);
+      return {
+        data,
+        pagination: { total: data.length, has_more: false },
+      } as T;
+    }
+
+    // Mock: DELETE /v1/api-keys/:id
+    if (endpoint.match(/^\/v1\/api-keys\/key_[a-zA-Z0-9]+$/) && options.method === 'DELETE') {
+      const id = endpoint.split('/').pop();
+      const stored = JSON.parse(localStorage.getItem('mock_api_keys') || '[]') as ApiKeyResponse[];
+      const filtered = stored.filter(k => k.id !== id);
+
+      if (filtered.length === stored.length) {
+        throw new ApiClientError(404, 'Not Found', 'API key not found');
+      }
+
+      localStorage.setItem('mock_api_keys', JSON.stringify(filtered));
+      return undefined as T;
+    }
+
+    // Mock: POST /v1/webhooks
+    if (endpoint === '/v1/webhooks' && options.method === 'POST') {
+      const body = JSON.parse(options.body as string) as CreateWebhookRequest;
+      const id = 'wh_' + crypto.randomUUID().substring(0, 8);
+      const secret = 'whsec_' + crypto.randomUUID().replace(/-/g, '');
+      const now = new Date().toISOString();
+
+      const webhook: WebhookResponse = {
+        id,
+        url: body.url,
+        events: body.events,
+        enabled: true,
+        description: body.description || null,
+        created_at: now,
+        updated_at: now,
+        secret,
+      };
+
+      const stored = JSON.parse(localStorage.getItem('mock_webhooks') || '[]') as WebhookResponse[];
+      stored.push(webhook);
+      localStorage.setItem('mock_webhooks', JSON.stringify(stored));
+
+      return webhook as T;
+    }
+
+    // Mock: GET /v1/webhooks
+    if (endpoint === '/v1/webhooks' && (!options.method || options.method === 'GET')) {
+      const stored = JSON.parse(localStorage.getItem('mock_webhooks') || '[]') as WebhookResponse[];
+      // Strip secrets from list responses
+      const data = stored.map(({ secret: _secret, ...rest }) => rest);
+      return {
+        data,
+        pagination: { total: data.length, has_more: false },
+      } as T;
+    }
+
+    // Mock: PATCH /v1/webhooks/:id
+    if (endpoint.match(/^\/v1\/webhooks\/wh_[a-zA-Z0-9]+$/) && options.method === 'PATCH') {
+      const id = endpoint.split('/').pop();
+      const updates = JSON.parse(options.body as string) as UpdateWebhookRequest;
+      const stored = JSON.parse(localStorage.getItem('mock_webhooks') || '[]') as WebhookResponse[];
+      const index = stored.findIndex(w => w.id === id);
+
+      if (index === -1) {
+        throw new ApiClientError(404, 'Not Found', 'Webhook not found');
+      }
+
+      const updated = {
+        ...stored[index],
+        ...updates,
+        updated_at: new Date().toISOString(),
+      };
+      delete updated.secret; // Never return secret on update
+      stored[index] = updated;
+      localStorage.setItem('mock_webhooks', JSON.stringify(stored));
+
+      return updated as T;
+    }
+
+    // Mock: DELETE /v1/webhooks/:id
+    if (endpoint.match(/^\/v1\/webhooks\/wh_[a-zA-Z0-9]+$/) && options.method === 'DELETE') {
+      const id = endpoint.split('/').pop();
+      const stored = JSON.parse(localStorage.getItem('mock_webhooks') || '[]') as WebhookResponse[];
+      const filtered = stored.filter(w => w.id !== id);
+
+      if (filtered.length === stored.length) {
+        throw new ApiClientError(404, 'Not Found', 'Webhook not found');
+      }
+
+      localStorage.setItem('mock_webhooks', JSON.stringify(filtered));
+      return undefined as T;
+    }
+
+    // Mock: POST /v1/webhooks/:id/rotate-secret
+    if (endpoint.match(/^\/v1\/webhooks\/wh_[a-zA-Z0-9]+\/rotate-secret$/) && options.method === 'POST') {
+      const parts = endpoint.split('/');
+      const id = parts[parts.length - 2];
+      const stored = JSON.parse(localStorage.getItem('mock_webhooks') || '[]') as WebhookResponse[];
+      const index = stored.findIndex(w => w.id === id);
+
+      if (index === -1) {
+        throw new ApiClientError(404, 'Not Found', 'Webhook not found');
+      }
+
+      const newSecret = 'whsec_' + crypto.randomUUID().replace(/-/g, '');
+      stored[index].secret = newSecret;
+      stored[index].updated_at = new Date().toISOString();
+      localStorage.setItem('mock_webhooks', JSON.stringify(stored));
+
+      return {
+        id,
+        secret: newSecret,
+        rotatedAt: new Date().toISOString(),
+      } as T;
+    }
+
     throw new ApiClientError(501, 'Not Implemented', 'Mock endpoint not implemented');
   }
 
@@ -310,6 +556,105 @@ export class ApiClient {
       // Always clear token, even if request fails
       TokenManager.clearToken();
     }
+  }
+
+  /**
+   * Sign up a new user
+   * Stores access token in TokenManager on success
+   */
+  async signup(email: string, password: string): Promise<User & { accessToken: string; refreshToken: string }> {
+    const response = await this.request<SignupResponse>('/v1/auth/signup', {
+      method: 'POST',
+      body: JSON.stringify({ email, password }),
+    });
+
+    // Store access token
+    TokenManager.setToken(response.access_token);
+
+    return {
+      id: response.id,
+      email: response.email,
+      accessToken: response.access_token,
+      refreshToken: response.refresh_token,
+    };
+  }
+
+  // API Key methods
+
+  /**
+   * Create a new API key
+   * The full key is only returned on creation
+   */
+  async createApiKey(data: CreateApiKeyRequest): Promise<ApiKeyResponse> {
+    return this.request<ApiKeyResponse>('/v1/api-keys', {
+      method: 'POST',
+      body: JSON.stringify(data),
+    });
+  }
+
+  /**
+   * List all API keys for the authenticated user
+   */
+  async listApiKeys(): Promise<{ data: ApiKeyResponse[]; pagination: { total: number; has_more: boolean } }> {
+    return this.request<{ data: ApiKeyResponse[]; pagination: { total: number; has_more: boolean } }>('/v1/api-keys');
+  }
+
+  /**
+   * Delete (revoke) an API key
+   */
+  async deleteApiKey(id: string): Promise<void> {
+    await this.request<void>(`/v1/api-keys/${id}`, {
+      method: 'DELETE',
+    });
+  }
+
+  // Webhook methods
+
+  /**
+   * Create a new webhook endpoint
+   * The secret is only returned on creation
+   */
+  async createWebhook(data: CreateWebhookRequest): Promise<WebhookResponse> {
+    return this.request<WebhookResponse>('/v1/webhooks', {
+      method: 'POST',
+      body: JSON.stringify(data),
+    });
+  }
+
+  /**
+   * List all webhooks for the authenticated user
+   */
+  async listWebhooks(): Promise<{ data: WebhookResponse[]; pagination: { total: number; has_more: boolean } }> {
+    return this.request<{ data: WebhookResponse[]; pagination: { total: number; has_more: boolean } }>('/v1/webhooks');
+  }
+
+  /**
+   * Update a webhook endpoint (PATCH)
+   */
+  async updateWebhook(id: string, data: UpdateWebhookRequest): Promise<WebhookResponse> {
+    return this.request<WebhookResponse>(`/v1/webhooks/${id}`, {
+      method: 'PATCH',
+      body: JSON.stringify(data),
+    });
+  }
+
+  /**
+   * Delete a webhook endpoint
+   */
+  async deleteWebhook(id: string): Promise<void> {
+    await this.request<void>(`/v1/webhooks/${id}`, {
+      method: 'DELETE',
+    });
+  }
+
+  /**
+   * Rotate a webhook's signing secret
+   * The new secret is only returned once
+   */
+  async rotateWebhookSecret(id: string): Promise<RotateWebhookSecretResponse> {
+    return this.request<RotateWebhookSecretResponse>(`/v1/webhooks/${id}/rotate-secret`, {
+      method: 'POST',
+    });
   }
 }
 
