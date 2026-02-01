@@ -306,7 +306,7 @@ export class PaymentService {
       tx_hash: session.txHash,
       block_number: session.blockNumber,
       confirmations: session.confirmations,
-      checkout_url: `${baseUrl}/checkout/${session.id}`,
+      checkout_url: `${baseUrl}/pay/${session.id}`,
       success_url: session.successUrl,
       cancel_url: session.cancelUrl,
       metadata: session.metadata as any,

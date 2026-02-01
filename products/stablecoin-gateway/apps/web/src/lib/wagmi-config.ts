@@ -19,7 +19,7 @@ const mainnetRpcUrl = import.meta.env.VITE_ALCHEMY_MAINNET_URL || 'https://eth.p
 export const config = createConfig({
   chains: [polygon, mainnet],
   connectors: [
-    injected({ target: 'metaMask' }),
+    injected(),
     walletConnect({
       projectId: walletConnectProjectId,
       metadata: {

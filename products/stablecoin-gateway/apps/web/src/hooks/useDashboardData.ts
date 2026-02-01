@@ -18,33 +18,35 @@ export interface DashboardTransaction {
   status: 'SUCCESS' | 'PENDING' | 'FAILED';
 }
 
-function formatCurrency(cents: number): string {
-  return '$' + (cents / 100).toLocaleString('en-US', {
+function formatCurrency(amount: number): string {
+  return '$' + amount.toLocaleString('en-US', {
     minimumFractionDigits: 2,
     maximumFractionDigits: 2,
   });
 }
 
 function formatDate(iso: string): string {
-  return new Date(iso).toLocaleDateString('en-US', {
+  return new Date(iso).toLocaleString('en-US', {
     month: 'short',
     day: 'numeric',
     year: 'numeric',
+    hour: 'numeric',
+    minute: '2-digit',
   });
 }
 
-function mapStatus(status: PaymentSession['status']): DashboardTransaction['status'] {
-  switch (status) {
-    case 'completed': return 'SUCCESS';
-    case 'pending':
-    case 'confirming': return 'PENDING';
+function mapStatus(status: string): DashboardTransaction['status'] {
+  switch (status.toUpperCase()) {
+    case 'COMPLETED': return 'SUCCESS';
+    case 'PENDING':
+    case 'CONFIRMING': return 'PENDING';
     default: return 'FAILED';
   }
 }
 
 function computeStats(sessions: PaymentSession[]) {
-  const completed = sessions.filter(s => s.status === 'completed');
-  const terminal = sessions.filter(s => s.status === 'completed' || s.status === 'failed');
+  const completed = sessions.filter(s => s.status.toUpperCase() === 'COMPLETED');
+  const terminal = sessions.filter(s => s.status.toUpperCase() === 'COMPLETED' || s.status.toUpperCase() === 'FAILED');
 
   const totalBalance = completed.reduce((sum, s) => sum + s.amount, 0);
   const volume = sessions.reduce((sum, s) => sum + s.amount, 0);

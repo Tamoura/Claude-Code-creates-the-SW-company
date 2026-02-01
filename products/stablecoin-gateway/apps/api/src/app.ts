@@ -21,6 +21,7 @@ import webhookRoutes from './routes/v1/webhooks.js';
 import apiKeyRoutes from './routes/v1/api-keys.js';
 import refundRoutes from './routes/v1/refunds.js';
 import adminRoutes from './routes/v1/admin.js';
+import checkoutRoutes from './routes/v1/checkout.js';
 import webhookWorkerRoutes from './routes/internal/webhook-worker.js';
 
 // Utils
@@ -228,6 +229,13 @@ export async function buildApp(): Promise<FastifyInstance> {
   await fastify.register(apiKeyRoutes, { prefix: '/v1/api-keys' });
   await fastify.register(refundRoutes, { prefix: '/v1/refunds' });
   await fastify.register(adminRoutes, { prefix: '/v1/admin' });
+  await fastify.register(checkoutRoutes, { prefix: '/v1/checkout' });
+
+  // Dev-only routes (never registered in production)
+  if (process.env.NODE_ENV !== 'production') {
+    const devRoutes = (await import('./routes/v1/dev.js')).default;
+    await fastify.register(devRoutes, { prefix: '/v1/dev' });
+  }
 
   // Internal routes (for cron jobs, workers, etc.)
   await fastify.register(webhookWorkerRoutes, { prefix: '/internal' });
