@@ -8,6 +8,7 @@
 
 import { FastifyInstance } from 'fastify';
 import { buildApp } from '../../src/app';
+import Redis from 'ioredis';
 
 describe('Auth Endpoint Rate Limiting - Login', () => {
   let app: FastifyInstance;
@@ -15,6 +16,11 @@ describe('Auth Endpoint Rate Limiting - Login', () => {
   const testUA = `LoginRateLimitTest/${Date.now()}`;
 
   beforeAll(async () => {
+    // Flush Redis to clear any rate limit state from prior tests
+    const redis = new Redis(process.env.REDIS_URL || 'redis://localhost:6379');
+    await redis.flushdb();
+    await redis.quit();
+
     app = await buildApp();
     // Clean database and create test user
     await app.prisma.user.deleteMany();
@@ -32,12 +38,14 @@ describe('Auth Endpoint Rate Limiting - Login', () => {
 
   it('should allow 5 login attempts then block 6th', async () => {
     // Make 5 failed attempts
+    // Use unique emails per attempt to avoid account lockout interference,
+    // since lockout also triggers 429 after 5 fails for the same email.
     for (let i = 0; i < 5; i++) {
       const response = await app.inject({
         method: 'POST',
         url: '/v1/auth/login',
         payload: {
-          email: 'test@example.com',
+          email: `nonexistent-${i}@example.com`,
           password: 'WrongPassword123!',
         },
         headers: {
@@ -53,7 +61,7 @@ describe('Auth Endpoint Rate Limiting - Login', () => {
       method: 'POST',
       url: '/v1/auth/login',
       payload: {
-        email: 'test@example.com',
+        email: 'nonexistent-final@example.com',
         password: 'WrongPassword123!',
       },
       headers: {

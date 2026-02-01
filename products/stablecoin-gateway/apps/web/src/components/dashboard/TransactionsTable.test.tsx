@@ -1,4 +1,5 @@
 import { render, screen } from '@testing-library/react';
+import { MemoryRouter } from 'react-router-dom';
 import { describe, it, expect } from 'vitest';
 import TransactionsTable, { type TransactionRow } from './TransactionsTable';
 
@@ -29,9 +30,13 @@ const mockTransactions: TransactionRow[] = [
   },
 ];
 
+function renderWithRouter(ui: React.ReactElement) {
+  return render(<MemoryRouter>{ui}</MemoryRouter>);
+}
+
 describe('TransactionsTable', () => {
   it('renders the Recent Transactions heading', () => {
-    render(<TransactionsTable transactions={mockTransactions} />);
+    renderWithRouter(<TransactionsTable transactions={mockTransactions} />);
 
     expect(
       screen.getByRole('heading', { name: /recent transactions/i })
@@ -39,7 +44,7 @@ describe('TransactionsTable', () => {
   });
 
   it('renders the View All button', () => {
-    render(<TransactionsTable transactions={mockTransactions} />);
+    renderWithRouter(<TransactionsTable transactions={mockTransactions} />);
 
     expect(
       screen.getByRole('button', { name: /view all/i })
@@ -47,7 +52,7 @@ describe('TransactionsTable', () => {
   });
 
   it('renders table column headers', () => {
-    render(<TransactionsTable transactions={mockTransactions} />);
+    renderWithRouter(<TransactionsTable transactions={mockTransactions} />);
 
     expect(screen.getByText('ID')).toBeInTheDocument();
     expect(screen.getByText('Customer')).toBeInTheDocument();
@@ -58,7 +63,7 @@ describe('TransactionsTable', () => {
   });
 
   it('renders transaction rows from props', () => {
-    render(<TransactionsTable transactions={mockTransactions} />);
+    renderWithRouter(<TransactionsTable transactions={mockTransactions} />);
 
     expect(screen.getByText('#TX-8821')).toBeInTheDocument();
     expect(screen.getByText('$50.00')).toBeInTheDocument();
@@ -69,7 +74,7 @@ describe('TransactionsTable', () => {
   });
 
   it('renders status badges with correct text', () => {
-    render(<TransactionsTable transactions={mockTransactions} />);
+    renderWithRouter(<TransactionsTable transactions={mockTransactions} />);
 
     const successBadges = screen.getAllByText('SUCCESS');
     const pendingBadges = screen.getAllByText('PENDING');
@@ -79,13 +84,13 @@ describe('TransactionsTable', () => {
   });
 
   it('shows loading state', () => {
-    render(<TransactionsTable isLoading />);
+    renderWithRouter(<TransactionsTable isLoading />);
 
     expect(screen.getByText('Loading transactions...')).toBeInTheDocument();
   });
 
   it('shows empty state when no transactions', () => {
-    render(<TransactionsTable transactions={[]} />);
+    renderWithRouter(<TransactionsTable transactions={[]} />);
 
     expect(screen.getByText('No transactions yet')).toBeInTheDocument();
   });

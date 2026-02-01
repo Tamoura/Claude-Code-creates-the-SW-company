@@ -181,6 +181,9 @@ describe('ProviderManager', () => {
       const result1 = await manager.getProvider('polygon');
       expect(result1).toBe(primary);
 
+      // Advance past health cache TTL (30s) so cached result expires
+      jest.advanceTimersByTime(31000);
+
       // Next call: primary should not be skipped (failure cleared)
       jest.spyOn(primary, 'getBlockNumber').mockClear();
       jest.spyOn(primary, 'getBlockNumber').mockResolvedValue(12345);

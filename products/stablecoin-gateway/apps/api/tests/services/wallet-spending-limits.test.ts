@@ -6,6 +6,9 @@
  *
  * FIX: Hot Wallet Has No Spending Limits
  *
+ * The implementation uses redis.get() for limit checks and
+ * redis.incrby() + redis.expire() for recording spend (not Lua scripts).
+ *
  * Test cases:
  * 1. Refund within daily limit succeeds
  * 2. Refund exceeding daily limit is rejected with error
@@ -40,7 +43,7 @@ const mockTransferFn = jest.fn().mockResolvedValue({
 });
 mockTransferFn.estimateGas = jest.fn().mockResolvedValue(BigInt(65000));
 
-// Mock ethers — keep isAddress, Wallet, formatEther real
+// Mock ethers -- keep isAddress, Wallet, formatEther real
 jest.mock('ethers', () => {
   const real = jest.requireActual('ethers');
   return {
@@ -75,6 +78,7 @@ function createMockProviderManager() {
 const VALID_ADDRESS = '0x0b7Eb565F75758f61F4A83F7E995B9C3201B482b';
 
 // Helper: create a mock Redis client with in-memory store
+// The implementation uses get/incrby/expire (not Lua eval)
 function createMockRedis() {
   const store: Record<string, string> = {};
   return {
@@ -91,23 +95,6 @@ function createMockRedis() {
       return newVal;
     }),
     expire: jest.fn(async () => 1),
-    eval: jest.fn(
-      async (
-        _script: string,
-        _numkeys: number,
-        ...args: (string | number)[]
-      ) => {
-        const key = String(args[0]);
-        const limit = Number(args[1]);
-        const amount = Number(args[2]);
-        const current = parseInt(store[key] || '0', 10);
-        if (current + amount > limit) {
-          return 0;
-        }
-        store[key] = String(current + amount);
-        return 1;
-      }
-    ),
     status: 'ready',
   };
 }
@@ -244,21 +231,20 @@ describe('Wallet Spending Limits', () => {
       const today = new Date().toISOString().split('T')[0];
       const expectedKeyPattern = `spend:daily:${today}`;
 
-      // The atomic eval call should have used a date-based key
-      expect(redis.eval).toHaveBeenCalledWith(
-        expect.any(String), // Lua script
-        1, // numkeys
-        expectedKeyPattern, // KEYS[1]
-        expect.any(Number), // limitCents (ARGV[1])
-        50000, // amountCents for $500 (ARGV[2])
-        172800 // TTL in seconds (ARGV[3])
-      );
+      // The implementation uses redis.get() with a date-based key to check limit
+      expect(redis.get).toHaveBeenCalledWith(expectedKeyPattern);
+
+      // After success, redis.incrby() records the spend in cents
+      expect(redis.incrby).toHaveBeenCalledWith(expectedKeyPattern, 50000); // $500 = 50000 cents
+
+      // And redis.expire() sets the TTL (172800 = 48 hours)
+      expect(redis.expire).toHaveBeenCalledWith(expectedKeyPattern, 172800);
     });
   });
 
   describe('Graceful degradation when Redis unavailable', () => {
     it('should allow the refund when Redis is not provided', async () => {
-      // No redis option passed — but providerManager needed for health checks
+      // No redis option passed -- but providerManager needed for health checks
       const service = new BlockchainTransactionService({ providerManager: createMockProviderManager() });
 
       const result = await service.executeRefund({
@@ -278,7 +264,6 @@ describe('Wallet Spending Limits', () => {
         incrby: jest.fn().mockRejectedValue(new Error('Connection refused')),
         set: jest.fn().mockRejectedValue(new Error('Connection refused')),
         expire: jest.fn().mockRejectedValue(new Error('Connection refused')),
-        eval: jest.fn().mockRejectedValue(new Error('Connection refused')),
         status: 'end',
       };
 

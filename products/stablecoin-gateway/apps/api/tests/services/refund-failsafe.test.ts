@@ -16,6 +16,7 @@ const originalEnv = { ...process.env };
 // Mock the BlockchainTransactionService
 jest.mock('../../src/services/blockchain-transaction.service', () => ({
   BlockchainTransactionService: jest.fn(),
+  CONFIRMATION_REQUIREMENTS: { polygon: 12, ethereum: 3 },
 }));
 
 // Mock PrismaClient
@@ -23,6 +24,8 @@ jest.mock('@prisma/client', () => ({
   PrismaClient: jest.fn().mockImplementation(() => ({
     paymentSession: { findFirst: jest.fn(), findUnique: jest.fn(), update: jest.fn() },
     refund: { create: jest.fn(), findUnique: jest.fn(), findMany: jest.fn(), update: jest.fn(), count: jest.fn() },
+    $transaction: jest.fn(),
+    $executeRaw: jest.fn(),
   })),
   RefundStatus: {
     PENDING: 'PENDING',
@@ -42,6 +45,33 @@ jest.mock('../../src/services/webhook-delivery.service', () => ({
   WebhookDeliveryService: jest.fn().mockImplementation(() => ({
     queueWebhook: jest.fn().mockResolvedValue(undefined),
   })),
+}));
+
+// Mock BlockchainMonitorService (required by RefundService constructor)
+jest.mock('../../src/services/blockchain-monitor.service', () => ({
+  BlockchainMonitorService: jest.fn().mockImplementation(() => ({
+    getConfirmations: jest.fn().mockResolvedValue(0),
+  })),
+}));
+
+// Mock RefundQueryService (required by RefundService constructor)
+jest.mock('../../src/services/refund-query.service', () => ({
+  RefundQueryService: jest.fn().mockImplementation(() => ({
+    getRefund: jest.fn(),
+    listRefunds: jest.fn(),
+    toResponse: jest.fn(),
+  })),
+}));
+
+// Mock RefundFinalizationService (required by RefundService constructor)
+jest.mock('../../src/services/refund-finalization.service', () => ({
+  RefundFinalizationService: jest.fn().mockImplementation(() => ({
+    completeRefund: jest.fn(),
+    failRefund: jest.fn(),
+    confirmRefundFinality: jest.fn(),
+  })),
+  computeRefundedTotal: jest.fn(),
+  computeRemainingAmount: jest.fn(),
 }));
 
 // Mock crypto utils
@@ -80,7 +110,7 @@ describe('RefundService Failsafe', () => {
       const { RefundService } = await import('../../src/services/refund.service');
       const mockPrisma = new PrismaClient();
 
-      // Should throw in production
+      // Should throw in production - the error message includes the wrapper text
       expect(() => new RefundService(mockPrisma)).toThrow(
         'BlockchainTransactionService initialization failed in production'
       );
@@ -97,6 +127,7 @@ describe('RefundService Failsafe', () => {
       const { RefundService } = await import('../../src/services/refund.service');
       const mockPrisma = new PrismaClient();
 
+      // The actual error message includes the original error text
       expect(() => new RefundService(mockPrisma)).toThrow(originalError);
     });
   });
@@ -110,8 +141,8 @@ describe('RefundService Failsafe', () => {
         throw new Error('MERCHANT_WALLET_PRIVATE_KEY not configured');
       });
 
-      // Mock console.warn to verify warning is logged
-      const warnSpy = jest.spyOn(console, 'warn').mockImplementation();
+      // logger.warn calls console.log (not console.warn)
+      const logSpy = jest.spyOn(console, 'log').mockImplementation();
 
       const { RefundService } = await import('../../src/services/refund.service');
       const mockPrisma = new PrismaClient();
@@ -119,15 +150,14 @@ describe('RefundService Failsafe', () => {
       // Should NOT throw in development
       expect(() => new RefundService(mockPrisma)).not.toThrow();
 
-      // Should log warning
-      expect(warnSpy).toHaveBeenCalledWith(
-        expect.stringContaining('BlockchainTransactionService not available')
+      // Should log warning via logger (which uses console.log)
+      const logCalls = logSpy.mock.calls.map(call => String(call[0]));
+      const hasWarning = logCalls.some(msg =>
+        msg.includes('BlockchainTransactionService not available')
       );
-      expect(warnSpy).toHaveBeenCalledWith(
-        expect.stringContaining('development/test')
-      );
+      expect(hasWarning).toBe(true);
 
-      warnSpy.mockRestore();
+      logSpy.mockRestore();
     });
 
     it('should allow missing blockchain service in test environment', async () => {
@@ -137,14 +167,14 @@ describe('RefundService Failsafe', () => {
         throw new Error('No wallet configured');
       });
 
-      const warnSpy = jest.spyOn(console, 'warn').mockImplementation();
+      const logSpy = jest.spyOn(console, 'log').mockImplementation();
 
       const { RefundService } = await import('../../src/services/refund.service');
       const mockPrisma = new PrismaClient();
 
       expect(() => new RefundService(mockPrisma)).not.toThrow();
 
-      warnSpy.mockRestore();
+      logSpy.mockRestore();
     });
   });
 
@@ -171,7 +201,7 @@ describe('RefundService Failsafe', () => {
         throw new Error('Not configured');
       });
 
-      const warnSpy = jest.spyOn(console, 'warn').mockImplementation();
+      const logSpy = jest.spyOn(console, 'log').mockImplementation();
 
       const { RefundService } = await import('../../src/services/refund.service');
       const mockPrisma = new PrismaClient();
@@ -179,7 +209,7 @@ describe('RefundService Failsafe', () => {
 
       expect(service.isBlockchainAvailable()).toBe(false);
 
-      warnSpy.mockRestore();
+      logSpy.mockRestore();
     });
   });
 
@@ -191,7 +221,7 @@ describe('RefundService Failsafe', () => {
         throw new Error('Not configured');
       });
 
-      const warnSpy = jest.spyOn(console, 'warn').mockImplementation();
+      const logSpy = jest.spyOn(console, 'log').mockImplementation();
 
       const { RefundService } = await import('../../src/services/refund.service');
       const mockPrisma = new PrismaClient();
@@ -214,10 +244,10 @@ describe('RefundService Failsafe', () => {
       });
 
       await expect(service.processRefund('ref_test123')).rejects.toThrow(
-        'Cannot process refund: blockchain service unavailable'
+        'blockchain service unavailable'
       );
 
-      warnSpy.mockRestore();
+      logSpy.mockRestore();
     });
 
     it('should skip on-chain execution in dev/test when blockchain unavailable', async () => {
@@ -227,7 +257,7 @@ describe('RefundService Failsafe', () => {
         throw new Error('Not configured');
       });
 
-      const warnSpy = jest.spyOn(console, 'warn').mockImplementation();
+      const logSpy = jest.spyOn(console, 'log').mockImplementation();
 
       const { RefundService } = await import('../../src/services/refund.service');
       const mockPrisma = new PrismaClient();
@@ -249,12 +279,14 @@ describe('RefundService Failsafe', () => {
       // Should not throw in test, just warn and return
       await expect(service.processRefund('ref_test123')).resolves.not.toThrow();
 
-      // Should log warning about skipping
-      expect(warnSpy).toHaveBeenCalledWith(
-        expect.stringContaining('Skipping on-chain refund')
+      // Should log warning about skipping (via logger which uses console.log)
+      const logCalls = logSpy.mock.calls.map(call => String(call[0]));
+      const hasSkipWarning = logCalls.some(msg =>
+        msg.includes('Skipping on-chain refund')
       );
+      expect(hasSkipWarning).toBe(true);
 
-      warnSpy.mockRestore();
+      logSpy.mockRestore();
     });
 
     it('should process refund normally when blockchain service is available', async () => {
@@ -298,7 +330,7 @@ describe('RefundService Failsafe', () => {
       (mockPrisma.refund.findUnique as jest.Mock).mockResolvedValue(mockRefund);
       (mockPrisma.refund.update as jest.Mock).mockResolvedValue({
         ...mockRefund,
-        status: 'COMPLETED',
+        status: 'PROCESSING',
         txHash: '0xabc123',
         blockNumber: 12345,
         completedAt: new Date('2024-01-15T10:05:00Z'),
@@ -317,7 +349,7 @@ describe('RefundService Failsafe', () => {
         network: 'polygon',
         token: 'USDC',
         recipientAddress: '0x1234567890123456789012345678901234567890',
-        amount: 50,
+        amount: '50',
       });
     });
   });

@@ -58,7 +58,7 @@ const config: Config.InitialOptions = {
   collectCoverageFrom: ['**/*.test.ts'],
 
   // Coverage thresholds
-  coverageThresholds: {
+  coverageThreshold: {
     global: {
       branches: 80,
       functions: 80,

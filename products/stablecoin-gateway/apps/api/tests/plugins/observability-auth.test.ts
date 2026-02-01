@@ -144,24 +144,30 @@ describe('Observability - Production Configuration', () => {
 });
 
 describe('Observability - Development Mode', () => {
-  const originalEnv = process.env;
+  let savedInternalApiKey: string | undefined;
+
+  beforeEach(() => {
+    savedInternalApiKey = process.env.INTERNAL_API_KEY;
+  });
 
   afterEach(() => {
-    process.env = originalEnv;
+    if (savedInternalApiKey !== undefined) {
+      process.env.INTERNAL_API_KEY = savedInternalApiKey;
+    } else {
+      delete process.env.INTERNAL_API_KEY;
+    }
   });
 
   it('should return 500 when INTERNAL_API_KEY is not set (even in development)', async () => {
     // Metrics endpoint requires INTERNAL_API_KEY in all environments
-    process.env = {
-      ...originalEnv,
-      NODE_ENV: 'development',
-      INTERNAL_API_KEY: undefined,
-    };
-    delete process.env.INTERNAL_API_KEY;
-
+    // Note: Prisma Client auto-loads .env on import, so we must delete
+    // the key AFTER buildApp() to ensure it's not present at request time.
     const app = await buildApp();
 
     try {
+      // Delete the key after app build (Prisma re-loads .env during init)
+      delete process.env.INTERNAL_API_KEY;
+
       const response = await app.inject({
         method: 'GET',
         url: '/internal/metrics',

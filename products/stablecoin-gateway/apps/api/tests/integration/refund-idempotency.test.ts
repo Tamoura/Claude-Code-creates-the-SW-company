@@ -142,7 +142,7 @@ describe('Refund idempotency (Idempotency-Key header)', () => {
 
     expect(res2.statusCode).toBe(409);
     const body = JSON.parse(res2.body);
-    expect(body.code).toBe('idempotency-mismatch');
+    expect(body.type).toBe('https://gateway.io/errors/idempotency-mismatch');
   });
 
   it('should create separate refunds without idempotency key', async () => {

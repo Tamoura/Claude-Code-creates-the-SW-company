@@ -30,4 +30,7 @@ module.exports = {
   },
   setupFilesAfterEnv: ['<rootDir>/tests/setup.ts'],
   testTimeout: 30000,
+  // Run tests sequentially - integration tests share a real Postgres DB
+  // and parallel workers cause data interference via setup.ts deleteMany()
+  maxWorkers: 1,
 };

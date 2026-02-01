@@ -5,12 +5,25 @@
  * - Authentication state
  * - Login/logout functions
  * - Current user data
+ *
+ * Uses the mock API client (VITE_USE_MOCK_API=true in vitest config).
+ * Mock login validates email against localStorage mock_users store.
  */
 
 import { describe, it, expect, beforeEach } from 'vitest';
 import { renderHook, waitFor, act } from '@testing-library/react';
 import { useAuth } from '../../src/hooks/useAuth';
 import { TokenManager } from '../../src/lib/token-manager';
+
+const TEST_EMAIL = 'test@example.com';
+const MOCK_USER_ID = 'usr_test1234';
+
+/** Pre-seed a mock user in localStorage so mock login can find it */
+function seedMockUser(email = TEST_EMAIL, id = MOCK_USER_ID) {
+  const mockUsers = JSON.parse(localStorage.getItem('mock_users') || '[]');
+  mockUsers.push({ id, email });
+  localStorage.setItem('mock_users', JSON.stringify(mockUsers));
+}
 
 describe('useAuth Hook', () => {
   beforeEach(() => {
@@ -31,8 +44,6 @@ describe('useAuth Hook', () => {
 
     it('should detect existing token and authenticate', async () => {
       // Pre-set a valid token (simulating returning user)
-      // Note: In real scenario, we'd need to mock or setup a valid token
-      // For this test, we'll test the check happens
       const { result } = renderHook(() => useAuth());
 
       // Initially should check for token
@@ -42,11 +53,12 @@ describe('useAuth Hook', () => {
 
   describe('Login', () => {
     it('should login successfully with valid credentials', async () => {
+      seedMockUser();
       const { result } = renderHook(() => useAuth());
 
       // Start login
       await act(async () => {
-        await result.current.login('test@example.com', 'SecurePass123');
+        await result.current.login(TEST_EMAIL, 'SecurePass123');
       });
 
       // Should be authenticated
@@ -55,17 +67,18 @@ describe('useAuth Hook', () => {
       });
 
       expect(result.current.user).toMatchObject({
-        email: 'test@example.com',
+        email: TEST_EMAIL,
       });
       expect(result.current.error).toBeNull();
     });
 
     it('should set loading state during login', async () => {
+      seedMockUser();
       const { result } = renderHook(() => useAuth());
 
       // Start login (don't await)
       act(() => {
-        result.current.login('test@example.com', 'SecurePass123');
+        result.current.login(TEST_EMAIL, 'SecurePass123');
       });
 
       // Should be loading
@@ -78,11 +91,12 @@ describe('useAuth Hook', () => {
     });
 
     it('should set error on invalid credentials', async () => {
+      // Don't seed user - mock rejects when email is not found
       const { result } = renderHook(() => useAuth());
 
       await act(async () => {
         try {
-          await result.current.login('test@example.com', 'WrongPassword');
+          await result.current.login('nonexistent@example.com', 'WrongPassword');
         } catch (e) {
           // Expected to throw
         }
@@ -98,12 +112,13 @@ describe('useAuth Hook', () => {
     });
 
     it('should clear previous errors on new login attempt', async () => {
+      seedMockUser();
       const { result } = renderHook(() => useAuth());
 
-      // First attempt - fail
+      // First attempt - fail with email not in mock store
       await act(async () => {
         try {
-          await result.current.login('test@example.com', 'WrongPassword');
+          await result.current.login('nonexistent@example.com', 'WrongPassword');
         } catch (e) {
           // Expected
         }
@@ -113,9 +128,9 @@ describe('useAuth Hook', () => {
         expect(result.current.error).toBeTruthy();
       });
 
-      // Second attempt - succeed
+      // Second attempt - succeed with seeded user
       await act(async () => {
-        await result.current.login('test@example.com', 'SecurePass123');
+        await result.current.login(TEST_EMAIL, 'SecurePass123');
       });
 
       await waitFor(() => {
@@ -127,11 +142,12 @@ describe('useAuth Hook', () => {
 
   describe('Logout', () => {
     it('should logout and clear state', async () => {
+      seedMockUser();
       const { result } = renderHook(() => useAuth());
 
       // First login
       await act(async () => {
-        await result.current.login('test@example.com', 'SecurePass123');
+        await result.current.login(TEST_EMAIL, 'SecurePass123');
       });
 
       await waitFor(() => {
@@ -167,11 +183,13 @@ describe('useAuth Hook', () => {
 
   describe('Authentication Persistence', () => {
     it('should restore authentication from stored token', async () => {
+      seedMockUser();
+
       // First hook instance - login
       const { result: firstResult } = renderHook(() => useAuth());
 
       await act(async () => {
-        await firstResult.current.login('test@example.com', 'SecurePass123');
+        await firstResult.current.login(TEST_EMAIL, 'SecurePass123');
       });
 
       await waitFor(() => {

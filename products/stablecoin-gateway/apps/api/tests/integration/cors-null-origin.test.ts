@@ -3,9 +3,15 @@ import { buildApp } from '../../src/app.js';
 
 describe('CORS null/missing origin handling', () => {
   const originalNodeEnv = process.env.NODE_ENV;
+  const originalAllowedOrigins = process.env.ALLOWED_ORIGINS;
 
   afterEach(() => {
     process.env.NODE_ENV = originalNodeEnv;
+    if (originalAllowedOrigins !== undefined) {
+      process.env.ALLOWED_ORIGINS = originalAllowedOrigins;
+    } else {
+      delete process.env.ALLOWED_ORIGINS;
+    }
   });
 
   describe('production environment', () => {
@@ -13,6 +19,7 @@ describe('CORS null/missing origin handling', () => {
 
     beforeAll(async () => {
       process.env.NODE_ENV = 'production';
+      process.env.ALLOWED_ORIGINS = 'http://localhost:3101,http://localhost:3104';
       app = await buildApp();
     });
 
