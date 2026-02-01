@@ -82,7 +82,29 @@ This script automatically:
 or "Not yet implemented" is a FAIL. Placeholder pages mean the product is not
 shippable, regardless of how many unit tests pass.
 
-### Step 4: Visual Verification
+### Step 4: Interactive Element Verification (MANDATORY)
+**This step catches bugs that static checks miss** — buttons that render but don't work,
+dropdowns that don't open, sign-out that doesn't redirect. These are the bugs the CEO
+finds during live demos.
+
+For EVERY interactive element on EVERY page, verify:
+- [ ] **Buttons**: Each button has a working onClick handler (not just styled, actually clickable and does something)
+- [ ] **Navigation**: Every sidebar/nav link navigates to the correct page
+- [ ] **Sign out**: Clicking sign out redirects to /login (test from EVERY sign out location)
+- [ ] **Forms**: Submit buttons are wired to real API calls (not placeholder)
+- [ ] **Dropdowns**: Click to open, items inside are clickable and navigate/act correctly
+- [ ] **User context**: User info (email, initials, name) comes from real auth state, not hardcoded
+- [ ] **CRUD operations**: Create/Read/Update/Delete buttons actually call the API
+
+**How to verify**: The E2E tests should cover all of these. If an interactive element
+exists on any page but has NO corresponding E2E test, that is a **FAIL**. Every clickable
+element must have an E2E test that clicks it and verifies the result.
+
+If ANY interactive element is broken or untested:
+- **FAIL** the testing gate
+- Route to Frontend Engineer to fix the element AND add E2E test coverage
+
+### Step 5: Visual Verification
 With dev server running (smoke test leaves it running), verify:
 - [ ] App loads without errors
 - [ ] All buttons visible and styled (have background color)
@@ -98,7 +120,8 @@ TESTING GATE PASSED - Ready for CEO checkpoint
 
 Results:
 - Unit tests: PASS (X tests)
-- E2E tests: PASS (X tests)
+- E2E tests: PASS (X tests across Y spec files)
+- Interactive element verification: PASS (all buttons/nav/forms tested by E2E)
 - Smoke test: PASS (servers start, health OK, UI loads, no placeholders)
 - Visual verification: PASS
 
@@ -111,7 +134,8 @@ TESTING GATE FAILED - Not ready for CEO
 
 Results:
 - Unit tests: [PASS/FAIL]
-- E2E tests: [PASS/FAIL]
+- E2E tests: [PASS/FAIL] (X tests across Y spec files)
+- Interactive element verification: [PASS/FAIL]
 - Smoke test: [PASS/FAIL]
 - Visual verification: [PASS/FAIL]
 

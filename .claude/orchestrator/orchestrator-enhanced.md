@@ -256,7 +256,11 @@ F. CHECK FOR CHECKPOINT
        - Continue execution loop (improvements first)
        - Re-audit after improvements
        - Repeat until all scores >= 8/10
-     - **All pass condition**: smoke test PASS + no placeholders + testing gate PASS + all audit scores >= 8/10
+     - **E2E Test Existence Check**: Before proceeding, verify the product has >= 3 Playwright
+       E2E test files. If not, route to QA Engineer to write them. Products without E2E tests
+       CANNOT pass the checkpoint — this is non-negotiable. Interactive bugs (broken buttons,
+       missing navigation, hardcoded values) are only caught by E2E tests.
+     - **All pass condition**: smoke test PASS + no placeholders + E2E tests exist and pass + testing gate PASS + all audit scores >= 8/10
      - Once all pass:
        - PAUSE execution loop
        - Generate CEO report with audit scores + smoke test report

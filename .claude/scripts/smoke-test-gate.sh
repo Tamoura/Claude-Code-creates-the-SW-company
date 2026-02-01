@@ -288,10 +288,10 @@ fi
 echo ""
 
 # ============================================================================
-# CHECK 5: Playwright Headless Verification (optional)
+# CHECK 5: Playwright Headless Verification (MANDATORY)
 # ============================================================================
 echo "┌──────────────────────────────────────────────────────────────┐"
-echo "│ Check 5: Playwright Headless Verification (optional)         │"
+echo "│ Check 5: Playwright Headless Verification (MANDATORY)        │"
 echo "└──────────────────────────────────────────────────────────────┘"
 
 if [ "$HAS_WEB" = true ] && command -v npx >/dev/null 2>&1; then
@@ -334,17 +334,21 @@ PLAYWRIGHT_EOF
     if [ "$PW_STATUS" = "200" ] && [ "$PW_HAS_CONTENT" = "true" ] && [ "$PW_ERRORS" = "0" ]; then
       record "PASS" "Playwright headless check" "Page loads, has content, 0 console errors"
     elif [ "$PW_STATUS" = "200" ] && [ "$PW_ERRORS" != "0" ]; then
-      record "WARN" "Playwright headless check" "Page loads but $PW_ERRORS console errors detected"
+      record "FAIL" "Playwright headless check" "Page loads but $PW_ERRORS console errors detected"
     else
-      record "WARN" "Playwright headless check" "Could not verify: status=$PW_STATUS content=$PW_HAS_CONTENT"
+      record "FAIL" "Playwright headless check" "Page did not load correctly: status=$PW_STATUS content=$PW_HAS_CONTENT"
     fi
 
     [ -f "$SCREENSHOT_PATH" ] && echo "  Screenshot saved: $SCREENSHOT_PATH"
   else
-    record "WARN" "Playwright headless check" "Playwright not installed, skipping"
+    record "FAIL" "Playwright headless check" "Playwright not installed — install with: npx playwright install chromium"
   fi
 else
-  record "WARN" "Playwright headless check" "Skipped (no web app or npx not available)"
+  if [ "$HAS_WEB" = true ]; then
+    record "FAIL" "Playwright headless check" "npx not available — required for headless verification"
+  else
+    record "WARN" "Playwright headless check" "No web app found, skipping"
+  fi
 fi
 
 echo ""
@@ -376,6 +380,37 @@ if [ "$HAS_API" = true ]; then
     tail -10 /tmp/smoke-build-api-$PRODUCT.log 2>/dev/null | sed 's/^/    /'
   fi
   cd "$PRODUCT_DIR"
+fi
+
+echo ""
+
+# ============================================================================
+# CHECK 7: E2E Test Existence (MANDATORY for web apps)
+# ============================================================================
+echo "┌──────────────────────────────────────────────────────────────┐"
+echo "│ Check 7: E2E Test Coverage (MANDATORY)                       │"
+echo "└──────────────────────────────────────────────────────────────┘"
+
+MIN_E2E_FILES=3
+
+if [ "$HAS_WEB" = true ]; then
+  E2E_COUNT=0
+  for e2e_dir in "$PRODUCT_DIR/apps/web/e2e" "$PRODUCT_DIR/e2e" "$PRODUCT_DIR/apps/web/tests/e2e"; do
+    if [ -d "$e2e_dir" ]; then
+      dir_count=$(find "$e2e_dir" -name "*.spec.ts" -o -name "*.spec.js" -o -name "*.test.ts" -o -name "*.test.js" 2>/dev/null | wc -l | tr -d ' ')
+      E2E_COUNT=$((E2E_COUNT + dir_count))
+    fi
+  done
+
+  if [ "$E2E_COUNT" -ge "$MIN_E2E_FILES" ]; then
+    record "PASS" "E2E test files exist" "Found $E2E_COUNT E2E test files (minimum: $MIN_E2E_FILES)"
+  elif [ "$E2E_COUNT" -gt 0 ]; then
+    record "WARN" "E2E test files exist" "Found $E2E_COUNT E2E test files but minimum is $MIN_E2E_FILES"
+  else
+    record "FAIL" "E2E test files exist" "No E2E test files found — every web app must have Playwright E2E tests"
+  fi
+else
+  record "WARN" "E2E test files exist" "No web app found, skipping"
 fi
 
 echo ""
