@@ -1,55 +1,64 @@
-# Dockerfile for Stablecoin Gateway Web
+# Dockerfile for Stablecoin Gateway Web (Vite + React)
+# Production build: multi-stage with nginx
 
-# Stage 1: Build
+# Stage 1: Build the Vite app
 FROM node:20-alpine AS builder
 
 WORKDIR /app
 
-# Copy package files
+# Copy package files and install dependencies
 COPY apps/web/package*.json ./
 RUN npm ci && npm cache clean --force
 
 # Copy source code
 COPY apps/web/ ./
 
-# Build Next.js app
-# ARG NEXT_PUBLIC_API_URL is passed at build time
-ARG NEXT_PUBLIC_API_URL
-ENV NEXT_PUBLIC_API_URL=$NEXT_PUBLIC_API_URL
+# Build-time env vars for Vite (baked into the bundle)
+ARG VITE_API_URL
+ARG VITE_USE_MOCK_API=false
+ENV VITE_API_URL=$VITE_API_URL
+ENV VITE_USE_MOCK_API=$VITE_USE_MOCK_API
 
 RUN npm run build
 
-# Stage 2: Production
-FROM node:20-alpine AS runner
+# Stage 2: Serve with nginx
+FROM nginx:alpine AS runner
 
-WORKDIR /app
+# Remove default nginx config
+RUN rm /etc/nginx/conf.d/default.conf
 
-ENV NODE_ENV=production
+# Inline nginx config with SPA fallback for React Router
+RUN cat > /etc/nginx/conf.d/default.conf <<'NGINX'
+server {
+    listen 80;
+    server_name _;
+    root /usr/share/nginx/html;
+    index index.html;
 
-# Install dumb-init for proper signal handling
-RUN apk add --no-cache dumb-init
+    # SPA fallback: serve index.html for any route not matching a file
+    location / {
+        try_files $uri $uri/ /index.html;
+    }
 
-# Create non-root user
-RUN addgroup -g 1001 -S nodejs && \
-    adduser -S nodejs -u 1001
+    # Cache static assets aggressively
+    location ~* \.(js|css|png|jpg|jpeg|gif|ico|svg|woff|woff2|ttf|eot)$ {
+        expires 1y;
+        add_header Cache-Control "public, immutable";
+    }
 
-# Copy Next.js build output
-COPY --from=builder --chown=nodejs:nodejs /app/public ./public
-COPY --from=builder --chown=nodejs:nodejs /app/.next/standalone ./
-COPY --from=builder --chown=nodejs:nodejs /app/.next/static ./.next/static
+    # Security headers
+    add_header X-Frame-Options "SAMEORIGIN" always;
+    add_header X-Content-Type-Options "nosniff" always;
+    add_header Referrer-Policy "strict-origin-when-cross-origin" always;
+}
+NGINX
 
-# Switch to non-root user
-USER nodejs
+# Copy built assets from builder stage
+COPY --from=builder /app/dist /usr/share/nginx/html
 
-# Expose port
-EXPOSE 3101
+EXPOSE 80
 
-# Health check
 HEALTHCHECK --interval=30s --timeout=5s --start-period=10s --retries=3 \
-  CMD node -e "require('http').get('http://localhost:3101/', (r) => {process.exit(r.statusCode === 200 ? 0 : 1)})"
+  CMD wget -qO- http://localhost:80/ || exit 1
 
-# Run with dumb-init for proper signal handling
-ENTRYPOINT ["dumb-init", "--"]
-
-# Start the Next.js server
-CMD ["node", "server.js"]
+CMD ["nginx", "-g", "daemon off;"]
