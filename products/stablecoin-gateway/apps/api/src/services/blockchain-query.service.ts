@@ -13,6 +13,7 @@
  */
 
 import { ethers } from 'ethers';
+import Decimal from 'decimal.js';
 import { ProviderManager } from '../utils/provider-manager.js';
 import { createSignerProvider, SignerProvider } from './kms-signer.service.js';
 import { TOKEN_ADDRESSES, Network, Token } from '../constants/tokens.js';
@@ -84,8 +85,9 @@ export class BlockchainQueryService {
       connectedWallet
     );
 
+    // Use Decimal.js for precise token unit conversion (avoids IEEE 754 float errors)
     const amountInTokenUnits = BigInt(
-      Math.floor(amount * Math.pow(10, this.decimals))
+      new Decimal(amount).times(new Decimal(10).pow(this.decimals)).floor().toString()
     );
 
     // Estimate gas
@@ -127,8 +129,10 @@ export class BlockchainQueryService {
     );
 
     const balance = await tokenContract.balanceOf(wallet.address);
-    const balanceInUsd =
-      Number(balance) / Math.pow(10, this.decimals);
+    // Use Decimal.js for precise balance conversion (avoids IEEE 754 float errors)
+    const balanceInUsd = new Decimal(balance.toString())
+      .dividedBy(new Decimal(10).pow(this.decimals))
+      .toNumber();
 
     return balanceInUsd;
   }
