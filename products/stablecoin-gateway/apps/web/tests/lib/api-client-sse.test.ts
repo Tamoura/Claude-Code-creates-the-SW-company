@@ -39,6 +39,16 @@ const testApiClient = new (ApiClient as unknown as new (baseUrl: string, useMock
   false
 );
 
+// Helper to create a mock fetch response with required properties
+function mockResponse(data: Record<string, unknown>, status = 200) {
+  return {
+    ok: status >= 200 && status < 300,
+    status,
+    headers: new Headers({ 'content-type': 'application/json' }),
+    json: async () => data,
+  };
+}
+
 describe('SSE Token Security - Authorization Header', () => {
   beforeEach(() => {
     localStorage.clear();
@@ -58,13 +68,10 @@ describe('SSE Token Security - Authorization Header', () => {
       TokenManager.setToken(accessToken);
 
       // Mock SSE token request
-      mockFetch.mockResolvedValueOnce({
-        ok: true,
-        json: async () => ({
-          token: sseToken,
-          expires_at: new Date(Date.now() + 15 * 60 * 1000).toISOString(),
-        }),
-      });
+      mockFetch.mockResolvedValueOnce(mockResponse({
+        token: sseToken,
+        expires_at: new Date(Date.now() + 15 * 60 * 1000).toISOString(),
+      }));
 
       await testApiClient.createEventSource('ps_123');
 
@@ -81,13 +88,10 @@ describe('SSE Token Security - Authorization Header', () => {
       TokenManager.setToken(accessToken);
 
       // Mock SSE token request
-      mockFetch.mockResolvedValueOnce({
-        ok: true,
-        json: async () => ({
-          token: sseToken,
-          expires_at: new Date(Date.now() + 15 * 60 * 1000).toISOString(),
-        }),
-      });
+      mockFetch.mockResolvedValueOnce(mockResponse({
+        token: sseToken,
+        expires_at: new Date(Date.now() + 15 * 60 * 1000).toISOString(),
+      }));
 
       await testApiClient.createEventSource('ps_123');
 
@@ -103,13 +107,10 @@ describe('SSE Token Security - Authorization Header', () => {
       TokenManager.setToken(accessToken);
 
       // Mock SSE token request
-      mockFetch.mockResolvedValueOnce({
-        ok: true,
-        json: async () => ({
-          token: sseToken,
-          expires_at: new Date(Date.now() + 15 * 60 * 1000).toISOString(),
-        }),
-      });
+      mockFetch.mockResolvedValueOnce(mockResponse({
+        token: sseToken,
+        expires_at: new Date(Date.now() + 15 * 60 * 1000).toISOString(),
+      }));
 
       await testApiClient.createEventSource('ps_123');
 
@@ -123,13 +124,10 @@ describe('SSE Token Security - Authorization Header', () => {
       TokenManager.setToken(accessToken);
 
       // Mock SSE token request
-      mockFetch.mockResolvedValueOnce({
-        ok: true,
-        json: async () => ({
-          token: sseToken,
-          expires_at: new Date(Date.now() + 15 * 60 * 1000).toISOString(),
-        }),
-      });
+      mockFetch.mockResolvedValueOnce(mockResponse({
+        token: sseToken,
+        expires_at: new Date(Date.now() + 15 * 60 * 1000).toISOString(),
+      }));
 
       await testApiClient.createEventSource('ps_123');
 
@@ -152,13 +150,10 @@ describe('SSE Token Security - Authorization Header', () => {
       TokenManager.setToken(accessToken);
 
       // Mock SSE token request
-      mockFetch.mockResolvedValueOnce({
-        ok: true,
-        json: async () => ({
-          token: sseToken,
-          expires_at: new Date(Date.now() + 15 * 60 * 1000).toISOString(),
-        }),
-      });
+      mockFetch.mockResolvedValueOnce(mockResponse({
+        token: sseToken,
+        expires_at: new Date(Date.now() + 15 * 60 * 1000).toISOString(),
+      }));
 
       await testApiClient.createEventSource('ps_123');
 

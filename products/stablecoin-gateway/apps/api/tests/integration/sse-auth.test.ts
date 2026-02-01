@@ -128,16 +128,25 @@ describe('SSE Endpoint Authentication', () => {
     });
 
     expect(response.statusCode).toBe(403);
-    expect(response.body).toContain('SSE endpoint requires SSE token');
+    expect(response.body).toContain('This endpoint requires an SSE-scoped token');
   });
 
   it('should allow user to access their own payment session events with SSE token', async () => {
+    // SSE endpoints write to reply.raw and never call reply.send(),
+    // so inject() hangs waiting for the response to finish. Use an
+    // AbortController to disconnect the client after the SSE stream
+    // has been established, which triggers the close handler and
+    // allows inject() to resolve.
+    const ac = new AbortController();
+    setTimeout(() => ac.abort(), 500);
+
     const response = await app.inject({
       method: 'GET',
       url: `/v1/payment-sessions/${user1PaymentId}/events`,
       headers: {
         authorization: `Bearer ${user1SseToken}`,
       },
+      signal: ac.signal as any,
     });
 
     expect(response.statusCode).toBe(200);
@@ -155,7 +164,7 @@ describe('SSE Endpoint Authentication', () => {
     });
 
     expect(response.statusCode).toBe(403);
-    expect(response.body).toContain('not valid for this payment session');
+    expect(response.body).toContain('Access denied');
   });
 
   it('should handle non-existent payment session gracefully', async () => {
@@ -169,6 +178,6 @@ describe('SSE Endpoint Authentication', () => {
 
     // Token is valid for user1PaymentId, not non-existent-id
     expect(response.statusCode).toBe(403);
-    expect(response.body).toContain('not valid for this payment session');
+    expect(response.body).toContain('Access denied');
   });
 });

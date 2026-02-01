@@ -1,5 +1,6 @@
 import { buildApp } from '../../src/app';
 import { FastifyInstance } from 'fastify';
+import Redis from 'ioredis';
 
 /**
  * Payment Session Concurrency Tests
@@ -11,24 +12,32 @@ import { FastifyInstance } from 'fastify';
 describe('Payment Session Concurrency (Row-Level Locking)', () => {
   let app: FastifyInstance;
   let accessToken: string;
+  let testUserId: string;
 
   beforeAll(async () => {
+    // Flush Redis to clear rate limit state from prior tests
+    const redis = new Redis(process.env.REDIS_URL || 'redis://localhost:6379');
+    await redis.flushdb();
+    await redis.quit();
+
     app = await buildApp();
 
-    // Create test user
-    const signupResponse = await app.inject({
-      method: 'POST',
-      url: '/v1/auth/signup',
-      payload: {
-        email: 'concurrency-test@example.com',
-        password: 'SecurePass123!',
+    // Create test user directly in DB to avoid auth rate limits
+    const user = await app.prisma.user.create({
+      data: {
+        email: `concurrency-test-${Date.now()}@example.com`,
+        passwordHash: 'not-a-real-hash',
       },
     });
+    testUserId = user.id;
 
-    accessToken = signupResponse.json().access_token;
+    // Generate JWT token directly
+    accessToken = app.jwt.sign({ userId: user.id });
   });
 
   afterAll(async () => {
+    await app.prisma.paymentSession.deleteMany({ where: { userId: testUserId } });
+    await app.prisma.user.deleteMany({ where: { id: testUserId } });
     await app.close();
   });
 
@@ -48,7 +57,15 @@ describe('Payment Session Concurrency (Row-Level Locking)', () => {
 
     const paymentId = createResponse.json().id;
 
-    // Send 5 concurrent PATCH requests trying to update the same payment
+    // Send 5 concurrent PATCH requests updating a non-blockchain field.
+    // (blockchain fields like confirmations require a status transition)
+    const addresses = [
+      '0x1111111111111111111111111111111111111111',
+      '0x2222222222222222222222222222222222222222',
+      '0x3333333333333333333333333333333333333333',
+      '0x4444444444444444444444444444444444444444',
+      '0x5555555555555555555555555555555555555555',
+    ];
     const concurrentUpdates = Array.from({ length: 5 }, (_, i) =>
       app.inject({
         method: 'PATCH',
@@ -57,7 +74,7 @@ describe('Payment Session Concurrency (Row-Level Locking)', () => {
           authorization: `Bearer ${accessToken}`,
         },
         payload: {
-          confirmations: i + 1,
+          customer_address: addresses[i],
         },
       })
     );
@@ -69,8 +86,8 @@ describe('Payment Session Concurrency (Row-Level Locking)', () => {
       expect(response.statusCode).toBe(200);
     });
 
-    // Final confirmation count should be from one of the requests (1-5)
-    // Not a sum or corrupted value
+    // Final customer_address should be from one of the requests
+    // Not corrupted or merged
     const finalResponse = await app.inject({
       method: 'GET',
       url: `/v1/payment-sessions/${paymentId}`,
@@ -80,8 +97,7 @@ describe('Payment Session Concurrency (Row-Level Locking)', () => {
     });
 
     const finalPayment = finalResponse.json();
-    expect(finalPayment.confirmations).toBeGreaterThanOrEqual(1);
-    expect(finalPayment.confirmations).toBeLessThanOrEqual(5);
+    expect(addresses).toContain(finalPayment.customer_address);
   });
 
   it('should prevent double-completion with concurrent status updates', async () => {
@@ -153,7 +169,7 @@ describe('Payment Session Concurrency (Row-Level Locking)', () => {
     // Record start time
     const startTime = Date.now();
 
-    // Send 10 concurrent updates
+    // Send 10 concurrent updates using non-blockchain field (customer_address)
     const concurrentUpdates = Array.from({ length: 10 }, (_, i) =>
       app.inject({
         method: 'PATCH',
@@ -162,7 +178,7 @@ describe('Payment Session Concurrency (Row-Level Locking)', () => {
           authorization: `Bearer ${accessToken}`,
         },
         payload: {
-          confirmations: i,
+          customer_address: `0x${(i + 1).toString().padStart(40, '0')}`,
         },
       })
     );
@@ -198,7 +214,7 @@ describe('Payment Session Concurrency (Row-Level Locking)', () => {
     const createResponses = await Promise.all(createPromises);
     const paymentIds = createResponses.map(r => r.json().id);
 
-    // Update all 5 concurrently (different payments, should not block each other)
+    // Update all 5 concurrently using non-blockchain field (customer_address)
     const updatePromises = paymentIds.map((paymentId, i) =>
       app.inject({
         method: 'PATCH',
@@ -207,7 +223,7 @@ describe('Payment Session Concurrency (Row-Level Locking)', () => {
           authorization: `Bearer ${accessToken}`,
         },
         payload: {
-          confirmations: i + 1,
+          customer_address: `0x${(i + 1).toString().padStart(40, '0')}`,
         },
       })
     );
@@ -217,7 +233,7 @@ describe('Payment Session Concurrency (Row-Level Locking)', () => {
     // All should succeed
     responses.forEach((response, i) => {
       expect(response.statusCode).toBe(200);
-      expect(response.json().confirmations).toBe(i + 1);
+      expect(response.json().customer_address).toBe(`0x${(i + 1).toString().padStart(40, '0')}`);
     });
   });
 });

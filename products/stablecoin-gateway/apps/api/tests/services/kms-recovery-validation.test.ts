@@ -5,13 +5,11 @@
  * Both v=27 and v=28 could recover valid but different addresses.
  * Must verify recovered address matches expected signer.
  *
- * The existing findRecoveryParam already works correctly for the
- * normal case. These tests verify the error handling when neither
- * v value recovers the expected address, and that the correct v
- * is selected when only one matches.
+ * The findRecoveryParam method lives on KMSSigningService, not
+ * KMSService directly. KMSService delegates signing to
+ * KMSSigningService which owns the recovery logic.
  */
 
-import { KMSService } from '../../src/services/kms.service';
 import { ethers } from 'ethers';
 
 // Mock KMS client to control signing behavior
@@ -23,14 +21,30 @@ jest.mock('@aws-sdk/client-kms', () => ({
   GetPublicKeyCommand: jest.fn(),
 }));
 
+// Mock asn1.js since KMSSigningService imports it
+jest.mock('asn1.js', () => ({
+  define: jest.fn().mockReturnValue({
+    decode: jest.fn(),
+  }),
+}));
+
+import { KMSSigningService } from '../../src/services/kms-signing.service';
+import { KMSClient } from '@aws-sdk/client-kms';
+
 describe('KMS recovery parameter validation', () => {
   it('should throw when neither v=27 nor v=28 recovers expected address', async () => {
-    const kms = new KMSService({
-      keyId: 'arn:aws:kms:us-east-1:123456789012:key/test-key-id',
-    });
+    const mockClient = new KMSClient({});
 
-    // Override getAddress to return an address that won't match any recovery
-    (kms as any).addressCache = '0x1111111111111111111111111111111111111111';
+    // Create an address provider that returns an address that won't match
+    const addressProvider = {
+      getAddress: jest.fn().mockResolvedValue('0x1111111111111111111111111111111111111111'),
+    };
+
+    const signingService = new KMSSigningService(
+      mockClient,
+      'test-key-id',
+      addressProvider
+    );
 
     // Call findRecoveryParam with arbitrary r, s values
     // Neither v=27 nor v=28 will recover 0x1111...
@@ -39,28 +53,34 @@ describe('KMS recovery parameter validation', () => {
     const s = BigInt('0x' + 'cd'.repeat(32));
 
     await expect(
-      (kms as any).findRecoveryParam(messageHash, r, s)
+      signingService.findRecoveryParam(messageHash, r, s)
     ).rejects.toThrow('Could not determine recovery parameter');
   });
 
-  it('should select correct v when v=28 matches but v=27 does not', async () => {
+  it('should select correct v when the matching recovery param is found', async () => {
     // Generate a known keypair
     const wallet = ethers.Wallet.createRandom();
     const address = wallet.address;
 
-    const kms = new KMSService({
-      keyId: 'arn:aws:kms:us-east-1:123456789012:key/test-key-id',
-    });
+    const mockClient = new KMSClient({});
 
-    // Set the expected address to the wallet's address
-    (kms as any).addressCache = address;
+    // Create an address provider that returns the wallet's address
+    const addressProvider = {
+      getAddress: jest.fn().mockResolvedValue(address),
+    };
+
+    const signingService = new KMSSigningService(
+      mockClient,
+      'test-key-id',
+      addressProvider
+    );
 
     // Sign a message with the wallet to get a known-good signature
     const messageHash = ethers.keccak256(Buffer.from('test-message'));
     const sig = wallet.signingKey.sign(messageHash);
 
     // Call findRecoveryParam with the known r, s
-    const result = await (kms as any).findRecoveryParam(
+    const result = await signingService.findRecoveryParam(
       messageHash,
       BigInt(sig.r),
       BigInt(sig.s)

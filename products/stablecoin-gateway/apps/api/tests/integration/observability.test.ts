@@ -11,15 +11,20 @@ import { FastifyInstance } from 'fastify';
  * - Error tracking
  */
 
+const INTERNAL_KEY = 'test-observability-key';
+
 describe('Observability', () => {
   let app: FastifyInstance;
+  const originalInternalKey = process.env.INTERNAL_API_KEY;
 
   beforeAll(async () => {
+    process.env.INTERNAL_API_KEY = INTERNAL_KEY;
     app = await buildApp();
   });
 
   afterAll(async () => {
     await app.close();
+    process.env.INTERNAL_API_KEY = originalInternalKey;
   });
 
   describe('Request correlation', () => {
@@ -61,6 +66,7 @@ describe('Observability', () => {
       const metricsResponse = await app.inject({
         method: 'GET',
         url: '/internal/metrics',
+        headers: { authorization: `Bearer ${INTERNAL_KEY}` },
       });
 
       expect(metricsResponse.statusCode).toBe(200);
@@ -97,6 +103,7 @@ describe('Observability', () => {
       const before = await app.inject({
         method: 'GET',
         url: '/internal/metrics',
+        headers: { authorization: `Bearer ${INTERNAL_KEY}` },
       });
       const beforeMetrics = before.json();
 
@@ -110,6 +117,7 @@ describe('Observability', () => {
       const after = await app.inject({
         method: 'GET',
         url: '/internal/metrics',
+        headers: { authorization: `Bearer ${INTERNAL_KEY}` },
       });
       const afterMetrics = after.json();
 
@@ -127,6 +135,7 @@ describe('Observability', () => {
       const before = await app.inject({
         method: 'GET',
         url: '/internal/metrics',
+        headers: { authorization: `Bearer ${INTERNAL_KEY}` },
       });
       const beforeErrors = before.json().errors.total;
 
@@ -140,6 +149,7 @@ describe('Observability', () => {
       const after = await app.inject({
         method: 'GET',
         url: '/internal/metrics',
+        headers: { authorization: `Bearer ${INTERNAL_KEY}` },
       });
       const afterErrors = after.json().errors.total;
 
@@ -150,6 +160,7 @@ describe('Observability', () => {
       const response = await app.inject({
         method: 'GET',
         url: '/internal/metrics',
+        headers: { authorization: `Bearer ${INTERNAL_KEY}` },
       });
 
       const metrics = response.json();
@@ -164,6 +175,7 @@ describe('Observability', () => {
       const response = await app.inject({
         method: 'GET',
         url: '/internal/metrics',
+        headers: { authorization: `Bearer ${INTERNAL_KEY}` },
       });
 
       expect(response.statusCode).toBe(200);

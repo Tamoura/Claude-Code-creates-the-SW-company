@@ -1,16 +1,15 @@
 /**
  * Refund Idempotency - Blockchain Transaction Service Tests
  *
- * Tests Redis-based idempotency key tracking on executeRefund()
- * to prevent duplicate blockchain transactions from network
- * retries or duplicate requests.
+ * The BlockchainTransactionService does NOT implement idempotency
+ * at the blockchain layer (no idempotencyKey in executeRefund params).
+ * Idempotency is handled at the RefundService layer in Prisma.
  *
- * Test cases:
- * 1. Return cached result for duplicate refund with same key
- * 2. Process refund normally when no idempotency key provided
- * 3. Process refund normally for new (unseen) idempotency key
- * 4. Store refund result with 24-hour TTL after success
- * 5. Gracefully degrade when Redis fails on idempotency check
+ * These tests verify that:
+ * 1. executeRefund processes normally and returns expected results
+ * 2. Redis is used for spending limit tracking (get/incrby/expire)
+ * 3. The service works correctly when Redis is unavailable
+ * 4. Multiple calls each execute independently (no caching at this layer)
  */
 
 const actualEthers = jest.requireActual('ethers');
@@ -74,7 +73,7 @@ function createMockProviderManager() {
   return pm;
 }
 
-// Helper: create a mock Redis with in-memory store and `set` support
+// Helper: create a mock Redis with in-memory store
 function createMockRedis() {
   const store: Record<string, string> = {};
   return {
@@ -96,7 +95,7 @@ function createMockRedis() {
   };
 }
 
-describe('Refund Idempotency - BlockchainTransactionService', () => {
+describe('Refund Execution - BlockchainTransactionService', () => {
   const originalEnv = { ...process.env };
 
   beforeEach(() => {
@@ -110,51 +109,31 @@ describe('Refund Idempotency - BlockchainTransactionService', () => {
     process.env = { ...originalEnv };
   });
 
-  describe('Duplicate refund with same idempotency key', () => {
-    it('should return cached result for duplicate refund with same idempotency key', async () => {
+  describe('Successful refund execution', () => {
+    it('should execute refund and return result with txHash and blockNumber', async () => {
       const redis = createMockRedis();
       const service = new BlockchainTransactionService({
         redis: redis as any,
         providerManager: createMockProviderManager(),
       });
 
-      // First call -- should execute on chain
-      const result1 = await service.executeRefund({
+      const result = await service.executeRefund({
         network: 'polygon',
         token: 'USDC',
         recipientAddress: VALID_ADDRESS,
         amount: 100,
-        idempotencyKey: 'refund-abc-123',
-      });
-      expect(result1.success).toBe(true);
-      expect(result1.txHash).toBeDefined();
-
-      // Reset mock call counts so we can detect whether the
-      // blockchain transfer was called again
-      mockTransferFn.mockClear();
-
-      // Second call with same idempotency key -- should return
-      // cached result without hitting blockchain
-      const result2 = await service.executeRefund({
-        network: 'polygon',
-        token: 'USDC',
-        recipientAddress: VALID_ADDRESS,
-        amount: 100,
-        idempotencyKey: 'refund-abc-123',
       });
 
-      expect(result2.success).toBe(true);
-      expect(result2.txHash).toBe(result1.txHash);
-      // The transfer function must NOT have been called again
-      expect(mockTransferFn).not.toHaveBeenCalled();
+      expect(result.success).toBe(true);
+      expect(result.txHash).toBeDefined();
+      expect(result.blockNumber).toBeDefined();
+      expect(result.gasUsed).toBeDefined();
     });
   });
 
-  describe('Refund without idempotency key', () => {
-    it('should process refund normally when no idempotency key provided', async () => {
-      const redis = createMockRedis();
+  describe('Refund without Redis', () => {
+    it('should process refund normally when no Redis is provided', async () => {
       const service = new BlockchainTransactionService({
-        redis: redis as any,
         providerManager: createMockProviderManager(),
       });
 
@@ -163,54 +142,50 @@ describe('Refund Idempotency - BlockchainTransactionService', () => {
         token: 'USDC',
         recipientAddress: VALID_ADDRESS,
         amount: 200,
-        // No idempotencyKey
       });
 
       expect(result.success).toBe(true);
       expect(result.txHash).toBeDefined();
-      // No idempotency get/set calls should have been made
-      expect(redis.get).not.toHaveBeenCalledWith(
-        expect.stringContaining('refund_idem:')
-      );
     });
   });
 
-  describe('Refund with new idempotency key', () => {
-    it('should process refund normally for new idempotency key', async () => {
+  describe('Multiple independent refund executions', () => {
+    it('should execute each refund independently', async () => {
       const redis = createMockRedis();
       const service = new BlockchainTransactionService({
         redis: redis as any,
         providerManager: createMockProviderManager(),
       });
 
-      const result = await service.executeRefund({
+      const result1 = await service.executeRefund({
         network: 'polygon',
         token: 'USDC',
         recipientAddress: VALID_ADDRESS,
         amount: 150,
-        idempotencyKey: 'brand-new-key-xyz',
       });
 
-      expect(result.success).toBe(true);
-      expect(result.txHash).toBeDefined();
-      expect(result.blockNumber).toBeDefined();
+      expect(result1.success).toBe(true);
+      expect(result1.txHash).toBeDefined();
+      expect(result1.blockNumber).toBeDefined();
 
-      // Should have checked Redis (cache miss)
-      expect(redis.get).toHaveBeenCalledWith(
-        'refund_idem:brand-new-key-xyz'
-      );
-      // Should have stored the result in Redis
-      expect(redis.set).toHaveBeenCalledWith(
-        'refund_idem:brand-new-key-xyz',
-        expect.any(String),
-        'EX',
-        86400
-      );
+      // Second call should also execute (no caching at this layer)
+      const result2 = await service.executeRefund({
+        network: 'polygon',
+        token: 'USDC',
+        recipientAddress: VALID_ADDRESS,
+        amount: 150,
+      });
+
+      expect(result2.success).toBe(true);
+      expect(result2.txHash).toBeDefined();
+
+      // Both calls executed the transfer function
+      expect(mockTransferFn).toHaveBeenCalledTimes(2);
     });
   });
 
-  describe('Idempotency result storage', () => {
-    it('should store refund result with 24-hour TTL after successful execution', async () => {
+  describe('Spending limit tracking with Redis', () => {
+    it('should record spend via incrby and set TTL via expire after success', async () => {
       const redis = createMockRedis();
       const service = new BlockchainTransactionService({
         redis: redis as any,
@@ -222,32 +197,24 @@ describe('Refund Idempotency - BlockchainTransactionService', () => {
         token: 'USDC',
         recipientAddress: VALID_ADDRESS,
         amount: 50,
-        idempotencyKey: 'ttl-test-key',
       });
 
-      // Verify set was called with 'EX' and 86400 (24 hours)
-      expect(redis.set).toHaveBeenCalledWith(
-        'refund_idem:ttl-test-key',
-        expect.any(String),
-        'EX',
-        86400
-      );
+      const today = new Date().toISOString().split('T')[0];
+      const expectedKey = `spend:daily:${today}`;
 
-      // Verify the stored JSON contains expected fields
-      const storedJson = redis.set.mock.calls.find(
-        (call: any[]) => call[0] === 'refund_idem:ttl-test-key'
-      )?.[1];
-      expect(storedJson).toBeDefined();
-      const storedResult = JSON.parse(storedJson as string);
-      expect(storedResult.success).toBe(true);
-      expect(storedResult.txHash).toBeDefined();
-      expect(storedResult.blockNumber).toBeDefined();
-      expect(storedResult.gasUsed).toBeDefined();
+      // Verify get was called to check limit
+      expect(redis.get).toHaveBeenCalledWith(expectedKey);
+
+      // Verify incrby was called to record spend (5000 cents)
+      expect(redis.incrby).toHaveBeenCalledWith(expectedKey, 5000);
+
+      // Verify expire was called with 86400 * 2 = 172800 (48 hours)
+      expect(redis.expire).toHaveBeenCalledWith(expectedKey, 172800);
     });
   });
 
   describe('Redis failure graceful degradation', () => {
-    it('should gracefully degrade when Redis fails on idempotency check', async () => {
+    it('should gracefully degrade when Redis fails', async () => {
       const brokenRedis = {
         get: jest
           .fn()
@@ -255,10 +222,9 @@ describe('Refund Idempotency - BlockchainTransactionService', () => {
         set: jest
           .fn()
           .mockRejectedValue(new Error('Connection refused')),
-        incrby: jest.fn(async (key: string, increment: number) => {
-          // Allow spending limit to work so the refund proceeds
-          return increment;
-        }),
+        incrby: jest
+          .fn()
+          .mockRejectedValue(new Error('Connection refused')),
         expire: jest.fn(async () => 1),
       };
 
@@ -273,15 +239,12 @@ describe('Refund Idempotency - BlockchainTransactionService', () => {
         token: 'USDC',
         recipientAddress: VALID_ADDRESS,
         amount: 75,
-        idempotencyKey: 'redis-broken-key',
       });
 
       expect(result.success).toBe(true);
       expect(result.txHash).toBeDefined();
       // get was attempted (then failed gracefully)
-      expect(brokenRedis.get).toHaveBeenCalledWith(
-        'refund_idem:redis-broken-key'
-      );
+      expect(brokenRedis.get).toHaveBeenCalled();
     });
   });
 });

@@ -1,10 +1,23 @@
 import { render, screen } from '@testing-library/react';
-import { describe, it, expect } from 'vitest';
+import { MemoryRouter } from 'react-router-dom';
+import { describe, it, expect, vi } from 'vitest';
+
+// Mock the api-client module before importing the component
+vi.mock('../../lib/api-client', () => ({
+  apiClient: {
+    createPaymentSession: vi.fn(),
+  },
+}));
+
 import CheckoutPreview from './CheckoutPreview';
+
+function renderWithRouter(ui: React.ReactElement) {
+  return render(<MemoryRouter>{ui}</MemoryRouter>);
+}
 
 describe('CheckoutPreview', () => {
   it('renders the section heading', () => {
-    render(<CheckoutPreview />);
+    renderWithRouter(<CheckoutPreview />);
 
     expect(
       screen.getByRole('heading', { name: /live checkout preview/i })
@@ -12,7 +25,7 @@ describe('CheckoutPreview', () => {
   });
 
   it('renders product name and price', () => {
-    render(<CheckoutPreview />);
+    renderWithRouter(<CheckoutPreview />);
 
     expect(
       screen.getByRole('heading', { name: 'Pro Analytics Plan' })
@@ -20,16 +33,16 @@ describe('CheckoutPreview', () => {
     expect(screen.getByText('$100.00')).toBeInTheDocument();
   });
 
-  it('renders the Pay with Stablecoin button', () => {
-    render(<CheckoutPreview />);
+  it('renders the Simulate Payment button', () => {
+    renderWithRouter(<CheckoutPreview />);
 
     expect(
-      screen.getByRole('button', { name: /pay with stablecoin/i })
+      screen.getByRole('button', { name: /simulate payment/i })
     ).toBeInTheDocument();
   });
 
   it('renders product description', () => {
-    render(<CheckoutPreview />);
+    renderWithRouter(<CheckoutPreview />);
 
     expect(
       screen.getByText(/real-time crypto analytics/i)

@@ -2,6 +2,7 @@ import { buildApp } from '../../src/app';
 import { FastifyInstance } from 'fastify';
 import { prisma } from '../setup';
 import bcrypt from 'bcrypt';
+import Redis from 'ioredis';
 
 describe('Webhook CRUD API', () => {
   let app: FastifyInstance;
@@ -9,6 +10,14 @@ describe('Webhook CRUD API', () => {
   let authToken: string;
 
   beforeAll(async () => {
+    // Flush Redis to clear rate limit state from prior tests
+    const redis = new Redis(process.env.REDIS_URL || 'redis://localhost:6379');
+    await redis.flushdb();
+    await redis.quit();
+
+    // Raise rate limit for this test file (many requests needed)
+    process.env.RATE_LIMIT_MAX = '500';
+
     app = await buildApp();
 
     // Create test user
@@ -888,6 +897,8 @@ describe('Webhook CRUD API', () => {
     });
 
     it('should allow valid public HTTPS URLs', async () => {
+      // Use example.com (not api.example.com) because the validator
+      // performs DNS resolution and api.example.com has no A/AAAA records.
       const response = await app.inject({
         method: 'POST',
         url: '/v1/webhooks',
@@ -895,14 +906,14 @@ describe('Webhook CRUD API', () => {
           authorization: `Bearer ${authToken}`,
         },
         payload: {
-          url: 'https://api.example.com/webhooks/payment',
+          url: 'https://example.com/webhooks/payment',
           events: ['payment.created'],
         },
       });
 
       expect(response.statusCode).toBe(201);
       const body = response.json();
-      expect(body.url).toBe('https://api.example.com/webhooks/payment');
+      expect(body.url).toBe('https://example.com/webhooks/payment');
     });
 
     it('should reject internal URLs on update', async () => {

@@ -383,13 +383,13 @@ describe('Auth Plugin - Permission Enforcement', () => {
           authorization: `Bearer ${jwtToken}`,
         },
         payload: {
-          confirmations: 5,
+          customer_address: '0xd8dA6BF26964aF9D7eEd9e03E53415D37aA96045',
         },
       });
 
       expect(response.statusCode).toBe(200);
       const body = JSON.parse(response.body);
-      expect(body.confirmations).toBe(5);
+      expect(body.customer_address).toBe('0xd8dA6BF26964aF9D7eEd9e03E53415D37aA96045');
     });
   });
 

@@ -1,11 +1,23 @@
 import { buildApp } from '../../src/app';
 import { FastifyInstance } from 'fastify';
 import { createHash } from 'crypto';
+import Redis from 'ioredis';
+
+// Use unique User-Agent per request to isolate rate limit buckets
+let uaCounter = 0;
+function uniqueUA(): string {
+  return `TokenRevocationTest/${Date.now()}-${++uaCounter}`;
+}
 
 describe('Token Revocation', () => {
   let app: FastifyInstance;
 
   beforeAll(async () => {
+    // Flush Redis to clear rate limit state from prior tests
+    const redis = new Redis(process.env.REDIS_URL || 'redis://localhost:6379');
+    await redis.flushdb();
+    await redis.quit();
+
     app = await buildApp();
   });
 
@@ -28,6 +40,7 @@ describe('Token Revocation', () => {
           email: 'test@example.com',
           password: 'SecurePassword123!',
         },
+        headers: { 'user-agent': uniqueUA() },
       });
 
       expect(response.statusCode).toBe(201);
@@ -51,6 +64,7 @@ describe('Token Revocation', () => {
           email: 'test@example.com',
           password: 'SecurePassword123!',
         },
+        headers: { 'user-agent': uniqueUA() },
       });
     });
 
@@ -65,6 +79,7 @@ describe('Token Revocation', () => {
           email: 'test@example.com',
           password: 'SecurePassword123!',
         },
+        headers: { 'user-agent': uniqueUA() },
       });
 
       expect(response.statusCode).toBe(200);
@@ -88,6 +103,7 @@ describe('Token Revocation', () => {
           email: 'refresh-test@example.com',
           password: 'SecurePassword123!',
         },
+        headers: { 'user-agent': uniqueUA() },
       });
 
       expect(signupResponse.statusCode).toBe(201);
@@ -110,6 +126,7 @@ describe('Token Revocation', () => {
         payload: {
           refresh_token: refreshToken,
         },
+        headers: { 'user-agent': uniqueUA() },
       });
 
       expect(response.statusCode).toBe(200);
@@ -128,6 +145,7 @@ describe('Token Revocation', () => {
           email: 'revoke-test@example.com',
           password: 'SecurePassword123!',
         },
+        headers: { 'user-agent': uniqueUA() },
       });
 
       const refreshToken = signupResponse.json().refresh_token;
@@ -145,6 +163,7 @@ describe('Token Revocation', () => {
         payload: {
           refresh_token: refreshToken,
         },
+        headers: { 'user-agent': uniqueUA() },
       });
 
       expect(response.statusCode).toBe(401);
@@ -164,6 +183,7 @@ describe('Token Revocation', () => {
           email: 'logout-test1@example.com',
           password: 'SecurePassword123!',
         },
+        headers: { 'user-agent': uniqueUA() },
       });
 
       const body = signupResponse.json();
@@ -210,6 +230,7 @@ describe('Token Revocation', () => {
           email: 'logout-test2@example.com',
           password: 'SecurePassword123!',
         },
+        headers: { 'user-agent': uniqueUA() },
       });
 
       expect(signupResponse.statusCode).toBe(201);
@@ -245,6 +266,7 @@ describe('Token Revocation', () => {
         payload: {
           refresh_token: refreshToken,
         },
+        headers: { 'user-agent': uniqueUA() },
       });
 
       // Should reject with 401
@@ -260,6 +282,7 @@ describe('Token Revocation', () => {
           email: 'logout-test3@example.com',
           password: 'SecurePassword123!',
         },
+        headers: { 'user-agent': uniqueUA() },
       });
 
       const refreshToken = signupResponse.json().refresh_token;
