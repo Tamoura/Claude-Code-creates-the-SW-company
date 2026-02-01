@@ -15,6 +15,8 @@ export interface AppConfig {
   jwtRefreshExpiresIn: string;
   bcryptRounds: number;
   anthropicApiKey: string;
+  anthropicBaseUrl: string;
+  aiModel: string;
   stripeSecretKey: string;
   stripeWebhookSecret: string;
   appUrl: string;
@@ -42,6 +44,8 @@ export function loadConfig(): AppConfig {
     anthropicApiKey: process.env.NODE_ENV === 'test'
       ? (process.env.ANTHROPIC_API_KEY || 'test-key-not-used')
       : requireEnv('ANTHROPIC_API_KEY'),
+    anthropicBaseUrl: process.env.ANTHROPIC_BASE_URL || '',
+    aiModel: process.env.AI_MODEL || 'claude-sonnet-4-20250514',
     stripeSecretKey: process.env.NODE_ENV === 'test'
       ? (process.env.STRIPE_SECRET_KEY || 'sk_test_fake')
       : (process.env.STRIPE_SECRET_KEY || ''),
