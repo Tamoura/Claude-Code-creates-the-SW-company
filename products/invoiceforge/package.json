@@ -1,0 +1,18 @@
+{
+  "name": "invoiceforge",
+  "version": "0.1.0",
+  "private": true,
+  "description": "AI-powered invoice generator for freelancers and consultants",
+  "scripts": {
+    "dev": "concurrently \"npm run dev:api\" \"npm run dev:web\"",
+    "dev:api": "cd apps/api && npm run dev",
+    "dev:web": "cd apps/web && npm run dev",
+    "test": "cd apps/api && npm test",
+    "build": "cd apps/api && npm run build && cd ../web && npm run build",
+    "docker:up": "docker compose up -d",
+    "docker:down": "docker compose down"
+  },
+  "devDependencies": {
+    "concurrently": "^8.0.0"
+  }
+}
