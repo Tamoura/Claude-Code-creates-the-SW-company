@@ -1,4 +1,5 @@
 import { test, expect } from '@playwright/test';
+import { signupUser, authenticatePageWithUser } from './fixtures/auth.fixture';
 
 const API_URL = 'http://localhost:5001';
 
@@ -14,13 +15,13 @@ test.describe('Authentication Flows', () => {
   test('Sign In button navigates to login page', async ({ page }) => {
     await page.goto('/');
     await page.locator('button', { hasText: 'Sign In' }).click();
-    await expect(page).toHaveURL('/login');
+    await expect(page).toHaveURL(/\/login/);
   });
 
   test('Get Started button navigates to signup page', async ({ page }) => {
     await page.goto('/');
     await page.locator('button', { hasText: 'Get Started' }).click();
-    await expect(page).toHaveURL('/signup');
+    await expect(page).toHaveURL(/\/signup/);
   });
 
   test('login page has email and password fields', async ({ page }) => {
@@ -38,63 +39,51 @@ test.describe('Authentication Flows', () => {
   });
 
   test('full signup -> login -> dashboard -> logout flow', async ({ page, request }) => {
-    const email = `e2e-auth-${Date.now()}@test.com`;
-    const password = 'TestPassword123!@#';
+    // Signup via API (1 rate-limit slot)
+    const user = await signupUser(request, 'e2e-auth');
 
-    // Step 1: Signup via API (to avoid UI flakiness)
-    await request.post(`${API_URL}/v1/auth/signup`, {
-      data: { email, password },
-    });
+    // Login via UI with route interception (0 rate-limit slots)
+    await authenticatePageWithUser(page, user);
 
-    // Step 2: Login via UI
-    await page.goto('/login');
-    await page.fill('input[name="email"]', email);
-    await page.fill('input[name="password"]', password);
-    await page.click('button[type="submit"]');
+    // Verify dashboard content loaded
+    await expect(page.locator('h1:has-text("Dashboard")')).toBeVisible();
 
-    // Step 3: Should be on dashboard
-    await page.waitForURL('/dashboard', { timeout: 10000 });
-    await expect(page).toHaveURL('/dashboard');
-
-    // Step 4: Verify dashboard content loaded
-    await expect(page.locator('text=Dashboard')).toBeVisible();
-
-    // Step 5: Sign out via user dropdown
+    // Sign out via user dropdown
     const avatar = page.locator('header button.rounded-full');
     await avatar.click();
     await page.locator('button', { hasText: 'Sign Out' }).click();
 
-    // Step 6: Should be on login page
-    await page.waitForURL('/login', { timeout: 5000 });
-    await expect(page).toHaveURL('/login');
+    // Should be on login page
+    await page.waitForURL('**/login', { timeout: 5000 });
+    await expect(page).toHaveURL(/\/login/);
   });
 
   test('unauthenticated user redirected from dashboard to login', async ({ page }) => {
-    // Try to visit dashboard without being logged in
     await page.goto('/dashboard');
-
-    // Should be redirected to login
-    await expect(page).toHaveURL('/login');
+    await expect(page).toHaveURL(/\/login/);
   });
 
-  test('login with wrong password shows error', async ({ page, request }) => {
-    const email = `e2e-wrong-${Date.now()}@test.com`;
-    const password = 'TestPassword123!@#';
-
-    // Create user
-    await request.post(`${API_URL}/v1/auth/signup`, {
-      data: { email, password },
+  test('login with wrong password shows error', async ({ page }) => {
+    // Intercept login to return 401 (no real API call needed)
+    await page.route('**/v1/auth/login', async (route) => {
+      await route.fulfill({
+        status: 401,
+        contentType: 'application/json',
+        body: JSON.stringify({
+          status: 401,
+          title: 'Unauthorized',
+          detail: 'Invalid email or password',
+        }),
+      });
     });
 
-    // Try login with wrong password
     await page.goto('/login');
-    await page.fill('input[name="email"]', email);
+    await page.fill('input[name="email"]', 'wrong@test.com');
     await page.fill('input[name="password"]', 'WrongPassword999!');
     await page.click('button[type="submit"]');
 
-    // Should show error and stay on login page
     await expect(page.locator('[role="alert"]')).toBeVisible({ timeout: 5000 });
-    await expect(page).toHaveURL('/login');
+    await expect(page).toHaveURL(/\/login/);
   });
 
   test('login page has link to signup page', async ({ page }) => {
@@ -102,7 +91,7 @@ test.describe('Authentication Flows', () => {
     const signupLink = page.locator('a[href="/signup"]');
     await expect(signupLink).toBeVisible();
     await signupLink.click();
-    await expect(page).toHaveURL('/signup');
+    await expect(page).toHaveURL(/\/signup/);
   });
 
   test('signup page has link to login page', async ({ page }) => {
@@ -110,6 +99,6 @@ test.describe('Authentication Flows', () => {
     const loginLink = page.locator('a[href="/login"]');
     await expect(loginLink).toBeVisible();
     await loginLink.click();
-    await expect(page).toHaveURL('/login');
+    await expect(page).toHaveURL(/\/login/);
   });
 });

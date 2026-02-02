@@ -1,35 +1,43 @@
-import { test, expect } from '@playwright/test';
+import { test, expect } from './fixtures/auth.fixture';
 
 test.describe('Dashboard', () => {
-  test('dashboard route exists and responds', async ({ page }) => {
-    const response = await page.goto('/dashboard', { waitUntil: 'networkidle' });
 
-    // Should get a response (not a 404 or server error)
-    expect(response?.status()).toBeLessThan(500);
+  test('dashboard shows stat cards', async ({ authedPage }) => {
+    await expect(authedPage.locator('h1:has-text("Dashboard")')).toBeVisible();
+
+    // Stat cards should be visible (Total Balance, Settlement Volume, Success Rate)
+    const statCards = authedPage.locator('.rounded-xl').filter({ has: authedPage.locator('.text-2xl') });
+    await expect(statCards.first()).toBeVisible({ timeout: 5000 });
   });
 
-  test('dashboard layout has navigation elements', async ({ page }) => {
-    await page.goto('/dashboard', { waitUntil: 'networkidle' });
+  test('dashboard shows recent transactions table', async ({ authedPage }) => {
+    await expect(authedPage.locator('h1:has-text("Dashboard")')).toBeVisible();
 
-    // Wait for page content to load
-    await page.waitForTimeout(1000);
+    // Transactions table or "No transactions" message
+    const table = authedPage.locator('table');
+    const emptyMsg = authedPage.locator('text=No transactions');
+    const hasTable = await table.isVisible().catch(() => false);
+    const hasEmpty = await emptyMsg.isVisible().catch(() => false);
 
-    // Look for any navigation or sidebar element
-    const hasNav = await page.locator('nav').first().isVisible().catch(() => false);
-    const hasSidebar = await page.locator('[class*="sidebar"], [class*="Sidebar"], aside').first().isVisible().catch(() => false);
-    const hasLinks = await page.locator('a[href*="dashboard"]').first().isVisible().catch(() => false);
-
-    // At least one navigation structure should be present
-    expect(hasNav || hasSidebar || hasLinks).toBe(true);
+    expect(hasTable || hasEmpty).toBe(true);
   });
 
-  test('payment list route is accessible', async ({ page }) => {
-    const response = await page.goto('/dashboard/payments', { waitUntil: 'networkidle' });
-    expect(response?.status()).toBeLessThan(500);
+  test('dashboard has sidebar navigation', async ({ authedPage }) => {
+    const sidebar = authedPage.locator('aside');
+    await expect(sidebar).toBeVisible();
+
+    await expect(sidebar.locator('a[href="/dashboard"]')).toBeVisible();
+    await expect(sidebar.locator('a[href="/dashboard/payments"]')).toBeVisible();
+    await expect(sidebar.locator('a[href="/dashboard/invoices"]')).toBeVisible();
+    await expect(sidebar.locator('a[href="/dashboard/api-keys"]')).toBeVisible();
+    await expect(sidebar.locator('a[href="/dashboard/webhooks"]')).toBeVisible();
+    await expect(sidebar.locator('a[href="/dashboard/security"]')).toBeVisible();
   });
 
-  test('settings route is accessible', async ({ page }) => {
-    const response = await page.goto('/dashboard/settings', { waitUntil: 'networkidle' });
-    expect(response?.status()).toBeLessThan(500);
+  test('dashboard has View All button linking to payments', async ({ authedPage }) => {
+    const viewAllBtn = authedPage.locator('button', { hasText: 'View All' });
+    await expect(viewAllBtn).toBeVisible();
+    await viewAllBtn.click();
+    await expect(authedPage).toHaveURL(/\/dashboard\/payments/);
   });
 });
