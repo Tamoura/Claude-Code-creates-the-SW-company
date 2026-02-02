@@ -18,6 +18,7 @@
 
 import fp from 'fastify-plugin';
 import { FastifyPluginAsync, FastifyRequest, FastifyReply } from 'fastify';
+import crypto from 'crypto';
 import { logger } from '../utils/logger.js';
 
 // Metrics storage (in-memory for simplicity, can be replaced with Prometheus/StatsD)
@@ -182,8 +183,17 @@ const observabilityPlugin: FastifyPluginAsync = async (fastify) => {
       return reply.code(500).send({ error: 'Metrics endpoint not configured' });
     }
 
-    // Require valid authorization
-    if (!authHeader || authHeader !== `Bearer ${expectedKey}`) {
+    // Timing-safe comparison to prevent timing side-channel attacks
+    const expectedValue = `Bearer ${expectedKey}`;
+    const suppliedValue = authHeader || '';
+    const isValid =
+      suppliedValue.length === expectedValue.length &&
+      crypto.timingSafeEqual(
+        Buffer.from(suppliedValue),
+        Buffer.from(expectedValue),
+      );
+
+    if (!isValid) {
       return reply.code(401).send({ error: 'Unauthorized' });
     }
 

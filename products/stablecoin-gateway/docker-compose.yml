@@ -21,7 +21,7 @@ services:
       POSTGRES_PASSWORD: ${POSTGRES_PASSWORD:?POSTGRES_PASSWORD is required - see .env.docker}
       POSTGRES_DB: ${POSTGRES_DB:-stablecoin_gateway_dev}
     ports:
-      - "5432:5432"
+      - "127.0.0.1:5432:5432"
     volumes:
       - postgres_data:/var/lib/postgresql/data
     healthcheck:
@@ -33,12 +33,13 @@ services:
   redis:
     image: redis:7-alpine
     container_name: stablecoin-gateway-redis
+    command: redis-server --requirepass ${REDIS_PASSWORD:-devpassword}
     ports:
-      - "6379:6379"
+      - "127.0.0.1:6379:6379"
     volumes:
       - redis_data:/data
     healthcheck:
-      test: ["CMD", "redis-cli", "ping"]
+      test: ["CMD", "redis-cli", "-a", "${REDIS_PASSWORD:-devpassword}", "ping"]
       interval: 10s
       timeout: 5s
       retries: 5
@@ -55,7 +56,7 @@ services:
       - PORT=5001
       # SECURITY: Database URL constructed from environment variables
       - DATABASE_URL=postgresql://${POSTGRES_USER:-postgres}:${POSTGRES_PASSWORD:?POSTGRES_PASSWORD is required}@postgres:5432/${POSTGRES_DB:-stablecoin_gateway_dev}
-      - REDIS_URL=redis://redis:6379
+      - REDIS_URL=redis://:${REDIS_PASSWORD:-devpassword}@redis:6379
       # SECURITY: JWT secret must be provided via environment
       # Generate with: openssl rand -hex 32
       - JWT_SECRET=${JWT_SECRET:?JWT_SECRET is required - generate with: openssl rand -hex 32}

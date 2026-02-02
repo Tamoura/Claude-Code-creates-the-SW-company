@@ -73,10 +73,11 @@ const webhookWorkerRoutes: FastifyPluginAsync = async (fastify) => {
         duration_ms: duration,
       });
     } catch (error) {
+      // Log full error internally for debugging
       logger.error('Error processing webhook queue', error);
+      // SECURITY: Do not expose internal error details in response
       return reply.code(500).send({
         error: 'Failed to process webhook queue',
-        message: error instanceof Error ? error.message : 'Unknown error',
       });
     }
   });

@@ -1,14 +1,18 @@
 /**
  * Spending Limit Atomicity Tests
  *
- * Verifies that the spending limit check and record use
- * redis.get() for checking + redis.incrby() for recording +
- * redis.expire() for TTL, with graceful degradation when Redis
- * is unavailable.
+ * Verifies that the spending limit check uses atomic INCRBY-then-check
+ * with rollback, preventing race conditions where concurrent requests
+ * could both pass a GET-based check before either records its spend.
+ *
+ * The implementation uses:
+ * - redis.incrby(key, amountCents) to atomically reserve spend
+ * - redis.expire(key, ttl) to set TTL
+ * - redis.incrby(key, -amountCents) to roll back if over limit
  *
  * Test cases:
- * 1. Should check limit via get and record spend via incrby within limit
- * 2. Should reject spend exceeding limit after get check
+ * 1. Should reserve spend via incrby within limit
+ * 2. Should reject spend exceeding limit and roll back via incrby(-amount)
  * 3. Should prevent concurrent requests from exceeding daily limit
  * 4. Should gracefully degrade when Redis is unavailable
  * 5. Should set TTL on spend key via expire
@@ -75,23 +79,26 @@ function createMockProviderManager() {
 }
 
 /**
- * Create a mock Redis client that supports get/incrby/expire.
+ * Create a mock Redis client that supports incrby/expire (atomic pattern).
  *
  * The implementation uses:
- * - get(key) to check current spend
- * - incrby(key, amountCents) to record spend after success
- * - expire(key, ttl) to set TTL on spend key
+ * - incrby(key, amountCents) to atomically reserve spend
+ * - expire(key, ttl) to set TTL
+ * - incrby(key, -amountCents) to roll back if over limit
  */
 function createAtomicMockRedis() {
-  const store: Record<string, string> = {};
+  const store: Record<string, number> = {};
 
   const redis = {
     store,
-    get: jest.fn(async (key: string) => store[key] || null),
+    get: jest.fn(async (key: string) => {
+      const val = store[key];
+      return val !== undefined ? String(val) : null;
+    }),
     incrby: jest.fn(async (key: string, increment: number) => {
-      const current = parseInt(store[key] || '0', 10);
+      const current = store[key] || 0;
       const newVal = current + increment;
-      store[key] = String(newVal);
+      store[key] = newVal;
       return newVal;
     }),
     expire: jest.fn(async () => 1),
@@ -114,8 +121,8 @@ describe('Spending Limit Atomicity', () => {
     process.env = { ...originalEnv };
   });
 
-  describe('should check and record spend within limit', () => {
-    it('succeeds and records spend via get + incrby', async () => {
+  describe('should reserve spend atomically via incrby', () => {
+    it('succeeds and reserves spend via incrby', async () => {
       const redis = createAtomicMockRedis();
       const service = new BlockchainTransactionService({
         redis: redis as unknown as SpendingLimitRedis,
@@ -132,10 +139,7 @@ describe('Spending Limit Atomicity', () => {
       expect(result.success).toBe(true);
       expect(result.txHash).toBeDefined();
 
-      // The implementation calls redis.get() to check the limit
-      expect(redis.get).toHaveBeenCalled();
-
-      // After a successful tx, it calls redis.incrby() to record spend
+      // The implementation calls redis.incrby() to atomically reserve spend
       expect(redis.incrby).toHaveBeenCalled();
 
       // And redis.expire() to set TTL
@@ -144,7 +148,7 @@ describe('Spending Limit Atomicity', () => {
       // Verify the store has the spend recorded
       const today = new Date().toISOString().split('T')[0];
       const key = `spend:daily:${today}`;
-      expect(parseInt(redis.store[key] || '0', 10)).toBe(50000); // 500 * 100 cents
+      expect(redis.store[key]).toBe(50000); // 500 * 100 cents
     });
   });
 
@@ -169,15 +173,13 @@ describe('Spending Limit Atomicity', () => {
         'Daily refund limit exceeded - manual approval required'
       );
 
-      // get was called to check limit
-      expect(redis.get).toHaveBeenCalled();
+      // incrby was called (atomic reserve attempt)
+      expect(redis.incrby).toHaveBeenCalled();
 
-      // No spend should be recorded since the check rejected it
-      expect(redis.incrby).not.toHaveBeenCalled();
-
+      // The overspend was rolled back, so store should be 0
       const today = new Date().toISOString().split('T')[0];
       const key = `spend:daily:${today}`;
-      expect(redis.store[key]).toBeUndefined();
+      expect(redis.store[key] || 0).toBe(0);
     });
 
     it('rejects when cumulative spend would exceed limit', async () => {
@@ -208,10 +210,12 @@ describe('Spending Limit Atomicity', () => {
         'Daily refund limit exceeded - manual approval required'
       );
 
-      // get called twice (once per executeRefund)
-      expect(redis.get).toHaveBeenCalledTimes(2);
-      // incrby called only once (for the first successful refund)
-      expect(redis.incrby).toHaveBeenCalledTimes(1);
+      // incrby called for both attempts (reserve + rollback for the second)
+      expect(redis.incrby).toHaveBeenCalled();
+      // After rollback, only the first $6,000 should remain
+      const today = new Date().toISOString().split('T')[0];
+      const key = `spend:daily:${today}`;
+      expect(redis.store[key]).toBe(600000); // $6,000 in cents
     });
   });
 
@@ -244,21 +248,18 @@ describe('Spending Limit Atomicity', () => {
       const successes = [result1, result2].filter((r) => r.success);
       const failures = [result1, result2].filter((r) => !r.success);
 
-      // With get-then-incrby (non-atomic), both may succeed in
-      // concurrent execution since both read 0 before either writes.
-      // The implementation uses get + incrby (not Lua), so both
-      // concurrent requests may pass the check. We verify that at
-      // least one succeeded and the total spend is recorded.
+      // With atomic INCRBY, at most one should succeed (the first to reserve
+      // gets 600000 within limit, the second pushes to 1200000 which exceeds
+      // and rolls back). In the mock (synchronous INCRBY), exactly one succeeds.
       expect(successes.length).toBeGreaterThanOrEqual(1);
 
-      // Both called get to check
-      expect(redis.get).toHaveBeenCalled();
+      // incrby was called for both attempts
+      expect(redis.incrby).toHaveBeenCalled();
 
       const today = new Date().toISOString().split('T')[0];
       const key = `spend:daily:${today}`;
-      const totalSpend = parseInt(redis.store[key] || '0', 10);
       // Each success records 600000 cents ($6,000)
-      expect(totalSpend).toBe(successes.length * 600000);
+      expect(redis.store[key]).toBe(successes.length * 600000);
     });
   });
 
@@ -290,8 +291,8 @@ describe('Spending Limit Atomicity', () => {
 
       // Should succeed with graceful degradation
       expect(result.success).toBe(true);
-      // get was attempted for the spending limit check
-      expect(brokenRedis.get).toHaveBeenCalledTimes(1);
+      // incrby was attempted (then failed gracefully)
+      expect(brokenRedis.incrby).toHaveBeenCalledTimes(1);
     });
 
     it('allows refund when no Redis is configured', async () => {
@@ -311,7 +312,7 @@ describe('Spending Limit Atomicity', () => {
   });
 
   describe('should set TTL on spend key', () => {
-    it('calls expire with TTL after recording spend', async () => {
+    it('calls expire with TTL after reserving spend', async () => {
       const redis = createAtomicMockRedis();
       const service = new BlockchainTransactionService({
         redis: redis as unknown as SpendingLimitRedis,

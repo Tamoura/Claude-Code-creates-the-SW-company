@@ -75,42 +75,47 @@ export class RefundProcessingWorker {
     }
 
     try {
-      const pendingRefunds = await this.prisma.$queryRaw`
-        SELECT id FROM "Refund"
-        WHERE status = 'PENDING'
-        ORDER BY "createdAt" ASC
-        LIMIT ${BATCH_SIZE}
-        FOR UPDATE SKIP LOCKED
-      `;
+      // Wrap FOR UPDATE SKIP LOCKED in an interactive transaction so the
+      // row-level locks are held for the duration of processing, preventing
+      // concurrent instances from claiming the same refunds.
+      await this.prisma.$transaction(async (tx) => {
+        const pendingRefunds = await tx.$queryRaw`
+          SELECT id FROM "Refund"
+          WHERE status = 'PENDING'
+          ORDER BY "createdAt" ASC
+          LIMIT ${BATCH_SIZE}
+          FOR UPDATE SKIP LOCKED
+        `;
 
-      if (
-        !Array.isArray(pendingRefunds) ||
-        pendingRefunds.length === 0
-      ) {
-        return;
-      }
-
-      let processed = 0;
-      let failed = 0;
-
-      for (const refund of pendingRefunds) {
-        try {
-          await this.refundService.processRefund(refund.id);
-          processed++;
-        } catch (error) {
-          failed++;
-          logger.error(
-            `Failed to process refund ${refund.id}`,
-            error instanceof Error ? error : undefined,
-          );
+        if (
+          !Array.isArray(pendingRefunds) ||
+          pendingRefunds.length === 0
+        ) {
+          return;
         }
-      }
 
-      logger.info('Refund processing batch complete', {
-        total: pendingRefunds.length,
-        processed,
-        failed,
-      });
+        let processed = 0;
+        let failed = 0;
+
+        for (const refund of pendingRefunds) {
+          try {
+            await this.refundService.processRefund(refund.id);
+            processed++;
+          } catch (error) {
+            failed++;
+            logger.error(
+              `Failed to process refund ${refund.id}`,
+              error instanceof Error ? error : undefined,
+            );
+          }
+        }
+
+        logger.info('Refund processing batch complete', {
+          total: pendingRefunds.length,
+          processed,
+          failed,
+        });
+      }, { timeout: 120_000 }); // 2 minute timeout for batch processing
     } catch (error) {
       logger.error(
         'Refund processing worker failed',

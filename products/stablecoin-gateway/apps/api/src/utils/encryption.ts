@@ -61,9 +61,11 @@ export function initializeEncryption(): void {
     );
   }
 
-  // Derive a proper 256-bit key from the environment variable
-  // Using SHA-256 ensures we get exactly 32 bytes regardless of input length
-  encryptionKey = crypto.createHash('sha256').update(keyString).digest();
+  // Decode the 64 hex character string directly into a 32-byte buffer.
+  // The key is already validated to be exactly 64 hex chars (32 bytes for AES-256).
+  // No hashing needed — using the raw key directly ensures interoperability
+  // with other AES-256-GCM implementations (e.g., OpenSSL CLI).
+  encryptionKey = Buffer.from(keyString, 'hex');
 }
 
 /**

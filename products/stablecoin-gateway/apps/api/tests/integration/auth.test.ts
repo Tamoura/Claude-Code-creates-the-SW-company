@@ -79,7 +79,7 @@ describe('POST /v1/auth/signup', () => {
     expect(response.statusCode).toBe(400);
   });
 
-  it('should return 409 for duplicate email', async () => {
+  it('should return 201 with generic message for duplicate email (prevents enumeration)', async () => {
     // Create first user (may already exist from earlier test)
     await app.inject({
       method: 'POST',
@@ -93,7 +93,8 @@ describe('POST /v1/auth/signup', () => {
       },
     });
 
-    // Try to create duplicate
+    // Try to create duplicate — should return 201 with generic message
+    // to prevent email enumeration attacks
     const response = await app.inject({
       method: 'POST',
       url: '/v1/auth/signup',
@@ -106,9 +107,11 @@ describe('POST /v1/auth/signup', () => {
       },
     });
 
-    expect(response.statusCode).toBe(409);
+    expect(response.statusCode).toBe(201);
     const body = response.json();
-    expect(body.detail).toContain('already exists');
+    expect(body.message).toBeDefined();
+    // Should NOT contain tokens (not actually logged in)
+    expect(body.access_token).toBeUndefined();
   });
 });
 

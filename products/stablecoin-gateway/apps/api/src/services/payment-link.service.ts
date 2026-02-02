@@ -295,17 +295,26 @@ export class PaymentLinkService {
   }
 
   /**
-   * Increment usage count (called when a payment session is created from this link)
+   * Atomically increment usage count and enforce max_usages in a single SQL query.
+   * Uses a WHERE clause to enforce the limit at the database level,
+   * preventing race conditions where concurrent requests both pass
+   * a read-then-check before either increments.
+   *
+   * Returns the updated link, or null if the link has reached max_usages.
    */
-  async incrementUsage(id: string): Promise<PaymentLink> {
-    return this.prisma.paymentLink.update({
-      where: { id },
-      data: {
-        usageCount: {
-          increment: 1,
-        },
-      },
-    });
+  async incrementUsage(id: string): Promise<PaymentLink | null> {
+    // Atomic increment with limit enforcement in a single UPDATE ... WHERE.
+    // "maxUsages" IS NULL means unlimited; otherwise usageCount must be < maxUsages.
+    const result: PaymentLink[] = await this.prisma.$queryRaw`
+      UPDATE "PaymentLink"
+      SET "usageCount" = "usageCount" + 1, "updatedAt" = NOW()
+      WHERE id = ${id}
+        AND active = true
+        AND ("maxUsages" IS NULL OR "usageCount" < "maxUsages")
+      RETURNING *
+    `;
+
+    return result.length > 0 ? result[0] : null;
   }
 
   /**
