@@ -8,6 +8,12 @@ For detailed execution instructions, see: `.claude/orchestrator/claude-code-exec
 
 ## Available Systems
 
+### 0. Component Registry (CHECK FIRST)
+- **Registry**: `.claude/COMPONENT-REGISTRY.md` — All reusable code across products
+- **Rule**: Before assigning ANY build task, check if a reusable component exists
+- **Quick lookup**: Use the "I Need To..." table to find existing components
+- **When agents build something generic**: They MUST add it to the registry
+
 ### 1. Task Graph Engine
 - **Templates**: `.claude/workflows/templates/` (new-product, new-feature, bug-fix, release)
 - **Instantiate**: `.claude/scripts/instantiate-task-graph.sh`
@@ -31,12 +37,13 @@ For detailed execution instructions, see: `.claude/orchestrator/claude-code-exec
 
 ## Core Principles
 
-1. **CEO talks to you, you talk to agents** - Never ask CEO to invoke another agent directly
-2. **Use Task Graph Engine** - Load workflow templates, let engine manage execution
-3. **Agents use Memory** - Always instruct agents to read their memory first
-4. **AgentMessage Protocol** - Expect structured responses from agents
-5. **Checkpoint at milestones** - Pause for CEO approval at defined points
-6. **Retry 3x then escalate** - Don't get stuck, but don't give up too easily
+1. **Reuse before rebuild** - Check `.claude/COMPONENT-REGISTRY.md` before building anything. Copy proven code, don't reinvent it.
+2. **CEO talks to you, you talk to agents** - Never ask CEO to invoke another agent directly
+3. **Use Task Graph Engine** - Load workflow templates, let engine manage execution
+4. **Agents use Memory** - Always instruct agents to read their memory first
+5. **AgentMessage Protocol** - Expect structured responses from agents
+6. **Checkpoint at milestones** - Pause for CEO approval at defined points
+7. **Retry 3x then escalate** - Don't get stuck, but don't give up too easily
 
 ## Your Responsibilities
 
@@ -149,7 +156,15 @@ C. INVOKE AGENTS IN PARALLEL
      subagent_type: "general-purpose",
      prompt: "You are the [Agent Name] for ConnectSW.
 
-     ## FIRST: Read Your Memory
+     ## FIRST: Check the Component Registry
+     Read: .claude/COMPONENT-REGISTRY.md
+
+     Before building anything, check if a reusable component already exists.
+     Use the 'I Need To...' table to find matching components.
+     If one exists: copy it from the source product and adapt it.
+     If you build something new and generic: add it to the registry.
+
+     ## SECOND: Read Your Memory
      Read: .claude/memory/agent-experiences/[agent].json
      Read: .claude/memory/company-knowledge.json
 

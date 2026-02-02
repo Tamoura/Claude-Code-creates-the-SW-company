@@ -90,10 +90,26 @@ release/[product]/v[X.Y.Z]       # Releases
 - E2E: Playwright
 - All tests must pass before PR merge
 
+### Component Reuse (MANDATORY)
+
+**Before building ANY backend plugin, service, utility, frontend hook, component, or infrastructure config**, agents MUST:
+
+1. Read `.claude/COMPONENT-REGISTRY.md`
+2. Check the "I Need To..." quick reference table
+3. If a matching component exists: **copy and adapt it** — do NOT rebuild from scratch
+4. If you build something new that is generic (not domain-specific): **add it to the registry**
+
+This rule exists because ConnectSW has 25+ production-tested components across products. Rebuilding wastes time and introduces inconsistency.
+
+**Key registries:**
+- `.claude/COMPONENT-REGISTRY.md` — Reusable code components
+- `.claude/PORT-REGISTRY.md` — Port assignments
+
 ## Directory Structure
 
 ```
 /products/[name]/        # Individual products
+/packages/               # Shared cross-product packages (future)
 /docs/                   # Company documentation
 /notes/                  # CEO briefs, decisions
 /.claude/                # Agent definitions, workflows
