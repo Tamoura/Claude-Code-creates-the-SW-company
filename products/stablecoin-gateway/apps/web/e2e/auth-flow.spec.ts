@@ -2,49 +2,42 @@ import { test, expect } from '@playwright/test';
 
 test.describe('Authentication Flow', () => {
   test('login page renders with email and password fields', async ({ page }) => {
-    await page.goto('/login', { waitUntil: 'networkidle' });
+    await page.goto('/login');
 
-    await expect(page.getByRole('heading', { level: 1 })).toBeVisible({ timeout: 10000 });
-    await expect(page.getByLabel(/email/i)).toBeVisible();
-    await expect(page.getByLabel(/password/i)).toBeVisible();
-    await expect(page.getByRole('button', { name: /sign in|log in/i })).toBeVisible();
+    await expect(page.locator('h2')).toBeVisible({ timeout: 10000 });
+    await expect(page.locator('#email')).toBeVisible();
+    await expect(page.locator('#password')).toBeVisible();
+    await expect(page.locator('button[type="submit"]')).toBeVisible();
   });
 
   test('login form validates required fields', async ({ page }) => {
-    await page.goto('/login', { waitUntil: 'networkidle' });
+    await page.goto('/login');
 
-    // Click submit without filling fields
-    const submitButton = page.getByRole('button', { name: /sign in|log in/i });
+    const submitButton = page.locator('button[type="submit"]');
     await expect(submitButton).toBeVisible({ timeout: 10000 });
     await submitButton.click();
 
-    // Browser native validation or form validation should prevent submission
-    // The email field should be marked as invalid or show an error
-    const emailInput = page.getByLabel(/email/i);
+    const emailInput = page.locator('#email');
     const isInvalid = await emailInput.evaluate(
       (el) => !(el as HTMLInputElement).validity.valid,
     );
     expect(isInvalid).toBe(true);
   });
 
-  test('login page has link to register or reset password', async ({ page }) => {
-    await page.goto('/login', { waitUntil: 'networkidle' });
-    await expect(page.getByRole('heading', { level: 1 })).toBeVisible({ timeout: 10000 });
+  test('login page has link to register', async ({ page }) => {
+    await page.goto('/login');
+    await expect(page.locator('h2')).toBeVisible({ timeout: 10000 });
 
-    // Page should contain at least one navigation link
-    const links = page.locator('a');
-    const count = await links.count();
-    expect(count).toBeGreaterThan(0);
+    const signupLink = page.locator('a[href="/signup"]');
+    await expect(signupLink).toBeVisible();
   });
 
   test('unauthenticated user accessing dashboard redirects to login', async ({ page }) => {
-    await page.goto('/dashboard', { waitUntil: 'networkidle' });
+    await page.goto('/dashboard');
 
-    // Should either redirect to login or show login prompt
-    // Wait for page to settle
     await page.waitForTimeout(1000);
     const url = page.url();
-    const hasLoginContent = await page.getByLabel(/email/i).isVisible().catch(() => false);
+    const hasLoginContent = await page.locator('#email').isVisible().catch(() => false);
     const isOnLogin = url.includes('/login');
 
     expect(isOnLogin || hasLoginContent).toBe(true);

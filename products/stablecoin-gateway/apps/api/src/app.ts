@@ -107,6 +107,7 @@ export async function buildApp(): Promise<FastifyInstance> {
       callback(new Error('Not allowed by CORS'), false);
     },
     credentials: true,
+    methods: ['GET', 'HEAD', 'POST', 'PUT', 'PATCH', 'DELETE', 'OPTIONS'],
   });
 
   // Register JWT
