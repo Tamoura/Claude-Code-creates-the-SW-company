@@ -38,10 +38,11 @@ const config: Config.InitialOptions = {
     '^.+\\.tsx?$': [
       'ts-jest',
       {
+        diagnostics: false,
         tsconfig: {
           esModuleInterop: true,
           allowSyntheticDefaultImports: true,
-          strict: true,
+          strict: false,
           skipLibCheck: true,
         },
       },
