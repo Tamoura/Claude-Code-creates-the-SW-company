@@ -9,7 +9,7 @@ Run multiple Claude sessions on different products simultaneously using git work
 .claude/scripts/worktree.sh create stablecoin-gateway
 
 # Work in it
-cd "$(git rev-parse --show-toplevel)-worktrees/stablecoin-gateway"
+cd "$(git rev-parse --show-toplevel)/.tree/stablecoin-gateway"
 cd products/stablecoin-gateway && npm install
 
 # When done, remove the worktree (branch is kept)
@@ -23,11 +23,11 @@ Git worktrees let you check out multiple branches simultaneously in separate dir
 **Directory layout after creating worktrees:**
 
 ```
-~/Desktop/Projects/
-  Claude Code creates the SW company/              # main repo (any branch)
-  Claude Code creates the SW company-worktrees/
-    stablecoin-gateway/                             # worktree on its own branch
-    invoiceforge/                                   # worktree on its own branch
+Claude Code creates the SW company/
+  .tree/
+    stablecoin-gateway/     # worktree on its own branch
+    invoiceforge/           # worktree on its own branch
+  products/                 # main repo products
 ```
 
 Each worktree:

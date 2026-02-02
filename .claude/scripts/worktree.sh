@@ -7,9 +7,10 @@
 #   ./worktree.sh remove <product>            Remove a worktree (keeps branch)
 #   ./worktree.sh path <product>              Print worktree path
 #
-# Worktrees are created in <repo>-worktrees/<product>/
+# Worktrees are created in <repo>/.tree/<product>/
 # Each gets its own branch checkout sharing the same .git database.
 # Hooks are inherited automatically from the main repo.
+# The .tree/ directory is gitignored.
 
 set -euo pipefail
 
@@ -22,7 +23,7 @@ else
   REPO_ROOT="$(dirname "$GIT_COMMON_DIR")"
 fi
 
-WORKTREE_BASE="${REPO_ROOT}-worktrees"
+WORKTREE_BASE="${REPO_ROOT}/.tree"
 
 usage() {
   echo "Usage: $(basename "$0") <command> [args]"
