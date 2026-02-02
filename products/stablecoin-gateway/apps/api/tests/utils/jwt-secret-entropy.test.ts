@@ -4,7 +4,6 @@ import crypto from 'crypto';
 
 describe('JWT Secret Entropy Validation', () => {
   const originalEnv = process.env;
-  const originalExit = process.exit;
 
   // Helper: valid base env for development (no KMS/webhook issues)
   function setBaseEnv() {
@@ -27,12 +26,10 @@ describe('JWT Secret Entropy Validation', () => {
 
   beforeEach(() => {
     process.env = { ...originalEnv };
-    process.exit = jest.fn() as any;
   });
 
   afterAll(() => {
     process.env = originalEnv;
-    process.exit = originalExit;
   });
 
   describe('calculateShannonEntropy', () => {
@@ -72,30 +69,22 @@ describe('JWT Secret Entropy Validation', () => {
       setBaseEnv();
       process.env.JWT_SECRET = crypto.randomBytes(32).toString('hex');
 
-      validateEnvironment();
-
-      expect(process.exit).not.toHaveBeenCalled();
+      expect(() => validateEnvironment()).not.toThrow();
     });
 
     it('should reject a repeated-character secret in production', () => {
       setProductionBaseEnv();
       process.env.JWT_SECRET = 'a'.repeat(64);
 
-      validateEnvironment();
-
-      expect(process.exit).toHaveBeenCalledWith(1);
+      expect(() => validateEnvironment()).toThrow('Environment validation failed');
     });
 
     it('should warn but not exit for a repeated-character secret in development', () => {
       setBaseEnv();
       process.env.NODE_ENV = 'development';
       process.env.JWT_SECRET = 'a'.repeat(64);
-      const warnSpy = jest.spyOn(console, 'log').mockImplementation();
 
-      validateEnvironment();
-
-      expect(process.exit).not.toHaveBeenCalled();
-      warnSpy.mockRestore();
+      expect(() => validateEnvironment()).not.toThrow();
     });
 
     it('should reject a short dictionary word repeated to meet length', () => {
@@ -103,9 +92,7 @@ describe('JWT Secret Entropy Validation', () => {
       // "password" repeated 8 times = 64 chars, only 7 unique chars
       process.env.JWT_SECRET = 'password'.repeat(8);
 
-      validateEnvironment();
-
-      expect(process.exit).toHaveBeenCalledWith(1);
+      expect(() => validateEnvironment()).toThrow('Environment validation failed');
     });
 
     it('should reject a secret with fewer than 16 unique characters in production', () => {
@@ -114,9 +101,7 @@ describe('JWT Secret Entropy Validation', () => {
       const fifteenUnique = 'abcdefghijklmno';
       process.env.JWT_SECRET = fifteenUnique.repeat(5).slice(0, 64);
 
-      validateEnvironment();
-
-      expect(process.exit).toHaveBeenCalledWith(1);
+      expect(() => validateEnvironment()).toThrow('Environment validation failed');
     });
 
     it('should warn for fewer than 16 unique characters in development', () => {
@@ -124,12 +109,8 @@ describe('JWT Secret Entropy Validation', () => {
       process.env.NODE_ENV = 'development';
       const fifteenUnique = 'abcdefghijklmno';
       process.env.JWT_SECRET = fifteenUnique.repeat(5).slice(0, 64);
-      const warnSpy = jest.spyOn(console, 'log').mockImplementation();
 
-      validateEnvironment();
-
-      expect(process.exit).not.toHaveBeenCalled();
-      warnSpy.mockRestore();
+      expect(() => validateEnvironment()).not.toThrow();
     });
 
     it('should pass a secret with exactly 16 unique characters and sufficient entropy', () => {
@@ -138,9 +119,7 @@ describe('JWT Secret Entropy Validation', () => {
       const sixteenUnique = '0123456789abcdef';
       process.env.JWT_SECRET = sixteenUnique.repeat(4); // 64 chars
 
-      validateEnvironment();
-
-      expect(process.exit).not.toHaveBeenCalled();
+      expect(() => validateEnvironment()).not.toThrow();
     });
 
     it('should use Shannon entropy calculation (entropy >= 3.0 required)', () => {

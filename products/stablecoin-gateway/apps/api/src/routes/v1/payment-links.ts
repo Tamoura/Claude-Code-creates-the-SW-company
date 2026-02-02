@@ -1,4 +1,4 @@
-import { FastifyPluginAsync } from 'fastify';
+import { FastifyPluginAsync, FastifyRequest } from 'fastify';
 import { ZodError, z } from 'zod';
 import { PaymentLinkService } from '../../services/payment-link.service.js';
 import { AppError } from '../../types/index.js';
@@ -78,6 +78,27 @@ const listPaymentLinksQuerySchema = z.object({
 // ==================== Routes ====================
 
 const paymentLinkRoutes: FastifyPluginAsync = async (fastify) => {
+  // Rate limit config for public endpoints (RISK-032 fix)
+  const publicRateLimit = {
+    config: {
+      rateLimit: {
+        max: 60,
+        timeWindow: '1 minute',
+        keyGenerator: (request: FastifyRequest) => `paylink:${request.ip}`,
+      },
+    },
+  };
+
+  const qrRateLimit = {
+    config: {
+      rateLimit: {
+        max: 30,
+        timeWindow: '1 minute',
+        keyGenerator: (request: FastifyRequest) => `qr:${request.ip}`,
+      },
+    },
+  };
+
   // POST /v1/payment-links - Create payment link
   fastify.post(
     '/',
@@ -186,12 +207,25 @@ const paymentLinkRoutes: FastifyPluginAsync = async (fastify) => {
 
   // GET /v1/payment-links/resolve/:shortCode - Resolve short code (public)
   // Registered before /:id to prevent Fastify from matching "resolve" as an :id param
-  fastify.get('/resolve/:shortCode', async (request, reply) => {
+  fastify.get('/resolve/:shortCode', publicRateLimit, async (request, reply) => {
     try {
       const { shortCode } = request.params as { shortCode: string };
 
       const paymentLinkService = new PaymentLinkService(fastify.prisma);
       const link = await paymentLinkService.getPaymentLinkByShortCode(shortCode);
+
+      // Validate link is still usable (RISK-040 fix)
+      if (!link.active) {
+        throw new AppError(400, 'link-inactive', 'This payment link is no longer active');
+      }
+
+      if (link.expiresAt && link.expiresAt < new Date()) {
+        throw new AppError(400, 'link-expired', 'This payment link has expired');
+      }
+
+      if (link.maxUsages !== null && link.usageCount >= link.maxUsages) {
+        throw new AppError(400, 'link-max-usage-reached', 'Payment link has reached maximum usage limit');
+      }
 
       const baseUrl = process.env.FRONTEND_URL || 'http://localhost:3101';
       const response = paymentLinkService.toResponse(link, baseUrl);
@@ -208,7 +242,7 @@ const paymentLinkRoutes: FastifyPluginAsync = async (fastify) => {
 
   // GET /v1/payment-links/:id/qr - Generate QR code (public)
   // Registered before /:id to prevent Fastify from matching QR path segments incorrectly
-  fastify.get('/:id/qr', async (request, reply) => {
+  fastify.get('/:id/qr', qrRateLimit, async (request, reply) => {
     try {
       const { id } = request.params as { id: string };
 

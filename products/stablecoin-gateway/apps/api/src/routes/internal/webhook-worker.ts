@@ -31,14 +31,13 @@ const webhookWorkerRoutes: FastifyPluginAsync = async (fastify) => {
     }
 
     // Timing-safe comparison to prevent timing attacks (Phase 3.2)
+    // Hash both values before comparing to normalize length and prevent
+    // length-based information leakage (RISK-034 fix)
     const expectedValue = `Bearer ${expectedKey}`;
     const suppliedValue = authHeader || '';
-    const isValid =
-      suppliedValue.length === expectedValue.length &&
-      crypto.timingSafeEqual(
-        Buffer.from(suppliedValue),
-        Buffer.from(expectedValue),
-      );
+    const expectedHash = crypto.createHash('sha256').update(expectedValue).digest();
+    const suppliedHash = crypto.createHash('sha256').update(suppliedValue).digest();
+    const isValid = crypto.timingSafeEqual(expectedHash, suppliedHash);
 
     if (!isValid) {
       // Log unauthorized access without sensitive headers

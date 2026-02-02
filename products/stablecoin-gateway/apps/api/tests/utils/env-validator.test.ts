@@ -2,53 +2,43 @@ import { validateEnvironment } from '../../src/utils/env-validator';
 
 describe('Environment Validation', () => {
   const originalEnv = process.env;
-  const originalExit = process.exit;
 
   beforeEach(() => {
     // Reset environment before each test
     process.env = { ...originalEnv };
-    // Mock process.exit to prevent tests from actually exiting
-    process.exit = jest.fn() as any;
   });
 
   afterAll(() => {
-    // Restore original environment and process.exit
+    // Restore original environment
     process.env = originalEnv;
-    process.exit = originalExit;
   });
 
   describe('JWT_SECRET validation', () => {
-    it('should call process.exit when JWT_SECRET is missing', () => {
+    it('should throw when JWT_SECRET is missing', () => {
       delete process.env.JWT_SECRET;
       process.env.DATABASE_URL = 'postgresql://user:pass@localhost:5432/dbname';
       process.env.ALLOW_PRIVATE_KEY_FALLBACK = 'true';
       process.env.HOT_WALLET_PRIVATE_KEY = '0x1234567890123456789012345678901234567890123456789012345678901234';
 
-      validateEnvironment();
-
-      expect(process.exit).toHaveBeenCalledWith(1);
+      expect(() => validateEnvironment()).toThrow('Environment validation failed');
     });
 
-    it('should call process.exit when JWT_SECRET is too short (<32 chars)', () => {
+    it('should throw when JWT_SECRET is too short (<32 chars)', () => {
       process.env.JWT_SECRET = 'short-secret-12345';
       process.env.DATABASE_URL = 'postgresql://user:pass@localhost:5432/dbname';
       process.env.ALLOW_PRIVATE_KEY_FALLBACK = 'true';
       process.env.HOT_WALLET_PRIVATE_KEY = '0x1234567890123456789012345678901234567890123456789012345678901234';
 
-      validateEnvironment();
-
-      expect(process.exit).toHaveBeenCalledWith(1);
+      expect(() => validateEnvironment()).toThrow('Environment validation failed');
     });
 
-    it('should call process.exit when JWT_SECRET is the default value', () => {
+    it('should throw when JWT_SECRET is the default value', () => {
       process.env.JWT_SECRET = 'change-this-secret-in-production';
       process.env.DATABASE_URL = 'postgresql://user:pass@localhost:5432/dbname';
       process.env.ALLOW_PRIVATE_KEY_FALLBACK = 'true';
       process.env.HOT_WALLET_PRIVATE_KEY = '0x1234567890123456789012345678901234567890123456789012345678901234';
 
-      validateEnvironment();
-
-      expect(process.exit).toHaveBeenCalledWith(1);
+      expect(() => validateEnvironment()).toThrow('Environment validation failed');
     });
 
     it('should pass validation with valid JWT_SECRET (32+ chars)', () => {
@@ -57,9 +47,7 @@ describe('Environment Validation', () => {
       process.env.ALLOW_PRIVATE_KEY_FALLBACK = 'true';
       process.env.HOT_WALLET_PRIVATE_KEY = '0x1234567890123456789012345678901234567890123456789012345678901234';
 
-      validateEnvironment();
-
-      expect(process.exit).not.toHaveBeenCalled();
+      expect(() => validateEnvironment()).not.toThrow();
     });
 
     it('should pass validation with exactly 32 character JWT_SECRET', () => {
@@ -68,22 +56,18 @@ describe('Environment Validation', () => {
       process.env.ALLOW_PRIVATE_KEY_FALLBACK = 'true';
       process.env.HOT_WALLET_PRIVATE_KEY = '0x1234567890123456789012345678901234567890123456789012345678901234';
 
-      validateEnvironment();
-
-      expect(process.exit).not.toHaveBeenCalled();
+      expect(() => validateEnvironment()).not.toThrow();
     });
   });
 
   describe('DATABASE_URL validation', () => {
-    it('should call process.exit when DATABASE_URL is missing', () => {
+    it('should throw when DATABASE_URL is missing', () => {
       delete process.env.DATABASE_URL;
       process.env.JWT_SECRET = 'this-is-a-very-secure-secret-key-with-more-than-32-characters';
       process.env.ALLOW_PRIVATE_KEY_FALLBACK = 'true';
       process.env.HOT_WALLET_PRIVATE_KEY = '0x1234567890123456789012345678901234567890123456789012345678901234';
 
-      validateEnvironment();
-
-      expect(process.exit).toHaveBeenCalledWith(1);
+      expect(() => validateEnvironment()).toThrow('Environment validation failed');
     });
 
     it('should pass validation with valid DATABASE_URL', () => {
@@ -92,9 +76,7 @@ describe('Environment Validation', () => {
       process.env.ALLOW_PRIVATE_KEY_FALLBACK = 'true';
       process.env.HOT_WALLET_PRIVATE_KEY = '0x1234567890123456789012345678901234567890123456789012345678901234';
 
-      validateEnvironment();
-
-      expect(process.exit).not.toHaveBeenCalled();
+      expect(() => validateEnvironment()).not.toThrow();
     });
   });
 
@@ -107,9 +89,7 @@ describe('Environment Validation', () => {
       delete process.env.PORT;
       delete process.env.FRONTEND_URL;
 
-      validateEnvironment();
-
-      expect(process.exit).not.toHaveBeenCalled();
+      expect(() => validateEnvironment()).not.toThrow();
     });
   });
 });

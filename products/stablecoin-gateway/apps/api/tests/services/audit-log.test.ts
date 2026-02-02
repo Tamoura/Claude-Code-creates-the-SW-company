@@ -339,7 +339,7 @@ describe('AuditLogService', () => {
     });
 
     it('should log an error when record() fails internally', () => {
-      const consoleSpy = jest.spyOn(console, 'error').mockImplementation();
+      const consoleSpy = jest.spyOn(console, 'log').mockImplementation();
 
       const brokenService = new AuditLogService();
       Object.defineProperty(brokenService, 'entries', {
@@ -356,8 +356,8 @@ describe('AuditLogService', () => {
       });
 
       expect(consoleSpy).toHaveBeenCalledWith(
-        expect.stringContaining('Audit log write failed'),
-        expect.any(Error)
+        expect.stringContaining('Audit log database write failed'),
+        expect.anything()
       );
 
       consoleSpy.mockRestore();

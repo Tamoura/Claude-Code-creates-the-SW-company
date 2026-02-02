@@ -16,6 +16,7 @@
  */
 
 import { PrismaClient } from '@prisma/client';
+import { logger } from '../utils/logger.js';
 
 export interface AuditEntry {
   actor: string;
@@ -121,14 +122,14 @@ export class AuditLogService {
           // DB write succeeded -- skip in-memory to avoid duplication
         }).catch((error) => {
           // DB write failed -- fall back to in-memory
-          console.error('Audit log write failed', error);
+          logger.error('Audit log database write failed', error);
           this.pushBounded(entry);
         });
       }
 
       this.pushBounded(entry);
     } catch (error) {
-      console.error('Audit log write failed', error);
+      logger.error('Audit log database write failed', error);
     }
   }
 

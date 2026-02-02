@@ -1,6 +1,6 @@
 import { FastifyPluginAsync, FastifyRequest } from 'fastify';
 import { ZodError } from 'zod';
-import { signupSchema, loginSchema, sseTokenSchema, forgotPasswordSchema, resetPasswordSchema, validateBody } from '../../utils/validation.js';
+import { signupSchema, loginSchema, logoutSchema, sseTokenSchema, forgotPasswordSchema, resetPasswordSchema, validateBody } from '../../utils/validation.js';
 import { hashPassword, verifyPassword } from '../../utils/crypto.js';
 import { AppError } from '../../types/index.js';
 import { logger } from '../../utils/logger.js';
@@ -231,11 +231,7 @@ const authRoutes: FastifyPluginAsync = async (fastify) => {
   // POST /v1/auth/refresh
   fastify.post('/refresh', authRateLimit, async (request, reply) => {
     try {
-      const { refresh_token } = request.body as { refresh_token: string };
-
-      if (!refresh_token) {
-        throw new AppError(400, 'missing-token', 'Refresh token is required');
-      }
+      const { refresh_token } = validateBody(logoutSchema, request.body);
 
       // Verify refresh token
       const decoded = fastify.jwt.verify(refresh_token) as { userId: string; type: string };
@@ -262,9 +258,19 @@ const authRoutes: FastifyPluginAsync = async (fastify) => {
         throw new AppError(401, 'invalid-token', 'Refresh token has expired');
       }
 
-      // Generate new access token
+      // Fetch user to include role in the new access token (RISK-031 fix)
+      const user = await fastify.prisma.user.findUnique({
+        where: { id: decoded.userId },
+        select: { id: true, role: true },
+      });
+
+      if (!user) {
+        throw new AppError(401, 'invalid-token', 'User not found');
+      }
+
+      // Generate new access token with role included
       const accessToken = fastify.jwt.sign(
-        { userId: decoded.userId, jti: randomUUID() },
+        { userId: decoded.userId, role: user.role, jti: randomUUID() },
         { expiresIn: process.env.JWT_EXPIRES_IN || '15m' }
       );
 
@@ -305,6 +311,15 @@ const authRoutes: FastifyPluginAsync = async (fastify) => {
       if (error instanceof AppError) {
         return reply.code(error.statusCode).send(error.toJSON());
       }
+      if (error instanceof ZodError) {
+        return reply.code(400).send({
+          type: 'https://gateway.io/errors/validation-error',
+          title: 'Validation Error',
+          status: 400,
+          detail: error.message,
+          request_id: request.id,
+        });
+      }
       throw new AppError(401, 'invalid-token', 'Invalid or expired refresh token');
     }
   });
@@ -316,11 +331,7 @@ const authRoutes: FastifyPluginAsync = async (fastify) => {
       await request.jwtVerify();
       const userId = (request.user as { userId: string }).userId;
 
-      const { refresh_token } = request.body as { refresh_token: string };
-
-      if (!refresh_token) {
-        throw new AppError(400, 'missing-token', 'Refresh token is required');
-      }
+      const { refresh_token } = validateBody(logoutSchema, request.body);
 
       // Revoke the refresh token
       const tokenHash = createHash('sha256').update(refresh_token).digest('hex');
@@ -370,6 +381,15 @@ const authRoutes: FastifyPluginAsync = async (fastify) => {
     } catch (error) {
       if (error instanceof AppError) {
         return reply.code(error.statusCode).send(error.toJSON());
+      }
+      if (error instanceof ZodError) {
+        return reply.code(400).send({
+          type: 'https://gateway.io/errors/validation-error',
+          title: 'Validation Error',
+          status: 400,
+          detail: error.message,
+          request_id: request.id,
+        });
       }
       throw error;
     }

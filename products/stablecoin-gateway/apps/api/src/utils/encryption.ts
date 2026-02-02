@@ -61,6 +61,14 @@ export function initializeEncryption(): void {
     );
   }
 
+  // Validate entropy to reject weak keys like all-zeros or sequential patterns (RISK-043 fix)
+  const uniqueChars = new Set(keyString.toLowerCase()).size;
+  if (uniqueChars < 8) {
+    throw new Error(
+      'WEBHOOK_ENCRYPTION_KEY has insufficient entropy (too few unique characters). Generate with: openssl rand -hex 32'
+    );
+  }
+
   // Decode the 64 hex character string directly into a 32-byte buffer.
   // The key is already validated to be exactly 64 hex chars (32 bytes for AES-256).
   // No hashing needed — using the raw key directly ensures interoperability
