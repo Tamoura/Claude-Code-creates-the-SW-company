@@ -373,7 +373,7 @@ export function validateEnvironment(): void {
     logger.error('❌ Environment validation failed - server cannot start');
     logger.error('   Fix the errors above and restart the server');
     logger.error('');
-    process.exit(1);
+    throw new Error('Environment validation failed - see errors above');
   }
 
   if (hasWarnings) {

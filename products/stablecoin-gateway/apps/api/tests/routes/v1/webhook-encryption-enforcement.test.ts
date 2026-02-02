@@ -82,7 +82,7 @@ describe('Webhook encryption enforcement', () => {
 
   it('should create webhook in production when encryption key is set', async () => {
     process.env.NODE_ENV = 'production';
-    process.env.WEBHOOK_ENCRYPTION_KEY = 'a'.repeat(64);
+    process.env.WEBHOOK_ENCRYPTION_KEY = '0123456789abcdef'.repeat(4);
     initializeEncryption();
 
     const response = await app.inject({
@@ -129,7 +129,7 @@ describe('Webhook encryption enforcement', () => {
 
   it('should encrypt webhook secret in development when encryption key is set', async () => {
     process.env.NODE_ENV = 'development';
-    process.env.WEBHOOK_ENCRYPTION_KEY = 'b'.repeat(64);
+    process.env.WEBHOOK_ENCRYPTION_KEY = 'fedcba9876543210'.repeat(4);
     initializeEncryption();
 
     const response = await app.inject({
@@ -196,7 +196,7 @@ describe('Webhook encryption enforcement', () => {
 
     // Switch to production with encryption key
     process.env.NODE_ENV = 'production';
-    process.env.WEBHOOK_ENCRYPTION_KEY = 'c'.repeat(64);
+    process.env.WEBHOOK_ENCRYPTION_KEY = 'abcdef0123456789'.repeat(4);
     initializeEncryption();
 
     const response = await app.inject({

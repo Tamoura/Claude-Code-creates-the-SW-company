@@ -76,9 +76,10 @@ export async function buildApp(): Promise<FastifyInstance> {
   });
 
   // Register CORS with multiple allowed origins
+  // Normalize origins to lowercase to prevent case-sensitivity bypass (RISK-042 fix)
   const allowedOrigins = (process.env.ALLOWED_ORIGINS || 'http://localhost:3104')
     .split(',')
-    .map((origin) => origin.trim());
+    .map((origin) => origin.trim().toLowerCase());
 
   const isProduction = process.env.NODE_ENV === 'production';
 
@@ -97,8 +98,8 @@ export async function buildApp(): Promise<FastifyInstance> {
         return;
       }
 
-      // Check if origin is in whitelist
-      if (allowedOrigins.includes(origin)) {
+      // Check if origin is in whitelist (case-insensitive)
+      if (allowedOrigins.includes(origin.toLowerCase())) {
         callback(null, true);
         return;
       }

@@ -1,4 +1,4 @@
-import { FastifyPluginAsync } from 'fastify';
+import { FastifyPluginAsync, FastifyRequest } from 'fastify';
 import { logger } from '../../utils/logger.js';
 
 /**
@@ -6,8 +6,19 @@ import { logger } from '../../utils/logger.js';
  * These endpoints return minimal payment info for the customer-facing checkout UI.
  */
 const checkoutRoutes: FastifyPluginAsync = async (fastify) => {
+  // Rate limit config for public endpoints (RISK-032 fix)
+  const publicRateLimit = {
+    config: {
+      rateLimit: {
+        max: 60,
+        timeWindow: '1 minute',
+        keyGenerator: (request: FastifyRequest) => `checkout:${request.ip}`,
+      },
+    },
+  };
+
   // GET /v1/checkout/:id - Public endpoint for checkout page
-  fastify.get('/:id', async (request, reply) => {
+  fastify.get('/:id', publicRateLimit, async (request, reply) => {
     const { id } = request.params as { id: string };
 
     const session = await fastify.prisma.paymentSession.findUnique({

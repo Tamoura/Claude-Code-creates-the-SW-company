@@ -12,23 +12,14 @@ import { validateEnvironment } from '../../src/utils/env-validator';
 
 describe('Production secrets enforcement', () => {
   const originalEnv = process.env;
-  const originalExit = process.exit;
 
   beforeEach(() => {
     // Start with a clean env -- only set what setBaseEnv provides
     process.env = {};
-    process.exit = jest.fn() as any;
-    // Suppress log output during tests
-    jest.spyOn(console, 'log').mockImplementation();
-  });
-
-  afterEach(() => {
-    jest.restoreAllMocks();
   });
 
   afterAll(() => {
     process.env = originalEnv;
-    process.exit = originalExit;
   });
 
   /**
@@ -45,33 +36,27 @@ describe('Production secrets enforcement', () => {
     process.env.INTERNAL_API_KEY = '7b2e9f4a1d8c5e3b6f0a2d7c4e9b1f5a3d8c6e0b4f7a2d9c5e1b3f8a6d0c4e7';
   }
 
-  it('should exit in production when API_KEY_HMAC_SECRET is missing', () => {
+  it('should throw in production when API_KEY_HMAC_SECRET is missing', () => {
     setBaseEnv();
     process.env.NODE_ENV = 'production';
     // API_KEY_HMAC_SECRET intentionally NOT set
 
-    validateEnvironment();
-
-    expect(process.exit).toHaveBeenCalledWith(1);
+    expect(() => validateEnvironment()).toThrow('Environment validation failed');
   });
 
-  it('should NOT exit in development when API_KEY_HMAC_SECRET is missing', () => {
+  it('should NOT throw in development when API_KEY_HMAC_SECRET is missing', () => {
     setBaseEnv();
     process.env.NODE_ENV = 'development';
     // API_KEY_HMAC_SECRET intentionally NOT set
 
-    validateEnvironment();
-
-    expect(process.exit).not.toHaveBeenCalled();
+    expect(() => validateEnvironment()).not.toThrow();
   });
 
-  it('should NOT exit in production when API_KEY_HMAC_SECRET is present', () => {
+  it('should NOT throw in production when API_KEY_HMAC_SECRET is present', () => {
     setBaseEnv();
     process.env.NODE_ENV = 'production';
     process.env.API_KEY_HMAC_SECRET = '7b2e9f4a1d8c5e3b6f0a2d7c4e9b1f5a3d8c6e0b4f7a2d9c5e1b3f8a6d0c4e7';
 
-    validateEnvironment();
-
-    expect(process.exit).not.toHaveBeenCalled();
+    expect(() => validateEnvironment()).not.toThrow();
   });
 });
