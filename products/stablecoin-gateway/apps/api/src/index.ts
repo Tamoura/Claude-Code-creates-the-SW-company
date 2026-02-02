@@ -3,7 +3,6 @@ import { logger } from './utils/logger.js';
 import { validateEnvironment } from './utils/env-validator.js';
 import { enforceProductionEncryption } from './utils/startup-checks.js';
 import { initializeEncryption } from './utils/encryption.js';
-import { PrismaClient } from '@prisma/client';
 import { RefundService } from './services/refund.service.js';
 import { RefundProcessingWorker } from './workers/refund-processing.worker.js';
 
@@ -40,10 +39,10 @@ async function start() {
     logger.info(listenMsg);
     logger.info('Environment: ' + (process.env.NODE_ENV || 'development'));
 
-    // Start background workers
-    const prisma = new PrismaClient();
-    const refundService = new RefundService(prisma);
-    const refundWorker = new RefundProcessingWorker(prisma, refundService);
+    // Start background workers using the Fastify-managed PrismaClient
+    // to avoid dual PrismaClient instances (which would double DB connections).
+    const refundService = new RefundService(app.prisma);
+    const refundWorker = new RefundProcessingWorker(app.prisma, refundService);
     refundWorker.start();
 
     // Graceful shutdown
@@ -52,8 +51,7 @@ async function start() {
       process.on(signal, async () => {
         logger.info('Received ' + signal + ', closing server...');
         refundWorker.stop();
-        await prisma.$disconnect();
-        await app.close();
+        await app.close(); // This disconnects the Prisma plugin's client
         process.exit(0);
       });
     });

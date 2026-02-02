@@ -185,7 +185,7 @@ describe('Refund Execution - BlockchainTransactionService', () => {
   });
 
   describe('Spending limit tracking with Redis', () => {
-    it('should record spend via incrby and set TTL via expire after success', async () => {
+    it('should reserve spend via incrby and set TTL via expire', async () => {
       const redis = createMockRedis();
       const service = new BlockchainTransactionService({
         redis: redis as any,
@@ -202,10 +202,7 @@ describe('Refund Execution - BlockchainTransactionService', () => {
       const today = new Date().toISOString().split('T')[0];
       const expectedKey = `spend:daily:${today}`;
 
-      // Verify get was called to check limit
-      expect(redis.get).toHaveBeenCalledWith(expectedKey);
-
-      // Verify incrby was called to record spend (5000 cents)
+      // Verify incrby was called to atomically reserve spend (5000 cents)
       expect(redis.incrby).toHaveBeenCalledWith(expectedKey, 5000);
 
       // Verify expire was called with 86400 * 2 = 172800 (48 hours)
@@ -243,8 +240,8 @@ describe('Refund Execution - BlockchainTransactionService', () => {
 
       expect(result.success).toBe(true);
       expect(result.txHash).toBeDefined();
-      // get was attempted (then failed gracefully)
-      expect(brokenRedis.get).toHaveBeenCalled();
+      // incrby was attempted (then failed gracefully)
+      expect(brokenRedis.incrby).toHaveBeenCalled();
     });
   });
 });

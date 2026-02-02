@@ -42,17 +42,26 @@ const authRoutes: FastifyPluginAsync = async (fastify) => {
     try {
       const body = validateBody(signupSchema, request.body);
 
-      // Check if user already exists
+      // Hash password and attempt to create user
+      const passwordHash = await hashPassword(body.password);
+
+      // Use upsert-like pattern to prevent email enumeration.
+      // If the email already exists, return the same 201 shape with
+      // a generic message so an attacker cannot distinguish between
+      // "new account" and "existing account".
       const existingUser = await fastify.prisma.user.findUnique({
         where: { email: body.email },
       });
 
       if (existingUser) {
-        throw new AppError(409, 'user-exists', 'User with this email already exists');
+        // SECURITY: Return generic success to prevent email enumeration.
+        // Do NOT reveal that the email already exists.
+        logger.info('Signup attempted for existing email', { email: body.email });
+        return reply.code(201).send({
+          message: 'Account created successfully. Please check your email for verification.',
+        });
       }
 
-      // Hash password and create user
-      const passwordHash = await hashPassword(body.password);
       const user = await fastify.prisma.user.create({
         data: {
           email: body.email,

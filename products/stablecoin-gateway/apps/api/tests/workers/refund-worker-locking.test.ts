@@ -24,6 +24,7 @@ jest.mock('@prisma/client', () => {
       findMany: jest.fn(),
     },
     $queryRaw: jest.fn(),
+    $transaction: jest.fn(),
   };
   return {
     PrismaClient: jest.fn(() => mockPrisma),
@@ -88,7 +89,11 @@ describe('RefundProcessingWorker - Distributed Locking', () => {
 
   describe('lock acquisition', () => {
     it('should acquire Redis lock before processing refunds', async () => {
-      mockPrisma.$queryRaw.mockResolvedValue([]);
+      // $transaction calls the callback with a transaction client (tx)
+      mockPrisma.$transaction.mockImplementation(async (cb: Function) => {
+        const tx = { $queryRaw: jest.fn().mockResolvedValue([]) };
+        return cb(tx);
+      });
 
       await worker.processPendingRefunds();
 
@@ -99,14 +104,12 @@ describe('RefundProcessingWorker - Distributed Locking', () => {
         60000,
         'NX',
       );
-      // Lock must be acquired before any DB query
+      // Lock must be acquired before the transaction
       const setCallOrder = mockRedis.set.mock.invocationCallOrder[0];
-      // If $queryRaw was never called (no refunds), that's fine;
-      // but if it was, lock must come first
-      if (mockPrisma.$queryRaw.mock.calls.length > 0) {
-        const queryCallOrder =
-          mockPrisma.$queryRaw.mock.invocationCallOrder[0];
-        expect(setCallOrder).toBeLessThan(queryCallOrder);
+      if (mockPrisma.$transaction.mock.calls.length > 0) {
+        const txCallOrder =
+          mockPrisma.$transaction.mock.invocationCallOrder[0];
+        expect(setCallOrder).toBeLessThan(txCallOrder);
       }
     });
 
@@ -124,7 +127,7 @@ describe('RefundProcessingWorker - Distributed Locking', () => {
         'NX',
       );
       // Should NOT query the database at all
-      expect(mockPrisma.$queryRaw).not.toHaveBeenCalled();
+      expect(mockPrisma.$transaction).not.toHaveBeenCalled();
       expect(mockPrisma.refund.findMany).not.toHaveBeenCalled();
       expect(mockRefundService.processRefund).not.toHaveBeenCalled();
     });
@@ -136,7 +139,10 @@ describe('RefundProcessingWorker - Distributed Locking', () => {
         { id: 'ref_1' },
         { id: 'ref_2' },
       ];
-      mockPrisma.$queryRaw.mockResolvedValue(pendingRefunds);
+      mockPrisma.$transaction.mockImplementation(async (cb: Function) => {
+        const tx = { $queryRaw: jest.fn().mockResolvedValue(pendingRefunds) };
+        return cb(tx);
+      });
       mockRefundService.processRefund.mockResolvedValue({});
 
       // Make get return the lock value so we can verify ownership check
@@ -157,8 +163,8 @@ describe('RefundProcessingWorker - Distributed Locking', () => {
     });
 
     it('should release lock even if processing throws an error', async () => {
-      // Simulate a fatal error during query
-      mockPrisma.$queryRaw.mockRejectedValue(
+      // Simulate a fatal error during transaction
+      mockPrisma.$transaction.mockRejectedValue(
         new Error('Database connection lost'),
       );
 
@@ -182,7 +188,10 @@ describe('RefundProcessingWorker - Distributed Locking', () => {
 
   describe('lock TTL', () => {
     it('should set lock TTL to 60 seconds to prevent deadlock', async () => {
-      mockPrisma.$queryRaw.mockResolvedValue([]);
+      mockPrisma.$transaction.mockImplementation(async (cb: Function) => {
+        const tx = { $queryRaw: jest.fn().mockResolvedValue([]) };
+        return cb(tx);
+      });
 
       await worker.processPendingRefunds();
 
@@ -198,9 +207,16 @@ describe('RefundProcessingWorker - Distributed Locking', () => {
   });
 
   describe('row-level locking', () => {
-    it('should use FOR UPDATE SKIP LOCKED for individual refund claims', async () => {
+    it('should use FOR UPDATE SKIP LOCKED inside a transaction', async () => {
       const pendingRefunds = [{ id: 'ref_1' }];
-      mockPrisma.$queryRaw.mockResolvedValue(pendingRefunds);
+      let capturedQueryRaw: jest.Mock | null = null;
+
+      mockPrisma.$transaction.mockImplementation(async (cb: Function) => {
+        const txQueryRaw = jest.fn().mockResolvedValue(pendingRefunds);
+        capturedQueryRaw = txQueryRaw;
+        const tx = { $queryRaw: txQueryRaw };
+        return cb(tx);
+      });
       mockRefundService.processRefund.mockResolvedValue({});
 
       // Make get return the lock value for proper cleanup
@@ -214,9 +230,12 @@ describe('RefundProcessingWorker - Distributed Locking', () => {
 
       await worker.processPendingRefunds();
 
-      // Worker should use $queryRaw (not findMany) with FOR UPDATE SKIP LOCKED
-      expect(mockPrisma.$queryRaw).toHaveBeenCalled();
-      const rawQuery = mockPrisma.$queryRaw.mock.calls[0][0];
+      // Worker should use $transaction wrapping $queryRaw with FOR UPDATE SKIP LOCKED
+      expect(mockPrisma.$transaction).toHaveBeenCalled();
+      expect(capturedQueryRaw).not.toBeNull();
+      expect(capturedQueryRaw!).toHaveBeenCalled();
+
+      const rawQuery = capturedQueryRaw!.mock.calls[0][0];
 
       // Prisma tagged template literals produce an array of strings
       const queryStr = Array.isArray(rawQuery)

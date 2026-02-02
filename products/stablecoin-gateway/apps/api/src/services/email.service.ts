@@ -60,6 +60,19 @@ const DEFAULT_PREFERENCES = {
   sendCustomerReceipt: true,
 };
 
+/**
+ * Escape HTML special characters to prevent XSS in email templates.
+ * Applied to all user-controlled values before HTML interpolation.
+ */
+function escapeHtml(str: string): string {
+  return str
+    .replace(/&/g, '&amp;')
+    .replace(/</g, '&lt;')
+    .replace(/>/g, '&gt;')
+    .replace(/"/g, '&quot;')
+    .replace(/'/g, '&#039;');
+}
+
 export class EmailService {
   private prisma: PrismaClient;
 
@@ -204,6 +217,10 @@ export class EmailService {
     txHash?: string;
   }): string {
     const { paymentId, amount, currency, merchantName, txHash } = data;
+    const safeMerchantName = escapeHtml(merchantName);
+    const safePaymentId = escapeHtml(paymentId);
+    const safeCurrency = escapeHtml(currency);
+    const safeTxHash = txHash ? escapeHtml(txHash) : undefined;
     const date = new Date().toLocaleDateString('en-US', {
       year: 'numeric',
       month: 'long',
@@ -301,21 +318,21 @@ export class EmailService {
     </div>
 
     <div class="amount">
-      ${amount.toFixed(2)} ${currency}
+      ${amount.toFixed(2)} ${safeCurrency}
     </div>
 
     <div class="details">
       <div class="detail-row">
         <span class="detail-label">Merchant</span>
-        <span class="detail-value">${merchantName}</span>
+        <span class="detail-value">${safeMerchantName}</span>
       </div>
       <div class="detail-row">
         <span class="detail-label">Payment ID</span>
-        <span class="detail-value">${paymentId}</span>
+        <span class="detail-value">${safePaymentId}</span>
       </div>
       <div class="detail-row">
         <span class="detail-label">Amount</span>
-        <span class="detail-value">${amount.toFixed(2)} ${currency}</span>
+        <span class="detail-value">${amount.toFixed(2)} ${safeCurrency}</span>
       </div>
       <div class="detail-row">
         <span class="detail-label">Status</span>
@@ -323,10 +340,10 @@ export class EmailService {
       </div>
     </div>
 
-    ${txHash ? `
+    ${safeTxHash ? `
     <div>
       <strong>Transaction Hash:</strong>
-      <div class="tx-hash">${txHash}</div>
+      <div class="tx-hash">${safeTxHash}</div>
     </div>
     ` : ''}
 
@@ -353,6 +370,10 @@ export class EmailService {
     customerAddress?: string;
   }): string {
     const { event, paymentId, amount, currency, customerAddress } = data;
+    const safePaymentId = escapeHtml(paymentId);
+    const safeCurrency = escapeHtml(currency);
+    const safeEvent = escapeHtml(event);
+    const safeCustomerAddress = customerAddress ? escapeHtml(customerAddress) : undefined;
     const date = new Date().toLocaleString('en-US', {
       year: 'numeric',
       month: 'long',
@@ -465,20 +486,20 @@ export class EmailService {
     <div class="details">
       <div class="detail-row">
         <span class="detail-label">Payment ID</span>
-        <span class="detail-value">${paymentId}</span>
+        <span class="detail-value">${safePaymentId}</span>
       </div>
       <div class="detail-row">
         <span class="detail-label">Event Type</span>
-        <span class="detail-value">${event}</span>
+        <span class="detail-value">${safeEvent}</span>
       </div>
       <div class="detail-row">
         <span class="detail-label">Amount</span>
-        <span class="detail-value">${amount.toFixed(2)} ${currency}</span>
+        <span class="detail-value">${amount.toFixed(2)} ${safeCurrency}</span>
       </div>
-      ${customerAddress ? `
+      ${safeCustomerAddress ? `
       <div class="detail-row">
         <span class="detail-label">Customer Address</span>
-        <span class="detail-value" style="font-family: monospace; font-size: 11px;">${customerAddress}</span>
+        <span class="detail-value" style="font-family: monospace; font-size: 11px;">${safeCustomerAddress}</span>
       </div>
       ` : ''}
     </div>

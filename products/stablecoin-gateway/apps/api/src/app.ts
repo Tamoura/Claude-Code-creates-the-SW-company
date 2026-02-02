@@ -64,7 +64,7 @@ export async function buildApp(): Promise<FastifyInstance> {
       directives: {
         defaultSrc: ["'self'"],
         styleSrc: ["'self'", "'unsafe-inline'"],
-        scriptSrc: ["'self'", "'unsafe-inline'"],
+        scriptSrc: ["'self'"],
         imgSrc: ["'self'", 'data:', 'https:'],
       },
     },
@@ -222,9 +222,12 @@ export async function buildApp(): Promise<FastifyInstance> {
     },
   });
 
-  await fastify.register(swaggerUi, {
-    routePrefix: '/docs',
-  });
+  // Only expose Swagger UI in non-production environments
+  if (process.env.NODE_ENV !== 'production') {
+    await fastify.register(swaggerUi, {
+      routePrefix: '/docs',
+    });
+  }
   // Register routes
   await fastify.register(authRoutes, { prefix: '/v1/auth' });
   await fastify.register(paymentSessionRoutes, { prefix: '/v1/payment-sessions' });

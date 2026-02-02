@@ -231,10 +231,7 @@ describe('Wallet Spending Limits', () => {
       const today = new Date().toISOString().split('T')[0];
       const expectedKeyPattern = `spend:daily:${today}`;
 
-      // The implementation uses redis.get() with a date-based key to check limit
-      expect(redis.get).toHaveBeenCalledWith(expectedKeyPattern);
-
-      // After success, redis.incrby() records the spend in cents
+      // The implementation uses redis.incrby() to atomically reserve spend
       expect(redis.incrby).toHaveBeenCalledWith(expectedKeyPattern, 50000); // $500 = 50000 cents
 
       // And redis.expire() sets the TTL (172800 = 48 hours)

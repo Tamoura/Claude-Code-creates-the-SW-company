@@ -215,32 +215,39 @@ export class BlockchainTransactionService {
   }
 
   /**
-   * Check whether a refund amount would exceed the daily limit.
-   * Returns true if the refund is within the limit.
+   * Atomically check and reserve spending against the daily limit.
+   * Returns true if the refund is within the limit and the spend
+   * has been reserved.
+   *
+   * Uses INCRBY to atomically increment the counter, then checks
+   * if the new total exceeds the limit. If it does, decrements
+   * back (rollback). This eliminates the check-then-spend race
+   * condition where concurrent requests could both pass a GET-based
+   * check before either records its spend.
    *
    * If Redis is unavailable, logs a warning and returns true
    * (graceful degradation -- do not block refunds on Redis failure).
    */
-  private async checkSpendingLimit(amount: number): Promise<boolean> {
+  private async checkAndReserveSpend(amount: number): Promise<boolean> {
     if (!this.redis) {
       return true; // No Redis = no enforcement (graceful degradation)
     }
 
     try {
       const key = this.getDailySpendKey();
-      const currentSpendStr = await this.redis.get(key);
-      const currentSpend = currentSpendStr
-        ? Number(currentSpendStr)
-        : 0;
-
-      // Convert amount to cents using string arithmetic to avoid IEEE 754 errors.
-      // Math.round(1.005 * 100) === 100 (wrong), but string split gives 101.
       const amountCents = dollarsToCents(amount);
       const limitCents = dollarsToCents(this.dailyRefundLimit);
 
-      if (currentSpend + amountCents > limitCents) {
+      // Atomically increment first, then check
+      const newTotal = await this.redis.incrby(key, amountCents);
+      // Ensure the key has a TTL (idempotent if already set)
+      await this.redis.expire(key, SPEND_KEY_TTL_SECONDS);
+
+      if (newTotal > limitCents) {
+        // Over limit: roll back the increment
+        await this.redis.incrby(key, -amountCents);
         logger.warn('Daily refund spending limit would be exceeded', {
-          currentSpendCents: currentSpend,
+          currentSpendCents: newTotal - amountCents,
           refundAmountCents: amountCents,
           dailyLimitCents: limitCents,
         });
@@ -332,8 +339,10 @@ export class BlockchainTransactionService {
         };
       }
 
-      // SECURITY: Check daily spending limit before executing
-      const withinLimit = await this.checkSpendingLimit(Number(amount));
+      // SECURITY: Atomically check and reserve daily spending limit before executing.
+      // This eliminates the race condition where concurrent requests could both
+      // pass the limit check before either records its spend.
+      const withinLimit = await this.checkAndReserveSpend(Number(amount));
       if (!withinLimit) {
         return {
           success: false,
@@ -437,8 +446,8 @@ export class BlockchainTransactionService {
         };
       }
 
-      // SECURITY: Record the successful spend against the daily limit
-      await this.recordSpend(Number(amount));
+      // Spend was already atomically reserved in checkAndReserveSpend()
+      // No separate recordSpend needed.
 
       // Calculate how many more confirmations are needed for finality
       const requiredConfirmations = CONFIRMATION_REQUIREMENTS[network];
