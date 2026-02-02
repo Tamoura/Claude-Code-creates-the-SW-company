@@ -192,21 +192,30 @@ export async function validateWebhookUrl(url: string): Promise<void> {
   if (!isDirectIP) {
     // Hostname is a domain name - resolve it to IPs
     const resolvedIPs: string[] = [];
+    const DNS_TIMEOUT_MS = 5000;
+
+    const withTimeout = <T>(promise: Promise<T>, label: string): Promise<T> =>
+      Promise.race([
+        promise,
+        new Promise<never>((_, reject) =>
+          setTimeout(() => reject(new Error(`DNS ${label} timed out`)), DNS_TIMEOUT_MS)
+        ),
+      ]);
 
     try {
-      // Try to resolve IPv4 addresses
-      const ipv4Addresses = await resolve4Async(parsedUrl.hostname);
+      // Try to resolve IPv4 addresses (with timeout)
+      const ipv4Addresses = await withTimeout(resolve4Async(parsedUrl.hostname), 'IPv4');
       resolvedIPs.push(...ipv4Addresses);
     } catch (error) {
-      // IPv4 resolution failed - might not have A records
+      // IPv4 resolution failed or timed out - might not have A records
     }
 
     try {
-      // Try to resolve IPv6 addresses
-      const ipv6Addresses = await resolve6Async(parsedUrl.hostname);
+      // Try to resolve IPv6 addresses (with timeout)
+      const ipv6Addresses = await withTimeout(resolve6Async(parsedUrl.hostname), 'IPv6');
       resolvedIPs.push(...ipv6Addresses);
     } catch (error) {
-      // IPv6 resolution failed - might not have AAAA records
+      // IPv6 resolution failed or timed out - might not have AAAA records
     }
 
     // If DNS resolution failed completely, reject the URL
