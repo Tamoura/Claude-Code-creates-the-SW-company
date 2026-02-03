@@ -7,9 +7,9 @@ export default function ComingSoon({
 }) {
   return (
     <div className="flex flex-col items-center justify-center min-h-[400px] text-center p-8">
-      <div className="w-16 h-16 bg-blue-100 rounded-full flex items-center justify-center mb-4">
+      <div className="w-16 h-16 bg-blue-500/15 rounded-full flex items-center justify-center mb-4 border border-blue-500/30">
         <svg
-          className="w-8 h-8 text-blue-600"
+          className="w-8 h-8 text-accent-blue"
           fill="none"
           viewBox="0 0 24 24"
           stroke="currentColor"
@@ -22,8 +22,8 @@ export default function ComingSoon({
           />
         </svg>
       </div>
-      <h1 className="text-2xl font-bold text-gray-900 mb-2">{title}</h1>
-      <p className="text-gray-600 max-w-md">
+      <h1 className="text-2xl font-bold text-text-primary mb-2">{title}</h1>
+      <p className="text-text-secondary max-w-md">
         {description || "We're working on this feature. Check back soon!"}
       </p>
     </div>

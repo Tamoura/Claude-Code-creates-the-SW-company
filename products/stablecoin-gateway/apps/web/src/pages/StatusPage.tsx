@@ -76,10 +76,10 @@ export default function StatusPage() {
 
   if (isLoading) {
     return (
-      <div className="min-h-screen bg-gray-50 flex items-center justify-center">
+      <div className="min-h-screen bg-page-bg flex items-center justify-center">
         <div className="text-center">
           <div className="animate-spin rounded-full h-12 w-12 border-b-2 border-blue-600 mx-auto mb-4"></div>
-          <p className="text-gray-600">Loading payment status...</p>
+          <p className="text-text-secondary">Loading payment status...</p>
         </div>
       </div>
     );
@@ -87,10 +87,10 @@ export default function StatusPage() {
 
   if (!payment) {
     return (
-      <div className="min-h-screen bg-gray-50 flex items-center justify-center">
-        <div className="bg-white rounded-lg shadow-lg p-8 max-w-md w-full text-center">
-          <h1 className="text-2xl font-bold text-gray-900 mb-4">Payment Not Found</h1>
-          <p className="text-gray-600 mb-6">{error || 'This payment link is invalid or has expired.'}</p>
+      <div className="min-h-screen bg-page-bg flex items-center justify-center">
+        <div className="bg-card-bg rounded-lg shadow-lg p-8 max-w-md w-full text-center">
+          <h1 className="text-2xl font-bold text-text-primary mb-4">Payment Not Found</h1>
+          <p className="text-text-secondary mb-6">{error || 'This payment link is invalid or has expired.'}</p>
           <button
             onClick={() => navigate('/')}
             className="bg-blue-600 text-white py-2 px-6 rounded-lg hover:bg-blue-700 transition-colors"
@@ -155,10 +155,10 @@ export default function StatusPage() {
   };
 
   return (
-    <div className="min-h-screen bg-gray-50 py-12 px-4">
+    <div className="min-h-screen bg-page-bg py-12 px-4">
       <div className="max-w-2xl mx-auto">
         {/* Status Card */}
-        <div className="bg-white rounded-lg shadow-lg p-8 mb-6">
+        <div className="bg-card-bg rounded-lg shadow-lg p-8 mb-6">
           {/* Status Icon */}
           <div className="flex justify-center mb-6">
             {getStatusIcon(status)}
@@ -166,10 +166,10 @@ export default function StatusPage() {
 
           {/* Status Text */}
           <div className="text-center mb-8">
-            <h1 className="text-3xl font-bold text-gray-900 mb-2">
+            <h1 className="text-3xl font-bold text-text-primary mb-2">
               {statusText[status]}
             </h1>
-            <p className="text-gray-600">
+            <p className="text-text-secondary">
               {statusDescription[status]}
             </p>
           </div>
@@ -184,47 +184,47 @@ export default function StatusPage() {
                   }`}>
                     <span className="text-white font-semibold">1</span>
                   </div>
-                  <span className="text-xs mt-2 text-gray-600">Initiated</span>
+                  <span className="text-xs mt-2 text-text-secondary">Initiated</span>
                 </div>
-                <div className={`flex-1 h-1 mx-2 ${stepDone(1) ? 'bg-green-500' : 'bg-gray-200'}`}></div>
+                <div className={`flex-1 h-1 mx-2 ${stepDone(1) ? 'bg-green-500' : 'bg-card-border'}`}></div>
                 <div className="flex flex-col items-center flex-1">
                   <div className={`w-10 h-10 rounded-full flex items-center justify-center ${
-                    stepDone(2) ? 'bg-green-500' : status === 'confirming' ? 'bg-blue-500' : 'bg-gray-200'
+                    stepDone(2) ? 'bg-green-500' : status === 'confirming' ? 'bg-blue-500' : 'bg-card-border'
                   }`}>
                     <span className="text-white font-semibold">2</span>
                   </div>
-                  <span className="text-xs mt-2 text-gray-600">Confirming</span>
+                  <span className="text-xs mt-2 text-text-secondary">Confirming</span>
                 </div>
-                <div className={`flex-1 h-1 mx-2 ${stepDone(2) ? 'bg-green-500' : 'bg-gray-200'}`}></div>
+                <div className={`flex-1 h-1 mx-2 ${stepDone(2) ? 'bg-green-500' : 'bg-card-border'}`}></div>
                 <div className="flex flex-col items-center flex-1">
                   <div className={`w-10 h-10 rounded-full flex items-center justify-center ${
-                    stepDone(2) ? 'bg-green-500' : 'bg-gray-200'
+                    stepDone(2) ? 'bg-green-500' : 'bg-card-border'
                   }`}>
                     <span className="text-white font-semibold">3</span>
                   </div>
-                  <span className="text-xs mt-2 text-gray-600">Complete</span>
+                  <span className="text-xs mt-2 text-text-secondary">Complete</span>
                 </div>
               </div>
             </div>
           )}
 
           {/* Payment Details */}
-          <div className="border-t border-gray-200 pt-6 space-y-3">
+          <div className="border-t border-card-border pt-6 space-y-3">
             <div className="flex justify-between items-center">
-              <span className="text-gray-600">Amount</span>
-              <span className="font-semibold text-gray-900">${payment.amount.toFixed(2)} {payment.token}</span>
+              <span className="text-text-secondary">Amount</span>
+              <span className="font-semibold text-text-primary">${payment.amount.toFixed(2)} {payment.token}</span>
             </div>
             <div className="flex justify-between items-center">
-              <span className="text-gray-600">Payment ID</span>
-              <span className="text-sm font-mono text-gray-700">{payment.id.slice(0, 16)}...</span>
+              <span className="text-text-secondary">Payment ID</span>
+              <span className="text-sm font-mono text-text-primary">{payment.id.slice(0, 16)}...</span>
             </div>
-            <div className="flex justify-between items-center text-sm text-gray-500">
+            <div className="flex justify-between items-center text-sm text-text-muted">
               <span>Network</span>
               <span className="capitalize">{payment.network}</span>
             </div>
             {payment.tx_hash && (
               <div className="flex justify-between items-center">
-                <span className="text-gray-600">Transaction Hash</span>
+                <span className="text-text-secondary">Transaction Hash</span>
                 <span className="text-sm font-mono text-blue-600">
                   {payment.tx_hash.slice(0, 14)}...
                 </span>
@@ -232,20 +232,20 @@ export default function StatusPage() {
             )}
             {payment.confirmations !== undefined && payment.confirmations > 0 && (
               <div className="flex justify-between items-center">
-                <span className="text-gray-600">Confirmations</span>
-                <span className="text-sm text-gray-700">{payment.confirmations}</span>
+                <span className="text-text-secondary">Confirmations</span>
+                <span className="text-sm text-text-primary">{payment.confirmations}</span>
               </div>
             )}
             <div className="flex justify-between items-center">
-              <span className="text-gray-600">Created</span>
-              <span className="text-sm text-gray-700">
+              <span className="text-text-secondary">Created</span>
+              <span className="text-sm text-text-primary">
                 {new Date(payment.created_at).toLocaleString()}
               </span>
             </div>
             {payment.completed_at && (
               <div className="flex justify-between items-center">
-                <span className="text-gray-600">Completed</span>
-                <span className="text-sm text-gray-700">
+                <span className="text-text-secondary">Completed</span>
+                <span className="text-sm text-text-primary">
                   {new Date(payment.completed_at).toLocaleString()}
                 </span>
               </div>

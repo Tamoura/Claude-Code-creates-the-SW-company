@@ -1,6 +1,7 @@
 import { useState, useEffect, useCallback } from 'react';
 import { useParams, Link } from 'react-router-dom';
 import { apiClient, type PaymentSession } from '../../lib/api-client';
+import { formatCurrency, formatDate, truncateAddress, getBlockExplorerUrl } from '../../lib/formatters';
 
 // Status badge component matching TransactionsTable pattern
 function StatusBadge({ status }: { status: PaymentSession['status'] }) {
@@ -43,38 +44,6 @@ function CopyButton({ text, label = 'Copy' }: { text: string; label?: string }) 
       {copied ? 'Copied!' : 'Copy'}
     </button>
   );
-}
-
-// Truncate address helper
-function truncateAddress(address: string): string {
-  if (address.length <= 16) return address;
-  return `${address.slice(0, 10)}...${address.slice(-6)}`;
-}
-
-// Format currency
-function formatCurrency(amount: number, currency: string = 'USD'): string {
-  return `$${amount.toLocaleString('en-US', { minimumFractionDigits: 2, maximumFractionDigits: 2 })} ${currency}`;
-}
-
-// Format date
-function formatDate(iso: string): string {
-  return new Date(iso).toLocaleString('en-US', {
-    month: 'short',
-    day: 'numeric',
-    year: 'numeric',
-    hour: 'numeric',
-    minute: '2-digit',
-  });
-}
-
-// Block explorer URL helper
-function getBlockExplorerUrl(network: string, txHash: string): string {
-  if (network === 'ethereum') {
-    return `https://etherscan.io/tx/${txHash}`;
-  } else if (network === 'polygon') {
-    return `https://polygonscan.com/tx/${txHash}`;
-  }
-  return '#';
 }
 
 export default function PaymentDetail() {
@@ -170,7 +139,7 @@ export default function PaymentDetail() {
 
       {/* Header section */}
       <div className="bg-card-bg border border-card-border rounded-xl p-6">
-        <div className="flex items-start justify-between mb-4">
+        <div className="flex flex-col sm:flex-row items-start justify-between gap-4 mb-4">
           <div>
             <h1 className="text-2xl font-bold text-text-primary font-mono mb-2">{payment.id}</h1>
             <StatusBadge status={payment.status} />
