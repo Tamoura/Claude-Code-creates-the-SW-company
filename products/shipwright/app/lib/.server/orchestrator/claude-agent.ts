@@ -22,20 +22,28 @@ export class ClaudeAgent implements Agent {
     const systemPrompt = this.buildSystemPrompt(context);
     const messages = this.buildMessages(task, context);
 
-    const result = await generateText({
-      model: this.getModel(context),
-      system: systemPrompt,
-      messages,
-    });
+    const controller = new AbortController();
+    const timeout = setTimeout(() => controller.abort(), 120_000); // 2 min per agent
 
-    return {
-      role: this.role,
-      content: result.text,
-      artifacts: [],
-      tokensIn: result.usage?.promptTokens ?? 0,
-      tokensOut: result.usage?.completionTokens ?? 0,
-      durationMs: Date.now() - startTime,
-    };
+    try {
+      const result = await generateText({
+        model: this.getModel(context),
+        system: systemPrompt,
+        messages,
+        abortSignal: controller.signal,
+      });
+
+      return {
+        role: this.role,
+        content: result.text,
+        artifacts: [],
+        tokensIn: result.usage?.promptTokens ?? 0,
+        tokensOut: result.usage?.completionTokens ?? 0,
+        durationMs: Date.now() - startTime,
+      };
+    } finally {
+      clearTimeout(timeout);
+    }
   }
 
   async *stream(task: Task, context: AgentContext): AsyncIterable<StreamChunk> {
@@ -66,18 +74,24 @@ export class ClaudeAgent implements Agent {
   private buildSystemPrompt(context: AgentContext): string {
     let prompt = getAgentPrompt(this.role);
 
-    // Append previous agent results as context
+    // Append previous agent results as context (capped to prevent context explosion)
     if (context.previousResults.length > 0) {
       prompt += '\n\n## Previous Agent Results\n';
       prompt += 'The following agents have already completed their work. Use their output as context:\n\n';
 
+      const MAX_RESULT_CHARS = 12_000; // ~3k tokens per result
+
       for (const result of context.previousResults) {
-        prompt += `### ${result.role}\n${result.content}\n\n`;
+        const content =
+          result.content.length > MAX_RESULT_CHARS
+            ? result.content.slice(0, MAX_RESULT_CHARS) + '\n\n[...output truncated for context limit]'
+            : result.content;
+        prompt += `### ${result.role}\n${content}\n\n`;
       }
     }
 
-    // Append existing files if available
-    if (Object.keys(context.files).length > 0) {
+    // Append existing files if available (skip if previous results already provide context)
+    if (Object.keys(context.files).length > 0 && context.previousResults.length === 0) {
       prompt += '\n\n## Existing Project Files\n';
 
       for (const [path, content] of Object.entries(context.files)) {
