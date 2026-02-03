@@ -37,6 +37,12 @@ export default class OpenRouterProvider extends BaseProvider {
       provider: 'OpenRouter',
       maxTokenAllowed: 1048576,
     },
+    {
+      name: 'qwen/qwen3-coder',
+      label: 'Qwen3 Coder 480B A35B',
+      provider: 'OpenRouter',
+      maxTokenAllowed: 262144,
+    },
   ];
 
   getModelInstance(options: {
