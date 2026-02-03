@@ -6,37 +6,15 @@
  */
 
 import { useNavigate } from 'react-router-dom';
+import PublicNav from '../components/PublicNav';
+import PublicFooter from '../components/PublicFooter';
 
 export default function HomePageNew() {
   const navigate = useNavigate();
 
   return (
     <div className="min-h-screen bg-page-bg text-text-primary">
-      {/* Navigation Bar */}
-      <nav className="border-b border-card-border">
-        <div className="max-w-6xl mx-auto px-6 py-4 flex items-center justify-between">
-          <div className="flex items-center gap-2">
-            <div className="w-8 h-8 rounded-lg bg-gradient-to-br from-pink-500 to-blue-500 flex items-center justify-center">
-              <span className="text-white text-sm font-bold">SF</span>
-            </div>
-            <span className="text-lg font-bold text-text-primary">StableFlow</span>
-          </div>
-          <div className="flex items-center gap-3">
-            <button
-              onClick={() => navigate('/login')}
-              className="px-4 py-2 text-sm font-medium text-text-secondary border border-card-border rounded-lg hover:text-text-primary hover:border-text-muted transition-colors"
-            >
-              Sign In
-            </button>
-            <button
-              onClick={() => navigate('/signup')}
-              className="px-4 py-2 text-sm font-medium text-white bg-gradient-to-r from-pink-500 to-pink-600 rounded-lg hover:from-pink-600 hover:to-pink-700 transition-all"
-            >
-              Get Started
-            </button>
-          </div>
-        </div>
-      </nav>
+      <PublicNav />
 
       {/* Hero Section */}
       <section className="max-w-6xl mx-auto px-6 pt-20 pb-16 text-center">
@@ -208,13 +186,7 @@ export default function HomePageNew() {
         </button>
       </section>
 
-      {/* Footer */}
-      <footer className="border-t border-card-border">
-        <div className="max-w-6xl mx-auto px-6 py-6 flex items-center justify-between text-xs text-text-muted">
-          <span>StableFlow &mdash; Stablecoin Payment Infrastructure</span>
-          <span>Polygon &middot; Ethereum &middot; USDC &middot; USDT</span>
-        </div>
-      </footer>
+      <PublicFooter />
     </div>
   );
 }
