@@ -258,6 +258,7 @@ const SETTINGS_KEYS = {
   EVENT_LOGS: 'isEventLogsEnabled',
   PROMPT_ID: 'promptId',
   DEVELOPER_MODE: 'isDeveloperMode',
+  ORCHESTRATOR_MODE: 'orchestratorMode',
 } as const;
 
 // Initialize settings from localStorage or defaults
@@ -287,6 +288,7 @@ const getInitialSettings = () => {
     eventLogs: getStoredBoolean(SETTINGS_KEYS.EVENT_LOGS, true),
     promptId: isBrowser ? localStorage.getItem(SETTINGS_KEYS.PROMPT_ID) || 'default' : 'default',
     developerMode: getStoredBoolean(SETTINGS_KEYS.DEVELOPER_MODE, false),
+    orchestratorMode: getStoredBoolean(SETTINGS_KEYS.ORCHESTRATOR_MODE, false),
   };
 };
 
@@ -298,6 +300,7 @@ export const autoSelectStarterTemplate = atom<boolean>(initialSettings.autoSelec
 export const enableContextOptimizationStore = atom<boolean>(initialSettings.contextOptimization);
 export const isEventLogsEnabled = atom<boolean>(initialSettings.eventLogs);
 export const promptStore = atom<string>(initialSettings.promptId);
+export const orchestratorModeStore = atom<boolean>(initialSettings.orchestratorMode);
 
 // Helper functions to update settings with persistence
 export const updateLatestBranch = (enabled: boolean) => {
@@ -323,6 +326,11 @@ export const updateEventLogs = (enabled: boolean) => {
 export const updatePromptId = (id: string) => {
   promptStore.set(id);
   localStorage.setItem(SETTINGS_KEYS.PROMPT_ID, id);
+};
+
+export const updateOrchestratorMode = (enabled: boolean) => {
+  orchestratorModeStore.set(enabled);
+  localStorage.setItem(SETTINGS_KEYS.ORCHESTRATOR_MODE, JSON.stringify(enabled));
 };
 
 // Initialize tab configuration from localStorage or defaults
