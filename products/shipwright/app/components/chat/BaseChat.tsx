@@ -75,6 +75,8 @@ interface BaseChatProps {
   data?: JSONValue[] | undefined;
   chatMode?: 'discuss' | 'build';
   setChatMode?: (mode: 'discuss' | 'build') => void;
+  orchestratorMode?: boolean;
+  setOrchestratorMode?: (enabled: boolean) => void;
   append?: (message: Message) => void;
   designScheme?: DesignScheme;
   setDesignScheme?: (scheme: DesignScheme) => void;
@@ -122,6 +124,8 @@ export const BaseChat = React.forwardRef<HTMLDivElement, BaseChatProps>(
       data,
       chatMode,
       setChatMode,
+      orchestratorMode,
+      setOrchestratorMode,
       append,
       designScheme,
       setDesignScheme,
@@ -461,6 +465,8 @@ export const BaseChat = React.forwardRef<HTMLDivElement, BaseChatProps>(
                   handleFileUpload={handleFileUpload}
                   chatMode={chatMode}
                   setChatMode={setChatMode}
+                  orchestratorMode={orchestratorMode}
+                  setOrchestratorMode={setOrchestratorMode}
                   designScheme={designScheme}
                   setDesignScheme={setDesignScheme}
                   selectedElement={selectedElement}

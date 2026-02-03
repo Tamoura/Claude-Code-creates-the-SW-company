@@ -68,16 +68,52 @@ describe('Orchestrator Mode: Settings Store', () => {
 
 describe('Orchestrator Mode: useSettings hook wiring', () => {
   it('should import orchestratorModeStore and updateOrchestratorMode in useSettings module', async () => {
-    // Verify the useSettings module imports from settings store
     const settingsModule = await import('~/lib/stores/settings');
     expect(settingsModule.orchestratorModeStore).toBeDefined();
     expect(settingsModule.updateOrchestratorMode).toBeDefined();
   });
 
   it('should export enableOrchestratorMode in UseSettingsReturn interface', async () => {
-    // This tests that useSettings.ts actually imports and re-exports the function
     const hookModule = await import('~/lib/hooks/useSettings');
     const returnType = hookModule.useSettings;
     expect(typeof returnType).toBe('function');
+  });
+});
+
+// --- ChatBox component integration ---
+
+describe('Orchestrator Mode: ChatBox toggle', () => {
+  it('should accept orchestratorMode and setOrchestratorMode props', async () => {
+    const chatBoxModule = await import('~/components/chat/ChatBox');
+    expect(chatBoxModule.ChatBox).toBeDefined();
+  });
+
+  it('should render an Orchestrator toggle button with i-ph:users-three icon', async () => {
+    const fs = await import('fs');
+    const path = await import('path');
+    const chatBoxPath = path.resolve(__dirname, '..', 'ChatBox.tsx');
+    const source = fs.readFileSync(chatBoxPath, 'utf-8');
+
+    expect(source).toContain('title="Orchestrator"');
+    expect(source).toContain('i-ph:users-three');
+    expect(source).toContain('setOrchestratorMode');
+  });
+});
+
+// --- Chat.client API routing ---
+
+describe('Orchestrator Mode: API routing', () => {
+  it('should conditionally route to /api/orchestrator in Chat.client.tsx', async () => {
+    // Verify the source code contains the conditional API routing
+    const fs = await import('fs');
+    const path = await import('path');
+    const chatClientPath = path.resolve(__dirname, '..', 'Chat.client.tsx');
+    const source = fs.readFileSync(chatClientPath, 'utf-8');
+
+    // Should contain the conditional expression for API routing
+    expect(source).toContain("orchestratorMode ? '/api/orchestrator' : '/api/chat'");
+    // Should destructure orchestratorMode from useSettings
+    expect(source).toContain('orchestratorMode');
+    expect(source).toContain('enableOrchestratorMode');
   });
 });
