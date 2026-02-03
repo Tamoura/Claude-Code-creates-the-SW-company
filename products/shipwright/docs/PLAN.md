@@ -124,6 +124,64 @@ Bolt.diy Fork (Remix app)
 
 ---
 
+## Agentic Framework Strategy
+
+**Decision**: Hybrid approach — homegrown TypeScript orchestrator for MVP, clean abstraction layer for future framework swap.
+
+**Rationale**: The task-graph-executor.ts and Vercel AI SDK already in Bolt.diy give us everything needed for MVP. Building on a framework like LangChain.js or CrewAI adds dependency weight and learning curve with no immediate payoff. But we design the interfaces so swapping is a config change, not a rewrite.
+
+### Key Interfaces
+
+```typescript
+// Agent — wraps a single specialist (PM, Architect, Backend, etc.)
+interface Agent {
+  readonly role: string;
+  execute(task: Task, context: AgentContext): Promise<AgentResult>;
+  stream(task: Task, context: AgentContext): AsyncIterable<StreamChunk>;
+  handoff(toAgent: string, payload: HandoffPayload): Promise<void>;
+}
+
+// WorkflowEngine — manages the task dependency graph
+interface WorkflowEngine {
+  loadGraph(template: string, vars: Record<string, string>): TaskGraph;
+  getReadyTasks(graph: TaskGraph): Task[];
+  markComplete(graph: TaskGraph, taskId: string, result: AgentResult): void;
+  getStatus(graph: TaskGraph): GraphStatus;
+}
+
+// Orchestrator — top-level coordinator
+interface Orchestrator {
+  handleRequest(prompt: string, projectId: string): AsyncIterable<OrchestratorEvent>;
+  selectWorkflow(prompt: string): string;
+  routeTask(task: Task): Agent;
+}
+```
+
+### MVP Implementation
+
+Each interface gets a concrete class that calls Claude directly via Vercel AI SDK:
+
+- `ClaudeAgent` implements `Agent` — wraps `generateText()` / `streamText()` with the agent's system prompt from `.claude/agents/*.md`
+- `TaskGraphWorkflowEngine` implements `WorkflowEngine` — ports `task-graph-executor.ts` directly
+- `SimpleOrchestrator` implements `Orchestrator` — sequential pipeline (PM -> Architect -> Backend -> Frontend -> QA)
+
+No framework dependencies. Just TypeScript + Vercel AI SDK + our agent definitions.
+
+### Future Swap Path
+
+When we need capabilities beyond direct API calls, swap the implementation behind the same interfaces:
+
+| Trigger | Swap To | What Changes |
+|---------|---------|--------------|
+| Complex tool chains (10+ tools per agent) | LangChain.js agents | `ClaudeAgent` → `LangChainAgent` |
+| Persistent memory across sessions | LangGraph checkpointing | `TaskGraphWorkflowEngine` → `LangGraphWorkflowEngine` |
+| RAG retrieval over project history | LangChain.js retrieval | Add retrieval step inside `AgentContext` |
+| Visual workflow builder for non-devs | CrewAI-style YAML crews | `SimpleOrchestrator` → `CrewOrchestrator` |
+
+The swap is at the implementation level. Nothing above the interfaces changes — UI, billing, auth, database all stay the same.
+
+---
+
 ## Implementation Steps
 
 ### Step 1: Fork and Run Bolt.diy
@@ -177,6 +235,10 @@ for (const task of graph.getReadyTasks()) {
 ```
 
 The key insight: each "agent" is just a Claude API call with a different system prompt. The orchestrator manages the sequence and passes context between them.
+
+### Step 3.5: Define Agent Abstraction Interfaces
+
+Before building the orchestrator, define the `Agent`, `WorkflowEngine`, and `Orchestrator` interfaces (see "Agentic Framework Strategy" above). Implement the MVP concrete classes (`ClaudeAgent`, `TaskGraphWorkflowEngine`, `SimpleOrchestrator`). This ensures the multi-agent system is built against abstractions from day one, making a future framework swap non-breaking.
 
 ### Step 4: Add Agent Team UI
 
@@ -257,13 +319,14 @@ The ConnectSW agent definitions (`.claude/agents/*.md`) are the real IP -- they'
 1. Fork Bolt.diy, verify it runs, understand the codebase
 2. Add Clerk auth (sign up / sign in / protect routes)
 3. Add Neon PostgreSQL + Prisma (users, projects, usage tables)
-4. Build the multi-agent orchestrator (port task-graph-executor.ts + agent definitions)
-5. Replace Bolt.diy's single LLM call with the orchestrator pipeline
-6. Add agent team sidebar UI
-7. Add Stripe billing (free + pro tiers)
-8. Deploy to Railway/Fly.io
-9. Landing page (can be a simple page within the Remix app)
-10. Test end-to-end: sign up → prompt → agents work → code → preview → deploy
+4. Define Agent/WorkflowEngine/Orchestrator interfaces + MVP implementations
+5. Build the multi-agent orchestrator (port task-graph-executor.ts + agent definitions)
+6. Replace Bolt.diy's single LLM call with the orchestrator pipeline
+7. Add agent team sidebar UI
+8. Add Stripe billing (free + pro tiers)
+9. Deploy to Railway/Fly.io
+10. Landing page (can be a simple page within the Remix app)
+11. Test end-to-end: sign up → prompt → agents work → code → preview → deploy
 
 ---
 
