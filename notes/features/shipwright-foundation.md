@@ -1,6 +1,6 @@
 # Shipwright Foundation
 
-## Status: Fork Complete
+## Status: Step 2 Complete (Auth + Database)
 
 Bolt.diy (stackblitz-labs/bolt.diy, MIT) forked into `products/shipwright/`.
 Branch: `feature/shipwright/dev`
@@ -69,8 +69,40 @@ Point the chat component's `api` prop from `/api/chat` to `/api/orchestrator`.
 - Build: `pnpm run build` — succeeds
 - Dev: `pnpm run dev` — starts correctly
 
+## Completed Steps
+
+1. Fork Bolt.diy — 515 files imported
+2. Port registered (3110), state updated
+3. Clerk auth — `@clerk/remix`, route protection, sign-in/sign-up routes
+4. Prisma + PostgreSQL — User, Project, AgentRun models, user sync service
+
+## Tests: 61/61 passing
+
+- 52 original Bolt.diy tests (Markdown parsing, etc.)
+- 5 auth route protection tests
+- 4 user-sync tests
+
+## Commits on branch
+
+```
+1665a5a feat(shipwright): add Prisma schema and user sync service
+f6e9516 feat(shipwright): add Clerk auth with route protection
+970d424 chore(shipwright): register port, update state, add notes
+ff84df5 feat(shipwright): fork Bolt.diy as product foundation
+74e1568 docs(shipwright): add hybrid agentic framework strategy
+```
+
+## Technical Notes
+
+- Prisma 7 config: `url` no longer in schema, moved to `prisma.config.ts`
+- `@clerk/remix` is in maintenance mode; may need to migrate to React Router SDK
+- Cloudflare adapter: Clerk needs explicit `secretKey` via `args.context.cloudflare.env`
+- Prisma works in dev (`vite dev` runs Node.js) but won't work on Cloudflare Workers
+- Runtime switch to Node.js needed before deployment (Railway/Fly.io target)
+
 ## Next Steps
 
-1. Register port in PORT-REGISTRY.md
-2. Add Shipwright to orchestrator state.yml
-3. Begin Step 2: Clerk auth integration
+1. Step 3: Add Neon PostgreSQL + run migrations (needs DATABASE_URL)
+2. Step 4: Define Agent/WorkflowEngine/Orchestrator interfaces
+3. Step 5: Build multi-agent orchestrator
+4. Step 6: Replace Bolt.diy's single LLM call with orchestrator pipeline
