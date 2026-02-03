@@ -57,6 +57,8 @@ interface ChatBoxProps {
   enhancePrompt?: (() => void) | undefined;
   chatMode?: 'discuss' | 'build';
   setChatMode?: (mode: 'discuss' | 'build') => void;
+  orchestratorMode?: boolean;
+  setOrchestratorMode?: (enabled: boolean) => void;
   designScheme?: DesignScheme;
   setDesignScheme?: (scheme: DesignScheme) => void;
   selectedElement?: ElementInfo | null;
@@ -304,6 +306,21 @@ export const ChatBox: React.FC<ChatBoxProps> = (props) => {
                 {props.chatMode === 'discuss' ? <span>Discuss</span> : <span />}
               </IconButton>
             )}
+            <IconButton
+              title="Orchestrator"
+              className={classNames(
+                'transition-all flex items-center gap-1 px-1.5',
+                props.orchestratorMode
+                  ? '!bg-bolt-elements-item-backgroundAccent !text-bolt-elements-item-contentAccent'
+                  : 'bg-bolt-elements-item-backgroundDefault text-bolt-elements-item-contentDefault',
+              )}
+              onClick={() => {
+                props.setOrchestratorMode?.(!props.orchestratorMode);
+              }}
+            >
+              <div className="i-ph:users-three text-xl" />
+              {props.orchestratorMode ? <span>Orchestrator</span> : <span />}
+            </IconButton>
             <IconButton
               title="Model Settings"
               className={classNames('transition-all flex items-center gap-1', {

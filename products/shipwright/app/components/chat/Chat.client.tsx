@@ -100,7 +100,7 @@ export const ChatImpl = memo(
       (project) => project.id === supabaseConn.selectedProjectId,
     );
     const supabaseAlert = useStore(workbenchStore.supabaseAlert);
-    const { activeProviders, promptId, autoSelectTemplate, contextOptimizationEnabled } = useSettings();
+    const { activeProviders, promptId, autoSelectTemplate, contextOptimizationEnabled, orchestratorMode, enableOrchestratorMode } = useSettings();
     const [llmErrorAlert, setLlmErrorAlert] = useState<LlmErrorAlertType | undefined>(undefined);
     const [model, setModel] = useState(() => {
       const savedModel = Cookies.get('selectedModel');
@@ -132,7 +132,7 @@ export const ChatImpl = memo(
       setData,
       addToolResult,
     } = useChat({
-      api: '/api/chat',
+      api: orchestratorMode ? '/api/orchestrator' : '/api/chat',
       body: {
         apiKeys,
         files,
@@ -658,6 +658,8 @@ export const ChatImpl = memo(
         data={chatData}
         chatMode={chatMode}
         setChatMode={setChatMode}
+        orchestratorMode={orchestratorMode}
+        setOrchestratorMode={enableOrchestratorMode}
         append={append}
         designScheme={designScheme}
         setDesignScheme={setDesignScheme}
