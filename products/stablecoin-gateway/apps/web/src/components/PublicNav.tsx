@@ -5,14 +5,34 @@
  * Includes logo, nav links, and auth buttons.
  */
 
-import { useState } from 'react';
+import { useState, useEffect, useRef } from 'react';
 import { Link, useLocation } from 'react-router-dom';
 
 export default function PublicNav() {
   const location = useLocation();
   const [isMobileMenuOpen, setIsMobileMenuOpen] = useState(false);
+  const firstMenuItemRef = useRef<HTMLAnchorElement>(null);
 
   const isActive = (path: string) => location.pathname === path;
+
+  // Handle Escape key to close mobile menu
+  useEffect(() => {
+    const handleEscape = (e: KeyboardEvent) => {
+      if (e.key === 'Escape' && isMobileMenuOpen) {
+        setIsMobileMenuOpen(false);
+      }
+    };
+
+    document.addEventListener('keydown', handleEscape);
+    return () => document.removeEventListener('keydown', handleEscape);
+  }, [isMobileMenuOpen]);
+
+  // Auto-focus first menu item when mobile menu opens
+  useEffect(() => {
+    if (isMobileMenuOpen && firstMenuItemRef.current) {
+      firstMenuItemRef.current.focus();
+    }
+  }, [isMobileMenuOpen]);
 
   return (
     <nav className="border-b border-card-border">
@@ -94,6 +114,7 @@ export default function PublicNav() {
         {isMobileMenuOpen && (
           <div className="md:hidden mt-4 pb-4 space-y-3">
             <Link
+              ref={firstMenuItemRef}
               to="/"
               onClick={() => setIsMobileMenuOpen(false)}
               className={`block px-4 py-2 text-sm font-medium rounded-lg transition-colors ${

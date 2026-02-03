@@ -45,7 +45,7 @@ export default function DashboardLayout() {
       <Sidebar isOpen={isSidebarOpen} onClose={() => setIsSidebarOpen(false)} />
       <div className="flex-1 md:ml-56 flex flex-col">
         <TopHeader title={title} />
-        <main id="main-content" className="flex-1 p-8">
+        <main id="main-content" className="flex-1 p-4 md:p-8">
           <Outlet />
         </main>
       </div>
