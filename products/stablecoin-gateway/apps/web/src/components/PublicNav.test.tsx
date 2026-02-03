@@ -22,28 +22,28 @@ describe('PublicNav', () => {
   it('renders navigation links', () => {
     renderWithRouter(<PublicNav />);
 
-    expect(screen.getByRole('button', { name: 'Home' })).toBeInTheDocument();
-    expect(screen.getByRole('button', { name: 'Pricing' })).toBeInTheDocument();
+    expect(screen.getByRole('link', { name: 'Home' })).toBeInTheDocument();
+    expect(screen.getByRole('link', { name: 'Pricing' })).toBeInTheDocument();
   });
 
   it('renders auth buttons', () => {
     renderWithRouter(<PublicNav />);
 
-    expect(screen.getByRole('button', { name: 'Sign In' })).toBeInTheDocument();
-    expect(screen.getByRole('button', { name: 'Get Started' })).toBeInTheDocument();
+    expect(screen.getByRole('link', { name: 'Sign In' })).toBeInTheDocument();
+    expect(screen.getByRole('link', { name: 'Get Started' })).toBeInTheDocument();
   });
 
   it('highlights active page (Home)', () => {
     renderWithRouter(<PublicNav />, '/');
 
-    const homeButton = screen.getByRole('button', { name: 'Home' });
-    expect(homeButton).toHaveClass('text-accent-pink');
+    const homeLink = screen.getByRole('link', { name: 'Home' });
+    expect(homeLink).toHaveClass('text-accent-pink');
   });
 
   it('highlights active page (Pricing)', () => {
     renderWithRouter(<PublicNav />, '/pricing');
 
-    const pricingButton = screen.getByRole('button', { name: 'Pricing' });
-    expect(pricingButton).toHaveClass('text-accent-pink');
+    const pricingLink = screen.getByRole('link', { name: 'Pricing' });
+    expect(pricingLink).toHaveClass('text-accent-pink');
   });
 });

@@ -84,10 +84,10 @@ describe('PricingPage', () => {
     renderWithRouter(<PricingPage />);
 
     expect(screen.getAllByText('StableFlow')).toHaveLength(2); // Nav and table
-    expect(screen.getByRole('button', { name: 'Home' })).toBeInTheDocument();
-    expect(screen.getByRole('button', { name: 'Pricing' })).toBeInTheDocument();
-    expect(screen.getByRole('button', { name: 'Sign In' })).toBeInTheDocument();
-    expect(screen.getByRole('button', { name: 'Get Started' })).toBeInTheDocument();
+    expect(screen.getByRole('link', { name: 'Home' })).toBeInTheDocument();
+    expect(screen.getByRole('link', { name: 'Pricing' })).toBeInTheDocument();
+    expect(screen.getByRole('link', { name: 'Sign In' })).toBeInTheDocument();
+    expect(screen.getByRole('link', { name: 'Get Started' })).toBeInTheDocument();
   });
 
   it('renders footer', () => {

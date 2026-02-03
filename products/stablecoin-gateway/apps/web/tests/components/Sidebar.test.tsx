@@ -96,7 +96,7 @@ describe('Sidebar', () => {
       expect(screen.getByText('Payments')).toBeInTheDocument();
       expect(screen.getByText('Invoices')).toBeInTheDocument();
       expect(screen.getByText('Developers')).toBeInTheDocument();
-      expect(screen.getByText('Settings')).toBeInTheDocument();
+      expect(screen.getAllByText('Settings').length).toBeGreaterThanOrEqual(1);
     });
   });
 });

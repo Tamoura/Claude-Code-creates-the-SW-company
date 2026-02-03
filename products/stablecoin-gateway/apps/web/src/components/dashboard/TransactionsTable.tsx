@@ -53,8 +53,9 @@ export default function TransactionsTable({ transactions, isLoading }: Transacti
         </button>
       </div>
 
-      <div role="table" aria-label="Transactions" className="bg-card-bg border border-card-border rounded-xl overflow-hidden">
-        <table className="w-full text-sm">
+      <div className="overflow-x-auto">
+        <div role="table" aria-label="Transactions" className="bg-card-bg border border-card-border rounded-xl overflow-hidden">
+          <table className="w-full text-sm">
           <thead>
             <tr className="border-b border-card-border">
               <th scope="col" className="text-left px-6 py-3.5 text-text-muted font-medium">ID</th>
@@ -106,6 +107,7 @@ export default function TransactionsTable({ transactions, isLoading }: Transacti
             )}
           </tbody>
         </table>
+        </div>
       </div>
     </div>
   );

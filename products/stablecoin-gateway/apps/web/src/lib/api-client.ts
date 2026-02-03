@@ -495,6 +495,25 @@ export class ApiClient {
    * Get payment session for checkout (public, no auth required)
    */
   async getCheckoutSession(id: string): Promise<PaymentSession> {
+    // If mock mode, use mockRequest
+    if (this.useMock) {
+      // Simulate delay
+      await new Promise(resolve => setTimeout(resolve, 300));
+
+      // Try to get from localStorage
+      const stored = localStorage.getItem(`payment_${id}`);
+      if (!stored) {
+        // Check mockPaymentSessions
+        const mockSession = mockPaymentSessions.find(s => s.id === id);
+        if (!mockSession) {
+          throw new ApiClientError(404, 'Not Found', 'Payment session not found');
+        }
+        return mockSession;
+      }
+
+      return JSON.parse(stored) as PaymentSession;
+    }
+
     // Public endpoint - bypass auth header injection
     const url = `${this.baseUrl}/v1/checkout/${id}`;
     const response = await fetch(url);
