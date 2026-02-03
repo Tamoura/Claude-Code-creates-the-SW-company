@@ -1,4 +1,5 @@
-import React, { useState } from 'react';
+import { useState } from 'react';
+import type { FC } from 'react';
 import { AnimatePresence, motion } from 'framer-motion';
 import type { ProgressAnnotation } from '~/types/context';
 import { classNames } from '~/utils/classNames';
@@ -56,7 +57,7 @@ interface AgentActivityPanelProps {
   onClose?: () => void;
 }
 
-export const AgentActivityPanel: React.FC<AgentActivityPanelProps> = ({ annotations, onClose }) => {
+export const AgentActivityPanel: FC<AgentActivityPanelProps> = ({ annotations, onClose }) => {
   const [collapsed, setCollapsed] = useState(false);
   const agents = extractAgentStatuses(annotations);
 
