@@ -60,7 +60,7 @@ export default function TopHeader({ title }: TopHeaderProps) {
   }
 
   return (
-    <header className="sticky top-0 z-10 flex items-center justify-between px-8 py-4 bg-page-bg border-b border-card-border">
+    <header role="banner" className="sticky top-0 z-10 flex items-center justify-between px-8 py-4 bg-page-bg border-b border-card-border">
       <h1 className="text-xl font-bold text-text-primary">{title}</h1>
 
       <div className="flex items-center gap-4">
@@ -79,6 +79,9 @@ export default function TopHeader({ title }: TopHeaderProps) {
         <div className="relative" ref={menuRef}>
           <button
             onClick={() => setShowMenu(!showMenu)}
+            aria-label={`User menu for ${user?.email || 'user'}`}
+            aria-expanded={showMenu}
+            aria-haspopup="true"
             className="w-9 h-9 rounded-full bg-accent-blue flex items-center justify-center text-sm font-bold text-white hover:ring-2 hover:ring-accent-blue/50 transition-all cursor-pointer"
           >
             {initials}

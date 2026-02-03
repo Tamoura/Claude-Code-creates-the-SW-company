@@ -47,6 +47,7 @@ export default function Login() {
         <form className="mt-8 space-y-6" onSubmit={handleSubmit}>
           {error && (
             <div
+              id="login-error"
               className="bg-red-500/10 border border-red-500/30 text-red-400 px-4 py-3 rounded-lg"
               role="alert"
             >
@@ -65,6 +66,9 @@ export default function Login() {
                 type="email"
                 autoComplete="email"
                 required
+                aria-required="true"
+                aria-invalid={error ? 'true' : 'false'}
+                aria-describedby={error ? 'login-error' : undefined}
                 className="w-full px-3 py-2.5 bg-card-bg border border-card-border rounded-lg text-text-primary placeholder:text-text-muted focus:outline-none focus:border-accent-blue text-sm"
                 placeholder="you@company.com"
                 value={email}
@@ -82,6 +86,9 @@ export default function Login() {
                 type="password"
                 autoComplete="current-password"
                 required
+                aria-required="true"
+                aria-invalid={error ? 'true' : 'false'}
+                aria-describedby={error ? 'login-error' : undefined}
                 className="w-full px-3 py-2.5 bg-card-bg border border-card-border rounded-lg text-text-primary placeholder:text-text-muted focus:outline-none focus:border-accent-blue text-sm"
                 placeholder="Enter your password"
                 value={password}
