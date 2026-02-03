@@ -39,5 +39,11 @@ ChatBox toggle -> orchestratorMode state
 - `app/components/chat/BaseChat.tsx` - conditionally render panel
 
 ## Test Files
-- `app/components/chat/__tests__/orchestrator-toggle.test.tsx`
-- `app/components/chat/__tests__/agent-activity-panel.test.tsx`
+- `app/components/chat/__tests__/orchestrator-toggle.test.tsx` (10 tests)
+- `app/components/chat/__tests__/agent-activity-panel.test.tsx` (11 tests)
+
+## Status
+- PR: https://github.com/Tamoura/Claude-Code-creates-the-SW-company/pull/98
+- Branch: `feature/shipwright/orchestrator-ui`
+- Base: `feature/shipwright/dev`
+- Tests: 117/117 passing (96 existing + 21 new)
