@@ -43,13 +43,23 @@ Build all missing frontend pages and features to reach PRD MVP parity, then run 
 - Checkout success/failed pages fetch from public `/v1/checkout/:id` endpoint (no auth)
 
 ## Progress
-- [ ] Task 1: Payment Link Generator
-- [ ] Task 2: Payment Detail Page
-- [ ] Task 3: Search + CSV Export
-- [ ] Task 4: Settings Page
-- [ ] Task 5: Pricing Page
-- [ ] Task 6: Docs Pages
-- [ ] Task 7: Checkout Success/Failed
-- [ ] Task 8: ToS + Accessibility
-- [ ] Task 9: Integration test pass
+- [x] Task 1: Payment Link Generator — 8 tests
+- [x] Task 2: Payment Detail Page — 7 tests
+- [x] Task 3: Search + CSV Export — 14 tests
+- [x] Task 4: Settings Page — 13 tests
+- [x] Task 5: Pricing Page — 7 tests (+ 3 PublicFooter, 5 PublicNav)
+- [x] Task 6: Docs Pages — 10 tests (5 DocsLayout, 5 QuickStart)
+- [x] Task 7: Checkout Success/Failed — 14 tests (7 each)
+- [x] Task 8: ToS + Accessibility — accessibility + signup tests
+- [x] Task 9: Integration test pass — 264/264 tests, 37 files, TS build clean
 - [ ] Task 10: Audit gate
+
+## Test Summary (post-build)
+- 264 tests passing across 37 test files (was 160 across 24)
+- +104 new tests, +13 new test files
+- TypeScript build: zero errors
+- No test failures
+
+## Reference
+- Prototype HTML checked for docs section: `file:///Users/tamer/Downloads/prototype (1).html`
+- Docs implementation exceeds prototype in depth (HMAC verification, retry policy, TypeScript types, error handling)
