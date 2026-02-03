@@ -21,7 +21,8 @@ export interface AgentContext {
   conversationHistory: Message[];
   files: Record<string, string>;
   previousResults: AgentResult[];
-  model?: string;
+  model?: any; // LanguageModelV1 instance from AI SDK
+  modelName?: string;
   provider?: string;
   apiKeys?: Record<string, string>;
 }

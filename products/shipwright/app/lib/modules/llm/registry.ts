@@ -19,6 +19,7 @@ import GithubProvider from './providers/github';
 import MoonshotProvider from './providers/moonshot';
 
 export {
+  OpenRouterProvider,
   AnthropicProvider,
   CohereProvider,
   DeepseekProvider,
@@ -30,7 +31,6 @@ export {
   MoonshotProvider,
   OllamaProvider,
   OpenAIProvider,
-  OpenRouterProvider,
   OpenAILikeProvider,
   PerplexityProvider,
   XAIProvider,

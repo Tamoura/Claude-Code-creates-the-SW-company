@@ -2,7 +2,8 @@ import { type ActionFunctionArgs } from '@remix-run/cloudflare';
 import { createDataStream } from 'ai';
 import { SimpleOrchestrator } from '~/lib/.server/orchestrator';
 import type { AgentContext, AgentResult, OrchestratorEvent } from '~/lib/.server/orchestrator';
-import { MODEL_REGEX, PROVIDER_REGEX } from '~/utils/constants';
+import { MODEL_REGEX, PROVIDER_REGEX, PROVIDER_LIST } from '~/utils/constants';
+import { LLMManager } from '~/lib/modules/llm/manager';
 import { createScopedLogger } from '~/utils/logger';
 import type { ProgressAnnotation } from '~/types/context';
 
@@ -37,7 +38,7 @@ function extractPromptFromMessage(content: string): {
   const modelMatch = content.match(MODEL_REGEX);
   const providerMatch = content.match(PROVIDER_REGEX);
 
-  const model = modelMatch ? modelMatch[1] : 'anthropic/claude-sonnet-4-20250514';
+  const model = modelMatch ? modelMatch[1] : 'anthropic/claude-sonnet-4';
   const provider = providerMatch ? providerMatch[1] : 'OpenRouter';
   const prompt = content.replace(MODEL_REGEX, '').replace(PROVIDER_REGEX, '').trim();
 
@@ -63,7 +64,7 @@ function formatAgentRole(role: string): string {
     .join(' ');
 }
 
-async function orchestratorAction({ request }: ActionFunctionArgs) {
+async function orchestratorAction({ request, context }: ActionFunctionArgs) {
   try {
     const body = await request.json<{
       messages?: any[];
@@ -86,7 +87,17 @@ async function orchestratorAction({ request }: ActionFunctionArgs) {
 
     const cookieHeader = request.headers.get('Cookie');
     const apiKeys = JSON.parse(parseCookies(cookieHeader || '').apiKeys || '{}');
-    const { model, provider, prompt } = extractPromptFromMessage(lastUserMessage.content);
+    const { model: modelName, provider: providerName, prompt } = extractPromptFromMessage(lastUserMessage.content);
+
+    // Create a proper AI SDK model instance via the provider
+    const providerInfo = PROVIDER_LIST.find((p) => p.name === providerName) || PROVIDER_LIST[0];
+    const serverEnv = ((context as any)?.cloudflare?.env || process.env || {}) as Record<string, string>;
+    const modelInstance = providerInfo.getModelInstance({
+      model: modelName,
+      serverEnv: serverEnv as any,
+      apiKeys,
+      providerSettings: {},
+    });
 
     const orchestrator = new SimpleOrchestrator();
 
@@ -98,8 +109,9 @@ async function orchestratorAction({ request }: ActionFunctionArgs) {
       })),
       files: flattenFiles(files),
       previousResults: [],
-      model,
-      provider,
+      model: modelInstance,
+      modelName,
+      provider: providerName,
       apiKeys,
     };
 

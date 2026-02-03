@@ -23,10 +23,10 @@ describe('Orchestrator Mode: Settings Store', () => {
     storageMap.clear();
   });
 
-  it('should export orchestratorModeStore with default value of false', async () => {
+  it('should export orchestratorModeStore with default value of true', async () => {
     const { orchestratorModeStore } = await import('~/lib/stores/settings');
     expect(orchestratorModeStore).toBeDefined();
-    expect(orchestratorModeStore.get()).toBe(false);
+    expect(orchestratorModeStore.get()).toBe(true);
   });
 
   it('should export updateOrchestratorMode function', async () => {
@@ -37,13 +37,13 @@ describe('Orchestrator Mode: Settings Store', () => {
 
   it('should update orchestratorModeStore when updateOrchestratorMode is called', async () => {
     const { orchestratorModeStore, updateOrchestratorMode } = await import('~/lib/stores/settings');
-    expect(orchestratorModeStore.get()).toBe(false);
-
-    updateOrchestratorMode(true);
     expect(orchestratorModeStore.get()).toBe(true);
 
     updateOrchestratorMode(false);
     expect(orchestratorModeStore.get()).toBe(false);
+
+    updateOrchestratorMode(true);
+    expect(orchestratorModeStore.get()).toBe(true);
   });
 
   it('should persist orchestrator mode to localStorage', async () => {

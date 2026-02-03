@@ -4,20 +4,6 @@ import type { IProviderSetting } from '~/types/model';
 import type { LanguageModelV1 } from 'ai';
 import { createOpenRouter } from '@openrouter/ai-sdk-provider';
 
-interface OpenRouterModel {
-  name: string;
-  id: string;
-  context_length: number;
-  pricing: {
-    prompt: number;
-    completion: number;
-  };
-}
-
-interface OpenRouterModelsResponse {
-  data: OpenRouterModel[];
-}
-
 export default class OpenRouterProvider extends BaseProvider {
   name = 'OpenRouter';
   getApiKeyLink = 'https://openrouter.ai/settings/keys';
@@ -27,62 +13,31 @@ export default class OpenRouterProvider extends BaseProvider {
   };
 
   staticModels: ModelInfo[] = [
-    /*
-     * Essential fallback models - only the most stable/reliable ones
-     * Claude 3.5 Sonnet via OpenRouter: 200k context
-     */
     {
-      name: 'anthropic/claude-3.5-sonnet',
-      label: 'Claude 3.5 Sonnet',
+      name: 'anthropic/claude-sonnet-4',
+      label: 'Claude Sonnet 4',
       provider: 'OpenRouter',
       maxTokenAllowed: 200000,
     },
-
-    // GPT-4o via OpenRouter: 128k context
     {
-      name: 'openai/gpt-4o',
-      label: 'GPT-4o',
+      name: 'anthropic/claude-3.5-haiku',
+      label: 'Claude 3.5 Haiku (fast)',
       provider: 'OpenRouter',
-      maxTokenAllowed: 128000,
+      maxTokenAllowed: 200000,
+    },
+    {
+      name: 'openai/gpt-4.1',
+      label: 'GPT-4.1',
+      provider: 'OpenRouter',
+      maxTokenAllowed: 1048576,
+    },
+    {
+      name: 'google/gemini-2.5-pro-preview',
+      label: 'Gemini 2.5 Pro',
+      provider: 'OpenRouter',
+      maxTokenAllowed: 1048576,
     },
   ];
-
-  async getDynamicModels(
-    _apiKeys?: Record<string, string>,
-    _settings?: IProviderSetting,
-    _serverEnv: Record<string, string> = {},
-  ): Promise<ModelInfo[]> {
-    try {
-      const response = await fetch('https://openrouter.ai/api/v1/models', {
-        headers: {
-          'Content-Type': 'application/json',
-        },
-      });
-
-      const data = (await response.json()) as OpenRouterModelsResponse;
-
-      return data.data
-        .sort((a, b) => a.name.localeCompare(b.name))
-        .map((m) => {
-          // Get accurate context window from OpenRouter API
-          const contextWindow = m.context_length || 32000; // Use API value or fallback
-
-          // Cap at reasonable limits to prevent issues (OpenRouter has some very large models)
-          const maxAllowed = 1000000; // 1M tokens max for safety
-          const finalContext = Math.min(contextWindow, maxAllowed);
-
-          return {
-            name: m.id,
-            label: `${m.name} - in:$${(m.pricing.prompt * 1_000_000).toFixed(2)} out:$${(m.pricing.completion * 1_000_000).toFixed(2)} - context ${finalContext >= 1000000 ? Math.floor(finalContext / 1000000) + 'M' : Math.floor(finalContext / 1000) + 'k'}`,
-            provider: this.name,
-            maxTokenAllowed: finalContext,
-          };
-        });
-    } catch (error) {
-      console.error('Error getting OpenRouter models:', error);
-      return [];
-    }
-  }
 
   getModelInstance(options: {
     model: string;

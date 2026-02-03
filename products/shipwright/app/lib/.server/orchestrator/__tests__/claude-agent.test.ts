@@ -23,11 +23,15 @@ describe('ClaudeAgent', () => {
     parallelOk: false,
   };
 
+  const mockModel = { doGenerate: vi.fn(), modelId: 'test-model' };
+
   const mockContext: AgentContext = {
     projectId: 'proj_123',
     conversationHistory: [{ role: 'user', content: 'Build me a todo app' }],
     files: {},
     previousResults: [],
+    model: mockModel,
+    modelName: 'test-model',
   };
 
   beforeEach(() => {

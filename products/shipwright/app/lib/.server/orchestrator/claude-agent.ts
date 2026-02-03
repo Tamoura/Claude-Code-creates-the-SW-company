@@ -104,10 +104,10 @@ export class ClaudeAgent implements Agent {
   }
 
   private getModel(context: AgentContext): any {
-    // In MVP, model selection is handled by the caller.
-    // This returns a placeholder — the actual model instance
-    // is injected by the orchestrator via the AI SDK provider.
-    // For now, we pass through whatever is configured.
-    return context.model ?? 'anthropic:claude-sonnet-4-20250514';
+    if (!context.model) {
+      throw new Error(`No model instance provided in agent context for ${this.role}`);
+    }
+
+    return context.model;
   }
 }

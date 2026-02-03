@@ -412,6 +412,31 @@ export const ChatImpl = memo(
       if (!chatStarted) {
         setFakeLoading(true);
 
+        // In orchestrator mode, skip template selection — let the agent team handle everything
+        if (orchestratorMode) {
+          const userMessageText = `[Model: ${model}]\n\n[Provider: ${provider.name}]\n\n${finalMessageContent}`;
+          const attachments = uploadedFiles.length > 0 ? await filesToAttachments(uploadedFiles) : undefined;
+
+          append(
+            {
+              role: 'user',
+              content: userMessageText,
+              parts: createMessageParts(userMessageText, imageDataList),
+            },
+            attachments ? { experimental_attachments: attachments } : undefined,
+          );
+
+          setFakeLoading(false);
+          setInput('');
+          Cookies.remove(PROMPT_COOKIE_KEY);
+          setUploadedFiles([]);
+          setImageDataList([]);
+          resetEnhancer();
+          textareaRef.current?.blur();
+
+          return;
+        }
+
         if (autoSelectTemplate) {
           const { template, title } = await selectStarterTemplate({
             message: finalMessageContent,
