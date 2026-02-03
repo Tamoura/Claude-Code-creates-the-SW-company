@@ -13,12 +13,14 @@ describe('JWT Secret Entropy Validation', () => {
       '0x1234567890123456789012345678901234567890123456789012345678901234';
   }
 
-  // Helper: valid base env for production (KMS + webhook configured)
+  // Helper: valid base env for production (KMS + webhook + HMAC + internal key configured)
   function setProductionBaseEnv() {
     process.env.NODE_ENV = 'production';
     process.env.DATABASE_URL = 'postgresql://user:pass@localhost:5432/dbname';
     process.env.KMS_KEY_ID = 'arn:aws:kms:us-east-1:123456789012:key/12345678-1234-1234-1234-123456789012';
     process.env.WEBHOOK_ENCRYPTION_KEY = 'a'.repeat(64);
+    process.env.API_KEY_HMAC_SECRET = crypto.randomBytes(32).toString('hex');
+    process.env.INTERNAL_API_KEY = crypto.randomBytes(32).toString('hex');
     // Remove private key fallback for production
     delete process.env.HOT_WALLET_PRIVATE_KEY;
     delete process.env.ALLOW_PRIVATE_KEY_FALLBACK;
