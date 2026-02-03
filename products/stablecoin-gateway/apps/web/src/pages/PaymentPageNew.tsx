@@ -85,10 +85,10 @@ export default function PaymentPageNew() {
     }
   }, [id]);
 
-  // Redirect to status page when transaction confirmed
+  // Redirect to success page when transaction confirmed
   useEffect(() => {
     if (isConfirmed && id) {
-      navigate(`/status/${id}`);
+      navigate(`/checkout/${id}/success`);
     }
   }, [isConfirmed, id, navigate]);
 
@@ -296,7 +296,7 @@ export default function PaymentPageNew() {
                   setIsSimulating(true);
                   try {
                     await apiClient.simulatePayment(id!);
-                    navigate(`/status/${id}`);
+                    navigate(`/checkout/${id}/success`);
                   } catch (err) {
                     setError(err instanceof Error ? err.message : 'Simulation failed');
                   } finally {

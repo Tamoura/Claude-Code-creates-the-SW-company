@@ -2,6 +2,7 @@ import { useNavigate } from 'react-router-dom';
 
 export interface TransactionRow {
   id: string;
+  rawId?: string; // The actual session ID (e.g., ps_abc123)
   customer: string;
   date: string;
   amount: string;
@@ -16,8 +17,17 @@ function StatusBadge({ status }: { status: TransactionRow['status'] }) {
     FAILED: 'bg-red-500/15 text-red-400 border-red-500/30',
   }[status];
 
+  const ariaLabel = {
+    SUCCESS: 'Transaction successful',
+    PENDING: 'Transaction pending',
+    FAILED: 'Transaction failed',
+  }[status];
+
   return (
-    <span className={`inline-block px-2.5 py-0.5 rounded-full text-xs font-semibold border ${styles}`}>
+    <span
+      className={`inline-block px-2.5 py-0.5 rounded-full text-xs font-semibold border ${styles}`}
+      aria-label={ariaLabel}
+    >
       {status}
     </span>
   );
@@ -43,16 +53,17 @@ export default function TransactionsTable({ transactions, isLoading }: Transacti
         </button>
       </div>
 
-      <div className="bg-card-bg border border-card-border rounded-xl overflow-hidden">
-        <table className="w-full text-sm">
+      <div className="overflow-x-auto">
+        <div role="table" aria-label="Transactions" className="bg-card-bg border border-card-border rounded-xl overflow-hidden">
+          <table className="w-full text-sm">
           <thead>
             <tr className="border-b border-card-border">
-              <th className="text-left px-6 py-3.5 text-text-muted font-medium">ID</th>
-              <th className="text-left px-6 py-3.5 text-text-muted font-medium">Customer</th>
-              <th className="text-left px-6 py-3.5 text-text-muted font-medium">Date</th>
-              <th className="text-left px-6 py-3.5 text-text-muted font-medium">Amount</th>
-              <th className="text-left px-6 py-3.5 text-text-muted font-medium">Asset</th>
-              <th className="text-left px-6 py-3.5 text-text-muted font-medium">Status</th>
+              <th scope="col" className="text-left px-6 py-3.5 text-text-muted font-medium">ID</th>
+              <th scope="col" className="text-left px-6 py-3.5 text-text-muted font-medium">Customer</th>
+              <th scope="col" className="text-left px-6 py-3.5 text-text-muted font-medium">Date</th>
+              <th scope="col" className="text-left px-6 py-3.5 text-text-muted font-medium">Amount</th>
+              <th scope="col" className="text-left px-6 py-3.5 text-text-muted font-medium">Asset</th>
+              <th scope="col" className="text-left px-6 py-3.5 text-text-muted font-medium">Status</th>
             </tr>
           </thead>
           <tbody>
@@ -70,7 +81,19 @@ export default function TransactionsTable({ transactions, isLoading }: Transacti
               </tr>
             ) : (
               transactions.map((tx) => (
-                <tr key={tx.id} className="border-b border-card-border last:border-b-0">
+                <tr
+                  key={tx.id}
+                  onClick={() => tx.rawId && navigate(`/dashboard/payments/${tx.rawId}`)}
+                  onKeyDown={(e) => {
+                    if (tx.rawId && (e.key === 'Enter' || e.key === ' ')) {
+                      e.preventDefault();
+                      navigate(`/dashboard/payments/${tx.rawId}`);
+                    }
+                  }}
+                  tabIndex={tx.rawId ? 0 : undefined}
+                  role={tx.rawId ? 'link' : undefined}
+                  className={`border-b border-card-border last:border-b-0 ${tx.rawId ? 'cursor-pointer hover:bg-sidebar-hover focus-visible:outline-2 focus-visible:outline-accent-blue focus-visible:outline-offset-2' : ''}`}
+                >
                   <td className="px-6 py-4 text-text-primary font-mono">{tx.id}</td>
                   <td className="px-6 py-4 text-text-secondary">{tx.customer}</td>
                   <td className="px-6 py-4 text-text-secondary">{tx.date}</td>
@@ -84,6 +107,7 @@ export default function TransactionsTable({ transactions, isLoading }: Transacti
             )}
           </tbody>
         </table>
+        </div>
       </div>
     </div>
   );

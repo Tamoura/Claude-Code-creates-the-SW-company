@@ -22,6 +22,7 @@ export default function Signup() {
   const [email, setEmail] = useState('');
   const [password, setPassword] = useState('');
   const [confirmPassword, setConfirmPassword] = useState('');
+  const [agreedToTerms, setAgreedToTerms] = useState(false);
   const [error, setError] = useState<string | null>(null);
   const [isLoading, setIsLoading] = useState(false);
   const navigate = useNavigate();
@@ -32,6 +33,11 @@ export default function Signup() {
   const handleSubmit = async (e: FormEvent) => {
     e.preventDefault();
     setError(null);
+
+    if (!agreedToTerms) {
+      setError('You must agree to the Terms of Service and Privacy Policy');
+      return;
+    }
 
     if (!allRequirementsMet) {
       setError('Password does not meet all requirements');
@@ -95,6 +101,8 @@ export default function Signup() {
                 type="email"
                 autoComplete="email"
                 required
+                aria-required="true"
+                aria-invalid={error ? 'true' : 'false'}
                 className="w-full px-3 py-2.5 bg-card-bg border border-card-border rounded-lg text-text-primary placeholder:text-text-muted focus:outline-none focus:border-accent-blue text-sm"
                 placeholder="you@company.com"
                 value={email}
@@ -112,6 +120,9 @@ export default function Signup() {
                 type="password"
                 autoComplete="new-password"
                 required
+                aria-required="true"
+                aria-describedby="password-requirements"
+                aria-invalid={error && !allRequirementsMet ? 'true' : 'false'}
                 className="w-full px-3 py-2.5 bg-card-bg border border-card-border rounded-lg text-text-primary placeholder:text-text-muted focus:outline-none focus:border-accent-blue text-sm"
                 placeholder="Create a strong password"
                 value={password}
@@ -129,6 +140,8 @@ export default function Signup() {
                 type="password"
                 autoComplete="new-password"
                 required
+                aria-required="true"
+                aria-invalid={error && !passwordsMatch && confirmPassword.length > 0 ? 'true' : 'false'}
                 className="w-full px-3 py-2.5 bg-card-bg border border-card-border rounded-lg text-text-primary placeholder:text-text-muted focus:outline-none focus:border-accent-blue text-sm"
                 placeholder="Confirm your password"
                 value={confirmPassword}
@@ -139,7 +152,7 @@ export default function Signup() {
           </div>
 
           {/* Password requirements */}
-          <div className="bg-card-bg border border-card-border rounded-lg p-4">
+          <div id="password-requirements" className="bg-card-bg border border-card-border rounded-lg p-4">
             <p className="text-xs font-medium text-text-secondary mb-2">Password requirements:</p>
             <ul className="space-y-1">
               {PASSWORD_REQUIREMENTS.map((req) => {
@@ -168,10 +181,33 @@ export default function Signup() {
             )}
           </div>
 
+          {/* Terms of Service Consent */}
+          <div className="flex items-start">
+            <label className="flex items-start gap-2 cursor-pointer">
+              <input
+                type="checkbox"
+                checked={agreedToTerms}
+                onChange={(e) => setAgreedToTerms(e.target.checked)}
+                disabled={isLoading}
+                className="mt-0.5 w-4 h-4 text-pink-600 bg-card-bg border-card-border rounded focus:ring-pink-500 focus:ring-2"
+              />
+              <span className="text-sm text-text-secondary">
+                I agree to the{' '}
+                <a href="#" className="text-accent-pink hover:text-pink-400 underline">
+                  Terms of Service
+                </a>{' '}
+                and{' '}
+                <a href="#" className="text-accent-pink hover:text-pink-400 underline">
+                  Privacy Policy
+                </a>
+              </span>
+            </label>
+          </div>
+
           <div>
             <button
               type="submit"
-              disabled={isLoading || !allRequirementsMet || !passwordsMatch}
+              disabled={isLoading || !allRequirementsMet || !passwordsMatch || !agreedToTerms}
               className="w-full flex justify-center py-2.5 px-4 text-sm font-semibold rounded-lg text-white bg-gradient-to-r from-pink-500 to-pink-600 hover:from-pink-600 hover:to-pink-700 focus:outline-none focus:ring-2 focus:ring-offset-2 focus:ring-pink-500 disabled:opacity-50 disabled:cursor-not-allowed transition-all"
             >
               {isLoading ? (

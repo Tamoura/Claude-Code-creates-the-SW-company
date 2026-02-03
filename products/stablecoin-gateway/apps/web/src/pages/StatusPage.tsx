@@ -30,7 +30,16 @@ export default function StatusPage() {
     const fetchPayment = async () => {
       try {
         const session = await apiClient.getCheckoutSession(id);
-        if (!cancelled) setPayment(session);
+        if (!cancelled) {
+          setPayment(session);
+          // Redirect to appropriate checkout page if completed or failed
+          const status = mapStatus(session.status);
+          if (status === 'completed') {
+            navigate(`/checkout/${id}/success`, { replace: true });
+          } else if (status === 'failed') {
+            navigate(`/checkout/${id}/failed`, { replace: true });
+          }
+        }
       } catch (err) {
         if (!cancelled) setError('Payment not found or has expired');
       } finally {
@@ -44,7 +53,16 @@ export default function StatusPage() {
     const interval = setInterval(async () => {
       try {
         const session = await apiClient.getCheckoutSession(id);
-        if (!cancelled) setPayment(session);
+        if (!cancelled) {
+          setPayment(session);
+          // Check for completion/failure on each poll
+          const status = mapStatus(session.status);
+          if (status === 'completed') {
+            navigate(`/checkout/${id}/success`, { replace: true });
+          } else if (status === 'failed') {
+            navigate(`/checkout/${id}/failed`, { replace: true });
+          }
+        }
       } catch {
         // Silently ignore poll errors
       }
@@ -54,7 +72,7 @@ export default function StatusPage() {
       cancelled = true;
       clearInterval(interval);
     };
-  }, [id]);
+  }, [id, navigate]);
 
   if (isLoading) {
     return (
