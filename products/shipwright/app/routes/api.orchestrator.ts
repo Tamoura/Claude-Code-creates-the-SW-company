@@ -164,8 +164,9 @@ async function orchestratorAction({ request, context }: ActionFunctionArgs) {
           if (event.result) {
             accumulatedResults.push(event.result);
 
-            // Stream the header and readable text immediately
-            const header = `\n\n---\n**${formatAgentRole(event.agentRole!)}**\n\n`;
+            const agentName = formatAgentRole(event.agentRole!);
+            const stepNum = accumulatedResults.length;
+            const header = `\n\n---\n**Step ${stepNum}: ${agentName}**\n\n`;
             dataStream.write(`0:${JSON.stringify(header)}\n`);
 
             // Strip <boltArtifact> blocks — those are buffered for workflow-completed
@@ -175,6 +176,15 @@ async function orchestratorAction({ request, context }: ActionFunctionArgs) {
 
             if (displayContent) {
               dataStream.write(`0:${JSON.stringify(displayContent)}\n`);
+            } else {
+              // All content was artifacts — show a file summary
+              const filePaths = [...event.result.content.matchAll(/filePath="([^"]+)"/g)]
+                .map((m) => m[1]);
+
+              if (filePaths.length > 0) {
+                const summary = `*Created ${filePaths.length} files:*\n${filePaths.map((p) => `- \`${p}\``).join('\n')}\n`;
+                dataStream.write(`0:${JSON.stringify(summary)}\n`);
+              }
             }
           }
 
