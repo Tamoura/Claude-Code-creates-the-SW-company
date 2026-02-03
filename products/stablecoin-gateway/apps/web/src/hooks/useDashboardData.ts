@@ -11,6 +11,7 @@ export interface DashboardStat {
 
 export interface DashboardTransaction {
   id: string;
+  rawId?: string;
   customer: string;
   date: string;
   amount: string;
@@ -79,6 +80,7 @@ function toTransactions(sessions: PaymentSession[]): DashboardTransaction[] {
     .slice(0, 5)
     .map(s => ({
       id: `#${s.id.replace('ps_', 'TX-').toUpperCase()}`,
+      rawId: s.id,
       customer: s.customer_address || 'Unknown',
       date: formatDate(s.created_at),
       amount: formatCurrency(s.amount),
