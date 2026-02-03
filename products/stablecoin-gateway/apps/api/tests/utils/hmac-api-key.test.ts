@@ -2,7 +2,8 @@
  * HMAC API Key Hashing Tests
  *
  * Validates that hashApiKey uses HMAC-SHA-256 when API_KEY_HMAC_SECRET
- * is set, and falls back to plain SHA-256 when the secret is absent.
+ * is set, falls back to plain SHA-256 in dev/test, and throws in
+ * production when the secret is missing (RISK-050 remediation).
  */
 
 import * as crypto from 'crypto';
@@ -52,11 +53,26 @@ describe('hashApiKey HMAC-SHA-256', () => {
     });
   });
 
-  describe('without HMAC secret', () => {
+  describe('without HMAC secret (dev/test)', () => {
     const testApiKey = 'sk_live_xyz789';
 
-    it('should fall back to plain SHA-256', () => {
+    it('should fall back to plain SHA-256 in non-production', () => {
       delete process.env.API_KEY_HMAC_SECRET;
+      process.env.NODE_ENV = 'test';
+
+      const { hashApiKey } = require('../../src/utils/crypto');
+
+      const expectedPlainHash = crypto
+        .createHash('sha256')
+        .update(testApiKey)
+        .digest('hex');
+
+      expect(hashApiKey(testApiKey)).toEqual(expectedPlainHash);
+    });
+
+    it('should fall back to plain SHA-256 in development', () => {
+      delete process.env.API_KEY_HMAC_SECRET;
+      process.env.NODE_ENV = 'development';
 
       const { hashApiKey } = require('../../src/utils/crypto');
 
@@ -125,35 +141,34 @@ describe('hashApiKey HMAC-SHA-256', () => {
     });
   });
 
-  describe('production warning', () => {
-    it('should log a warning in production when HMAC secret is missing', () => {
+  describe('production enforcement (RISK-050)', () => {
+    it('should throw an error in production when HMAC secret is missing', () => {
       delete process.env.API_KEY_HMAC_SECRET;
       process.env.NODE_ENV = 'production';
 
-      const warnSpy = jest.spyOn(console, 'warn').mockImplementation();
-
       const { hashApiKey } = require('../../src/utils/crypto');
-      hashApiKey('sk_live_prod_warn_test');
 
-      expect(warnSpy).toHaveBeenCalledWith(
-        'WARNING: API_KEY_HMAC_SECRET not set in production - using unsalted SHA-256'
+      expect(() => hashApiKey('sk_live_prod_test')).toThrow(
+        'API_KEY_HMAC_SECRET is required in production'
       );
-
-      warnSpy.mockRestore();
     });
 
-    it('should not log a warning in non-production without HMAC secret', () => {
+    it('should not throw in production when HMAC secret is set', () => {
+      process.env.API_KEY_HMAC_SECRET = 'prod-secret-value';
+      process.env.NODE_ENV = 'production';
+
+      const { hashApiKey } = require('../../src/utils/crypto');
+
+      expect(() => hashApiKey('sk_live_prod_test')).not.toThrow();
+    });
+
+    it('should not throw in non-production when HMAC secret is missing', () => {
       delete process.env.API_KEY_HMAC_SECRET;
       process.env.NODE_ENV = 'test';
 
-      const warnSpy = jest.spyOn(console, 'warn').mockImplementation();
-
       const { hashApiKey } = require('../../src/utils/crypto');
-      hashApiKey('sk_live_no_warn_test');
 
-      expect(warnSpy).not.toHaveBeenCalled();
-
-      warnSpy.mockRestore();
+      expect(() => hashApiKey('sk_live_no_throw_test')).not.toThrow();
     });
   });
 });

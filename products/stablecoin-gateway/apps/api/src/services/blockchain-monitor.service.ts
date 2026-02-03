@@ -5,8 +5,13 @@ import { logger } from '../utils/logger.js';
 import { ProviderManager } from '../utils/provider-manager.js';
 import { TOKEN_ADDRESSES, getRpcUrls, Network, Token } from '../constants/tokens.js';
 
+/** Default RPC call timeout: 15 seconds */
+const DEFAULT_RPC_TIMEOUT_MS = 15_000;
+
 export interface BlockchainMonitorServiceOptions {
   providerManager?: ProviderManager;
+  /** Timeout in milliseconds for individual RPC calls (default: 15 000) */
+  rpcTimeoutMs?: number;
 }
 
 export interface PaymentSessionForVerification {
@@ -27,6 +32,27 @@ export interface VerificationResult {
 }
 
 /**
+ * Wrap a promise with a timeout. If the promise does not settle within
+ * `ms` milliseconds, the returned promise rejects with a descriptive
+ * error that includes the operation label.
+ *
+ * RISK-045: Prevents indefinite blocking when a blockchain RPC node hangs.
+ */
+function withTimeout<T>(promise: Promise<T>, ms: number, label: string): Promise<T> {
+  let timeoutId: ReturnType<typeof setTimeout>;
+  const timeout = new Promise<never>((_, reject) => {
+    timeoutId = setTimeout(
+      () => reject(new Error(`${label} timed out after ${ms}ms`)),
+      ms,
+    );
+  });
+
+  return Promise.race([promise, timeout]).finally(() => {
+    clearTimeout(timeoutId);
+  });
+}
+
+/**
  * Convert a wei (smallest unit) amount to a USD string with exact precision.
  *
  * Uses Decimal.js to avoid IEEE 754 floating-point errors that occur
@@ -42,10 +68,12 @@ export function weiToUsd(amountWei: string, decimals: number): string {
 
 export class BlockchainMonitorService {
   private providerManager: ProviderManager;
+  private rpcTimeoutMs: number;
 
   constructor(options?: BlockchainMonitorServiceOptions) {
     // Initialize provider manager with failover support
     this.providerManager = options?.providerManager ?? new ProviderManager();
+    this.rpcTimeoutMs = options?.rpcTimeoutMs ?? DEFAULT_RPC_TIMEOUT_MS;
 
     if (!options?.providerManager) {
       this.providerManager.addProviders('polygon', getRpcUrls('polygon'));
@@ -86,8 +114,12 @@ export class BlockchainMonitorService {
     }
 
     try {
-      // Get transaction receipt
-      const receipt = await provider.getTransactionReceipt(txHash);
+      // Get transaction receipt (with timeout - RISK-045)
+      const receipt = await withTimeout(
+        provider.getTransactionReceipt(txHash),
+        this.rpcTimeoutMs,
+        'getTransactionReceipt',
+      );
 
       if (!receipt) {
         return {
@@ -99,8 +131,12 @@ export class BlockchainMonitorService {
         };
       }
 
-      // Get current block number to calculate confirmations
-      const currentBlock = await provider.getBlockNumber();
+      // Get current block number to calculate confirmations (with timeout - RISK-045)
+      const currentBlock = await withTimeout(
+        provider.getBlockNumber(),
+        this.rpcTimeoutMs,
+        'getBlockNumber',
+      );
       const confirmations = currentBlock - receipt.blockNumber + 1;
 
       // Check minimum confirmations
@@ -258,13 +294,21 @@ export class BlockchainMonitorService {
     }
 
     try {
-      const receipt = await provider.getTransactionReceipt(txHash);
+      const receipt = await withTimeout(
+        provider.getTransactionReceipt(txHash),
+        this.rpcTimeoutMs,
+        'getTransactionReceipt',
+      );
 
       if (!receipt) {
         return 0;
       }
 
-      const currentBlock = await provider.getBlockNumber();
+      const currentBlock = await withTimeout(
+        provider.getBlockNumber(),
+        this.rpcTimeoutMs,
+        'getBlockNumber',
+      );
       return currentBlock - receipt.blockNumber + 1;
     } catch (error) {
       logger.error('Error getting confirmations', { network, txHash, error });

@@ -10,6 +10,7 @@
  * - All endpoints require authentication (JWT or API key)
  * - Users can only access their own refunds
  * - Refund permission required for creation
+ * - Rate limited: 10 refund requests per minute per user (RISK-047)
  */
 
 import { FastifyPluginAsync } from 'fastify';
@@ -50,6 +51,12 @@ const refundRoutes: FastifyPluginAsync = async (fastify) => {
     '/',
     {
       onRequest: [fastify.authenticate, fastify.requirePermission('refund')],
+      config: {
+        rateLimit: {
+          max: 10,
+          timeWindow: '1 minute',
+        },
+      },
     },
     async (request, reply) => {
       try {

@@ -195,10 +195,10 @@ export const ERRORS = {
     code: 'invalid-refund-amount',
     message: 'Refund amount must be greater than 0',
   },
-  PAYMENT_NOT_COMPLETED: {
+  PAYMENT_NOT_REFUNDABLE: {
     status: 400,
-    code: 'payment-not-completed',
-    message: 'Payment must be completed before refunding',
+    code: 'payment-not-refundable',
+    message: 'Payment must be in a refundable state (COMPLETED or REFUNDED)',
   },
   REFUND_EXCEEDS_PAYMENT: {
     status: 400,
