@@ -52,13 +52,45 @@ Build all missing frontend pages and features to reach PRD MVP parity, then run 
 - [x] Task 7: Checkout Success/Failed — 14 tests (7 each)
 - [x] Task 8: ToS + Accessibility — accessibility + signup tests
 - [x] Task 9: Integration test pass — 264/264 tests, 37 files, TS build clean
-- [ ] Task 10: Audit gate
+- [x] Task 10: Audit gate — PASS (8.3/10 overall, all dimensions >= 8/10)
 
 ## Test Summary (post-build)
 - 264 tests passing across 37 test files (was 160 across 24)
 - +104 new tests, +13 new test files
 - TypeScript build: zero errors
 - No test failures
+
+## Audit Results (v12)
+
+| Dimension | Score |
+|-----------|-------|
+| Correctness | 8/10 |
+| Security | 9/10 |
+| Performance | 8/10 |
+| Accessibility (WCAG 2.1 AA) | 8/10 |
+| Code Quality | 9/10 |
+| Testing | 8/10 |
+| UX Completeness | 8/10 |
+| Responsive Design | 8/10 |
+| **Overall** | **8.3/10** |
+
+### Remediation Applied (16 fixes across 2 commits)
+1. React.lazy + Suspense code splitting (App.tsx)
+2. useCallback + proper deps (PaymentDetail)
+3. catch (err: unknown) with instanceof narrowing
+4. Clipboard try/catch in CopyButton
+5. ErrorBoundary error details gated behind DEV mode
+6. aria-label on search input and docs sidebar toggle
+7. aria-hidden on decorative SVGs
+8. useMemo for dashboard data computations
+9. Semantic theme tokens in checkout pages
+10. Sidebar: Settings link + Log Out button
+11. Sidebar: mobile responsive with slide-in/backdrop
+12. DashboardLayout: hamburger button for mobile
+13. PublicNav: Links + mobile hamburger menu
+14. TransactionsTable: overflow-x-auto for mobile
+15. api-client: getCheckoutSession mock mode fix
+16. Updated tests for all component changes
 
 ## Reference
 - Prototype HTML checked for docs section: `file:///Users/tamer/Downloads/prototype (1).html`
