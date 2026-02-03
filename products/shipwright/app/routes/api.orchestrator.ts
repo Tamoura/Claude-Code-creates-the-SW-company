@@ -163,10 +163,21 @@ async function orchestratorAction({ request, context }: ActionFunctionArgs) {
         case 'agent-completed': {
           if (event.result) {
             accumulatedResults.push(event.result);
+
+            // Stream the header and readable text immediately
+            const header = `\n\n---\n**${formatAgentRole(event.agentRole!)}**\n\n`;
+            dataStream.write(`0:${JSON.stringify(header)}\n`);
+
+            // Strip <boltArtifact> blocks — those are buffered for workflow-completed
+            const displayContent = event.result.content
+              .replace(/<boltArtifact[\s\S]*?<\/boltArtifact>/g, '')
+              .trim();
+
+            if (displayContent) {
+              dataStream.write(`0:${JSON.stringify(displayContent)}\n`);
+            }
           }
 
-          // Only emit progress — content is buffered until workflow completes
-          // so the message parser doesn't create files prematurely
           dataStream.writeData({
             type: 'progress',
             label: event.agentRole!,
@@ -189,12 +200,16 @@ async function orchestratorAction({ request, context }: ActionFunctionArgs) {
           break;
 
         case 'workflow-completed': {
-          // Now that all agents are done, emit the buffered content.
-          // The message parser will process bolt artifacts and create files.
+          // Now that all agents are done, emit the buffered bolt artifacts.
+          // The message parser will process these and create files.
           for (const result of accumulatedResults) {
-            const header = `\n\n---\n**${formatAgentRole(result.role)}**\n\n`;
-            dataStream.write(`0:${JSON.stringify(header)}\n`);
-            dataStream.write(`0:${JSON.stringify(result.content)}\n`);
+            const artifacts = result.content.match(/<boltArtifact[\s\S]*?<\/boltArtifact>/g);
+
+            if (artifacts) {
+              for (const artifact of artifacts) {
+                dataStream.write(`0:${JSON.stringify(artifact)}\n`);
+              }
+            }
           }
 
           const totalUsage = {
