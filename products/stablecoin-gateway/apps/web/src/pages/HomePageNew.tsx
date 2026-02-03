@@ -5,12 +5,11 @@
  * Showcases StableFlow features and directs users to sign up or log in.
  */
 
-import { useNavigate } from 'react-router-dom';
+import { Link } from 'react-router-dom';
 import PublicNav from '../components/PublicNav';
 import PublicFooter from '../components/PublicFooter';
 
 export default function HomePageNew() {
-  const navigate = useNavigate();
 
   return (
     <div className="min-h-screen bg-page-bg text-text-primary">
@@ -33,18 +32,18 @@ export default function HomePageNew() {
           and zero crypto volatility. Built for merchants who want simplicity.
         </p>
         <div className="flex items-center justify-center gap-4">
-          <button
-            onClick={() => navigate('/signup')}
+          <Link
+            to="/signup"
             className="px-8 py-3 text-sm font-semibold text-white bg-gradient-to-r from-pink-500 to-pink-600 rounded-lg hover:from-pink-600 hover:to-pink-700 transition-all"
           >
             Start Accepting Payments
-          </button>
-          <button
-            onClick={() => navigate('/login')}
+          </Link>
+          <Link
+            to="/login"
             className="px-8 py-3 text-sm font-semibold text-text-secondary border border-card-border rounded-lg hover:text-text-primary hover:border-text-muted transition-colors"
           >
             Merchant Dashboard
-          </button>
+          </Link>
         </div>
       </section>
 
@@ -53,7 +52,7 @@ export default function HomePageNew() {
         <div className="grid md:grid-cols-3 gap-6">
           <div className="bg-card-bg border border-card-border rounded-xl p-6">
             <div className="w-10 h-10 rounded-lg bg-green-500/15 flex items-center justify-center mb-4">
-              <svg className="w-5 h-5 text-accent-green" fill="none" viewBox="0 0 24 24" stroke="currentColor">
+              <svg className="w-5 h-5 text-accent-green" fill="none" viewBox="0 0 24 24" stroke="currentColor" aria-hidden="true">
                 <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M12 8c-1.657 0-3 .895-3 2s1.343 2 3 2 3 .895 3 2-1.343 2-3 2m0-8c1.11 0 2.08.402 2.599 1M12 8V7m0 1v8m0 0v1m0-1c-1.11 0-2.08-.402-2.599-1M21 12a9 9 0 11-18 0 9 9 0 0118 0z" />
               </svg>
             </div>
@@ -66,7 +65,7 @@ export default function HomePageNew() {
 
           <div className="bg-card-bg border border-card-border rounded-xl p-6">
             <div className="w-10 h-10 rounded-lg bg-blue-500/15 flex items-center justify-center mb-4">
-              <svg className="w-5 h-5 text-accent-blue" fill="none" viewBox="0 0 24 24" stroke="currentColor">
+              <svg className="w-5 h-5 text-accent-blue" fill="none" viewBox="0 0 24 24" stroke="currentColor" aria-hidden="true">
                 <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M13 10V3L4 14h7v7l9-11h-7z" />
               </svg>
             </div>
@@ -79,7 +78,7 @@ export default function HomePageNew() {
 
           <div className="bg-card-bg border border-card-border rounded-xl p-6">
             <div className="w-10 h-10 rounded-lg bg-pink-500/15 flex items-center justify-center mb-4">
-              <svg className="w-5 h-5 text-accent-pink" fill="none" viewBox="0 0 24 24" stroke="currentColor">
+              <svg className="w-5 h-5 text-accent-pink" fill="none" viewBox="0 0 24 24" stroke="currentColor" aria-hidden="true">
                 <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M9 12l2 2 4-4m5.618-4.016A11.955 11.955 0 0112 2.944a11.955 11.955 0 01-8.618 3.04A12.02 12.02 0 003 9c0 5.591 3.824 10.29 9 11.622 5.176-1.332 9-6.03 9-11.622 0-1.042-.133-2.052-.382-3.016z" />
               </svg>
             </div>
@@ -178,12 +177,12 @@ export default function HomePageNew() {
         <p className="text-text-secondary mb-8">
           Create your merchant account and start accepting stablecoin payments today.
         </p>
-        <button
-          onClick={() => navigate('/signup')}
+        <Link
+          to="/signup"
           className="px-8 py-3 text-sm font-semibold text-white bg-gradient-to-r from-pink-500 to-pink-600 rounded-lg hover:from-pink-600 hover:to-pink-700 transition-all"
         >
           Create Free Account
-        </button>
+        </Link>
       </section>
 
       <PublicFooter />

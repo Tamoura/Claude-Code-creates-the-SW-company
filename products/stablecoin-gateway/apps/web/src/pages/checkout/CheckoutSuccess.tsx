@@ -14,15 +14,7 @@ import { useEffect, useState } from 'react';
 import { useParams } from 'react-router-dom';
 import { apiClient } from '../../lib/api-client';
 import type { PaymentSession } from '../../lib/api-client';
-
-// Helper to get block explorer URL based on network
-function getBlockExplorerUrl(network: string, txHash: string): string {
-  const explorers: Record<string, string> = {
-    polygon: 'https://polygonscan.com/tx/',
-    ethereum: 'https://etherscan.io/tx/',
-  };
-  return `${explorers[network] || explorers.ethereum}${txHash}`;
-}
+import { getBlockExplorerUrl } from '../../lib/formatters';
 
 export default function CheckoutSuccess() {
   const { id } = useParams<{ id: string }>();
@@ -79,6 +71,7 @@ export default function CheckoutSuccess() {
               fill="none"
               viewBox="0 0 24 24"
               stroke="currentColor"
+              aria-hidden="true"
             >
               <path
                 strokeLinecap="round"

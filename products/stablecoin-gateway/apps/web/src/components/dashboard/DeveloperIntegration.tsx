@@ -72,7 +72,7 @@ export default function DeveloperIntegration() {
       </div>
 
       <div className="mt-4">
-        <div className="text-sm text-text-secondary mb-2">Live API Key</div>
+        <div className="text-sm text-text-muted mb-2">Live API Key</div>
         <div className="flex items-center gap-3">
           <code className="px-3 py-1.5 bg-code-bg border border-card-border rounded text-sm text-accent-green font-mono">
             {apiKey}

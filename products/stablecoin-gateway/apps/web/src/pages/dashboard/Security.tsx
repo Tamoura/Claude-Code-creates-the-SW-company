@@ -83,6 +83,7 @@ export default function Security() {
               <input
                 type="password"
                 placeholder="Current password"
+                aria-label="Current password"
                 value={currentPassword}
                 onChange={e => setCurrentPassword(e.target.value)}
                 required
@@ -91,6 +92,7 @@ export default function Security() {
               <input
                 type="password"
                 placeholder="New password (min 12 chars)"
+                aria-label="New password (min 12 chars)"
                 value={newPassword}
                 onChange={e => setNewPassword(e.target.value)}
                 required
@@ -100,6 +102,7 @@ export default function Security() {
               <input
                 type="password"
                 placeholder="Confirm new password"
+                aria-label="Confirm new password"
                 value={confirmPassword}
                 onChange={e => setConfirmPassword(e.target.value)}
                 required

@@ -162,10 +162,10 @@ export default function PaymentPageNew() {
   // Loading state
   if (isLoading) {
     return (
-      <div className="min-h-screen bg-gray-50 flex items-center justify-center">
+      <div className="min-h-screen bg-page-bg flex items-center justify-center">
         <div className="text-center">
           <div className="animate-spin rounded-full h-12 w-12 border-b-2 border-blue-600 mx-auto mb-4"></div>
-          <p className="text-gray-600">Loading payment...</p>
+          <p className="text-text-secondary">Loading payment...</p>
         </div>
       </div>
     );
@@ -174,10 +174,10 @@ export default function PaymentPageNew() {
   // Payment not found
   if (!payment) {
     return (
-      <div className="min-h-screen bg-gray-50 flex items-center justify-center">
-        <div className="bg-white rounded-lg shadow-lg p-8 max-w-md w-full text-center">
-          <h1 className="text-2xl font-bold text-gray-900 mb-4">Payment Not Found</h1>
-          <p className="text-gray-600 mb-6">
+      <div className="min-h-screen bg-page-bg flex items-center justify-center">
+        <div className="bg-card-bg rounded-lg shadow-lg p-8 max-w-md w-full text-center">
+          <h1 className="text-2xl font-bold text-text-primary mb-4">Payment Not Found</h1>
+          <p className="text-text-secondary mb-6">
             {error || 'This payment link is invalid or has expired.'}
           </p>
           <button
@@ -199,38 +199,38 @@ export default function PaymentPageNew() {
     balance && parseFloat(formatUnits(balance.value, balance.decimals)) >= payment.amount;
 
   return (
-    <div className="min-h-screen bg-gray-50 py-12 px-4">
+    <div className="min-h-screen bg-page-bg py-12 px-4">
       <div className="max-w-md mx-auto">
         {/* Payment Details Card */}
-        <div className="bg-white rounded-lg shadow-lg p-8 mb-6">
-          <h1 className="text-2xl font-bold text-gray-900 mb-6">Complete Payment</h1>
+        <div className="bg-card-bg rounded-lg shadow-lg p-8 mb-6">
+          <h1 className="text-2xl font-bold text-text-primary mb-6">Complete Payment</h1>
 
           {payment.description && (
-            <p className="text-gray-600 mb-4">{payment.description}</p>
+            <p className="text-text-secondary mb-4">{payment.description}</p>
           )}
 
           <div className="space-y-4 mb-6">
-            <div className="flex justify-between items-center py-3 border-b border-gray-200">
-              <span className="text-gray-600">Amount</span>
-              <span className="text-2xl font-bold text-gray-900">
+            <div className="flex justify-between items-center py-3 border-b border-card-border">
+              <span className="text-text-secondary">Amount</span>
+              <span className="text-2xl font-bold text-text-primary">
                 ${payment.amount.toFixed(2)}
               </span>
             </div>
             <div className="flex justify-between items-center text-sm">
-              <span className="text-gray-600">Fee (0.5%)</span>
-              <span className="text-gray-700">-${fee.toFixed(2)}</span>
+              <span className="text-text-secondary">Fee (0.5%)</span>
+              <span className="text-text-primary">-${fee.toFixed(2)}</span>
             </div>
-            <div className="flex justify-between items-center text-sm pt-3 border-t border-gray-200">
-              <span className="text-gray-600">Merchant receives</span>
-              <span className="font-semibold text-green-600">
+            <div className="flex justify-between items-center text-sm pt-3 border-t border-card-border">
+              <span className="text-text-secondary">Merchant receives</span>
+              <span className="font-semibold text-accent-green">
                 ${merchantReceives.toFixed(2)}
               </span>
             </div>
-            <div className="flex justify-between items-center text-sm text-gray-500">
+            <div className="flex justify-between items-center text-sm text-text-muted">
               <span>Network</span>
               <span className="capitalize">{payment.network}</span>
             </div>
-            <div className="flex justify-between items-center text-sm text-gray-500">
+            <div className="flex justify-between items-center text-sm text-text-muted">
               <span>Token</span>
               <span>{payment.token}</span>
             </div>
@@ -264,7 +264,7 @@ export default function PaymentPageNew() {
               {IS_DEV && (
                 <button
                   onClick={handleDevWallet}
-                  className="w-full bg-gray-700 text-white py-3 px-6 rounded-lg font-semibold hover:bg-gray-800 transition-colors flex items-center justify-center"
+                  className="w-full bg-card-bg text-text-primary border border-card-border py-3 px-6 rounded-lg font-semibold hover:bg-sidebar-hover transition-colors flex items-center justify-center"
                 >
                   Dev: Simulate Wallet
                 </button>
@@ -311,7 +311,7 @@ export default function PaymentPageNew() {
 
               <button
                 onClick={() => setDevWalletConnected(false)}
-                className="w-full border border-gray-300 text-gray-700 py-2 px-4 rounded-lg hover:bg-gray-50 transition-colors text-sm"
+                className="w-full border border-card-border text-text-secondary py-2 px-4 rounded-lg hover:bg-sidebar-hover transition-colors text-sm"
               >
                 Disconnect Wallet
               </button>
@@ -337,7 +337,7 @@ export default function PaymentPageNew() {
 
               <button
                 onClick={() => disconnect()}
-                className="w-full border border-gray-300 text-gray-700 py-2 px-4 rounded-lg hover:bg-gray-50 transition-colors text-sm"
+                className="w-full border border-card-border text-text-secondary py-2 px-4 rounded-lg hover:bg-sidebar-hover transition-colors text-sm"
               >
                 Disconnect Wallet
               </button>
@@ -346,17 +346,17 @@ export default function PaymentPageNew() {
             /* Connected & Correct Network */
             <div className="space-y-4">
               {/* Wallet Info */}
-              <div className="bg-green-50 rounded-lg p-4">
+              <div className="bg-green-500/15 rounded-lg p-4 border border-green-500/30">
                 <div className="flex items-center justify-between">
                   <div>
-                    <p className="text-sm font-medium text-green-900">Wallet Connected</p>
-                    <p className="text-xs text-green-700 mt-1 font-mono">
+                    <p className="text-sm font-medium text-accent-green">Wallet Connected</p>
+                    <p className="text-xs text-accent-green mt-1 font-mono">
                       {address?.slice(0, 6)}...{address?.slice(-4)}
                     </p>
                   </div>
                   <div className="text-right">
-                    <p className="text-xs text-green-700">Balance</p>
-                    <p className="text-sm font-semibold text-green-900">
+                    <p className="text-xs text-accent-green">Balance</p>
+                    <p className="text-sm font-semibold text-accent-green">
                       {balance ? formatUnits(balance.value, balance.decimals) : '0'} {payment.token}
                     </p>
                   </div>
@@ -365,11 +365,11 @@ export default function PaymentPageNew() {
 
               {/* Insufficient Balance Warning */}
               {!hasSufficientBalance && (
-                <div className="bg-red-50 rounded-lg p-4">
-                  <p className="text-sm font-medium text-red-900 mb-1">
+                <div className="bg-red-500/15 rounded-lg p-4 border border-red-500/30">
+                  <p className="text-sm font-medium text-red-400 mb-1">
                     Insufficient {payment.token} Balance
                   </p>
-                  <p className="text-xs text-red-700">
+                  <p className="text-xs text-red-400">
                     You need at least {payment.amount} {payment.token} to complete this payment.
                   </p>
                 </div>
@@ -411,7 +411,7 @@ export default function PaymentPageNew() {
 
               <button
                 onClick={() => disconnect()}
-                className="w-full border border-gray-300 text-gray-700 py-2 px-4 rounded-lg hover:bg-gray-50 transition-colors text-sm"
+                className="w-full border border-card-border text-text-secondary py-2 px-4 rounded-lg hover:bg-sidebar-hover transition-colors text-sm"
               >
                 Disconnect Wallet
               </button>
@@ -419,14 +419,14 @@ export default function PaymentPageNew() {
           )}
 
           {error && (
-            <div className="mt-4 bg-red-50 border border-red-200 rounded-lg p-4">
-              <p className="text-sm text-red-700">{error}</p>
+            <div className="mt-4 bg-red-500/15 border border-red-500/30 rounded-lg p-4">
+              <p className="text-sm text-red-400">{error}</p>
             </div>
           )}
         </div>
 
         {/* Security Notice */}
-        <div className="text-center text-sm text-gray-500">
+        <div className="text-center text-sm text-text-muted">
           <p>Secured by blockchain technology</p>
           <p className="mt-1">
             <a

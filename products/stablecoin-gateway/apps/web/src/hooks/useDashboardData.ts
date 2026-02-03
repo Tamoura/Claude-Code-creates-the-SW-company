@@ -1,6 +1,7 @@
 import { useState, useEffect, useMemo } from 'react';
 import { apiClient, type PaymentSession } from '../lib/api-client';
 import { mockPaymentSessions } from '../data/dashboard-mock';
+import { formatCurrency, formatDate } from '../lib/formatters';
 
 export interface DashboardStat {
   title: string;
@@ -17,23 +18,6 @@ export interface DashboardTransaction {
   amount: string;
   asset: string;
   status: 'SUCCESS' | 'PENDING' | 'FAILED';
-}
-
-function formatCurrency(amount: number): string {
-  return '$' + amount.toLocaleString('en-US', {
-    minimumFractionDigits: 2,
-    maximumFractionDigits: 2,
-  });
-}
-
-function formatDate(iso: string): string {
-  return new Date(iso).toLocaleString('en-US', {
-    month: 'short',
-    day: 'numeric',
-    year: 'numeric',
-    hour: 'numeric',
-    minute: '2-digit',
-  });
 }
 
 function mapStatus(status: string): DashboardTransaction['status'] {

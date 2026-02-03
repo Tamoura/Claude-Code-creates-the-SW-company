@@ -28,6 +28,7 @@ module.exports = {
       statements: 80,
     },
   },
+  setupFiles: ['dotenv/config'],
   setupFilesAfterEnv: ['<rootDir>/tests/setup.ts'],
   testTimeout: 30000,
   // Run tests sequentially - integration tests share a real Postgres DB
