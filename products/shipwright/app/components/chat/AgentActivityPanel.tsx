@@ -72,8 +72,8 @@ export const AgentActivityPanel: FC<AgentActivityPanelProps> = ({ annotations, o
     <motion.div
       className={classNames(
         'bg-bolt-elements-background-depth-2 border border-bolt-elements-borderColor',
-        'rounded-lg shadow-lg overflow-hidden',
-        'w-64 flex-shrink-0',
+        'rounded-lg shadow-xl overflow-hidden',
+        'fixed top-[calc(var(--header-height)+1.5rem)] right-4 w-64 z-10',
       )}
       initial={{ opacity: 0, x: 20 }}
       animate={{ opacity: 1, x: 0 }}

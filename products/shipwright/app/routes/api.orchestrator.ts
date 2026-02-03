@@ -163,12 +163,10 @@ async function orchestratorAction({ request, context }: ActionFunctionArgs) {
         case 'agent-completed': {
           if (event.result) {
             accumulatedResults.push(event.result);
-
-            const header = `\n\n---\n**${formatAgentRole(event.agentRole!)}**\n\n`;
-            dataStream.write(`0:${JSON.stringify(header)}\n`);
-            dataStream.write(`0:${JSON.stringify(event.result.content)}\n`);
           }
 
+          // Only emit progress — content is buffered until workflow completes
+          // so the message parser doesn't create files prematurely
           dataStream.writeData({
             type: 'progress',
             label: event.agentRole!,
@@ -191,6 +189,14 @@ async function orchestratorAction({ request, context }: ActionFunctionArgs) {
           break;
 
         case 'workflow-completed': {
+          // Now that all agents are done, emit the buffered content.
+          // The message parser will process bolt artifacts and create files.
+          for (const result of accumulatedResults) {
+            const header = `\n\n---\n**${formatAgentRole(result.role)}**\n\n`;
+            dataStream.write(`0:${JSON.stringify(header)}\n`);
+            dataStream.write(`0:${JSON.stringify(result.content)}\n`);
+          }
+
           const totalUsage = {
             completionTokens: accumulatedResults.reduce((sum, r) => sum + r.tokensOut, 0),
             promptTokens: accumulatedResults.reduce((sum, r) => sum + r.tokensIn, 0),

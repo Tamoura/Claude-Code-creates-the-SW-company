@@ -157,7 +157,11 @@ export const ChatImpl = memo(
       },
       onFinish: (message, response) => {
         const usage = response.usage;
-        setData(undefined);
+
+        // In orchestrator mode, preserve data so the AgentActivityPanel stays visible
+        if (!orchestratorMode) {
+          setData(undefined);
+        }
 
         if (usage) {
           console.log('Token usage:', usage);

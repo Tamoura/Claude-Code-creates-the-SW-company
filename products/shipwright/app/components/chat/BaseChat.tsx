@@ -161,7 +161,12 @@ export const BaseChat = React.forwardRef<HTMLDivElement, BaseChatProps>(
         const progressList = data.filter(
           (x) => typeof x === 'object' && (x as any).type === 'progress',
         ) as ProgressAnnotation[];
-        setProgressAnnotations(progressList);
+
+        // Only update if we have new progress data — never clear existing annotations
+        // so the AgentActivityPanel stays visible after stream completes
+        if (progressList.length > 0) {
+          setProgressAnnotations(progressList);
+        }
       }
     }, [data]);
     useEffect(() => {
