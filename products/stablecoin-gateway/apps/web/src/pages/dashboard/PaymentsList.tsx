@@ -148,6 +148,7 @@ export default function PaymentsList() {
         <input
           type="text"
           placeholder="Search by description or tx hash..."
+          aria-label="Search payments"
           value={searchQuery}
           onChange={(e) => setSearchQuery(e.target.value)}
           className="w-full bg-card-bg border border-card-border rounded-lg px-4 py-2.5 pl-11 text-text-primary placeholder-text-muted focus:outline-none focus:ring-2 focus:ring-accent-blue focus:border-transparent"

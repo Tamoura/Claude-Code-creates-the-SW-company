@@ -1,4 +1,4 @@
-import { useState, useEffect } from 'react';
+import { useState, useEffect, useCallback } from 'react';
 import { useParams, Link } from 'react-router-dom';
 import { apiClient, type PaymentSession } from '../../lib/api-client';
 
@@ -25,9 +25,13 @@ function CopyButton({ text, label = 'Copy' }: { text: string; label?: string }) 
   const [copied, setCopied] = useState(false);
 
   const handleCopy = async () => {
-    await navigator.clipboard.writeText(text);
-    setCopied(true);
-    setTimeout(() => setCopied(false), 2000);
+    try {
+      await navigator.clipboard.writeText(text);
+      setCopied(true);
+      setTimeout(() => setCopied(false), 2000);
+    } catch (err) {
+      console.error('Failed to copy to clipboard:', err);
+    }
   };
 
   return (
@@ -79,7 +83,7 @@ export default function PaymentDetail() {
   const [isLoading, setIsLoading] = useState(true);
   const [error, setError] = useState<string | null>(null);
 
-  const loadPayment = async () => {
+  const loadPayment = useCallback(async () => {
     if (!id) return;
 
     setIsLoading(true);
@@ -88,8 +92,8 @@ export default function PaymentDetail() {
     try {
       const data = await apiClient.getPaymentSession(id);
       setPayment(data);
-    } catch (err: any) {
-      if (err.status === 404) {
+    } catch (err: unknown) {
+      if (err instanceof Error && 'status' in err && (err as any).status === 404) {
         setError('Payment not found');
       } else {
         setError('Failed to load payment details');
@@ -97,11 +101,11 @@ export default function PaymentDetail() {
     } finally {
       setIsLoading(false);
     }
-  };
+  }, [id]);
 
   useEffect(() => {
     loadPayment();
-  }, [id]);
+  }, [loadPayment]);
 
   // Loading state
   if (isLoading) {

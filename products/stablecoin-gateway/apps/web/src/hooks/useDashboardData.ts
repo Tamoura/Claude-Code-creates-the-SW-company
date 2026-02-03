@@ -1,4 +1,4 @@
-import { useState, useEffect } from 'react';
+import { useState, useEffect, useMemo } from 'react';
 import { apiClient, type PaymentSession } from '../lib/api-client';
 import { mockPaymentSessions } from '../data/dashboard-mock';
 
@@ -118,9 +118,12 @@ export function useDashboardData() {
     return () => { cancelled = true; };
   }, []);
 
+  const stats = useMemo(() => computeStats(sessions), [sessions]);
+  const transactions = useMemo(() => toTransactions(sessions), [sessions]);
+
   return {
     isLoading,
-    stats: computeStats(sessions),
-    transactions: toTransactions(sessions),
+    stats,
+    transactions,
   };
 }

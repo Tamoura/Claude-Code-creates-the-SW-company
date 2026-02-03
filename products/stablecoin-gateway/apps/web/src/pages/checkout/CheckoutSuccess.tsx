@@ -46,10 +46,10 @@ export default function CheckoutSuccess() {
   // Loading state
   if (isLoading) {
     return (
-      <div className="min-h-screen bg-gray-50 flex items-center justify-center">
+      <div className="min-h-screen bg-page-bg flex items-center justify-center">
         <div className="text-center">
           <div className="animate-spin rounded-full h-12 w-12 border-b-2 border-blue-600 mx-auto mb-4"></div>
-          <p className="text-gray-600">Loading payment details...</p>
+          <p className="text-text-secondary">Loading payment details...</p>
         </div>
       </div>
     );
@@ -58,20 +58,20 @@ export default function CheckoutSuccess() {
   // Error state
   if (!payment || error) {
     return (
-      <div className="min-h-screen bg-gray-50 flex items-center justify-center">
-        <div className="bg-white rounded-lg shadow-lg p-8 max-w-md w-full text-center">
-          <h1 className="text-2xl font-bold text-gray-900 mb-4">Payment Not Found</h1>
-          <p className="text-gray-600 mb-6">{error || 'This payment link is invalid or has expired.'}</p>
+      <div className="min-h-screen bg-page-bg flex items-center justify-center">
+        <div className="bg-card-bg rounded-lg shadow-lg p-8 max-w-md w-full text-center">
+          <h1 className="text-2xl font-bold text-text-primary mb-4">Payment Not Found</h1>
+          <p className="text-text-secondary mb-6">{error || 'This payment link is invalid or has expired.'}</p>
         </div>
       </div>
     );
   }
 
   return (
-    <div className="min-h-screen bg-gray-50 py-12 px-4">
+    <div className="min-h-screen bg-page-bg py-12 px-4">
       <div className="max-w-2xl mx-auto">
         {/* Success Card */}
-        <div className="bg-white rounded-lg shadow-lg p-8 mb-6">
+        <div className="bg-card-bg rounded-lg shadow-lg p-8 mb-6">
           {/* Success Icon */}
           <div className="flex justify-center mb-6">
             <svg
@@ -91,29 +91,29 @@ export default function CheckoutSuccess() {
 
           {/* Success Message */}
           <div className="text-center mb-8">
-            <h1 className="text-3xl font-bold text-gray-900 mb-2">
+            <h1 className="text-3xl font-bold text-text-primary mb-2">
               Payment Successful!
             </h1>
-            <p className="text-gray-600">
+            <p className="text-text-secondary">
               Your payment has been processed and confirmed on the blockchain.
             </p>
           </div>
 
           {/* Payment Details */}
-          <div className="border-t border-gray-200 pt-6 space-y-3">
+          <div className="border-t border-card-border pt-6 space-y-3">
             <div className="flex justify-between items-center">
-              <span className="text-gray-600">Amount</span>
-              <span className="font-semibold text-gray-900">
+              <span className="text-text-secondary">Amount</span>
+              <span className="font-semibold text-text-primary">
                 ${payment.amount.toFixed(2)} {payment.token}
               </span>
             </div>
             <div className="flex justify-between items-center">
-              <span className="text-gray-600">Network</span>
-              <span className="capitalize text-gray-900">{payment.network}</span>
+              <span className="text-text-secondary">Network</span>
+              <span className="capitalize text-text-primary">{payment.network}</span>
             </div>
             {payment.tx_hash && (
               <div className="flex justify-between items-center">
-                <span className="text-gray-600">Transaction</span>
+                <span className="text-text-secondary">Transaction</span>
                 <a
                   href={getBlockExplorerUrl(payment.network, payment.tx_hash)}
                   target="_blank"
@@ -127,23 +127,23 @@ export default function CheckoutSuccess() {
           </div>
 
           {/* Receipt Section */}
-          <div className="border-t border-gray-200 mt-6 pt-6">
-            <h2 className="text-lg font-semibold text-gray-900 mb-4">Receipt Details</h2>
+          <div className="border-t border-card-border mt-6 pt-6">
+            <h2 className="text-lg font-semibold text-text-primary mb-4">Receipt Details</h2>
             <div className="space-y-3">
               <div className="flex justify-between items-center text-sm">
-                <span className="text-gray-600">Payment ID</span>
-                <span className="font-mono text-gray-700">{payment.id}</span>
+                <span className="text-text-secondary">Payment ID</span>
+                <span className="font-mono text-text-primary">{payment.id}</span>
               </div>
               <div className="flex justify-between items-center text-sm">
-                <span className="text-gray-600">Date</span>
-                <span className="text-gray-700">
+                <span className="text-text-secondary">Date</span>
+                <span className="text-text-primary">
                   {new Date(payment.completed_at || payment.created_at).toLocaleString()}
                 </span>
               </div>
               {payment.confirmations !== undefined && (
                 <div className="flex justify-between items-center text-sm">
-                  <span className="text-gray-600">Confirmations</span>
-                  <span className="text-gray-700">{payment.confirmations}</span>
+                  <span className="text-text-secondary">Confirmations</span>
+                  <span className="text-text-primary">{payment.confirmations}</span>
                 </div>
               )}
             </div>
@@ -165,7 +165,7 @@ export default function CheckoutSuccess() {
         </div>
 
         {/* Security Notice */}
-        <div className="text-center text-sm text-gray-500">
+        <div className="text-center text-sm text-text-muted">
           <p>This transaction is secured by blockchain technology</p>
         </div>
       </div>
