@@ -79,4 +79,5 @@ pnpm-lock.yaml
 docker-compose.override.yml
 .trees/
 .tree/
+*.code-workspace
 .claude/audit-trail.jsonl
