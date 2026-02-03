@@ -33,6 +33,7 @@ import { ChatBox } from './ChatBox';
 import type { DesignScheme } from '~/types/design-scheme';
 import type { ElementInfo } from '~/components/workbench/Inspector';
 import LlmErrorAlert from './LLMApiAlert';
+import { AgentActivityPanel } from './AgentActivityPanel';
 
 const TEXTAREA_MIN_HEIGHT = 76;
 
@@ -495,6 +496,9 @@ export const BaseChat = React.forwardRef<HTMLDivElement, BaseChatProps>(
               </div>
             </div>
           </div>
+          {orchestratorMode && progressAnnotations.length > 0 && (
+            <AgentActivityPanel annotations={progressAnnotations} />
+          )}
           <ClientOnly>
             {() => (
               <Workbench chatStarted={chatStarted} isStreaming={isStreaming} setSelectedElement={setSelectedElement} />
