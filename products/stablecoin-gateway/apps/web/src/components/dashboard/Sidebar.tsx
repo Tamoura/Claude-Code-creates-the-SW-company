@@ -14,6 +14,15 @@ const mainNav = [
     ),
   },
   {
+    to: '/dashboard/create',
+    label: 'Create Link',
+    icon: (
+      <svg className="w-5 h-5" fill="none" viewBox="0 0 24 24" stroke="currentColor" strokeWidth={1.5}>
+        <path strokeLinecap="round" strokeLinejoin="round" d="M12 4.5v15m7.5-7.5h-15" />
+      </svg>
+    ),
+  },
+  {
     to: '/dashboard/payments',
     label: 'Payments',
     icon: (
@@ -84,7 +93,7 @@ function NavItem({ to, label, icon, end }: { to: string; label: string; icon: Re
       to={to}
       end={end}
       className={({ isActive }) =>
-        `flex items-center gap-3 px-3 py-2.5 rounded-lg text-sm font-medium transition-colors ${
+        `flex items-center gap-3 px-3 py-2.5 rounded-lg text-sm font-medium transition-colors focus-visible:outline-2 focus-visible:outline-accent-blue focus-visible:outline-offset-2 ${
           isActive
             ? 'bg-accent-blue text-white'
             : 'text-text-secondary hover:bg-sidebar-hover hover:text-text-primary'
@@ -102,13 +111,13 @@ export default function Sidebar() {
   const isAdmin = user?.role === 'ADMIN';
 
   return (
-    <aside className="fixed left-0 top-0 bottom-0 w-56 bg-sidebar-bg flex flex-col border-r border-card-border">
+    <aside role="complementary" className="fixed left-0 top-0 bottom-0 w-56 bg-sidebar-bg flex flex-col border-r border-card-border">
       <div className="flex items-center gap-2.5 px-5 py-5">
         <span className="text-accent-pink text-2xl font-bold">$</span>
         <span className="text-text-primary text-lg font-bold tracking-tight">StableFlow</span>
       </div>
 
-      <nav className="flex-1 px-3 space-y-1">
+      <nav role="navigation" aria-label="Main navigation" className="flex-1 px-3 space-y-1">
         {mainNav.map((item) => (
           <NavItem key={item.to} {...item} />
         ))}

@@ -4,6 +4,7 @@ import TopHeader from '../../components/dashboard/TopHeader';
 
 const pageTitles: Record<string, string> = {
   '/dashboard': 'Dashboard',
+  '/dashboard/create': 'Create Payment Link',
   '/dashboard/payments': 'Payments',
   '/dashboard/invoices': 'Invoices',
   '/dashboard/api-keys': 'API Keys',
@@ -21,10 +22,16 @@ export default function DashboardLayout() {
 
   return (
     <div className="flex min-h-screen bg-page-bg">
+      <a
+        href="#main-content"
+        className="sr-only focus:not-sr-only focus:absolute focus:top-4 focus:left-4 focus:z-50 focus:px-4 focus:py-2 focus:bg-accent-blue focus:text-white focus:rounded-lg focus:outline-none focus:ring-2 focus:ring-accent-blue"
+      >
+        Skip to main content
+      </a>
       <Sidebar />
       <div className="flex-1 ml-56 flex flex-col">
         <TopHeader title={title} />
-        <main className="flex-1 p-8">
+        <main id="main-content" className="flex-1 p-8">
           <Outlet />
         </main>
       </div>
