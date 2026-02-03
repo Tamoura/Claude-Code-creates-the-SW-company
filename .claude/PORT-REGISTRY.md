@@ -22,7 +22,8 @@
 | 3106 | meetingmind | Active | http://localhost:3106 |
 | 3108 | deal-flow-platform | Active | http://localhost:3108 |
 | 3109 | invoiceforge | Active | http://localhost:3109 |
-| 3110-3199 | *Available* | Free | - |
+| 3110 | shipwright | Active | http://localhost:3110 |
+| 3111-3199 | *Available* | Free | - |
 
 ### Backend APIs (5000-5099)
 
