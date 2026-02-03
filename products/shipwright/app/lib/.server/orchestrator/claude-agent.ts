@@ -23,7 +23,7 @@ export class ClaudeAgent implements Agent {
     const messages = this.buildMessages(task, context);
 
     const controller = new AbortController();
-    const timeout = setTimeout(() => controller.abort(), 120_000); // 2 min per agent
+    const timeout = setTimeout(() => controller.abort(), 300_000); // 5 min per agent
 
     try {
       const result = await generateText({
