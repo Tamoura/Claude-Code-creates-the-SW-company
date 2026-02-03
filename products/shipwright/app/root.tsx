@@ -1,6 +1,8 @@
 import { useStore } from '@nanostores/react';
-import type { LinksFunction } from '@remix-run/cloudflare';
+import type { LinksFunction, LoaderFunctionArgs } from '@remix-run/cloudflare';
 import { Links, Meta, Outlet, Scripts, ScrollRestoration } from '@remix-run/react';
+import { ClerkApp } from '@clerk/remix';
+import { rootAuthLoader } from '@clerk/remix/ssr.server';
 import tailwindReset from '@unocss/reset/tailwind-compat.css?url';
 import { themeStore } from './lib/stores/theme';
 import { stripIndents } from './utils/stripIndent';
@@ -21,6 +23,12 @@ const toastAnimation = cssTransition({
   enter: 'animated fadeInRight',
   exit: 'animated fadeOutRight',
 });
+
+export const loader = (args: LoaderFunctionArgs) => {
+  return rootAuthLoader(args, {
+    secretKey: (args.context as any)?.cloudflare?.env?.CLERK_SECRET_KEY || process.env.CLERK_SECRET_KEY,
+  });
+};
 
 export const links: LinksFunction = () => [
   {
@@ -114,7 +122,7 @@ export function Layout({ children }: { children: React.ReactNode }) {
 
 import { logStore } from './lib/stores/logs';
 
-export default function App() {
+function App() {
   const theme = useStore(themeStore);
 
   useEffect(() => {
@@ -150,3 +158,5 @@ export default function App() {
     </Layout>
   );
 }
+
+export default ClerkApp(App);
