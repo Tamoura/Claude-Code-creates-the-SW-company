@@ -10,6 +10,8 @@ const DashboardPage = lazy(() => import('./pages/DashboardPage'));
 const ProvidersPage = lazy(() => import('./pages/ProvidersPage'));
 const KeysPage = lazy(() => import('./pages/KeysPage'));
 const PlaygroundPage = lazy(() => import('./pages/PlaygroundPage'));
+const FreeTierComparisonPage = lazy(() => import('./pages/FreeTierComparisonPage'));
+const ProviderDetailPage = lazy(() => import('./pages/ProviderDetailPage'));
 
 function LoadingSpinner() {
   return (
@@ -34,6 +36,8 @@ function App() {
             <Route element={<ProtectedRoute />}>
               <Route path="/dashboard" element={<DashboardPage />}>
                 <Route path="providers" element={<ProvidersPage />} />
+                <Route path="providers/:slug" element={<ProviderDetailPage />} />
+                <Route path="free-tiers" element={<FreeTierComparisonPage />} />
                 <Route path="keys" element={<KeysPage />} />
                 <Route path="playground" element={<PlaygroundPage />} />
               </Route>

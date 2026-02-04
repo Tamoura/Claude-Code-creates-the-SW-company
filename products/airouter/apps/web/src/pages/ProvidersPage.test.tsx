@@ -102,4 +102,33 @@ describe('ProvidersPage', () => {
       expect(operationalBadges.length).toBeGreaterThan(0);
     });
   });
+
+  it('renders category badges on provider cards', async () => {
+    renderProviders();
+
+    await waitFor(() => {
+      // Category appears both as filter pill and on cards
+      expect(screen.getAllByText('Multimodal').length).toBeGreaterThan(1);
+      expect(screen.getAllByText('Speed').length).toBeGreaterThan(1);
+    });
+  });
+
+  it('renders View Guide buttons linking to detail pages', async () => {
+    renderProviders();
+
+    await waitFor(() => {
+      const guideLinks = screen.getAllByText('View Guide');
+      expect(guideLinks.length).toBe(10);
+    });
+  });
+
+  it('renders Free Tier Comparison link', async () => {
+    renderProviders();
+
+    await waitFor(() => {
+      expect(
+        screen.getByRole('link', { name: /free tier comparison/i })
+      ).toBeInTheDocument();
+    });
+  });
 });

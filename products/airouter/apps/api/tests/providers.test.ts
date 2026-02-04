@@ -28,6 +28,56 @@ describe('Provider Registry', () => {
       }
     });
 
+    it('should have enriched fields for every provider', () => {
+      for (const provider of providers) {
+        expect(provider.description).toBeTruthy();
+        expect(provider.category).toBeTruthy();
+        expect(provider.lastVerified).toBeTruthy();
+        expect(provider.prerequisites).toBeDefined();
+        expect(Array.isArray(provider.prerequisites)).toBe(true);
+        expect(provider.prerequisites.length).toBeGreaterThan(0);
+      }
+    });
+
+    it('should have valid categories', () => {
+      const validCategories = [
+        'Multimodal', 'Speed', 'Edge AI', 'Open Source',
+        'Enterprise', 'Aggregator', 'Reasoning',
+      ];
+      for (const provider of providers) {
+        expect(validCategories).toContain(provider.category);
+      }
+    });
+
+    it('should have structured key acquisition guides', () => {
+      for (const provider of providers) {
+        const guide = provider.keyAcquisitionGuide;
+        expect(typeof guide).toBe('object');
+        expect(Array.isArray(guide.steps)).toBe(true);
+        expect(guide.steps.length).toBeGreaterThanOrEqual(5);
+        expect(Array.isArray(guide.tips)).toBe(true);
+        expect(guide.tips.length).toBeGreaterThan(0);
+        expect(Array.isArray(guide.gotchas)).toBe(true);
+        expect(guide.gotchas.length).toBeGreaterThan(0);
+        expect(Array.isArray(guide.verificationSteps)).toBe(true);
+        expect(guide.verificationSteps.length).toBeGreaterThan(0);
+
+        for (const step of guide.steps) {
+          expect(step.step).toBeGreaterThan(0);
+          expect(step.instruction).toBeTruthy();
+        }
+      }
+    });
+
+    it('should have documentation links for every provider', () => {
+      for (const provider of providers) {
+        expect(provider.documentation).toBeDefined();
+        expect(provider.documentation.quickstart).toBeTruthy();
+        expect(provider.documentation.pricing).toBeTruthy();
+        expect(provider.documentation.api).toBeTruthy();
+      }
+    });
+
     it('should have valid free tier limits for each provider', () => {
       for (const provider of providers) {
         const ft = provider.freeTier;
