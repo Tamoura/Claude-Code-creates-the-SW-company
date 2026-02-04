@@ -156,6 +156,16 @@ export interface RotateWebhookSecretResponse {
   rotatedAt: string;
 }
 
+export interface NotificationPreferences {
+  id: string;
+  emailOnPaymentReceived: boolean;
+  emailOnRefundProcessed: boolean;
+  emailOnPaymentFailed: boolean;
+  sendCustomerReceipt: boolean;
+  createdAt: string;
+  updatedAt: string;
+}
+
 export class ApiClient {
   private baseUrl: string;
   private useMock: boolean;
@@ -677,6 +687,23 @@ export class ApiClient {
     await this.request<void>('/v1/auth/change-password', {
       method: 'POST',
       body: JSON.stringify({ current_password: currentPassword, new_password: newPassword }),
+    });
+  }
+
+  async getNotificationPreferences(): Promise<NotificationPreferences> {
+    return this.request<NotificationPreferences>('/v1/notifications/preferences');
+  }
+
+  async updateNotificationPreferences(prefs: Partial<NotificationPreferences>): Promise<NotificationPreferences> {
+    return this.request<NotificationPreferences>('/v1/notifications/preferences', {
+      method: 'PATCH',
+      body: JSON.stringify(prefs),
+    });
+  }
+
+  async deleteAccount(): Promise<void> {
+    await this.request<void>('/v1/auth/account', {
+      method: 'DELETE',
     });
   }
 
