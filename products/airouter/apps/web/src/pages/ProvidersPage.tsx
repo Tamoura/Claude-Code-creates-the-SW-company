@@ -1,13 +1,26 @@
 import { useEffect, useState } from 'react';
+import { Link } from 'react-router-dom';
 import ProviderCard from '../components/ui/ProviderCard';
 import { apiClient } from '../lib/api-client';
 import type { Provider } from '../lib/api-client';
+
+const CATEGORIES = [
+  'All',
+  'Multimodal',
+  'Speed',
+  'Open Source',
+  'Aggregator',
+  'Enterprise',
+  'Edge AI',
+  'Reasoning',
+];
 
 export default function ProvidersPage() {
   const [providers, setProviders] = useState<Provider[]>([]);
   const [loading, setLoading] = useState(true);
   const [search, setSearch] = useState('');
   const [modelFilter, setModelFilter] = useState('');
+  const [categoryFilter, setCategoryFilter] = useState('All');
   const [showAddKeyModal, setShowAddKeyModal] = useState(false);
   const [selectedProviderId, setSelectedProviderId] = useState('');
   const [newKey, setNewKey] = useState('');
@@ -63,7 +76,9 @@ export default function ProvidersPage() {
       p.description.toLowerCase().includes(search.toLowerCase());
     const matchesModel =
       !modelFilter || p.models.some((m) => m === modelFilter);
-    return matchesSearch && matchesModel;
+    const matchesCategory =
+      categoryFilter === 'All' || p.category === categoryFilter;
+    return matchesSearch && matchesModel && matchesCategory;
   });
 
   const selectedProviderName =
@@ -79,16 +94,41 @@ export default function ProvidersPage() {
 
   return (
     <div>
-      <div className="mb-8">
-        <h1 className="text-2xl font-bold text-text-primary">
-          Provider Directory
-        </h1>
-        <p className="text-text-secondary mt-1">
-          Browse free AI providers and add your API keys
-        </p>
+      <div className="mb-8 flex flex-col sm:flex-row sm:items-center sm:justify-between gap-4">
+        <div>
+          <h1 className="text-2xl font-bold text-text-primary">
+            Provider Directory
+          </h1>
+          <p className="text-text-secondary mt-1">
+            Browse free AI providers and add your API keys
+          </p>
+        </div>
+        <Link
+          to="/dashboard/free-tiers"
+          className="inline-flex items-center gap-2 px-4 py-2.5 rounded-lg bg-accent-blue/10 text-accent-blue hover:bg-accent-blue/20 transition-colors text-sm font-medium"
+        >
+          Free Tier Comparison
+        </Link>
       </div>
 
-      {/* Filters */}
+      {/* Category Filter Pills */}
+      <div className="flex flex-wrap gap-2 mb-4">
+        {CATEGORIES.map((cat) => (
+          <button
+            key={cat}
+            onClick={() => setCategoryFilter(cat)}
+            className={`px-3 py-1.5 rounded-lg text-sm transition-colors ${
+              categoryFilter === cat
+                ? 'bg-accent-blue text-white'
+                : 'bg-card-bg border border-card-border text-text-secondary hover:text-text-primary'
+            }`}
+          >
+            {cat}
+          </button>
+        ))}
+      </div>
+
+      {/* Search & Model Filter */}
       <div className="flex flex-col sm:flex-row gap-4 mb-6">
         <input
           type="text"

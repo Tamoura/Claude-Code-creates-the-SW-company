@@ -1,4 +1,4 @@
-import { useState } from 'react';
+import { Link } from 'react-router-dom';
 import StatusBadge from './StatusBadge';
 import type { Provider } from '../../lib/api-client';
 
@@ -7,12 +7,20 @@ interface ProviderCardProps {
   onAddKey: (providerId: string) => void;
 }
 
+const categoryColors: Record<string, string> = {
+  Multimodal: 'bg-purple-500/10 text-purple-400',
+  Speed: 'bg-blue-500/10 text-blue-400',
+  'Open Source': 'bg-green-500/10 text-green-400',
+  Aggregator: 'bg-yellow-500/10 text-yellow-400',
+  Enterprise: 'bg-indigo-500/10 text-indigo-400',
+  'Edge AI': 'bg-cyan-500/10 text-cyan-400',
+  Reasoning: 'bg-pink-500/10 text-pink-400',
+};
+
 export default function ProviderCard({
   provider,
   onAddKey,
 }: ProviderCardProps) {
-  const [showGuide, setShowGuide] = useState(false);
-
   return (
     <div className="bg-card-bg border border-card-border rounded-xl p-6 flex flex-col">
       <div className="flex items-start justify-between mb-3">
@@ -28,6 +36,19 @@ export default function ProviderCard({
           </div>
         </div>
         <StatusBadge status={provider.status} />
+      </div>
+
+      <div className="flex items-center gap-2 mb-3">
+        <span
+          className={`text-xs px-2 py-0.5 rounded-md font-medium ${
+            categoryColors[provider.category] || 'bg-gray-500/10 text-gray-400'
+          }`}
+        >
+          {provider.category}
+        </span>
+        <span className="text-xs text-text-muted">
+          {provider.lastVerified}
+        </span>
       </div>
 
       <p className="text-sm text-text-secondary mb-3 flex-1">
@@ -52,33 +73,13 @@ export default function ProviderCard({
         >
           Add Key
         </button>
-        <button
-          onClick={() => setShowGuide(!showGuide)}
+        <Link
+          to={`/dashboard/providers/${provider.slug}`}
           className="text-sm py-2 px-3 rounded-lg border border-card-border text-text-secondary hover:text-text-primary hover:border-text-muted transition-colors"
-          aria-label={`How to get a ${provider.name} key`}
         >
-          ?
-        </button>
+          View Guide
+        </Link>
       </div>
-
-      {showGuide && (
-        <div className="mt-3 p-3 rounded-lg bg-code-bg text-sm text-text-secondary">
-          <p className="font-medium text-text-primary mb-2">
-            How to get a key:
-          </p>
-          <pre className="whitespace-pre-wrap text-xs leading-relaxed">
-            {provider.keyGuide}
-          </pre>
-          <a
-            href={provider.website}
-            target="_blank"
-            rel="noopener noreferrer"
-            className="inline-block mt-2 text-accent-blue hover:underline text-xs"
-          >
-            Visit {provider.name} &rarr;
-          </a>
-        </div>
-      )}
     </div>
   );
 }
