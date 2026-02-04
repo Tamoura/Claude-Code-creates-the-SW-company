@@ -1,6 +1,8 @@
 import { useState } from 'react';
 import type { FormEvent } from 'react';
+import { useNavigate } from 'react-router-dom';
 import { useAuth } from '../../hooks/useAuth';
+import { useSettings } from '../../hooks/useSettings';
 
 // Constants
 const PASSWORD_REQUIREMENTS = {
@@ -100,6 +102,8 @@ function getPasswordValidationError(validation: PasswordValidation): string | nu
 // Main component
 export default function Settings() {
   const { user } = useAuth();
+  const navigate = useNavigate();
+  const { notifications: apiNotifications, isLoadingNotifications, saveNotifications, changePassword, deleteAccount } = useSettings();
 
   // State: Notifications
   const [notifications, setNotifications] = useState<NotificationPreferences>(DEFAULT_NOTIFICATIONS);
@@ -119,14 +123,19 @@ export default function Settings() {
   const [deleteConfirmText, setDeleteConfirmText] = useState('');
 
   // Handlers
-  const handleSaveNotifications = () => {
-    // TODO: Call API endpoint when available
-    console.log('Saving notification preferences:', notifications);
-    setNotificationsSaved(true);
-    setTimeout(() => setNotificationsSaved(false), 3000);
+  const handleSaveNotifications = async () => {
+    const success = await saveNotifications({
+      emailOnPaymentReceived: notifications.paymentReceived,
+      emailOnPaymentFailed: notifications.paymentFailed,
+      emailOnRefundProcessed: notifications.refundProcessed,
+    });
+    if (success) {
+      setNotificationsSaved(true);
+      setTimeout(() => setNotificationsSaved(false), 3000);
+    }
   };
 
-  const handlePasswordChange = (e: FormEvent) => {
+  const handlePasswordChange = async (e: FormEvent) => {
     e.preventDefault();
     setPasswordError('');
     setPasswordSuccess(false);
@@ -146,20 +155,25 @@ export default function Settings() {
       return;
     }
 
-    // TODO: Call API endpoint when available
-    console.log('Updating password');
-    setPasswordSuccess(true);
-    setPassword({ current: '', new: '', confirm: '' });
-    setTimeout(() => setPasswordSuccess(false), 3000);
+    const result = await changePassword(password.current, password.new);
+    if (result.success) {
+      setPasswordSuccess(true);
+      setPassword({ current: '', new: '', confirm: '' });
+      setTimeout(() => setPasswordSuccess(false), 3000);
+    } else {
+      setPasswordError(result.error || 'Failed to change password');
+    }
   };
 
-  const handleDeleteAccount = () => {
+  const handleDeleteAccount = async () => {
     if (deleteConfirmText === 'DELETE') {
-      // TODO: Call API endpoint when available
-      console.log('Deleting account');
-      alert('Account deletion is not yet implemented');
-      setShowDeleteDialog(false);
-      setDeleteConfirmText('');
+      const result = await deleteAccount();
+      if (result.success) {
+        navigate('/login');
+      } else {
+        setShowDeleteDialog(false);
+        setDeleteConfirmText('');
+      }
     }
   };
 
