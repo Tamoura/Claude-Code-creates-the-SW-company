@@ -157,6 +157,22 @@ export interface RotateWebhookSecretResponse {
   rotatedAt: string;
 }
 
+export interface Refund {
+  id: string;
+  payment_session_id: string;
+  amount: number;
+  status: 'PENDING' | 'PROCESSING' | 'COMPLETED' | 'FAILED';
+  reason?: string;
+  created_at: string;
+  completed_at?: string;
+}
+
+export interface CreateRefundRequest {
+  payment_session_id: string;
+  amount: number;
+  reason?: string;
+}
+
 export class ApiClient {
   private baseUrl: string;
   private useMock: boolean;
@@ -747,6 +763,34 @@ export class ApiClient {
     return this.request<RotateWebhookSecretResponse>(`/v1/webhooks/${id}/rotate-secret`, {
       method: 'POST',
     });
+  }
+
+  // Refund methods
+
+  async createRefund(data: CreateRefundRequest): Promise<Refund> {
+    return this.request<Refund>('/v1/refunds', {
+      method: 'POST',
+      body: JSON.stringify(data),
+    });
+  }
+
+  async listRefunds(params?: {
+    payment_session_id?: string;
+    status?: string;
+    limit?: number;
+    offset?: number;
+  }): Promise<{ data: Refund[]; pagination: { total: number; has_more: boolean } }> {
+    const query = new URLSearchParams();
+    if (params?.payment_session_id) query.set('payment_session_id', params.payment_session_id);
+    if (params?.status) query.set('status', params.status);
+    if (params?.limit) query.set('limit', String(params.limit));
+    if (params?.offset) query.set('offset', String(params.offset));
+    const qs = query.toString();
+    return this.request(`/v1/refunds${qs ? `?${qs}` : ''}`);
+  }
+
+  async getRefund(id: string): Promise<Refund> {
+    return this.request<Refund>(`/v1/refunds/${id}`);
   }
 
   // Admin methods
