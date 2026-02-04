@@ -22,7 +22,8 @@
 | 3106 | meetingmind | Active | http://localhost:3106 |
 | 3108 | deal-flow-platform | Active | http://localhost:3108 |
 | 3109 | invoiceforge | Active | http://localhost:3109 |
-| 3110-3199 | *Available* | Free | - |
+| 3110 | airouter | Active | http://localhost:3110 |
+| 3111-3199 | *Available* | Free | - |
 
 ### Backend APIs (5000-5099)
 
@@ -31,7 +32,9 @@
 | 5001 | stablecoin-gateway | Active | http://localhost:5001 |
 | 5003 | deal-flow-platform | Active | http://localhost:5003 |
 | 5004 | invoiceforge | Active | http://localhost:5004 |
-| 5005-5099 | *Available* | Free | - |
+| 5005 | shariascreen | Active | http://localhost:5005 |
+| 5006 | airouter | Active | http://localhost:5006 |
+| 5007-5099 | *Available* | Free | - |
 
 ### Mobile Development (8081-8099)
 

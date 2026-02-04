@@ -1,0 +1,113 @@
+generator client {
+  provider = "prisma-client-js"
+}
+
+datasource db {
+  provider = "postgresql"
+  url      = env("DATABASE_URL")
+}
+
+// ==================== User Management ====================
+
+enum Role {
+  USER
+  ADMIN
+}
+
+model User {
+  id           String   @id @default(cuid())
+  email        String   @unique
+  passwordHash String   @map("password_hash")
+  role         Role     @default(USER)
+
+  createdAt DateTime @default(now()) @map("created_at")
+  updatedAt DateTime @updatedAt @map("updated_at")
+
+  apiKeys      ApiKey[]
+  providerKeys ProviderKey[]
+  usageRecords UsageRecord[]
+
+  @@map("users")
+}
+
+// ==================== AIRouter API Keys ====================
+
+model ApiKey {
+  id      String @id @default(cuid())
+  userId  String @map("user_id")
+  name    String
+  keyHash String @unique @map("key_hash")
+  prefix  String
+
+  permissions Json @default("{\"read\": true, \"write\": true}")
+
+  lastUsedAt DateTime? @map("last_used_at")
+  createdAt  DateTime  @default(now()) @map("created_at")
+
+  user User @relation(fields: [userId], references: [id], onDelete: Cascade)
+
+  @@index([userId])
+  @@map("api_keys")
+}
+
+// ==================== Provider Key Vault ====================
+
+model ProviderKey {
+  id           String  @id @default(cuid())
+  userId       String  @map("user_id")
+  provider     String
+  encryptedKey String  @map("encrypted_key")
+  keyPrefix    String  @map("key_prefix")
+  isValid      Boolean @default(true) @map("is_valid")
+
+  lastTestedAt DateTime? @map("last_tested_at")
+  createdAt    DateTime  @default(now()) @map("created_at")
+  updatedAt    DateTime  @updatedAt @map("updated_at")
+
+  user User @relation(fields: [userId], references: [id], onDelete: Cascade)
+
+  @@unique([userId, provider])
+  @@index([userId])
+  @@index([provider])
+  @@map("provider_keys")
+}
+
+// ==================== Usage Tracking ====================
+
+model UsageRecord {
+  id           String @id @default(cuid())
+  userId       String @map("user_id")
+  provider     String
+  date         String // YYYY-MM-DD format for daily tracking
+  requestCount Int    @default(0) @map("request_count")
+  tokenCount   Int    @default(0) @map("token_count")
+
+  createdAt DateTime @default(now()) @map("created_at")
+  updatedAt DateTime @updatedAt @map("updated_at")
+
+  user User @relation(fields: [userId], references: [id], onDelete: Cascade)
+
+  @@unique([userId, provider, date])
+  @@index([userId])
+  @@index([provider, date])
+  @@map("usage_records")
+}
+
+// ==================== Audit Log ====================
+
+model AuditLog {
+  id           String   @id @default(cuid())
+  actor        String
+  action       String
+  resourceType String   @map("resource_type")
+  resourceId   String   @map("resource_id")
+  details      Json?
+  ip           String?
+  userAgent    String?  @map("user_agent")
+  timestamp    DateTime @default(now())
+
+  @@index([actor])
+  @@index([action])
+  @@index([timestamp])
+  @@map("audit_logs")
+}
