@@ -38,7 +38,8 @@ describe('Sidebar', () => {
   it('renders settings navigation links', () => {
     renderSidebar();
 
-    expect(screen.getByText('Settings')).toBeInTheDocument();
+    expect(screen.getAllByText('Settings').length).toBeGreaterThanOrEqual(1);
+    expect(screen.getByRole('link', { name: /^settings$/i })).toBeInTheDocument();
     expect(screen.getByRole('link', { name: /security/i })).toBeInTheDocument();
   });
 

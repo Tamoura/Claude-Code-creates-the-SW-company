@@ -79,6 +79,18 @@ describe('Refund API', () => {
     await app.close();
   });
 
+  // Flush rate limit keys between tests to prevent cross-test 429s
+  // The route-level rate limit on POST /v1/refunds (RISK-047) is 10/min,
+  // which this test suite can exceed when running all cases sequentially.
+  beforeEach(async () => {
+    if (app.redis) {
+      const keys = await app.redis.keys('ratelimit:*');
+      if (keys.length > 0) {
+        await app.redis.del(...keys);
+      }
+    }
+  });
+
   describe('POST /v1/refunds', () => {
     it('should require authentication', async () => {
       const response = await app.inject({
@@ -137,7 +149,7 @@ describe('Refund API', () => {
 
       expect(response.statusCode).toBe(400);
       const body = response.json();
-      expect(body.detail).toContain('completed');
+      expect(body.detail).toContain('refundable');
     });
 
     it('should reject refund exceeding payment amount', async () => {

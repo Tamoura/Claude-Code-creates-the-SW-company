@@ -18,18 +18,24 @@ export async function verifyPassword(password: string, hash: string): Promise<bo
  * API keys need fast hash lookups (called on every authenticated request),
  * so bcrypt is not appropriate here.
  *
- * Falls back to plain SHA-256 only if API_KEY_HMAC_SECRET is not set
- * (development/test environments). Production should always have the secret.
+ * Falls back to plain SHA-256 only in dev/test when API_KEY_HMAC_SECRET is
+ * not set. In production, missing API_KEY_HMAC_SECRET throws an error to
+ * prevent unsalted SHA-256 exposure (RISK-050).
  */
 export function hashApiKey(apiKey: string): string {
   const hmacSecret = process.env.API_KEY_HMAC_SECRET;
   if (hmacSecret) {
     return crypto.createHmac('sha256', hmacSecret).update(apiKey).digest('hex');
   }
-  // Fallback for dev/test - plain SHA-256 (log warning in production)
+  // Production must always use HMAC - fail hard (RISK-050)
   if (process.env.NODE_ENV === 'production') {
-    console.warn('WARNING: API_KEY_HMAC_SECRET not set in production - using unsalted SHA-256');
+    throw new Error(
+      'API_KEY_HMAC_SECRET is required in production. ' +
+      'Unsalted SHA-256 fallback is not allowed. ' +
+      'Generate a secret: openssl rand -hex 64'
+    );
   }
+  // Fallback for dev/test only - plain SHA-256
   return crypto.createHash('sha256').update(apiKey).digest('hex');
 }
 

@@ -12,25 +12,40 @@ import { polygon, mainnet } from 'wagmi/chains';
 import { injected, walletConnect } from 'wagmi/connectors';
 
 // Environment variables
-const walletConnectProjectId = import.meta.env.VITE_WALLETCONNECT_PROJECT_ID || 'demo_project_id';
+const walletConnectProjectId = import.meta.env.VITE_WALLETCONNECT_PROJECT_ID;
 const polygonRpcUrl = import.meta.env.VITE_ALCHEMY_POLYGON_URL || 'https://polygon-rpc.com';
 const mainnetRpcUrl = import.meta.env.VITE_ALCHEMY_MAINNET_URL || 'https://eth.public-rpc.com';
 
+// Only include WalletConnect connector when a valid project ID is configured.
+// Invalid/empty IDs cause WalletConnect SDK to crash during relay connection,
+// which can prevent the entire app from rendering.
+function buildConnectors() {
+  const base = [injected()];
+  const id = walletConnectProjectId?.trim();
+  if (id && id !== 'demo_project_id') {
+    try {
+      base.push(
+        walletConnect({
+          projectId: id,
+          metadata: {
+            name: 'Stablecoin Gateway',
+            description: 'Accept stablecoin payments at 0.5% fees',
+            url: 'https://gateway.io',
+            icons: ['https://gateway.io/icon.png'],
+          },
+          showQrModal: true,
+        })
+      );
+    } catch {
+      // WalletConnect init failed — fall back to injected-only
+    }
+  }
+  return base;
+}
+
 export const config = createConfig({
   chains: [polygon, mainnet],
-  connectors: [
-    injected(),
-    walletConnect({
-      projectId: walletConnectProjectId,
-      metadata: {
-        name: 'Stablecoin Gateway',
-        description: 'Accept stablecoin payments at 0.5% fees',
-        url: 'https://gateway.io',
-        icons: ['https://gateway.io/icon.png'],
-      },
-      showQrModal: true,
-    }),
-  ],
+  connectors: buildConnectors(),
   transports: {
     [polygon.id]: http(polygonRpcUrl),
     [mainnet.id]: http(mainnetRpcUrl),

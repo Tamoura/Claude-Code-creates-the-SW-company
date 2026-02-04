@@ -176,11 +176,12 @@ export class RefundService {
         throw new AppError(404, 'payment-not-found', 'Payment session not found');
       }
 
-      if (payment.status !== PaymentStatus.COMPLETED) {
+      const refundableStatuses = [PaymentStatus.COMPLETED, PaymentStatus.REFUNDED];
+      if (!refundableStatuses.includes(payment.status)) {
         throw new AppError(
           400,
-          'payment-not-completed',
-          'Payment must be completed before refunding'
+          'payment-not-refundable',
+          'Payment must be in a refundable state (COMPLETED or REFUNDED)'
         );
       }
 

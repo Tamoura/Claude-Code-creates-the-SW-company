@@ -27,10 +27,7 @@ export default function Security() {
     }
     setIsChanging(true);
     try {
-      await apiClient.request('/v1/auth/change-password', {
-        method: 'POST',
-        body: JSON.stringify({ current_password: currentPassword, new_password: newPassword }),
-      });
+      await apiClient.changePassword(currentPassword, newPassword);
       setPasswordMsg({ type: 'success', text: 'Password changed successfully' });
       setShowPasswordForm(false);
       setCurrentPassword('');
@@ -83,6 +80,7 @@ export default function Security() {
               <input
                 type="password"
                 placeholder="Current password"
+                aria-label="Current password"
                 value={currentPassword}
                 onChange={e => setCurrentPassword(e.target.value)}
                 required
@@ -91,6 +89,7 @@ export default function Security() {
               <input
                 type="password"
                 placeholder="New password (min 12 chars)"
+                aria-label="New password (min 12 chars)"
                 value={newPassword}
                 onChange={e => setNewPassword(e.target.value)}
                 required
@@ -100,6 +99,7 @@ export default function Security() {
               <input
                 type="password"
                 placeholder="Confirm new password"
+                aria-label="Confirm new password"
                 value={confirmPassword}
                 onChange={e => setConfirmPassword(e.target.value)}
                 required

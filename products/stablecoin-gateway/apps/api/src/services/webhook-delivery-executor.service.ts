@@ -12,6 +12,57 @@ import { validateWebhookUrl } from '../utils/url-validator.js';
 import { decryptSecret } from '../utils/encryption.js';
 import { WebhookCircuitBreakerService } from './webhook-circuit-breaker.service.js';
 
+/**
+ * TTL-based in-memory cache for decrypted webhook secrets.
+ *
+ * Problem: decryptSecret() performs AES-256-GCM decryption on every
+ * webhook delivery. For high-throughput endpoints receiving many events,
+ * this repeated crypto work is unnecessary since the encrypted secret
+ * rarely changes.
+ *
+ * Solution: Cache decrypted secrets keyed by their encrypted form.
+ * Entries expire after 5 minutes (SECRET_CACHE_TTL_MS) to bound
+ * memory usage and ensure rotated secrets are picked up promptly.
+ *
+ * Security: The cache lives in process memory only. It is never
+ * serialized, logged, or persisted. The 5-minute TTL limits the
+ * window during which a rotated secret's old value remains cached.
+ */
+const secretCache = new Map<string, { value: string; expiresAt: number }>();
+const SECRET_CACHE_TTL_MS = 5 * 60 * 1000; // 5 minutes
+
+function getCachedSecret(encryptedSecret: string): string | null {
+  const cached = secretCache.get(encryptedSecret);
+  if (cached && cached.expiresAt > Date.now()) {
+    return cached.value;
+  }
+  if (cached) {
+    secretCache.delete(encryptedSecret);
+  }
+  return null;
+}
+
+function cacheSecret(encryptedSecret: string, decryptedValue: string): void {
+  secretCache.set(encryptedSecret, {
+    value: decryptedValue,
+    expiresAt: Date.now() + SECRET_CACHE_TTL_MS,
+  });
+}
+
+/**
+ * Clear all cached secrets. Exposed for testing and secret rotation.
+ */
+export function clearSecretCache(): void {
+  secretCache.clear();
+}
+
+/**
+ * Get current cache size. Exposed for testing and monitoring.
+ */
+export function getSecretCacheSize(): number {
+  return secretCache.size;
+}
+
 export class WebhookDeliveryExecutorService {
   private maxRetries = 5;
   private retryDelays = [60, 300, 900, 3600, 7200]; // 1m, 5m, 15m, 1h, 2h
@@ -70,9 +121,18 @@ export class WebhookDeliveryExecutorService {
 
       let secret: string;
       try {
-        secret = process.env.WEBHOOK_ENCRYPTION_KEY
-          ? decryptSecret(endpoint.secret)
-          : endpoint.secret;
+        if (process.env.WEBHOOK_ENCRYPTION_KEY) {
+          // Check cache before performing decryption
+          const cached = getCachedSecret(endpoint.secret);
+          if (cached) {
+            secret = cached;
+          } else {
+            secret = decryptSecret(endpoint.secret);
+            cacheSecret(endpoint.secret, secret);
+          }
+        } else {
+          secret = endpoint.secret;
+        }
       } catch (decryptError) {
         logger.error('Failed to decrypt webhook secret', {
           deliveryId: id,

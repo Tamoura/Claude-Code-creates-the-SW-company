@@ -26,12 +26,12 @@ class ErrorBoundary extends Component<Props, State> {
   render() {
     if (this.state.hasError) {
       return (
-        <div className="min-h-screen bg-gray-50 flex items-center justify-center px-4">
-          <div className="bg-white rounded-lg shadow-lg p-8 max-w-md w-full">
+        <div className="min-h-screen bg-page-bg flex items-center justify-center px-4">
+          <div className="bg-card-bg rounded-lg shadow-lg p-8 max-w-md w-full">
             <div className="text-center">
-              <div className="w-16 h-16 bg-red-100 rounded-full flex items-center justify-center mx-auto mb-4">
+              <div className="w-16 h-16 bg-red-500/15 rounded-full flex items-center justify-center mx-auto mb-4 border border-red-500/30">
                 <svg
-                  className="w-8 h-8 text-red-600"
+                  className="w-8 h-8 text-red-400"
                   fill="none"
                   viewBox="0 0 24 24"
                   stroke="currentColor"
@@ -44,18 +44,18 @@ class ErrorBoundary extends Component<Props, State> {
                   />
                 </svg>
               </div>
-              <h1 className="text-2xl font-bold text-gray-900 mb-2">
+              <h1 className="text-2xl font-bold text-text-primary mb-2">
                 Oops! Something went wrong
               </h1>
-              <p className="text-gray-600 mb-6">
+              <p className="text-text-secondary mb-6">
                 We encountered an unexpected error. Please try refreshing the page.
               </p>
-              {this.state.error && (
+              {this.state.error && import.meta.env.DEV && (
                 <details className="text-left mb-6">
-                  <summary className="cursor-pointer text-sm text-gray-500 hover:text-gray-700">
+                  <summary className="cursor-pointer text-sm text-text-muted hover:text-text-secondary">
                     Technical details
                   </summary>
-                  <pre className="mt-2 text-xs bg-gray-100 p-3 rounded overflow-auto max-h-40">
+                  <pre className="mt-2 text-xs bg-code-bg p-3 rounded overflow-auto max-h-40">
                     {this.state.error.toString()}
                   </pre>
                 </details>

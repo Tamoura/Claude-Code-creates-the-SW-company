@@ -1,6 +1,7 @@
-import { useState, useEffect } from 'react';
+import { useState, useEffect, useMemo } from 'react';
 import { apiClient, type PaymentSession } from '../lib/api-client';
 import { mockPaymentSessions } from '../data/dashboard-mock';
+import { formatCurrency, formatDate } from '../lib/formatters';
 
 export interface DashboardStat {
   title: string;
@@ -11,28 +12,12 @@ export interface DashboardStat {
 
 export interface DashboardTransaction {
   id: string;
+  rawId?: string;
   customer: string;
   date: string;
   amount: string;
   asset: string;
   status: 'SUCCESS' | 'PENDING' | 'FAILED';
-}
-
-function formatCurrency(amount: number): string {
-  return '$' + amount.toLocaleString('en-US', {
-    minimumFractionDigits: 2,
-    maximumFractionDigits: 2,
-  });
-}
-
-function formatDate(iso: string): string {
-  return new Date(iso).toLocaleString('en-US', {
-    month: 'short',
-    day: 'numeric',
-    year: 'numeric',
-    hour: 'numeric',
-    minute: '2-digit',
-  });
 }
 
 function mapStatus(status: string): DashboardTransaction['status'] {
@@ -79,6 +64,7 @@ function toTransactions(sessions: PaymentSession[]): DashboardTransaction[] {
     .slice(0, 5)
     .map(s => ({
       id: `#${s.id.replace('ps_', 'TX-').toUpperCase()}`,
+      rawId: s.id,
       customer: s.customer_address || 'Unknown',
       date: formatDate(s.created_at),
       amount: formatCurrency(s.amount),
@@ -116,9 +102,12 @@ export function useDashboardData() {
     return () => { cancelled = true; };
   }, []);
 
+  const stats = useMemo(() => computeStats(sessions), [sessions]);
+  const transactions = useMemo(() => toTransactions(sessions), [sessions]);
+
   return {
     isLoading,
-    stats: computeStats(sessions),
-    transactions: toTransactions(sessions),
+    stats,
+    transactions,
   };
 }
