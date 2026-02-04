@@ -1,23 +1,29 @@
 # Provider Acquisition Guides & Free Tier Tracker
 
-## Feature Summary
-Enrich AIRouter's provider data with detailed step-by-step key acquisition guides, add a Free Tier Comparison page, and individual Provider Detail pages.
+## Status: Complete
+**PR**: https://github.com/Tamoura/Claude-Code-creates-the-SW-company/pull/111
+**Branch**: `feature/airouter/provider-guides-free-tier-tracker`
 
-## Branch
-`feature/airouter/provider-guides-free-tier-tracker`
+## What Changed
 
-## Phases
-1. Backend data enrichment (types, provider data, routes, tests)
-2. Frontend data & mock alignment (api-client types/mock data)
-3. Free Tier Comparison page (new page at /dashboard/free-tiers)
-4. Provider Detail page (new page at /dashboard/providers/:slug)
-5. Update existing pages & navigation (ProvidersPage, ProviderCard, Sidebar, App.tsx)
+### Backend (apps/api)
+- Extended `Provider` interface with `description`, `category`, `lastVerified`, `prerequisites[]`, structured `keyAcquisitionGuide` (steps/tips/gotchas/verificationSteps), `documentation` links
+- Enriched all 10 providers with 6-8 step guides, tips, gotchas, curl verification commands
+- Added `GET /api/v1/providers/compare` endpoint
+- Updated list/detail endpoints to include new fields
 
-## Key Decisions
-- `keyAcquisitionGuide` changes from string to structured object with steps[], tips[], gotchas[], verificationSteps[]
-- New fields: description, category, lastVerified, prerequisites[], documentation links
-- Frontend Provider type gains: category, lastVerified, freeTier (structured), keyAcquisitionGuide (structured)
-- New API endpoint: GET /api/v1/providers/compare
+### Frontend (apps/web)
+- Updated `Provider` type with `category`, `lastVerified`, `freeTier` (structured), `keyAcquisitionGuide` (structured)
+- Enriched all 10 mock providers with full guide data
+- Added `getProviderComparison()` method to api-client
+- **New page**: FreeTierComparisonPage at `/dashboard/free-tiers` — sortable table with color coding
+- **New page**: ProviderDetailPage at `/dashboard/providers/:slug` — full guide, tips, gotchas, verification
+- Updated ProvidersPage with category filter pills and Free Tier Comparison link
+- Updated ProviderCard with category badge, lastVerified, View Guide link
+- Added "Free Tiers" to Sidebar navigation
+- Added new routes to App.tsx
 
-## TDD Approach
-Each phase: write failing tests first, then implement, then refactor.
+## Test Results
+- Backend: 76 tests (4 new)
+- Frontend: 72 tests (24 new)
+- Total: 148 passing
