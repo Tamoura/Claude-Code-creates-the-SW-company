@@ -683,6 +683,18 @@ export class ApiClient {
     };
   }
 
+  // Session management methods
+
+  async listSessions(): Promise<{ data: Array<{ id: string; created_at: string; expires_at: string }> }> {
+    return this.request('/v1/auth/sessions');
+  }
+
+  async revokeSession(id: string): Promise<void> {
+    await this.request<void>(`/v1/auth/sessions/${id}`, {
+      method: 'DELETE',
+    });
+  }
+
   async changePassword(currentPassword: string, newPassword: string): Promise<void> {
     await this.request<void>('/v1/auth/change-password', {
       method: 'POST',
