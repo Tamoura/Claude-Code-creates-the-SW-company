@@ -2,7 +2,7 @@
 
 **Purpose**: Centralized port allocation to prevent conflicts when running multiple products simultaneously.
 
-**Last Updated**: 2026-02-01
+**Last Updated**: 2026-02-04
 
 ## Port Allocation Rules
 
@@ -22,8 +22,9 @@
 | 3106 | meetingmind | Active | http://localhost:3106 |
 | 3108 | deal-flow-platform | Active | http://localhost:3108 |
 | 3109 | invoiceforge | Active | http://localhost:3109 |
-| 3110 | shipwright | Active | http://localhost:3110 |
-| 3111-3199 | *Available* | Free | - |
+| 3110 | shipwright (legacy) | Retired | http://localhost:3110 |
+| 3111 | shipwright | Active | http://localhost:3111 |
+| 3112-3199 | *Available* | Free | - |
 
 ### Backend APIs (5000-5099)
 
@@ -32,7 +33,8 @@
 | 5001 | stablecoin-gateway | Active | http://localhost:5001 |
 | 5003 | deal-flow-platform | Active | http://localhost:5003 |
 | 5004 | invoiceforge | Active | http://localhost:5004 |
-| 5005-5099 | *Available* | Free | - |
+| 5007 | shipwright | Active | http://localhost:5007 |
+| 5008-5099 | *Available* | Free | - |
 
 ### Mobile Development (8081-8099)
 
@@ -101,11 +103,13 @@ cd products/quantum-computing-usecases/apps/web && npm run dev &# :3105
 cd products/meetingmind/apps/web && npm run dev &               # :3106
 cd products/deal-flow-platform/apps/web && npm run dev &        # :3108
 cd products/invoiceforge/apps/web && npm run dev &              # :3109
+cd products/shipwright/apps/web && npm run dev &                # :3111
 
 # Backend APIs
 cd products/stablecoin-gateway/apps/api && npm run dev &        # :5001
 cd products/deal-flow-platform/apps/api && npm run dev &        # :5003
 cd products/invoiceforge/apps/api && npm run dev &              # :5004
+cd products/shipwright/apps/api && npm run dev &                # :5007
 ```
 
 ### Check Port Availability
