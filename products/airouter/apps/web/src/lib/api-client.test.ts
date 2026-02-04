@@ -87,6 +87,29 @@ describe('apiClient - Providers', () => {
     }
   });
 
+  it('each provider has enriched fields', async () => {
+    const providers = await apiClient.listProviders();
+
+    for (const provider of providers) {
+      expect(provider.category).toBeTruthy();
+      expect(provider.lastVerified).toBeTruthy();
+      expect(provider.freeTier).toBeDefined();
+      expect(provider.freeTier.requestsPerMinute).toBeGreaterThan(0);
+    }
+  });
+
+  it('each provider has structured key acquisition guide', async () => {
+    const providers = await apiClient.listProviders();
+
+    for (const provider of providers) {
+      expect(provider.keyAcquisitionGuide).toBeDefined();
+      expect(provider.keyAcquisitionGuide.steps.length).toBeGreaterThanOrEqual(5);
+      expect(provider.keyAcquisitionGuide.tips.length).toBeGreaterThan(0);
+      expect(provider.keyAcquisitionGuide.gotchas.length).toBeGreaterThan(0);
+      expect(provider.keyAcquisitionGuide.verificationSteps.length).toBeGreaterThan(0);
+    }
+  });
+
   it('getProvider returns a specific provider', async () => {
     const provider = await apiClient.getProvider('groq');
 
@@ -105,6 +128,18 @@ describe('apiClient - Providers', () => {
     const guide = await apiClient.getProviderGuide('google-gemini');
 
     expect(guide).toContain('ai.google.dev');
+  });
+
+  it('getProviderComparison returns all providers for comparison', async () => {
+    const comparison = await apiClient.getProviderComparison();
+
+    expect(comparison.length).toBe(10);
+    for (const provider of comparison) {
+      expect(provider.name).toBeDefined();
+      expect(provider.category).toBeDefined();
+      expect(provider.freeTier).toBeDefined();
+      expect(provider.lastVerified).toBeDefined();
+    }
   });
 });
 
