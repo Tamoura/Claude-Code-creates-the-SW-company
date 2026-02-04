@@ -3,15 +3,19 @@ import { render, screen, fireEvent, waitFor } from '@testing-library/react';
 import { BrowserRouter } from 'react-router-dom';
 import Security from './Security';
 import * as useAuthModule from '../../hooks/useAuth';
+import * as useSessionsModule from '../../hooks/useSessions';
 import { apiClient } from '../../lib/api-client';
 
 // Mock the useAuth hook
 vi.mock('../../hooks/useAuth');
 
+// Mock the useSessions hook
+vi.mock('../../hooks/useSessions');
+
 // Mock the apiClient
 vi.mock('../../lib/api-client', () => ({
   apiClient: {
-    request: vi.fn(),
+    changePassword: vi.fn(),
   },
 }));
 
@@ -27,6 +31,7 @@ describe('Security Page', () => {
   };
 
   const mockLogout = vi.fn();
+  const mockRevokeSession = vi.fn();
 
   beforeEach(() => {
     vi.clearAllMocks();
@@ -38,6 +43,18 @@ describe('Security Page', () => {
       error: null,
       login: vi.fn(),
       logout: mockLogout,
+    });
+
+    // Mock useSessions hook
+    vi.spyOn(useSessionsModule, 'useSessions').mockReturnValue({
+      sessions: [
+        { id: 's1', created_at: '2026-01-01T00:00:00Z', expires_at: '2026-01-08T00:00:00Z' },
+        { id: 's2', created_at: '2026-01-02T00:00:00Z', expires_at: '2026-01-09T00:00:00Z' },
+      ],
+      isLoading: false,
+      error: null,
+      revokeSession: mockRevokeSession,
+      refresh: vi.fn(),
     });
   });
 
@@ -123,7 +140,7 @@ describe('Security Page', () => {
     });
 
     it('shows success message when password is changed successfully', async () => {
-      vi.mocked(apiClient.request).mockResolvedValueOnce(undefined);
+      vi.mocked(apiClient.changePassword).mockResolvedValueOnce(undefined);
 
       renderWithRouter(<Security />);
 
@@ -149,7 +166,7 @@ describe('Security Page', () => {
     });
 
     it('shows error message when API call fails', async () => {
-      vi.mocked(apiClient.request).mockRejectedValueOnce(new Error('API Error'));
+      vi.mocked(apiClient.changePassword).mockRejectedValueOnce(new Error('API Error'));
 
       renderWithRouter(<Security />);
 
@@ -172,7 +189,7 @@ describe('Security Page', () => {
     });
 
     it('disables submit button during password change', async () => {
-      vi.mocked(apiClient.request).mockImplementationOnce(() => new Promise(() => {})); // Never resolves
+      vi.mocked(apiClient.changePassword).mockImplementationOnce(() => new Promise(() => {})); // Never resolves
 
       renderWithRouter(<Security />);
 
@@ -209,8 +226,8 @@ describe('Security Page', () => {
       const showButton = screen.getByRole('button', { name: /show sessions/i });
       fireEvent.click(showButton);
 
-      expect(screen.getByText('Current Session')).toBeInTheDocument();
-      expect(screen.getByText(/127.0.0.1/)).toBeInTheDocument();
+      expect(screen.getByText('Session 1')).toBeInTheDocument();
+      expect(screen.getByText('Session 2')).toBeInTheDocument();
     });
 
     it('hides sessions when hide button is clicked', () => {
@@ -218,11 +235,11 @@ describe('Security Page', () => {
 
       const showButton = screen.getByRole('button', { name: /show sessions/i });
       fireEvent.click(showButton);
-      expect(screen.getByText('Current Session')).toBeInTheDocument();
+      expect(screen.getByText('Session 1')).toBeInTheDocument();
 
       const hideButton = screen.getByRole('button', { name: /hide sessions/i });
       fireEvent.click(hideButton);
-      expect(screen.queryByText('Current Session')).not.toBeInTheDocument();
+      expect(screen.queryByText('Session 1')).not.toBeInTheDocument();
     });
   });
 

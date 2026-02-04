@@ -458,6 +458,61 @@ const authRoutes: FastifyPluginAsync = async (fastify) => {
     }
   });
 
+  // ==================== Session Management ====================
+
+  // GET /v1/auth/sessions — list active refresh tokens for current user
+  fastify.get('/sessions', async (request, reply) => {
+    try {
+      await request.jwtVerify();
+      const userId = (request.user as { userId: string }).userId;
+
+      const tokens = await fastify.prisma.refreshToken.findMany({
+        where: { userId, revoked: false, expiresAt: { gt: new Date() } },
+        orderBy: { createdAt: 'desc' },
+        select: { id: true, createdAt: true, expiresAt: true },
+      });
+
+      const sessions = tokens.map(t => ({
+        id: t.id,
+        created_at: t.createdAt.toISOString(),
+        expires_at: t.expiresAt.toISOString(),
+      }));
+
+      return reply.send({ data: sessions });
+    } catch (error) {
+      if (error instanceof AppError) {
+        return reply.code(error.statusCode).send(error.toJSON());
+      }
+      throw error;
+    }
+  });
+
+  // DELETE /v1/auth/sessions/:id — revoke a specific session
+  fastify.delete('/sessions/:id', async (request, reply) => {
+    try {
+      await request.jwtVerify();
+      const userId = (request.user as { userId: string }).userId;
+      const { id } = request.params as { id: string };
+
+      const result = await fastify.prisma.refreshToken.updateMany({
+        where: { id, userId, revoked: false },
+        data: { revoked: true, revokedAt: new Date() },
+      });
+
+      if (result.count === 0) {
+        throw new AppError(404, 'session-not-found', 'Session not found or already revoked');
+      }
+
+      logger.info('Session revoked', { userId, sessionId: id });
+      return reply.code(204).send();
+    } catch (error) {
+      if (error instanceof AppError) {
+        return reply.code(error.statusCode).send(error.toJSON());
+      }
+      throw error;
+    }
+  });
+
   // ==================== Password Reset ====================
 
   // Reset token TTL: 1 hour
