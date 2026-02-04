@@ -17,6 +17,7 @@ const StatusPage = lazy(() => import('./pages/StatusPage'));
 const CheckoutSuccess = lazy(() => import('./pages/checkout/CheckoutSuccess'));
 const CheckoutFailed = lazy(() => import('./pages/checkout/CheckoutFailed'));
 const DashboardHome = lazy(() => import('./pages/dashboard/DashboardHome'));
+const Analytics = lazy(() => import('./pages/dashboard/Analytics'));
 const CreatePaymentLink = lazy(() => import('./pages/dashboard/CreatePaymentLink'));
 const PaymentsList = lazy(() => import('./pages/dashboard/PaymentsList'));
 const PaymentDetail = lazy(() => import('./pages/dashboard/PaymentDetail'));
@@ -77,6 +78,7 @@ function App() {
                 <Route element={<ProtectedRoute />}>
                   <Route path="/dashboard" element={<DashboardLayout />}>
                     <Route index element={<DashboardHome />} />
+                    <Route path="analytics" element={<Analytics />} />
                     <Route path="create" element={<CreatePaymentLink />} />
                     <Route path="payments" element={<PaymentsList />} />
                     <Route path="payments/:id" element={<PaymentDetail />} />

@@ -225,6 +225,19 @@ export const createApiKeySchema = z.object({
     .default({ read: true, write: true, refund: false }),
 });
 
+// ==================== Analytics Schemas ====================
+
+export const analyticsOverviewQuerySchema = z.object({}).default({});
+
+export const analyticsVolumeQuerySchema = z.object({
+  period: z.enum(['day', 'week', 'month']).default('day'),
+  days: z.coerce.number().min(1).max(365).default(30),
+});
+
+export const analyticsBreakdownQuerySchema = z.object({
+  group_by: z.enum(['status', 'network', 'token']).default('status'),
+});
+
 // ==================== Helper Functions ====================
 
 export function validateBody<T>(schema: z.ZodSchema<T>, data: unknown): T {
