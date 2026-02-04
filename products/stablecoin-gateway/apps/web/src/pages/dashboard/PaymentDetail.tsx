@@ -2,6 +2,8 @@ import { useState, useEffect, useCallback } from 'react';
 import { useParams, Link } from 'react-router-dom';
 import { apiClient, type PaymentSession } from '../../lib/api-client';
 import { formatCurrency, formatDate, truncateAddress, getBlockExplorerUrl } from '../../lib/formatters';
+import { usePaymentEvents } from '../../hooks/usePaymentEvents';
+import SseStatusBadge from '../../components/dashboard/SseStatusBadge';
 
 // Status badge component matching TransactionsTable pattern
 function StatusBadge({ status }: { status: PaymentSession['status'] }) {
@@ -52,6 +54,15 @@ export default function PaymentDetail() {
   const [isLoading, setIsLoading] = useState(true);
   const [error, setError] = useState<string | null>(null);
 
+  // SSE real-time updates (only for pending/confirming payments)
+  const shouldConnectSSE = payment && (payment.status === 'pending' || payment.status === 'confirming');
+  const {
+    status: sseStatus,
+    confirmations: sseConfirmations,
+    txHash: sseTxHash,
+    connectionState,
+  } = usePaymentEvents(shouldConnectSSE ? id : undefined);
+
   const loadPayment = useCallback(async () => {
     if (!id) return;
 
@@ -75,6 +86,11 @@ export default function PaymentDetail() {
   useEffect(() => {
     loadPayment();
   }, [loadPayment]);
+
+  // Merge SSE data with payment data for display
+  const displayStatus = sseStatus || payment?.status || 'unknown';
+  const displayConfirmations = sseConfirmations > 0 ? sseConfirmations : (payment?.confirmations || 0);
+  const displayTxHash = sseTxHash || payment?.tx_hash || null;
 
   // Loading state
   if (isLoading) {
@@ -129,12 +145,15 @@ export default function PaymentDetail() {
         >
           ← Back to Payments
         </Link>
-        <button
-          onClick={loadPayment}
-          className="px-4 py-2 text-sm font-medium text-text-secondary border border-card-border rounded-lg hover:text-text-primary hover:border-text-muted transition-colors"
-        >
-          Refresh
-        </button>
+        <div className="flex items-center gap-3">
+          {shouldConnectSSE && <SseStatusBadge state={connectionState} />}
+          <button
+            onClick={loadPayment}
+            className="px-4 py-2 text-sm font-medium text-text-secondary border border-card-border rounded-lg hover:text-text-primary hover:border-text-muted transition-colors"
+          >
+            Refresh
+          </button>
+        </div>
       </div>
 
       {/* Header section */}
@@ -142,7 +161,7 @@ export default function PaymentDetail() {
         <div className="flex flex-col sm:flex-row items-start justify-between gap-4 mb-4">
           <div>
             <h1 className="text-2xl font-bold text-text-primary font-mono mb-2">{payment.id}</h1>
-            <StatusBadge status={payment.status} />
+            <StatusBadge status={displayStatus as PaymentSession['status']} />
           </div>
           <div className="text-right">
             <div className="text-3xl font-bold text-text-primary">
@@ -193,20 +212,20 @@ export default function PaymentDetail() {
         <div className="bg-card-bg border border-card-border rounded-xl p-6">
           <h2 className="text-lg font-bold text-text-primary mb-4">Blockchain Information</h2>
           <div className="space-y-3">
-            {payment.tx_hash ? (
+            {displayTxHash ? (
               <>
                 <div>
                   <div className="text-xs text-text-muted mb-1">Transaction Hash</div>
                   <div className="flex items-center justify-between">
                     <a
-                      href={getBlockExplorerUrl(payment.network, payment.tx_hash)}
+                      href={getBlockExplorerUrl(payment.network, displayTxHash)}
                       target="_blank"
                       rel="noopener noreferrer"
                       className="text-accent-blue hover:underline font-mono text-sm"
                     >
-                      {truncateAddress(payment.tx_hash)}
+                      {truncateAddress(displayTxHash)}
                     </a>
-                    <CopyButton text={payment.tx_hash} label="transaction hash" />
+                    <CopyButton text={displayTxHash} label="transaction hash" />
                   </div>
                 </div>
                 {payment.block_number && (
@@ -215,10 +234,10 @@ export default function PaymentDetail() {
                     <div className="text-text-primary font-mono">{payment.block_number}</div>
                   </div>
                 )}
-                {payment.confirmations !== undefined && (
+                {displayConfirmations !== undefined && (
                   <div>
                     <div className="text-xs text-text-muted mb-1">Confirmations</div>
-                    <div className="text-text-primary font-mono">{payment.confirmations}</div>
+                    <div className="text-text-primary font-mono">{displayConfirmations}</div>
                   </div>
                 )}
               </>
