@@ -46,7 +46,8 @@ describe('LandingPage', () => {
   it('renders the How It Works section with 3 steps', () => {
     renderWithRouter();
 
-    expect(screen.getByText('How It Works')).toBeInTheDocument();
+    const howItWorks = screen.getAllByText('How It Works');
+    expect(howItWorks.length).toBeGreaterThan(0);
     expect(screen.getByText('Add Your Keys')).toBeInTheDocument();
     expect(screen.getByText('Route Requests')).toBeInTheDocument();
     expect(screen.getByText('Track Usage')).toBeInTheDocument();
