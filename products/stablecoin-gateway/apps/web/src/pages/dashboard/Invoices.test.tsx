@@ -1,13 +1,21 @@
 import { describe, it, expect, vi, beforeEach } from 'vitest';
 import { render, screen, waitFor } from '@testing-library/react';
+import userEvent from '@testing-library/user-event';
 import Invoices from './Invoices';
 import { apiClient } from '../../lib/api-client';
+import * as invoicePdf from '../../lib/invoice-pdf';
 
 // Mock the apiClient
 vi.mock('../../lib/api-client', () => ({
   apiClient: {
     listPaymentSessions: vi.fn(),
   },
+}));
+
+// Mock the invoice-pdf module
+vi.mock('../../lib/invoice-pdf', () => ({
+  generateInvoicePdf: vi.fn(),
+  exportAllInvoicesCsv: vi.fn(),
 }));
 
 describe('Invoices Page', () => {
@@ -275,6 +283,116 @@ describe('Invoices Page', () => {
           status: 'completed',
         });
       });
+    });
+  });
+
+  describe('PDF Export', () => {
+    it('renders Actions column header', async () => {
+      vi.mocked(apiClient.listPaymentSessions).mockResolvedValueOnce({
+        data: mockPaymentSessions,
+      });
+
+      render(<Invoices />);
+
+      await waitFor(() => {
+        expect(screen.getByText('Actions')).toBeInTheDocument();
+      });
+    });
+
+    it('renders Download PDF button for each invoice', async () => {
+      vi.mocked(apiClient.listPaymentSessions).mockResolvedValueOnce({
+        data: mockPaymentSessions,
+      });
+
+      render(<Invoices />);
+
+      await waitFor(() => {
+        const downloadButtons = screen.getAllByText('Download PDF');
+        expect(downloadButtons).toHaveLength(3);
+      });
+    });
+
+    it('calls generateInvoicePdf when Download PDF is clicked', async () => {
+      const user = userEvent.setup();
+      vi.mocked(apiClient.listPaymentSessions).mockResolvedValueOnce({
+        data: [mockPaymentSessions[0]],
+      });
+
+      render(<Invoices />);
+
+      await waitFor(() => {
+        expect(screen.getByText('Download PDF')).toBeInTheDocument();
+      });
+
+      const downloadButton = screen.getByText('Download PDF');
+      await user.click(downloadButton);
+
+      expect(invoicePdf.generateInvoicePdf).toHaveBeenCalledWith({
+        id: 'INV-ABC123',
+        paymentId: 'ps_abc123',
+        amount: '$10,000.00',
+        currency: 'USDC',
+        status: 'Paid',
+        customer: '0x1234...5678',
+        date: expect.stringContaining('Jan 15'),
+      });
+    });
+
+    it('renders Export CSV button when invoices exist', async () => {
+      vi.mocked(apiClient.listPaymentSessions).mockResolvedValueOnce({
+        data: mockPaymentSessions,
+      });
+
+      render(<Invoices />);
+
+      await waitFor(() => {
+        expect(screen.getByText('Export CSV')).toBeInTheDocument();
+      });
+    });
+
+    it('does not render Export CSV button when no invoices exist', async () => {
+      vi.mocked(apiClient.listPaymentSessions).mockResolvedValueOnce({
+        data: [],
+      });
+
+      render(<Invoices />);
+
+      await waitFor(() => {
+        expect(screen.queryByText('Export CSV')).not.toBeInTheDocument();
+      });
+    });
+
+    it('calls exportAllInvoicesCsv when Export CSV is clicked', async () => {
+      const user = userEvent.setup();
+      vi.mocked(apiClient.listPaymentSessions).mockResolvedValueOnce({
+        data: mockPaymentSessions,
+      });
+
+      render(<Invoices />);
+
+      await waitFor(() => {
+        expect(screen.getByText('Export CSV')).toBeInTheDocument();
+      });
+
+      const exportButton = screen.getByText('Export CSV');
+      await user.click(exportButton);
+
+      expect(invoicePdf.exportAllInvoicesCsv).toHaveBeenCalledWith(
+        expect.arrayContaining([
+          expect.objectContaining({
+            id: 'INV-ABC123',
+            paymentId: 'ps_abc123',
+          }),
+          expect.objectContaining({
+            id: 'INV-DEF456',
+            paymentId: 'ps_def456',
+          }),
+          expect.objectContaining({
+            id: 'INV-GHI789',
+            paymentId: 'ps_ghi789',
+          }),
+        ])
+      );
     });
   });
 });
