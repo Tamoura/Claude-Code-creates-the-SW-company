@@ -23,6 +23,7 @@ const PaymentsList = lazy(() => import('./pages/dashboard/PaymentsList'));
 const PaymentDetail = lazy(() => import('./pages/dashboard/PaymentDetail'));
 const Settings = lazy(() => import('./pages/dashboard/Settings'));
 const Invoices = lazy(() => import('./pages/dashboard/Invoices'));
+const Refunds = lazy(() => import('./pages/dashboard/Refunds'));
 const ApiKeys = lazy(() => import('./pages/dashboard/ApiKeys'));
 const Webhooks = lazy(() => import('./pages/dashboard/Webhooks'));
 const Security = lazy(() => import('./pages/dashboard/Security'));
@@ -82,6 +83,7 @@ function App() {
                     <Route path="payments" element={<PaymentsList />} />
                     <Route path="payments/:id" element={<PaymentDetail />} />
                     <Route path="invoices" element={<Invoices />} />
+                    <Route path="refunds" element={<Refunds />} />
                     <Route path="api-keys" element={<ApiKeys />} />
                     <Route path="webhooks" element={<Webhooks />} />
                     <Route path="security" element={<Security />} />

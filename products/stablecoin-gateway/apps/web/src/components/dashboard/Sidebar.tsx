@@ -49,6 +49,15 @@ const mainNav = [
       </svg>
     ),
   },
+  {
+    to: '/dashboard/refunds',
+    label: 'Refunds',
+    icon: (
+      <svg className="w-5 h-5" fill="none" viewBox="0 0 24 24" stroke="currentColor" strokeWidth={1.5} aria-hidden="true">
+        <path strokeLinecap="round" strokeLinejoin="round" d="M9 15 3 9m0 0 6-6M3 9h12a6 6 0 0 1 0 12h-3" />
+      </svg>
+    ),
+  },
 ];
 
 const developerNav = [

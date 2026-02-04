@@ -5,7 +5,6 @@
  * For development/testing, it can use mock responses when API is unavailable.
  */
 
-import { EventSourcePolyfill } from 'event-source-polyfill';
 import { TokenManager } from './token-manager';
 import { mockPaymentSessions } from '../data/dashboard-mock';
 
@@ -155,6 +154,32 @@ export interface RotateWebhookSecretResponse {
   id: string;
   secret: string;
   rotatedAt: string;
+}
+
+export interface Refund {
+  id: string;
+  payment_session_id: string;
+  amount: number;
+  status: 'PENDING' | 'PROCESSING' | 'COMPLETED' | 'FAILED';
+  reason?: string;
+  created_at: string;
+  completed_at?: string;
+}
+
+export interface CreateRefundRequest {
+  payment_session_id: string;
+  amount: number;
+  reason?: string;
+}
+
+export interface NotificationPreferences {
+  id: string;
+  emailOnPaymentReceived: boolean;
+  emailOnRefundProcessed: boolean;
+  emailOnPaymentFailed: boolean;
+  sendCustomerReceipt: boolean;
+  createdAt: string;
+  updatedAt: string;
 }
 
 export interface AnalyticsOverview {
@@ -616,6 +641,9 @@ export class ApiClient {
     // Request a short-lived SSE token specific to this payment session
     const { token } = await this.requestSseToken(paymentId);
 
+    // Dynamic import to avoid module-level failure if polyfill is unavailable
+    const { EventSourcePolyfill } = await import('event-source-polyfill');
+
     // Use EventSourcePolyfill to send token in Authorization header
     // This prevents token leakage in browser history, server logs, and proxy logs
     const url = `${this.baseUrl}/v1/payment-sessions/${paymentId}/events`;
@@ -691,6 +719,42 @@ export class ApiClient {
       accessToken: response.access_token,
       refreshToken: response.refresh_token,
     };
+  }
+
+  // Session management methods
+
+  async listSessions(): Promise<{ data: Array<{ id: string; created_at: string; expires_at: string }> }> {
+    return this.request('/v1/auth/sessions');
+  }
+
+  async revokeSession(id: string): Promise<void> {
+    await this.request<void>(`/v1/auth/sessions/${id}`, {
+      method: 'DELETE',
+    });
+  }
+
+  async changePassword(currentPassword: string, newPassword: string): Promise<void> {
+    await this.request<void>('/v1/auth/change-password', {
+      method: 'POST',
+      body: JSON.stringify({ current_password: currentPassword, new_password: newPassword }),
+    });
+  }
+
+  async getNotificationPreferences(): Promise<NotificationPreferences> {
+    return this.request<NotificationPreferences>('/v1/notifications/preferences');
+  }
+
+  async updateNotificationPreferences(prefs: Partial<NotificationPreferences>): Promise<NotificationPreferences> {
+    return this.request<NotificationPreferences>('/v1/notifications/preferences', {
+      method: 'PATCH',
+      body: JSON.stringify(prefs),
+    });
+  }
+
+  async deleteAccount(): Promise<void> {
+    await this.request<void>('/v1/auth/account', {
+      method: 'DELETE',
+    });
   }
 
   // API Key methods
@@ -769,6 +833,34 @@ export class ApiClient {
     return this.request<RotateWebhookSecretResponse>(`/v1/webhooks/${id}/rotate-secret`, {
       method: 'POST',
     });
+  }
+
+  // Refund methods
+
+  async createRefund(data: CreateRefundRequest): Promise<Refund> {
+    return this.request<Refund>('/v1/refunds', {
+      method: 'POST',
+      body: JSON.stringify(data),
+    });
+  }
+
+  async listRefunds(params?: {
+    payment_session_id?: string;
+    status?: string;
+    limit?: number;
+    offset?: number;
+  }): Promise<{ data: Refund[]; pagination: { total: number; has_more: boolean } }> {
+    const query = new URLSearchParams();
+    if (params?.payment_session_id) query.set('payment_session_id', params.payment_session_id);
+    if (params?.status) query.set('status', params.status);
+    if (params?.limit) query.set('limit', String(params.limit));
+    if (params?.offset) query.set('offset', String(params.offset));
+    const qs = query.toString();
+    return this.request(`/v1/refunds${qs ? `?${qs}` : ''}`);
+  }
+
+  async getRefund(id: string): Promise<Refund> {
+    return this.request<Refund>(`/v1/refunds/${id}`);
   }
 
   // Admin methods

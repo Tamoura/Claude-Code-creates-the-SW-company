@@ -15,6 +15,7 @@ import { useAccount, useConnect, useDisconnect, useSwitchChain, useBalance, useW
 import { parseUnits, formatUnits } from 'viem';
 import { apiClient } from '../lib/api-client';
 import { TOKEN_ADDRESSES, NETWORK_IDS, ERC20_ABI } from '../lib/wagmi-config';
+import { usePaymentEvents } from '../hooks/usePaymentEvents';
 import type { PaymentSession } from '../lib/api-client';
 
 const IS_DEV = import.meta.env.DEV;
@@ -46,6 +47,12 @@ export default function PaymentPageNew() {
   const [devWalletConnected, setDevWalletConnected] = useState(false);
   const [isSimulating, setIsSimulating] = useState(false);
   const devAddress = '0x742d35Cc6634C0532925a3b844Bc9e7595f2bD18';
+
+  // SSE real-time updates
+  const {
+    status: sseStatus,
+    confirmations: sseConfirmations,
+  } = usePaymentEvents(id);
 
   // Get required chain ID for this payment
   const requiredChainId = payment ? NETWORK_IDS[payment.network] : undefined;
@@ -85,12 +92,19 @@ export default function PaymentPageNew() {
     }
   }, [id]);
 
-  // Redirect to success page when transaction confirmed
+  // Redirect to success page when transaction confirmed (wagmi or SSE)
   useEffect(() => {
     if (isConfirmed && id) {
       navigate(`/checkout/${id}/success`);
     }
   }, [isConfirmed, id, navigate]);
+
+  // Redirect to success when SSE reports completion
+  useEffect(() => {
+    if (sseStatus === 'completed' && id) {
+      navigate(`/checkout/${id}/success`);
+    }
+  }, [sseStatus, id, navigate]);
 
   // Surface wagmi connect errors
   useEffect(() => {
@@ -371,6 +385,18 @@ export default function PaymentPageNew() {
                   </p>
                   <p className="text-xs text-red-400">
                     You need at least {payment.amount} {payment.token} to complete this payment.
+                  </p>
+                </div>
+              )}
+
+              {/* SSE Confirmation Message */}
+              {sseConfirmations > 0 && (
+                <div className="bg-green-500/15 rounded-lg p-4 border border-green-500/30">
+                  <p className="text-sm font-medium text-accent-green mb-1">
+                    Payment confirmed on blockchain
+                  </p>
+                  <p className="text-xs text-accent-green">
+                    {sseConfirmations} confirmation{sseConfirmations !== 1 ? 's' : ''} received
                   </p>
                 </div>
               )}

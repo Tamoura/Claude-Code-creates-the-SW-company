@@ -1,6 +1,6 @@
 import { FastifyPluginAsync, FastifyRequest } from 'fastify';
 import { ZodError } from 'zod';
-import { signupSchema, loginSchema, logoutSchema, sseTokenSchema, forgotPasswordSchema, resetPasswordSchema, validateBody } from '../../utils/validation.js';
+import { signupSchema, loginSchema, logoutSchema, sseTokenSchema, forgotPasswordSchema, resetPasswordSchema, changePasswordSchema, validateBody } from '../../utils/validation.js';
 import { hashPassword, verifyPassword } from '../../utils/crypto.js';
 import { AppError } from '../../types/index.js';
 import { logger } from '../../utils/logger.js';
@@ -453,6 +453,116 @@ const authRoutes: FastifyPluginAsync = async (fastify) => {
           status: 400,
           detail: error.message,
         });
+      }
+      throw error;
+    }
+  });
+
+  // POST /v1/auth/change-password (authenticated)
+  fastify.post('/change-password', async (request, reply) => {
+    try {
+      await request.jwtVerify();
+      const userId = (request.user as { userId: string }).userId;
+
+      const body = validateBody(changePasswordSchema, request.body);
+
+      // Fetch the user
+      const user = await fastify.prisma.user.findUnique({
+        where: { id: userId },
+      });
+
+      if (!user) {
+        throw new AppError(401, 'invalid-credentials', 'User not found');
+      }
+
+      // Verify current password
+      const isValid = await verifyPassword(body.current_password, user.passwordHash);
+      if (!isValid) {
+        throw new AppError(401, 'invalid-credentials', 'Current password is incorrect');
+      }
+
+      // Reject if new password is same as current
+      const isSame = await verifyPassword(body.new_password, user.passwordHash);
+      if (isSame) {
+        throw new AppError(400, 'same-password', 'New password must be different from current password');
+      }
+
+      // Hash and update
+      const passwordHash = await hashPassword(body.new_password);
+      await fastify.prisma.user.update({
+        where: { id: userId },
+        data: { passwordHash },
+      });
+
+      logger.info('Password changed', { userId });
+
+      return reply.send({ message: 'Password changed successfully' });
+    } catch (error) {
+      if (error instanceof AppError) {
+        return reply.code(error.statusCode).send(error.toJSON());
+      }
+      if (error instanceof ZodError) {
+        return reply.code(400).send({
+          type: 'https://gateway.io/errors/validation-error',
+          title: 'Validation Error',
+          status: 400,
+          detail: error.message,
+        });
+      }
+      throw error;
+    }
+  });
+
+  // ==================== Session Management ====================
+
+  // GET /v1/auth/sessions — list active refresh tokens for current user
+  fastify.get('/sessions', async (request, reply) => {
+    try {
+      await request.jwtVerify();
+      const userId = (request.user as { userId: string }).userId;
+
+      const tokens = await fastify.prisma.refreshToken.findMany({
+        where: { userId, revoked: false, expiresAt: { gt: new Date() } },
+        orderBy: { createdAt: 'desc' },
+        select: { id: true, createdAt: true, expiresAt: true },
+      });
+
+      const sessions = tokens.map(t => ({
+        id: t.id,
+        created_at: t.createdAt.toISOString(),
+        expires_at: t.expiresAt.toISOString(),
+      }));
+
+      return reply.send({ data: sessions });
+    } catch (error) {
+      if (error instanceof AppError) {
+        return reply.code(error.statusCode).send(error.toJSON());
+      }
+      throw error;
+    }
+  });
+
+  // DELETE /v1/auth/sessions/:id — revoke a specific session
+  fastify.delete('/sessions/:id', async (request, reply) => {
+    try {
+      await request.jwtVerify();
+      const userId = (request.user as { userId: string }).userId;
+      const { id } = request.params as { id: string };
+
+      const result = await fastify.prisma.refreshToken.updateMany({
+        where: { id, userId, revoked: false },
+        data: { revoked: true, revokedAt: new Date() },
+      });
+
+      if (result.count === 0) {
+        throw new AppError(404, 'session-not-found', 'Session not found or already revoked');
+      }
+
+      logger.info('Session revoked', { userId, sessionId: id });
+      return reply.code(204).send();
+    } catch (error) {
+      if (error instanceof AppError) {
+        return reply.code(error.statusCode).send(error.toJSON());
       }
       throw error;
     }

@@ -2,10 +2,12 @@ import { useState, type FormEvent } from 'react';
 import { useNavigate } from 'react-router-dom';
 import { useAuth } from '../../hooks/useAuth';
 import { apiClient } from '../../lib/api-client';
+import { useSessions } from '../../hooks/useSessions';
 
 export default function Security() {
   const navigate = useNavigate();
   const { user, logout } = useAuth();
+  const { sessions, isLoading: sessionsLoading, revokeSession } = useSessions();
   const [showSessions, setShowSessions] = useState(false);
   const [showPasswordForm, setShowPasswordForm] = useState(false);
   const [currentPassword, setCurrentPassword] = useState('');
@@ -27,10 +29,7 @@ export default function Security() {
     }
     setIsChanging(true);
     try {
-      await apiClient.request('/v1/auth/change-password', {
-        method: 'POST',
-        body: JSON.stringify({ current_password: currentPassword, new_password: newPassword }),
-      });
+      await apiClient.changePassword(currentPassword, newPassword);
       setPasswordMsg({ type: 'success', text: 'Password changed successfully' });
       setShowPasswordForm(false);
       setCurrentPassword('');
@@ -43,9 +42,6 @@ export default function Security() {
     }
   }
 
-  const sessions = [
-    { id: 'current', device: 'Current Session', ip: '127.0.0.1', lastActive: new Date().toISOString(), current: true },
-  ];
 
   return (
     <div className="space-y-6">
@@ -139,21 +135,37 @@ export default function Security() {
 
         {showSessions && (
           <div className="space-y-3">
-            {sessions.map(session => (
-              <div key={session.id} className="flex items-center justify-between py-2 border-b border-card-border last:border-b-0">
-                <div>
-                  <p className="text-sm text-text-primary">
-                    {session.device}
-                    {session.current && (
-                      <span className="ml-2 inline-block px-2 py-0.5 rounded-full text-xs font-semibold bg-green-500/15 text-accent-green border border-green-500/30">
-                        Current
-                      </span>
-                    )}
-                  </p>
-                  <p className="text-xs text-text-muted">IP: {session.ip} &middot; Last active: {new Date(session.lastActive).toLocaleString()}</p>
+            {sessionsLoading ? (
+              <p className="text-sm text-text-muted">Loading sessions...</p>
+            ) : sessions.length === 0 ? (
+              <p className="text-sm text-text-muted">No active sessions</p>
+            ) : (
+              sessions.map((session, index) => (
+                <div key={session.id} className="flex items-center justify-between py-2 border-b border-card-border last:border-b-0">
+                  <div>
+                    <p className="text-sm text-text-primary">
+                      Session {index + 1}
+                      {index === 0 && (
+                        <span className="ml-2 inline-block px-2 py-0.5 rounded-full text-xs font-semibold bg-green-500/15 text-accent-green border border-green-500/30">
+                          Current
+                        </span>
+                      )}
+                    </p>
+                    <p className="text-xs text-text-muted">
+                      Created: {new Date(session.created_at).toLocaleString()} &middot; Expires: {new Date(session.expires_at).toLocaleString()}
+                    </p>
+                  </div>
+                  {index > 0 && (
+                    <button
+                      onClick={() => revokeSession(session.id)}
+                      className="px-3 py-1 text-xs font-medium text-red-400 border border-red-500/30 rounded-lg hover:bg-red-500/10 transition-colors"
+                    >
+                      Revoke
+                    </button>
+                  )}
                 </div>
-              </div>
-            ))}
+              ))
+            )}
           </div>
         )}
       </div>
