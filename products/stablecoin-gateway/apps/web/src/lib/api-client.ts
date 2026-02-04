@@ -157,6 +157,28 @@ export interface RotateWebhookSecretResponse {
   rotatedAt: string;
 }
 
+export interface AnalyticsOverview {
+  total_payments: number;
+  total_volume: number;
+  successful_payments: number;
+  success_rate: number;
+  average_payment: number;
+  total_refunds: number;
+  refund_rate: number;
+}
+
+export interface VolumeDataPoint {
+  date: string;
+  volume: number;
+  count: number;
+}
+
+export interface BreakdownItem {
+  label: string;
+  count: number;
+  volume: number;
+}
+
 export class ApiClient {
   private baseUrl: string;
   private useMock: boolean;
@@ -775,6 +797,36 @@ export class ApiClient {
     if (params?.status) query.set('status', params.status);
     const qs = query.toString();
     return this.request(`/v1/admin/merchants/${merchantId}/payments${qs ? `?${qs}` : ''}`);
+  }
+
+  // Analytics methods
+
+  /**
+   * Get analytics overview
+   */
+  async getAnalyticsOverview(): Promise<AnalyticsOverview> {
+    return this.request<AnalyticsOverview>('/v1/analytics/overview');
+  }
+
+  /**
+   * Get volume data over time
+   * @param period - Time period grouping: 'day', 'week', or 'month'
+   * @param days - Number of days to look back
+   */
+  async getAnalyticsVolume(period: string, days: number): Promise<{ data: VolumeDataPoint[]; period: string; days: number }> {
+    return this.request<{ data: VolumeDataPoint[]; period: string; days: number }>(
+      `/v1/analytics/volume?period=${period}&days=${days}`
+    );
+  }
+
+  /**
+   * Get payment breakdown by dimension
+   * @param groupBy - Dimension to group by: 'status', 'network', or 'token'
+   */
+  async getAnalyticsBreakdown(groupBy: string): Promise<{ data: BreakdownItem[]; group_by: string }> {
+    return this.request<{ data: BreakdownItem[]; group_by: string }>(
+      `/v1/analytics/payments?group_by=${groupBy}`
+    );
   }
 }
 

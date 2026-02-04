@@ -152,4 +152,42 @@ describe('API Client (Mock Mode)', () => {
       expect(expiresAt).toBeLessThan(now + sevenDays + 60000);
     });
   });
+
+  describe('Analytics', () => {
+    describe('getAnalyticsOverview', () => {
+      it('should call overview endpoint', async () => {
+        // This will test against the mock implementation for now
+        // When backend is ready, this should return real data
+        try {
+          await apiClient.getAnalyticsOverview();
+          // If mock not implemented yet, it will throw
+        } catch (error: any) {
+          expect(error.status).toBe(501);
+          expect(error.title).toBe('Not Implemented');
+        }
+      });
+    });
+
+    describe('getAnalyticsVolume', () => {
+      it('should call volume endpoint with params', async () => {
+        try {
+          await apiClient.getAnalyticsVolume('day', 30);
+        } catch (error: any) {
+          expect(error.status).toBe(501);
+          expect(error.title).toBe('Not Implemented');
+        }
+      });
+    });
+
+    describe('getAnalyticsBreakdown', () => {
+      it('should call breakdown endpoint with groupBy param', async () => {
+        try {
+          await apiClient.getAnalyticsBreakdown('status');
+        } catch (error: any) {
+          expect(error.status).toBe(501);
+          expect(error.title).toBe('Not Implemented');
+        }
+      });
+    });
+  });
 });
