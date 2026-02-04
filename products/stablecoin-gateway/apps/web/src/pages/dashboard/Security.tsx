@@ -27,10 +27,7 @@ export default function Security() {
     }
     setIsChanging(true);
     try {
-      await apiClient.request('/v1/auth/change-password', {
-        method: 'POST',
-        body: JSON.stringify({ current_password: currentPassword, new_password: newPassword }),
-      });
+      await apiClient.changePassword(currentPassword, newPassword);
       setPasswordMsg({ type: 'success', text: 'Password changed successfully' });
       setShowPasswordForm(false);
       setCurrentPassword('');

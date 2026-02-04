@@ -5,7 +5,6 @@
  * For development/testing, it can use mock responses when API is unavailable.
  */
 
-import { EventSourcePolyfill } from 'event-source-polyfill';
 import { TokenManager } from './token-manager';
 import { mockPaymentSessions } from '../data/dashboard-mock';
 
@@ -603,6 +602,9 @@ export class ApiClient {
 
     // Request a short-lived SSE token specific to this payment session
     const { token } = await this.requestSseToken(paymentId);
+
+    // Dynamic import to avoid module-level failure if polyfill is unavailable
+    const { EventSourcePolyfill } = await import('event-source-polyfill');
 
     // Use EventSourcePolyfill to send token in Authorization header
     // This prevents token leakage in browser history, server logs, and proxy logs

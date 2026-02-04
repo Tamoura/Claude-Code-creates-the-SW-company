@@ -11,7 +11,7 @@ vi.mock('../../hooks/useAuth');
 // Mock the apiClient
 vi.mock('../../lib/api-client', () => ({
   apiClient: {
-    request: vi.fn(),
+    changePassword: vi.fn(),
   },
 }));
 
@@ -123,7 +123,7 @@ describe('Security Page', () => {
     });
 
     it('shows success message when password is changed successfully', async () => {
-      vi.mocked(apiClient.request).mockResolvedValueOnce(undefined);
+      vi.mocked(apiClient.changePassword).mockResolvedValueOnce(undefined);
 
       renderWithRouter(<Security />);
 
@@ -149,7 +149,7 @@ describe('Security Page', () => {
     });
 
     it('shows error message when API call fails', async () => {
-      vi.mocked(apiClient.request).mockRejectedValueOnce(new Error('API Error'));
+      vi.mocked(apiClient.changePassword).mockRejectedValueOnce(new Error('API Error'));
 
       renderWithRouter(<Security />);
 
@@ -172,7 +172,7 @@ describe('Security Page', () => {
     });
 
     it('disables submit button during password change', async () => {
-      vi.mocked(apiClient.request).mockImplementationOnce(() => new Promise(() => {})); // Never resolves
+      vi.mocked(apiClient.changePassword).mockImplementationOnce(() => new Promise(() => {})); // Never resolves
 
       renderWithRouter(<Security />);
 
