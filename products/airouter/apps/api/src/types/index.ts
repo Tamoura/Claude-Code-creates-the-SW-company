@@ -51,15 +51,48 @@ export interface ProviderModel {
   contextWindow?: number;
 }
 
+export interface GuideStep {
+  step: number;
+  instruction: string;
+  note?: string;
+}
+
+export interface KeyAcquisitionGuide {
+  steps: GuideStep[];
+  tips: string[];
+  gotchas: string[];
+  verificationSteps: string[];
+}
+
+export interface ProviderDocumentation {
+  quickstart: string;
+  pricing: string;
+  api: string;
+}
+
+export type ProviderCategory =
+  | 'Multimodal'
+  | 'Speed'
+  | 'Edge AI'
+  | 'Open Source'
+  | 'Enterprise'
+  | 'Aggregator'
+  | 'Reasoning';
+
 export interface Provider {
   slug: string;
   name: string;
+  description: string;
+  category: ProviderCategory;
+  lastVerified: string;
+  prerequisites: string[];
   baseUrl: string;
   apiFormat: 'openai' | 'google' | 'cohere' | 'custom';
   freeTier: ProviderFreeTier;
   models: ProviderModel[];
   keyAcquisitionUrl: string;
-  keyAcquisitionGuide: string;
+  keyAcquisitionGuide: KeyAcquisitionGuide;
+  documentation: ProviderDocumentation;
   healthStatus: 'up' | 'down' | 'degraded';
   authHeader: string;
   authPrefix: string;

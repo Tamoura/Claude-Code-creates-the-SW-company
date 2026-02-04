@@ -378,7 +378,9 @@ describe('API Routes', () => {
       expect(res.statusCode).toBe(200);
       const body = JSON.parse(res.body);
       expect(body.provider).toBe('Google Gemini');
-      expect(body.guide).toContain('Google AI Studio');
+      expect(body.guide).toBeDefined();
+      expect(body.guide.steps).toBeDefined();
+      expect(body.guide.steps[0].instruction).toContain('Google AI Studio');
       expect(body.signup_url).toBeTruthy();
     });
   });

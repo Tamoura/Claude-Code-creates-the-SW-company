@@ -9,8 +9,29 @@ const providerRoutes: FastifyPluginAsync = async (fastify) => {
       data: providers.map(p => ({
         slug: p.slug,
         name: p.name,
+        description: p.description,
+        category: p.category,
+        last_verified: p.lastVerified,
         base_url: p.baseUrl,
         api_format: p.apiFormat,
+        free_tier: p.freeTier,
+        models: p.models,
+        health_status: p.healthStatus,
+        key_acquisition_url: p.keyAcquisitionUrl,
+      })),
+      total: providers.length,
+    });
+  });
+
+  // GET /api/v1/providers/compare - Free tier comparison data
+  fastify.get('/compare', async (_request, reply) => {
+    return reply.send({
+      data: providers.map(p => ({
+        slug: p.slug,
+        name: p.name,
+        description: p.description,
+        category: p.category,
+        last_verified: p.lastVerified,
         free_tier: p.freeTier,
         models: p.models,
         health_status: p.healthStatus,
@@ -32,6 +53,10 @@ const providerRoutes: FastifyPluginAsync = async (fastify) => {
     return reply.send({
       slug: provider.slug,
       name: provider.name,
+      description: provider.description,
+      category: provider.category,
+      last_verified: provider.lastVerified,
+      prerequisites: provider.prerequisites,
       base_url: provider.baseUrl,
       api_format: provider.apiFormat,
       free_tier: provider.freeTier,
@@ -39,6 +64,7 @@ const providerRoutes: FastifyPluginAsync = async (fastify) => {
       health_status: provider.healthStatus,
       key_acquisition_url: provider.keyAcquisitionUrl,
       key_acquisition_guide: provider.keyAcquisitionGuide,
+      documentation: provider.documentation,
     });
   });
 
