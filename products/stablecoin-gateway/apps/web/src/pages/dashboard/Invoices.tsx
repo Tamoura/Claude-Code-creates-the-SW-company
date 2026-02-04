@@ -1,5 +1,6 @@
 import { useState, useEffect } from 'react';
 import { apiClient, type PaymentSession } from '../../lib/api-client';
+import { generateInvoicePdf, exportAllInvoicesCsv } from '../../lib/invoice-pdf';
 
 interface Invoice {
   id: string;
@@ -44,11 +45,21 @@ export default function Invoices() {
 
   return (
     <div className="space-y-6">
-      <div>
-        <h2 className="text-2xl font-bold text-text-primary mb-1">Invoices</h2>
-        <p className="text-text-secondary">
-          Completed payment invoices generated from your transactions
-        </p>
+      <div className="flex items-center justify-between">
+        <div>
+          <h2 className="text-2xl font-bold text-text-primary mb-1">Invoices</h2>
+          <p className="text-text-secondary">
+            Completed payment invoices generated from your transactions
+          </p>
+        </div>
+        {invoices.length > 0 && (
+          <button
+            onClick={() => exportAllInvoicesCsv(invoices)}
+            className="px-4 py-2 text-sm font-medium text-text-secondary border border-card-border rounded-lg hover:text-text-primary hover:border-text-muted transition-colors"
+          >
+            Export CSV
+          </button>
+        )}
       </div>
 
       <div className="bg-card-bg border border-card-border rounded-xl overflow-hidden">
@@ -60,18 +71,19 @@ export default function Invoices() {
               <th className="text-left px-6 py-3.5 text-text-muted font-medium">Date</th>
               <th className="text-left px-6 py-3.5 text-text-muted font-medium">Amount</th>
               <th className="text-left px-6 py-3.5 text-text-muted font-medium">Status</th>
+              <th className="text-left px-6 py-3.5 text-text-muted font-medium">Actions</th>
             </tr>
           </thead>
           <tbody>
             {isLoading ? (
               <tr>
-                <td colSpan={5} className="px-6 py-8 text-center text-text-secondary">
+                <td colSpan={6} className="px-6 py-8 text-center text-text-secondary">
                   Loading invoices...
                 </td>
               </tr>
             ) : invoices.length === 0 ? (
               <tr>
-                <td colSpan={5} className="px-6 py-8 text-center text-text-secondary">
+                <td colSpan={6} className="px-6 py-8 text-center text-text-secondary">
                   No completed payments yet. Invoices are generated from completed transactions.
                 </td>
               </tr>
@@ -86,6 +98,14 @@ export default function Invoices() {
                     <span className="inline-block px-2.5 py-0.5 rounded-full text-xs font-semibold bg-green-500/15 text-accent-green border border-green-500/30">
                       {inv.status}
                     </span>
+                  </td>
+                  <td className="px-6 py-4">
+                    <button
+                      onClick={() => generateInvoicePdf(inv)}
+                      className="text-xs font-medium text-accent-blue hover:underline"
+                    >
+                      Download PDF
+                    </button>
                   </td>
                 </tr>
               ))

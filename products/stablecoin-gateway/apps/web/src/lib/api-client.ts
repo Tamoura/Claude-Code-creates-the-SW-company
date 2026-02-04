@@ -5,7 +5,6 @@
  * For development/testing, it can use mock responses when API is unavailable.
  */
 
-import { EventSourcePolyfill } from 'event-source-polyfill';
 import { TokenManager } from './token-manager';
 import { mockPaymentSessions } from '../data/dashboard-mock';
 
@@ -155,6 +154,16 @@ export interface RotateWebhookSecretResponse {
   id: string;
   secret: string;
   rotatedAt: string;
+}
+
+export interface NotificationPreferences {
+  id: string;
+  emailOnPaymentReceived: boolean;
+  emailOnRefundProcessed: boolean;
+  emailOnPaymentFailed: boolean;
+  sendCustomerReceipt: boolean;
+  createdAt: string;
+  updatedAt: string;
 }
 
 export class ApiClient {
@@ -594,6 +603,9 @@ export class ApiClient {
     // Request a short-lived SSE token specific to this payment session
     const { token } = await this.requestSseToken(paymentId);
 
+    // Dynamic import to avoid module-level failure if polyfill is unavailable
+    const { EventSourcePolyfill } = await import('event-source-polyfill');
+
     // Use EventSourcePolyfill to send token in Authorization header
     // This prevents token leakage in browser history, server logs, and proxy logs
     const url = `${this.baseUrl}/v1/payment-sessions/${paymentId}/events`;
@@ -687,6 +699,23 @@ export class ApiClient {
     await this.request<void>('/v1/auth/change-password', {
       method: 'POST',
       body: JSON.stringify({ current_password: currentPassword, new_password: newPassword }),
+    });
+  }
+
+  async getNotificationPreferences(): Promise<NotificationPreferences> {
+    return this.request<NotificationPreferences>('/v1/notifications/preferences');
+  }
+
+  async updateNotificationPreferences(prefs: Partial<NotificationPreferences>): Promise<NotificationPreferences> {
+    return this.request<NotificationPreferences>('/v1/notifications/preferences', {
+      method: 'PATCH',
+      body: JSON.stringify(prefs),
+    });
+  }
+
+  async deleteAccount(): Promise<void> {
+    await this.request<void>('/v1/auth/account', {
+      method: 'DELETE',
     });
   }
 

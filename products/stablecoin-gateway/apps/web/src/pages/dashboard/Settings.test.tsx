@@ -1,10 +1,15 @@
 import { describe, it, expect, vi, beforeEach } from 'vitest';
 import { render, screen, fireEvent, waitFor } from '@testing-library/react';
+import { BrowserRouter } from 'react-router-dom';
 import Settings from './Settings';
 import * as useAuthModule from '../../hooks/useAuth';
+import * as useSettingsModule from '../../hooks/useSettings';
 
 // Mock the useAuth hook
 vi.mock('../../hooks/useAuth');
+
+// Mock the useSettings hook
+vi.mock('../../hooks/useSettings');
 
 describe('Settings Page', () => {
   const mockUser = {
@@ -13,9 +18,17 @@ describe('Settings Page', () => {
     role: 'MERCHANT' as const,
   };
 
+  const mockSaveNotifications = vi.fn();
+  const mockChangePassword = vi.fn();
+  const mockDeleteAccount = vi.fn();
+
+  const renderWithRouter = (component: React.ReactElement) => {
+    return render(<BrowserRouter>{component}</BrowserRouter>);
+  };
+
   beforeEach(() => {
     vi.clearAllMocks();
-    // Default mock implementation
+    // Default mock implementation for useAuth
     vi.spyOn(useAuthModule, 'useAuth').mockReturnValue({
       user: mockUser,
       isAuthenticated: true,
@@ -24,11 +37,26 @@ describe('Settings Page', () => {
       login: vi.fn(),
       logout: vi.fn(),
     });
+
+    // Default mock implementation for useSettings
+    vi.spyOn(useSettingsModule, 'useSettings').mockReturnValue({
+      notifications: null,
+      isLoadingNotifications: false,
+      notificationError: null,
+      saveNotifications: mockSaveNotifications,
+      changePassword: mockChangePassword,
+      deleteAccount: mockDeleteAccount,
+    });
+
+    // Reset mock implementations to successful responses
+    mockSaveNotifications.mockResolvedValue(true);
+    mockChangePassword.mockResolvedValue({ success: true });
+    mockDeleteAccount.mockResolvedValue({ success: true });
   });
 
   describe('Account Information', () => {
     it('renders account info with email', () => {
-      render(<Settings />);
+      renderWithRouter(<Settings />);
 
       expect(screen.getByText('Account Information')).toBeInTheDocument();
       expect(screen.getByText(mockUser.email)).toBeInTheDocument();
@@ -36,7 +64,7 @@ describe('Settings Page', () => {
     });
 
     it('displays member since date', () => {
-      render(<Settings />);
+      renderWithRouter(<Settings />);
 
       expect(screen.getByText(/member since/i)).toBeInTheDocument();
     });
@@ -44,7 +72,7 @@ describe('Settings Page', () => {
 
   describe('Email Notifications', () => {
     it('renders notification toggles with correct defaults', () => {
-      render(<Settings />);
+      renderWithRouter(<Settings />);
 
       expect(screen.getByText('Email Notifications')).toBeInTheDocument();
 
@@ -63,7 +91,7 @@ describe('Settings Page', () => {
     });
 
     it('allows toggling notification preferences', () => {
-      render(<Settings />);
+      renderWithRouter(<Settings />);
 
       const toggles = screen.getAllByRole('checkbox');
       const weeklyToggle = toggles[3];
@@ -74,7 +102,7 @@ describe('Settings Page', () => {
     });
 
     it('shows success message when saving preferences', async () => {
-      render(<Settings />);
+      renderWithRouter(<Settings />);
 
       const saveButton = screen.getByRole('button', { name: /save preferences/i });
       fireEvent.click(saveButton);
@@ -87,7 +115,7 @@ describe('Settings Page', () => {
 
   describe('Change Password', () => {
     it('renders password change form', () => {
-      render(<Settings />);
+      renderWithRouter(<Settings />);
 
       expect(screen.getByText('Change Password')).toBeInTheDocument();
       expect(screen.getByLabelText(/current password/i)).toBeInTheDocument();
@@ -96,7 +124,7 @@ describe('Settings Page', () => {
     });
 
     it('shows validation error for mismatched passwords', () => {
-      render(<Settings />);
+      renderWithRouter(<Settings />);
 
       const currentPassword = screen.getByLabelText(/current password/i);
       const newPassword = screen.getByLabelText(/new password/i);
@@ -112,7 +140,7 @@ describe('Settings Page', () => {
     });
 
     it('shows validation error for weak password', async () => {
-      render(<Settings />);
+      renderWithRouter(<Settings />);
 
       const currentPassword = screen.getByLabelText(/current password/i);
       const newPassword = screen.getByLabelText(/new password/i);
@@ -130,7 +158,7 @@ describe('Settings Page', () => {
     });
 
     it('validates password requirements (uppercase, lowercase, number, special)', async () => {
-      render(<Settings />);
+      renderWithRouter(<Settings />);
 
       const currentPassword = screen.getByLabelText(/current password/i);
       const newPassword = screen.getByLabelText(/new password/i);
@@ -149,7 +177,7 @@ describe('Settings Page', () => {
     });
 
     it('shows success message when password is updated', async () => {
-      render(<Settings />);
+      renderWithRouter(<Settings />);
 
       const currentPassword = screen.getByLabelText(/current password/i);
       const newPassword = screen.getByLabelText(/new password/i);
@@ -169,7 +197,7 @@ describe('Settings Page', () => {
 
   describe('Danger Zone', () => {
     it('renders delete account section', () => {
-      render(<Settings />);
+      renderWithRouter(<Settings />);
 
       expect(screen.getByText('Danger Zone')).toBeInTheDocument();
       expect(screen.getByText(/permanently delete your account/i)).toBeInTheDocument();
@@ -177,7 +205,7 @@ describe('Settings Page', () => {
     });
 
     it('shows confirmation dialog when delete is clicked', () => {
-      render(<Settings />);
+      renderWithRouter(<Settings />);
 
       const deleteButton = screen.getByRole('button', { name: /delete account/i });
       fireEvent.click(deleteButton);
@@ -188,7 +216,7 @@ describe('Settings Page', () => {
     });
 
     it('requires exact DELETE text to confirm deletion', async () => {
-      render(<Settings />);
+      renderWithRouter(<Settings />);
 
       const deleteButton = screen.getByRole('button', { name: /delete account/i });
       fireEvent.click(deleteButton);

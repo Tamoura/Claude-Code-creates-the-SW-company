@@ -26,9 +26,16 @@ products:
     path: "products/deal-flow-platform"
     status: "active"
     notes: "Qatar deal flow platform for institutional investors."
+  shipwright:
+    path: "products/shipwright"
+    status: "active"
+    notes: "AI Dev Team as a Service. Bolt.diy fork with multi-agent orchestrator. Port 3110."
 
 # Active worktrees (for parallel product development)
-worktrees: {}
+worktrees:
+  shipwright:
+    path: ".tree/shipwright"
+    branch: "feature/shipwright/dev"
 
 # Company-wide pending decisions (cross-product)
 pending_decisions: []
@@ -37,4 +44,4 @@ pending_decisions: []
 checkpoints: []
 
 # Last updated
-last_updated: "2026-02-01T00:00:00Z"
+last_updated: "2026-02-03T00:00:00Z"
