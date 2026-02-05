@@ -149,6 +149,8 @@ describe('POST /v1/auth/change-password', () => {
     });
     const freshToken = loginRes.json().access_token;
 
+    // Use unique UA to avoid rate limit from earlier tests
+    const samePassUA = `ChangePasswordSameTest/${Date.now()}`;
     const response = await app.inject({
       method: 'POST',
       url: '/v1/auth/change-password',
@@ -158,7 +160,7 @@ describe('POST /v1/auth/change-password', () => {
       },
       headers: {
         authorization: `Bearer ${freshToken}`,
-        'user-agent': testUA,
+        'user-agent': samePassUA,
       },
     });
 

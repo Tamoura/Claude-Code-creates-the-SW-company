@@ -191,9 +191,9 @@ describe('NonceManager - Lock Atomicity (TOCTOU Fix)', () => {
   });
 
   // -----------------------------------------------------------------------
-  // Test 3: Falls back to non-atomic release when eval throws
+  // Test 3: RISK-096 — When eval fails, lock is NOT released (auto-expires via PX)
   // -----------------------------------------------------------------------
-  it('should fall back to non-atomic release if eval fails', async () => {
+  it('should let lock auto-expire when eval fails (no non-atomic fallback)', async () => {
     const redis = createMockRedisWithBrokenEval();
     const nonceManager = new NonceManager(redis as any, 5000);
     const mockProvider = createMockProvider(0);
@@ -205,20 +205,19 @@ describe('NonceManager - Lock Atomicity (TOCTOU Fix)', () => {
     const evalCalls = redis.calls.filter((c) => c.method === 'eval');
     expect(evalCalls.length).toBe(1);
 
-    // Fallback: get was called to check lock ownership
+    // RISK-096: No fallback GET+DEL — lock remains and will auto-expire via PX TTL
     const getCalls = redis.calls.filter(
       (c) => c.method === 'get' && c.args[0] === `nonce_lock:${walletAddress}`
     );
-    expect(getCalls.length).toBeGreaterThanOrEqual(1);
+    expect(getCalls.length).toBe(0);
 
-    // Fallback: del was called to release the lock
     const delCalls = redis.calls.filter(
       (c) => c.method === 'del' && c.args[0] === `nonce_lock:${walletAddress}`
     );
-    expect(delCalls.length).toBe(1);
+    expect(delCalls.length).toBe(0);
 
-    // Lock should be released despite eval failure
-    expect(redis.store[`nonce_lock:${walletAddress}`]).toBeUndefined();
+    // Lock still exists — will auto-expire via PX TTL set during acquisition
+    expect(redis.store[`nonce_lock:${walletAddress}`]).toBeDefined();
   });
 
   // -----------------------------------------------------------------------

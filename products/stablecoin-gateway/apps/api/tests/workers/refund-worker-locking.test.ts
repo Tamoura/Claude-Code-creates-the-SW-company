@@ -91,7 +91,10 @@ describe('RefundProcessingWorker - Distributed Locking', () => {
     it('should acquire Redis lock before processing refunds', async () => {
       // $transaction calls the callback with a transaction client (tx)
       mockPrisma.$transaction.mockImplementation(async (cb: Function) => {
-        const tx = { $queryRaw: jest.fn().mockResolvedValue([]) };
+        const tx = {
+          $queryRaw: jest.fn().mockResolvedValue([]),
+          $executeRaw: jest.fn().mockResolvedValue(0),
+        };
         return cb(tx);
       });
 
@@ -140,7 +143,10 @@ describe('RefundProcessingWorker - Distributed Locking', () => {
         { id: 'ref_2' },
       ];
       mockPrisma.$transaction.mockImplementation(async (cb: Function) => {
-        const tx = { $queryRaw: jest.fn().mockResolvedValue(pendingRefunds) };
+        const tx = {
+          $queryRaw: jest.fn().mockResolvedValue(pendingRefunds),
+          $executeRaw: jest.fn().mockResolvedValue(2),
+        };
         return cb(tx);
       });
       mockRefundService.processRefund.mockResolvedValue({});
@@ -189,7 +195,10 @@ describe('RefundProcessingWorker - Distributed Locking', () => {
   describe('lock TTL', () => {
     it('should set lock TTL to 60 seconds to prevent deadlock', async () => {
       mockPrisma.$transaction.mockImplementation(async (cb: Function) => {
-        const tx = { $queryRaw: jest.fn().mockResolvedValue([]) };
+        const tx = {
+          $queryRaw: jest.fn().mockResolvedValue([]),
+          $executeRaw: jest.fn().mockResolvedValue(0),
+        };
         return cb(tx);
       });
 
@@ -214,7 +223,10 @@ describe('RefundProcessingWorker - Distributed Locking', () => {
       mockPrisma.$transaction.mockImplementation(async (cb: Function) => {
         const txQueryRaw = jest.fn().mockResolvedValue(pendingRefunds);
         capturedQueryRaw = txQueryRaw;
-        const tx = { $queryRaw: txQueryRaw };
+        const tx = {
+          $queryRaw: txQueryRaw,
+          $executeRaw: jest.fn().mockResolvedValue(1),
+        };
         return cb(tx);
       });
       mockRefundService.processRefund.mockResolvedValue({});
@@ -248,12 +260,10 @@ describe('RefundProcessingWorker - Distributed Locking', () => {
   });
 
   describe('Redis unavailable fallback', () => {
-    it('should fall back to current behavior with warning when Redis is unavailable', async () => {
+    it('should fall back to atomic UPDATE...RETURNING when Redis is unavailable', async () => {
       const warnSpy = jest.spyOn(console, 'warn');
-      const pendingRefunds = [
-        { id: 'ref_1', status: 'PENDING', createdAt: new Date() },
-      ];
-      mockPrisma.refund.findMany.mockResolvedValue(pendingRefunds);
+      const claimedRefunds = [{ id: 'ref_1' }];
+      mockPrisma.$queryRaw.mockResolvedValue(claimedRefunds);
       mockRefundService.processRefund.mockResolvedValue({});
 
       // Create worker without Redis
@@ -264,8 +274,8 @@ describe('RefundProcessingWorker - Distributed Locking', () => {
 
       await workerNoRedis.processPendingRefunds();
 
-      // Should still process using findMany (old behavior)
-      expect(mockPrisma.refund.findMany).toHaveBeenCalled();
+      // Should process using $queryRaw (UPDATE ... RETURNING)
+      expect(mockPrisma.$queryRaw).toHaveBeenCalled();
       expect(mockRefundService.processRefund).toHaveBeenCalledWith('ref_1');
 
       warnSpy.mockRestore();

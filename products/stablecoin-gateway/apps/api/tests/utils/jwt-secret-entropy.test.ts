@@ -21,6 +21,7 @@ describe('JWT Secret Entropy Validation', () => {
     process.env.WEBHOOK_ENCRYPTION_KEY = 'a'.repeat(64);
     process.env.API_KEY_HMAC_SECRET = crypto.randomBytes(32).toString('hex');
     process.env.INTERNAL_API_KEY = crypto.randomBytes(32).toString('hex');
+    process.env.FRONTEND_URL = 'https://app.stableflow.io';
     // Remove private key fallback for production
     delete process.env.HOT_WALLET_PRIVATE_KEY;
     delete process.env.ALLOW_PRIVATE_KEY_FALLBACK;

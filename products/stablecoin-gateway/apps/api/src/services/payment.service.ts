@@ -49,7 +49,7 @@ export class PaymentService {
     // Queue webhook for payment.created event
     await this.webhookService.queueWebhook(userId, 'payment.created', {
       id: paymentSession.id,
-      amount: Number(paymentSession.amount),
+      amount: paymentSession.amount.toString(),
       currency: paymentSession.currency,
       status: paymentSession.status,
       network: paymentSession.network,

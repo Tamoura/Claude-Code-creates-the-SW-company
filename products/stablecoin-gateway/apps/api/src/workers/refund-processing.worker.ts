@@ -75,11 +75,11 @@ export class RefundProcessingWorker {
     }
 
     try {
-      // Wrap FOR UPDATE SKIP LOCKED in an interactive transaction so the
-      // row-level locks are held for the duration of processing, preventing
-      // concurrent instances from claiming the same refunds.
-      await this.prisma.$transaction(async (tx) => {
-        const pendingRefunds = await tx.$queryRaw`
+      // RISK-089: Claim refund IDs in a short transaction, then process
+      // outside the transaction so the FOR UPDATE lock is held only briefly.
+      // This prevents lock starvation when processing takes longer than expected.
+      const pendingRefunds = await this.prisma.$transaction(async (tx) => {
+        const rows = await tx.$queryRaw<{ id: string }[]>`
           SELECT id FROM "Refund"
           WHERE status = 'PENDING'
           ORDER BY "createdAt" ASC
@@ -87,35 +87,54 @@ export class RefundProcessingWorker {
           FOR UPDATE SKIP LOCKED
         `;
 
-        if (
-          !Array.isArray(pendingRefunds) ||
-          pendingRefunds.length === 0
-        ) {
-          return;
+        if (!Array.isArray(rows) || rows.length === 0) {
+          return [];
         }
 
-        let processed = 0;
-        let failed = 0;
+        // Mark as PROCESSING to prevent other workers from picking them up
+        const ids = rows.map((r) => r.id);
+        await tx.$executeRaw`
+          UPDATE "Refund" SET status = 'PROCESSING'
+          WHERE id = ANY(${ids}::text[])
+        `;
 
-        for (const refund of pendingRefunds) {
+        return ids;
+      }, { timeout: 10_000 }); // Short timeout for claim-only transaction
+
+      if (pendingRefunds.length === 0) {
+        return; // early return inside finally is fine — lock is released below
+      }
+
+      let processed = 0;
+      let failed = 0;
+
+      for (const refundId of pendingRefunds) {
+        try {
+          await this.refundService.processRefund(refundId);
+          processed++;
+        } catch (error) {
+          failed++;
+          // Reset back to PENDING so it can be retried
           try {
-            await this.refundService.processRefund(refund.id);
-            processed++;
-          } catch (error) {
-            failed++;
-            logger.error(
-              `Failed to process refund ${refund.id}`,
-              error instanceof Error ? error : undefined,
-            );
+            await this.prisma.refund.update({
+              where: { id: refundId },
+              data: { status: 'PENDING' },
+            });
+          } catch {
+            // If reset fails, the refund stays in PROCESSING and will need manual intervention
           }
+          logger.error(
+            `Failed to process refund ${refundId}`,
+            error instanceof Error ? error : undefined,
+          );
         }
+      }
 
-        logger.info('Refund processing batch complete', {
-          total: pendingRefunds.length,
-          processed,
-          failed,
-        });
-      }, { timeout: 120_000 }); // 2 minute timeout for batch processing
+      logger.info('Refund processing batch complete', {
+        total: pendingRefunds.length,
+        processed,
+        failed,
+      });
     } catch (error) {
       logger.error(
         'Refund processing worker failed',
@@ -135,25 +154,41 @@ export class RefundProcessingWorker {
    * Uses the original Prisma findMany without distributed locking.
    */
   private async processPendingRefundsUnlocked(): Promise<void> {
-    const pendingRefunds = await this.prisma.refund.findMany({
-      where: { status: 'PENDING' },
-      orderBy: { createdAt: 'asc' },
-      take: BATCH_SIZE,
-    });
+    // RISK-090: Use UPDATE ... RETURNING to atomically claim refunds at the DB level.
+    // This prevents duplicate processing when multiple workers run without Redis.
+    const claimed = await this.prisma.$queryRaw<{ id: string }[]>`
+      UPDATE "Refund" SET status = 'PROCESSING'
+      WHERE id IN (
+        SELECT id FROM "Refund"
+        WHERE status = 'PENDING'
+        ORDER BY "createdAt" ASC
+        LIMIT ${BATCH_SIZE}
+        FOR UPDATE SKIP LOCKED
+      )
+      RETURNING id
+    `;
 
-    if (pendingRefunds.length === 0) {
+    if (!Array.isArray(claimed) || claimed.length === 0) {
       return;
     }
 
     let processed = 0;
     let failed = 0;
 
-    for (const refund of pendingRefunds) {
+    for (const refund of claimed) {
       try {
         await this.refundService.processRefund(refund.id);
         processed++;
       } catch (error) {
         failed++;
+        try {
+          await this.prisma.refund.update({
+            where: { id: refund.id },
+            data: { status: 'PENDING' },
+          });
+        } catch {
+          // If reset fails, refund stays in PROCESSING for manual intervention
+        }
         logger.error(
           `Failed to process refund ${refund.id}`,
           error instanceof Error ? error : undefined,
@@ -162,7 +197,7 @@ export class RefundProcessingWorker {
     }
 
     logger.info('Refund processing batch complete', {
-      total: pendingRefunds.length,
+      total: claimed.length,
       processed,
       failed,
     });

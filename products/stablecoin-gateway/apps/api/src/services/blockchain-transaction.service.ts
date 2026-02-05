@@ -290,6 +290,29 @@ export class BlockchainTransactionService {
   }
 
   /**
+   * RISK-085: Roll back a previously reserved spend amount.
+   * Called when a refund transaction fails after checkAndReserveSpend
+   * succeeded, so that failed refunds do not exhaust the daily limit.
+   */
+  private async rollbackSpend(amount: number): Promise<void> {
+    if (!this.redis) {
+      return;
+    }
+
+    try {
+      const key = this.getDailySpendKey();
+      const amountCents = dollarsToCents(amount);
+      await this.redis.incrby(key, -amountCents);
+    } catch (error: unknown) {
+      // Log but do not fail — the tx already failed
+      logger.warn(
+        'Failed to rollback spend reservation in Redis after failed refund',
+        { error } as Record<string, unknown>
+      );
+    }
+  }
+
+  /**
    * Lazily initialize and cache a wallet per network via the signer
    * provider. Each network gets its own wallet instance to prevent
    * cross-network wallet reuse.
@@ -489,6 +512,10 @@ export class BlockchainTransactionService {
         pendingConfirmations,
       };
     } catch (error) {
+      // RISK-085: Rollback the spending reservation on transaction failure
+      // so failed refunds do not exhaust the daily limit.
+      await this.rollbackSpend(Number(amount));
+
       logger.error('Refund transaction failed', error, {
         network,
         token,

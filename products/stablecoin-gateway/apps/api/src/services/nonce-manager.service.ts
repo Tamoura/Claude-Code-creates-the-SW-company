@@ -121,12 +121,13 @@ export class NonceManager {
           lockValue
         );
       } catch (error) {
-        // If eval fails, fall back to non-atomic release (better than leaking lock)
-        logger.warn('Lua EVAL failed for nonce lock release, attempting non-atomic fallback', { error });
-        const currentValue = await this.redis.get(lockKey);
-        if (currentValue === lockValue) {
-          await this.redis.del(lockKey);
-        }
+        // RISK-096: Do NOT fall back to non-atomic GET+DEL — that can delete
+        // another process's lock if timing aligns. Let the lock expire via PX TTL.
+        logger.warn('Lua EVAL failed for nonce lock release — lock will auto-expire', {
+          error,
+          lockKey,
+          lockTimeoutMs: this.lockTimeout,
+        });
       }
     }
   }

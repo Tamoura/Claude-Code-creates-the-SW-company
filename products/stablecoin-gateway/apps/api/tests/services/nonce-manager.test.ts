@@ -46,6 +46,18 @@ function createMockRedis() {
       delete store[key];
       return 1;
     }),
+    eval: jest.fn(
+      async (_script: string, _numkeys: number, ...args: (string | number)[]) => {
+        // Simulate atomic compare-and-delete Lua script
+        const lockKey = args[0] as string;
+        const expectedValue = args[1] as string;
+        if (store[lockKey] === expectedValue) {
+          delete store[lockKey];
+          return 1;
+        }
+        return 0;
+      }
+    ),
   };
 }
 
@@ -96,10 +108,9 @@ describe('NonceManager', () => {
         5000,
         'NX'
       );
-      // Lock should be released after (key deleted)
-      expect(mockRedis.del).toHaveBeenCalledWith(
-        `nonce_lock:${walletAddress}`
-      );
+      // Lock should be released via atomic Lua eval (not plain del)
+      expect(mockRedis.eval).toHaveBeenCalled();
+      expect(mockRedis.store[`nonce_lock:${walletAddress}`]).toBeUndefined();
     });
 
     it('should throw error when lock cannot be acquired', async () => {
@@ -173,18 +184,18 @@ describe('NonceManager', () => {
         nonceManager.getNextNonce(walletAddress, mockProvider as any)
       ).rejects.toThrow('RPC timeout');
 
-      // Lock should still be released
-      expect(mockRedis.del).toHaveBeenCalledWith(
-        `nonce_lock:${walletAddress}`
-      );
+      // Lock should still be released via atomic Lua eval
+      expect(mockRedis.eval).toHaveBeenCalled();
+      expect(mockRedis.store[`nonce_lock:${walletAddress}`]).toBeUndefined();
     });
 
     it('should only release lock if still owned by this caller', async () => {
       const walletAddress = '0xsaferelease';
       const mockProvider = createMockProvider(0);
 
-      // Override get to return a different value than what set stored
-      // simulating lock takeover by another process
+      // Override set to simulate lock takeover by another process:
+      // After we acquire the lock, immediately replace the value in the store
+      // so that eval's compare-and-delete sees a mismatch and refuses to delete.
       mockRedis.set = jest.fn(
         async (
           key: string,
@@ -195,25 +206,22 @@ describe('NonceManager', () => {
         ) => {
           if (key.startsWith('nonce_lock:') && flag === 'NX') {
             mockRedis.store[key] = value;
+            // Simulate lock expiry + re-acquire by another process
+            mockRedis.store[key] = 'different-owner';
             return 'OK';
           }
           mockRedis.store[key] = value;
           return 'OK';
         }
       );
-      mockRedis.get = jest.fn(async (key: string) => {
-        if (key.startsWith('nonce_lock:')) {
-          // Return a DIFFERENT value to simulate someone else took the lock
-          return 'different-owner';
-        }
-        return mockRedis.store[key] || null;
-      });
 
       await nonceManager.getNextNonce(walletAddress, mockProvider as any);
 
-      // Should NOT have deleted the lock since we don't own it anymore
-      expect(mockRedis.del).not.toHaveBeenCalledWith(
-        `nonce_lock:${walletAddress}`
+      // eval was called (atomic attempt), but the lock should NOT be deleted
+      // because the Lua script saw a value mismatch
+      expect(mockRedis.eval).toHaveBeenCalled();
+      expect(mockRedis.store[`nonce_lock:${walletAddress}`]).toBe(
+        'different-owner'
       );
     });
   });
