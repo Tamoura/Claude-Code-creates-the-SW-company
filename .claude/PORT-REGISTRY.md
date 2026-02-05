@@ -22,9 +22,7 @@
 | 3106 | *Available* | Free | - |
 | 3108 | *Available* | Free | - |
 | 3109 | invoiceforge | Active | http://localhost:3109 |
-| 3110 | shipwright (legacy) | Retired | http://localhost:3110 |
-| 3111 | shipwright | Active | http://localhost:3111 |
-| 3112-3199 | *Available* | Free | - |
+| 3110-3199 | *Available* | Free | - |
 
 ### Backend APIs (5000-5099)
 
@@ -33,8 +31,7 @@
 | 5001 | stablecoin-gateway | Active | http://localhost:5001 |
 | 5003 | *Available* | Free | - |
 | 5004 | invoiceforge | Active | http://localhost:5004 |
-| 5007 | shipwright | Active | http://localhost:5007 |
-| 5008-5099 | *Available* | Free | - |
+| 5007-5099 | *Available* | Free | - |
 
 ### Mobile Development (8081-8099)
 
@@ -101,12 +98,10 @@ When initiating new product workflows:
 cd products/stablecoin-gateway/apps/web && npm run dev &        # :3104
 cd products/quantum-computing-usecases/apps/web && npm run dev &# :3105
 cd products/invoiceforge/apps/web && npm run dev &              # :3109
-cd products/shipwright/apps/web && npm run dev &                # :3111
 
 # Backend APIs
 cd products/stablecoin-gateway/apps/api && npm run dev &        # :5001
 cd products/invoiceforge/apps/api && npm run dev &              # :5004
-cd products/shipwright/apps/api && npm run dev &                # :5007
 ```
 
 ### Check Port Availability
