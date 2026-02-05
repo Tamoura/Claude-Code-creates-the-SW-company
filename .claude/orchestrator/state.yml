@@ -14,10 +14,6 @@ products:
     path: "products/stablecoin-gateway"
     status: "active"
     notes: "Backend-only (apps/api). Most active product. Security audit in progress."
-  meetingmind:
-    path: "products/meetingmind"
-    status: "planned"
-    notes: "AI meeting assistant."
   quantum-computing-usecases:
     path: "products/quantum-computing-usecases"
     status: "planned"
