@@ -15,6 +15,8 @@ interface UsePaymentEventsResult {
 
 const MAX_RETRIES = 3;
 const RETRY_DELAY = 5000; // 5 seconds
+// RISK-070: Buffer before SSE token expiry to trigger refresh (2 minutes)
+const TOKEN_REFRESH_BUFFER_MS = 2 * 60 * 1000;
 
 /**
  * Hook for managing SSE connection to payment session events
@@ -35,6 +37,8 @@ export function usePaymentEvents(paymentId: string | undefined): UsePaymentEvent
   const eventSourceRef = useRef<EventSource | null>(null);
   const retryCountRef = useRef<number>(0);
   const retryTimeoutRef = useRef<number | null>(null);
+  // RISK-070: Track SSE token expiry to refresh before it expires
+  const tokenRefreshTimerRef = useRef<number | null>(null);
 
   const disconnect = useCallback((preserveErrorState = false) => {
     if (eventSourceRef.current) {
@@ -44,6 +48,11 @@ export function usePaymentEvents(paymentId: string | undefined): UsePaymentEvent
     if (retryTimeoutRef.current) {
       clearTimeout(retryTimeoutRef.current);
       retryTimeoutRef.current = null;
+    }
+    // RISK-070: Clear token refresh timer
+    if (tokenRefreshTimerRef.current) {
+      clearTimeout(tokenRefreshTimerRef.current);
+      tokenRefreshTimerRef.current = null;
     }
     if (!preserveErrorState) {
       setConnectionState('disconnected');
@@ -63,7 +72,29 @@ export function usePaymentEvents(paymentId: string | undefined): UsePaymentEvent
     setError(null);
 
     try {
-      const eventSource = await apiClient.createEventSource(paymentId);
+      // RISK-070: Request SSE token and track its expiry for auto-refresh
+      const { token: sseToken, expires_at } = await apiClient.requestSseToken(paymentId);
+      const expiresAtMs = new Date(expires_at).getTime();
+
+      // RISK-070: Validate token hasn't already expired (e.g. clock skew, slow network)
+      if (expiresAtMs <= Date.now()) {
+        throw new Error('SSE token already expired at issuance');
+      }
+
+      const refreshAt = expiresAtMs - TOKEN_REFRESH_BUFFER_MS;
+      const refreshDelay = Math.max(refreshAt - Date.now(), 0);
+
+      // Schedule a reconnect before the token expires
+      if (refreshDelay > 0) {
+        tokenRefreshTimerRef.current = window.setTimeout(() => {
+          console.log('SSE token expiring soon, reconnecting...');
+          connect();
+        }, refreshDelay);
+      }
+
+      // RISK-070: Pass pre-fetched token to avoid double-fetch and ensure
+      // the tracked expiry matches the token actually used
+      const eventSource = await apiClient.createEventSource(paymentId, sseToken);
       eventSourceRef.current = eventSource;
 
       // Handle incoming messages

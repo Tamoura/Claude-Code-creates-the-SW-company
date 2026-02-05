@@ -28,6 +28,7 @@
 
 import crypto from 'crypto';
 import { AppError } from '../types/index.js';
+import { logger } from './logger.js';
 
 // Encryption algorithm and parameters
 const ALGORITHM = 'aes-256-gcm';
@@ -127,11 +128,15 @@ export function encryptSecret(plaintext: string): string {
       encrypted.toString('base64'),
     ].join(':');
   } catch (error) {
+    // RISK-075: Log full error server-side, return generic message to caller
+    logger.error('Encryption operation failed', {
+      error: error instanceof Error ? error.message : 'Unknown error',
+    });
     throw new AppError(
       500,
       'encryption-failed',
       'Failed to encrypt secret',
-      error instanceof Error ? error.message : 'Unknown error'
+      'Contact system administrator'
     );
   }
 }
@@ -195,12 +200,15 @@ export function decryptSecret(encryptedData: string): string {
       throw error;
     }
 
-    // This could be tampering or corruption
+    // RISK-075: Log full error server-side, return generic message to caller
+    logger.error('Decryption operation failed', {
+      error: error instanceof Error ? error.message : 'Unknown error',
+    });
     throw new AppError(
       500,
       'decryption-failed',
       'Failed to decrypt secret - data may have been tampered with',
-      error instanceof Error ? error.message : 'Unknown error'
+      'Contact system administrator'
     );
   }
 }

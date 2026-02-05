@@ -30,6 +30,7 @@ import { WebhookCircuitBreakerService } from './webhook-circuit-breaker.service.
  */
 const secretCache = new Map<string, { value: string; expiresAt: number }>();
 const SECRET_CACHE_TTL_MS = 5 * 60 * 1000; // 5 minutes
+const MAX_SECRET_CACHE_SIZE = 1_000; // RISK-063: bound cache memory
 
 function getCachedSecret(encryptedSecret: string): string | null {
   const cached = secretCache.get(encryptedSecret);
@@ -43,10 +44,49 @@ function getCachedSecret(encryptedSecret: string): string | null {
 }
 
 function cacheSecret(encryptedSecret: string, decryptedValue: string): void {
+  // RISK-063: Evict expired entries and enforce max cache size
+  if (secretCache.size >= MAX_SECRET_CACHE_SIZE) {
+    evictExpiredSecrets();
+  }
+  // If still over limit after evicting expired, drop oldest entries
+  if (secretCache.size >= MAX_SECRET_CACHE_SIZE) {
+    const excess = secretCache.size - MAX_SECRET_CACHE_SIZE + 100; // drop 100 oldest
+    let dropped = 0;
+    for (const key of secretCache.keys()) {
+      if (dropped >= excess) break;
+      secretCache.delete(key);
+      dropped++;
+    }
+  }
   secretCache.set(encryptedSecret, {
     value: decryptedValue,
     expiresAt: Date.now() + SECRET_CACHE_TTL_MS,
   });
+}
+
+/**
+ * RISK-063: Remove all expired entries from the secret cache.
+ * Called automatically when the cache approaches its size limit.
+ * Exposed for testing and manual cache maintenance.
+ */
+export function evictExpiredSecrets(): number {
+  const now = Date.now();
+  let evicted = 0;
+  for (const [key, entry] of secretCache.entries()) {
+    if (entry.expiresAt <= now) {
+      secretCache.delete(key);
+      evicted++;
+    }
+  }
+  return evicted;
+}
+
+/**
+ * RISK-066: Invalidate a specific cached secret (e.g., after key rotation).
+ * Returns true if the entry was found and removed, false otherwise.
+ */
+export function invalidateSecretCache(encryptedSecret: string): boolean {
+  return secretCache.delete(encryptedSecret);
 }
 
 /**
@@ -222,7 +262,10 @@ export class WebhookDeliveryExecutorService {
     errorMessage: string
   ): Promise<void> {
     if (attempts < this.maxRetries) {
-      const delaySeconds = this.retryDelays[attempts - 1] || 7200;
+      // RISK-076: Add 10% random jitter to prevent thundering herd
+      const baseDelay = this.retryDelays[attempts - 1] || 7200;
+      const jitter = Math.floor(baseDelay * 0.1 * Math.random());
+      const delaySeconds = baseDelay + jitter;
       const nextAttemptAt = new Date(Date.now() + delaySeconds * 1000);
 
       await this.prisma.webhookDelivery.update({

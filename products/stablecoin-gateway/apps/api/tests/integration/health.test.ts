@@ -9,17 +9,37 @@ describe('GET /health', () => {
   let app: FastifyInstance;
 
   beforeAll(async () => {
+    // Set INTERNAL_API_KEY for tests that verify detailed checks
+    process.env.INTERNAL_API_KEY = 'test-internal-api-key';
     app = await buildApp();
   });
 
   afterAll(async () => {
+    delete process.env.INTERNAL_API_KEY;
     await app.close();
   });
 
-  it('should return 200 with healthy status when database is connected', async () => {
+  it('should return 200 with healthy status (public, no checks)', async () => {
     const response = await app.inject({
       method: 'GET',
       url: '/health',
+    });
+
+    expect(response.statusCode).toBe(200);
+    const body = response.json();
+    expect(body.status).toBe('healthy');
+    expect(body).toHaveProperty('timestamp');
+    // RISK-068: checks should NOT be exposed without internal API key
+    expect(body).not.toHaveProperty('checks');
+  });
+
+  it('should return detailed checks with internal API key', async () => {
+    const response = await app.inject({
+      method: 'GET',
+      url: '/health',
+      headers: {
+        'x-internal-api-key': 'test-internal-api-key',
+      },
     });
 
     expect(response.statusCode).toBe(200);
@@ -46,6 +66,9 @@ describe('GET /health', () => {
     const response = await app.inject({
       method: 'GET',
       url: '/health',
+      headers: {
+        'x-internal-api-key': 'test-internal-api-key',
+      },
     });
 
     const body = response.json();
@@ -61,5 +84,20 @@ describe('GET /health', () => {
     });
 
     expect(response.statusCode).toBe(200);
+  });
+
+  it('should not expose checks with wrong internal API key', async () => {
+    const response = await app.inject({
+      method: 'GET',
+      url: '/health',
+      headers: {
+        'x-internal-api-key': 'wrong-key',
+      },
+    });
+
+    expect(response.statusCode).toBe(200);
+    const body = response.json();
+    expect(body.status).toBe('healthy');
+    expect(body).not.toHaveProperty('checks');
   });
 });

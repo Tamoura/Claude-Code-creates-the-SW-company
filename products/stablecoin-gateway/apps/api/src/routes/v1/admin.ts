@@ -6,13 +6,13 @@ import { logger } from '../../utils/logger.js';
 
 const merchantListQuerySchema = z.object({
   limit: z.coerce.number().min(1).max(100).default(20),
-  offset: z.coerce.number().min(0).default(0),
+  offset: z.coerce.number().min(0).max(10000).default(0), // RISK-072: bound offset
   search: z.string().max(255).optional().default(''),
 });
 
 const merchantPaymentsQuerySchema = z.object({
   limit: z.coerce.number().min(1).max(100).default(20),
-  offset: z.coerce.number().min(0).default(0),
+  offset: z.coerce.number().min(0).max(10000).default(0), // RISK-072: bound offset
   status: z.enum(['PENDING', 'CONFIRMING', 'COMPLETED', 'FAILED', 'REFUNDED']).optional(),
 });
 
