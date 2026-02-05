@@ -13,6 +13,18 @@ const prismaPlugin: FastifyPluginAsync = async (fastify) => {
   const poolSize = parseInt(process.env.DATABASE_POOL_SIZE || '20', 10);
   const poolTimeout = parseInt(process.env.DATABASE_POOL_TIMEOUT || '10', 10);
 
+  // RISK-073: Validate pool size to prevent resource exhaustion
+  if (isNaN(poolSize) || poolSize < 1 || poolSize > 500) {
+    throw new Error(
+      `Invalid DATABASE_POOL_SIZE: ${process.env.DATABASE_POOL_SIZE}. Must be between 1 and 500.`
+    );
+  }
+  if (isNaN(poolTimeout) || poolTimeout < 1 || poolTimeout > 300) {
+    throw new Error(
+      `Invalid DATABASE_POOL_TIMEOUT: ${process.env.DATABASE_POOL_TIMEOUT}. Must be between 1 and 300 seconds.`
+    );
+  }
+
   const prisma = new PrismaClient({
     log: process.env.NODE_ENV === 'development' ? ['query', 'error', 'warn'] : ['error'],
     datasourceUrl: appendPoolParams(process.env.DATABASE_URL || '', poolSize, poolTimeout),

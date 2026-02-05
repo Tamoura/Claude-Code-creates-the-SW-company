@@ -632,14 +632,16 @@ export class ApiClient {
   }
 
   // SSE connection for real-time updates
-  async createEventSource(paymentId: string): Promise<EventSource> {
+  // RISK-070: Accept optional pre-fetched token to avoid double-fetch
+  // and ensure the tracked expiry matches the token actually used.
+  async createEventSource(paymentId: string, prefetchedToken?: string): Promise<EventSource> {
     if (this.useMock) {
       // Mock SSE not implemented - would need a more complex mock
       throw new Error('SSE not available in mock mode');
     }
 
-    // Request a short-lived SSE token specific to this payment session
-    const { token } = await this.requestSseToken(paymentId);
+    // Use pre-fetched token if provided, otherwise request a new one
+    const token = prefetchedToken ?? (await this.requestSseToken(paymentId)).token;
 
     // Dynamic import to avoid module-level failure if polyfill is unavailable
     const { EventSourcePolyfill } = await import('event-source-polyfill');

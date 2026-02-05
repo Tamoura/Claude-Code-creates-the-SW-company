@@ -272,7 +272,9 @@ export async function buildApp(): Promise<FastifyInstance> {
   await fastify.register(webhookWorkerRoutes, { prefix: '/internal' });
 
   // Health check with deep dependency verification
-  fastify.get('/health', async (_request, reply) => {
+  // RISK-068: Detailed infrastructure data requires INTERNAL_API_KEY.
+  // Without the key, only status + timestamp are returned.
+  fastify.get('/health', async (request, reply) => {
     const checks: Record<string, { status: string; latency?: number; error?: string }> = {};
     let overallStatus = 'healthy';
 
@@ -307,7 +309,6 @@ export async function buildApp(): Promise<FastifyInstance> {
           error: error instanceof Error ? error.message : 'Unknown error',
         };
         // Redis is optional, so don't mark overall as unhealthy
-        // overallStatus = 'degraded'; // Could use this if we want to indicate degraded state
       }
     } else if (process.env.REDIS_URL) {
       // Redis URL configured but client not connected
@@ -318,10 +319,23 @@ export async function buildApp(): Promise<FastifyInstance> {
 
     const statusCode = overallStatus === 'healthy' ? 200 : 503;
 
+    // RISK-068: Only expose infrastructure details to authenticated internal callers
+    const internalKey = process.env.INTERNAL_API_KEY;
+    const providedKey = request.headers['x-internal-api-key'] as string | undefined;
+    const isAuthorized = internalKey && providedKey && internalKey === providedKey;
+
+    if (isAuthorized) {
+      return reply.code(statusCode).send({
+        status: overallStatus,
+        timestamp: new Date().toISOString(),
+        checks,
+      });
+    }
+
+    // Public response: status only, no infrastructure details
     return reply.code(statusCode).send({
       status: overallStatus,
       timestamp: new Date().toISOString(),
-      checks,
     });
   });
 

@@ -21,6 +21,7 @@ describe('Rate Limiting', () => {
   let accessToken: string;
 
   beforeAll(async () => {
+    process.env.INTERNAL_API_KEY = 'test-internal-api-key';
     app = await buildApp();
 
     // Create test user with unique UA to avoid rate limit collision
@@ -142,9 +143,13 @@ describe('Rate Limiting', () => {
       // This test just verifies that the app starts correctly
       // Actual Redis functionality is tested by making requests above
 
+      // RISK-068: Internal API key required for detailed health checks
       const healthResponse = await app.inject({
         method: 'GET',
         url: '/health',
+        headers: {
+          'x-internal-api-key': 'test-internal-api-key',
+        },
       });
 
       if (healthResponse.statusCode === 500) {
@@ -156,7 +161,7 @@ describe('Rate Limiting', () => {
       const health = healthResponse.json();
 
       // Redis check may or may not be present depending on configuration
-      if (health.checks.redis) {
+      if (health.checks?.redis) {
         expect(['healthy', 'unhealthy', 'not-connected']).toContain(
           health.checks.redis.status
         );

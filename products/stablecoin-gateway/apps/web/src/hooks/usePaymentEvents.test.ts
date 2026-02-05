@@ -6,6 +6,7 @@ import * as apiClientModule from '../lib/api-client';
 // Mock the api-client module
 vi.mock('../lib/api-client', () => ({
   apiClient: {
+    requestSseToken: vi.fn(),
     createEventSource: vi.fn(),
   },
 }));
@@ -29,6 +30,12 @@ describe('usePaymentEvents', () => {
 
     // Reset mocks
     vi.clearAllMocks();
+
+    // RISK-070: Mock requestSseToken to return a valid token with future expiry
+    vi.mocked(apiClientModule.apiClient.requestSseToken).mockResolvedValue({
+      token: 'mock-sse-token',
+      expires_at: new Date(Date.now() + 10 * 60 * 1000).toISOString(), // 10 minutes from now
+    });
   });
 
   afterEach(() => {

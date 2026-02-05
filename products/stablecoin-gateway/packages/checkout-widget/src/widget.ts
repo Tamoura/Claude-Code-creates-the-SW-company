@@ -23,6 +23,18 @@ interface ErrorData {
   message: string;
 }
 
+// RISK-081: Validate color strings to prevent XSS via inline styles.
+// Only allows hex colors (#RGB, #RRGGBB, #RRGGBBAA) and named CSS colors.
+const HEX_COLOR_RE = /^#([0-9a-fA-F]{3}|[0-9a-fA-F]{6}|[0-9a-fA-F]{8})$/;
+const CSS_NAMED_COLOR_RE = /^[a-zA-Z]{1,30}$/;
+
+function sanitizeColor(color: string | undefined, fallback: string): string {
+  if (!color) return fallback;
+  if (HEX_COLOR_RE.test(color)) return color;
+  if (CSS_NAMED_COLOR_RE.test(color)) return color;
+  return fallback;
+}
+
 class StablecoinWidget {
   private config: WidgetConfig;
   private modal: HTMLElement | null = null;
@@ -33,11 +45,13 @@ class StablecoinWidget {
       apiUrl: config.apiUrl || 'https://pay.gateway.io',
       theme: config.theme || 'light',
       buttonText: config.buttonText || 'Pay with Crypto',
-      primaryColor: config.primaryColor || '#4F46E5',
+      primaryColor: sanitizeColor(config.primaryColor, '#4F46E5'),
       currency: config.currency || 'USD',
       network: config.network || 'polygon',
       token: config.token || 'USDC',
       ...config,
+      // RISK-081: Re-sanitize after spread to prevent override
+      primaryColor: sanitizeColor(config.primaryColor, '#4F46E5'),
     };
 
     this.setupMessageListener();
