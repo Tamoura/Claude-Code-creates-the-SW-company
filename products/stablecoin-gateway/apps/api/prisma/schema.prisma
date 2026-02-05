@@ -31,6 +31,7 @@ model User {
   refreshTokens          RefreshToken[]
   paymentLinks           PaymentLink[]
   notificationPreference NotificationPreference?
+  teamMemberships        TeamMember[]
 
   @@map("users")
 }
@@ -335,4 +336,51 @@ model AuditLog {
   @@index([resourceType])
   @@index([timestamp])
   @@map("audit_logs")
+}
+
+// ==================== Team Management ====================
+
+enum TeamRole {
+  OWNER    // Full control, can delete org
+  ADMIN    // Manage members, settings
+  MEMBER   // Create/manage payments, webhooks
+  VIEWER   // Read-only access
+}
+
+model Organization {
+  id   String @id @default(cuid())
+  name String
+
+  // Timestamps
+  createdAt DateTime @default(now()) @map("created_at")
+  updatedAt DateTime @updatedAt @map("updated_at")
+
+  // Relations
+  members TeamMember[]
+
+  @@map("organizations")
+}
+
+model TeamMember {
+  id             String @id @default(cuid())
+  organizationId String @map("organization_id")
+  userId         String @map("user_id")
+
+  // Member details
+  role      TeamRole @default(MEMBER)
+  invitedBy String?  @map("invited_by") // userId of inviter
+
+  // Timestamps
+  createdAt DateTime @default(now()) @map("created_at")
+  updatedAt DateTime @updatedAt @map("updated_at")
+
+  // Relations
+  organization Organization @relation(fields: [organizationId], references: [id], onDelete: Cascade)
+  user         User         @relation(fields: [userId], references: [id], onDelete: Cascade)
+
+  // One membership per user per org
+  @@unique([organizationId, userId])
+  @@index([userId])
+  @@index([organizationId])
+  @@map("team_members")
 }

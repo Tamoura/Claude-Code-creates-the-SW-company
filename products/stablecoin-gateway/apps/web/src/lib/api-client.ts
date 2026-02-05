@@ -893,6 +893,61 @@ export class ApiClient {
     return this.request(`/v1/admin/merchants/${merchantId}/payments${qs ? `?${qs}` : ''}`);
   }
 
+  // Team management methods
+
+  async createOrganization(name: string): Promise<{
+    id: string; name: string; created_at: string; updated_at: string;
+    members: Array<{ id: string; user_id: string; email: string; role: string; invited_by: string | null; joined_at: string; updated_at: string }>;
+  }> {
+    return this.request('/v1/team/organizations', {
+      method: 'POST',
+      body: JSON.stringify({ name }),
+    });
+  }
+
+  async listOrganizations(): Promise<{
+    data: Array<{ id: string; name: string; role: string; joined_at: string; created_at: string; updated_at: string }>;
+  }> {
+    return this.request('/v1/team/organizations');
+  }
+
+  async getOrganization(orgId: string): Promise<{
+    id: string; name: string; created_at: string; updated_at: string;
+    members: Array<{ id: string; user_id: string; email: string; role: string; invited_by: string | null; joined_at: string; updated_at: string }>;
+  }> {
+    return this.request(`/v1/team/organizations/${orgId}`);
+  }
+
+  async addTeamMember(orgId: string, email: string, role: string): Promise<{
+    id: string; user_id: string; email: string; role: string; invited_by: string | null; joined_at: string; updated_at: string;
+  }> {
+    return this.request(`/v1/team/organizations/${orgId}/members`, {
+      method: 'POST',
+      body: JSON.stringify({ email, role }),
+    });
+  }
+
+  async updateTeamMemberRole(orgId: string, memberId: string, role: string): Promise<{
+    id: string; user_id: string; email: string; role: string; invited_by: string | null; joined_at: string; updated_at: string;
+  }> {
+    return this.request(`/v1/team/organizations/${orgId}/members/${memberId}`, {
+      method: 'PATCH',
+      body: JSON.stringify({ role }),
+    });
+  }
+
+  async removeTeamMember(orgId: string, memberId: string): Promise<void> {
+    await this.request<void>(`/v1/team/organizations/${orgId}/members/${memberId}`, {
+      method: 'DELETE',
+    });
+  }
+
+  async leaveOrganization(orgId: string): Promise<void> {
+    await this.request<void>(`/v1/team/organizations/${orgId}/leave`, {
+      method: 'DELETE',
+    });
+  }
+
   // Analytics methods
 
   /**
