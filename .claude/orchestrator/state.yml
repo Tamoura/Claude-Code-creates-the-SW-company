@@ -22,10 +22,6 @@ products:
     path: "products/quantum-computing-usecases"
     status: "planned"
     notes: "Quantum computing use case explorer."
-  deal-flow-platform:
-    path: "products/deal-flow-platform"
-    status: "active"
-    notes: "Qatar deal flow platform for institutional investors."
   shipwright:
     path: "products/shipwright"
     status: "active"
