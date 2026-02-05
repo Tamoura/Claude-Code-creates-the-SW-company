@@ -214,7 +214,7 @@
 | RISK-058 | Webhook idempotency race condition | Code | High | Dev | Phase 1 (1-2w) | None | Test: concurrent events produce single delivery | **Mitigated** — DB unique constraint handles atomically |
 | RISK-059 | Missing CSP headers on frontend | Security | High | Dev | Phase 1 (1-2w) | None | Verify: CSP meta tag present in index.html | **Closed** (PR #115) |
 | RISK-060 | No HTTPS enforcement on redirect URLs | Security | High | Dev | Phase 1 (1-2w) | None | Test: HTTP success_url rejected with 400 | **Closed** (PR #115) |
-| RISK-061 | Nonce confirmation race in refunds | Code | High | Dev | Phase 1 (1-2w) | None | Test: failed nonce confirm resets for next tx | Open |
+| RISK-061 | Nonce confirmation race in refunds | Code | High | Dev | Phase 1 (1-2w) | None | Test: failed nonce confirm resets for next tx | **Closed** (releaseNonce + confirmNonce on all paths) |
 | RISK-062 | Missing path parameter validation | Security | High | Dev | Phase 1 (1-2w) | None | Test: non-UUID path params return 400 | **Closed** (PR #115) |
 | RISK-063 | Unbounded secret cache memory | Code | High | Dev | Phase 2 (2-4w) | None | Monitor: cache size metric stays below 10K entries | **Closed** (Phase 2) |
 | RISK-064 | Missing ownership check in incrementUsage | Security | High | Dev | Phase 1 (1-2w) | RISK-052 | Test: user A cannot increment user B link | **Closed** (PR #115) |
@@ -657,11 +657,10 @@ Technical Score (8.0) + Security Readiness (8.0) + Product Potential (8.5) + Ent
 
 Technical Score (8.5) + Security Readiness (9.0) + Product Potential (9.0) + Enterprise Readiness (8.0) = 34.5 / 4 = **8.6 → rounded to 9.0 with closed risk weighting**
 
-30 of 33 risk items closed. 3 remain (1 High: RISK-061, 1 Medium: RISK-058, 1 Open: RISK-061).
+31 of 33 risk items closed. 2 remain (RISK-058 mitigated via DB unique constraint).
 
 Remaining open items:
-- RISK-058: Webhook idempotency race — mitigated via DB unique constraint
-- RISK-061: Nonce confirmation race in refunds — High severity, requires refund finalization redesign
+- RISK-058: Webhook idempotency race — mitigated via DB unique constraint (acceptable risk)
 
 ---
 
@@ -686,7 +685,7 @@ Remaining open items:
 | Item | Severity | Status |
 |------|----------|--------|
 | RISK-058 | High | Mitigated (DB unique constraint) |
-| RISK-061 | High | Open — requires refund finalization redesign |
+| RISK-061 | High | **Closed** — releaseNonce() + confirmNonce() on all failure paths |
 
 ### Improvement Plan
 
