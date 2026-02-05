@@ -1,0 +1,112 @@
+generator client {
+  provider = "prisma-client-js"
+}
+
+datasource db {
+  provider = "postgresql"
+  url      = env("DATABASE_URL")
+}
+
+enum Role {
+  DEVELOPER
+  ADMIN
+}
+
+enum ComplianceStatus {
+  COMPLIANT
+  NON_COMPLIANT
+  DOUBTFUL
+}
+
+model User {
+  id           String   @id @default(cuid())
+  email        String   @unique
+  passwordHash String   @map("password_hash")
+  role         Role     @default(DEVELOPER)
+  createdAt    DateTime @default(now()) @map("created_at")
+  updatedAt    DateTime @updatedAt @map("updated_at")
+
+  apiKeys ApiKey[]
+
+  @@map("users")
+}
+
+model ApiKey {
+  id          String    @id @default(cuid())
+  userId      String    @map("user_id")
+  name        String
+  keyHash     String    @unique @map("key_hash")
+  keyPrefix   String    @map("key_prefix")
+  permissions Json      @default("{\"read\":true,\"write\":false}")
+  lastUsedAt  DateTime? @map("last_used_at")
+  createdAt   DateTime  @default(now()) @map("created_at")
+
+  user User @relation(fields: [userId], references: [id], onDelete: Cascade)
+
+  @@index([userId])
+  @@index([keyHash])
+  @@map("api_keys")
+}
+
+model Stock {
+  id                    String   @id @default(cuid())
+  ticker                String   @unique
+  name                  String
+  exchange              String   @default("NYSE")
+  sector                String
+  industry              String
+  marketCap             Float    @map("market_cap")
+  totalDebt             Float    @map("total_debt")
+  totalRevenue          Float    @map("total_revenue")
+  interestIncome        Float    @map("interest_income")
+  cashAndEquivalents    Float    @map("cash_and_equivalents")
+  accountsReceivable    Float    @map("accounts_receivable")
+  nonPermissibleRevenue Float    @map("non_permissible_revenue")
+  dividendPerShare      Float    @default(0) @map("dividend_per_share")
+  totalAssets           Float    @map("total_assets")
+  screeningData         Json?    @map("screening_data")
+  lastUpdated           DateTime @default(now()) @map("last_updated")
+
+  screeningResults ScreeningResult[]
+
+  @@map("stocks")
+}
+
+model ScreeningResult {
+  id                   String           @id @default(cuid())
+  stockId              String           @map("stock_id")
+  standard             String           @default("AAOIFI")
+  status               ComplianceStatus
+  debtRatio            Float            @map("debt_ratio")
+  interestIncomeRatio  Float            @map("interest_income_ratio")
+  cashRatio            Float            @map("cash_ratio")
+  receivablesRatio     Float            @map("receivables_ratio")
+  businessActivityPass Boolean          @map("business_activity_pass")
+  purificationPerShare Float            @default(0) @map("purification_per_share")
+  details              Json?
+  screenedAt           DateTime         @default(now()) @map("screened_at")
+
+  stock Stock @relation(fields: [stockId], references: [id], onDelete: Cascade)
+
+  @@index([stockId])
+  @@index([status])
+  @@map("screening_results")
+}
+
+model AuditLog {
+  id           String   @id @default(cuid())
+  actor        String
+  action       String
+  resourceType String   @map("resource_type")
+  resourceId   String   @map("resource_id")
+  details      Json?
+  ip           String?
+  userAgent    String?  @map("user_agent")
+  timestamp    DateTime @default(now())
+
+  @@index([actor])
+  @@index([action])
+  @@index([resourceType])
+  @@index([timestamp])
+  @@map("audit_logs")
+}
