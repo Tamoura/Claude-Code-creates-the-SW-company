@@ -485,7 +485,6 @@ Components in this registry are sourced from these products:
 |----------------------|------------|---------|----------|------------|--------|
 | stablecoin-gateway   | Production | Yes     | Yes      | Yes        | Yes    |
 | invoiceforge         | Production | Yes     | Yes      | Yes        | Yes    |
-| deal-flow-platform   | Active     | Yes     | Yes      | No         | No     |
 | meetingmind          | Active     | --      | --       | --         | --     |
 | motqen               | Active     | --      | --       | --         | --     |
 | shipwright            | New        | --      | --       | --         | --     |
