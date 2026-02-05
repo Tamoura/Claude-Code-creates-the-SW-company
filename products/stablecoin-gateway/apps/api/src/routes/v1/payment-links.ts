@@ -212,20 +212,10 @@ const paymentLinkRoutes: FastifyPluginAsync = async (fastify) => {
       const { shortCode } = request.params as { shortCode: string };
 
       const paymentLinkService = new PaymentLinkService(fastify.prisma);
+      // getPaymentLinkByShortCode already validates active, expiry, and max_usages.
+      // Do NOT duplicate those checks here — the service is the single source of
+      // truth and duplicating creates a TOCTOU window (RISK-052 remediation).
       const link = await paymentLinkService.getPaymentLinkByShortCode(shortCode);
-
-      // Validate link is still usable (RISK-040 fix)
-      if (!link.active) {
-        throw new AppError(400, 'link-inactive', 'This payment link is no longer active');
-      }
-
-      if (link.expiresAt && link.expiresAt < new Date()) {
-        throw new AppError(400, 'link-expired', 'This payment link has expired');
-      }
-
-      if (link.maxUsages !== null && link.usageCount >= link.maxUsages) {
-        throw new AppError(400, 'link-max-usage-reached', 'Payment link has reached maximum usage limit');
-      }
 
       const baseUrl = process.env.FRONTEND_URL || 'http://localhost:3101';
       const response = paymentLinkService.toResponse(link, baseUrl);
@@ -262,21 +252,14 @@ const paymentLinkRoutes: FastifyPluginAsync = async (fastify) => {
         throw new AppError(404, 'not-found', 'Payment link not found');
       }
 
-      // Validate link is still usable
+      // Validate link is still usable (inline because QR lookup
+      // bypasses the service's getPaymentLinkByShortCode method).
       if (!link.active) {
         throw new AppError(400, 'link-inactive', 'Payment link is no longer active');
       }
 
       if (link.expiresAt && link.expiresAt < new Date()) {
         throw new AppError(400, 'link-expired', 'Payment link has expired');
-      }
-
-      if (link.maxUsages !== null && link.usageCount >= link.maxUsages) {
-        throw new AppError(
-          400,
-          'link-max-usage-reached',
-          'Payment link has reached maximum usage limit'
-        );
       }
 
       // Generate checkout URL

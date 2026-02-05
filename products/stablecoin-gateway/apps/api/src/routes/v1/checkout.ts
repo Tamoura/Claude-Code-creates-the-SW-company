@@ -44,8 +44,9 @@ const checkoutRoutes: FastifyPluginAsync = async (fastify) => {
       });
     }
 
-    // Return only the fields needed for the checkout UI
-    // No sensitive merchant data, no internal IDs beyond the session ID
+    // Return ONLY the fields the checkout UI needs to render.
+    // Sensitive data (merchant_address, customer_address, tx_hash)
+    // is deliberately excluded to prevent payment session enumeration.
     return reply.send({
       id: session.id,
       amount: Number(session.amount),
@@ -54,12 +55,6 @@ const checkoutRoutes: FastifyPluginAsync = async (fastify) => {
       status: session.status,
       network: session.network,
       token: session.token,
-      merchant_address: session.merchantAddress,
-      customer_address: session.customerAddress,
-      tx_hash: session.txHash,
-      confirmations: session.confirmations,
-      checkout_url: `${process.env.FRONTEND_URL || 'http://localhost:3104'}/pay/${session.id}`,
-      created_at: session.createdAt.toISOString(),
       expires_at: session.expiresAt.toISOString(),
     });
   });

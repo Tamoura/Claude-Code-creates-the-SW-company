@@ -18,15 +18,27 @@
  */
 
 import { Redis } from 'ioredis';
+import { logger } from './logger.js';
 
 export interface RateLimitStoreOptions {
   redis?: Redis;
   keyPrefix?: string;
 }
 
+/**
+ * In-memory fallback entry for rate limiting when Redis is unavailable.
+ * Entries expire after their TTL to prevent unbounded memory growth.
+ */
+interface MemoryEntry {
+  count: number;
+  expiresAt: number;
+}
+
 export class RedisRateLimitStore {
   private redis: Redis;
   private keyPrefix: string;
+  /** In-memory fallback counters used when Redis is unavailable (RISK-056). */
+  private memoryFallback: Map<string, MemoryEntry> = new Map();
 
   constructor(options: RateLimitStoreOptions = {}) {
     // When @fastify/rate-limit instantiates this, it passes globalParams
@@ -41,9 +53,22 @@ export class RedisRateLimitStore {
   }
 
   /**
+   * Evict expired entries from the in-memory fallback to prevent leaks.
+   */
+  private evictExpired(): void {
+    const now = Date.now();
+    for (const [key, entry] of this.memoryFallback) {
+      if (entry.expiresAt <= now) {
+        this.memoryFallback.delete(key);
+      }
+    }
+  }
+
+  /**
    * Increment the request counter for a key
    *
-   * Returns the current count and TTL
+   * Returns the current count and TTL.
+   * Falls back to an in-memory Map when Redis is unavailable (RISK-056).
    */
   async incr(key: string, callback: (err: Error | null, result?: { current: number; ttl: number }) => void): Promise<void> {
     const redisKey = this.keyPrefix + key;
@@ -65,7 +90,24 @@ export class RedisRateLimitStore {
         ttl: remainingTtl > 0 ? remainingTtl : ttl,
       });
     } catch (error) {
-      callback(error as Error);
+      // RISK-056: Fall back to in-memory rate limiting instead of
+      // propagating the error (which bypasses rate limiting entirely).
+      logger.warn('Redis unavailable for rate limiting, using in-memory fallback', {
+        key: redisKey,
+        error: error instanceof Error ? error.message : 'unknown',
+      });
+
+      this.evictExpired();
+
+      const now = Date.now();
+      const existing = this.memoryFallback.get(redisKey);
+      if (existing && existing.expiresAt > now) {
+        existing.count += 1;
+        callback(null, { current: existing.count, ttl: existing.expiresAt - now });
+      } else {
+        this.memoryFallback.set(redisKey, { count: 1, expiresAt: now + ttl });
+        callback(null, { current: 1, ttl });
+      }
     }
   }
 
