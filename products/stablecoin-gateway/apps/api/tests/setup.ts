@@ -13,6 +13,8 @@ beforeAll(async () => {
   await redis.flushdb();
 
   // Delete in correct order for FK constraints
+  await prisma.teamMember.deleteMany();
+  await prisma.organization.deleteMany();
   await prisma.webhookDelivery.deleteMany();
   await prisma.webhookEndpoint.deleteMany();
   await prisma.refund.deleteMany();
