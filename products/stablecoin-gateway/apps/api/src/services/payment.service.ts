@@ -3,12 +3,18 @@ import { AppError, CreatePaymentSessionRequest, PaymentSessionResponse } from '.
 import { generatePaymentSessionId } from '../utils/crypto.js';
 import { validatePaymentStatusTransition } from '../utils/payment-state-machine.js';
 import { WebhookDeliveryService } from './webhook-delivery.service.js';
+import { ExchangeRateService } from './exchange-rate.service.js';
 
 export class PaymentService {
   private webhookService: WebhookDeliveryService;
+  private exchangeRateService: ExchangeRateService;
 
-  constructor(private prisma: PrismaClient) {
+  constructor(
+    private prisma: PrismaClient,
+    redis?: { get: Function; set: Function; del: Function } | null
+  ) {
     this.webhookService = new WebhookDeliveryService(prisma);
+    this.exchangeRateService = new ExchangeRateService(prisma, redis);
   }
 
   /**
@@ -27,13 +33,35 @@ export class PaymentService {
     const expiresAt = new Date();
     expiresAt.setDate(expiresAt.getDate() + 7); // Expires in 7 days
 
+    const requestedCurrency = data.currency || 'USD';
+    let usdAmount = data.amount;
+    let originalAmount: number | null = null;
+    let originalCurrency: string | null = null;
+    let exchangeRate: number | null = null;
+
+    // Convert non-USD currencies to USD equivalent
+    if (requestedCurrency !== 'USD') {
+      const conversion = await this.exchangeRateService.convert(
+        data.amount,
+        requestedCurrency,
+        'USD'
+      );
+      usdAmount = conversion.convertedAmount;
+      originalAmount = data.amount;
+      originalCurrency = requestedCurrency;
+      exchangeRate = conversion.rate;
+    }
+
     const paymentSession = await this.prisma.paymentSession.create({
       data: {
         id,
         userId,
-        amount: data.amount,
-        currency: data.currency || 'USD',
+        amount: usdAmount,
+        currency: 'USD', // Always store in USD (stablecoin denomination)
         description: data.description,
+        originalAmount,
+        originalCurrency,
+        exchangeRate,
         network: data.network || 'polygon',
         token: data.token || 'USDC',
         merchantAddress: data.merchant_address,
@@ -310,6 +338,9 @@ export class PaymentService {
       success_url: session.successUrl,
       cancel_url: session.cancelUrl,
       metadata: session.metadata as any,
+      original_amount: session.originalAmount ? Number(session.originalAmount) : null,
+      original_currency: session.originalCurrency,
+      exchange_rate: session.exchangeRate ? Number(session.exchangeRate) : null,
       created_at: session.createdAt.toISOString(),
       expires_at: session.expiresAt.toISOString(),
       completed_at: session.completedAt?.toISOString() || null,

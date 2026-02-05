@@ -11,10 +11,12 @@ import { mockPaymentSessions } from '../data/dashboard-mock';
 const API_BASE_URL = import.meta.env.VITE_API_URL || 'http://localhost:5001';
 const USE_MOCK_API = import.meta.env.VITE_USE_MOCK_API === 'true';
 
+export type SupportedCurrency = 'USD' | 'EUR' | 'GBP';
+
 export interface PaymentSession {
   id: string;
   amount: number;
-  currency: 'USD';
+  currency: string;
   description?: string;
   status: 'pending' | 'confirming' | 'completed' | 'failed' | 'refunded';
   network: 'polygon' | 'ethereum';
@@ -28,6 +30,9 @@ export interface PaymentSession {
   success_url?: string;
   cancel_url?: string;
   metadata?: Record<string, unknown>;
+  original_amount?: number | null;
+  original_currency?: string | null;
+  exchange_rate?: number | null;
   created_at: string;
   expires_at: string;
   completed_at?: string;
@@ -35,7 +40,7 @@ export interface PaymentSession {
 
 export interface CreatePaymentSessionRequest {
   amount: number;
-  currency?: 'USD';
+  currency?: SupportedCurrency;
   description?: string;
   network?: 'polygon' | 'ethereum';
   token?: 'USDC' | 'USDT';
@@ -43,6 +48,26 @@ export interface CreatePaymentSessionRequest {
   success_url?: string;
   cancel_url?: string;
   metadata?: Record<string, unknown>;
+}
+
+export interface ExchangeRate {
+  currency: string;
+  rate_to_usd: number;
+  source: string;
+  fetched_at: string;
+}
+
+export interface ExchangeRatesResponse {
+  supported_currencies: string[];
+  rates: ExchangeRate[];
+}
+
+export interface ConversionResult {
+  amount: number;
+  from: string;
+  to: string;
+  converted_amount: number;
+  rate: number;
 }
 
 export interface ApiError {
@@ -975,6 +1000,26 @@ export class ApiClient {
   async getAnalyticsBreakdown(groupBy: string): Promise<{ data: BreakdownItem[]; group_by: string }> {
     return this.request<{ data: BreakdownItem[]; group_by: string }>(
       `/v1/analytics/payments?group_by=${groupBy}`
+    );
+  }
+
+  // ==================== Exchange Rates ====================
+
+  /**
+   * Get current exchange rates for all supported currencies.
+   * Public endpoint — no authentication required.
+   */
+  async getExchangeRates(): Promise<ExchangeRatesResponse> {
+    return this.request<ExchangeRatesResponse>('/v1/exchange-rates');
+  }
+
+  /**
+   * Convert an amount between currencies.
+   * Public endpoint — no authentication required.
+   */
+  async convertCurrency(amount: number, from: string, to: string = 'USD'): Promise<ConversionResult> {
+    return this.request<ConversionResult>(
+      `/v1/exchange-rates/convert?amount=${amount}&from=${from}&to=${to}`
     );
   }
 }

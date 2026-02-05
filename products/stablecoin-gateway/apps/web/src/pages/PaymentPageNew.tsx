@@ -20,6 +20,16 @@ import type { PaymentSession } from '../lib/api-client';
 
 const IS_DEV = import.meta.env.DEV;
 
+const CURRENCY_SYMBOLS: Record<string, string> = {
+  USD: '$',
+  EUR: '\u20AC',
+  GBP: '\u00A3',
+};
+
+function getCurrencySymbol(currency: string): string {
+  return CURRENCY_SYMBOLS[currency] || '';
+}
+
 export default function PaymentPageNew() {
   const { id } = useParams<{ id: string }>();
   const navigate = useNavigate();
@@ -224,8 +234,26 @@ export default function PaymentPageNew() {
           )}
 
           <div className="space-y-4 mb-6">
+            {/* Show original currency conversion info if applicable */}
+            {payment.original_currency && payment.original_amount && (
+              <div className="bg-blue-50 rounded-lg p-3 mb-2">
+                <div className="flex justify-between items-center text-sm">
+                  <span className="text-blue-700">Original amount</span>
+                  <span className="font-semibold text-blue-900">
+                    {getCurrencySymbol(payment.original_currency)}{payment.original_amount.toFixed(2)} {payment.original_currency}
+                  </span>
+                </div>
+                {payment.exchange_rate && (
+                  <div className="text-xs text-blue-600 mt-1">
+                    Rate: 1 USD = {payment.exchange_rate} {payment.original_currency}
+                  </div>
+                )}
+              </div>
+            )}
             <div className="flex justify-between items-center py-3 border-b border-card-border">
-              <span className="text-text-secondary">Amount</span>
+              <span className="text-text-secondary">
+                {payment.original_currency ? 'USD Equivalent' : 'Amount'}
+              </span>
               <span className="text-2xl font-bold text-text-primary">
                 ${payment.amount.toFixed(2)}
               </span>

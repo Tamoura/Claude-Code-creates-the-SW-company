@@ -55,6 +55,9 @@ const checkoutRoutes: FastifyPluginAsync = async (fastify) => {
       status: session.status,
       network: session.network,
       token: session.token,
+      original_amount: session.originalAmount ? Number(session.originalAmount) : null,
+      original_currency: session.originalCurrency,
+      exchange_rate: session.exchangeRate ? Number(session.exchangeRate) : null,
       expires_at: session.expiresAt.toISOString(),
     });
   });

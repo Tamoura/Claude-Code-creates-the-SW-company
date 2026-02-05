@@ -67,10 +67,13 @@ model PaymentSession {
   userId          String  @map("user_id")
   idempotencyKey  String? @map("idempotency_key")
 
-  // Payment details
-  amount      Decimal @db.Decimal(18, 6)
-  currency    String  @default("USD")
-  description String?
+  // Payment details (amount is always in USD/stablecoin equivalent)
+  amount           Decimal @db.Decimal(18, 6)
+  currency         String  @default("USD")
+  description      String?
+  originalAmount   Decimal? @db.Decimal(18, 6) @map("original_amount")
+  originalCurrency String?  @map("original_currency") // null = same as currency (USD)
+  exchangeRate     Decimal? @db.Decimal(18, 8) @map("exchange_rate") // rate used at time of conversion
 
   // Payment state
   status PaymentStatus @default(PENDING)
@@ -316,6 +319,25 @@ model NotificationPreference {
   user User @relation(fields: [userId], references: [id], onDelete: Cascade)
 
   @@map("notification_preferences")
+}
+
+// ==================== Exchange Rates ====================
+
+model ExchangeRate {
+  id       String @id @default(cuid())
+  currency String // e.g. "EUR", "GBP"
+  rateToUsd Decimal @db.Decimal(18, 8) @map("rate_to_usd") // 1 USD = X of this currency (inverse stored)
+
+  // Source metadata
+  source    String @default("manual") // "manual", "coingecko", "ecb"
+  fetchedAt DateTime @default(now()) @map("fetched_at")
+
+  // Timestamps
+  createdAt DateTime @default(now()) @map("created_at")
+
+  @@unique([currency, fetchedAt], name: "currency_fetchedAt")
+  @@index([currency, fetchedAt(sort: Desc)])
+  @@map("exchange_rates")
 }
 
 // ==================== Audit Logs ====================

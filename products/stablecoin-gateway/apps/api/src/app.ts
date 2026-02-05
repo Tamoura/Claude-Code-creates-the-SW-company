@@ -26,6 +26,7 @@ import paymentLinkRoutes from './routes/v1/payment-links.js';
 import notificationRoutes from './routes/v1/notifications.js';
 import analyticsRoutes from './routes/v1/analytics.js';
 import teamRoutes from './routes/v1/team.js';
+import exchangeRateRoutes from './routes/v1/exchange-rates.js';
 import webhookWorkerRoutes from './routes/internal/webhook-worker.js';
 
 // Utils
@@ -263,6 +264,7 @@ export async function buildApp(): Promise<FastifyInstance> {
   await fastify.register(notificationRoutes, { prefix: '/v1/notifications' });
   await fastify.register(analyticsRoutes, { prefix: '/v1/analytics' });
   await fastify.register(teamRoutes, { prefix: '/v1/team' });
+  await fastify.register(exchangeRateRoutes, { prefix: '/v1/exchange-rates' });
 
   // Dev-only routes (never registered in production)
   if (process.env.NODE_ENV !== 'production') {

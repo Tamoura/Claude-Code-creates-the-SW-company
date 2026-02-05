@@ -119,9 +119,9 @@ const httpsUrlSchema = z
 export const createPaymentSessionSchema = z.object({
   amount: z
     .number()
-    .min(1, 'Amount must be at least 1 USD')
-    .max(10000, 'Amount cannot exceed 10,000 USD'),
-  currency: z.enum(['USD']).default('USD'),
+    .positive('Amount must be positive')
+    .max(100000, 'Amount cannot exceed 100,000'),
+  currency: z.enum(['USD', 'EUR', 'GBP']).default('USD'),
   description: z.string().max(500).optional(),
   network: z.enum(['polygon', 'ethereum']).default('polygon'),
   token: z.enum(['USDC', 'USDT']).default('USDC'),

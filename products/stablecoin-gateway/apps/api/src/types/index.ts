@@ -32,6 +32,9 @@ export interface PaymentSessionResponse {
   success_url: string | null;
   cancel_url: string | null;
   metadata: Record<string, unknown> | null;
+  original_amount: number | null;
+  original_currency: string | null;
+  exchange_rate: number | null;
   created_at: string;
   expires_at: string;
   completed_at: string | null;

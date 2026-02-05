@@ -77,7 +77,7 @@ describe('POST /v1/payment-sessions', () => {
         authorization: `Bearer ${accessToken}`,
       },
       payload: {
-        amount: 0.5,
+        amount: -10,
         merchant_address: '0x742D35CC6634c0532925A3b844BC9E7595F0BEb0',
       },
     });

@@ -23,7 +23,7 @@ const paymentSessionRoutes: FastifyPluginAsync = async (fastify) => {
       const body = validateBody(createPaymentSessionSchema, request.body);
       const userId = request.currentUser!.id;
 
-      const paymentService = new PaymentService(fastify.prisma);
+      const paymentService = new PaymentService(fastify.prisma, fastify.redis);
 
       // IDEMPOTENCY: Check if payment already exists with this idempotency key
       // Read from Idempotency-Key header per API contract (not body)
@@ -126,7 +126,7 @@ const paymentSessionRoutes: FastifyPluginAsync = async (fastify) => {
       const query = validateQuery(listPaymentSessionsQuerySchema, request.query);
       const userId = request.currentUser!.id;
 
-      const paymentService = new PaymentService(fastify.prisma);
+      const paymentService = new PaymentService(fastify.prisma, fastify.redis);
       const { data, total } = await paymentService.listPaymentSessions(userId, {
         limit: query.limit,
         offset: query.offset,
@@ -173,7 +173,7 @@ const paymentSessionRoutes: FastifyPluginAsync = async (fastify) => {
       const { id } = request.params as { id: string };
       const userId = request.currentUser!.id;
 
-      const paymentService = new PaymentService(fastify.prisma);
+      const paymentService = new PaymentService(fastify.prisma, fastify.redis);
       const session = await paymentService.getPaymentSession(id, userId);
 
       const baseUrl = process.env.FRONTEND_URL || 'http://localhost:3101';
@@ -208,7 +208,7 @@ const paymentSessionRoutes: FastifyPluginAsync = async (fastify) => {
       // Validate request body
       const updates = validateBody(updatePaymentSessionSchema, request.body);
 
-      const paymentService = new PaymentService(fastify.prisma);
+      const paymentService = new PaymentService(fastify.prisma, fastify.redis);
 
       // Build update data with only allowed fields (security: whitelist prevents mass assignment)
       const updateData: Prisma.PaymentSessionUpdateInput = {};

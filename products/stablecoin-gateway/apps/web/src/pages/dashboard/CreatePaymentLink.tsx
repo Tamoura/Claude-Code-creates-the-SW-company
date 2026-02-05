@@ -1,8 +1,10 @@
-import { useState, FormEvent } from 'react';
+import { useState, useEffect, FormEvent } from 'react';
 import { apiClient } from '../../lib/api-client';
+import type { SupportedCurrency } from '../../lib/api-client';
 
 interface FormData {
   amount: string;
+  currency: SupportedCurrency;
   description: string;
   network: 'polygon' | 'ethereum';
   token: 'USDC' | 'USDT';
@@ -23,6 +25,7 @@ interface GeneratedSession {
 export default function CreatePaymentLink() {
   const [formData, setFormData] = useState<FormData>({
     amount: '',
+    currency: 'USD',
     description: '',
     network: 'polygon',
     token: 'USDC',
@@ -30,11 +33,33 @@ export default function CreatePaymentLink() {
     cancel_url: '',
   });
 
+  const [usdPreview, setUsdPreview] = useState<number | null>(null);
+
   const [errors, setErrors] = useState<ValidationErrors>({});
   const [isLoading, setIsLoading] = useState(false);
   const [apiError, setApiError] = useState<string>('');
   const [generatedSession, setGeneratedSession] = useState<GeneratedSession | null>(null);
   const [copied, setCopied] = useState(false);
+
+  // Live USD preview when currency is non-USD
+  useEffect(() => {
+    if (formData.currency === 'USD') {
+      setUsdPreview(null);
+      return;
+    }
+    const amount = parseFloat(formData.amount);
+    if (isNaN(amount) || amount <= 0) {
+      setUsdPreview(null);
+      return;
+    }
+    let cancelled = false;
+    apiClient.convertCurrency(amount, formData.currency).then((result) => {
+      if (!cancelled) setUsdPreview(result.converted_amount);
+    }).catch(() => {
+      if (!cancelled) setUsdPreview(null);
+    });
+    return () => { cancelled = true; };
+  }, [formData.amount, formData.currency]);
 
   const validateForm = (): boolean => {
     const newErrors: ValidationErrors = {};
@@ -67,6 +92,7 @@ export default function CreatePaymentLink() {
     try {
       const response = await apiClient.createPaymentSession({
         amount: parseFloat(formData.amount),
+        currency: formData.currency,
         description: formData.description || undefined,
         network: formData.network,
         token: formData.token,
@@ -99,12 +125,14 @@ export default function CreatePaymentLink() {
   const handleCreateAnother = () => {
     setFormData({
       amount: '',
+      currency: 'USD',
       description: '',
       network: 'polygon',
       token: 'USDC',
       success_url: '',
       cancel_url: '',
     });
+    setUsdPreview(null);
     setGeneratedSession(null);
     setErrors({});
     setApiError('');
@@ -197,22 +225,39 @@ export default function CreatePaymentLink() {
           </div>
         )}
 
-        {/* Amount */}
+        {/* Amount + Currency */}
         <div>
           <label htmlFor="amount" className="block text-sm font-medium text-text-primary mb-2">
-            Amount (USD) *
+            Amount *
           </label>
-          <input
-            type="number"
-            id="amount"
-            step="0.01"
-            min="0.01"
-            value={formData.amount}
-            onChange={(e) => setFormData({ ...formData, amount: e.target.value })}
-            className="w-full bg-page-bg border border-card-border rounded-lg px-4 py-2.5 text-text-primary focus:outline-none focus:ring-2 focus:ring-accent-blue"
-            placeholder="100.00"
-          />
+          <div className="flex gap-3">
+            <input
+              type="number"
+              id="amount"
+              step="0.01"
+              min="0.01"
+              value={formData.amount}
+              onChange={(e) => setFormData({ ...formData, amount: e.target.value })}
+              className="flex-1 bg-page-bg border border-card-border rounded-lg px-4 py-2.5 text-text-primary focus:outline-none focus:ring-2 focus:ring-accent-blue"
+              placeholder="100.00"
+            />
+            <select
+              id="currency"
+              value={formData.currency}
+              onChange={(e) => setFormData({ ...formData, currency: e.target.value as SupportedCurrency })}
+              className="w-24 bg-page-bg border border-card-border rounded-lg px-3 py-2.5 text-text-primary focus:outline-none focus:ring-2 focus:ring-accent-blue"
+            >
+              <option value="USD">USD</option>
+              <option value="EUR">EUR</option>
+              <option value="GBP">GBP</option>
+            </select>
+          </div>
           {errors.amount && <p className="text-red-500 text-sm mt-1">{errors.amount}</p>}
+          {usdPreview !== null && formData.currency !== 'USD' && (
+            <p className="text-text-secondary text-sm mt-1">
+              ≈ ${usdPreview.toFixed(2)} USD (customer pays in stablecoin)
+            </p>
+          )}
         </div>
 
         {/* Description */}

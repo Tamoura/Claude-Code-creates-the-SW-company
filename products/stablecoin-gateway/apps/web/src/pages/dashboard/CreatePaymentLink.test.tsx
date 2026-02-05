@@ -8,6 +8,13 @@ import * as apiClientModule from '../../lib/api-client';
 vi.mock('../../lib/api-client', () => ({
   apiClient: {
     createPaymentSession: vi.fn(),
+    convertCurrency: vi.fn().mockResolvedValue({
+      amount: 100,
+      from: 'EUR',
+      to: 'USD',
+      converted_amount: 108.70,
+      rate: 0.92,
+    }),
   },
 }));
 
@@ -182,6 +189,71 @@ describe('CreatePaymentLink', () => {
     // Get a fresh reference to the input after the form resets
     const resetAmountInput = screen.getByLabelText(/amount/i) as HTMLInputElement;
     expect(resetAmountInput.value).toBe('');
+  });
+
+  it('renders currency selector with USD, EUR, GBP options', () => {
+    renderCreatePaymentLink();
+
+    const currencySelect = screen.getByRole('combobox') as HTMLSelectElement;
+    expect(currencySelect).toBeInTheDocument();
+    expect(currencySelect.value).toBe('USD');
+
+    const options = Array.from(currencySelect.options).map((o) => o.value);
+    expect(options).toEqual(['USD', 'EUR', 'GBP']);
+  });
+
+  it('passes selected currency to API on submission', async () => {
+    const mockSession = {
+      id: 'ps_eur_test',
+      amount: 108.70,
+      currency: 'USD',
+      status: 'pending',
+      network: 'polygon',
+      token: 'USDC',
+      merchant_address: '0x742d35Cc6634C0532925a3b844Bc9e7595f2bD18',
+      checkout_url: 'http://localhost:3100/pay/ps_eur_test',
+      original_amount: 100,
+      original_currency: 'EUR',
+      exchange_rate: 0.92,
+      created_at: '2025-01-01T00:00:00Z',
+      expires_at: '2025-01-08T00:00:00Z',
+    };
+
+    vi.mocked(apiClientModule.apiClient.createPaymentSession).mockResolvedValue(mockSession);
+
+    renderCreatePaymentLink();
+
+    const amountInput = screen.getByLabelText(/amount/i);
+    fireEvent.change(amountInput, { target: { value: '100' } });
+
+    const currencySelect = screen.getByRole('combobox');
+    fireEvent.change(currencySelect, { target: { value: 'EUR' } });
+
+    const generateButton = screen.getByRole('button', { name: /generate link/i });
+    fireEvent.click(generateButton);
+
+    await waitFor(() => {
+      expect(apiClientModule.apiClient.createPaymentSession).toHaveBeenCalledWith(
+        expect.objectContaining({
+          amount: 100,
+          currency: 'EUR',
+        })
+      );
+    });
+  });
+
+  it('shows USD preview when non-USD currency is selected', async () => {
+    renderCreatePaymentLink();
+
+    const amountInput = screen.getByLabelText(/amount/i);
+    fireEvent.change(amountInput, { target: { value: '100' } });
+
+    const currencySelect = screen.getByRole('combobox');
+    fireEvent.change(currencySelect, { target: { value: 'EUR' } });
+
+    await waitFor(() => {
+      expect(screen.getByText(/≈ \$108\.70 USD/)).toBeInTheDocument();
+    });
   });
 
   it('displays API errors', async () => {
