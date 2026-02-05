@@ -1,6 +1,8 @@
 import { FastifyPluginAsync } from 'fastify';
 import { ZodError } from 'zod';
 import { AnalyticsService } from '../../services/analytics.service.js';
+import { AppError } from '../../types/index.js';
+import { logger } from '../../utils/logger.js';
 import {
   analyticsOverviewQuerySchema,
   analyticsVolumeQuerySchema,
@@ -21,6 +23,9 @@ const analyticsRoutes: FastifyPluginAsync = async (fastify) => {
         const overview = await analyticsService.getOverview(userId);
         return reply.send(overview);
       } catch (error) {
+        if (error instanceof AppError) {
+          return reply.code(error.statusCode).send(error.toJSON());
+        }
         if (error instanceof ZodError) {
           return reply.code(400).send({
             type: 'https://gateway.io/errors/validation-error',
@@ -29,6 +34,7 @@ const analyticsRoutes: FastifyPluginAsync = async (fastify) => {
             detail: error.errors.map((e) => e.message).join(', '),
           });
         }
+        logger.error('Analytics error', error);
         throw error;
       }
     },
@@ -45,6 +51,9 @@ const analyticsRoutes: FastifyPluginAsync = async (fastify) => {
         const volume = await analyticsService.getVolume(userId, query.period, query.days);
         return reply.send({ data: volume, period: query.period, days: query.days });
       } catch (error) {
+        if (error instanceof AppError) {
+          return reply.code(error.statusCode).send(error.toJSON());
+        }
         if (error instanceof ZodError) {
           return reply.code(400).send({
             type: 'https://gateway.io/errors/validation-error',
@@ -53,6 +62,7 @@ const analyticsRoutes: FastifyPluginAsync = async (fastify) => {
             detail: error.errors.map((e) => e.message).join(', '),
           });
         }
+        logger.error('Analytics error', error);
         throw error;
       }
     },
@@ -69,6 +79,9 @@ const analyticsRoutes: FastifyPluginAsync = async (fastify) => {
         const breakdown = await analyticsService.getPaymentBreakdown(userId, query.group_by);
         return reply.send({ data: breakdown, group_by: query.group_by });
       } catch (error) {
+        if (error instanceof AppError) {
+          return reply.code(error.statusCode).send(error.toJSON());
+        }
         if (error instanceof ZodError) {
           return reply.code(400).send({
             type: 'https://gateway.io/errors/validation-error',
@@ -77,6 +90,7 @@ const analyticsRoutes: FastifyPluginAsync = async (fastify) => {
             detail: error.errors.map((e) => e.message).join(', '),
           });
         }
+        logger.error('Analytics error', error);
         throw error;
       }
     },

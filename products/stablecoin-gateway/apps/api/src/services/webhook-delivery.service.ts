@@ -126,6 +126,9 @@ export class WebhookDeliveryService {
 
     for (const endpoint of endpoints) {
       try {
+        // Create delivery record. The DB unique constraint
+        // (endpoint_id, event_type, resource_id) prevents duplicates
+        // atomically — a concurrent create will fail with P2002.
         const delivery = await this.prisma.webhookDelivery.create({
           data: {
             endpointId: endpoint.id,

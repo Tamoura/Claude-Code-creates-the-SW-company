@@ -300,15 +300,20 @@ export class PaymentLinkService {
    * preventing race conditions where concurrent requests both pass
    * a read-then-check before either increments.
    *
-   * Returns the updated link, or null if the link has reached max_usages.
+   * RISK-064: userId is required to enforce ownership — prevents user A
+   * from incrementing user B's payment link usage count.
+   *
+   * Returns the updated link, or null if the link has reached max_usages
+   * or ownership does not match.
    */
-  async incrementUsage(id: string): Promise<PaymentLink | null> {
-    // Atomic increment with limit enforcement in a single UPDATE ... WHERE.
+  async incrementUsage(id: string, userId: string): Promise<PaymentLink | null> {
+    // Atomic increment with limit + ownership enforcement in a single UPDATE ... WHERE.
     // "maxUsages" IS NULL means unlimited; otherwise usageCount must be < maxUsages.
     const result: PaymentLink[] = await this.prisma.$queryRaw`
       UPDATE "PaymentLink"
       SET "usageCount" = "usageCount" + 1, "updatedAt" = NOW()
       WHERE id = ${id}
+        AND "userId" = ${userId}
         AND active = true
         AND ("maxUsages" IS NULL OR "usageCount" < "maxUsages")
       RETURNING *

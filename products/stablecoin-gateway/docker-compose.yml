@@ -70,6 +70,9 @@ services:
       - INTERNAL_API_KEY=${INTERNAL_API_KEY:-}
       # Webhook encryption key for secure webhook secret storage
       - WEBHOOK_ENCRYPTION_KEY=${WEBHOOK_ENCRYPTION_KEY:-}
+      # HMAC secret for API key hashing (RISK-074)
+      # Generate with: openssl rand -hex 32
+      - API_KEY_HMAC_SECRET=${API_KEY_HMAC_SECRET:?API_KEY_HMAC_SECRET is required - generate with: openssl rand -hex 32}
     depends_on:
       postgres:
         condition: service_healthy

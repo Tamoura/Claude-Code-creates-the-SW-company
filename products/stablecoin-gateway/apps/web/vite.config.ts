@@ -5,6 +5,16 @@ import react from '@vitejs/plugin-react'
 export default defineConfig(({ mode }) => {
   const isProduction = mode === 'production';
 
+  // RISK-067: Prevent mock mode from being deployed to production.
+  // A production build with mock API enabled would bypass all real
+  // payment processing and return fake data to users.
+  if (isProduction && process.env.VITE_USE_MOCK_API === 'true') {
+    throw new Error(
+      'FATAL: VITE_USE_MOCK_API=true is not allowed in production builds. ' +
+      'Unset VITE_USE_MOCK_API or set it to "false" before building for production.',
+    );
+  }
+
   return {
     plugins: [react()],
     server: {
@@ -19,6 +29,9 @@ export default defineConfig(({ mode }) => {
     build: {
       // Enable minification and tree-shaking for production
       minify: isProduction ? 'esbuild' : false,
+      // RISK-069: Disable source maps in production to prevent
+      // exposing original source code to end users.
+      sourcemap: !isProduction,
       rollupOptions: {
         output: {
           // Ensure consistent chunk naming for better caching
