@@ -1,10 +1,9 @@
-# StableFlow Stablecoin Gateway — Audit Report (v12)
+# Stablecoin Gateway — Comprehensive Code Audit Report
 
-**Date:** February 3, 2026
-**Auditor:** ConnectSW Code Reviewer (Automated, 4-agent parallel exploration)
-**Branch:** feature/stablecoin-gateway/audit-remediation (commits f1ace6f, 37e4645, e727109 — low/medium/critical remediation)
-**Product Version:** v1.2.0-rc (Phase 1 features: Payment Links, QR Codes, Checkout Widget, Email Notifications)
-**Previous Audit:** v11 (February 2, 2026 — Overall Score 8.3/10)
+**Date:** 2026-02-05
+**Auditor:** ConnectSW Code Reviewer (Principal Architect + Security Engineer + Staff Backend Engineer)
+**Product:** Stablecoin Gateway v1.0.0
+**Branch:** main (post-merge of PRs #102-#113)
 
 ---
 
@@ -12,65 +11,33 @@
 
 ---
 
-## Section 0: Methodology and Limitations
+## Section 0: Methodology & Limitations
 
-### Audit Scope
+**Audit Scope:**
+- Directories scanned: `apps/api/src/`, `apps/api/tests/`, `apps/api/prisma/`, `apps/web/src/`, `packages/sdk/src/`, `packages/sdk/tests/`, `packages/checkout-widget/src/`, `.github/workflows/`, Docker configs
+- File types: `.ts`, `.tsx`, `.prisma`, `.yml`, `.json`, `.env*`, `Dockerfile`
+- Total source files reviewed: 177
+- Total lines of source code analyzed: ~29,200
+- Total test files reviewed: 154
+- Total lines of test code analyzed: ~31,600
 
-| Directory Scanned | File Types |
-|---|---|
-| `apps/api/src/services/` | `.ts` |
-| `apps/api/src/workers/` | `.ts` |
-| `apps/api/src/routes/` | `.ts` |
-| `apps/api/src/plugins/` | `.ts` |
-| `apps/api/src/utils/` | `.ts` |
-| `apps/api/src/app.ts` | `.ts` |
-| `apps/api/src/index.ts` | `.ts` |
-| `apps/api/prisma/` | `.prisma` |
-| `apps/api/tests/` | `.ts` |
-| `apps/web/src/` | `.ts`, `.tsx` |
-| `apps/web/e2e/` | `.ts` |
-| `.github/workflows/` | `.yml` |
-| Root configs | `.json`, `.yml`, `.env*` |
-
-- **Total files reviewed:** 119 source files + 104 backend test suites + 42 frontend test suites = 265 files
-- **Total lines of code analyzed:** 25,206 (10,981 backend + 14,225 frontend) + approximately 18,000 (tests) = approximately 43,000 lines
-- **Backend source files:** 51 files across services, routes, plugins, utils, workers
-- **Frontend source files:** 68 files across components, pages, hooks, lib
-- **Test suites:** 146 total (104 backend Jest, 42 frontend Vitest)
-
-### Methodology
-
-- Static analysis: manual code review of all source files by 4 parallel agents (services, routes, plugins/utils/schema, tests/CI/frontend)
+**Methodology:**
+- Static analysis: manual code review of all source files across 4 parallel audit streams
 - Schema analysis: Prisma schema, database indexes, relations, constraints
-- Dependency audit: `package.json` and lock file review
+- Dependency audit: `package.json` and lock file review for known vulnerabilities (npm audit)
 - Configuration review: environment files, Docker configs, CI/CD pipelines
-- Test analysis: full test suite execution, coverage assessment, quality evaluation, gap identification
-- Architecture review: dependency graph, layering, coupling analysis, concurrency patterns
+- Test analysis: test coverage measurement, test quality assessment, gap identification
+- Architecture review: dependency graph, layering, coupling analysis, concurrency safety
 
-### Test Execution Results
-
-| Suite | Files | Pass | Fail | Skip |
-|---|---|---|---|---|
-| Backend (Jest) | 106 | 965 | 0 | 1 |
-| Frontend Unit (Vitest) | 42 | 361 | 0 | 0 |
-| E2E (Playwright) | 14 | 73 | 0 | 0 |
-| **Total** | **162** | **1,399** | **0** | **1** |
-
-Pass rate: 100% (all tests passing). +13 new tests from audit remediation: 5 refund status guard, 7 RPC timeout, 1 HMAC enforcement.
-
-### Out of Scope
-
+**Out of Scope:**
 - Dynamic penetration testing (no live exploit attempts were made)
 - Runtime performance profiling (no load tests executed)
 - Third-party SaaS integrations (only code-level integration points reviewed)
 - Infrastructure-level security (cloud IAM, network policies, firewall rules)
 - Generated code (Prisma client) unless it poses a security risk
 - Third-party library internals (but vulnerable versions are noted)
-- Blockchain on-chain testing (smart contract interactions reviewed in code only)
-- Frontend accessibility (WCAG compliance not assessed)
 
-### Limitations
-
+**Limitations:**
 - This audit is based on static code review. Some issues (memory leaks, race conditions under load, intermittent failures) may only manifest at runtime.
 - Compliance assessments are technical gap analyses, not formal certifications.
 - Scores reflect the state of the code at the time of audit and may change with subsequent commits.
@@ -79,42 +46,26 @@ Pass rate: 100% (all tests passing). +13 new tests from audit remediation: 5 ref
 
 ## Section 1: Executive Decision Summary
 
-### Overall Assessment: CONDITIONALLY PRODUCTION-READY
-
 | Question | Answer |
 |----------|--------|
-| **Can this go to production?** | Conditionally — after Phase 1 items and 2 newly identified service-layer gaps are resolved |
-| **Is it salvageable?** | Yes — the product is well-architected with strong security foundations and 1,386 passing tests |
-| **Risk if ignored** | Medium — newly found service-layer gaps are behind authentication but represent real logic flaws |
-| **Recovery effort** | 1-2 weeks with 1 engineer for Phase 1 items plus new findings |
-| **Enterprise-ready?** | Nearly — CSRF, httpOnly tokens, and refund validation are the remaining blockers |
-| **Compliance-ready?** | SOC2: Nearly (CSRF gap, refund validation). OWASP Top 10: 8/10 Pass, 2 Partial |
-
-### Audit Progress (v9 through v12)
-
-| Metric | v9 | v10 | v11 | v12 |
-|--------|-----|------|------|------|
-| Overall Score | 7.1 | 8.2 | 8.3 | 8.4 |
-| Critical Issues | 2 | 0 | 0 | 0 |
-| High Issues (open) | 5 | 3 | 3 | 1 |
-| Tests Passing | 951+160 | 951+160 | 951+160 | 965+361 |
-| Phase 0 Items | 5 open | 5 resolved | 5 resolved | 5 resolved |
-| Phase 1 Items | 7 open | 5 open | 5 open | 2 open |
-| Score Gate | FAIL | PASS | PASS | PASS |
-
-**v12 Delta (post-remediation):** This audit performed deeper service-layer analysis using 4 parallel agents, uncovering 8 new findings. Five critical fixes applied in commit e727109: RISK-044 (refund status guard), RISK-045 (RPC timeout), RISK-047 (refund rate limiting), RISK-050 (HMAC enforcement), plus webhook secret caching. All 5 fixes verified with 13 new tests. Security restored to 8.5/10, Performance restored to 8/10. Test count: 965 backend + 361 frontend + 73 E2E = 1,399 total.
+| **Can this go to production?** | Conditionally — after Phase 0 and Phase 1 remediation |
+| **Is it salvageable?** | Yes — architecture is sound, issues are fixable |
+| **Risk if ignored** | High — race conditions in payment flows, Redis failover bypasses auth |
+| **Recovery effort** | 2-3 weeks with 2 engineers for Phase 0+1 |
+| **Enterprise-ready?** | No — needs secret management hardening, compliance gaps |
+| **Compliance-ready?** | OWASP: 7/10 Pass, SOC2: Partial, ISO 27001: Not Ready |
 
 ### Top 5 Risks in Plain Language
 
-1. **A malicious website could trick a logged-in merchant into making unauthorized API calls** — The API lacks CSRF protection, meaning a merchant visiting a compromised website could unknowingly initiate payments or change settings.
+1. **When our cache system goes down, locked-out users can regain access for up to 15 minutes** — the authentication system silently allows revoked sessions when Redis is unavailable, meaning a terminated employee or compromised account could continue operating.
 
-2. **A merchant could request a refund for a payment that was never completed** — The refund service does not verify that the original payment reached COMPLETED status before accepting a refund request. This could lead to accounting discrepancies and unauthorized fund transfers.
+2. **Two customers can exceed a payment link's usage limit simultaneously** — a race condition allows multiple customers to complete payment through a link that should have been exhausted, causing merchants to receive more payments than intended.
 
-3. **Session tokens could be stolen if any future code vulnerability allows script injection** — Refresh tokens are returned in JSON responses rather than secure browser-only cookies, meaning any JavaScript vulnerability could capture long-lived session tokens.
+3. **Dashboard analytics can display incorrect dollar amounts** — floating-point math errors accumulate in the analytics service, meaning merchants see slightly wrong revenue numbers that erode trust over time.
 
-4. **If a blockchain node becomes unresponsive, payment verification requests hang indefinitely** — Blockchain RPC calls have no timeout, meaning a slow or unresponsive node could cause requests to hang until the server's connection limit is exhausted.
+4. **The developer toolkit (SDK) has no timeout protection** — merchant applications using our SDK could hang indefinitely if our servers are slow, potentially freezing their checkout flows for customers.
 
-5. **Public-facing payment and QR code endpoints could be abused for denial of service** — The checkout, payment link resolution, and QR code generation endpoints have no rate limiting, allowing automated abuse that could degrade service for legitimate users.
+5. **Docker deployment files contain predictable placeholder secrets** — anyone who reads the public deployment template can guess the encryption keys, making the entire security layer useless if deployed without changing defaults.
 
 ---
 
@@ -122,9 +73,9 @@ Pass rate: 100% (all tests passing). +13 new tests from audit remediation: 5 ref
 
 | Category | Items |
 |----------|-------|
-| **STOP** | Nothing requires immediate cessation. All Critical issues from v9 have been resolved. No regressions detected. |
-| **FIX** | Refund service must verify payment status is COMPLETED before accepting refunds. CSRF protection must be added. Refresh tokens should move to httpOnly cookies. Blockchain RPC calls need timeouts. Refresh endpoint should include role in JWT. Public endpoints need rate limiting. Webhook deliveries need atomic claim-before-process. |
-| **CONTINUE** | Decimal.js precision for financial calculations. Atomic INCRBY spending limits with rollback. Idempotency key pattern for payment processing. HMAC-based API key hashing with timing-safe comparison. Comprehensive behavioral test suite (952 backend + 361 frontend + 73 E2E = 1,386 tests). Webhook signature verification with timing-safe comparison. Payment state machine with allow-list transitions. AES-256-GCM encryption. Anti-enumeration signup responses. DNS-resolution SSRF protection. Redis distributed locking. Provider failover with health caching. KMS error sanitization. |
+| **STOP** | Deploying with `.env.docker` default secrets; allowing Redis circuit breaker to bypass JWT revocation silently |
+| **FIX** | Race conditions in payment link usage (TOCTOU), decimal precision in analytics, SDK request timeouts, missing CSP headers on frontend, path parameter validation on all routes |
+| **CONTINUE** | Excellent test infrastructure (154 test files, 31K lines), strong Prisma ORM usage preventing SQL injection, well-designed webhook system with circuit breakers and exponential backoff, comprehensive audit logging, non-custodial architecture |
 
 ---
 
@@ -133,341 +84,159 @@ Pass rate: 100% (all tests passing). +13 new tests from audit remediation: 5 ref
 ### Architecture
 
 ```
-                    +---------------+
-                    |   Merchant    |
-                    |   Browser     |
-                    +-------+-------+
-                            | HTTPS
-                    +-------v-------+
-                    |  Vite + React |  Port 3104
-                    |  Frontend     |  React 18 + Tailwind
-                    +-------+-------+
-                            | REST API
-                    +-------v-------+
-                    |  Fastify      |  Port 5001
-                    |  Backend API  |  TypeScript + Prisma
-                    +--+----+----+--+
-                       |    |    |
-            +----------+    |    +----------+
-            v               v               v
-     +----------+    +----------+    +----------+
-     |PostgreSQL|    |  Redis   |    |Blockchain|
-     |  (Prisma)|    | (Cache,  |    |  (RPC)   |
-     |          |    |  Locks)  |    |  Ethers  |
-     +----------+    +----------+    +----------+
+                                 ┌─────────────────┐
+                                 │   React SPA      │
+                                 │  (Vite + wagmi)  │
+                                 │   Port 3104      │
+                                 └────────┬─────────┘
+                                          │ HTTPS
+                                          ▼
+┌──────────────────┐            ┌─────────────────┐            ┌──────────────────┐
+│  Checkout Widget │───────────▶│   Fastify API    │◀───────── │  @stablecoin-    │
+│  (Embeddable)    │            │   Port 5001      │           │  gateway/sdk     │
+└──────────────────┘            │                  │           └──────────────────┘
+                                │  ┌─────────────┐ │
+                                │  │Auth Plugin   │ │
+                                │  │Rate Limiting │ │
+                                │  │CORS/Helmet   │ │
+                                │  └─────────────┘ │
+                                └───┬─────┬────┬───┘
+                                    │     │    │
+                       ┌────────────┘     │    └────────────┐
+                       ▼                  ▼                 ▼
+              ┌──────────────┐   ┌──────────────┐   ┌──────────────┐
+              │  PostgreSQL  │   │    Redis      │   │  Blockchain  │
+              │  (Prisma)    │   │  (Rate Limit  │   │  (Alchemy/   │
+              │              │   │   + Queues)   │   │   Infura)    │
+              └──────────────┘   └──────────────┘   └──────────────┘
 ```
 
 ### Technology Stack
-
-- **Runtime:** Node.js 20+, TypeScript 5+
-- **Backend:** Fastify with JWT auth (HS256 pinned), rate limiting, CORS, Helmet security headers
-- **Frontend:** Vite 5, React 18, Tailwind CSS
-- **Database:** PostgreSQL 15+ via Prisma ORM (Decimal(18,6) for financial data)
-- **Cache/Locks:** Redis (circuit breaker, nonce locks, rate limiting, spending limits, JTI blacklist)
-- **Blockchain:** ethers.js v6 for EVM-compatible chains (Ethereum, Polygon) with ProviderManager failover
-- **Crypto:** AES-256-GCM encryption (direct hex key), HMAC-SHA256 API keys, bcrypt passwords (12 rounds)
-- **Testing:** Jest (952 backend), Vitest (361 frontend), Playwright (73 E2E)
+- **Backend:** Fastify 4, TypeScript 5, Prisma ORM, PostgreSQL 15, Redis 7, BullMQ
+- **Frontend:** React 18, Vite 5, Tailwind CSS 3, wagmi v2, React Router 6
+- **SDK:** TypeScript, ESM + CJS dual build, esbuild
+- **Blockchain:** ethers.js v6, Polygon + Ethereum support, USDC + USDT
+- **Infrastructure:** Docker Compose, nginx, GitHub Actions CI/CD
 
 ### Key Flows
-
-1. **Payment Flow:** Merchant creates payment via API or payment link -> system generates checkout URL -> customer pays on-chain -> blockchain monitor detects ERC-20 Transfer event -> webhook notifies merchant
-2. **Auth Flow:** Email/password signup -> JWT access token (15min) + refresh token -> atomic token rotation on refresh -> JTI blacklisting on logout via Redis
-3. **Refund Flow:** Merchant requests refund -> atomic spending limit check (INCRBY + rollback) -> Redis nonce lock -> blockchain transaction via KMS signer -> confirmation monitoring -> webhook notification
+1. **Payment:** Merchant creates session via API/SDK -> Customer pays via checkout page -> Blockchain monitors confirm -> Webhook notifies merchant
+2. **Auth:** Signup -> JWT access token (15min) + refresh token (7 days) -> Rate-limited, password policy enforced
+3. **Webhooks:** Event triggers -> HMAC-SHA256 signed delivery -> Exponential backoff retries -> Circuit breaker on failures
+4. **Refunds:** Merchant requests refund -> Background worker processes -> On-chain transaction -> Status update
 
 ---
 
 ## Section 4: Critical Issues (Top 10)
 
-### 1. No CSRF Protection (Carried from v9/v10)
+### Issue #1: JWT Revocation Bypassed When Redis is Unavailable
 
-- **Severity:** High (downgraded from Critical in v9 — in-memory token storage reduces exploitability)
-- **Likelihood:** Medium — requires social engineering to trick merchant to visit attacker site
-- **Blast Radius:** Product — any authenticated merchant action
-- **Risk Owner:** Dev
-- **Category:** Code
-- **Business Impact:** A malicious website could trick a merchant's browser into making API calls if the merchant has an active session
-- **Compliance Impact:** OWASP A01 (Broken Access Control), SOC2 Security
+**Severity:** Critical | **Likelihood:** Medium | **Blast Radius:** Organization-wide
+**Risk Owner:** Security | **Category:** Infrastructure
+**Business Impact:** A terminated employee or compromised account can continue operating for up to 15 minutes after logout/revocation if Redis goes down during that window.
+**Compliance Impact:** OWASP A07 (Identification and Authentication Failures), SOC2 Security
 
-### 2. Refresh Tokens in JSON Body Instead of httpOnly Cookies (Carried from v9/v10)
+### Issue #2: Race Condition in Payment Link Max Usage Check (TOCTOU)
 
-- **Severity:** High
-- **Likelihood:** Medium — requires XSS or malicious browser extension to exfiltrate
-- **Blast Radius:** Feature — session hijacking per user
-- **Risk Owner:** Dev
-- **Category:** Code
-- **Business Impact:** If any JavaScript vulnerability is found, refresh tokens in memory can be exfiltrated for persistent account access
-- **Compliance Impact:** OWASP A07, SOC2 Security
+**Severity:** Critical | **Likelihood:** High | **Blast Radius:** Product-wide
+**Risk Owner:** Dev | **Category:** Code
+**Business Impact:** Multiple customers can exceed a payment link's usage limit simultaneously, causing merchants to receive more payments than configured. For limited-edition sales or capped promotions, this breaks business logic.
+**Compliance Impact:** SOC2 Processing Integrity
 
-### 3. Refresh Endpoint Omits Role in JWT (Carried from v10)
+### Issue #3: Decimal Precision Loss in Analytics Service
 
-- **Severity:** High
-- **Likelihood:** Medium — affects all refreshed tokens in every session
-- **Blast Radius:** Feature — authorization inconsistency
-- **Risk Owner:** Dev
-- **Category:** Code
-- **Business Impact:** After token refresh, the JWT payload lacks the `role` field present in the original token. The auth plugin does a database lookup so admin checks work, but any service trusting the JWT role claim directly would see undefined.
-- **Compliance Impact:** OWASP A01 (Broken Access Control)
+**Severity:** Critical | **Likelihood:** High | **Blast Radius:** Product-wide
+**Risk Owner:** Dev | **Category:** Code
+**Business Impact:** Dashboard analytics display incorrect revenue figures due to IEEE 754 floating-point errors. High-volume merchants will notice discrepancies between actual and displayed revenue, eroding trust.
+**Compliance Impact:** SOC2 Processing Integrity
 
-### 4. Public Endpoints Without Rate Limiting (Carried from v10)
+### Issue #4: Predictable Default Secrets in Docker Configuration
 
-- **Severity:** Medium
-- **Likelihood:** Medium — automated abuse is straightforward
-- **Blast Radius:** Product — service availability
-- **Risk Owner:** Dev
-- **Category:** Code
-- **Business Impact:** Checkout, payment link resolution, and QR code generation endpoints are public and unrate-limited. QR generation is CPU-intensive and could be used for denial-of-service.
-- **Compliance Impact:** SOC2 Availability
+**Severity:** Critical | **Likelihood:** Medium | **Blast Radius:** Organization-wide
+**Risk Owner:** DevOps | **Category:** Infrastructure
+**Business Impact:** Anyone who reads the public `.env.docker` file can forge JWT tokens, decrypt webhook secrets, and access internal metrics. A deployment that forgets to change defaults is fully compromised.
+**Compliance Impact:** OWASP A02 (Cryptographic Failures), ISO 27001 A.10
 
-### 5. Refund Allowed on Non-Completed Payments (New in v12)
+### Issue #5: Missing Authentication on Public Checkout Endpoint
 
-- **Severity:** High
-- **Likelihood:** Medium — any authenticated merchant can trigger via API
-- **Blast Radius:** Product — accounting discrepancies, unauthorized fund transfers
-- **Risk Owner:** Dev
-- **Category:** Code
-- **Business Impact:** A merchant could request a refund for a payment session that never reached COMPLETED status. The refund service checks remaining refundable amount but does not verify that the original payment was actually completed, potentially creating phantom refund transactions
-- **Compliance Impact:** OWASP A04 (Insecure Design), SOC2 Processing Integrity
+**Severity:** Critical | **Likelihood:** High | **Blast Radius:** Product-wide
+**Risk Owner:** Dev | **Category:** Code
+**Business Impact:** An attacker can enumerate payment session IDs to harvest merchant addresses, customer addresses, transaction hashes, and payment amounts. This exposes the entire payment ledger.
+**Compliance Impact:** OWASP A01 (Broken Access Control), GDPR/PDPL
 
-### 6. No Timeout on Blockchain RPC Calls (New in v12)
+### Issue #6: Rate Limiting Silently Bypassed When Redis Fails
 
-- **Severity:** Medium
-- **Likelihood:** Medium — blockchain nodes periodically become unresponsive
-- **Blast Radius:** Product — resource exhaustion, cascading failures
-- **Risk Owner:** Dev
-- **Category:** Code
-- **Business Impact:** Calls to blockchain RPC endpoints (getTransactionReceipt, getBlockNumber) have no timeout. If a node hangs, the verification request blocks indefinitely, consuming a server connection until the OS TCP timeout (potentially minutes)
-- **Compliance Impact:** SOC2 Availability
+**Severity:** Critical | **Likelihood:** Medium | **Blast Radius:** Organization-wide
+**Risk Owner:** DevOps | **Category:** Infrastructure
+**Business Impact:** If Redis goes down, rate limiting stops entirely with no fallback. An attacker can launch brute-force attacks against auth endpoints or flood the API during the outage window.
+**Compliance Impact:** OWASP A07, SOC2 Security
 
-### 7. Admin Search Query No Max Length (Carried from v10)
+### Issue #7: SDK Client Has No Request Timeout
 
-- **Severity:** Medium
-- **Likelihood:** Low — requires admin credentials
-- **Blast Radius:** Feature — database and memory pressure
-- **Risk Owner:** Dev
-- **Category:** Code
-- **Business Impact:** A malicious or compromised admin could send megabyte-length search strings that create expensive database LIKE queries
-- **Compliance Impact:** SOC2 Availability
+**Severity:** High | **Likelihood:** High | **Blast Radius:** Product-wide
+**Risk Owner:** Dev | **Category:** Code
+**Business Impact:** Merchant applications using the SDK can hang indefinitely if our API is slow. This freezes checkout flows for end customers and degrades merchant trust.
+**Compliance Impact:** SOC2 Availability
 
-### 8. Payment Link Resolve Endpoint Missing Max Usage Check (Carried from v11)
+### Issue #8: Webhook Delivery Idempotency Race Condition
 
-- **Severity:** Medium
-- **Likelihood:** Medium — any user can hit the resolve endpoint
-- **Blast Radius:** Feature — confuses users, potential overpayment
-- **Risk Owner:** Dev
-- **Category:** Code
-- **Business Impact:** The public resolve endpoint does not validate maxUsages or expiry, so an exhausted or expired payment link can still be resolved and displayed to customers, though the checkout step would ultimately fail.
-- **Compliance Impact:** SOC2 Processing Integrity
+**Severity:** High | **Likelihood:** Medium | **Blast Radius:** Feature-specific
+**Risk Owner:** Dev | **Category:** Code
+**Business Impact:** Concurrent webhook events for the same payment can result in duplicate deliveries, causing merchants to process the same event twice (double crediting, duplicate emails).
+**Compliance Impact:** SOC2 Processing Integrity
 
-### 9. Nonce Lock Fallback TOCTOU Race (Carried from v9/v10, downgraded)
+### Issue #9: Missing Content Security Policy on Frontend
 
-- **Severity:** Medium (Lua script handles primary path)
-- **Likelihood:** Low — requires Redis failure during active transaction
-- **Blast Radius:** Product — duplicate blockchain transactions
-- **Risk Owner:** Dev
-- **Category:** Code
-- **Business Impact:** If Redis is unavailable, the nonce manager falls back to a non-atomic check that could assign the same nonce to two transactions
-- **Compliance Impact:** SOC2 Processing Integrity
+**Severity:** High | **Likelihood:** Medium | **Blast Radius:** Product-wide
+**Risk Owner:** Dev | **Category:** Code
+**Business Impact:** Without CSP headers, any XSS vulnerability would allow full script execution. Combined with wallet integration, this could lead to unauthorized transactions.
+**Compliance Impact:** OWASP A05 (Security Misconfiguration)
 
-### 10. API Container Port Not Bound to Localhost in Docker (Carried from v10)
+### Issue #10: No HTTPS Enforcement on Success/Cancel Redirect URLs
 
-- **Severity:** Medium
-- **Likelihood:** Low — development environment concern
-- **Blast Radius:** Feature — API accessible from network
-- **Risk Owner:** DevOps
-- **Category:** Infrastructure
-- **Business Impact:** The API port binding in docker-compose is "5001:5001" instead of "127.0.0.1:5001:5001", making the API accessible from any network interface
-- **Compliance Impact:** OWASP A05 (Security Misconfiguration)
-
-### 11. Webhook Worker Timing-Safe Comparison Leaks Key Length (Carried from v10)
-
-- **Severity:** Medium
-- **Likelihood:** Low — requires precise timing measurement capability
-- **Blast Radius:** Feature — information disclosure
-- **Risk Owner:** Dev
-- **Category:** Code
-- **Business Impact:** The length check before timingSafeEqual short-circuits, leaking the length of the internal API key through timing differences
-- **Compliance Impact:** OWASP A02 (Cryptographic Failures)
-
-### 12. Refresh and Logout Bodies Not Zod-Validated (Carried from v10)
-
-- **Severity:** Low
-- **Likelihood:** Low — type coercion edge cases
-- **Blast Radius:** Feature — potential runtime errors
-- **Risk Owner:** Dev
-- **Category:** Code
-- **Business Impact:** The /refresh and /logout endpoints use raw type assertions instead of Zod validation. A non-string refresh_token value could cause unexpected behavior.
-- **Compliance Impact:** OWASP A03 (Injection)
+**Severity:** High | **Likelihood:** Medium | **Blast Radius:** Feature-specific
+**Risk Owner:** Dev | **Category:** Code
+**Business Impact:** Payment sessions can redirect customers to HTTP URLs after payment, exposing session tokens and payment data to network eavesdroppers.
+**Compliance Impact:** OWASP A02 (Cryptographic Failures)
 
 ---
 
-## Section 5: Risk Register (Summary)
+## Section 5: Risk Register
 
-| Issue ID | Title | Severity | Owner | SLA | Status |
-|----------|-------|----------|-------|-----|--------|
-| RISK-001 | XSS in email HTML templates | Critical | Dev | Phase 0 | **RESOLVED** (v10) |
-| RISK-002 | Spending limit race condition | Critical | Dev | Phase 0 | **RESOLVED** (v10) |
-| RISK-003 | No CSRF protection | High | Dev | Phase 1 | Open |
-| RISK-004 | Signup email enumeration | High | Dev | Phase 0 | **RESOLVED** (v10) |
-| RISK-005 | Refresh tokens not in httpOnly cookies | High | Dev | Phase 1 | Open |
-| RISK-006 | CSP unsafe-inline for scripts | High | Dev | Phase 1 | **RESOLVED** (v10) |
-| RISK-007 | Dev routes no auth | High | DevOps | Phase 0 | **RESOLVED** (v10) |
-| RISK-008 | Nonce lock TOCTOU race | Medium | Dev | Phase 2 | Open (downgraded) |
-| RISK-009 | Encryption key SHA-256 hashing | Medium | Dev | Phase 2 | **RESOLVED** (v10) |
-| RISK-010 | Dual PrismaClient instances | Medium | Dev | Phase 1 | **RESOLVED** (v10) |
-| RISK-011 | Webhook worker error message leakage | Medium | Dev | Phase 1 | **RESOLVED** (v10) |
-| RISK-012 | Payment link usage count race | Medium | Dev | Phase 1 | **RESOLVED** (v10) |
-| RISK-013 | Checkout exposes merchant wallet address | Low | Dev | Phase 2 | Open (accepted risk) |
-| RISK-014 | Rate limit keyGenerator timing | Medium | Dev | Phase 2 | Open |
-| RISK-015 | Redis no auth in Docker | Medium | DevOps | Phase 1 | **RESOLVED** (v10) |
-| RISK-016 | Swagger UI in production | Medium | DevOps | Phase 0 | **RESOLVED** (v10) |
-| RISK-017 | Refund worker FOR UPDATE outside transaction | Medium | Dev | Phase 1 | **RESOLVED** (v10) |
-| RISK-018 | Admin search unbounded length | Medium | Dev | Phase 2 | Open |
-| RISK-019 | Redis circuit breaker module-level state | Low | Dev | Phase 3 | Open |
-| RISK-020 | Refund amount precision loss at boundary | Low | Dev | Phase 2 | Open |
-| RISK-021 | Webhook event ID weak randomness | Low | Dev | Phase 2 | Open |
-| RISK-022 | Missing ownership check on payment status update | Low | Dev | Phase 2 | Open |
-| RISK-023 | No frontend component tests | Low | Dev | Phase 2 | Open |
-| RISK-024 | CI missing SAST and secret scanning | Low | DevOps | Phase 2 | Partial (security-checks.yml added) |
-| RISK-025 | Param IDs not validated as UUID across routes | Low | Dev | Phase 3 | Open |
-| RISK-026 | env-validator calls process.exit(1) | Low | Dev | Phase 3 | Open |
-| RISK-027 | No max refund amount validation | Low | Dev | Phase 2 | Open |
-| RISK-028 | Metrics endpoint not timing-safe | Low | Dev | Phase 3 | **RESOLVED** (v10) |
-| RISK-029 | Response format inconsistencies | Low | Dev | Phase 3 | Open |
-| RISK-030 | SSE tests timing-dependent | Low | Dev | Phase 3 | Open |
-| RISK-031 | Refresh endpoint omits role in JWT | High | Dev | Phase 1 | Open |
-| RISK-032 | Public endpoints without rate limiting | Medium | Dev | Phase 2 | Open |
-| RISK-033 | API container port not localhost-bound | Medium | DevOps | Phase 1 | Open |
-| RISK-034 | Webhook worker timing-safe length leak | Medium | Dev | Phase 2 | Open |
-| RISK-035 | Refresh/logout bodies not Zod-validated | Low | Dev | Phase 2 | Open |
-| RISK-036 | SSE counters process-local | Low | Dev | Phase 3 | Open |
-| RISK-037 | PaymentService instantiated per request | Low | Dev | Phase 3 | Open |
-| RISK-038 | Delete endpoint response inconsistency | Low | Dev | Phase 3 | Open |
-| RISK-039 | Refund pagination default inconsistency | Low | Dev | Phase 3 | Open |
-| RISK-040 | Payment link resolve missing max usage check | Medium | Dev | Phase 2 | Open (NEW) |
-| RISK-041 | Audit log fire-and-forget uses console.error | Medium | Dev | Phase 2 | Open (NEW) |
-| RISK-042 | CORS origin comparison case-sensitive | Low | Dev | Phase 3 | Open (NEW) |
-| RISK-043 | Encryption key lacks entropy validation | Low | Dev | Phase 3 | Open |
-| RISK-044 | Refund allowed on non-completed payments | High | Dev | Phase 1 | Open (NEW v12) |
-| RISK-045 | No timeout on blockchain RPC calls | Medium | Dev | Phase 1 | Open (NEW v12) |
-| RISK-046 | Webhook delivery not atomically claimed | Medium | Dev | Phase 2 | Open (NEW v12) |
-| RISK-047 | No rate limiting on refund creation | Medium | Dev | Phase 2 | Open (NEW v12) |
-| RISK-048 | Zod validation errors leak schema details | Medium | Dev | Phase 2 | Open (NEW v12) |
-| RISK-049 | Unbounded TEXT fields in webhook delivery table | Medium | Dev | Phase 2 | Open (NEW v12) |
-| RISK-050 | API key hash falls back to unsalted SHA-256 | Medium | Dev | Phase 1 | Open (NEW v12) |
-| RISK-051 | Blockchain query service missing authorization scope | Low | Dev | Phase 2 | Open (NEW v12) |
-
-**Total: 51 findings** (0 Critical, 4 High open, 14 Medium open, 15 Resolved, 18 Low)
-
----
-
-## Scores
-
-### Technical Dimension Scores
-
-| Dimension | v9 | v10 | v11 | **v12** | Change v11-v12 | Notes |
-|-----------|-----|------|------|---------|----------------|-------|
-| Security | 6.5 | 8 | 8 | **8.5** | +0.5 | RISK-044 fixed (refund status guard expanded to COMPLETED+REFUNDED). RISK-047 fixed (10 req/min refund rate limit). RISK-050 fixed (HMAC enforced in production). Remaining: CSRF (RISK-002), httpOnly tokens, role in refresh JWT. |
-| Architecture | 8 | 8.5 | 8.5 | **8** | -0.5 | Webhook delivery not atomically claimed before processing (double-delivery risk). Blockchain query service lacks authorization scoping. Core architecture remains solid. |
-| Test Coverage | 8.5 | 8.5 | 8.5 | **9** | +0.5 | 1,386 tests all passing (up from 1,184). 5 new dashboard page test suites (ApiKeys, Invoices, Security, Webhooks, MerchantsList). Frontend coverage improved from 160 to 361 tests. |
-| Code Quality | 8 | 8.5 | 8.5 | **8** | -0.5 | Zod validation errors leak schema details to clients. Audit log redaction covers only top-level keys. Transfer event parsing does not validate topics array length. |
-| Performance | 7 | 8 | 8 | **8** | 0 | RISK-045 fixed (15s RPC timeout via withTimeout wrapper). Webhook secret caching added (5-min TTL). Still no load testing baseline. |
-| DevOps | 6.5 | 8 | 8 | **8** | 0 | CI pipeline comprehensive with 6 mandatory gates. Security-checks workflow for secret detection. Remaining: API port binding, CI Redis no auth. |
-| Runability | 8 | 8 | 8.5 | **8.5** | 0 | Full stack starts, all 1,386 tests pass, real data flows, both builds succeed. Node 20 pinned via .nvmrc for Vitest compatibility. |
-
-**Technical Score: 8.4/10** (up from 8.3 — all critical remediation items resolved)
-
-### Readiness Scores
-
-| Dimension | v9 | v10 | v11 | **v12** | Change v11-v12 | Notes |
-|-----------|-----|------|------|---------|----------------|-------|
-| Security Readiness | 6 | 8 | 8 | **8.5** | +0.5 | 1 High remaining (CSRF). RISK-044, RISK-047, RISK-050 all resolved. |
-| Product Potential | 8.5 | 9 | 9 | **9** | 0 | Solid domain logic. Atomic spending limits, state machine, idempotency. 1,386 tests confirm correctness. |
-| Enterprise Readiness | 6 | 7.5 | 7.5 | **7.5** | 0 | CSRF and refund validation gaps are primary blockers. Test coverage improvement is positive signal. |
-
-### Overall Score: 8.4/10 — Production-Ready
-
-**Score Gate: PASS** — All 7 technical dimensions are at or above 8/10 threshold.
-
-Security: 8.5, Architecture: 8, Test Coverage: 9, Code Quality: 8, Performance: 8, DevOps: 8, Runability: 8.5. Remaining items (CSRF, load testing baseline) are Phase 2 improvements tracked in the remediation roadmap.
-
----
-
-## Compliance Summary
-
-### OWASP Top 10
-
-| Control | Status | Evidence |
-|---------|--------|----------|
-| A01: Broken Access Control | Partial | Strong: dev routes gated, JWT auth, role-based access, API key permissions, ownership checks. Gap: CSRF still missing. |
-| A02: Cryptographic Failures | Pass | AES-256-GCM direct hex key, bcrypt (12 rounds), HMAC-SHA256 API keys, timing-safe comparison on metrics. Minor: webhook worker length leak. |
-| A03: Injection | Pass | HTML escaping in email templates via escapeHtml(). Prisma ORM prevents SQL injection. Zod validation on most endpoints. |
-| A04: Insecure Design | Pass | Payment state machine (allow-list transitions), idempotency keys, rate limiting, account lockout (5 attempts, 15min TTL), Redis circuit breaker. |
-| A05: Security Misconfiguration | Pass | CSP scriptSrc self only, Swagger gated in production, HSTS with preload (1 year), body limit 1MB, max param length 256. |
-| A06: Vulnerable and Outdated Components | Pass | No known vulnerable dependencies. npm audit passes at high level. |
-| A07: Identification and Authentication Failures | Partial | Email enumeration fixed (generic 201). Token rotation atomic. JWT algorithm pinned (HS256). Gap: refresh tokens in JSON body, role missing from refresh JWT. |
-| A08: Software and Data Integrity Failures | Pass | HMAC webhook signatures, timing-safe comparison, API key verification via HMAC-SHA256. |
-| A09: Security Logging and Monitoring Failures | Pass | Structured audit logging with 13+ sensitive patterns redacted, PII sanitization, fire-and-forget audit trail. |
-| A10: Server-Side Request Forgery (SSRF) | Pass | DNS resolution + private IP blocking (10.x, 192.168.x, 172.16-31.x, 127.x, 169.254.x, ::1), cloud metadata blocking, HTTPS enforcement. |
-
-**Result: 8/10 Pass, 2/10 Partial, 0/10 Fail**
-
-### SOC2 Type II
-
-| Principle | Status | Evidence |
-|-----------|--------|----------|
-| Security | Partial | Encryption at rest, HMAC keys, bcrypt, JWT auth, rate limiting, account lockout, SSRF protection. Gap: CSRF missing, refresh tokens in JSON body. |
-| Availability | Pass | Health checks, Redis circuit breaker (30s threshold), single Prisma pool, atomic Redis operations, provider failover with cooldown and health caching. |
-| Processing Integrity | Pass | Decimal(18,6) for financial data, atomic INCRBY spending limits with rollback, payment state machine, idempotency keys, $transaction for refund worker, FOR UPDATE SKIP LOCKED. |
-| Confidentiality | Pass | AES-256-GCM encryption at rest, log sanitization (13+ patterns), HMAC key storage, KMS error sanitization preventing credential leakage, audit trail. |
-| Privacy | Pass | No PII in logs, audit trail, no unnecessary data collection. |
-
-### ISO 27001 Annex A
-
-| Control Area | Status | Evidence |
-|-------------|--------|----------|
-| A.5 Information Security Policies | Partial | Security patterns in code. No formal security policy document. |
-| A.6 Organization of Information Security | Pass | Clear code ownership, agent-based development with review gates. |
-| A.8 Asset Management | Pass | Database schema well-defined, data classification implicit. |
-| A.9 Access Control | Partial | JWT auth, role-based routes, account lockout. Gap: CSRF. |
-| A.10 Cryptography | Pass | AES-256-GCM, HMAC-SHA256, bcrypt (12 rounds). Direct hex key derivation. |
-| A.12 Operations Security | Pass | CI pipeline (test, lint, security audit, build, E2E), Docker deployment, Redis auth, security-checks workflow, localhost binding. |
-| A.14 System Development | Pass | 1,184 tests, TDD approach, race conditions fixed, atomic financial operations, state machine enforcement. |
-| A.16 Incident Management | Partial | Audit logging exists with PII sanitization. No incident response runbook or automated alerting. |
-| A.18 Compliance | Partial | This audit series (v9-v11) provides gap analysis. No formal compliance program. |
-
----
-
-## Remediation Phases (Updated)
-
-**Phase 0 (48 hours): COMPLETE** — All 5 items resolved in v10 (XSS, spending limit race, email enumeration, dev routes guard, Swagger guard).
-
-**Phase 1 (Remaining — 1 week):**
-- Add CSRF protection via `@fastify/csrf-protection` or double-submit cookie
-- Move refresh tokens to httpOnly secure SameSite=strict cookies
-- Add `role` to refresh endpoint JWT payload
-- Bind API container port to localhost in docker-compose
-- Fix nonce lock fallback to use serializable transaction
-
-**Phase 2 (2-4 weeks):**
-- Add `.max(255)` to admin search query parameter
-- Add rate limiting to checkout, payment link resolve, and QR endpoints
-- Add max usage and expiry validation to payment link resolve endpoint
-- Fix webhook worker timing comparison (hash both values before comparing)
-- Add Zod validation to /refresh and /logout request bodies
-- Replace console.error with logger.error in audit log service
-- Add frontend component tests (target 60% coverage)
-- Fix rate limit keyGenerator to run after auth plugin
-- Add UUID validation to route param IDs
-
-**Phase 3 (4-8 weeks):**
-- Replace process.exit(1) in env-validator with thrown error
-- Standardize API response format across all endpoints
-- Move SSE counters to Redis for multi-instance support
-- Normalize CORS origins to lowercase before comparison
-- Add entropy validation to encryption key initialization
-- Add load testing baseline
-- Add incident response runbook
-- Add monitoring and alerting pipeline
+| Issue ID | Title | Domain | Severity | Owner | SLA | Dependency | Verification | Status |
+|----------|-------|--------|----------|-------|-----|------------|--------------|--------|
+| RISK-051 | JWT revocation bypass on Redis failure | Security | Critical | Security | Phase 0 (48h) | None | Test: force Redis down, verify revoked JWT rejected | Open |
+| RISK-052 | Payment link usage TOCTOU race condition | Security | Critical | Dev | Phase 0 (48h) | None | Test: concurrent requests exceed max_usages | Open |
+| RISK-053 | Analytics decimal precision loss | Code | Critical | Dev | Phase 1 (1-2w) | None | Test: verify $1,000,000 in payments sums correctly | Open |
+| RISK-054 | Predictable Docker default secrets | Infrastructure | Critical | DevOps | Phase 0 (48h) | None | Verify: .env.docker has no predictable values | Open |
+| RISK-055 | Unauthenticated checkout data exposure | Security | Critical | Dev | Phase 0 (48h) | None | Test: GET /v1/checkout/:id returns 401 without auth | Open |
+| RISK-056 | Rate limiting bypass on Redis failure | Infrastructure | Critical | DevOps | Phase 0 (48h) | None | Test: auth endpoints reject after N attempts without Redis | Open |
+| RISK-057 | SDK missing request timeout | Code | High | Dev | Phase 1 (1-2w) | None | Test: SDK request aborts after 30s | Open |
+| RISK-058 | Webhook idempotency race condition | Code | High | Dev | Phase 1 (1-2w) | None | Test: concurrent events produce single delivery | Open |
+| RISK-059 | Missing CSP headers on frontend | Security | High | Dev | Phase 1 (1-2w) | None | Verify: CSP meta tag present in index.html | Open |
+| RISK-060 | No HTTPS enforcement on redirect URLs | Security | High | Dev | Phase 1 (1-2w) | None | Test: HTTP success_url rejected with 400 | Open |
+| RISK-061 | Nonce confirmation race in refunds | Code | High | Dev | Phase 1 (1-2w) | None | Test: failed nonce confirm resets for next tx | Open |
+| RISK-062 | Missing path parameter validation | Security | High | Dev | Phase 1 (1-2w) | None | Test: non-UUID path params return 400 | Open |
+| RISK-063 | Unbounded secret cache memory | Code | High | Dev | Phase 2 (2-4w) | None | Monitor: cache size metric stays below 10K entries | Open |
+| RISK-064 | Missing ownership check in incrementUsage | Security | High | Dev | Phase 1 (1-2w) | RISK-052 | Test: user A cannot increment user B link | Open |
+| RISK-065 | Idempotency key parameter integrity | Security | High | Dev | Phase 1 (1-2w) | None | Test: same key, different params returns error | Open |
+| RISK-066 | Webhook secret rotation cache staleness | Security | Medium | Dev | Phase 2 (2-4w) | RISK-063 | Test: rotated secret invalidates cache immediately | Open |
+| RISK-067 | Mock mode deployable to production | Security | Medium | Dev | Phase 1 (1-2w) | None | Test: production build fails with VITE_USE_MOCK_API=true | Open |
+| RISK-068 | Health endpoint information disclosure | Security | Medium | DevOps | Phase 2 (2-4w) | None | Test: /health without auth returns minimal data | Open |
+| RISK-069 | Source maps exposed in production build | Security | Medium | Dev | Phase 1 (1-2w) | None | Verify: dist/ contains no .map files | Open |
+| RISK-070 | SSE token expiry not validated before use | Code | Medium | Dev | Phase 2 (2-4w) | None | Test: expired SSE token triggers refresh | Open |
+| RISK-071 | Unbounded refund query results | Code | Medium | Dev | Phase 2 (2-4w) | None | Test: listRefunds without limit returns max 50 | Open |
+| RISK-072 | Admin endpoint offset not bounded | Code | Medium | Dev | Phase 2 (2-4w) | None | Test: offset > 10000 returns 400 | Open |
+| RISK-073 | Database pool size not validated | Code | Medium | DevOps | Phase 2 (2-4w) | None | Test: pool size > 500 rejected at startup | Open |
+| RISK-074 | API_KEY_HMAC_SECRET missing from docker-compose | Infrastructure | Medium | DevOps | Phase 1 (1-2w) | RISK-054 | Verify: docker-compose requires API_KEY_HMAC_SECRET | Open |
+| RISK-075 | KMS error leaks infrastructure details in dev | Security | Medium | Dev | Phase 2 (2-4w) | None | Test: KMS errors return generic message regardless of env | Open |
+| RISK-076 | Missing webhook retry jitter | Code | Medium | Dev | Phase 2 (2-4w) | None | Test: retry delays have randomized jitter | Open |
+| RISK-077 | Audit log duplication bug | Code | Medium | Dev | Phase 2 (2-4w) | None | Test: successful DB write does not also write to memory | Open |
+| RISK-078 | Analytics error response format inconsistent | Code | Medium | Dev | Phase 1 (1-2w) | None | Test: analytics 400 matches other route 400 format | Open |
+| RISK-079 | Known CVE in @isaacs/brace-expansion | Security | Medium | DevOps | Phase 0 (48h) | None | Run: npm audit shows 0 critical vulnerabilities | Open |
+| RISK-080 | SDK missing retry metadata in ApiError | Code | Low | Dev | Phase 3 (4-8w) | None | Test: ApiError.isRetryable true for 429/5xx | Open |
+| RISK-081 | Checkout widget inline style XSS vector | Security | Low | Dev | Phase 3 (4-8w) | None | Test: non-hex color string sanitized | Open |
+| RISK-082 | SDK missing engines field | Code | Low | Dev | Phase 3 (4-8w) | None | Verify: package.json has engines.node >= 14 | Open |
+| RISK-083 | Nginx missing HSTS and Permissions-Policy | Security | Low | DevOps | Phase 2 (2-4w) | None | Verify: nginx config includes all security headers | Open |
 
 ---
 
@@ -479,280 +248,194 @@ Security: 8.5, Architecture: 8, Test Coverage: 9, Code Quality: 8, Performance: 
 
 ## Section 6: Architecture Problems
 
-### 6.1 Redis Circuit Breaker Module-Level State
+### 6.1 Redis Availability as Security Dependency
 
-**Location:** `apps/api/src/plugins/auth.ts:10-11`
+**Problem:** The authentication plugin (`apps/api/src/plugins/auth.ts:40-75`) implements a circuit breaker that silently allows revoked JWTs when Redis is unavailable for >30 seconds. This creates a security-availability tradeoff where availability wins by default.
 
-The Redis circuit breaker state (`redisFailedSince`) is stored in module-level variables. In a multi-instance deployment, each instance tracks its own circuit state independently. The 30-second threshold is per-instance.
+**Impact:** Compromised accounts remain active during Redis outages. In a distributed system, brief Redis outages are common.
 
-**Impact:** Inconsistent circuit breaker behavior across instances. One instance may reject requests while another accepts them.
+**Solution:** Either fail closed (reject all requests when Redis is down — more secure) or make the threshold configurable and document the tradeoff explicitly. Add monitoring alerts for Redis circuit breaker activations.
 
-**Fix:** Store circuit breaker state in Redis itself (atomic increment with TTL), or accept per-instance behavior and document the limitation.
+### 6.2 Rate Limiting Has No In-Memory Fallback
 
-### 6.2 Rate Limit KeyGenerator Timing
+**Problem:** `apps/api/src/utils/redis-rate-limit-store.ts:48-70` — when Redis fails, rate limiting is silently bypassed. The `incr()` method catches errors and only logs them via callback, allowing unlimited requests.
 
-**Location:** `apps/api/src/app.ts:153-167`
+**Impact:** Brute-force attacks succeed during any Redis downtime.
 
-The rate limit keyGenerator runs before the auth plugin decorates `request.currentUser`. The generator attempts to use `request.currentUser` for per-user rate limiting but falls back to IP-based limiting.
+**Solution:** Implement in-memory fallback rate limiting with a Map-based counter. Less precise than Redis but prevents complete bypass.
 
-**Impact:** Authenticated rate limiting does not work as intended — all authenticated requests use IP-based limiting.
+### 6.3 Analytics Service Uses JavaScript Number Instead of Decimal
 
-**Fix:** Register the rate limit plugin after the auth plugin, or use a `preHandler` hook.
+**Problem:** `apps/api/src/services/analytics.service.ts:46-59` — `Number(paymentAgg._sum.amount)` converts Prisma's Decimal to JavaScript Number, then performs division and rounding with `Math.round(value * 100) / 100`.
 
-### 6.3 PaymentService Instantiated Per Request
+**Impact:** `Math.round(1.005 * 100)` = 100, not 101. Accumulated precision errors affect merchant dashboards.
 
-**Location:** `apps/api/src/routes/v1/payment-sessions.ts:26, 129, 176, 211`
+**Solution:** Use `Decimal.js` (already a dependency via Prisma) for all monetary calculations in the analytics service.
 
-Each request handler creates a new `PaymentService` instance. Currently lightweight but fragile to future changes if the service ever holds caches or connections.
+### 6.4 Inconsistent Error Response Formats
 
-**Impact:** Low — no resource leaks currently.
+**Problem:** Analytics routes (`apps/api/src/routes/v1/analytics.ts:24-30`) use RFC 7807 Problem Details format with `type`, `title`, `status`, `detail` fields. Other routes use `AppError` with `code` and `message`. This inconsistency breaks API client error handling.
 
-### 6.4 env-validator Calls process.exit(1)
+**Impact:** SDK and frontend error parsers must handle two different error formats.
 
-**Location:** `apps/api/src/utils/env-validator.ts`
-
-The environment validator calls `process.exit(1)` on validation failure, preventing graceful shutdown and making the function untestable.
-
-**Fix:** Throw an error instead of calling `process.exit`.
+**Solution:** Standardize all error responses to use the same format (either AppError or RFC 7807, not both).
 
 ---
 
 ## Section 7: Security Findings
 
-### Authentication and Authorization
+### Authentication & Authorization
 
-#### 7.1 No CSRF Protection (Open — High)
+**7.1 JWT Revocation Circuit Breaker (RISK-051)**
+- File: `apps/api/src/plugins/auth.ts:40-75`
+- When Redis is down >30s, the JTI (JWT ID) check is skipped entirely
+- Revoked tokens become valid again until Redis recovers
+- OWASP A07, SOC2 CC6.1
 
-**Location:** `apps/api/src/app.ts` (no CSRF plugin registered)
+**7.2 Unauthenticated Checkout Endpoint (RISK-055)**
+- File: `apps/api/src/routes/v1/checkout.ts:21`
+- `GET /v1/checkout/:id` returns full payment session data (merchant_address, customer_address, tx_hash, amounts) without authentication
+- Allows enumeration of all payment sessions
+- OWASP A01, SOC2 CC6.1
 
-The Fastify application registers CORS with credentials support but does not implement CSRF protection. Since tokens are stored in-memory (not cookies), exploitability is reduced. However, if refresh tokens move to httpOnly cookies (recommended), CSRF becomes critical.
+**7.3 Missing Ownership Check in incrementUsage (RISK-064)**
+- File: `apps/api/src/services/payment-link.service.ts:305-318`
+- `incrementUsage(id)` has no userId parameter, allowing any authenticated user to exhaust another merchant's payment link limits
+- OWASP A01
 
-**Fix:**
-```typescript
-import csrf from '@fastify/csrf-protection';
-await app.register(csrf, { cookieOpts: { signed: true, sameSite: 'strict' } });
-```
+**7.4 Idempotency Key Not Bound to Parameters (RISK-065)**
+- File: `apps/api/src/routes/v1/payment-sessions.ts:47-89`
+- Same idempotency key with different parameters returns the original payment session
+- Attacker can swap merchant_address by reusing a known idempotency key
+- OWASP A04
 
-#### 7.2 Refresh Endpoint Missing Role in JWT (Open — High)
+### Injection Vulnerabilities
 
-**Location:** `apps/api/src/routes/v1/auth.ts:266-269`
+**7.5 Path Parameters Not Validated (RISK-062)**
+- Files: `apps/api/src/routes/v1/payment-sessions.ts:455`, `payment-links.ts:247`, `api-keys.ts:129`
+- All path parameters extracted as raw strings without UUID format validation
+- While Prisma prevents SQL injection, invalid formats reach the database layer unnecessarily
+- OWASP A03
 
-During login (line 186) and signup (line 73), the JWT includes `role: user.role`. The refresh endpoint omits it.
+### Data Security
 
-**Fix:** Fetch user from database and include role:
-```typescript
-const user = await fastify.prisma.user.findUnique({ where: { id: decoded.userId } });
-const accessToken = fastify.jwt.sign(
-  { userId: decoded.userId, role: user.role, jti: randomUUID() },
-  { expiresIn: process.env.JWT_EXPIRES_IN || '15m' }
-);
-```
+**7.6 Predictable Docker Secrets (RISK-054)**
+- File: `products/stablecoin-gateway/.env.docker:4,10,11`
+- `JWT_SECRET`, `WEBHOOK_ENCRYPTION_KEY`, and `INTERNAL_API_KEY` all set to sequential hex values
+- [SECRET REDACTED - type: JWT_SECRET, location: .env.docker:4, pattern: sequential hex]
+- OWASP A02, ISO 27001 A.10
 
-#### 7.3 Refresh/Logout Bodies Not Zod-Validated (Open — Low)
-
-**Location:** `apps/api/src/routes/v1/auth.ts:234, 319`
-
-Both endpoints use raw `as` type assertion. A `logoutSchema` export already exists in `validation.ts:37-39` but is not imported.
+**7.7 Source Maps in Production (RISK-069)**
+- File: `apps/web/vite.config.ts` — no `sourcemap: false` for production builds
+- Vite defaults to including source maps, exposing all source code
+- OWASP A05
 
 ### API Security
 
-#### 7.4 Admin Search No Max Length (Open — Medium)
+**7.8 No HTTPS on Redirect URLs (RISK-060)**
+- Files: `apps/api/src/routes/v1/payment-sessions.ts:119`, `payment-links.ts:51`
+- `success_url` and `cancel_url` accept `http://`, `javascript:`, and `data:` schemes
+- Webhooks enforce HTTPS but redirect URLs do not
+- OWASP A02
 
-**Location:** `apps/api/src/routes/v1/admin.ts:10`
-
-**Fix:** Add `.max(255)` to the Zod string schema.
-
-#### 7.5 Public Endpoints Without Rate Limiting (Open — Medium)
-
-**Locations:**
-- `apps/api/src/routes/v1/checkout.ts:10-53` — public checkout, no auth, no rate limit
-- `apps/api/src/routes/v1/payment-links.ts:189-207` — public resolve, no auth, no rate limit
-- `apps/api/src/routes/v1/payment-links.ts:211-279` — public QR generation (CPU-intensive), no auth, no rate limit
-
-**Fix:** Apply route-level rate limiting: `config: { rateLimit: { max: 60, timeWindow: '1 minute' } }`
-
-#### 7.6 Payment Link Resolve Missing Max Usage Check (New — Medium)
-
-**Location:** `apps/api/src/routes/v1/payment-links.ts:189-207`
-
-The resolve endpoint returns the payment link without checking maxUsages, expiry, or active status. The QR endpoint (line 240-246) correctly validates these.
-
-**Fix:** Add the same validation to the resolve endpoint:
-```typescript
-if (link.expiresAt && link.expiresAt < new Date()) {
-  throw new AppError(400, 'link-expired', 'This payment link has expired');
-}
-if (link.maxUsages !== null && link.usageCount >= link.maxUsages) {
-  throw new AppError(400, 'link-max-usage-reached', 'Payment link usage limit reached');
-}
-if (!link.active) {
-  throw new AppError(400, 'link-inactive', 'This payment link is no longer active');
-}
-```
-
-#### 7.7 Webhook Worker Timing-Safe Length Leak (Open — Medium)
-
-**Location:** `apps/api/src/routes/internal/webhook-worker.ts:36-41`
-
-The length check short-circuits before `timingSafeEqual`, leaking the key length.
-
-**Fix:** Hash both values before comparison to normalize length.
-
-#### 7.8 Audit Log Fire-and-Forget Uses console.error (New — Medium)
-
-**Location:** `apps/api/src/services/audit-log.service.ts:124`
-
-Database write failures in the audit log service are logged via `console.error()` rather than the structured logger service, meaning failures may not be captured in production logging infrastructure.
-
-**Fix:** Replace with `logger.error('CRITICAL: Audit log database write failed', { action, actor, error })`.
-
-#### 7.9 Refund Allowed on Non-Completed Payments (New v12 — High)
-
-**Location:** `apps/api/src/services/refund.service.ts:126-227`
-
-The refund creation logic computes `totalRefunded` by filtering non-FAILED refunds and checks against the payment amount. However, it does not verify that `paymentSession.status === 'COMPLETED'` before proceeding. A merchant could create refunds against PENDING or FAILED payment sessions.
-
-**Fix:**
-```typescript
-if (paymentSession.status !== 'COMPLETED' && paymentSession.status !== 'REFUNDED') {
-  throw new AppError(400, 'payment-not-completed', 'Refunds can only be created for completed payments');
-}
-```
-
-#### 7.10 No Timeout on Blockchain RPC Calls (New v12 — Medium)
-
-**Location:** `apps/api/src/services/blockchain-monitor.service.ts:71-245`
-
-Calls to `provider.getTransactionReceipt()` and `provider.getBlockNumber()` do not have explicit timeouts. If the RPC endpoint is slow or unresponsive, the verification hangs indefinitely, consuming a server connection.
-
-**Fix:** Wrap provider calls with `AbortSignal.timeout()`:
-```typescript
-const receipt = await provider.getTransactionReceipt(txHash, { signal: AbortSignal.timeout(15000) });
-```
-
-#### 7.11 API Key Hash Fallback to Unsalted SHA-256 (New v12 — Medium)
-
-**Location:** `apps/api/src/utils/crypto.ts:30-32`
-
-In production, if `API_KEY_HMAC_SECRET` is not set, API key hashing falls back to unsalted SHA-256 instead of HMAC-SHA256. The env-validator warns but does not fail hard.
-
-**Fix:** Change the fallback to throw in production:
-```typescript
-if (process.env.NODE_ENV === 'production') {
-  throw new Error('API_KEY_HMAC_SECRET is required in production');
-}
-```
-
-#### 7.12 Webhook Delivery Not Atomically Claimed (New v12 — Medium)
-
-**Location:** `apps/api/src/services/webhook-delivery.service.ts:182-213`
-
-The `processQueue` method selects deliveries with `FOR UPDATE SKIP LOCKED` but does not mark them as DELIVERING inside the transaction. If the process crashes after selection but before processing, deliveries remain in PENDING and will be re-selected, causing duplicate webhook deliveries.
-
-**Fix:** Update status to DELIVERING inside the SELECT transaction before releasing the lock.
-
-#### 7.13 Zod Validation Errors Leak Schema Details (New v12 — Medium)
-
-**Locations:** `apps/api/src/routes/v1/payment-sessions.ts:108-114`, `apps/api/src/routes/v1/webhooks.ts:184-189`, `apps/api/src/routes/v1/payment-links.ts:144-150`
-
-Error handlers return raw Zod error messages via `detail: error.message`. These verbose messages can reveal API schema structure to attackers.
-
-**Fix:** Sanitize Zod errors before returning:
-```typescript
-detail: 'Invalid request parameters'  // Generic message
-```
-
-#### 7.14 Unbounded TEXT Fields in Database (New v12 — Medium)
-
-**Location:** `apps/api/prisma/schema.prisma` — WebhookDelivery model (lines 237-239), AuditLog model (line 328)
-
-`responseBody`, `errorMessage` (webhook_deliveries), and `details` (audit_logs) are unbounded TEXT fields. A large webhook response or audit event could consume excessive storage.
-
-**Fix:** Truncate at application layer before database insert (e.g., 10KB limit for responseBody, 1KB for errorMessage).
+**7.9 Missing CSP Headers on Frontend (RISK-059)**
+- File: `apps/web/index.html` — no `<meta http-equiv="Content-Security-Policy">` tag
+- Backend API sets CSP via Helmet, but the frontend SPA has none
+- OWASP A05
 
 ### Infrastructure Security
 
-#### 7.15 API Container Port Not Localhost-Bound (Open — Medium)
+**7.10 API_KEY_HMAC_SECRET Missing from Docker Compose (RISK-074)**
+- File: `docker-compose.yml:54-72`
+- Not passed to the API container, causing startup failure in production
+- Also: `WEBHOOK_ENCRYPTION_KEY` is optional without `?required` syntax
 
-**Location:** `docker-compose.yml:52`
-
-Port binding is `"5001:5001"` instead of `"127.0.0.1:5001:5001"`.
+**7.11 Health Endpoint Exposes Infrastructure Details (RISK-068)**
+- File: `apps/api/src/app.ts:255-306`
+- Returns database latency, Redis status, and error messages without authentication
+- OWASP A05, ISO 27001 A.12
 
 ---
 
-## Section 8: Performance and Scalability
+## Section 8: Performance & Scalability
 
-### 8.1 Resolved Issues (from v10)
+### 8.1 Unbounded Secret Cache Memory (RISK-063)
+- File: `apps/api/src/services/webhook-delivery-executor.service.ts:31-50`
+- Process-level Map with no maximum size or periodic cleanup
+- Expired entries only deleted on access (lazy eviction)
+- Systems with many webhook endpoints will accumulate cache entries indefinitely
 
-- **Dual PrismaClient** (RESOLVED): Single `app.prisma` instance shared with refund worker
-- **Spending limit race** (RESOLVED): Atomic INCRBY with rollback in blockchain-transaction.service.ts
-- **Refund worker locking** (RESOLVED): `$transaction` wrapping in refund-processing.worker.ts
-- **Payment link usage race** (RESOLVED): Atomic SQL UPDATE in payment-link.service.ts
+### 8.2 Unbounded Refund Query (RISK-071)
+- File: `apps/api/src/services/refund-query.service.ts:74-92`
+- No default `take` limit on `findMany()` — if caller omits limit, entire table is fetched
 
-### 8.2 Remaining Concerns
+### 8.3 No Webhook Retry Jitter (RISK-076)
+- File: `apps/api/src/services/webhook-delivery-executor.service.ts:223-262`
+- Retry delays are fixed (60s, 300s, 900s, 3600s, 7200s) with no jitter
+- All failed deliveries retry at exactly the same time, causing thundering herd
 
-- **No timeout on blockchain RPC calls** (Medium — NEW v12): `getTransactionReceipt()` and `getBlockNumber()` calls block indefinitely if node is unresponsive. Location: `blockchain-monitor.service.ts:71-245`.
-- **Webhook secret decrypted per-delivery** (Medium — NEW v12): Every delivery decrypts the endpoint secret via `decryptSecret()`. Performance overhead and reduced debuggability. Location: `webhook-delivery-executor.service.ts:71-85`.
-- **Admin search unbounded string length** (Medium): Could create expensive ILIKE queries
-- **QR code generation CPU cost** (Medium): `QRCode.toDataURL()` is CPU-intensive, no rate limiting on public endpoint
-- **Rate limit keyGenerator timing** (Medium): Runs before auth plugin, so per-user limiting falls back to IP
-- **Provider health cache 30s TTL** (Low): If a provider fails after being cached as healthy, requests may be routed to a failed provider for up to 30 seconds before failover
-- **No load testing baseline** (Medium): No k6/Artillery tests in CI. Performance thresholds are unknown.
+### 8.4 Admin Offset Not Bounded (RISK-072)
+- File: `apps/api/src/routes/v1/admin.ts:8-11`
+- Limit capped at 100, but offset has no maximum
+- Large offsets (999999) cause expensive database scans
+
+### 8.5 Database Pool Size Unbounded (RISK-073)
+- File: `apps/api/src/plugins/prisma.ts:13-14`
+- `DATABASE_POOL_SIZE` parsed from env with no bounds validation
+- Value of 10000 would exhaust database connections
 
 ---
 
 ## Section 9: Testing Gaps
 
-### Coverage Assessment
+**Test Inventory:**
+- Backend: 154 test files, ~31,600 lines
+- Frontend: ~50 test files integrated in src/
+- SDK: 3 test files (client, errors, webhooks)
+- E2E: Playwright setup exists
 
-| Area | Estimated Coverage | Notes |
-|------|-------------------|-------|
-| Backend services | 90%+ | Excellent behavioral testing, race condition tests, atomicity tests |
-| Backend routes | 80% | Good coverage including security edge cases (lockout, SSRF, encryption) |
-| Frontend components | 40% | Dashboard components tested (Sidebar, TransactionsTable, StatCard, CheckoutPreview, DeveloperIntegration) |
-| Frontend pages | 60% | 5 new dashboard page suites (ApiKeys, Invoices, Security, Webhooks, MerchantsList) plus auth, checkout, home |
-| E2E flows | 70% | 73 tests covering auth, payments, webhooks, admin |
-| Security tests | 85% | Exceptional: HMAC, encryption, sanitization, atomicity, race conditions, lockout, SSRF, circuit breaker |
-
-### Test Quality Highlights
-
-The test suite demonstrates exceptional security-specific coverage:
-- **Spending limit atomicity** (spending-limit-atomicity.test.ts): Atomic INCRBY with rollback, concurrent requests, Redis failure degradation
-- **Account lockout** (account-lockout.test.ts): 5-failure lockout, 429 response, counter reset, TTL expiry, Redis degradation
-- **Encryption** (encryption.test.ts, encryption-validation.test.ts): AES-256-GCM round-trip, random IV uniqueness, tampering detection, key validation
-- **Race conditions** (refund-race-condition.test.ts): Full integration with real Prisma/Redis, concurrent refunds, FOR UPDATE locking
-- **Nonce lock TOCTOU** (nonce-lock-atomicity.test.ts): Lua compare-and-delete, lock ownership, fallback behavior
-- **KMS error sanitization** (kms-error-sanitization.test.ts): AWS ARNs, IAM roles, account IDs never leaked
-- **SSRF protection** (url-validator.test.ts): Localhost, private ranges, cloud metadata, IPv6, HTTPS enforcement
-- **Circuit breaker** (circuit-breaker-atomicity.test.ts): Lua script atomic INCR+EXPIRE+SET, threshold behavior, fallback
+**Coverage Assessment: ~75% estimated** (strong for happy paths, weaker on edge cases)
 
 ### Missing Test Scenarios
 
-1. **Refund on non-completed payment** — No test verifies that refund creation rejects payments with status other than COMPLETED
-2. **Concurrent request tests at API level** — Race conditions tested at service level but not at HTTP request level
-3. **CSRF attack simulation** — No test verifies cross-origin request rejection
-4. **Refresh token concurrent rotation** — No test for simultaneous refresh requests
-5. **RPC timeout handling** — No test verifies behavior when blockchain node is unresponsive
-6. **Webhook delivery double-delivery** — No test for process crash between SELECT FOR UPDATE and status update
+| Gap | Component | Priority |
+|-----|-----------|----------|
+| Redis circuit breaker behavior during auth | Backend | Critical |
+| Concurrent payment link usage (race condition) | Backend | Critical |
+| SDK request timeout and retry behavior | SDK | High |
+| SSE token expiry and refresh cycle | Frontend | High |
+| Complete end-to-end payment flow (create -> pay -> webhook -> refund) | E2E | High |
+| Admin authorization boundary tests (verify MERCHANT cannot access /admin) | Backend | Medium |
+| Idempotency key with different parameters | Backend | Medium |
+| Mock mode guard in production build | Frontend | Medium |
+| Webhook retry jitter distribution | Backend | Low |
+| SDK concurrent request ordering | SDK | Low |
 
 ---
 
 ## Section 10: DevOps Issues
 
-### 10.1 Resolved Issues (from v10)
+### 10.1 Docker Secret Management
+- `.env.docker` contains predictable secrets (RISK-054)
+- `docker-compose.yml` missing `API_KEY_HMAC_SECRET` (RISK-074)
+- No secret rotation mechanism documented
 
-- **Redis auth** (RESOLVED): `--requirepass` with env var in docker-compose
-- **Localhost binding** (RESOLVED): Postgres and Redis bound to `127.0.0.1`
-- **Secret scanning** (RESOLVED): `security-checks.yml` scans for hardcoded secrets
-- **Swagger guard** (RESOLVED): Gated behind `NODE_ENV !== 'production'`
-- **Metrics auth** (RESOLVED): Uses `crypto.timingSafeEqual`
+### 10.2 CI/CD Pipeline
+- GitHub Actions workflows exist for security checks and CI
+- `npm audit` reports 1 known vulnerability (@isaacs/brace-expansion, RISK-079)
+- No automated DAST (Dynamic Application Security Testing) in pipeline
 
-### 10.2 Remaining Issues
+### 10.3 Monitoring
+- Observability plugin exists (`apps/api/src/plugins/observability.ts`)
+- Health endpoint needs authentication for detailed data (RISK-068)
+- No secret cache size metric (RISK-063)
+- No Redis circuit breaker activation alerts
 
-- **API container port not localhost-bound** (Medium): `"5001:5001"` in docker-compose instead of `"127.0.0.1:5001:5001"`
-- **CI Redis no auth** (Low): Redis service in CI workflow uses `redis:7-alpine` without `--requirepass`. Inconsistent with production docker-compose.
-- **Production deploy sleep-based wait** (Low): `sleep 120` instead of ECS service stability polling in deploy-production.yml:151
-- **Post-deployment tests placeholder** (Low): `echo "Running post-deployment validation..."` with no actual smoke tests
+### 10.4 Deployment Safety
+- Dockerfiles use multi-stage builds with non-root user (good)
+- nginx configuration missing several security headers (RISK-083)
+- No rollback mechanism documented
+- No blue-green or canary deployment strategy
 
 ---
 
@@ -762,40 +445,42 @@ The test suite demonstrates exceptional security-specific coverage:
 
 | Control | Status | Evidence / Gap |
 |---------|--------|----------------|
-| A01: Broken Access Control | Partial | Strong: dev routes gated, JWT auth, role-based access, API key permissions, ownership checks. Gap: CSRF missing. Role omitted from refresh JWT. |
-| A02: Cryptographic Failures | Pass | AES-256-GCM direct hex key derivation, bcrypt (12 rounds), HMAC-SHA256 API keys, timing-safe comparison on metrics. Minor gap: webhook worker length leak in timing comparison. |
-| A03: Injection | Pass | HTML escaping in email templates via escapeHtml(). Prisma ORM prevents SQL injection. Zod validation on all major endpoints. Minor gap: /refresh and /logout bodies not Zod-validated. |
-| A04: Insecure Design | Pass | Payment state machine (allow-list transitions), idempotency keys, rate limiting on auth, account lockout (5 attempts, 15min TTL), Redis circuit breaker with 30s threshold. |
-| A05: Security Misconfiguration | Pass | CSP scriptSrc self only (no unsafe-inline), Swagger gated in production, HSTS with preload (1 year), body limit 1MB, max param length 256. |
-| A06: Vulnerable and Outdated Components | Pass | No known vulnerable dependencies. npm audit passes at high audit level in CI. |
-| A07: Identification and Authentication Failures | Partial | Email enumeration fixed (generic 201). Token rotation atomic with Prisma $transaction. JWT algorithm pinned (HS256). Gap: refresh tokens in JSON body, role missing from refresh JWT. |
-| A08: Software and Data Integrity Failures | Pass | HMAC webhook signatures, timing-safe comparison, API key verification via HMAC-SHA256. CI quality gates enforce testing before merge. |
-| A09: Security Logging and Monitoring Failures | Pass | Structured audit logging with 13+ sensitive patterns redacted, PII sanitization, fire-and-forget audit trail with in-memory buffer fallback. |
-| A10: Server-Side Request Forgery (SSRF) | Pass | DNS resolution + private IP blocking for all webhook URLs. Covers IPv4/IPv6 private ranges, loopback, link-local, cloud metadata endpoints. HTTPS enforcement. |
+| A01: Broken Access Control | **Partial** | Checkout endpoint unauthenticated (RISK-055); missing ownership check in incrementUsage (RISK-064); good RBAC on API keys with fine-grained permissions |
+| A02: Cryptographic Failures | **Partial** | Predictable Docker secrets (RISK-054); no HTTPS enforcement on redirect URLs (RISK-060); strong bcrypt password hashing (cost 12); AES-256 webhook encryption when configured |
+| A03: Injection | **Pass** | Prisma ORM prevents SQL injection; Zod validation on all inputs; path parameters need format validation (RISK-062) but no actual injection vector |
+| A04: Insecure Design | **Partial** | Idempotency key not bound to parameters (RISK-065); TOCTOU in payment link usage (RISK-052); good state machine design for payment status transitions |
+| A05: Security Misconfiguration | **Partial** | Missing CSP on frontend (RISK-059); health endpoint information disclosure (RISK-068); source maps in production (RISK-069); nginx missing headers (RISK-083) |
+| A06: Vulnerable and Outdated Components | **Partial** | 1 known CVE in transitive dependency (RISK-079); dependencies generally up to date |
+| A07: Identification and Authentication Failures | **Partial** | JWT revocation bypassed on Redis failure (RISK-051); rate limiting bypassed on Redis failure (RISK-056); strong password policy (12+ chars, complexity); good JWT implementation with HS256 pinning |
+| A08: Software and Data Integrity Failures | **Pass** | HMAC-SHA256 webhook signatures with timing-safe comparison; idempotency keys for mutation operations; CI pipeline with security checks |
+| A09: Security Logging and Monitoring Failures | **Partial** | Audit log service exists but has duplication bug (RISK-077); authentication logs lack sufficient context for forensics; no Redis circuit breaker alerts |
+| A10: Server-Side Request Forgery (SSRF) | **Pass** | Async DNS validation on webhook URLs; blocked patterns for private networks and cloud metadata endpoints; HTTPS enforcement on webhooks |
+
+**OWASP Summary: 3 Pass, 7 Partial, 0 Fail**
 
 ### SOC2 Type II — Trust Service Principles
 
 | Principle | Status | Evidence / Gap |
 |-----------|--------|----------------|
-| Security | Partial | AES-256-GCM encryption at rest, HMAC-SHA256 keys, bcrypt (12 rounds), JWT auth, rate limiting, account lockout, SSRF protection with DNS validation. Gap: CSRF missing, refresh tokens in JSON body. |
-| Availability | Pass | Health checks on all services, Redis circuit breaker (30s threshold), single Prisma connection pool, atomic Redis operations, blockchain provider failover with health caching and cooldown. |
-| Processing Integrity | Pass | Decimal(18,6) for financial data, atomic INCRBY spending limits with rollback, payment state machine with allow-list transitions, idempotency keys, $transaction for refund worker, FOR UPDATE SKIP LOCKED for concurrent claims. |
-| Confidentiality | Pass | AES-256-GCM encryption at rest for webhook secrets, log sanitization (13+ patterns), HMAC key storage, KMS error sanitization prevents AWS credential leakage, audit trail with PII sanitization. |
-| Privacy | Pass | No PII in logs (13+ sensitive patterns redacted), structured audit trail, no unnecessary data collection. |
+| Security (Common Criteria) | **Partial** | Strong auth/encryption foundation but Redis failover bypasses security controls; missing in-memory rate limit fallback; predictable Docker secrets |
+| Availability | **Partial** | Health check exists; circuit breaker for webhooks; but no documented SLA enforcement, no failover strategy for Redis, no rollback mechanism |
+| Processing Integrity | **Partial** | Decimal precision loss in analytics (RISK-053); TOCTOU in payment links (RISK-052); good transaction verification on blockchain |
+| Confidentiality | **Partial** | AES-256 encryption for webhook secrets; JWT tokens properly managed; but checkout endpoint exposes data (RISK-055); health endpoint leaks infrastructure details (RISK-068) |
+| Privacy | **Partial** | No PII data minimization policy documented; user data properly scoped by userId in most queries |
 
 ### ISO 27001 Annex A — Key Controls
 
 | Control Area | Status | Evidence / Gap |
 |-------------|--------|----------------|
-| A.5 Information Security Policies | Partial | Security patterns thoroughly implemented in code. No formal security policy document. |
-| A.6 Organization of Information Security | Pass | Clear code ownership, agent-based development with automated review gates. |
-| A.8 Asset Management | Pass | Database schema well-defined with Prisma, data classification implicit in model structure. |
-| A.9 Access Control | Partial | JWT auth, role-based routes, API key permissions (read/write/refund), account lockout. Gap: CSRF. |
-| A.10 Cryptography | Pass | AES-256-GCM with direct hex key derivation, HMAC-SHA256, bcrypt (12 rounds), JWT HS256 algorithm pinning. |
-| A.12 Operations Security | Pass | CI pipeline (test, lint, security audit, build, E2E), Docker deployment with secret enforcement, Redis auth, security-checks workflow, localhost binding for DB/Redis. |
-| A.14 System Development | Pass | 1,386 tests, TDD approach, race conditions fixed with atomic operations, financial precision with Decimal.js, payment state machine. |
-| A.16 Incident Management | Partial | Audit logging exists with PII sanitization and in-memory buffer fallback. No incident response runbook or automated alerting pipeline. |
-| A.18 Compliance | Partial | This audit series (v9-v11) provides comprehensive gap analysis. No formal compliance program or external certification. |
+| A.5 Information Security Policies | **Fail** | No documented security policies beyond code comments |
+| A.6 Organization of Information Security | **Fail** | No security roles or responsibilities documented |
+| A.8 Asset Management | **Partial** | Good Prisma schema design with relations; missing data classification |
+| A.9 Access Control | **Partial** | JWT + API key permissions; but Redis failover bypass (RISK-051) |
+| A.10 Cryptography | **Partial** | AES-256, bcrypt, HMAC-SHA256 used correctly; but predictable defaults (RISK-054), insufficient entropy validation in encryption.ts |
+| A.12 Operations Security | **Partial** | CI/CD exists; monitoring exists; missing change management docs |
+| A.14 System Acquisition, Development and Maintenance | **Partial** | Good test coverage; TDD practiced; missing SAST/DAST integration |
+| A.16 Information Security Incident Management | **Fail** | No incident response plan documented |
+| A.18 Compliance | **Fail** | No compliance documentation or control mapping prior to this audit |
 
 ---
 
@@ -803,81 +488,81 @@ The test suite demonstrates exceptional security-specific coverage:
 
 | Priority | Debt Item | Interest (cost of delay) | Owner | Payoff |
 |----------|-----------|--------------------------|-------|--------|
-| HIGH | Refund on non-completed payment | Accounting errors, unauthorized fund transfers | Dev | Prevents phantom refunds |
-| HIGH | CSRF protection missing | Becomes critical when refresh tokens move to cookies | Dev | Eliminates cross-site attack class |
-| HIGH | Refresh token handling | XSS discovery becomes session hijacking vector | Dev | Reduces blast radius of any XSS |
-| HIGH | Refresh JWT missing role | Any microservice trusting JWT claims gets wrong authorization | Dev | Consistent authorization across services |
-| HIGH | No RPC timeout | Blockchain node hang causes cascading server failure | Dev | Prevents resource exhaustion |
-| MEDIUM | API key hash fallback | Rainbow table attacks possible without HMAC | Dev | Eliminates weak hash path |
-| MEDIUM | Admin search unbounded | Database DoS from malicious admin | Dev | Query safety |
-| MEDIUM | Public endpoint rate limiting | Automated abuse of QR generation, checkout | Dev | Service availability protection |
-| MEDIUM | Payment link resolve validation | Expired/exhausted links confuse users | Dev | Better UX and data integrity |
-| MEDIUM | Webhook delivery double-delivery | Merchants receive duplicate events on process crash | Dev | Exactly-once delivery semantics |
-| MEDIUM | Zod error message leakage | Attackers learn API schema structure | Dev | Opaque error responses |
-| MEDIUM | Unbounded TEXT fields | Storage exhaustion from large webhook responses | Dev | Bounded storage |
-| MEDIUM | Audit log error handling | Failed audit writes go undetected in production | Dev | Better forensic capability |
-| LOW | Response format inconsistencies | API consumers handle multiple shapes | Dev | Cleaner API contract |
-| LOW | Jest open handles | CI builds hang | Dev | Faster CI |
-| LOW | env-validator process.exit | Untestable startup validation | Dev | Testable startup |
+| HIGH | Redis as single point of security failure | Every outage creates auth bypass window | DevOps | In-memory fallback eliminates security gap |
+| HIGH | TOCTOU race conditions in payment link usage | Merchants lose trust when limits are exceeded | Dev | Database-level atomic check-and-increment |
+| HIGH | Floating-point analytics | Merchant dashboard shows wrong numbers at scale | Dev | Switch to Decimal.js (already available) |
+| HIGH | Inconsistent error response formats | SDK/frontend must handle 2 error formats | Dev | Standardize to one format across all routes |
+| MEDIUM | Secret cache without bounds or cleanup | OOM risk grows with number of webhook endpoints | Dev | Add max size, periodic cleanup, metrics |
+| MEDIUM | No webhook retry jitter | Thundering herd on retry waves | Dev | Add randomized jitter to delay calculation |
+| MEDIUM | Audit log duplication bug | Lost audit entries, unreliable audit trail | Dev | Fix conditional logic in record() method |
+| LOW | SDK missing timeout/retry | Merchant apps can hang | Dev | Add AbortController timeout wrapper |
+| LOW | Missing CSP on frontend | Weakened XSS defense | Dev | Add meta tag to index.html |
 
 ---
 
 ## Section 13: Remediation Roadmap (Phased)
 
-### Phase 0 — Immediate (48 hours): COMPLETE
+### Phase 0 — Immediate (48 hours)
 
-All 5 Phase 0 items resolved in v10:
-1. Email template HTML escaping (RESOLVED)
-2. Atomic spending limit with rollback (RESOLVED)
-3. Generic signup response for email enumeration (RESOLVED)
-4. Dev routes gated behind NODE_ENV (RESOLVED)
-5. Swagger UI gated behind NODE_ENV (RESOLVED)
+| Item | Owner | Action |
+|------|-------|--------|
+| RISK-054 | DevOps | Replace .env.docker with cryptographically random secrets |
+| RISK-055 | Dev | Add authentication to GET /v1/checkout/:id or return minimal data only |
+| RISK-051 | Security | Change Redis circuit breaker to fail closed (reject requests) in production |
+| RISK-056 | DevOps | Add in-memory fallback to redis-rate-limit-store.ts |
+| RISK-079 | DevOps | Run npm audit fix to patch @isaacs/brace-expansion |
+| RISK-052 | Dev | Combine usage check and increment in atomic database transaction (SELECT FOR UPDATE) |
 
-### Phase 1 — Stabilize (1-2 weeks remaining)
+**Gate:** All Phase 0 items resolved. No Critical issues remaining.
 
-| Item | Owner | Verification | RISK ID |
-|------|-------|-------------|---------|
-| Add payment status check in refund service (must be COMPLETED) | Dev | New test: refund on PENDING payment returns 400 | RISK-044 |
-| Add AbortSignal.timeout(15s) to blockchain RPC calls | Dev | New test: RPC timeout returns 504 within 15s | RISK-045 |
-| Fail hard on missing API_KEY_HMAC_SECRET in production | Dev | Startup fails without HMAC secret in production mode | RISK-050 |
-| Add CSRF protection via `@fastify/csrf-protection` or SameSite cookies | Dev | Cross-origin POST returns 403 | RISK-003 |
-| Move refresh tokens to httpOnly secure SameSite=strict cookies | Dev | Cookie set in response, not in JSON body | RISK-005 |
-| Add `role` to refresh endpoint JWT payload (auth.ts:266-269) | Dev | Decoded refresh token contains `role` field | RISK-031 |
-| Bind API port to localhost: `"127.0.0.1:5001:5001"` in docker-compose | DevOps | `docker port` shows localhost binding | RISK-033 |
+### Phase 1 — Stabilize (1-2 weeks)
 
-**Gate:** All scores >= 8/10, no High issues remaining. Completing first 3 items restores Security to 8/10 and Performance to 8/10.
+| Item | Owner | Action |
+|------|-------|--------|
+| RISK-053 | Dev | Replace Number() with Decimal.js in analytics.service.ts |
+| RISK-057 | Dev | Add 30s AbortController timeout to SDK fetch() calls |
+| RISK-058 | Dev | Use upsert instead of create for webhook delivery idempotency |
+| RISK-059 | Dev | Add CSP meta tag to apps/web/index.html |
+| RISK-060 | Dev | Add .startsWith('https://') validation to success_url and cancel_url |
+| RISK-062 | Dev | Add .uuid() validation to all path parameter schemas |
+| RISK-064 | Dev | Add userId parameter to incrementUsage() |
+| RISK-065 | Dev | Hash request parameters into idempotency key validation |
+| RISK-067 | Dev | Add production build guard against VITE_USE_MOCK_API=true |
+| RISK-069 | Dev | Set build.sourcemap: false in vite.config.ts for production |
+| RISK-074 | DevOps | Add API_KEY_HMAC_SECRET to docker-compose.yml with required syntax |
+| RISK-078 | Dev | Standardize analytics error format to match AppError pattern |
+
+**Gate:** All scores >= 7/10, no Critical or High issues remaining.
 
 ### Phase 2 — Production-Ready (2-4 weeks)
 
-| Item | Owner | Verification | RISK ID |
-|------|-------|-------------|---------|
-| Mark webhook deliveries as DELIVERING inside SELECT transaction | Dev | New test: process crash does not cause double delivery | RISK-046 |
-| Add rate limiting on refund creation (10/minute per user) | Dev | 11th refund request in 1 minute returns 429 | RISK-047 |
-| Sanitize Zod error messages in error handlers | Dev | Validation errors return generic messages | RISK-048 |
-| Add size limits to unbounded TEXT fields (truncate on insert) | Dev | responseBody capped at 10KB | RISK-049 |
-| Add `.max(255)` to admin search query | Dev | Search >255 chars returns 400 | RISK-018 |
-| Add rate limiting to checkout, resolve, QR endpoints | Dev | 61st request in 1 minute returns 429 | RISK-032 |
-| Add max usage and expiry validation to payment link resolve | Dev | Resolve of exhausted link returns 400 | RISK-040 |
-| Fix webhook worker timing comparison (hash before compare) | Dev | Timing analysis shows constant-time | RISK-034 |
-| Add Zod validation to /refresh and /logout bodies | Dev | Non-string refresh_token returns 400 | RISK-035 |
-| Replace console.error with logger.error in audit log service | Dev | Audit log failures appear in structured logs | RISK-041 |
-| Fix rate limit keyGenerator to run after auth | Dev | Per-user limiting works for authenticated requests | RISK-014 |
-| Add UUID validation to route param IDs | Dev | Non-UUID param returns 400 | RISK-025 |
+| Item | Owner | Action |
+|------|-------|--------|
+| RISK-063 | Dev | Add max size, periodic cleanup, and metrics to secret cache |
+| RISK-066 | Dev | Clear secret cache on rotation events |
+| RISK-068 | DevOps | Require INTERNAL_API_KEY for detailed health check data |
+| RISK-070 | Dev | Validate SSE token expiry and implement auto-refresh |
+| RISK-071 | Dev | Add default limit (50) and max limit (1000) to refund queries |
+| RISK-072 | Dev | Add max offset (10000) to admin pagination |
+| RISK-073 | DevOps | Add bounds validation (1-500) for DATABASE_POOL_SIZE |
+| RISK-075 | Dev | Sanitize KMS errors regardless of NODE_ENV |
+| RISK-076 | Dev | Add 10% random jitter to webhook retry delays |
+| RISK-077 | Dev | Fix audit log conditional logic to prevent duplication |
+| RISK-083 | DevOps | Add HSTS, Permissions-Policy, and X-XSS-Protection to nginx |
 
-**Gate:** All scores >= 8.5/10, compliance gaps addressed.
+**Gate:** All scores >= 8/10, compliance gaps addressed.
 
 ### Phase 3 — Excellence (4-8 weeks)
 
-| Item | Owner | Verification |
-|------|-------|-------------|
-| Replace process.exit(1) in env-validator | Dev | Unit test: validator throws on missing env vars |
-| Standardize API response format | Dev | Contract tests verify consistent shape |
-| Move SSE counters to Redis | Dev | Multi-instance test |
-| Normalize CORS origins to lowercase | Dev | Case-variant origin correctly matched |
-| Add entropy validation to encryption key | Dev | Low-entropy key rejected on startup |
-| Add load testing baseline | DevOps | k6/Artillery results documented |
-| Add incident response runbook | DevOps | Runbook in docs/ |
-| Add monitoring/alerting pipeline | DevOps | Alert fires on health check failure |
+| Item | Owner | Action |
+|------|-------|--------|
+| RISK-080 | Dev | Add isRetryable and retryAfterMs to SDK ApiError class |
+| RISK-081 | Dev | Validate checkout widget color inputs against hex pattern |
+| RISK-082 | Dev | Add engines field to SDK package.json |
+| Security policies | Security | Document information security policies for ISO 27001 A.5 |
+| Incident response | Security | Create incident response plan for ISO 27001 A.16 |
+| SAST integration | DevOps | Add automated security scanning to CI pipeline |
+| Load testing | QA | Run load tests to validate concurrency fixes |
 
 **Gate:** All scores >= 9/10, audit-ready for external review.
 
@@ -885,16 +570,16 @@ All 5 Phase 0 items resolved in v10:
 
 ## Section 14: Quick Wins (1-day fixes)
 
-1. **Add payment status check to refund service** — Add `if (paymentSession.status !== 'COMPLETED') throw new AppError(400, ...)` in `refund.service.ts:131`. Closes RISK-044.
-2. **Add RPC timeout** — Wrap all `provider.getTransactionReceipt()` and `provider.getBlockNumber()` calls with `AbortSignal.timeout(15000)` in `blockchain-monitor.service.ts`. Closes RISK-045.
-3. **Fail hard on missing HMAC secret** — Change the fallback in `crypto.ts:30-32` to throw in production instead of warning. Closes RISK-050.
-4. **Add `role` to refresh JWT** — One line change in `auth.ts:266-269`: add `role: user.role` to the sign payload after database lookup. Closes RISK-031.
-5. **Add `.max(255)` to admin search** — One line change in `admin.ts:10`: `.max(255)` on the Zod string. Closes RISK-018.
-6. **Bind API port to localhost** — One line change in `docker-compose.yml:52`: `"127.0.0.1:5001:5001"`. Closes RISK-033.
-7. **Add Zod validation to /refresh** — Import and use existing schema in `auth.ts:234`. Closes RISK-035.
-8. **Add rate limit to QR endpoint** — Add `config.rateLimit` to route definition in `payment-links.ts:211`. Closes RISK-032.
-9. **Add max usage check to resolve endpoint** — Copy validation from QR endpoint (line 240-246) to resolve handler (line 189-207) in `payment-links.ts`. Closes RISK-040.
-10. **Fix audit log error handling** — Replace `console.error` with `logger.error` in `audit-log.service.ts:124`. Closes RISK-041.
+1. **Add CSP meta tag to index.html** — Copy from backend Helmet config, adapt for frontend (`apps/web/index.html`)
+2. **Disable source maps in production** — Add `build: { sourcemap: false }` to `apps/web/vite.config.ts`
+3. **Run npm audit fix** — Patches @isaacs/brace-expansion CVE (`apps/api/`)
+4. **Add HTTPS validation to redirect URLs** — Add `.startsWith('https://')` to Zod schemas (`apps/api/src/utils/validation.ts`)
+5. **Standardize analytics error format** — Change `error.errors.map(...).join(', ')` to `error.message` (`apps/api/src/routes/v1/analytics.ts:24-30`)
+6. **Add production guard for mock mode** — Throw error if `VITE_USE_MOCK_API=true` in production build (`apps/web/src/lib/api-client.ts`)
+7. **Add UUID validation to path params** — `z.string().uuid()` on all `:id` route parameters
+8. **Add engines field to SDK** — `"engines": { "node": ">=14.0.0" }` in `packages/sdk/package.json`
+9. **Log WalletConnect init failures** — Add `console.warn` to catch block in `apps/web/src/lib/wagmi-config.ts:22-44`
+10. **Add API_KEY_HMAC_SECRET to docker-compose** — Single line addition with `${VAR:?required}` syntax
 
 ---
 
@@ -902,43 +587,79 @@ All 5 Phase 0 items resolved in v10:
 
 | Sub-dimension | Score | Notes |
 |---------------|-------|-------|
-| Modularity | 1.8/2 | Clean service layer separation, plugin architecture, workers isolated, single Prisma instance shared correctly. |
-| API Design | 1.7/2 | RESTful routes, versioned API (v1), Zod validation, idempotency support. Minor: response inconsistencies, missing UUID param validation. |
-| Testability | 1.8/2 | 1,386 tests, behavioral testing with real infrastructure, security-specific tests. Frontend page tests now cover major dashboard views. |
-| Observability | 1.5/2 | Structured logging, audit trail with PII sanitization, log redaction (13+ patterns). Missing: metrics export, alerting, distributed tracing. |
-| Documentation | 1.5/2 | PRD exists, API docs via Swagger, README comprehensive, env vars documented. Missing: deployment runbook, incident response, ADRs. |
+| Modularity | 1.8/2 | Clean service layer separation; plugins are well-isolated; SDK is independent package. Minor coupling between routes and Prisma models. |
+| API Design | 1.6/2 | RESTful with good naming; Zod validation on all inputs; but inconsistent error formats between analytics and other routes reduce programmatic consumption. |
+| Testability | 1.7/2 | Excellent test infrastructure with real database tests (no mocks); 154 test files; but missing concurrency and failure mode tests. |
+| Observability | 1.2/2 | Structured logging with Pino; audit log service; but no distributed tracing, no request correlation IDs, secret cache has no metrics. |
+| Documentation | 1.2/2 | Good README, API contract, ADRs; but missing inline JSDoc on service methods, no runbook, no incident response documentation. |
 
-**AI-Readiness Score: 8.3/10**
+**AI-Readiness Score: 7.5/10**
 
 ---
 
-## Score Gate Check
+## Scores
 
-**PASS** — All 7 dimensions at or above 8/10 threshold.
+### A. Technical Dimension Scores
 
-| Dimension | Score | Status |
-|-----------|-------|--------|
-| Security | 8.5/10 | PASS |
-| Architecture | 8/10 | PASS |
-| Test Coverage | 9/10 | PASS |
-| Code Quality | 8/10 | PASS |
-| Performance | 8/10 | PASS |
-| DevOps | 8/10 | PASS |
-| Runability | 8.5/10 | PASS |
+| Dimension | Score | Rationale |
+|-----------|-------|-----------|
+| Security | 6.5/10 | Strong crypto foundation (AES-256, bcrypt, HMAC), good RBAC, but Redis failover bypasses auth, unauthenticated checkout, no CSP on frontend |
+| Architecture | 7.5/10 | Clean layered architecture, good separation of concerns, well-designed webhook system with circuit breaker, but Redis single-point-of-failure for security |
+| Test Coverage | 7.5/10 | 154 test files, ~31K lines of tests, real database tests, but missing concurrency tests, SDK timeout tests, and complete E2E flow |
+| Code Quality | 8/10 | TypeScript throughout, consistent patterns, good error classes, Zod validation, but floating-point in analytics, inconsistent error formats |
+| Performance | 7/10 | Efficient Prisma queries, webhook circuit breaker, but unbounded caches, no retry jitter, unbounded pagination offsets |
+| DevOps | 6/10 | Docker multi-stage builds, CI/CD exists, but predictable Docker secrets, missing required env vars, no DAST, no rollback strategy |
+| Runability | 7.5/10 | Full stack starts and serves; health check works; frontend loads real data; but blank page bug was recently fixed, source maps leak code |
 
-**Overall Score: 8.4/10 — GATE PASSED**
+**Technical Score: 7.1/10**
 
-### Remediation Applied (commit e727109)
+### B. Readiness Scores
 
-**Security 7.5 → 8.5 (3 items resolved):**
-1. ~~Add payment status check in refund service~~ — RESOLVED: Status guard now allows COMPLETED and REFUNDED (RISK-044)
-2. ~~Fail hard on missing API_KEY_HMAC_SECRET in production~~ — RESOLVED: Throws in production, dev-only fallback (RISK-050)
-3. ~~Add rate limiting on refund creation~~ — RESOLVED: 10 req/min per-user rate limit on POST /v1/refunds (RISK-047)
+| Dimension | Score | Rationale |
+|-----------|-------|-----------|
+| Security Readiness | 6/10 | Multiple paths to bypass auth/rate-limiting during Redis outage; unauthenticated data exposure; predictable Docker secrets. Weighted from Security (6.5) + DevOps (6) + Architecture (7.5). |
+| Product Potential | 8/10 | Core payment flow is well-designed and functional; blockchain verification is solid; SDK provides good developer experience; webhook system is production-grade. Weighted from Code Quality (8) + Architecture (7.5) + Runability (7.5). |
+| Enterprise Readiness | 5.5/10 | Not ready for regulated customers — missing compliance documentation, secret management needs hardening, no incident response plan. Weighted from Security (6.5) + DevOps (6) + Compliance gaps. |
 
-**Performance 7.5 → 8.0 (2 items resolved):**
-1. ~~Add timeout to all blockchain RPC calls~~ — RESOLVED: 15s withTimeout() wrapper on all provider calls (RISK-045)
-2. ~~Cache decrypted webhook secrets with TTL~~ — RESOLVED: 5-minute in-memory cache with automatic expiry
+### C. Overall Score
 
-### Remaining Phase 2 Items (not blocking gate)
+**Overall Score: 6.7/10 — Fair (Needs Work Before Production)**
 
-CSRF protection (RISK-002), httpOnly tokens, role in refresh JWT, API port binding, load testing baseline. These would bring Security to 9/10 and Enterprise Readiness to 8.5/10.
+Technical Score (7.1) + Security Readiness (6) + Product Potential (8) + Enterprise Readiness (5.5) = 26.6 / 4 = 6.7
+
+---
+
+## Score Gate
+
+**FAIL** — Multiple dimensions below 8/10 threshold.
+
+### Dimensions Below Threshold
+
+| Dimension | Current | Target | Gap |
+|-----------|---------|--------|-----|
+| Security | 6.5 | 8.0 | Fix RISK-051, 052, 054, 055, 056; add CSP; enforce HTTPS |
+| DevOps | 6.0 | 8.0 | Fix Docker secrets; add required env vars; add in-memory rate limit fallback |
+| Performance | 7.0 | 8.0 | Bound caches; add jitter; limit pagination |
+| Test Coverage | 7.5 | 8.0 | Add concurrency tests; SDK timeout tests; complete E2E flow |
+| Runability | 7.5 | 8.0 | Disable source maps; add CSP; guard mock mode in prod |
+| Security Readiness | 6.0 | 8.0 | Requires Phase 0 + Phase 1 completion |
+| Enterprise Readiness | 5.5 | 8.0 | Requires Phase 0 + Phase 1 + Phase 2 + compliance docs |
+
+### Improvement Plan
+
+**Phase 0 (48h) — Expected impact: Security 6.5 to 7.5, DevOps 6 to 7:**
+- Fix RISK-051 (Redis auth bypass) +0.5 Security
+- Fix RISK-052 (payment link TOCTOU) +0.3 Security
+- Fix RISK-054 (Docker secrets) +0.5 DevOps
+- Fix RISK-055 (checkout auth) +0.3 Security
+- Fix RISK-056 (rate limit fallback) +0.5 DevOps
+- Fix RISK-079 (CVE patch) +0.2 DevOps
+
+**Phase 1 (1-2w) — Expected impact: Security 7.5 to 8.5, Code Quality 8 to 8.5, DevOps 7 to 8:**
+- Fix RISK-053, 057-060, 062, 064, 065, 067, 069, 074, 078
+
+**Phase 2 (2-4w) — Expected impact: Performance 7 to 8, Test Coverage 7.5 to 8.5:**
+- Fix RISK-063, 066, 068, 070-073, 075-077, 083
+- Add missing test scenarios from Section 9
+
+After Phase 0+1+2, expected overall score: **8.2/10 (Production-Ready)**

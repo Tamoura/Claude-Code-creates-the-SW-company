@@ -5,10 +5,10 @@ import { hashApiKey } from '../utils/crypto.js';
 import { logger } from '../utils/logger.js';
 
 // Circuit breaker: track Redis health for token revocation checks.
-// If Redis has been unavailable for longer than the threshold, reject
-// all JWT requests with 503 rather than silently accepting revoked tokens.
+// SECURITY: Fail closed — if Redis is unavailable, reject all JWT
+// requests immediately with 503 rather than silently accepting
+// potentially-revoked tokens (RISK-051 remediation).
 let redisFailedSince: number | null = null;
-const REDIS_FAIL_THRESHOLD_MS = 30000;
 
 const authPlugin: FastifyPluginAsync = async (fastify) => {
   // Decorator for authentication check
@@ -34,21 +34,9 @@ const authPlugin: FastifyPluginAsync = async (fastify) => {
         // SECURITY: Check JTI blacklist for revoked access tokens.
         // On logout, the access token's JTI is stored in Redis so
         // it is rejected for the remainder of its 15-minute lifetime.
-        // If Redis is unavailable, skip the check (graceful degradation).
+        // If Redis is unavailable, reject with 503 (fail closed).
         const { jti, userId: decodedUserId } = decoded as { jti?: string; userId?: string };
         if (jti && fastify.redis) {
-          // Circuit breaker: if Redis has been down too long, reject the request
-          if (
-            redisFailedSince !== null &&
-            Date.now() - redisFailedSince > REDIS_FAIL_THRESHOLD_MS
-          ) {
-            logger.error('Redis circuit breaker open: rejecting token validation', {
-              jti,
-              redisDownSince: new Date(redisFailedSince).toISOString(),
-            });
-            throw new AppError(503, 'service-unavailable', 'Service temporarily unavailable');
-          }
-
           try {
             const revoked = await fastify.redis.get(`revoked_jti:${jti}`);
             if (revoked) {
@@ -60,18 +48,18 @@ const authPlugin: FastifyPluginAsync = async (fastify) => {
             if (redisError instanceof AppError) {
               throw redisError;
             }
-            // Redis error -- record the failure timestamp for circuit breaker
+            // SECURITY (RISK-051): Fail closed — reject immediately when
+            // Redis is unavailable. Without the revocation list, we cannot
+            // guarantee the token hasn't been revoked.
             if (redisFailedSince === null) {
               redisFailedSince = Date.now();
             }
-            logger.warn(
-              'Redis unavailable during JTI check, allowing request (circuit breaker window open)',
-              {
-                jti,
-                redisFailedSince: new Date(redisFailedSince).toISOString(),
-                error: redisError instanceof Error ? redisError.message : 'unknown',
-              },
-            );
+            logger.error('Redis unavailable during JTI check, rejecting request (fail closed)', {
+              jti,
+              redisFailedSince: new Date(redisFailedSince).toISOString(),
+              error: redisError instanceof Error ? redisError.message : 'unknown',
+            });
+            throw new AppError(503, 'service-unavailable', 'Service temporarily unavailable');
           }
         }
 
