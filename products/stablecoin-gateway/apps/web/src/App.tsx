@@ -27,6 +27,7 @@ const Refunds = lazy(() => import('./pages/dashboard/Refunds'));
 const ApiKeys = lazy(() => import('./pages/dashboard/ApiKeys'));
 const Webhooks = lazy(() => import('./pages/dashboard/Webhooks'));
 const Security = lazy(() => import('./pages/dashboard/Security'));
+const TeamManagement = lazy(() => import('./pages/dashboard/TeamManagement'));
 const MerchantsList = lazy(() => import('./pages/dashboard/admin/MerchantsList'));
 const MerchantPayments = lazy(() => import('./pages/dashboard/admin/MerchantPayments'));
 const Login = lazy(() => import('./pages/auth/Login'));
@@ -87,6 +88,7 @@ function App() {
                     <Route path="api-keys" element={<ApiKeys />} />
                     <Route path="webhooks" element={<Webhooks />} />
                     <Route path="security" element={<Security />} />
+                    <Route path="team" element={<TeamManagement />} />
                     <Route path="settings" element={<Settings />} />
                     <Route path="admin/merchants" element={<MerchantsList />} />
                     <Route path="admin/merchants/:id/payments" element={<MerchantPayments />} />

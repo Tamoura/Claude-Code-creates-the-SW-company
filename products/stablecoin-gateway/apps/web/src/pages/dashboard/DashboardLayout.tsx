@@ -11,6 +11,7 @@ const pageTitles: Record<string, string> = {
   '/dashboard/api-keys': 'API Keys',
   '/dashboard/webhooks': 'Webhooks & Docs',
   '/dashboard/security': 'Security',
+  '/dashboard/team': 'Team Management',
   '/dashboard/settings': 'Settings',
   '/dashboard/admin/merchants': 'Merchants',
 };
