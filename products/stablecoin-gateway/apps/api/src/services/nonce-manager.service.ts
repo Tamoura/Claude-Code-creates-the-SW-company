@@ -148,6 +148,47 @@ export class NonceManager {
   }
 
   /**
+   * RISK-061: Release a nonce that was never submitted to the network.
+   *
+   * When a transaction fails BEFORE being broadcast (e.g., gas estimation
+   * failure, signing error), the nonce was never consumed on-chain but
+   * IS tracked in Redis. This method rolls back the tracked nonce so
+   * the next caller can reuse it instead of skipping to nonce+1.
+   *
+   * IMPORTANT: Only call this when the transaction was NOT broadcast.
+   * If the transaction was broadcast but failed on-chain, the nonce IS
+   * consumed and should NOT be released.
+   *
+   * @param walletAddress - The wallet address
+   * @param nonce - The nonce to release
+   */
+  async releaseNonce(walletAddress: string, nonce: number): Promise<void> {
+    const nonceKey = `nonce:${walletAddress}`;
+    const trackedStr = await this.redis.get(nonceKey);
+    const tracked = trackedStr ? parseInt(trackedStr, 10) : null;
+
+    // Only roll back if the tracked nonce matches the one we're releasing.
+    // If someone else already advanced it, don't regress.
+    if (tracked === nonce) {
+      if (nonce > 0) {
+        await this.redis.set(nonceKey, (nonce - 1).toString());
+      } else {
+        await this.redis.del(nonceKey);
+      }
+      logger.info('Nonce released (not consumed on-chain)', {
+        walletAddress,
+        releasedNonce: nonce,
+      });
+    } else {
+      logger.warn('Nonce release skipped — tracked nonce already advanced', {
+        walletAddress,
+        releasedNonce: nonce,
+        currentTracked: tracked,
+      });
+    }
+  }
+
+  /**
    * Reset the tracked nonce for a wallet address.
    *
    * Useful when the tracked nonce gets out of sync with the
