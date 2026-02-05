@@ -166,50 +166,64 @@ export class TeamService {
   ): Promise<TeamMember & { user: { id: string; email: string } }> {
     await this.requireRole(orgId, requesterId, [TeamRole.OWNER, TeamRole.ADMIN]);
 
-    const member = await this.prisma.teamMember.findFirst({
-      where: { id: memberId, organizationId: orgId },
-    });
-
-    if (!member) {
-      throw new AppError(404, 'member-not-found', 'Team member not found');
-    }
-
-    // Prevent ADMINs from promoting to OWNER or changing OWNER roles
-    const requester = await this.getMembership(orgId, requesterId);
-    if (requester.role === TeamRole.ADMIN) {
-      if (role === TeamRole.OWNER || member.role === TeamRole.OWNER) {
-        throw new AppError(
-          403,
-          'insufficient-role',
-          'Only owners can modify owner roles'
-        );
-      }
-    }
-
-    // Cannot demote the last OWNER
-    if (member.role === TeamRole.OWNER && role !== TeamRole.OWNER) {
-      const ownerCount = await this.prisma.teamMember.count({
-        where: { organizationId: orgId, role: TeamRole.OWNER },
+    // RISK-084: Wrap owner demotion check + update in a serialized transaction
+    // to prevent TOCTOU race where concurrent requests both read ownerCount=2
+    // and both demote, leaving zero owners.
+    return this.prisma.$transaction(async (tx) => {
+      const member = await tx.teamMember.findFirst({
+        where: { id: memberId, organizationId: orgId },
       });
 
-      if (ownerCount <= 1) {
-        throw new AppError(
-          400,
-          'last-owner',
-          'Cannot demote the last owner. Transfer ownership first.'
-        );
+      if (!member) {
+        throw new AppError(404, 'member-not-found', 'Team member not found');
       }
-    }
 
-    const updated = await this.prisma.teamMember.update({
-      where: { id: memberId },
-      data: { role },
-      include: {
-        user: { select: { id: true, email: true } },
-      },
+      // Prevent ADMINs from promoting to OWNER or changing OWNER roles
+      const requester = await tx.teamMember.findUnique({
+        where: {
+          organizationId_userId: { organizationId: orgId, userId: requesterId },
+        },
+      });
+      if (!requester) {
+        throw new AppError(403, 'not-a-member', 'You are not a member of this organization');
+      }
+      if (requester.role === TeamRole.ADMIN) {
+        if (role === TeamRole.OWNER || member.role === TeamRole.OWNER) {
+          throw new AppError(
+            403,
+            'insufficient-role',
+            'Only owners can modify owner roles'
+          );
+        }
+      }
+
+      // Cannot demote the last OWNER — use FOR UPDATE to serialize concurrent checks
+      if (member.role === TeamRole.OWNER && role !== TeamRole.OWNER) {
+        const owners = await tx.$queryRaw<{ id: string }[]>`
+          SELECT id FROM "team_members"
+          WHERE "organization_id" = ${orgId} AND role = 'OWNER'::"TeamRole"
+          FOR UPDATE
+        `;
+
+        if (owners.length <= 1) {
+          throw new AppError(
+            400,
+            'last-owner',
+            'Cannot demote the last owner. Transfer ownership first.'
+          );
+        }
+      }
+
+      const updated = await tx.teamMember.update({
+        where: { id: memberId },
+        data: { role },
+        include: {
+          user: { select: { id: true, email: true } },
+        },
+      });
+
+      return updated;
     });
-
-    return updated;
   }
 
   /**
@@ -224,41 +238,53 @@ export class TeamService {
   ): Promise<void> {
     await this.requireRole(orgId, requesterId, [TeamRole.OWNER, TeamRole.ADMIN]);
 
-    const member = await this.prisma.teamMember.findFirst({
-      where: { id: memberId, organizationId: orgId },
-    });
-
-    if (!member) {
-      throw new AppError(404, 'member-not-found', 'Team member not found');
-    }
-
-    // Prevent ADMINs from removing OWNERs
-    const requester = await this.getMembership(orgId, requesterId);
-    if (requester.role === TeamRole.ADMIN && member.role === TeamRole.OWNER) {
-      throw new AppError(
-        403,
-        'insufficient-role',
-        'Only owners can remove other owners'
-      );
-    }
-
-    // Cannot remove the last OWNER
-    if (member.role === TeamRole.OWNER) {
-      const ownerCount = await this.prisma.teamMember.count({
-        where: { organizationId: orgId, role: TeamRole.OWNER },
+    // RISK-084: Serialized transaction to prevent concurrent owner removal
+    await this.prisma.$transaction(async (tx) => {
+      const member = await tx.teamMember.findFirst({
+        where: { id: memberId, organizationId: orgId },
       });
 
-      if (ownerCount <= 1) {
+      if (!member) {
+        throw new AppError(404, 'member-not-found', 'Team member not found');
+      }
+
+      // Prevent ADMINs from removing OWNERs
+      const requester = await tx.teamMember.findUnique({
+        where: {
+          organizationId_userId: { organizationId: orgId, userId: requesterId },
+        },
+      });
+      if (!requester) {
+        throw new AppError(403, 'not-a-member', 'You are not a member of this organization');
+      }
+      if (requester.role === TeamRole.ADMIN && member.role === TeamRole.OWNER) {
         throw new AppError(
-          400,
-          'last-owner',
-          'Cannot remove the last owner. Transfer ownership first.'
+          403,
+          'insufficient-role',
+          'Only owners can remove other owners'
         );
       }
-    }
 
-    await this.prisma.teamMember.delete({
-      where: { id: memberId },
+      // Cannot remove the last OWNER — FOR UPDATE serializes concurrent checks
+      if (member.role === TeamRole.OWNER) {
+        const owners = await tx.$queryRaw<{ id: string }[]>`
+          SELECT id FROM "team_members"
+          WHERE "organization_id" = ${orgId} AND role = 'OWNER'::"TeamRole"
+          FOR UPDATE
+        `;
+
+        if (owners.length <= 1) {
+          throw new AppError(
+            400,
+            'last-owner',
+            'Cannot remove the last owner. Transfer ownership first.'
+          );
+        }
+      }
+
+      await tx.teamMember.delete({
+        where: { id: memberId },
+      });
     });
   }
 
@@ -267,36 +293,41 @@ export class TeamService {
    * The last OWNER cannot leave.
    */
   async leaveOrganization(orgId: string, userId: string): Promise<void> {
-    const membership = await this.prisma.teamMember.findUnique({
-      where: {
-        organizationId_userId: {
-          organizationId: orgId,
-          userId,
+    // RISK-084: Serialized transaction to prevent last owner from leaving
+    await this.prisma.$transaction(async (tx) => {
+      const membership = await tx.teamMember.findUnique({
+        where: {
+          organizationId_userId: {
+            organizationId: orgId,
+            userId,
+          },
         },
-      },
-    });
-
-    if (!membership) {
-      throw new AppError(404, 'not-a-member', 'You are not a member of this organization');
-    }
-
-    // Last OWNER cannot leave
-    if (membership.role === TeamRole.OWNER) {
-      const ownerCount = await this.prisma.teamMember.count({
-        where: { organizationId: orgId, role: TeamRole.OWNER },
       });
 
-      if (ownerCount <= 1) {
-        throw new AppError(
-          400,
-          'last-owner',
-          'Cannot leave as the last owner. Transfer ownership first.'
-        );
+      if (!membership) {
+        throw new AppError(404, 'not-a-member', 'You are not a member of this organization');
       }
-    }
 
-    await this.prisma.teamMember.delete({
-      where: { id: membership.id },
+      // Last OWNER cannot leave — FOR UPDATE serializes concurrent checks
+      if (membership.role === TeamRole.OWNER) {
+        const owners = await tx.$queryRaw<{ id: string }[]>`
+          SELECT id FROM "team_members"
+          WHERE "organization_id" = ${orgId} AND role = 'OWNER'::"TeamRole"
+          FOR UPDATE
+        `;
+
+        if (owners.length <= 1) {
+          throw new AppError(
+            400,
+            'last-owner',
+            'Cannot leave as the last owner. Transfer ownership first.'
+          );
+        }
+      }
+
+      await tx.teamMember.delete({
+        where: { id: membership.id },
+      });
     });
   }
 

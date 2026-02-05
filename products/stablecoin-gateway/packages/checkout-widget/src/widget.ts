@@ -212,6 +212,8 @@ class StablecoinWidget {
 
     this.iframe = document.createElement('iframe');
     this.iframe.src = this.buildCheckoutUrl();
+    // RISK-098: Sandbox the iframe with minimal permissions for checkout
+    this.iframe.setAttribute('sandbox', 'allow-scripts allow-same-origin allow-forms allow-popups');
     this.iframe.style.cssText = `
       width: 100%;
       height: 100%;

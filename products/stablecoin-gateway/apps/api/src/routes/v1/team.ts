@@ -17,6 +17,17 @@ import { TeamService } from '../../services/team.service.js';
 import { AppError } from '../../types/index.js';
 import { logger } from '../../utils/logger.js';
 
+// RISK-092: Safe ID format validator for path parameters.
+// Accepts UUIDs and CUIDs (Prisma default). Rejects path traversal, null bytes,
+// and overly long values that could cause unexpected behavior.
+const SAFE_ID_RE = /^[a-zA-Z0-9_-]{1,128}$/;
+
+function validateIdParam(value: string, name: string): void {
+  if (!SAFE_ID_RE.test(value)) {
+    throw new AppError(400, 'invalid-parameter', `Invalid ${name} format`);
+  }
+}
+
 // Validation schemas
 const createOrgSchema = z.object({
   name: z.string().min(1, 'Organization name is required').max(100),
@@ -103,6 +114,7 @@ const teamRoutes: FastifyPluginAsync = async (fastify) => {
     async (request, reply) => {
       try {
         const { orgId } = request.params as { orgId: string };
+        validateIdParam(orgId, 'orgId');
         const userId = request.currentUser!.id;
 
         const org = await teamService.getOrganization(orgId, userId);
@@ -129,6 +141,7 @@ const teamRoutes: FastifyPluginAsync = async (fastify) => {
     async (request, reply) => {
       try {
         const { orgId } = request.params as { orgId: string };
+        validateIdParam(orgId, 'orgId');
         const body = addMemberSchema.parse(request.body);
         const userId = request.currentUser!.id;
 
@@ -166,6 +179,8 @@ const teamRoutes: FastifyPluginAsync = async (fastify) => {
           orgId: string;
           memberId: string;
         };
+        validateIdParam(orgId, 'orgId');
+        validateIdParam(memberId, 'memberId');
         const body = updateRoleSchema.parse(request.body);
         const userId = request.currentUser!.id;
 
@@ -202,6 +217,8 @@ const teamRoutes: FastifyPluginAsync = async (fastify) => {
           orgId: string;
           memberId: string;
         };
+        validateIdParam(orgId, 'orgId');
+        validateIdParam(memberId, 'memberId');
         const userId = request.currentUser!.id;
 
         await teamService.removeMember(orgId, memberId, userId);
@@ -228,6 +245,7 @@ const teamRoutes: FastifyPluginAsync = async (fastify) => {
     async (request, reply) => {
       try {
         const { orgId } = request.params as { orgId: string };
+        validateIdParam(orgId, 'orgId');
         const userId = request.currentUser!.id;
 
         await teamService.leaveOrganization(orgId, userId);

@@ -17,7 +17,7 @@ export interface CreatePaymentSessionRequest {
 
 export interface PaymentSessionResponse {
   id: string;
-  amount: number;
+  amount: number | string;
   currency: string;
   description: string | null;
   status: PaymentStatus;

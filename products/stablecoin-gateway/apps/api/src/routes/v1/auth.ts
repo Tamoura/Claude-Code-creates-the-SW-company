@@ -459,7 +459,8 @@ const authRoutes: FastifyPluginAsync = async (fastify) => {
   });
 
   // POST /v1/auth/change-password (authenticated)
-  fastify.post('/change-password', async (request, reply) => {
+  // RISK-093: Rate-limit password changes to 5 per 15 minutes
+  fastify.post('/change-password', authRateLimit, async (request, reply) => {
     try {
       await request.jwtVerify();
       const userId = (request.user as { userId: string }).userId;

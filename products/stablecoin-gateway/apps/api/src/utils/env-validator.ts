@@ -335,6 +335,34 @@ function validateInternalApiKey(): ValidationResult {
 }
 
 /**
+ * RISK-097: Validate FRONTEND_URL is set in production
+ */
+function validateFrontendUrl(): ValidationResult {
+  const errors: string[] = [];
+  const warnings: string[] = [];
+
+  const frontendUrl = process.env.FRONTEND_URL;
+  const isProduction = process.env.NODE_ENV === 'production';
+
+  if (!frontendUrl) {
+    if (isProduction) {
+      errors.push('FRONTEND_URL is required in production (used for checkout URLs)');
+      errors.push('Set FRONTEND_URL to the public URL of your frontend (e.g. https://app.stableflow.io)');
+    } else {
+      warnings.push('FRONTEND_URL not set — defaulting to http://localhost:3101');
+    }
+  } else if (frontendUrl.startsWith('http://localhost') && isProduction) {
+    errors.push('FRONTEND_URL cannot be localhost in production');
+  }
+
+  return {
+    valid: errors.length === 0,
+    errors,
+    warnings,
+  };
+}
+
+/**
  * Validate all environment variables
  */
 export function validateEnvironment(): void {
@@ -349,6 +377,7 @@ export function validateEnvironment(): void {
     { name: 'Webhook Encryption', result: validateWebhookEncryption() },
     { name: 'API Key HMAC', result: validateApiKeyHmac() },
     { name: 'Internal API Key', result: validateInternalApiKey() },
+    { name: 'Frontend URL', result: validateFrontendUrl() },
   ];
 
   let hasErrors = false;

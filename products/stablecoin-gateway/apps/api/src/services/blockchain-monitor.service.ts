@@ -236,8 +236,20 @@ export class BlockchainMonitorService {
       const amountWei = BigInt(matchingTransfer.data);
       const amountUsd = new Decimal(amountWei.toString()).dividedBy(new Decimal(10).pow(decimals));
 
-      // Secondary verification: ensure amount meets or exceeds expected
+      // RISK-086: Log overpayments above 5% tolerance for merchant investigation
+      const overpaymentThreshold = new Decimal(paymentSession.amount).times(1.05);
+      if (amountUsd.greaterThan(overpaymentThreshold)) {
+        logger.warn('Overpayment detected — amount exceeds 5% tolerance', {
+          paymentSessionId: paymentSession.id,
+          expectedAmount: paymentSession.amount,
+          receivedAmount: amountUsd.toString(),
+          overpaymentPercent: amountUsd.minus(paymentSession.amount)
+            .dividedBy(paymentSession.amount).times(100).toFixed(1),
+          txHash,
+        });
+      }
 
+      // Secondary verification: ensure amount meets or exceeds expected
       if (amountUsd.lessThan(paymentSession.amount)) {
         return {
           valid: false,
