@@ -224,21 +224,6 @@ npm run dev
 
 ---
 
-### MeetingMind
-
-AI meeting assistant (frontend only).
-
-**Port**: `3106`
-
-```bash
-cd products/meetingmind/apps/web
-npm install
-npm run dev
-# Available at http://localhost:3106
-```
-
----
-
 ### Quantum Computing Usecases
 
 Quantum computing educational explorer (frontend only).
@@ -262,7 +247,6 @@ All products use unique ports to run simultaneously.
 |------|---------|------|
 | 3104 | stablecoin-gateway | Frontend |
 | 3105 | quantum-computing-usecases | Frontend |
-| 3106 | meetingmind | Frontend |
 | 5001 | stablecoin-gateway | API |
 | 5432 | PostgreSQL | Database |
 | 6379 | Redis | Cache/Queue |
@@ -373,9 +357,6 @@ gh pr create --base main
 ```bash
 # Stablecoin Gateway
 cd products/stablecoin-gateway/apps/api && npm test
-
-# MeetingMind
-cd products/meetingmind/apps/web && npm test
 
 # Quantum Computing
 cd products/quantum-computing-usecases/apps/web && npm test

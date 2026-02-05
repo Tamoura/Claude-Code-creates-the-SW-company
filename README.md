@@ -11,7 +11,6 @@ ConnectSW is a software company where the CEO provides vision and direction whil
 | Product | Description | Status | Ports |
 |---------|-------------|--------|-------|
 | **stablecoin-gateway** | Institutional stablecoin payment gateway with security-audited API | Active | 3104 / 5001 |
-| **meetingmind** | AI meeting assistant | Planned | 3106 |
 | **quantum-computing-usecases** | Quantum computing use case explorer | Planned | 3105 |
 
 ## Getting Started
@@ -69,7 +68,6 @@ CEO
 .
 ├── products/                    # Product codebases
 │   ├── stablecoin-gateway/      #   Stablecoin payment gateway
-│   ├── meetingmind/             #   AI meeting assistant
 │   └── quantum-computing-usecases/ # Quantum use case explorer
 ├── docs/                        # Company documentation
 │   └── INSTALLATION.md          #   Setup guide

@@ -19,7 +19,7 @@
 |------|---------|--------|-----|
 | 3104 | stablecoin-gateway | Active | http://localhost:3104 |
 | 3105 | quantum-computing-usecases | Active | http://localhost:3105 |
-| 3106 | meetingmind | Active | http://localhost:3106 |
+| 3106 | *Available* | Free | - |
 | 3108 | *Available* | Free | - |
 | 3109 | invoiceforge | Active | http://localhost:3109 |
 | 3110 | shipwright (legacy) | Retired | http://localhost:3110 |
@@ -100,7 +100,6 @@ When initiating new product workflows:
 # Frontend apps
 cd products/stablecoin-gateway/apps/web && npm run dev &        # :3104
 cd products/quantum-computing-usecases/apps/web && npm run dev &# :3105
-cd products/meetingmind/apps/web && npm run dev &               # :3106
 cd products/invoiceforge/apps/web && npm run dev &              # :3109
 cd products/shipwright/apps/web && npm run dev &                # :3111
 
@@ -130,7 +129,7 @@ pkill -f "next dev"
 pkill -f "fastify"
 
 # Or kill by port
-lsof -ti:3104,3105,3106,3109,5001,5004 | xargs kill -9
+lsof -ti:3104,3105,3109,5001,5004 | xargs kill -9
 ```
 
 ## Port Conflict Resolution
