@@ -409,12 +409,31 @@ export class BlockchainTransactionService {
       }
 
       // Execute transfer (with managed nonce if available)
+      // RISK-061: Track whether tx was broadcast so we know whether to
+      // release the nonce (not broadcast) or confirm it (broadcast).
+      let txBroadcast = false;
       const transferOptions = nonce !== undefined ? { nonce } : {};
-      const tx = await tokenContract.transfer(
-        recipientAddress,
-        amountInTokenUnits,
-        transferOptions
-      );
+      let tx;
+      try {
+        tx = await tokenContract.transfer(
+          recipientAddress,
+          amountInTokenUnits,
+          transferOptions
+        );
+        txBroadcast = true;
+      } catch (submitError) {
+        // RISK-061: Transaction failed BEFORE broadcast (e.g., gas estimation,
+        // signing error). The nonce was NOT consumed on-chain, so release it
+        // to prevent the tracked nonce from getting stuck.
+        if (this.nonceManager && nonce !== undefined) {
+          await this.nonceManager.releaseNonce(wallet.address, nonce);
+          logger.info('Nonce released after submission failure', {
+            nonce,
+            walletAddress: wallet.address,
+          });
+        }
+        throw submitError; // Re-throw to be caught by outer catch
+      }
 
       logger.info('Refund transaction sent', {
         txHash: tx.hash,
@@ -428,7 +447,8 @@ export class BlockchainTransactionService {
       // Wait for confirmation
       const receipt = await tx.wait(1);
 
-      // Confirm nonce was used successfully
+      // RISK-061: Nonce IS consumed on-chain regardless of success/failure.
+      // Confirm it so the next transaction uses nonce+1.
       if (this.nonceManager && nonce !== undefined) {
         await this.nonceManager.confirmNonce(wallet.address, nonce);
       }

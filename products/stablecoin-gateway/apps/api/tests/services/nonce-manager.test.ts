@@ -240,6 +240,49 @@ describe('NonceManager', () => {
     });
   });
 
+  describe('releaseNonce', () => {
+    it('should roll back tracked nonce when it matches the released nonce', async () => {
+      const walletAddress = '0xreleasewallet';
+      mockRedis.store[`nonce:${walletAddress}`] = '5';
+
+      await nonceManager.releaseNonce(walletAddress, 5);
+
+      // Should have set nonce to 4 (one less)
+      expect(mockRedis.set).toHaveBeenCalledWith(
+        `nonce:${walletAddress}`,
+        '4'
+      );
+    });
+
+    it('should delete tracked nonce when releasing nonce 0', async () => {
+      const walletAddress = '0xreleasezero';
+      mockRedis.store[`nonce:${walletAddress}`] = '0';
+
+      await nonceManager.releaseNonce(walletAddress, 0);
+
+      expect(mockRedis.del).toHaveBeenCalledWith(`nonce:${walletAddress}`);
+    });
+
+    it('should not roll back if tracked nonce has already advanced', async () => {
+      const walletAddress = '0xadvanced';
+      mockRedis.store[`nonce:${walletAddress}`] = '10';
+
+      // Try to release nonce 5, but tracked is already at 10
+      await nonceManager.releaseNonce(walletAddress, 5);
+
+      // Should NOT have changed the tracked nonce
+      expect(mockRedis.store[`nonce:${walletAddress}`]).toBe('10');
+    });
+
+    it('should not error when no tracked nonce exists', async () => {
+      const walletAddress = '0xnotracked';
+
+      await expect(
+        nonceManager.releaseNonce(walletAddress, 3)
+      ).resolves.not.toThrow();
+    });
+  });
+
   describe('resetNonce', () => {
     it('should delete the tracked nonce from Redis', async () => {
       const walletAddress = '0xresetwallet';
@@ -260,6 +303,50 @@ describe('NonceManager', () => {
   });
 
   describe('nonce tracking across calls', () => {
+    it('RISK-061: released nonce is reused by the next caller', async () => {
+      const walletAddress = '0xrisk061';
+      const mockProvider = createMockProvider(0);
+
+      // First call: get nonce 0
+      const nonce1 = await nonceManager.getNextNonce(
+        walletAddress,
+        mockProvider as any
+      );
+      expect(nonce1).toBe(0);
+
+      // Transaction fails before broadcast — release the nonce
+      await nonceManager.releaseNonce(walletAddress, 0);
+
+      // Next call should get nonce 0 again (not 1)
+      const nonce2 = await nonceManager.getNextNonce(
+        walletAddress,
+        mockProvider as any
+      );
+      expect(nonce2).toBe(0);
+    });
+
+    it('RISK-061: confirmed nonce is NOT reused by the next caller', async () => {
+      const walletAddress = '0xrisk061confirmed';
+      const mockProvider = createMockProvider(0);
+
+      // First call: get nonce 0
+      const nonce1 = await nonceManager.getNextNonce(
+        walletAddress,
+        mockProvider as any
+      );
+      expect(nonce1).toBe(0);
+
+      // Transaction succeeded on-chain — confirm the nonce
+      await nonceManager.confirmNonce(walletAddress, 0);
+
+      // Next call should get nonce 1 (not 0)
+      const nonce2 = await nonceManager.getNextNonce(
+        walletAddress,
+        mockProvider as any
+      );
+      expect(nonce2).toBe(1);
+    });
+
     it('should increment nonce across sequential calls', async () => {
       const walletAddress = '0xsequential';
       const mockProvider = createMockProvider(0);
