@@ -36,6 +36,15 @@ const metadataSchema = z
     { message: 'Metadata size cannot exceed 16KB' }
   );
 
+// RISK-060: Redirect URLs must use HTTPS (http allowed only for localhost)
+const httpsUrlSchema = z
+  .string()
+  .url()
+  .refine(
+    (url) => url.startsWith('https://') || /^http:\/\/localhost(:\d+)?/.test(url),
+    { message: 'URL must use HTTPS (http is only allowed for localhost)' },
+  );
+
 const createPaymentLinkSchema = z.object({
   name: z.string().max(200).optional(),
   amount: z
@@ -48,8 +57,8 @@ const createPaymentLinkSchema = z.object({
   network: z.enum(['polygon', 'ethereum']).default('polygon'),
   token: z.enum(['USDC', 'USDT']).default('USDC'),
   merchant_address: ethereumAddressSchema,
-  success_url: z.string().url().optional(),
-  cancel_url: z.string().url().optional(),
+  success_url: httpsUrlSchema.optional(),
+  cancel_url: httpsUrlSchema.optional(),
   description: z.string().max(500).optional(),
   metadata: metadataSchema,
   max_usages: z.number().int().positive().optional().nullable(), // null = unlimited
@@ -59,8 +68,8 @@ const createPaymentLinkSchema = z.object({
 const updatePaymentLinkSchema = z.object({
   name: z.string().max(200).optional(),
   active: z.boolean().optional(),
-  success_url: z.string().url().optional(),
-  cancel_url: z.string().url().optional(),
+  success_url: httpsUrlSchema.optional(),
+  cancel_url: httpsUrlSchema.optional(),
   description: z.string().max(500).optional(),
   metadata: metadataSchema,
   max_usages: z.number().int().positive().optional().nullable(),

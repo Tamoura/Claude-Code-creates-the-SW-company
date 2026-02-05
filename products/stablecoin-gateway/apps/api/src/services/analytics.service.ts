@@ -78,19 +78,22 @@ export class AnalyticsService {
       orderBy: { createdAt: 'asc' },
     });
 
-    const buckets = new Map<string, { volume: number; count: number }>();
+    // RISK-053: Accumulate in integer cents to avoid floating-point drift.
+    // Converting each payment to cents first (Math.round(x * 100))
+    // ensures that long summation loops don't lose precision.
+    const buckets = new Map<string, { volumeCents: number; count: number }>();
 
     for (const p of payments) {
       const key = this.bucketKey(p.createdAt, period);
-      const existing = buckets.get(key) || { volume: 0, count: 0 };
-      existing.volume += Number(p.amount);
+      const existing = buckets.get(key) || { volumeCents: 0, count: 0 };
+      existing.volumeCents += Math.round(Number(p.amount) * 100);
       existing.count += 1;
       buckets.set(key, existing);
     }
 
     return Array.from(buckets.entries()).map(([date, data]) => ({
       date,
-      volume: Math.round(data.volume * 100) / 100,
+      volume: data.volumeCents / 100,
       count: data.count,
     }));
   }
@@ -111,6 +114,7 @@ export class AnalyticsService {
     return groups.map((g) => ({
       label: String(g[field]),
       count: g._count,
+      // RISK-053: Round via integer cents to avoid fp imprecision
       volume: Math.round(Number(g._sum.amount ?? 0) * 100) / 100,
     }));
   }

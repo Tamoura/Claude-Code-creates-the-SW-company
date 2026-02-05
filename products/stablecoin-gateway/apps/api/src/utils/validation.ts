@@ -106,6 +106,16 @@ const metadataSchema = z
     { message: 'Metadata size cannot exceed 16KB' }
   );
 
+// RISK-060: Redirect URLs must use HTTPS to prevent MitM on payment callbacks.
+// Allow http:// only for localhost origins (development convenience).
+const httpsUrlSchema = z
+  .string()
+  .url()
+  .refine(
+    (url) => url.startsWith('https://') || /^http:\/\/localhost(:\d+)?/.test(url),
+    { message: 'URL must use HTTPS (http is only allowed for localhost)' },
+  );
+
 export const createPaymentSessionSchema = z.object({
   amount: z
     .number()
@@ -116,8 +126,8 @@ export const createPaymentSessionSchema = z.object({
   network: z.enum(['polygon', 'ethereum']).default('polygon'),
   token: z.enum(['USDC', 'USDT']).default('USDC'),
   merchant_address: ethereumAddressSchema,
-  success_url: z.string().url().optional(),
-  cancel_url: z.string().url().optional(),
+  success_url: httpsUrlSchema.optional(),
+  cancel_url: httpsUrlSchema.optional(),
   metadata: metadataSchema,
   // NOTE: idempotency_key removed from body - use Idempotency-Key header instead
 });
@@ -237,6 +247,17 @@ export const analyticsVolumeQuerySchema = z.object({
 export const analyticsBreakdownQuerySchema = z.object({
   group_by: z.enum(['status', 'network', 'token']).default('status'),
 });
+
+// ==================== Path Parameter Schemas (RISK-062) ====================
+
+/**
+ * Validates that a path parameter is a valid UUID v4.
+ * Prevents scanning/enumeration attacks using sequential IDs
+ * and avoids Prisma errors from malformed IDs hitting the DB.
+ */
+export const uuidParamSchema = z
+  .string()
+  .uuid('Invalid ID format — expected a UUID');
 
 // ==================== Helper Functions ====================
 

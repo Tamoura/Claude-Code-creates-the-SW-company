@@ -11,11 +11,13 @@ import type {
 } from './types';
 
 const DEFAULT_BASE_URL = 'https://api.stableflow.io';
+const DEFAULT_TIMEOUT_MS = 30_000;
 const SDK_VERSION = '1.0.0';
 
 export class StablecoinGateway {
   private readonly apiKey: string;
   private readonly baseUrl: string;
+  private readonly timeoutMs: number;
 
   constructor(apiKey: string, options?: StablecoinGatewayOptions) {
     if (!apiKey || typeof apiKey !== 'string') {
@@ -23,6 +25,7 @@ export class StablecoinGateway {
     }
     this.apiKey = apiKey;
     this.baseUrl = (options?.baseUrl ?? DEFAULT_BASE_URL).replace(/\/+$/, '');
+    this.timeoutMs = options?.timeout ?? DEFAULT_TIMEOUT_MS;
   }
 
   // ==================== Payment Sessions ====================
@@ -86,12 +89,27 @@ export class StablecoinGateway {
       ...extraHeaders,
     };
 
-    const init: RequestInit = { method, headers };
+    // RISK-057: Abort requests that exceed the configured timeout to prevent
+    // merchant applications from hanging indefinitely on slow/unresponsive servers.
+    const controller = new AbortController();
+    const timer = setTimeout(() => controller.abort(), this.timeoutMs);
+
+    const init: RequestInit = { method, headers, signal: controller.signal };
     if (body !== undefined) {
       init.body = JSON.stringify(body);
     }
 
-    const response = await fetch(url, init);
+    let response: Response;
+    try {
+      response = await fetch(url, init);
+    } catch (err) {
+      clearTimeout(timer);
+      if (err instanceof DOMException && err.name === 'AbortError') {
+        throw new ApiError(0, 'TIMEOUT', `Request timed out after ${this.timeoutMs}ms`);
+      }
+      throw err;
+    }
+    clearTimeout(timer);
     const responseBody = await response.text();
 
     if (!response.ok) {
