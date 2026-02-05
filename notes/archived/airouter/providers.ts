@@ -1,0 +1,518 @@
+import { Provider } from '../types/index.js';
+
+export const providers: Provider[] = [
+  {
+    slug: 'google-gemini',
+    name: 'Google Gemini',
+    description: 'Google\'s multimodal AI with generous free tier supporting text, images, and code.',
+    category: 'Multimodal',
+    lastVerified: '2026-02-01',
+    prerequisites: ['Google account'],
+    baseUrl: 'https://generativelanguage.googleapis.com/v1beta',
+    apiFormat: 'google',
+    freeTier: {
+      requestsPerDay: 1000,
+      requestsPerMinute: 15,
+    },
+    models: [
+      { id: 'gemini-2.5-flash', name: 'Gemini 2.5 Flash', contextWindow: 1048576 },
+      { id: 'gemini-2.5-pro', name: 'Gemini 2.5 Pro', contextWindow: 1048576 },
+    ],
+    keyAcquisitionUrl: 'https://aistudio.google.com/apikey',
+    keyAcquisitionGuide: {
+      steps: [
+        { step: 1, instruction: 'Go to Google AI Studio at aistudio.google.com' },
+        { step: 2, instruction: 'Sign in with your Google account' },
+        { step: 3, instruction: 'Click "Get API Key" in the top navigation' },
+        { step: 4, instruction: 'Select "Create API key in new project" or choose an existing Google Cloud project' },
+        { step: 5, instruction: 'Copy the generated API key', note: 'The key starts with "AIza"' },
+        { step: 6, instruction: 'Store the key securely — it will not be shown again in full' },
+        { step: 7, instruction: 'Optionally, restrict the key in Google Cloud Console for security' },
+      ],
+      tips: [
+        'Use a dedicated Google Cloud project to keep API keys organized',
+        'Gemini 2.5 Flash is best for fast, cost-effective tasks',
+        'The free tier resets daily at midnight Pacific Time',
+      ],
+      gotchas: [
+        'Free tier is per-project, not per-key — multiple keys in the same project share limits',
+        'Gemini Pro has stricter rate limits than Flash on the free tier',
+        'Image inputs count toward your token quota',
+      ],
+      verificationSteps: [
+        'curl "https://generativelanguage.googleapis.com/v1beta/models?key=YOUR_API_KEY"',
+      ],
+    },
+    documentation: {
+      quickstart: 'https://ai.google.dev/gemini-api/docs/quickstart',
+      pricing: 'https://ai.google.dev/pricing',
+      api: 'https://ai.google.dev/gemini-api/docs/reference/rest',
+    },
+    healthStatus: 'up',
+    authHeader: 'x-goog-api-key',
+    authPrefix: '',
+  },
+  {
+    slug: 'groq',
+    name: 'Groq',
+    description: 'Ultra-fast LPU-based inference with high throughput for open-source models.',
+    category: 'Speed',
+    lastVerified: '2026-02-01',
+    prerequisites: ['Email address'],
+    baseUrl: 'https://api.groq.com/openai/v1',
+    apiFormat: 'openai',
+    freeTier: {
+      requestsPerDay: 1000,
+      requestsPerMinute: 30,
+    },
+    models: [
+      { id: 'llama-3.3-70b-versatile', name: 'Llama 3.3 70B', contextWindow: 131072 },
+      { id: 'llama-3.1-8b-instant', name: 'Llama 3.1 8B', contextWindow: 131072 },
+    ],
+    keyAcquisitionUrl: 'https://console.groq.com/keys',
+    keyAcquisitionGuide: {
+      steps: [
+        { step: 1, instruction: 'Go to console.groq.com' },
+        { step: 2, instruction: 'Sign up with email or Google/GitHub OAuth' },
+        { step: 3, instruction: 'Verify your email address if using email signup' },
+        { step: 4, instruction: 'Navigate to "API Keys" in the left sidebar' },
+        { step: 5, instruction: 'Click "Create API Key"' },
+        { step: 6, instruction: 'Give the key a descriptive name (e.g., "airouter-dev")' },
+        { step: 7, instruction: 'Copy the key immediately', note: 'Key starts with "gsk_" and is shown only once' },
+      ],
+      tips: [
+        'Groq is OpenAI-compatible — use any OpenAI SDK with the Groq base URL',
+        'Llama 3.3 70B offers the best quality-to-speed ratio',
+        'Token limits vary by model; check the docs for per-model quotas',
+      ],
+      gotchas: [
+        'The API key is displayed only once — copy it before closing the dialog',
+        'Free tier rate limits are per-minute and per-day, not per-month',
+        'Some models have lower context windows than advertised on the free tier',
+      ],
+      verificationSteps: [
+        'curl -s https://api.groq.com/openai/v1/models -H "Authorization: Bearer YOUR_API_KEY" | head -c 200',
+      ],
+    },
+    documentation: {
+      quickstart: 'https://console.groq.com/docs/quickstart',
+      pricing: 'https://groq.com/pricing',
+      api: 'https://console.groq.com/docs/api-reference',
+    },
+    healthStatus: 'up',
+    authHeader: 'Authorization',
+    authPrefix: 'Bearer ',
+  },
+  {
+    slug: 'cerebras',
+    name: 'Cerebras',
+    description: 'Wafer-scale engine delivering extremely fast inference for open-source models.',
+    category: 'Speed',
+    lastVerified: '2026-02-01',
+    prerequisites: ['Email address'],
+    baseUrl: 'https://api.cerebras.ai/v1',
+    apiFormat: 'openai',
+    freeTier: {
+      tokensPerDay: 1000000,
+      requestsPerMinute: 30,
+    },
+    models: [
+      { id: 'llama3.1-8b', name: 'Llama 3.1 8B', contextWindow: 8192 },
+      { id: 'llama3.3-70b', name: 'Llama 3.3 70B', contextWindow: 8192 },
+    ],
+    keyAcquisitionUrl: 'https://cloud.cerebras.ai/',
+    keyAcquisitionGuide: {
+      steps: [
+        { step: 1, instruction: 'Go to cloud.cerebras.ai' },
+        { step: 2, instruction: 'Click "Sign Up" and create an account' },
+        { step: 3, instruction: 'Verify your email address' },
+        { step: 4, instruction: 'Log in and navigate to the API Keys section' },
+        { step: 5, instruction: 'Click "Generate API Key"' },
+        { step: 6, instruction: 'Copy and store the key securely', note: 'Key is shown only once' },
+      ],
+      tips: [
+        'Cerebras is OpenAI-compatible — just change the base URL',
+        'Best for latency-sensitive applications',
+        '1M tokens/day is generous for development and testing',
+      ],
+      gotchas: [
+        'Context window is limited to 8192 tokens on the free tier',
+        'The free tier has a daily token limit, not a monthly one',
+        'Not all Llama variants are available — check the docs for current models',
+      ],
+      verificationSteps: [
+        'curl -s https://api.cerebras.ai/v1/models -H "Authorization: Bearer YOUR_API_KEY" | head -c 200',
+      ],
+    },
+    documentation: {
+      quickstart: 'https://docs.cerebras.ai/quickstart',
+      pricing: 'https://cerebras.ai/pricing',
+      api: 'https://docs.cerebras.ai/api-reference',
+    },
+    healthStatus: 'up',
+    authHeader: 'Authorization',
+    authPrefix: 'Bearer ',
+  },
+  {
+    slug: 'sambanova',
+    name: 'SambaNova',
+    description: 'Custom AI chip provider with unlimited free community cloud for open-source models.',
+    category: 'Open Source',
+    lastVerified: '2026-02-01',
+    prerequisites: ['Email address'],
+    baseUrl: 'https://api.sambanova.ai/v1',
+    apiFormat: 'openai',
+    freeTier: {
+      unlimited: true,
+      requestsPerMinute: 30,
+    },
+    models: [
+      { id: 'Meta-Llama-3.1-8B-Instruct', name: 'Llama 3.1 8B', contextWindow: 8192 },
+      { id: 'Meta-Llama-3.1-70B-Instruct', name: 'Llama 3.1 70B', contextWindow: 8192 },
+    ],
+    keyAcquisitionUrl: 'https://cloud.sambanova.ai/',
+    keyAcquisitionGuide: {
+      steps: [
+        { step: 1, instruction: 'Go to cloud.sambanova.ai' },
+        { step: 2, instruction: 'Click "Sign Up" for the free community tier' },
+        { step: 3, instruction: 'Fill in your details and verify your email' },
+        { step: 4, instruction: 'Log in and navigate to the API section' },
+        { step: 5, instruction: 'Click "Create API Key"' },
+        { step: 6, instruction: 'Copy the generated key', note: 'Store it securely — it won\'t be shown again' },
+      ],
+      tips: [
+        'SambaNova\'s free tier has no token limits — only rate limits',
+        'Great for batch processing and experimentation',
+        'OpenAI-compatible API — easy drop-in replacement',
+      ],
+      gotchas: [
+        'Rate limit of 30 RPM applies even though tokens are unlimited',
+        'Model availability can change — check the dashboard for current models',
+        'Response times may vary during peak hours on the community tier',
+      ],
+      verificationSteps: [
+        'curl -s https://api.sambanova.ai/v1/models -H "Authorization: Bearer YOUR_API_KEY" | head -c 200',
+      ],
+    },
+    documentation: {
+      quickstart: 'https://docs.sambanova.ai/cloud/quickstart',
+      pricing: 'https://sambanova.ai/pricing',
+      api: 'https://docs.sambanova.ai/cloud/api-reference',
+    },
+    healthStatus: 'up',
+    authHeader: 'Authorization',
+    authPrefix: 'Bearer ',
+  },
+  {
+    slug: 'openrouter',
+    name: 'OpenRouter',
+    description: 'Meta-router aggregating 100+ models with some free tiers available.',
+    category: 'Aggregator',
+    lastVerified: '2026-02-01',
+    prerequisites: ['Google or GitHub account'],
+    baseUrl: 'https://openrouter.ai/api/v1',
+    apiFormat: 'openai',
+    freeTier: {
+      requestsPerDay: 50,
+      requestsPerMinute: 20,
+    },
+    models: [
+      { id: 'meta-llama/llama-3.1-8b-instruct:free', name: 'Llama 3.1 8B (Free)', contextWindow: 131072 },
+      { id: 'google/gemma-2-9b-it:free', name: 'Gemma 2 9B (Free)', contextWindow: 8192 },
+    ],
+    keyAcquisitionUrl: 'https://openrouter.ai/keys',
+    keyAcquisitionGuide: {
+      steps: [
+        { step: 1, instruction: 'Go to openrouter.ai' },
+        { step: 2, instruction: 'Click "Sign In" and use Google or GitHub OAuth' },
+        { step: 3, instruction: 'Navigate to the "Keys" page from your profile menu' },
+        { step: 4, instruction: 'Click "Create Key"' },
+        { step: 5, instruction: 'Name your key and set optional credit limits' },
+        { step: 6, instruction: 'Copy the key', note: 'Key starts with "sk-or-" and is shown only once' },
+        { step: 7, instruction: 'Use only models with the ":free" suffix for zero-cost usage' },
+      ],
+      tips: [
+        'Filter models by ":free" suffix to find zero-cost options',
+        'OpenRouter supports OpenAI SDK — just change the base URL',
+        'You can set spending limits per key for safety',
+      ],
+      gotchas: [
+        'Not all models are free — only those with ":free" in the model ID',
+        'Free model availability changes frequently',
+        'Rate limits on free models are lower than paid ones',
+      ],
+      verificationSteps: [
+        'curl -s https://openrouter.ai/api/v1/models -H "Authorization: Bearer YOUR_API_KEY" | head -c 200',
+      ],
+    },
+    documentation: {
+      quickstart: 'https://openrouter.ai/docs/quickstart',
+      pricing: 'https://openrouter.ai/docs/models',
+      api: 'https://openrouter.ai/docs/api-reference',
+    },
+    healthStatus: 'up',
+    authHeader: 'Authorization',
+    authPrefix: 'Bearer ',
+  },
+  {
+    slug: 'cohere',
+    name: 'Cohere',
+    description: 'Enterprise NLP platform with strong RAG and text generation capabilities.',
+    category: 'Enterprise',
+    lastVerified: '2026-02-01',
+    prerequisites: ['Email address'],
+    baseUrl: 'https://api.cohere.ai/v2',
+    apiFormat: 'cohere',
+    freeTier: {
+      requestsPerMonth: 1000,
+      requestsPerMinute: 20,
+    },
+    models: [
+      { id: 'command-r-plus', name: 'Command R+', contextWindow: 128000 },
+    ],
+    keyAcquisitionUrl: 'https://dashboard.cohere.com/api-keys',
+    keyAcquisitionGuide: {
+      steps: [
+        { step: 1, instruction: 'Go to dashboard.cohere.com' },
+        { step: 2, instruction: 'Click "Sign Up" and create an account' },
+        { step: 3, instruction: 'Verify your email address' },
+        { step: 4, instruction: 'Navigate to "API Keys" in the dashboard sidebar' },
+        { step: 5, instruction: 'Click "Generate Trial Key"' },
+        { step: 6, instruction: 'Copy the key immediately', note: 'Trial keys have "trial" in the name' },
+      ],
+      tips: [
+        'Cohere excels at RAG (Retrieval-Augmented Generation) use cases',
+        'Command R+ supports tool use and structured outputs',
+        'The trial key is sufficient for prototyping and learning',
+      ],
+      gotchas: [
+        'Trial keys have a monthly limit of 1,000 requests, not daily',
+        'Cohere uses its own API format, not OpenAI-compatible',
+        'Some enterprise features require a paid plan',
+      ],
+      verificationSteps: [
+        'curl -s https://api.cohere.ai/v2/models -H "Authorization: Bearer YOUR_API_KEY" | head -c 200',
+      ],
+    },
+    documentation: {
+      quickstart: 'https://docs.cohere.com/docs/the-cohere-platform',
+      pricing: 'https://cohere.com/pricing',
+      api: 'https://docs.cohere.com/reference/about',
+    },
+    healthStatus: 'up',
+    authHeader: 'Authorization',
+    authPrefix: 'Bearer ',
+  },
+  {
+    slug: 'huggingface',
+    name: 'HuggingFace',
+    description: 'Open-source AI hub with free Inference API for thousands of community models.',
+    category: 'Open Source',
+    lastVerified: '2026-02-01',
+    prerequisites: ['Email address or GitHub account'],
+    baseUrl: 'https://api-inference.huggingface.co',
+    apiFormat: 'custom',
+    freeTier: {
+      requestsPerDay: 1000,
+      requestsPerMinute: 30,
+    },
+    models: [
+      { id: 'meta-llama/Llama-3.1-8B-Instruct', name: 'Llama 3.1 8B', contextWindow: 8192 },
+      { id: 'mistralai/Mistral-7B-Instruct-v0.3', name: 'Mistral 7B', contextWindow: 32768 },
+    ],
+    keyAcquisitionUrl: 'https://huggingface.co/settings/tokens',
+    keyAcquisitionGuide: {
+      steps: [
+        { step: 1, instruction: 'Go to huggingface.co' },
+        { step: 2, instruction: 'Click "Sign Up" (email or GitHub)' },
+        { step: 3, instruction: 'Verify your email address' },
+        { step: 4, instruction: 'Go to Settings > Access Tokens' },
+        { step: 5, instruction: 'Click "New Token"' },
+        { step: 6, instruction: 'Select "Read" permission type', note: 'Read access is sufficient for inference' },
+        { step: 7, instruction: 'Name your token and click "Generate"' },
+        { step: 8, instruction: 'Copy the token', note: 'Token starts with "hf_"' },
+      ],
+      tips: [
+        'Use "Read" permission — "Write" is only needed for uploading models',
+        'HuggingFace has thousands of models; start with popular ones',
+        'The Inference API automatically loads models on demand',
+      ],
+      gotchas: [
+        'Not all models on HuggingFace are available via the free Inference API',
+        'Large models may have cold-start delays of 20-60 seconds',
+        'The API format varies by model type — check the model card',
+      ],
+      verificationSteps: [
+        'curl -s https://api-inference.huggingface.co/models/gpt2 -H "Authorization: Bearer YOUR_TOKEN" -d \'{"inputs":"Hello"}\'',
+      ],
+    },
+    documentation: {
+      quickstart: 'https://huggingface.co/docs/api-inference/quicktour',
+      pricing: 'https://huggingface.co/pricing',
+      api: 'https://huggingface.co/docs/api-inference/detailed_parameters',
+    },
+    healthStatus: 'up',
+    authHeader: 'Authorization',
+    authPrefix: 'Bearer ',
+  },
+  {
+    slug: 'mistral',
+    name: 'Mistral',
+    description: 'European AI lab building efficient open models with a free experimentation tier.',
+    category: 'Open Source',
+    lastVerified: '2026-02-01',
+    prerequisites: ['Email address'],
+    baseUrl: 'https://api.mistral.ai/v1',
+    apiFormat: 'openai',
+    freeTier: {
+      requestsPerSecond: 1,
+      requestsPerMinute: 60,
+    },
+    models: [
+      { id: 'mistral-small-latest', name: 'Mistral Small', contextWindow: 32000 },
+    ],
+    keyAcquisitionUrl: 'https://console.mistral.ai/api-keys',
+    keyAcquisitionGuide: {
+      steps: [
+        { step: 1, instruction: 'Go to console.mistral.ai' },
+        { step: 2, instruction: 'Click "Sign Up" and create an account' },
+        { step: 3, instruction: 'Verify your email address' },
+        { step: 4, instruction: 'Navigate to "API Keys" in the left sidebar' },
+        { step: 5, instruction: 'Click "Create New Key"' },
+        { step: 6, instruction: 'Name your key and click "Create"' },
+        { step: 7, instruction: 'Copy the key immediately', note: 'Key is shown only once' },
+      ],
+      tips: [
+        'Mistral Small is their most cost-effective model',
+        'OpenAI-compatible API format — easy to integrate',
+        'Good for European data residency requirements',
+      ],
+      gotchas: [
+        'Free tier is rate-limited to 1 request per second',
+        'Some models require a paid plan (e.g., Mistral Large)',
+        'The free tier may require adding a payment method for verification',
+      ],
+      verificationSteps: [
+        'curl -s https://api.mistral.ai/v1/models -H "Authorization: Bearer YOUR_API_KEY" | head -c 200',
+      ],
+    },
+    documentation: {
+      quickstart: 'https://docs.mistral.ai/getting-started/quickstart',
+      pricing: 'https://mistral.ai/technology/#pricing',
+      api: 'https://docs.mistral.ai/api/',
+    },
+    healthStatus: 'up',
+    authHeader: 'Authorization',
+    authPrefix: 'Bearer ',
+  },
+  {
+    slug: 'cloudflare',
+    name: 'Cloudflare Workers AI',
+    description: 'Edge AI inference running models close to users worldwide with a generous free tier.',
+    category: 'Edge AI',
+    lastVerified: '2026-02-01',
+    prerequisites: ['Cloudflare account', 'Workers subscription (free plan)'],
+    baseUrl: 'https://api.cloudflare.com/client/v4/accounts',
+    apiFormat: 'custom',
+    freeTier: {
+      neuronsPerDay: 10000,
+      requestsPerMinute: 60,
+    },
+    models: [
+      { id: '@cf/meta/llama-3.1-8b-instruct', name: 'Llama 3.1 8B', contextWindow: 4096 },
+      { id: '@cf/mistral/mistral-7b-instruct-v0.2', name: 'Mistral 7B', contextWindow: 4096 },
+    ],
+    keyAcquisitionUrl: 'https://dash.cloudflare.com/profile/api-tokens',
+    keyAcquisitionGuide: {
+      steps: [
+        { step: 1, instruction: 'Go to dash.cloudflare.com and sign up or log in' },
+        { step: 2, instruction: 'Navigate to "My Profile" > "API Tokens"' },
+        { step: 3, instruction: 'Click "Create Token"' },
+        { step: 4, instruction: 'Select "Workers AI" from the template list or create custom' },
+        { step: 5, instruction: 'Set permissions: Account > Workers AI > Read' },
+        { step: 6, instruction: 'Click "Continue to summary" then "Create Token"' },
+        { step: 7, instruction: 'Copy the token immediately', note: 'You also need your Account ID from the dashboard' },
+      ],
+      tips: [
+        'You need your Account ID in addition to the API token for requests',
+        'Neurons are a usage unit; simple requests use ~100-500 neurons',
+        'Edge deployment means low latency for users worldwide',
+      ],
+      gotchas: [
+        'You need both an API token AND your Account ID to make requests',
+        'Context window is limited to 4096 tokens for most models',
+        'The "neurons" pricing model can be confusing — check the calculator',
+      ],
+      verificationSteps: [
+        'curl -s "https://api.cloudflare.com/client/v4/accounts/YOUR_ACCOUNT_ID/ai/models/search" -H "Authorization: Bearer YOUR_TOKEN" | head -c 200',
+      ],
+    },
+    documentation: {
+      quickstart: 'https://developers.cloudflare.com/workers-ai/get-started/',
+      pricing: 'https://developers.cloudflare.com/workers-ai/platform/pricing/',
+      api: 'https://developers.cloudflare.com/workers-ai/configuration/open-ai-compatibility/',
+    },
+    healthStatus: 'up',
+    authHeader: 'Authorization',
+    authPrefix: 'Bearer ',
+  },
+  {
+    slug: 'deepseek',
+    name: 'DeepSeek',
+    description: 'AI lab with strong coding and reasoning models at competitive free-tier pricing.',
+    category: 'Reasoning',
+    lastVerified: '2026-02-01',
+    prerequisites: ['Email address or phone number'],
+    baseUrl: 'https://api.deepseek.com/v1',
+    apiFormat: 'openai',
+    freeTier: {
+      tokensPerMonth: 5000000,
+      requestsPerMinute: 60,
+    },
+    models: [
+      { id: 'deepseek-chat', name: 'DeepSeek V3', contextWindow: 65536 },
+      { id: 'deepseek-reasoner', name: 'DeepSeek R1', contextWindow: 65536 },
+    ],
+    keyAcquisitionUrl: 'https://platform.deepseek.com/api_keys',
+    keyAcquisitionGuide: {
+      steps: [
+        { step: 1, instruction: 'Go to platform.deepseek.com' },
+        { step: 2, instruction: 'Click "Sign Up" and create an account' },
+        { step: 3, instruction: 'Verify your email or phone number' },
+        { step: 4, instruction: 'Navigate to "API Keys" in the sidebar' },
+        { step: 5, instruction: 'Click "Create New API Key"' },
+        { step: 6, instruction: 'Copy the key immediately', note: 'Key starts with "sk-" and is shown only once' },
+        { step: 7, instruction: 'Store the key securely in your password manager' },
+      ],
+      tips: [
+        'DeepSeek R1 excels at math, coding, and step-by-step reasoning',
+        'OpenAI-compatible API — easy drop-in replacement',
+        '5M tokens/month is generous for development and side projects',
+      ],
+      gotchas: [
+        'The API key is displayed only once — copy it immediately',
+        'DeepSeek R1 (reasoner) uses more tokens due to chain-of-thought',
+        'Service may experience higher latency during peak hours',
+      ],
+      verificationSteps: [
+        'curl -s https://api.deepseek.com/v1/models -H "Authorization: Bearer YOUR_API_KEY" | head -c 200',
+      ],
+    },
+    documentation: {
+      quickstart: 'https://platform.deepseek.com/docs',
+      pricing: 'https://platform.deepseek.com/pricing',
+      api: 'https://platform.deepseek.com/api-docs',
+    },
+    healthStatus: 'up',
+    authHeader: 'Authorization',
+    authPrefix: 'Bearer ',
+  },
+];
+
+export function getProviderBySlug(slug: string): Provider | undefined {
+  return providers.find(p => p.slug === slug);
+}
+
+export function getProvidersForModel(modelId: string): Provider[] {
+  return providers.filter(p => p.models.some(m => m.id === modelId));
+}
