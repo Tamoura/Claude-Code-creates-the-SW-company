@@ -19,6 +19,7 @@ import activityRoutes from './modules/activity/routes.js';
 import repoRoutes from './modules/repos/routes.js';
 import webhookRoutes from './modules/webhooks/routes.js';
 import metricsRoutes from './modules/metrics/routes.js';
+import riskRoutes from './modules/risk/routes.js';
 
 // Utils
 import { logger } from './utils/logger.js';
@@ -154,6 +155,7 @@ export async function buildApp(): Promise<FastifyInstance> {
   await fastify.register(repoRoutes, { prefix: '/api/v1/repos' });
   await fastify.register(webhookRoutes, { prefix: '/api/v1/webhooks' });
   await fastify.register(metricsRoutes, { prefix: '/api/v1/metrics' });
+  await fastify.register(riskRoutes, { prefix: '/api/v1/risk' });
 
   return fastify;
 }
