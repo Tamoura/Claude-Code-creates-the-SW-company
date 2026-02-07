@@ -14,6 +14,7 @@ import websocketPlugin from './plugins/websocket.js';
 // Routes
 import healthRoutes from './modules/health/routes.js';
 import authRoutes from './modules/auth/routes.js';
+import activityRoutes from './modules/activity/routes.js';
 import repoRoutes from './modules/repos/routes.js';
 import webhookRoutes from './modules/webhooks/routes.js';
 
@@ -130,6 +131,7 @@ export async function buildApp(): Promise<FastifyInstance> {
   // Routes
   await fastify.register(healthRoutes);
   await fastify.register(authRoutes, { prefix: '/api/v1/auth' });
+  await fastify.register(activityRoutes, { prefix: '/api/v1/activity' });
   await fastify.register(repoRoutes, { prefix: '/api/v1/repos' });
   await fastify.register(webhookRoutes, { prefix: '/api/v1/webhooks' });
 
