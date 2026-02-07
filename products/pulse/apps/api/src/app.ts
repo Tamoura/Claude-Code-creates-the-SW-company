@@ -14,6 +14,8 @@ import websocketPlugin from './plugins/websocket.js';
 // Routes
 import healthRoutes from './modules/health/routes.js';
 import authRoutes from './modules/auth/routes.js';
+import repoRoutes from './modules/repos/routes.js';
+import webhookRoutes from './modules/webhooks/routes.js';
 
 // Utils
 import { logger } from './utils/logger.js';
@@ -128,6 +130,8 @@ export async function buildApp(): Promise<FastifyInstance> {
   // Routes
   await fastify.register(healthRoutes);
   await fastify.register(authRoutes, { prefix: '/api/v1/auth' });
+  await fastify.register(repoRoutes, { prefix: '/api/v1/repos' });
+  await fastify.register(webhookRoutes, { prefix: '/api/v1/webhooks' });
 
   return fastify;
 }
