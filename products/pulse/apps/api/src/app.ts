@@ -10,6 +10,7 @@ import observabilityPlugin from './plugins/observability.js';
 import prismaPlugin from './plugins/prisma.js';
 import redisPlugin from './plugins/redis.js';
 import authPlugin from './plugins/auth.js';
+import teamAuthPlugin from './plugins/team-auth.js';
 import websocketPlugin from './plugins/websocket.js';
 
 // Routes
@@ -25,6 +26,13 @@ import riskRoutes from './modules/risk/routes.js';
 import { logger } from './utils/logger.js';
 import { AppError } from './lib/errors.js';
 
+// Augment FastifyRequest so handlers can access the raw body buffer
+declare module 'fastify' {
+  interface FastifyRequest {
+    rawBody?: string;
+  }
+}
+
 export async function buildApp(): Promise<FastifyInstance> {
   const fastify = Fastify({
     trustProxy: true,
@@ -32,6 +40,24 @@ export async function buildApp(): Promise<FastifyInstance> {
     logger: false, // We use our own logger
     requestIdHeader: 'x-request-id',
   });
+
+  // Custom content-type parser that captures raw body bytes for
+  // webhook HMAC signature verification (GitHub signs the raw HTTP body,
+  // not a JSON.stringify'd reconstruction).
+  fastify.addContentTypeParser(
+    'application/json',
+    { parseAs: 'string' },
+    (request, body, done) => {
+      const rawBody = typeof body === 'string' ? body : body.toString();
+      request.rawBody = rawBody;
+      try {
+        const json = JSON.parse(rawBody);
+        done(null, json);
+      } catch (err) {
+        done(err as Error, undefined);
+      }
+    }
+  );
 
   // Security headers
   await fastify.register(helmet, {
@@ -146,6 +172,7 @@ export async function buildApp(): Promise<FastifyInstance> {
   await fastify.register(prismaPlugin);
   await fastify.register(redisPlugin);
   await fastify.register(authPlugin);
+  await fastify.register(teamAuthPlugin);
   await fastify.register(websocketPlugin);
 
   // Routes

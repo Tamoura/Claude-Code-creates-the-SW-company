@@ -1,5 +1,11 @@
 import { FastifyRequest, FastifyReply } from 'fastify';
+import { ZodError } from 'zod';
 import { WebhookService } from './service.js';
+import {
+  pushEventSchema,
+  pullRequestEventSchema,
+  deploymentEventSchema,
+} from './schemas.js';
 import { UnauthorizedError } from '../../lib/errors.js';
 import { logger } from '../../utils/logger.js';
 
@@ -17,8 +23,10 @@ export class WebhookHandlers {
       throw new UnauthorizedError('Missing required webhook headers');
     }
 
-    // Get raw body for signature verification
-    const rawBody = JSON.stringify(request.body);
+    // Use the raw body bytes captured by our content-type parser.
+    // GitHub signs the exact HTTP body bytes, not a JSON.stringify'd
+    // reconstruction which can differ in key order or whitespace.
+    const rawBody = request.rawBody ?? JSON.stringify(request.body);
 
     // Get webhook secret from env or repo-specific secret
     const webhookSecret =
@@ -46,22 +54,37 @@ export class WebhookHandlers {
       });
     }
 
-    const body = request.body as any;
-
     switch (event) {
-      case 'push':
-        const pushResult = await this.service.processPushEvent(body);
+      case 'push': {
+        const parsed = pushEventSchema.safeParse(request.body);
+        if (!parsed.success) {
+          return this.validationError(reply, parsed.error);
+        }
+        const pushResult = await this.service.processPushEvent(
+          parsed.data
+        );
         return reply.code(200).send(pushResult);
+      }
 
-      case 'pull_request':
+      case 'pull_request': {
+        const parsed = pullRequestEventSchema.safeParse(request.body);
+        if (!parsed.success) {
+          return this.validationError(reply, parsed.error);
+        }
         const prResult =
-          await this.service.processPullRequestEvent(body);
+          await this.service.processPullRequestEvent(parsed.data);
         return reply.code(200).send(prResult);
+      }
 
-      case 'deployment':
+      case 'deployment': {
+        const parsed = deploymentEventSchema.safeParse(request.body);
+        if (!parsed.success) {
+          return this.validationError(reply, parsed.error);
+        }
         const deployResult =
-          await this.service.processDeploymentEvent(body);
+          await this.service.processDeploymentEvent(parsed.data);
         return reply.code(200).send(deployResult);
+      }
 
       case 'deployment_status':
         // For now, just acknowledge
@@ -77,5 +100,18 @@ export class WebhookHandlers {
           deliveryId,
         });
     }
+  }
+
+  private validationError(reply: FastifyReply, error: ZodError) {
+    return reply.code(422).send({
+      type: 'https://pulse.dev/errors/validation-error',
+      title: 'Validation Error',
+      status: 422,
+      detail: 'Webhook payload validation failed',
+      errors: error.errors.map((e) => ({
+        field: e.path.join('.'),
+        message: e.message,
+      })),
+    });
   }
 }
