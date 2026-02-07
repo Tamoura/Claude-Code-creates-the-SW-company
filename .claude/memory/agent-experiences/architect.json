@@ -1,7 +1,7 @@
 {
   "agent": "architect",
   "version": "1.2.0",
-  "updated_at": "2026-01-27T04:50:11Z",
+  "updated_at": "2026-02-07T10:53:08Z",
   "learned_patterns": [
     {
       "pattern_id": "PATTERN-006",
@@ -30,6 +30,15 @@
       "first_applied": "2026-01-27",
       "products_applied": [],
       "notes": "Design accessibility from start (semantic HTML, ARIA, keyboard nav) rather than retrofitting. 10x easier upfront. Create ADR for accessibility strategy."
+    },
+    {
+      "pattern": "BRIN indexes for time-series query optimization on timestamp columns",
+      "learned_from": {
+        "task_id": "ARCH-01",
+        "product": "pulse",
+        "date": "2026-02-07T10:53:08Z"
+      },
+      "confidence": "medium"
     }
   ],
   "task_history": [
@@ -96,6 +105,14 @@
       "status": "success",
       "time_minutes": 120,
       "summary": "Complete architecture design with 3 ADRs, tech stack selection, and accessibility-first approach"
+    },
+    {
+      "task_id": "ARCH-01",
+      "product": "pulse",
+      "timestamp": "2026-02-07T10:53:08Z",
+      "status": "success",
+      "time_minutes": 90,
+      "summary": "Designed full system architecture: architecture.md with Mermaid diagrams, OpenAPI 3.0 spec (35 endpoints), PostgreSQL DDL (15 tables, 50+ indexes), 5 ADRs, updated addendum and port registry"
     }
   ],
   "common_mistakes": [
@@ -230,9 +247,9 @@
     }
   ],
   "performance_metrics": {
-    "tasks_completed": 3,
+    "tasks_completed": 4,
     "success_rate": 1.00,
-    "average_time_minutes": 40,
+    "average_time_minutes": 52.5,
     "median_time_minutes": 120,
     "on_time_delivery": 1.0,
     "checkpoints_passed_first_try": 2,
