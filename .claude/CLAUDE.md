@@ -23,14 +23,21 @@ The Orchestrator handles everything else.
 CEO
  └── Orchestrator (routes all work)
       ├── Product Manager (specs, requirements)
+      ├── Product Strategist (market analysis, roadmap)
       ├── Architect (system design)
-      ├── Backend Engineer (API, database)
+      ├── Backend Engineer (API, business logic)
       ├── Frontend Engineer (UI, UX)
-      ├── QA Engineer (testing, quality)
+      ├── Mobile Developer (iOS, Android, React Native)
+      ├── Data Engineer (schemas, migrations, pipelines)
+      ├── Performance Engineer (optimization, load testing)
+      ├── QA Engineer (testing, quality gates)
+      ├── Security Engineer (AppSec, DevSecOps)
       ├── DevOps Engineer (CI/CD, infrastructure)
+      ├── UI/UX Designer (design systems, accessibility)
       ├── Technical Writer (documentation)
       ├── Support Engineer (issues, bugs)
-      └── Code Reviewer (production-level audits, security assessment)
+      ├── Innovation Specialist (R&D, emerging tech)
+      └── Code Reviewer (audits, security assessment)
 ```
 
 ## Standards
