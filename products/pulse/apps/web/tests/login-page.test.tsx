@@ -12,6 +12,7 @@ jest.mock('next/link', () => {
 jest.mock('next/navigation', () => ({
   useRouter: () => ({ push: jest.fn(), replace: jest.fn() }),
   usePathname: () => '/login',
+  useSearchParams: () => new URLSearchParams(),
 }));
 
 // Mock useAuth hook

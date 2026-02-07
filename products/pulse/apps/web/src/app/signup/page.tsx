@@ -5,6 +5,8 @@ import { useRouter } from 'next/navigation';
 import { useState } from 'react';
 import { useAuth } from '../../hooks/useAuth';
 
+const API_BASE_URL = process.env.NEXT_PUBLIC_API_URL || 'http://localhost:5003';
+
 export default function SignupPage() {
   const [name, setName] = useState('');
   const [email, setEmail] = useState('');
@@ -25,7 +27,7 @@ export default function SignupPage() {
   };
 
   const handleGitHubSignup = () => {
-    window.location.href = 'http://localhost:5003/api/v1/auth/github';
+    window.location.href = `${API_BASE_URL}/api/v1/auth/github`;
   };
 
   return (
