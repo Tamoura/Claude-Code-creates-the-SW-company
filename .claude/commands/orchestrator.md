@@ -56,91 +56,65 @@ cat .claude/orchestrator/state.yml 2>/dev/null || echo "No state file"
 
 Use Claude Code's Task tool to spawn specialist agents. For each task in the graph:
 
-**IMPORTANT**: When using the Task tool, provide a complete prompt that instructs the sub-agent. The sub-agent is a separate Claude instance that needs full context.
+**IMPORTANT**: When using the Task tool, provide a complete prompt that instructs the sub-agent. The sub-agent is a separate Claude instance that needs full context. Use compact briefs (not full agent files) to minimize context waste.
 
-#### Sub-Agent Prompt Template
+#### Sub-Agent Prompt Template (Compact — Opus 4.6 Optimized)
 
-When spawning a sub-agent, use this prompt structure:
+When spawning a sub-agent, use this prompt structure. The orchestrator prepares this by:
+1. Reading the compact brief from `.claude/agents/briefs/{agent}.md` (50-80 lines)
+2. Pre-filtering relevant patterns from `.claude/memory/company-knowledge.json` (see Step 3.5 in orchestrator-enhanced.md)
+3. Injecting both inline — the sub-agent reads NO files for setup context
 
 ---
 
-You are the **[Agent Role]** for ConnectSW, an AI software company.
+You are the **{ROLE}** for ConnectSW.
 
-## Step 1: Read Your Instructions and Memory
+## Your Brief
+{INLINE_BRIEF_CONTENT — paste the full contents of .claude/agents/briefs/{agent}.md here}
 
-First, read these files to understand your role and learn from past experience:
+## Component Registry
+Before building anything, check: `.claude/COMPONENT-REGISTRY.md`
+Use the "I Need To..." table. If a match exists, copy and adapt it.
+If you build something new and generic, add it to the registry.
 
-**Your agent instructions:**
-Read the file: `.claude/agents/[agent-name].md`
+## Product Context
+Read: `products/{PRODUCT}/.claude/addendum.md`
 
-**Your experience memory:**
-Read the file: `.claude/memory/agent-experiences/[agent-name].json`
+## Relevant Patterns (pre-filtered)
+{PRE_FILTERED_PATTERNS — top 3-5 patterns from company knowledge matching this agent's domain and task}
 
-Look for:
-- `learned_patterns` - Apply these if relevant to your task
-- `common_mistakes` - Avoid these errors
-- `preferred_approaches` - Use these patterns
-- `performance_metrics` - Understand your typical timing
-
-**Company knowledge:**
-Read the file: `.claude/memory/company-knowledge.json`
-
-Look for patterns with `category` matching your domain (backend, frontend, etc.)
-
-**Product-specific context:**
-Read the file: `products/[product]/.claude/addendum.md`
-
-## Step 2: Your Current Task
-
-**Task ID**: [TASK-ID from graph]
-**Product**: [product-name]
-**Branch**: [branch-name]
+## Your Current Task
+**Task ID**: {TASK-ID}
+**Product**: {PRODUCT}
+**Branch**: {BRANCH}
 
 **Description**:
-[Task description from task graph]
+{TASK_DESCRIPTION from task graph}
 
 **Acceptance Criteria**:
-- [Criterion 1]
-- [Criterion 2]
-- [...]
+{ACCEPTANCE_CRITERIA from task graph}
 
-## Step 3: Execute the Work
+## Constraints
+- Work in: `products/{PRODUCT}/`
+- Stage specific files only (never `git add .` or `git add -A`)
+- Verify staged files before commit (`git diff --cached --stat`)
+- Use conventional commit messages
+- Follow TDD: write tests first, make them pass, refactor
 
-Follow your agent instructions to complete the task. Remember:
-- Use TDD (write tests first)
-- Follow company coding standards
-- Commit your changes with conventional commit messages
+## When Complete
 
-## Step 4: Report Results
+Report your results:
+- **Status**: success | failure | blocked
+- **Summary**: What you accomplished
+- **Files Changed**: List of files created/modified
+- **Tests**: Count passing, coverage %
+- **Time Spent**: Minutes
+- **Learned Patterns**: Any new patterns discovered
+- **Blockers**: What's preventing completion (if any)
 
-When complete, report your results in this format:
-
-```
-### Task Complete: [TASK-ID]
-
-**Status**: success | failure
-**Summary**: [Brief description of what you accomplished]
-
-**Files Created/Modified**:
-- [file path 1]
-- [file path 2]
-
-**Tests**:
-- Unit tests: [X passing]
-- Coverage: [Y%]
-
-**Time Spent**: [Z minutes]
-
-**Learned Patterns** (if any):
-- [Pattern you discovered that might help future tasks]
-
-**Blockers** (if any):
-- [What's preventing completion]
-```
-
-Then run the mandatory post-task update (updates memory, audit trail, and task graph):
+Then run the mandatory post-task update:
 ```bash
-.claude/scripts/post-task-update.sh [agent-name] [TASK-ID] [product] [success|failure] [minutes] "[summary]" "[optional-pattern]"
+.claude/scripts/post-task-update.sh {AGENT} {TASK-ID} {PRODUCT} {STATUS} {MINUTES} "{SUMMARY}" "{PATTERN}"
 ```
 
 ---
@@ -149,37 +123,23 @@ Then run the mandatory post-task update (updates memory, audit trail, and task g
 
 When multiple tasks can run in parallel (all have `parallel_ok: true` and same dependencies):
 
-**Option A: Sequential in Current Session (Simpler)**
-Spawn sub-agents one at a time in this session. Each completes before the next starts.
+**Strategy A (PRIMARY): Task tool with `run_in_background: true`**
 
-**Option B: True Parallel with Worktrees (Faster)**
+Launch all independent tasks simultaneously in a single message:
 
-For true parallel execution, create git worktrees:
-
-```bash
-# Create worktrees for parallel agents
-git worktree add ../worktrees/backend-work -b feature/[product]/backend-[task-id]
-git worktree add ../worktrees/frontend-work -b feature/[product]/frontend-[task-id]
+```
+Task(subagent_type: "general-purpose", run_in_background: true, prompt: "...", description: "Backend: implement API")
+Task(subagent_type: "general-purpose", run_in_background: true, prompt: "...", description: "Frontend: build UI")
+Task(subagent_type: "general-purpose", run_in_background: true, prompt: "...", description: "DevOps: setup CI/CD")
 ```
 
-Then instruct the CEO:
-> "To run these tasks in parallel, please open additional Claude Code sessions:
-> - Session 1 in `../worktrees/backend-work`: [Backend task description]
-> - Session 2 in `../worktrees/frontend-work`: [Frontend task description]
-> 
-> Let me know when both are complete, and I'll merge the work."
+Monitor with `TaskOutput(task_id, block: false)`. Collect results with `TaskOutput(task_id, block: true)`.
 
-After parallel work completes:
-```bash
-# Merge branches
-git checkout main
-git merge feature/[product]/backend-[task-id]
-git merge feature/[product]/frontend-[task-id]
+**Strategy B (FALLBACK): Sequential in Current Session**
+Spawn sub-agents one at a time. Each completes before the next starts.
 
-# Clean up worktrees
-git worktree remove ../worktrees/backend-work
-git worktree remove ../worktrees/frontend-work
-```
+**Strategy C (RARE): Git Worktrees**
+For extreme parallelism (4+ agents, large codebases). See `.claude/protocols/parallel-execution.md`.
 
 ### 6. Before CEO Checkpoints: Run Testing Gate
 

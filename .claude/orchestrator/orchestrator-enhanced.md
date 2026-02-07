@@ -27,7 +27,13 @@ For detailed execution instructions, see: `.claude/orchestrator/claude-code-exec
 
 ### 3. Parallel Execution Protocol
 - **Reference**: `.claude/protocols/parallel-execution.md`
-- **Key**: Use git worktrees for true parallelism
+- **Primary**: Use Task tool with `run_in_background: true` for parallel sub-agents
+- **Fallback**: Git worktrees for rare edge cases (4+ agents, file conflicts)
+
+### 3b. Compact Agent Briefs
+- **Location**: `.claude/agents/briefs/{agent}.md` (50-80 lines each)
+- **Purpose**: Inline into sub-agent prompts instead of telling agents to read full files
+- **Originals**: `.claude/agents/{agent}.md` preserved as deep-dive reference
 
 ### 4. Quality Gates
 - **Testing Gate**: `.claude/scripts/testing-gate-checklist.sh`
@@ -130,7 +136,45 @@ For new work (not status update):
 5. Mark graph as active in company state
 ```
 
-### Step 4: Execute Task Graph (Automatic Execution Loop)
+### Step 3.5: Load & Index Memory (Pre-Filter for Sub-Agents)
+
+Before entering the execution loop, load memory files ONCE and pre-filter patterns for each agent role. This prevents every sub-agent from reading 200+ lines of JSON.
+
+```markdown
+1. Read `.claude/memory/company-knowledge.json`
+2. Read `.claude/memory/decision-log.json`
+
+3. For each task in the task graph, filter patterns by agent role:
+
+   | Agent Role | Filter Categories |
+   |------------|-------------------|
+   | Backend Engineer | backend, database, api, security |
+   | Frontend Engineer | frontend, ui, styling, testing |
+   | QA Engineer | testing, quality, frontend |
+   | Architect | backend, frontend, infrastructure |
+   | DevOps Engineer | infrastructure, ci-cd, security |
+   | Security Engineer | security, backend, infrastructure |
+   | Code Reviewer | security, backend, testing |
+   | Product Manager | product, business |
+   | Others | Match by keyword overlap with task description |
+
+4. For each matched pattern:
+   a. Check `applies_to` field for product name match
+   b. Check keyword overlap between pattern description and task description
+   c. Rank by `confidence` score (high > medium > low)
+   d. Select top 3-5 most relevant patterns
+
+5. Cache filtered results per agent role. When spawning a sub-agent, inject as:
+
+   ## Relevant Patterns (from company knowledge)
+   - PATTERN-XXX (confidence: high): "[pattern description]"
+   - PATTERN-YYY (confidence: high): "[pattern description]"
+
+   ## Gotchas to Avoid
+   - GOTCHA-XXX: "[gotcha description]"
+```
+
+### Step 4: Execute Task Graph (PARALLEL-AWARE Execution Loop)
 
 ```markdown
 Loop until all tasks complete or checkpoint reached:
@@ -145,72 +189,83 @@ B. IDENTIFY PARALLEL OPPORTUNITIES
    From ready tasks, group by:
    - Same dependency set
    - parallel_ok = true
-   - No resource conflicts
+   - No resource conflicts (backend: apps/api/, frontend: apps/web/, devops: .github/)
 
-C. INVOKE AGENTS IN PARALLEL
-   For each parallel group:
+C. INVOKE AGENTS (PARALLEL-AWARE)
 
-   Single message with multiple Task calls:
+   **Strategy A (PRIMARY): Task tool with run_in_background**
 
+   For each group of independent tasks, launch them simultaneously:
+
+   ```
+   // Launch all independent tasks in a single message with multiple Task calls
    Task(
      subagent_type: "general-purpose",
-     prompt: "You are the [Agent Name] for ConnectSW.
-
-     ## FIRST: Check the Component Registry
-     Read: .claude/COMPONENT-REGISTRY.md
-
-     Before building anything, check if a reusable component already exists.
-     Use the 'I Need To...' table to find matching components.
-     If one exists: copy it from the source product and adapt it.
-     If you build something new and generic: add it to the registry.
-
-     ## SECOND: Read Your Memory
-     Read: .claude/memory/agent-experiences/[agent].json
-     Read: .claude/memory/company-knowledge.json
-
-     Check for:
-     - Learned patterns relevant to this task
-     - Common mistakes to avoid
-     - Preferred approaches for this scenario
-
-     ## Your Agent Instructions
-     Read: .claude/agents/[agent].md
-
-     ## Product Context
-     Read: products/{PRODUCT}/.claude/addendum.md
-
-     ## Your Current Task
-     [Task description from graph]
-
-     ## Acceptance Criteria
-     [From graph]
-
-     ## When Complete
-     Report back using AgentMessage protocol:
-
-     {
-       \"metadata\": {
-         \"from\": \"[agent]\",
-         \"to\": \"orchestrator\",
-         \"timestamp\": \"...\",
-         \"message_type\": \"task_complete\",
-         \"product\": \"{PRODUCT}\",
-         \"task_id\": \"{TASK_ID}\"
-       },
-       \"payload\": {
-         \"status\": \"success\",
-         \"summary\": \"...\",
-         \"artifacts\": [...],
-         \"context\": {...},
-         \"metrics\": {...}
-       },
-       \"handoff\": {
-         \"next_agent\": \"...\",
-         \"required_context\": [...]
-       }
-     }",
+     run_in_background: true,
+     prompt: "[COMPACT SUB-AGENT PROMPT - see template below]",
      description: "[Agent]: [brief task]"
    )
+   // Repeat for each independent task in the group
+   ```
+
+   Track background task IDs for monitoring.
+   Use TaskOutput(task_id, block: false) to check progress without blocking.
+   Use TaskOutput(task_id, block: true) when ready to collect results.
+
+   **Strategy B (FALLBACK): Sequential execution**
+
+   When parallelism isn't possible (resource conflicts, shared files, dependency chains):
+   - Spawn one sub-agent at a time
+   - Wait for completion before next
+
+   **Strategy C (RARE): Git worktrees**
+
+   For extreme parallelism (4+ agents with large codebases), fall back to worktrees.
+   See `.claude/protocols/parallel-execution.md` for worktree setup.
+
+   ---
+
+   **COMPACT SUB-AGENT PROMPT TEMPLATE** (replaces the old 5-file-read template):
+
+   ```
+   You are the {ROLE} for ConnectSW.
+
+   ## Your Brief
+   {INLINE_BRIEF_CONTENT from .claude/agents/briefs/{agent}.md}
+
+   ## Component Registry
+   Before building anything, check: .claude/COMPONENT-REGISTRY.md
+   Use the "I Need To..." table. If a match exists, copy and adapt it.
+   If you build something new and generic, add it to the registry.
+
+   ## Product Context
+   Read: products/{PRODUCT}/.claude/addendum.md
+
+   ## Relevant Patterns (pre-filtered from company knowledge)
+   {PRE_FILTERED_PATTERNS from Step 3.5}
+
+   ## Your Current Task
+   Task ID: {TASK_ID}
+   Product: {PRODUCT}
+   Branch: {BRANCH}
+   Description: {TASK_DESCRIPTION}
+
+   ## Acceptance Criteria
+   {ACCEPTANCE_CRITERIA from task graph}
+
+   ## Constraints
+   - Work in: products/{PRODUCT}/
+   - Stage specific files only (never git add . or git add -A)
+   - Verify staged files before commit (git diff --cached --stat)
+   - Use conventional commit messages
+
+   ## When Complete
+   Report: status (success/failure/blocked), summary, files changed,
+   tests added/passing, time spent, learned patterns, blockers.
+
+   Then run:
+   .claude/scripts/post-task-update.sh {AGENT} {TASK_ID} {PRODUCT} {STATUS} {MINUTES} "{SUMMARY}" "{PATTERN}"
+   ```
 
    Update graph:
    - Mark tasks as in_progress
@@ -354,21 +409,15 @@ Available in `.claude/workflows/templates/`:
 
 ## Agent Memory Integration
 
-When invoking agents, ALWAYS include memory reading:
+Memory is now pre-filtered and injected inline (see Step 3.5). The orchestrator reads memory files once and includes only relevant patterns in each sub-agent prompt. This replaces the old approach of telling every agent to read full JSON files.
 
-```markdown
-## FIRST: Read Your Memory
-Read: .claude/memory/agent-experiences/[agent-name].json
-Read: .claude/memory/company-knowledge.json
+**For the orchestrator to prepare a sub-agent prompt:**
+1. Read the compact brief from `.claude/agents/briefs/{agent}.md` (50-80 lines)
+2. Insert it inline as the `## Your Brief` section
+3. Insert pre-filtered patterns from Step 3.5 as the `## Relevant Patterns` section
+4. The sub-agent receives everything it needs in its prompt — no file reads required for context
 
-Look for:
-1. Learned patterns relevant to this task type
-2. Common mistakes you've made before
-3. Preferred approaches for this scenario
-4. Performance metrics (am I typically under/over estimating?)
-
-Apply learned patterns automatically where confidence is high.
-```
+**Original agent files** (`.claude/agents/{agent}.md`) are preserved as deep-dive reference documentation. They are NOT read by sub-agents during normal task execution.
 
 After agents complete tasks, update their memory:
 
