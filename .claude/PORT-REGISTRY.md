@@ -19,6 +19,8 @@
 |------|---------|--------|-----|
 | 3104 | stablecoin-gateway | Active | http://localhost:3104 |
 | 3105 | quantum-computing-usecases | Active | http://localhost:3105 |
+| 3106 | *Available* | Free | - |
+| 3108 | *Available* | Free | - |
 | 3106 | pulse | Active | http://localhost:3106 |
 | 3108 | muaththir | Active | http://localhost:3108 |
 | 3109 | invoiceforge | Active | http://localhost:3109 |
