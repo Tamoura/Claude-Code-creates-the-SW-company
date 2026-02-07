@@ -31,11 +31,18 @@ Build React Native mobile app for Pulse in `products/pulse/apps/mobile/`
 
 ## Progress
 - [x] Notes file created
-- [ ] Expo project initialized
-- [ ] Navigation structure
-- [ ] Auth flow
-- [ ] Activity feed
-- [ ] Risk dashboard
-- [ ] Settings screen
-- [ ] Push notifications
-- [ ] Tests
+- [x] Expo project initialized (SDK 54, blank-typescript)
+- [x] Navigation structure (AuthStack + MainTabs + RootNavigator)
+- [x] Auth flow (Zustand store, secure token storage, login/signup)
+- [x] Activity feed (WebSocket hook, real-time FlatList, event icons)
+- [x] Risk dashboard (React Query, RiskGauge, FactorBar)
+- [x] Settings screen (profile, notification toggles, logout)
+- [x] Push notifications (expo-notifications registration hook)
+- [x] Tests (67/67 passing across 11 test suites)
+- [x] TypeScript strict mode - zero errors
+
+## Technical Notes
+- Jest 29 required (Jest 30 incompatible with jest-expo 54)
+- Expo SDK 54 notification handler requires shouldShowBanner/shouldShowList
+- React 19.1.0 + React Native 0.81.5 (new architecture enabled)
+- Used --legacy-peer-deps for @testing-library/react-native install
