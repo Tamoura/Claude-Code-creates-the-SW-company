@@ -25,6 +25,21 @@ and architectural decisions.
 All scripts tested manually and produce correct output.
 `generate-dashboard.sh` renders all new sections in the report.
 
+## Additional Fixes (same branch)
+- Created 5 missing agent experience files (code-reviewer,
+  innovation-specialist, product-strategist, ui-ux-designer,
+  mobile-developer)
+- Renamed mobile brief from mobile-engineer.md to
+  mobile-developer.md (naming mismatch)
+- Created /code-reviewer command for lightweight ad-hoc reviews
+
+## Verification
+- 67/67 orchestrator-referenced files now exist
+- 14/14 agents have experience files
+- 14/14 agents have correctly-named briefs
+- 7/7 commands exist (orchestrator, audit, status, dashboard,
+  execute-task, check-system, code-reviewer)
+
 ## Dependencies
 - `jq` required (graceful fallback if missing)
 - `bc` used for decimal arithmetic
