@@ -1,42 +1,40 @@
 # Pulse Metrics Module (BACKEND-04)
 
-## Task
-Build team velocity and code quality metrics for the Pulse API.
+## Status: COMPLETE
+16/16 tests passing. Pushed to feature/pulse/inception.
 
-## Endpoints
+## Endpoints Implemented
 - `GET /api/v1/metrics/velocity?teamId=X&period=7d|30d|90d`
 - `GET /api/v1/metrics/coverage?teamId=X&repoId=Y`
-- `GET /api/v1/metrics/summary?teamId=X`
+- `GET /api/v1/metrics/summary?teamId=X&period=7d|30d|90d`
+- `POST /api/v1/metrics/aggregate?teamId=X`
 
-## Metrics to Compute
+## Metrics Computed
 1. **PR merge rate**: count of merged PRs per period
 2. **Cycle time**: median time from PR open to merge (hours)
 3. **Review time**: median time from PR open to first review (hours)
-4. **Test coverage**: latest coverage % per repo, trend over time
-5. **Summary**: aggregated view of all above
+4. **Test coverage**: latest coverage % per repo, trend (up/down/stable)
+5. **Summary**: aggregated velocity + coverage + activity counts
+6. **Aggregation**: stores MetricSnapshots for time-series data
 
-## Architecture Decisions
-- Service class `MetricsService` takes PrismaClient in constructor (PATTERN-010)
-- Handlers class `MetricsHandlers` formats responses
-- Routes file registers under `/api/v1/metrics`
-- Zod schemas for query validation
-- All auth required (team membership verified)
-- Time-series data from MetricSnapshot table
-- Real-time computation from raw PR/Commit/CoverageReport data
-- Aggregation function computes and stores MetricSnapshots
+## Architecture
+- Service class `MetricsService` takes PrismaClient (PATTERN-010)
+- Handlers class `MetricsHandlers` validates with Zod, delegates to service
+- Routes file registers under `/api/v1/metrics` with auth hook
+- Parallel queries via Promise.all in getSummary and runAggregation
+- Batch inserts via createMany for snapshots
 
-## File Structure
-```
-src/modules/metrics/
-  schemas.ts    - Zod validation schemas
-  service.ts    - Business logic, DB queries
-  handlers.ts   - Request/response formatting
-  routes.ts     - Fastify route registration
-```
+## Files Created/Modified
+- `src/modules/metrics/schemas.ts` - Zod validation schemas
+- `src/modules/metrics/service.ts` - Business logic, DB queries
+- `src/modules/metrics/handlers.ts` - Request/response formatting
+- `src/modules/metrics/routes.ts` - Fastify route registration
+- `src/app.ts` - Route registration
+- `tests/integration/metrics.test.ts` - 16 integration tests
 
-## Test Plan
-1. GET /api/v1/metrics/velocity - auth, empty data, with PRs, period filtering
-2. GET /api/v1/metrics/coverage - auth, empty data, with coverage reports
-3. GET /api/v1/metrics/summary - auth, empty data, with mixed data
-4. Aggregation function - computes and stores snapshots
-5. Edge cases: no team membership, invalid params
+## Learned Patterns
+- Create test users directly in DB with `app.jwt.sign()` instead of
+  hitting rate-limited auth endpoints. This is faster and avoids
+  coupling test setup to auth implementation.
+- Use `Prisma.XWhereInput` types instead of `any` for where clauses.
+- Use `createMany` for batch inserts instead of sequential creates.
