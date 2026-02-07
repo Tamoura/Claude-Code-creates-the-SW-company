@@ -171,7 +171,7 @@ The first user to create a team is automatically assigned Admin role. Admins can
 | Frontend | Next.js 14 + React 18 | 14.x / 18.x | App Router, SSR for public pages |
 | Styling | Tailwind CSS | 3.x | Utility-first |
 | Components | shadcn/ui | latest | Built on Radix UI, accessible |
-| Charts | Recharts or Chart.js | latest | Architect to decide in ADR |
+| Charts | Recharts | 2.x | Chosen in ADR-004: SVG-based, React-native composition, ~45KB gzipped |
 | Backend | Fastify | 4.x | Plugin architecture with modules |
 | ORM | Prisma | 5.x | Type-safe DB access |
 | Database | PostgreSQL | 15+ | Database name: `pulse_dev` |
@@ -192,7 +192,7 @@ The first user to create a team is automatically assigned Admin role. Admins can
 | `@octokit/rest` | GitHub REST API client |
 | `@octokit/webhooks` | GitHub webhook verification and parsing |
 | `fastify-websocket` | WebSocket support for Fastify |
-| `recharts` or `chart.js` | Interactive charts (TBD by Architect) |
+| `recharts` | Interactive SVG charts (chosen in ADR-004) |
 | `bcrypt` | Password hashing |
 | `jsonwebtoken` | JWT creation/verification |
 | `zod` | Schema validation |
@@ -300,24 +300,87 @@ Each module has: `routes.ts`, `handlers.ts`, `service.ts`, `schemas.ts`, `test.t
 
 ### Architecture Decision Records
 
-- **ADR-001**: fastify-websocket for real-time (vs Socket.io, SSE)
-- **ADR-002**: GitHub API polling + webhooks hybrid strategy
-- **ADR-003**: Rule-based sprint risk scoring (vs ML model)
-- **ADR-004**: Chart library selection (Recharts vs Chart.js)
-- **ADR-005**: Redis for WebSocket state and metric caching
+| ADR | Decision | Status | File |
+|-----|----------|--------|------|
+| ADR-001 | `@fastify/websocket` for real-time (native WebSocket via `ws`) | Accepted | `docs/ADRs/ADR-001-websocket-library.md` |
+| ADR-002 | Webhooks + polling hybrid for GitHub data ingestion | Accepted | `docs/ADRs/ADR-002-github-data-ingestion.md` |
+| ADR-003 | Rule-based weighted scoring for sprint risk (not ML) | Accepted | `docs/ADRs/ADR-003-sprint-risk-scoring.md` |
+| ADR-004 | **Recharts** for charts (SVG, React composition, ~45KB) | Accepted | `docs/ADRs/ADR-004-chart-library.md` |
+| ADR-005 | Single Redis instance for cache + pub/sub + rate limiting + WS state | Accepted | `docs/ADRs/ADR-005-realtime-caching-strategy.md` |
 
 Full ADRs at: `products/pulse/docs/ADRs/`
 
 ### Key Documents
 
 - PRD: `products/pulse/docs/PRD.md`
-- Architecture: `products/pulse/docs/architecture.md` (TBD by Architect)
-- API Schema: `products/pulse/docs/api-schema.yml` (TBD by Architect)
-- DB Schema: `products/pulse/docs/db-schema.sql` (TBD by Architect)
+- Architecture: `products/pulse/docs/architecture.md`
+- API Schema: `products/pulse/docs/api-schema.yml` (OpenAPI 3.0, 35 endpoints)
+- DB Schema: `products/pulse/docs/db-schema.sql` (15 tables, 50+ indexes)
+- ADRs: `products/pulse/docs/ADRs/` (5 ADRs)
 - Task Graph: `products/pulse/.claude/task-graph.yml`
+
+## Technical Architecture (Architect Addendum)
+
+### Key Decisions Summary
+
+1. **Monolithic Fastify app** with module-based organization. No microservices.
+2. **`@fastify/websocket`** for real-time (native WebSocket, not Socket.io). Room-based pub/sub via Redis.
+3. **Webhooks + polling hybrid** for GitHub data. Webhooks for real-time, 30-min polling as failsafe.
+4. **Rule-based sprint risk scoring** with 7 weighted factors. ML deferred to Phase 2.
+5. **Recharts** for all dashboard charts. SVG-based, React-native composition, ~45KB gzipped.
+6. **Single Redis instance** serving 4 purposes: metric caching, pub/sub broadcasting, rate limiting, WebSocket room state.
+7. **In-process job scheduler** (setInterval) for background jobs. No external queue for MVP.
+8. **BRIN indexes** on timestamp columns for time-series query optimization.
+
+### Component Registry Reuse
+
+The following components from the ConnectSW Component Registry will be adapted for Pulse:
+
+| Component | Source Product | Adaptation Needed |
+|-----------|---------------|-------------------|
+| Auth Plugin | stablecoin-gateway | Adapt for GitHub OAuth + RBAC roles |
+| Redis Plugin | stablecoin-gateway | Copy as-is |
+| Prisma Plugin | stablecoin-gateway | Copy as-is |
+| Observability Plugin | stablecoin-gateway | Copy as-is |
+| Crypto Utils | stablecoin-gateway | Copy as-is (for bcrypt, encryption) |
+| Encryption Utils | stablecoin-gateway | Rename env var to ENCRYPTION_KEY |
+| Logger | stablecoin-gateway | Copy as-is |
+| Redis Rate Limit Store | stablecoin-gateway | Copy as-is |
+| Error Classes | invoiceforge | Copy as-is (AppError + RFC 7807) |
+| Pagination Helper | invoiceforge | Copy as-is |
+| Token Manager | stablecoin-gateway | Copy as-is (frontend) |
+| useAuth hook | stablecoin-gateway | Adapt for GitHub OAuth |
+| useTheme hook | stablecoin-gateway | Change storage key to "pulse-theme" |
+| ErrorBoundary | stablecoin-gateway | Copy as-is |
+| StatCard | stablecoin-gateway | Copy as-is (dashboard KPI cards) |
+
+### Database Summary
+
+15 tables with 50+ indexes including BRIN indexes for time-series optimization:
+- **Core**: users, teams, team_members
+- **GitHub Data**: repositories, commits, pull_requests, reviews, deployments
+- **Metrics**: coverage_reports, metric_snapshots, risk_snapshots
+- **Notifications**: notifications, notification_preferences, device_tokens
+- **Infrastructure**: team_invitations, refresh_tokens, audit_logs, job_state
+
+### API Summary
+
+35 REST endpoints + 1 WebSocket endpoint organized by domain:
+- Auth (8): register, login, GitHub OAuth, refresh, forgot/reset password, verify email
+- Repositories (6): list, available, detail, connect, disconnect, sync status
+- Activity (2): paginated feed + WebSocket stream
+- Velocity (3): overview, cycle time, review time
+- Quality (2): overview, coverage trends
+- Risk (3): current score, history, factors + recommendations
+- Team (5): list, member detail, invite, role update, remove
+- Notifications (4): history, preferences get/put, dismiss
+- Settings (2): profile get/put
+- Webhooks (1): GitHub webhook receiver
+- Overview (1): cross-team VP view
+- Health (1): system health check
 
 ---
 
-**Created by**: Product Manager
+**Created by**: Product Manager + Architect
 **Last Updated**: 2026-02-07
-**Status**: PRD complete, pending CEO review and Architect handoff
+**Status**: Architecture complete, pending CEO review
