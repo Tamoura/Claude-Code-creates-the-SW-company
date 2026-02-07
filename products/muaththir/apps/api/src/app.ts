@@ -50,16 +50,7 @@ export async function buildApp(
   // Cookie (for refresh tokens)
   await app.register(cookie);
 
-  // Plugins (order: observability -> prisma -> auth)
-  await app.register(observabilityPlugin);
-  await app.register(prismaPlugin);
-  await app.register(authPlugin);
-
-  // Routes
-  await app.register(healthRoutes, { prefix: '/api' });
-  await app.register(authRoutes, { prefix: '/api/auth' });
-
-  // Global error handler (RFC 7807)
+  // Global error handler (RFC 7807) -- set BEFORE routes for encapsulation
   app.setErrorHandler((error, request, reply) => {
     if (error instanceof AppError) {
       const response: Record<string, unknown> = {
@@ -123,6 +114,15 @@ export async function buildApp(
       instance: request.url,
     });
   });
+
+  // Plugins (order: observability -> prisma -> auth)
+  await app.register(observabilityPlugin);
+  await app.register(prismaPlugin);
+  await app.register(authPlugin);
+
+  // Routes
+  await app.register(healthRoutes, { prefix: '/api' });
+  await app.register(authRoutes, { prefix: '/api/auth' });
 
   return app;
 }
