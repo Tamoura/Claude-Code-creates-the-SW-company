@@ -1,0 +1,503 @@
+generator client {
+  provider = "prisma-client-js"
+}
+
+datasource db {
+  provider = "postgresql"
+  url      = env("DATABASE_URL")
+}
+
+// ────────────────────────────────────────
+// Enums
+// ────────────────────────────────────────
+
+enum UserRole {
+  ADMIN
+  MEMBER
+  VIEWER
+
+  @@map("user_role")
+}
+
+enum SyncStatus {
+  idle
+  syncing
+  complete
+  error
+
+  @@map("sync_status")
+}
+
+enum PrState {
+  open
+  closed
+  merged
+
+  @@map("pr_state")
+}
+
+enum ReviewState {
+  approved
+  changes_requested
+  commented
+  dismissed
+
+  @@map("review_state")
+}
+
+enum DeploymentStatus {
+  pending
+  in_progress
+  success
+  failure
+  error
+
+  @@map("deployment_status")
+}
+
+enum DeploymentEnvironment {
+  production
+  staging
+  development
+  preview
+
+  @@map("deployment_environment")
+}
+
+enum MetricType {
+  prs_merged
+  median_cycle_time
+  median_review_time
+  test_coverage
+  avg_pr_size
+  review_comments_per_pr
+  merge_without_approval_rate
+  commit_count
+  deployment_count
+
+  @@map("metric_type")
+}
+
+enum AnomalyType {
+  commit_frequency_drop
+  stalled_pr
+  coverage_drop
+  risk_score_spike
+  review_load_imbalance
+
+  @@map("anomaly_type")
+}
+
+enum AnomalySeverity {
+  low
+  medium
+  high
+
+  @@map("anomaly_severity")
+}
+
+enum NotificationType {
+  pr_review_requested
+  pr_reviewed
+  pr_merged
+  deployment
+  anomaly
+  risk_change
+
+  @@map("notification_type")
+}
+
+enum DevicePlatform {
+  ios
+  android
+
+  @@map("device_platform")
+}
+
+enum RiskLevel {
+  low
+  medium
+  high
+
+  @@map("risk_level")
+}
+
+// ────────────────────────────────────────
+// Models
+// ────────────────────────────────────────
+
+model User {
+  id                   String    @id @default(cuid())
+  email                String    @unique
+  passwordHash         String?   @map("password_hash")
+  name                 String
+  githubUsername        String?   @unique @map("github_username")
+  githubToken          String?   @map("github_token")
+  avatarUrl            String?   @map("avatar_url")
+  timezone             String    @default("UTC")
+  emailVerified        Boolean   @default(false) @map("email_verified")
+  emailVerifyToken     String?   @map("email_verify_token")
+  emailVerifyExpires   DateTime? @map("email_verify_expires")
+  passwordResetToken   String?   @map("password_reset_token")
+  passwordResetExpires DateTime? @map("password_reset_expires")
+  createdAt            DateTime  @default(now()) @map("created_at")
+  updatedAt            DateTime  @updatedAt @map("updated_at")
+
+  teamMembers              TeamMember[]
+  notifications            Notification[]
+  notificationPreferences  NotificationPreference?
+  deviceTokens             DeviceToken[]
+  teamInvitationsSent      TeamInvitation[]     @relation("InvitedBy")
+  refreshTokens            RefreshToken[]
+
+  @@index([email])
+  @@index([githubUsername])
+  @@map("users")
+}
+
+model Team {
+  id        String   @id @default(cuid())
+  name      String
+  slug      String   @unique
+  timezone  String   @default("UTC")
+  createdAt DateTime @default(now()) @map("created_at")
+  updatedAt DateTime @updatedAt @map("updated_at")
+
+  members         TeamMember[]
+  repositories    Repository[]
+  metricSnapshots MetricSnapshot[]
+  riskSnapshots   RiskSnapshot[]
+  invitations     TeamInvitation[]
+
+  @@index([slug])
+  @@map("teams")
+}
+
+model TeamMember {
+  id       String   @id @default(cuid())
+  userId   String   @map("user_id")
+  teamId   String   @map("team_id")
+  role     UserRole @default(MEMBER)
+  joinedAt DateTime @default(now()) @map("joined_at")
+
+  user User @relation(fields: [userId], references: [id], onDelete: Cascade)
+  team Team @relation(fields: [teamId], references: [id], onDelete: Cascade)
+
+  @@unique([userId, teamId])
+  @@index([userId])
+  @@index([teamId])
+  @@index([teamId, role])
+  @@map("team_members")
+}
+
+model Repository {
+  id              String     @id @default(cuid())
+  teamId          String     @map("team_id")
+  githubId        BigInt     @map("github_id")
+  name            String
+  fullName        String     @map("full_name")
+  organization    String?
+  language        String?
+  defaultBranch   String     @default("main") @map("default_branch")
+  isPrivate       Boolean    @default(false) @map("is_private")
+  webhookId       BigInt?    @map("webhook_id")
+  webhookSecret   String?    @map("webhook_secret")
+  syncStatus      SyncStatus @default(idle) @map("sync_status")
+  syncProgress    Int        @default(0) @map("sync_progress")
+  syncStartedAt   DateTime?  @map("sync_started_at")
+  syncCompletedAt DateTime?  @map("sync_completed_at")
+  syncError       String?    @map("sync_error")
+  lastActivityAt  DateTime?  @map("last_activity_at")
+  connectedAt     DateTime   @default(now()) @map("connected_at")
+  disconnectedAt  DateTime?  @map("disconnected_at")
+  createdAt       DateTime   @default(now()) @map("created_at")
+  updatedAt       DateTime   @updatedAt @map("updated_at")
+
+  team            Team             @relation(fields: [teamId], references: [id], onDelete: Cascade)
+  commits         Commit[]
+  pullRequests    PullRequest[]
+  deployments     Deployment[]
+  coverageReports CoverageReport[]
+  metricSnapshots MetricSnapshot[]
+
+  @@unique([teamId, githubId])
+  @@index([teamId])
+  @@index([githubId])
+  @@index([teamId, syncStatus])
+  @@map("repositories")
+}
+
+model Commit {
+  id                    String   @id @default(cuid())
+  repoId                String   @map("repo_id")
+  sha                   String
+  message               String
+  authorGithubUsername   String?  @map("author_github_username")
+  authorEmail           String?  @map("author_email")
+  committedAt           DateTime @map("committed_at")
+  additions             Int      @default(0)
+  deletions             Int      @default(0)
+  branch                String?
+  url                   String?
+  createdAt             DateTime @default(now()) @map("created_at")
+
+  repository Repository @relation(fields: [repoId], references: [id], onDelete: Cascade)
+
+  @@unique([repoId, sha])
+  @@index([repoId])
+  @@index([repoId, committedAt(sort: Desc)])
+  @@index([authorGithubUsername])
+  @@index([committedAt(sort: Desc)])
+  @@map("commits")
+}
+
+model PullRequest {
+  id                    String    @id @default(cuid())
+  repoId                String    @map("repo_id")
+  githubId              BigInt    @map("github_id")
+  number                Int
+  title                 String
+  state                 PrState   @default(open)
+  authorGithubUsername   String?   @map("author_github_username")
+  authorAvatarUrl       String?   @map("author_avatar_url")
+  additions             Int       @default(0)
+  deletions             Int       @default(0)
+  commitsCount          Int       @default(0) @map("commits_count")
+  isDraft               Boolean   @default(false) @map("is_draft")
+  createdAt             DateTime  @map("created_at")
+  updatedAt             DateTime  @map("updated_at")
+  mergedAt              DateTime? @map("merged_at")
+  closedAt              DateTime? @map("closed_at")
+  firstReviewAt         DateTime? @map("first_review_at")
+  draftRemovedAt        DateTime? @map("draft_removed_at")
+  url                   String?
+  ingestedAt            DateTime  @default(now()) @map("ingested_at")
+
+  repository Repository @relation(fields: [repoId], references: [id], onDelete: Cascade)
+  reviews    Review[]
+
+  @@unique([repoId, githubId])
+  @@index([repoId])
+  @@index([repoId, state])
+  @@index([authorGithubUsername])
+  @@index([createdAt(sort: Desc)])
+  @@index([repoId, createdAt(sort: Desc)])
+  @@map("pull_requests")
+}
+
+model Review {
+  id                     String      @id @default(cuid())
+  prId                   String      @map("pr_id")
+  githubId               BigInt      @map("github_id")
+  reviewerGithubUsername  String      @map("reviewer_github_username")
+  reviewerAvatarUrl      String?     @map("reviewer_avatar_url")
+  state                  ReviewState
+  body                   String?
+  submittedAt            DateTime    @map("submitted_at")
+  isBot                  Boolean     @default(false) @map("is_bot")
+  createdAt              DateTime    @default(now()) @map("created_at")
+
+  pullRequest PullRequest @relation(fields: [prId], references: [id], onDelete: Cascade)
+
+  @@unique([prId, githubId])
+  @@index([prId])
+  @@index([reviewerGithubUsername])
+  @@index([submittedAt(sort: Desc)])
+  @@map("reviews")
+}
+
+model Deployment {
+  id          String                @id @default(cuid())
+  repoId      String                @map("repo_id")
+  githubId    BigInt                @map("github_id")
+  environment DeploymentEnvironment
+  status      DeploymentStatus      @default(pending)
+  commitSha   String?               @map("commit_sha")
+  description String?
+  url         String?
+  createdAt   DateTime              @map("created_at")
+  updatedAt   DateTime              @default(now()) @map("updated_at")
+
+  repository Repository @relation(fields: [repoId], references: [id], onDelete: Cascade)
+
+  @@unique([repoId, githubId])
+  @@index([repoId])
+  @@index([repoId, environment])
+  @@index([repoId, createdAt(sort: Desc)])
+  @@map("deployments")
+}
+
+model CoverageReport {
+  id         String   @id @default(cuid())
+  repoId     String   @map("repo_id")
+  commitSha  String   @map("commit_sha")
+  coverage   Decimal  @db.Decimal(5, 1)
+  source     String   @default("github_checks")
+  reportedAt DateTime @map("reported_at")
+  createdAt  DateTime @default(now()) @map("created_at")
+
+  repository Repository @relation(fields: [repoId], references: [id], onDelete: Cascade)
+
+  @@unique([repoId, commitSha])
+  @@index([repoId])
+  @@index([repoId, reportedAt(sort: Desc)])
+  @@map("coverage_reports")
+}
+
+model MetricSnapshot {
+  id          String     @id @default(cuid())
+  teamId      String     @map("team_id")
+  repoId      String?    @map("repo_id")
+  metric      MetricType
+  value       Decimal
+  periodStart DateTime   @map("period_start")
+  periodEnd   DateTime   @map("period_end")
+  metadata    Json?
+  computedAt  DateTime   @default(now()) @map("computed_at")
+
+  team       Team        @relation(fields: [teamId], references: [id], onDelete: Cascade)
+  repository Repository? @relation(fields: [repoId], references: [id], onDelete: Cascade)
+
+  @@index([teamId])
+  @@index([teamId, metric])
+  @@index([teamId, metric, periodStart(sort: Desc)])
+  @@index([teamId, periodStart(sort: Desc), periodEnd])
+  @@map("metric_snapshots")
+}
+
+model RiskSnapshot {
+  id              String    @id @default(cuid())
+  teamId          String    @map("team_id")
+  score           Int
+  level           RiskLevel
+  explanation     String
+  factors         Json
+  recommendations Json?
+  calculatedAt    DateTime  @default(now()) @map("calculated_at")
+
+  team Team @relation(fields: [teamId], references: [id], onDelete: Cascade)
+
+  @@index([teamId])
+  @@index([teamId, calculatedAt(sort: Desc)])
+  @@map("risk_snapshots")
+}
+
+model Notification {
+  id          String           @id @default(cuid())
+  userId      String           @map("user_id")
+  type        NotificationType
+  title       String
+  body        String
+  data        Json?
+  read        Boolean          @default(false)
+  dismissed   Boolean          @default(false)
+  delivered   Boolean          @default(false)
+  queuedUntil DateTime?        @map("queued_until")
+  createdAt   DateTime         @default(now()) @map("created_at")
+
+  user User @relation(fields: [userId], references: [id], onDelete: Cascade)
+
+  @@index([userId])
+  @@index([userId, createdAt(sort: Desc)])
+  @@map("notifications")
+}
+
+model NotificationPreference {
+  id                 String    @id @default(cuid())
+  userId             String    @unique @map("user_id")
+  prReviewRequested  Boolean   @default(true) @map("pr_review_requested")
+  prReviewedMerged   Boolean   @default(true) @map("pr_reviewed_merged")
+  deploymentEvents   Boolean   @default(true) @map("deployment_events")
+  anomalyAlerts      Boolean   @default(true) @map("anomaly_alerts")
+  riskChanges        Boolean   @default(true) @map("risk_changes")
+  quietHoursStart    String?   @map("quiet_hours_start")
+  quietHoursEnd      String?   @map("quiet_hours_end")
+  emailDigest        String    @default("none") @map("email_digest")
+  createdAt          DateTime  @default(now()) @map("created_at")
+  updatedAt          DateTime  @updatedAt @map("updated_at")
+
+  user User @relation(fields: [userId], references: [id], onDelete: Cascade)
+
+  @@index([userId])
+  @@map("notification_preferences")
+}
+
+model DeviceToken {
+  id         String         @id @default(cuid())
+  userId     String         @map("user_id")
+  platform   DevicePlatform
+  token      String
+  lastUsedAt DateTime       @default(now()) @map("last_used_at")
+  createdAt  DateTime       @default(now()) @map("created_at")
+
+  user User @relation(fields: [userId], references: [id], onDelete: Cascade)
+
+  @@unique([userId, token])
+  @@index([userId])
+  @@map("device_tokens")
+}
+
+model TeamInvitation {
+  id         String    @id @default(cuid())
+  teamId     String    @map("team_id")
+  email      String
+  role       UserRole  @default(MEMBER)
+  invitedBy  String    @map("invited_by")
+  token      String    @unique
+  acceptedAt DateTime? @map("accepted_at")
+  expiresAt  DateTime  @map("expires_at")
+  createdAt  DateTime  @default(now()) @map("created_at")
+
+  team    Team @relation(fields: [teamId], references: [id], onDelete: Cascade)
+  inviter User @relation("InvitedBy", fields: [invitedBy], references: [id], onDelete: Cascade)
+
+  @@unique([teamId, email])
+  @@index([teamId])
+  @@index([email])
+  @@index([token])
+  @@map("team_invitations")
+}
+
+model RefreshToken {
+  id        String   @id @default(cuid())
+  userId    String   @map("user_id")
+  tokenHash String   @unique @map("token_hash")
+  expiresAt DateTime @map("expires_at")
+  revoked   Boolean  @default(false)
+  createdAt DateTime @default(now()) @map("created_at")
+
+  user User @relation(fields: [userId], references: [id], onDelete: Cascade)
+
+  @@index([userId])
+  @@index([tokenHash])
+  @@map("refresh_tokens")
+}
+
+model AuditLog {
+  id           String   @id @default(cuid())
+  actor        String
+  action       String
+  resourceType String   @map("resource_type")
+  resourceId   String   @map("resource_id")
+  details      Json?
+  ip           String?
+  userAgent    String?  @map("user_agent")
+  timestamp    DateTime @default(now())
+
+  @@index([actor])
+  @@index([action])
+  @@index([resourceType, resourceId])
+  @@index([timestamp(sort: Desc)])
+  @@map("audit_logs")
+}
+
+model JobState {
+  jobName         String   @id @map("job_name")
+  lastProcessedAt DateTime @default(now()) @map("last_processed_at")
+  lastDurationMs  Int?     @map("last_duration_ms")
+  lastStatus      String   @default("success") @map("last_status")
+  lastError       String?  @map("last_error")
+  updatedAt       DateTime @updatedAt @map("updated_at")
+
+  @@map("job_state")
+}
