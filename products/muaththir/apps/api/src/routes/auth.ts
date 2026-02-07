@@ -1,4 +1,4 @@
-import { FastifyPluginAsync } from 'fastify';
+import { FastifyInstance, FastifyPluginAsync, FastifyReply } from 'fastify';
 import { z } from 'zod';
 import { hashPassword, verifyPassword, generateRefreshToken } from '../utils/crypto';
 import { ConflictError, UnauthorizedError, ValidationError } from '../lib/errors';
@@ -25,7 +25,15 @@ const REFRESH_TOKEN_DAYS = parseInt(
   10
 );
 
-function parentToResponse(parent: { id: string; email: string; name: string; subscriptionTier: string; createdAt: Date }) {
+interface ParentLike {
+  id: string;
+  email: string;
+  name: string;
+  subscriptionTier: string;
+  createdAt: Date;
+}
+
+function parentToResponse(parent: ParentLike) {
   return {
     id: parent.id,
     email: parent.email,
@@ -35,20 +43,57 @@ function parentToResponse(parent: { id: string; email: string; name: string; sub
   };
 }
 
+function validateBody<T>(schema: z.ZodType<T>, body: unknown): T {
+  const parsed = schema.safeParse(body);
+  if (!parsed.success) {
+    throw new ValidationError(
+      parsed.error.errors[0]?.message || 'Validation failed',
+      parsed.error.flatten().fieldErrors as Record<string, string[]>
+    );
+  }
+  return parsed.data;
+}
+
+async function issueTokens(
+  fastify: FastifyInstance,
+  reply: FastifyReply,
+  parent: ParentLike
+): Promise<string> {
+  const accessToken = fastify.jwt.sign(
+    { sub: parent.id, email: parent.email, tier: parent.subscriptionTier },
+    { expiresIn: process.env.JWT_EXPIRES_IN || '1h' }
+  );
+
+  const refreshTokenValue = generateRefreshToken();
+  const expiresAt = new Date();
+  expiresAt.setDate(expiresAt.getDate() + REFRESH_TOKEN_DAYS);
+
+  await fastify.prisma.session.create({
+    data: {
+      parentId: parent.id,
+      token: refreshTokenValue,
+      expiresAt,
+    },
+  });
+
+  reply.setCookie('refreshToken', refreshTokenValue, {
+    httpOnly: true,
+    secure: process.env.NODE_ENV === 'production',
+    sameSite: 'strict',
+    path: '/api/auth',
+    maxAge: REFRESH_TOKEN_DAYS * 24 * 60 * 60,
+  });
+
+  return accessToken;
+}
+
 const authRoutes: FastifyPluginAsync = async (fastify) => {
-  // POST /register
   fastify.post('/register', async (request, reply) => {
-    const parsed = registerSchema.safeParse(request.body);
-    if (!parsed.success) {
-      throw new ValidationError(
-        parsed.error.errors[0]?.message || 'Validation failed',
-        parsed.error.flatten().fieldErrors as Record<string, string[]>
-      );
-    }
+    const { name, email, password } = validateBody(
+      registerSchema,
+      request.body
+    );
 
-    const { name, email, password } = parsed.data;
-
-    // Check for duplicate email
     const existing = await fastify.prisma.parent.findUnique({
       where: { email },
     });
@@ -56,40 +101,12 @@ const authRoutes: FastifyPluginAsync = async (fastify) => {
       throw new ConflictError('Email already registered');
     }
 
-    // Hash password
     const passwordHash = await hashPassword(password);
-
-    // Create parent
     const parent = await fastify.prisma.parent.create({
       data: { name, email, passwordHash },
     });
 
-    // Generate tokens
-    const accessToken = fastify.jwt.sign(
-      { sub: parent.id, email: parent.email, tier: parent.subscriptionTier },
-      { expiresIn: process.env.JWT_EXPIRES_IN || '1h' }
-    );
-
-    const refreshTokenValue = generateRefreshToken();
-    const expiresAt = new Date();
-    expiresAt.setDate(expiresAt.getDate() + REFRESH_TOKEN_DAYS);
-
-    await fastify.prisma.session.create({
-      data: {
-        parentId: parent.id,
-        token: refreshTokenValue,
-        expiresAt,
-      },
-    });
-
-    // Set refresh token as HttpOnly cookie
-    reply.setCookie('refreshToken', refreshTokenValue, {
-      httpOnly: true,
-      secure: process.env.NODE_ENV === 'production',
-      sameSite: 'strict',
-      path: '/api/auth',
-      maxAge: REFRESH_TOKEN_DAYS * 24 * 60 * 60,
-    });
+    const accessToken = await issueTokens(fastify, reply, parent);
 
     return reply.code(201).send({
       user: parentToResponse(parent),
@@ -97,17 +114,8 @@ const authRoutes: FastifyPluginAsync = async (fastify) => {
     });
   });
 
-  // POST /login
   fastify.post('/login', async (request, reply) => {
-    const parsed = loginSchema.safeParse(request.body);
-    if (!parsed.success) {
-      throw new ValidationError(
-        parsed.error.errors[0]?.message || 'Validation failed',
-        parsed.error.flatten().fieldErrors as Record<string, string[]>
-      );
-    }
-
-    const { email, password } = parsed.data;
+    const { email, password } = validateBody(loginSchema, request.body);
 
     const parent = await fastify.prisma.parent.findUnique({
       where: { email },
@@ -122,31 +130,7 @@ const authRoutes: FastifyPluginAsync = async (fastify) => {
       throw new UnauthorizedError('Invalid email or password');
     }
 
-    // Generate tokens
-    const accessToken = fastify.jwt.sign(
-      { sub: parent.id, email: parent.email, tier: parent.subscriptionTier },
-      { expiresIn: process.env.JWT_EXPIRES_IN || '1h' }
-    );
-
-    const refreshTokenValue = generateRefreshToken();
-    const expiresAt = new Date();
-    expiresAt.setDate(expiresAt.getDate() + REFRESH_TOKEN_DAYS);
-
-    await fastify.prisma.session.create({
-      data: {
-        parentId: parent.id,
-        token: refreshTokenValue,
-        expiresAt,
-      },
-    });
-
-    reply.setCookie('refreshToken', refreshTokenValue, {
-      httpOnly: true,
-      secure: process.env.NODE_ENV === 'production',
-      sameSite: 'strict',
-      path: '/api/auth',
-      maxAge: REFRESH_TOKEN_DAYS * 24 * 60 * 60,
-    });
+    const accessToken = await issueTokens(fastify, reply, parent);
 
     return reply.code(200).send({
       user: parentToResponse(parent),
@@ -154,7 +138,6 @@ const authRoutes: FastifyPluginAsync = async (fastify) => {
     });
   });
 
-  // POST /logout (requires auth)
   fastify.post('/logout', {
     preHandler: [fastify.authenticate],
   }, async (request, reply) => {
@@ -164,23 +147,17 @@ const authRoutes: FastifyPluginAsync = async (fastify) => {
       await fastify.prisma.session.deleteMany({
         where: { token: refreshToken },
       });
-    }
-
-    // Also delete all sessions for this user if no specific token
-    if (!refreshToken && request.currentUser) {
+    } else if (request.currentUser) {
       await fastify.prisma.session.deleteMany({
         where: { parentId: request.currentUser.id },
       });
     }
 
-    reply.clearCookie('refreshToken', {
-      path: '/api/auth',
-    });
+    reply.clearCookie('refreshToken', { path: '/api/auth' });
 
     return reply.code(200).send({ message: 'Logged out successfully' });
   });
 
-  // POST /refresh
   fastify.post('/refresh', async (request, reply) => {
     const refreshToken = request.cookies.refreshToken;
 
@@ -188,7 +165,6 @@ const authRoutes: FastifyPluginAsync = async (fastify) => {
       throw new UnauthorizedError('Missing refresh token');
     }
 
-    // Find session
     const session = await fastify.prisma.session.findUnique({
       where: { token: refreshToken },
       include: { parent: true },
@@ -198,7 +174,6 @@ const authRoutes: FastifyPluginAsync = async (fastify) => {
       throw new UnauthorizedError('Invalid refresh token');
     }
 
-    // Check expiry
     if (session.expiresAt < new Date()) {
       await fastify.prisma.session.delete({
         where: { id: session.id },
@@ -211,40 +186,9 @@ const authRoutes: FastifyPluginAsync = async (fastify) => {
       where: { id: session.id },
     });
 
-    // Create new session
-    const newRefreshToken = generateRefreshToken();
-    const expiresAt = new Date();
-    expiresAt.setDate(expiresAt.getDate() + REFRESH_TOKEN_DAYS);
+    const accessToken = await issueTokens(fastify, reply, session.parent);
 
-    await fastify.prisma.session.create({
-      data: {
-        parentId: session.parentId,
-        token: newRefreshToken,
-        expiresAt,
-      },
-    });
-
-    // Generate new access token
-    const accessToken = fastify.jwt.sign(
-      {
-        sub: session.parent.id,
-        email: session.parent.email,
-        tier: session.parent.subscriptionTier,
-      },
-      { expiresIn: process.env.JWT_EXPIRES_IN || '1h' }
-    );
-
-    reply.setCookie('refreshToken', newRefreshToken, {
-      httpOnly: true,
-      secure: process.env.NODE_ENV === 'production',
-      sameSite: 'strict',
-      path: '/api/auth',
-      maxAge: REFRESH_TOKEN_DAYS * 24 * 60 * 60,
-    });
-
-    return reply.code(200).send({
-      accessToken,
-    });
+    return reply.code(200).send({ accessToken });
   });
 };
 
