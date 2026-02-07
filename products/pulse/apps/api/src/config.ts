@@ -28,6 +28,10 @@ const configSchema = z.object({
   // Frontend
   frontendUrl: z.string().default('http://localhost:3106'),
 
+  // AI (OpenRouter)
+  openrouterApiKey: z.string().optional(),
+  openrouterModel: z.string().default('anthropic/claude-sonnet-4-20250514'),
+
   // Internal
   internalApiKey: z.string().optional(),
 });
@@ -50,6 +54,8 @@ export function loadConfig(): Config {
     githubWebhookSecret: process.env.GITHUB_WEBHOOK_SECRET,
     encryptionKey: process.env.ENCRYPTION_KEY,
     frontendUrl: process.env.FRONTEND_URL,
+    openrouterApiKey: process.env.OPENROUTER_API_KEY,
+    openrouterModel: process.env.OPENROUTER_MODEL,
     internalApiKey: process.env.INTERNAL_API_KEY,
   });
 }

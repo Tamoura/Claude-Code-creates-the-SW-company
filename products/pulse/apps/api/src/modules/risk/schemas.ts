@@ -35,6 +35,7 @@ export interface RiskResult {
   score: number;
   level: 'low' | 'medium' | 'high';
   explanation: string;
+  recommendations: string[];
   factors: RiskFactor[];
   calculatedAt: string;
 }
