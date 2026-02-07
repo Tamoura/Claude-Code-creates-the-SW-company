@@ -568,4 +568,52 @@ describe('Metrics Routes', () => {
       expect(snapshots.length).toBeGreaterThan(0);
     });
   });
+
+  // ────────────────────────────────────────
+  // Team Membership Enforcement
+  // ────────────────────────────────────────
+
+  describe('Team membership enforcement', () => {
+    it('should return 403 when non-member accesses velocity', async () => {
+      const { token: outsiderToken } = await createUserWithToken(
+        app,
+        'outsider-metrics@pulse.dev',
+        'Outsider'
+      );
+
+      const response = await app.inject({
+        method: 'GET',
+        url: `/api/v1/metrics/velocity?teamId=${teamId}`,
+        headers: { authorization: `Bearer ${outsiderToken}` },
+      });
+
+      expect(response.statusCode).toBe(403);
+    });
+
+    it('should return 403 when non-member accesses coverage', async () => {
+      const { token: outsiderToken } = await createUserWithToken(
+        app,
+        'outsider-cov@pulse.dev',
+        'Outsider Cov'
+      );
+
+      const response = await app.inject({
+        method: 'GET',
+        url: `/api/v1/metrics/coverage?teamId=${teamId}`,
+        headers: { authorization: `Bearer ${outsiderToken}` },
+      });
+
+      expect(response.statusCode).toBe(403);
+    });
+
+    it('should allow team members to access metrics', async () => {
+      const response = await app.inject({
+        method: 'GET',
+        url: `/api/v1/metrics/velocity?teamId=${teamId}`,
+        headers: { authorization: `Bearer ${authToken}` },
+      });
+
+      expect(response.statusCode).toBe(200);
+    });
+  });
 });

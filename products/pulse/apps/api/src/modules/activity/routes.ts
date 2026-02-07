@@ -17,6 +17,10 @@ declare module 'fastify' {
       request: FastifyRequest,
       reply: FastifyReply
     ) => Promise<void>;
+    verifyTeamMembership: (
+      request: FastifyRequest,
+      reply: FastifyReply
+    ) => Promise<void>;
   }
 }
 
@@ -43,7 +47,7 @@ const activityRoutes: FastifyPluginAsync = async (fastify) => {
   fastify.get(
     '/',
     {
-      preHandler: [fastify.authenticate],
+      preHandler: [fastify.authenticate, fastify.verifyTeamMembership],
     },
     handleActivityFeed
   );

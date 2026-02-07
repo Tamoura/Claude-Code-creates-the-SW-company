@@ -6,9 +6,12 @@ const repoRoutes: FastifyPluginAsync = async (fastify) => {
   const service = new RepoService(fastify.prisma);
   const handlers = new RepoHandlers(service);
 
-  // All routes require authentication
+  // All routes require authentication + team membership
   fastify.addHook('onRequest', async (request, reply) => {
     await (fastify as any).authenticate(request, reply);
+  });
+  fastify.addHook('preHandler', async (request, reply) => {
+    await (fastify as any).verifyTeamMembership(request, reply);
   });
 
   /**

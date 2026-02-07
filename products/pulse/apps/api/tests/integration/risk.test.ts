@@ -660,4 +660,42 @@ describe('Risk Routes', () => {
       expect(coverageFactor.score).toBeGreaterThan(0);
     });
   });
+
+  // ────────────────────────────────────────
+  // Team Membership Enforcement
+  // ────────────────────────────────────────
+
+  describe('Team membership enforcement', () => {
+    it('should return 403 when non-member accesses risk', async () => {
+      const { token: outsiderToken } = await createUserWithToken(
+        app,
+        'outsider-risk@pulse.dev',
+        'Risk Outsider'
+      );
+
+      const response = await app.inject({
+        method: 'GET',
+        url: `/api/v1/risk/current?teamId=${teamId}`,
+        headers: { authorization: `Bearer ${outsiderToken}` },
+      });
+
+      expect(response.statusCode).toBe(403);
+    });
+
+    it('should return 403 when non-member accesses risk history', async () => {
+      const { token: outsiderToken } = await createUserWithToken(
+        app,
+        'outsider-hist@pulse.dev',
+        'History Outsider'
+      );
+
+      const response = await app.inject({
+        method: 'GET',
+        url: `/api/v1/risk/history?teamId=${teamId}`,
+        headers: { authorization: `Bearer ${outsiderToken}` },
+      });
+
+      expect(response.statusCode).toBe(403);
+    });
+  });
 });

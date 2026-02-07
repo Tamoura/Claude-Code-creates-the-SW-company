@@ -1,5 +1,6 @@
 import { FastifyInstance } from 'fastify';
 import { getTestApp, closeTestApp, cleanDatabase } from '../helpers/build-app.js';
+import { hashPassword } from '../../src/utils/crypto.js';
 
 describe('Repos Routes', () => {
   let app: FastifyInstance;
@@ -435,6 +436,76 @@ describe('Repos Routes', () => {
       });
 
       expect(response.statusCode).toBe(404);
+    });
+  });
+
+  // ────────────────────────────────────────
+  // Team Membership Enforcement
+  // ────────────────────────────────────────
+
+  describe('Team membership enforcement', () => {
+    it('should return 403 when user is not a member of the team', async () => {
+      // Create a second user who is NOT a member of the team
+      const passwordHash = await hashPassword('SecureP@ss123');
+      const otherUser = await app.prisma.user.create({
+        data: {
+          email: 'outsider@pulse.dev',
+          passwordHash,
+          name: 'Outsider',
+        },
+      });
+      const outsiderToken = app.jwt.sign(
+        { sub: otherUser.id, email: otherUser.email, name: otherUser.name },
+        { expiresIn: '1h' }
+      );
+
+      // Try to list repos for a team the user is NOT a member of
+      const response = await app.inject({
+        method: 'GET',
+        url: `/api/v1/repos?teamId=${teamId}`,
+        headers: { authorization: `Bearer ${outsiderToken}` },
+      });
+
+      expect(response.statusCode).toBe(403);
+    });
+
+    it('should return 403 when non-member tries to connect a repo', async () => {
+      const passwordHash = await hashPassword('SecureP@ss123');
+      const otherUser = await app.prisma.user.create({
+        data: {
+          email: 'outsider2@pulse.dev',
+          passwordHash,
+          name: 'Outsider 2',
+        },
+      });
+      const outsiderToken = app.jwt.sign(
+        { sub: otherUser.id, email: otherUser.email, name: otherUser.name },
+        { expiresIn: '1h' }
+      );
+
+      const response = await app.inject({
+        method: 'POST',
+        url: '/api/v1/repos',
+        headers: { authorization: `Bearer ${outsiderToken}` },
+        payload: {
+          teamId,
+          githubId: 99999,
+          name: 'hacked-repo',
+          fullName: 'evil/hacked-repo',
+        },
+      });
+
+      expect(response.statusCode).toBe(403);
+    });
+
+    it('should allow team members to access their team data', async () => {
+      const response = await app.inject({
+        method: 'GET',
+        url: `/api/v1/repos?teamId=${teamId}`,
+        headers: { authorization: `Bearer ${authToken}` },
+      });
+
+      expect(response.statusCode).toBe(200);
     });
   });
 });
