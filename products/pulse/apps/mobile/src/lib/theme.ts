@@ -67,13 +67,13 @@ export const borderRadius = {
 export function getRiskColor(
   score: number
 ): typeof colors.riskLow | typeof colors.riskMedium | typeof colors.riskHigh {
-  if (score <= 40) return colors.riskLow;
-  if (score <= 70) return colors.riskMedium;
+  if (score <= 33) return colors.riskLow;
+  if (score <= 66) return colors.riskMedium;
   return colors.riskHigh;
 }
 
 export function getRiskLevel(score: number): 'low' | 'medium' | 'high' {
-  if (score <= 40) return 'low';
-  if (score <= 70) return 'medium';
+  if (score <= 33) return 'low';
+  if (score <= 66) return 'medium';
   return 'high';
 }
