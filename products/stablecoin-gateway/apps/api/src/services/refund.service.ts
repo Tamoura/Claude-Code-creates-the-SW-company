@@ -176,7 +176,7 @@ export class RefundService {
         throw new AppError(404, 'payment-not-found', 'Payment session not found');
       }
 
-      const refundableStatuses = [PaymentStatus.COMPLETED, PaymentStatus.REFUNDED];
+      const refundableStatuses: PaymentStatus[] = [PaymentStatus.COMPLETED, PaymentStatus.REFUNDED];
       if (!refundableStatuses.includes(payment.status)) {
         throw new AppError(
           400,

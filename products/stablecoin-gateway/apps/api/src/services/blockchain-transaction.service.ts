@@ -270,7 +270,7 @@ export class BlockchainTransactionService {
    * Uses INCRBY for atomic increment (race-condition safe).
    * Sets a 48-hour TTL so the key auto-expires after the day rolls over.
    */
-  private async recordSpend(amount: number): Promise<void> {
+  private async _recordSpend(amount: number): Promise<void> {
     if (!this.redis) {
       return;
     }

@@ -123,7 +123,7 @@ const paymentLinkRoutes: FastifyPluginAsync = async (fastify) => {
 
         const link = await paymentLinkService.createPaymentLink(userId, {
           name: body.name,
-          amount: body.amount,
+          amount: body.amount ?? undefined,
           currency: body.currency,
           network: body.network,
           token: body.token,
@@ -132,7 +132,7 @@ const paymentLinkRoutes: FastifyPluginAsync = async (fastify) => {
           cancel_url: body.cancel_url,
           description: body.description,
           metadata: body.metadata,
-          max_usages: body.max_usages,
+          max_usages: body.max_usages ?? undefined,
           expires_at: body.expires_at ? new Date(body.expires_at) : undefined,
         });
 
@@ -360,7 +360,7 @@ const paymentLinkRoutes: FastifyPluginAsync = async (fastify) => {
           cancel_url: updates.cancel_url,
           description: updates.description,
           metadata: updates.metadata,
-          max_usages: updates.max_usages,
+          max_usages: updates.max_usages ?? undefined,
           expires_at: updates.expires_at ? new Date(updates.expires_at) : undefined,
         });
 
