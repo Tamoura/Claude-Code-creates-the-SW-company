@@ -123,6 +123,84 @@ cat >> "$OUTPUT_FILE" << EOF
 
 ---
 
+## 🏆 Agent Performance
+
+| Agent | Tasks | Success Rate | Avg Time |
+|-------|-------|--------------|----------|
+EOF
+
+# Read agent performance metrics
+PERF_METRICS="$REPO_ROOT/.claude/memory/metrics/agent-performance.json"
+if [ -f "$PERF_METRICS" ] && command -v jq &> /dev/null; then
+  for agent_name in $(jq -r '.agents | keys[]' "$PERF_METRICS" 2>/dev/null); do
+    tasks=$(jq -r --arg a "$agent_name" '.agents[$a].tasks_completed // 0' "$PERF_METRICS" 2>/dev/null)
+    rate=$(jq -r --arg a "$agent_name" '.agents[$a].success_rate // 0' "$PERF_METRICS" 2>/dev/null)
+    avg_t=$(jq -r --arg a "$agent_name" '.agents[$a].avg_time_minutes // 0' "$PERF_METRICS" 2>/dev/null)
+    # Format success rate as percentage
+    rate_pct=$(echo "$rate * 100" | bc 2>/dev/null || echo "0")
+    echo "| $agent_name | $tasks | ${rate_pct}% | ${avg_t}m |" >> "$OUTPUT_FILE"
+  done
+else
+  echo "| *No data* | - | - | - |" >> "$OUTPUT_FILE"
+fi
+
+cat >> "$OUTPUT_FILE" << EOF
+
+---
+
+## 🛡️ Quality Gates
+
+| Gate | Runs | Pass Rate | Issues Caught |
+|------|------|-----------|---------------|
+EOF
+
+# Read gate metrics
+GATE_METRICS_FILE="$REPO_ROOT/.claude/memory/metrics/gate-metrics.json"
+if [ -f "$GATE_METRICS_FILE" ] && command -v jq &> /dev/null; then
+  for gate_key in security_gate performance_gate testing_gate production_gate; do
+    gate_label=$(echo "$gate_key" | sed 's/_gate//' | sed 's/_/ /g')
+    runs=$(jq -r --arg g "$gate_key" '.[$g].runs // 0' "$GATE_METRICS_FILE" 2>/dev/null)
+    passes=$(jq -r --arg g "$gate_key" '.[$g].passes // 0' "$GATE_METRICS_FILE" 2>/dev/null)
+    issues=$(jq -r --arg g "$gate_key" '.[$g].issues_caught | length // 0' "$GATE_METRICS_FILE" 2>/dev/null)
+    if [ "$runs" -gt 0 ] 2>/dev/null; then
+      pass_rate=$(echo "scale=0; $passes * 100 / $runs" | bc 2>/dev/null || echo "0")
+    else
+      pass_rate="0"
+    fi
+    echo "| $gate_label | $runs | ${pass_rate}% | $issues |" >> "$OUTPUT_FILE"
+  done
+else
+  echo "| *No data* | - | - | - |" >> "$OUTPUT_FILE"
+fi
+
+cat >> "$OUTPUT_FILE" << EOF
+
+---
+
+## 📝 Recent Decisions
+
+| ID | Category | Title | Product |
+|----|----------|-------|---------|
+EOF
+
+# Read recent decisions
+DECISION_LOG="$REPO_ROOT/.claude/memory/decision-log.json"
+if [ -f "$DECISION_LOG" ] && command -v jq &> /dev/null; then
+  DEC_COUNT=$(jq '.decisions | length' "$DECISION_LOG" 2>/dev/null || echo "0")
+  if [ "$DEC_COUNT" -gt 0 ]; then
+    # Show last 5 decisions
+    jq -r '.decisions | .[-5:] | .[] | "| \(.id) | \(.category) | \(.title) | \(.product) |"' "$DECISION_LOG" 2>/dev/null >> "$OUTPUT_FILE"
+  else
+    echo "| *No decisions logged* | - | - | - |" >> "$OUTPUT_FILE"
+  fi
+else
+  echo "| *No data* | - | - | - |" >> "$OUTPUT_FILE"
+fi
+
+cat >> "$OUTPUT_FILE" << EOF
+
+---
+
 ## 💰 Resource Usage
 
 EOF

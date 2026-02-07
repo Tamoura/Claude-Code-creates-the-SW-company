@@ -1,62 +1,66 @@
 {
   "version": "1.0.0",
   "period": "2025-01-26 onwards",
-  "updated_at": "2025-01-26T10:00:00Z",
+  "updated_at": "2026-02-07T06:58:07Z",
   "agents": {
-    "product-manager": {
-      "tasks_completed": 0,
-      "success_rate": 0,
-      "avg_time_minutes": 0,
-      "estimated_vs_actual": 0,
-      "checkpoints_passed_first_try": 0,
-      "ceo_revisions_requested": 0
-    },
     "architect": {
-      "tasks_completed": 0,
-      "success_rate": 0,
-      "avg_time_minutes": 0,
+      "tasks_completed": 3,
+      "success_rate": 1.00,
+      "avg_time_minutes": 120,
       "estimated_vs_actual": 0,
       "checkpoints_passed_first_try": 0,
       "ceo_revisions_requested": 0
     },
     "backend-engineer": {
-      "tasks_completed": 0,
-      "success_rate": 0,
-      "avg_time_minutes": 0,
+      "tasks_completed": 3,
+      "success_rate": 1.00,
+      "avg_time_minutes": 54,
       "estimated_vs_actual": 0,
       "test_coverage_avg": 0,
       "tests_passed_first_run": 0
     },
+    "code-reviewer": {},
+    "devops-engineer": {
+      "tasks_completed": 2,
+      "success_rate": 1.00,
+      "avg_time_minutes": 10,
+      "estimated_vs_actual": 0,
+      "deployments": 0,
+      "deployment_success_rate": 0
+    },
     "frontend-engineer": {
-      "tasks_completed": 0,
-      "success_rate": 0,
-      "avg_time_minutes": 0,
+      "tasks_completed": 4,
+      "success_rate": 1.00,
+      "avg_time_minutes": 82.5,
       "estimated_vs_actual": 0,
       "test_coverage_avg": 0,
       "tests_passed_first_run": 0,
       "common_issues": []
     },
+    "innovation-specialist": {},
+    "mobile-developer": {},
+    "product-manager": {
+      "tasks_completed": 2,
+      "success_rate": 1.00,
+      "avg_time_minutes": 45,
+      "estimated_vs_actual": 0,
+      "checkpoints_passed_first_try": 0,
+      "ceo_revisions_requested": 0
+    },
+    "product-strategist": {},
     "qa-engineer": {
-      "tasks_completed": 0,
-      "success_rate": 0,
+      "tasks_completed": 5,
+      "success_rate": 0.80,
       "avg_time_minutes": 0,
       "testing_gates_run": 0,
       "testing_gates_passed_first_try": 0,
       "bugs_found": 0,
       "false_positives": 0
     },
-    "devops-engineer": {
-      "tasks_completed": 0,
-      "success_rate": 0,
-      "avg_time_minutes": 0,
-      "estimated_vs_actual": 0,
-      "deployments": 0,
-      "deployment_success_rate": 0
-    },
-    "technical-writer": {
-      "tasks_completed": 0,
-      "success_rate": 0,
-      "avg_time_minutes": 0
+    "security-engineer": {
+      "tasks_completed": 3,
+      "success_rate": 1.00,
+      "avg_time_minutes": 61.67
     },
     "support-engineer": {
       "tasks_completed": 0,
@@ -64,7 +68,16 @@
       "avg_time_minutes": 0,
       "bugs_triaged": 0,
       "reproduction_success_rate": 0
-    }
+    },
+    "technical-writer": {
+      "tasks_completed": 0,
+      "success_rate": 0,
+      "avg_time_minutes": 0
+    },
+    "ui-ux-designer": {}
   },
-  "insights": []
+  "insights": [
+    "qa-engineer has highest task count (5 tasks)",
+    "22 total tasks completed across all agents"
+  ]
 }

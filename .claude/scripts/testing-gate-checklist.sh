@@ -302,6 +302,13 @@ EOF
 echo "Report saved: $REPORT_FILE"
 echo ""
 
+# Record gate result in metrics
+if [ -f "$SCRIPT_DIR/update-gate-metrics.sh" ]; then
+  RESULT=$([ $FAILED -gt 0 ] && echo "fail" || echo "pass")
+  DETAILS="{\"passed\":$PASSED,\"failed\":$FAILED,\"warnings\":$WARNINGS,\"product\":\"$PRODUCT\"}"
+  bash "$SCRIPT_DIR/update-gate-metrics.sh" "testing" "$PRODUCT" "$RESULT" "$DETAILS" 2>/dev/null || true
+fi
+
 if [ $FAILED -gt 0 ]; then
   echo "╔══════════════════════════════════════════════════════════════╗"
   echo "║              ❌ TESTING GATE: FAIL                           ║"
