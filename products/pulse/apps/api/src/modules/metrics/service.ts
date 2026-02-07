@@ -1,4 +1,4 @@
-import { PrismaClient, MetricType } from '@prisma/client';
+import { PrismaClient, MetricType, Prisma } from '@prisma/client';
 import { logger } from '../../utils/logger.js';
 
 const PERIOD_MS: Record<string, number> = {
@@ -17,19 +17,41 @@ function median(values: number[]): number | null {
   return sorted[mid];
 }
 
+function roundToOneDp(value: number): number {
+  return Math.round(value * 10) / 10;
+}
+
+function determineTrend(
+  latest: number,
+  previous: number | null
+): 'up' | 'down' | 'stable' {
+  if (previous === null) return 'stable';
+  if (latest > previous) return 'up';
+  if (latest < previous) return 'down';
+  return 'stable';
+}
+
 export class MetricsService {
   constructor(private prisma: PrismaClient) {}
 
-  async getVelocity(teamId: string, period: string) {
-    const periodMs = PERIOD_MS[period] || PERIOD_MS['30d'];
-    const since = new Date(Date.now() - periodMs);
-
-    // Get all repos for this team
+  /**
+   * Fetch active repo IDs for a team.
+   */
+  private async getTeamRepoIds(teamId: string): Promise<string[]> {
     const repos = await this.prisma.repository.findMany({
       where: { teamId, disconnectedAt: null },
       select: { id: true },
     });
-    const repoIds = repos.map((r) => r.id);
+    return repos.map((r) => r.id);
+  }
+
+  /**
+   * Compute velocity metrics: PR merge rate, cycle time, review time.
+   */
+  async getVelocity(teamId: string, period: string) {
+    const periodMs = PERIOD_MS[period] || PERIOD_MS['30d'];
+    const since = new Date(Date.now() - periodMs);
+    const repoIds = await this.getTeamRepoIds(teamId);
 
     if (repoIds.length === 0) {
       return {
@@ -41,7 +63,6 @@ export class MetricsService {
       };
     }
 
-    // Get merged PRs in the period
     const mergedPrs = await this.prisma.pullRequest.findMany({
       where: {
         repoId: { in: repoIds },
@@ -55,22 +76,16 @@ export class MetricsService {
       },
     });
 
-    // Compute cycle times (PR created -> merged) in hours
     const cycleTimes = mergedPrs
       .filter((pr) => pr.mergedAt !== null)
       .map((pr) => {
-        const created = pr.createdAt.getTime();
-        const merged = pr.mergedAt!.getTime();
-        return (merged - created) / 3600000;
+        return (pr.mergedAt!.getTime() - pr.createdAt.getTime()) / 3600000;
       });
 
-    // Compute review times (PR created -> first review) in hours
     const reviewTimes = mergedPrs
       .filter((pr) => pr.firstReviewAt !== null)
       .map((pr) => {
-        const created = pr.createdAt.getTime();
-        const reviewed = pr.firstReviewAt!.getTime();
-        return (reviewed - created) / 3600000;
+        return (pr.firstReviewAt!.getTime() - pr.createdAt.getTime()) / 3600000;
       });
 
     const medianCycleTime = median(cycleTimes);
@@ -78,19 +93,25 @@ export class MetricsService {
 
     return {
       prsMerged: mergedPrs.length,
-      medianCycleTimeHours: medianCycleTime
-        ? Math.round(medianCycleTime * 10) / 10
+      medianCycleTimeHours: medianCycleTime !== null
+        ? roundToOneDp(medianCycleTime)
         : null,
-      medianReviewTimeHours: medianReviewTime
-        ? Math.round(medianReviewTime * 10) / 10
+      medianReviewTimeHours: medianReviewTime !== null
+        ? roundToOneDp(medianReviewTime)
         : null,
       period,
       since: since.toISOString(),
     };
   }
 
+  /**
+   * Compute test coverage per repo with trend direction.
+   */
   async getCoverage(teamId: string, repoId?: string) {
-    const where: any = { teamId, disconnectedAt: null };
+    const where: Prisma.RepositoryWhereInput = {
+      teamId,
+      disconnectedAt: null,
+    };
     if (repoId) {
       where.id = repoId;
     }
@@ -104,89 +125,76 @@ export class MetricsService {
       return { repositories: [], teamAverage: null };
     }
 
-    const results = [];
-    const latestCoverages: number[] = [];
-
-    for (const repo of repos) {
-      // Get the two most recent coverage reports
+    // Fetch coverage for all repos in parallel
+    const coveragePromises = repos.map(async (repo) => {
       const reports = await this.prisma.coverageReport.findMany({
         where: { repoId: repo.id },
         orderBy: { reportedAt: 'desc' },
         take: 2,
-        select: { coverage: true, reportedAt: true, commitSha: true },
+        select: { coverage: true, reportedAt: true },
       });
 
-      if (reports.length === 0) continue;
+      if (reports.length === 0) return null;
 
       const latest = Number(reports[0].coverage);
-      const previous =
-        reports.length > 1 ? Number(reports[1].coverage) : null;
-      latestCoverages.push(latest);
+      const previous = reports.length > 1 ? Number(reports[1].coverage) : null;
 
-      let trend: 'up' | 'down' | 'stable' = 'stable';
-      if (previous !== null) {
-        if (latest > previous) trend = 'up';
-        else if (latest < previous) trend = 'down';
-      }
-
-      results.push({
+      return {
         repoId: repo.id,
         repoName: repo.name,
         fullName: repo.fullName,
         latestCoverage: latest,
         previousCoverage: previous,
-        trend,
+        trend: determineTrend(latest, previous),
         reportedAt: reports[0].reportedAt.toISOString(),
-      });
-    }
+      };
+    });
 
+    const results = (await Promise.all(coveragePromises)).filter(
+      (r): r is NonNullable<typeof r> => r !== null
+    );
+
+    const latestCoverages = results.map((r) => r.latestCoverage);
     const teamAverage =
       latestCoverages.length > 0
-        ? Math.round(
-            (latestCoverages.reduce((a, b) => a + b, 0) /
-              latestCoverages.length) *
-              10
-          ) / 10
+        ? roundToOneDp(
+            latestCoverages.reduce((a, b) => a + b, 0) / latestCoverages.length
+          )
         : null;
 
     return { repositories: results, teamAverage };
   }
 
+  /**
+   * Aggregated summary combining velocity, coverage, and activity.
+   */
   async getSummary(teamId: string, period: string) {
     const periodMs = PERIOD_MS[period] || PERIOD_MS['30d'];
     const since = new Date(Date.now() - periodMs);
+    const repoIds = await this.getTeamRepoIds(teamId);
 
-    const repos = await this.prisma.repository.findMany({
-      where: { teamId, disconnectedAt: null },
-      select: { id: true },
-    });
-    const repoIds = repos.map((r) => r.id);
-
-    // Velocity
-    const velocity = await this.getVelocity(teamId, period);
-
-    // Coverage
-    const coverage = await this.getCoverage(teamId);
-
-    // Activity counts
-    let commitCount = 0;
-    let deploymentCount = 0;
-
-    if (repoIds.length > 0) {
-      commitCount = await this.prisma.commit.count({
-        where: {
-          repoId: { in: repoIds },
-          committedAt: { gte: since },
-        },
-      });
-
-      deploymentCount = await this.prisma.deployment.count({
-        where: {
-          repoId: { in: repoIds },
-          createdAt: { gte: since },
-        },
-      });
-    }
+    // Run velocity, coverage, and activity counts in parallel
+    const [velocity, coverage, commitCount, deploymentCount] =
+      await Promise.all([
+        this.getVelocity(teamId, period),
+        this.getCoverage(teamId),
+        repoIds.length > 0
+          ? this.prisma.commit.count({
+              where: {
+                repoId: { in: repoIds },
+                committedAt: { gte: since },
+              },
+            })
+          : 0,
+        repoIds.length > 0
+          ? this.prisma.deployment.count({
+              where: {
+                repoId: { in: repoIds },
+                createdAt: { gte: since },
+              },
+            })
+          : 0,
+      ]);
 
     return {
       velocity,
@@ -200,17 +208,22 @@ export class MetricsService {
     };
   }
 
+  /**
+   * Compute and store metric snapshots for a team.
+   * Designed to be called periodically (hourly/daily).
+   */
   async runAggregation(teamId: string) {
     const now = new Date();
-    const periodStart = new Date(now.getTime() - 86400000); // last 24h
+    const periodStart = new Date(now.getTime() - 86400000);
     const periodEnd = now;
 
-    const velocity = await this.getVelocity(teamId, '30d');
-    const coverage = await this.getCoverage(teamId);
+    const [velocity, coverage] = await Promise.all([
+      this.getVelocity(teamId, '30d'),
+      this.getCoverage(teamId),
+    ]);
 
-    const snapshots = [];
+    const snapshots: Prisma.MetricSnapshotCreateManyInput[] = [];
 
-    // Store prs_merged
     snapshots.push({
       teamId,
       metric: MetricType.prs_merged,
@@ -220,7 +233,6 @@ export class MetricsService {
       metadata: { period: '30d' },
     });
 
-    // Store median_cycle_time
     if (velocity.medianCycleTimeHours !== null) {
       snapshots.push({
         teamId,
@@ -232,7 +244,6 @@ export class MetricsService {
       });
     }
 
-    // Store median_review_time
     if (velocity.medianReviewTimeHours !== null) {
       snapshots.push({
         teamId,
@@ -244,7 +255,6 @@ export class MetricsService {
       });
     }
 
-    // Store test_coverage per repo
     for (const repo of coverage.repositories) {
       snapshots.push({
         teamId,
@@ -253,25 +263,23 @@ export class MetricsService {
         value: repo.latestCoverage,
         periodStart,
         periodEnd,
-        metadata: {
-          repoName: repo.repoName,
-          trend: repo.trend,
-        },
+        metadata: { repoName: repo.repoName, trend: repo.trend },
       });
     }
 
-    // Batch create
-    let created = 0;
-    for (const snap of snapshots) {
-      await this.prisma.metricSnapshot.create({ data: snap });
-      created++;
-    }
+    const result = await this.prisma.metricSnapshot.createMany({
+      data: snapshots,
+    });
 
     logger.info('Metrics aggregation complete', {
       teamId,
-      snapshotsCreated: created,
+      snapshotsCreated: result.count,
     });
 
-    return { snapshotsCreated: created, periodStart, periodEnd };
+    return {
+      snapshotsCreated: result.count,
+      periodStart,
+      periodEnd,
+    };
   }
 }

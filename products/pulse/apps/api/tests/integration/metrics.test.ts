@@ -4,6 +4,27 @@ import {
   closeTestApp,
   cleanDatabase,
 } from '../helpers/build-app.js';
+import { hashPassword } from '../../src/utils/crypto.js';
+
+/**
+ * Create a user directly in DB and return a signed JWT.
+ * This avoids hitting rate-limited auth endpoints in beforeEach.
+ */
+async function createUserWithToken(
+  app: FastifyInstance,
+  email: string,
+  name: string
+) {
+  const passwordHash = await hashPassword('SecureP@ss123');
+  const user = await app.prisma.user.create({
+    data: { email, passwordHash, name },
+  });
+  const token = app.jwt.sign(
+    { sub: user.id, email: user.email, name: user.name },
+    { expiresIn: '1h' }
+  );
+  return { token, userId: user.id };
+}
 
 describe('Metrics Routes', () => {
   let app: FastifyInstance;
@@ -23,19 +44,13 @@ describe('Metrics Routes', () => {
   beforeEach(async () => {
     await cleanDatabase(app);
 
-    // Register a user and get a token
-    const regResponse = await app.inject({
-      method: 'POST',
-      url: '/api/v1/auth/register',
-      payload: {
-        email: 'metricsuser@pulse.dev',
-        password: 'SecureP@ss123',
-        name: 'Metrics Test User',
-      },
-    });
-    const regBody = JSON.parse(regResponse.payload);
-    authToken = regBody.token;
-    userId = regBody.user.id;
+    const { token, userId: uid } = await createUserWithToken(
+      app,
+      'metricsuser@pulse.dev',
+      'Metrics Test User'
+    );
+    authToken = token;
+    userId = uid;
 
     // Create a team
     const team = await app.prisma.team.create({
