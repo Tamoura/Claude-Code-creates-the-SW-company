@@ -1,7 +1,7 @@
 {
   "version": "1.0.0",
   "period": "2025-01-26 onwards",
-  "updated_at": "2026-02-07T06:52:41Z",
+  "updated_at": "2026-02-07T06:58:07Z",
   "agents": {
     "architect": {
       "tasks_completed": 3,
@@ -19,6 +19,7 @@
       "test_coverage_avg": 0,
       "tests_passed_first_run": 0
     },
+    "code-reviewer": {},
     "devops-engineer": {
       "tasks_completed": 2,
       "success_rate": 1.00,
@@ -36,6 +37,8 @@
       "tests_passed_first_run": 0,
       "common_issues": []
     },
+    "innovation-specialist": {},
+    "mobile-developer": {},
     "product-manager": {
       "tasks_completed": 2,
       "success_rate": 1.00,
@@ -44,6 +47,7 @@
       "checkpoints_passed_first_try": 0,
       "ceo_revisions_requested": 0
     },
+    "product-strategist": {},
     "qa-engineer": {
       "tasks_completed": 5,
       "success_rate": 0.80,
@@ -69,7 +73,8 @@
       "tasks_completed": 0,
       "success_rate": 0,
       "avg_time_minutes": 0
-    }
+    },
+    "ui-ux-designer": {}
   },
   "insights": [
     "qa-engineer has highest task count (5 tasks)",

@@ -1,0 +1,17 @@
+{
+  "agent": "mobile-developer",
+  "version": "1.0.0",
+  "updated_at": "2026-02-07T00:00:00Z",
+  "learned_patterns": [],
+  "task_history": [],
+  "common_mistakes": [],
+  "preferred_approaches": [],
+  "efficiency_improvements": [],
+  "performance_metrics": {
+    "tasks_completed": 0,
+    "success_rate": 0,
+    "average_time_minutes": 0,
+    "median_time_minutes": 0,
+    "on_time_delivery": 0
+  }
+}
