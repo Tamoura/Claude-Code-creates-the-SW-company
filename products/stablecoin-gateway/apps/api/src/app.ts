@@ -31,10 +31,6 @@ import webhookWorkerRoutes from './routes/internal/webhook-worker.js';
 import { logger } from './utils/logger.js';
 import { AppError } from './types/index.js';
 import { RedisRateLimitStore } from './utils/redis-rate-limit-store.js';
-import { uuidParamSchema } from './utils/validation.js';
-
-// UUID v4 regex for fast path-param validation (RISK-062)
-const UUID_RE = /^[0-9a-f]{8}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{12}$/i;
 
 export async function buildApp(): Promise<FastifyInstance> {
   const fastify = Fastify({

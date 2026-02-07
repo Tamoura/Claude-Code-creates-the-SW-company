@@ -1,5 +1,4 @@
 import { FastifyPluginAsync, FastifyRequest } from 'fastify';
-import { logger } from '../../utils/logger.js';
 
 /**
  * Public checkout routes - no authentication required.
