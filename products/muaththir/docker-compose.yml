@@ -1,0 +1,81 @@
+# Mu'aththir - Docker Compose Configuration
+#
+# Usage:
+#   cp apps/api/.env.example apps/api/.env
+#   # Edit apps/api/.env with your values
+#   docker-compose up -d
+#
+# Ports:
+#   PostgreSQL: 5435 (host) -> 5432 (container)
+#   API:        5005
+#   Web:        3108
+
+services:
+  postgres:
+    image: postgres:15-alpine
+    container_name: muaththir-db
+    environment:
+      POSTGRES_USER: ${POSTGRES_USER:-postgres}
+      POSTGRES_PASSWORD: ${POSTGRES_PASSWORD:-postgres}
+      POSTGRES_DB: ${POSTGRES_DB:-muaththir_dev}
+    ports:
+      - "127.0.0.1:5435:5432"
+    volumes:
+      - muaththir_postgres_data:/var/lib/postgresql/data
+    healthcheck:
+      test: ["CMD-SHELL", "pg_isready -U ${POSTGRES_USER:-postgres}"]
+      interval: 10s
+      timeout: 5s
+      retries: 5
+
+  api:
+    build:
+      context: .
+      dockerfile: apps/api/Dockerfile
+    container_name: muaththir-api
+    ports:
+      - "127.0.0.1:5005:5005"
+    environment:
+      - NODE_ENV=${NODE_ENV:-development}
+      - PORT=5005
+      - DATABASE_URL=postgresql://${POSTGRES_USER:-postgres}:${POSTGRES_PASSWORD:-postgres}@postgres:5432/${POSTGRES_DB:-muaththir_dev}
+      - JWT_SECRET=${JWT_SECRET:-change-me-in-production}
+      - JWT_REFRESH_SECRET=${JWT_REFRESH_SECRET:-change-me-in-production-too}
+      - JWT_EXPIRES_IN=${JWT_EXPIRES_IN:-1h}
+      - FRONTEND_URL=${FRONTEND_URL:-http://localhost:3108}
+      - ALLOWED_ORIGINS=${ALLOWED_ORIGINS:-http://localhost:3108}
+    depends_on:
+      postgres:
+        condition: service_healthy
+    healthcheck:
+      test: ["CMD", "node", "-e", "require('http').get('http://localhost:5005/health', (r) => {process.exit(r.statusCode === 200 ? 0 : 1)})"]
+      interval: 30s
+      timeout: 5s
+      start_period: 15s
+      retries: 3
+    command: sh -c "npx prisma migrate deploy && node dist/index.js"
+
+  web:
+    build:
+      context: .
+      dockerfile: apps/web/Dockerfile
+    container_name: muaththir-web
+    ports:
+      - "127.0.0.1:3108:3108"
+    environment:
+      - NODE_ENV=${NODE_ENV:-development}
+      - NEXT_PUBLIC_API_URL=${NEXT_PUBLIC_API_URL:-http://localhost:5005}
+      - PORT=3108
+    depends_on:
+      api:
+        condition: service_healthy
+    healthcheck:
+      test: ["CMD", "node", "-e", "require('http').get('http://localhost:3108', (r) => {process.exit(r.statusCode === 200 ? 0 : 1)})"]
+      interval: 30s
+      timeout: 5s
+      start_period: 20s
+      retries: 3
+
+volumes:
+  muaththir_postgres_data:
+    driver: local
