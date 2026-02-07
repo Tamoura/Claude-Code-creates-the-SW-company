@@ -45,11 +45,14 @@ export default function ActivityPage() {
         <div
           data-testid="connection-status"
           className="flex items-center gap-2"
+          role="status"
+          aria-live="polite"
         >
           <div
             className={`w-2.5 h-2.5 rounded-full ${
               isConnected ? 'bg-green-500' : 'bg-red-500'
             }`}
+            aria-hidden="true"
           />
           <span className="text-sm text-[var(--text-secondary)]">
             {isConnected ? 'Connected' : 'Disconnected'}
@@ -57,46 +60,62 @@ export default function ActivityPage() {
         </div>
 
         <div className="flex items-center gap-3">
-          <select
-            data-testid="filter-repo"
-            value={repoFilter}
-            onChange={(e) => setRepoFilter(e.target.value)}
-            className="px-3 py-1.5 rounded-lg border border-[var(--border-card)] bg-[var(--bg-card)] text-sm text-[var(--text-primary)]"
-          >
-            <option value="all">All Repos</option>
-            {repos.map((repo) => (
-              <option key={repo} value={repo}>
-                {repo}
-              </option>
-            ))}
-          </select>
+          <div>
+            <label htmlFor="filter-repo" className="sr-only">
+              Filter by repository
+            </label>
+            <select
+              id="filter-repo"
+              data-testid="filter-repo"
+              value={repoFilter}
+              onChange={(e) => setRepoFilter(e.target.value)}
+              className="px-3 py-1.5 rounded-lg border border-[var(--border-card)] bg-[var(--bg-card)] text-sm text-[var(--text-primary)]"
+            >
+              <option value="all">All Repos</option>
+              {repos.map((repo) => (
+                <option key={repo} value={repo}>
+                  {repo}
+                </option>
+              ))}
+            </select>
+          </div>
 
-          <select
-            data-testid="filter-type"
-            value={typeFilter}
-            onChange={(e) => setTypeFilter(e.target.value)}
-            className="px-3 py-1.5 rounded-lg border border-[var(--border-card)] bg-[var(--bg-card)] text-sm text-[var(--text-primary)]"
-          >
-            <option value="all">All Types</option>
-            {types.map((type) => (
-              <option key={type} value={type}>
-                {type}
-              </option>
-            ))}
-          </select>
+          <div>
+            <label htmlFor="filter-type" className="sr-only">
+              Filter by event type
+            </label>
+            <select
+              id="filter-type"
+              data-testid="filter-type"
+              value={typeFilter}
+              onChange={(e) => setTypeFilter(e.target.value)}
+              className="px-3 py-1.5 rounded-lg border border-[var(--border-card)] bg-[var(--bg-card)] text-sm text-[var(--text-primary)]"
+            >
+              <option value="all">All Types</option>
+              {types.map((type) => (
+                <option key={type} value={type}>
+                  {type}
+                </option>
+              ))}
+            </select>
+          </div>
         </div>
       </div>
 
       {/* Event list */}
-      <div className="bg-[var(--bg-card)] border border-[var(--border-card)] rounded-xl p-6">
+      <section
+        className="bg-[var(--bg-card)] border border-[var(--border-card)] rounded-xl p-6"
+        aria-label="Activity events"
+      >
         {filteredEvents.length === 0 ? (
-          <div className="text-center py-8">
+          <div className="text-center py-8" role="status">
             <svg
               className="w-12 h-12 text-[var(--text-muted)] mx-auto mb-3"
               fill="none"
               viewBox="0 0 24 24"
               stroke="currentColor"
               strokeWidth={1.5}
+              aria-hidden="true"
             >
               <path
                 strokeLinecap="round"
@@ -112,9 +131,9 @@ export default function ActivityPage() {
             </p>
           </div>
         ) : (
-          <div className="space-y-4">
+          <ul className="space-y-4" role="list" aria-live="polite">
             {filteredEvents.map((event) => (
-              <div key={event.id} className="flex items-start gap-3">
+              <li key={event.id} className="flex items-start gap-3">
                 <EventIcon type={event.type} />
                 <div className="flex-1 min-w-0">
                   <div className="text-sm text-[var(--text-primary)]">
@@ -126,15 +145,15 @@ export default function ActivityPage() {
                       {event.repo}
                     </span>
                     <span className="text-xs text-[var(--text-muted)]">
-                      {event.time}
+                      <time>{event.time}</time>
                     </span>
                   </div>
                 </div>
-              </div>
+              </li>
             ))}
-          </div>
+          </ul>
         )}
-      </div>
+      </section>
     </div>
   );
 }

@@ -70,7 +70,7 @@ export default function RiskPage() {
         </div>
         <a
           href="/dashboard/risk/history"
-          className="text-indigo-600 hover:text-indigo-500 text-sm font-medium transition-colors"
+          className="text-[var(--accent-indigo)] hover:underline text-sm font-medium transition-colors"
         >
           View History
         </a>
@@ -81,14 +81,16 @@ export default function RiskPage() {
         <div className="lg:col-span-1">
           <RiskGauge score={mockRiskData.score} label="Sprint Risk" />
           <p className="text-xs text-[var(--text-muted)] mt-2">
-            Last calculated: {new Date(mockRiskData.calculatedAt).toLocaleString()}
+            <time dateTime={mockRiskData.calculatedAt}>
+              Last calculated: {new Date(mockRiskData.calculatedAt).toLocaleString()}
+            </time>
           </p>
         </div>
 
         {/* AI Explanation */}
-        <div className="lg:col-span-2 bg-[var(--bg-card)] border border-[var(--border-card)] rounded-xl p-6">
+        <section className="lg:col-span-2 bg-[var(--bg-card)] border border-[var(--border-card)] rounded-xl p-6" aria-label="AI risk explanation">
           <div className="flex items-center gap-2 mb-3">
-            <svg className="w-5 h-5 text-indigo-500" fill="none" viewBox="0 0 24 24" stroke="currentColor" strokeWidth={2}>
+            <svg className="w-5 h-5 text-indigo-500" fill="none" viewBox="0 0 24 24" stroke="currentColor" strokeWidth={2} aria-hidden="true">
               <path strokeLinecap="round" strokeLinejoin="round" d="M9.813 15.904 9 18.75l-.813-2.846a4.5 4.5 0 0 0-3.09-3.09L2.25 12l2.846-.813a4.5 4.5 0 0 0 3.09-3.09L9 5.25l.813 2.846a4.5 4.5 0 0 0 3.09 3.09L15.75 12l-2.846.813a4.5 4.5 0 0 0-3.09 3.09ZM18.259 8.715 18 9.75l-.259-1.035a3.375 3.375 0 0 0-2.455-2.456L14.25 6l1.036-.259a3.375 3.375 0 0 0 2.455-2.456L18 2.25l.259 1.035a3.375 3.375 0 0 0 2.455 2.456L21.75 6l-1.036.259a3.375 3.375 0 0 0-2.455 2.456Z" />
             </svg>
             <h2 className="text-lg font-semibold text-[var(--text-primary)]">AI Explanation</h2>
@@ -96,15 +98,15 @@ export default function RiskPage() {
           <p className="text-[var(--text-secondary)] leading-relaxed">
             {mockRiskData.explanation}
           </p>
-        </div>
+        </section>
       </div>
 
       {/* Factor Breakdown */}
-      <div className="bg-[var(--bg-card)] border border-[var(--border-card)] rounded-xl p-6">
+      <section className="bg-[var(--bg-card)] border border-[var(--border-card)] rounded-xl p-6" aria-label="Risk factor breakdown">
         <h2 className="text-lg font-semibold text-[var(--text-primary)] mb-4">Risk Factors</h2>
-        <div className="space-y-4">
+        <ul className="space-y-4" role="list">
           {mockRiskData.factors.map((factor) => (
-            <div key={factor.name} className="flex items-center gap-4">
+            <li key={factor.name} className="flex items-center gap-4">
               <div className="w-36 shrink-0">
                 <div className="text-sm font-medium text-[var(--text-primary)]">{factor.name}</div>
                 <div className="text-xs text-[var(--text-muted)]" data-testid="factor-weight">
@@ -113,7 +115,14 @@ export default function RiskPage() {
               </div>
               <div className="flex-1">
                 <div className="flex items-center gap-3">
-                  <div className="flex-1 bg-gray-200 dark:bg-gray-700 rounded-full h-2">
+                  <div
+                    className="flex-1 bg-gray-200 dark:bg-gray-700 rounded-full h-2"
+                    role="progressbar"
+                    aria-valuenow={factor.score}
+                    aria-valuemin={0}
+                    aria-valuemax={100}
+                    aria-label={`${factor.name}: ${factor.score} out of 100`}
+                  >
                     <div
                       className={`h-2 rounded-full ${getFactorColor(factor.score)}`}
                       style={{ width: `${factor.score}%` }}
@@ -122,6 +131,7 @@ export default function RiskPage() {
                   <span
                     className="text-sm font-semibold text-[var(--text-primary)] w-8 text-right"
                     data-testid="factor-score"
+                    aria-hidden="true"
                   >
                     {factor.score}
                   </span>
@@ -130,10 +140,10 @@ export default function RiskPage() {
                   {factor.detail}
                 </p>
               </div>
-            </div>
+            </li>
           ))}
-        </div>
-      </div>
+        </ul>
+      </section>
     </div>
   );
 }

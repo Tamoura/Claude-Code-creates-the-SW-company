@@ -13,10 +13,15 @@ export default function DashboardLayout({
 
   return (
     <div className="min-h-screen bg-[var(--bg-page)]">
+      <a href="#main-content" className="skip-to-content">
+        Skip to main content
+      </a>
       <Sidebar isOpen={sidebarOpen} onClose={() => setSidebarOpen(false)} />
       <div className="md:ml-56">
         <Header onMenuClick={() => setSidebarOpen(true)} />
-        <main className="p-6">{children}</main>
+        <main id="main-content" className="p-6" role="main">
+          {children}
+        </main>
       </div>
     </div>
   );

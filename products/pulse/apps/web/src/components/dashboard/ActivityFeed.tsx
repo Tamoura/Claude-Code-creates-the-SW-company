@@ -46,11 +46,14 @@ const mockEvents: ActivityEvent[] = [
 
 export default function ActivityFeed() {
   return (
-    <div className="bg-[var(--bg-card)] border border-[var(--border-card)] rounded-xl p-6">
-      <div className="text-sm text-[var(--text-secondary)] mb-4">Recent Activity</div>
-      <div className="space-y-4">
+    <section
+      className="bg-[var(--bg-card)] border border-[var(--border-card)] rounded-xl p-6"
+      aria-label="Recent activity feed"
+    >
+      <h2 className="text-sm font-medium text-[var(--text-secondary)] mb-4">Recent Activity</h2>
+      <ul className="space-y-4" role="list">
         {mockEvents.map((event) => (
-          <div key={event.id} className="flex items-start gap-3">
+          <li key={event.id} className="flex items-start gap-3">
             <EventIcon type={event.type} />
             <div className="flex-1 min-w-0">
               <div className="text-sm text-[var(--text-primary)]">
@@ -59,12 +62,14 @@ export default function ActivityFeed() {
               </div>
               <div className="flex items-center gap-2 mt-0.5">
                 <span className="text-xs text-[var(--text-muted)]">{event.repo}</span>
-                <span className="text-xs text-[var(--text-muted)]">{event.time}</span>
+                <span className="text-xs text-[var(--text-muted)]">
+                  <time>{event.time}</time>
+                </span>
               </div>
             </div>
-          </div>
+          </li>
         ))}
-      </div>
-    </div>
+      </ul>
+    </section>
   );
 }

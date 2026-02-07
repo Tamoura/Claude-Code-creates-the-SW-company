@@ -116,13 +116,14 @@ function NavItem({
     <Link
       href={href}
       onClick={onClick}
+      aria-current={isActive ? 'page' : undefined}
       className={`flex items-center gap-3 px-3 py-2.5 rounded-lg text-sm font-medium transition-colors ${
         isActive
           ? 'bg-indigo-600 text-white'
           : 'text-[var(--text-secondary)] hover:bg-[var(--bg-sidebar-hover)] hover:text-[var(--text-primary)]'
       }`}
     >
-      {icon}
+      <span aria-hidden="true">{icon}</span>
       {label}
     </Link>
   );
@@ -146,11 +147,13 @@ export default function Sidebar({ isOpen = true, onClose }: SidebarProps) {
         <div
           className="fixed inset-0 bg-black/50 z-40 md:hidden"
           onClick={onClose}
+          aria-hidden="true"
         />
       )}
 
       <aside
         data-testid="sidebar"
+        aria-label="Main navigation"
         className={`fixed left-0 top-0 bottom-0 w-56 bg-[var(--bg-sidebar)] flex flex-col border-r border-[var(--border-card)] z-50 transition-transform duration-300 ${
           isOpen ? 'translate-x-0' : '-translate-x-full'
         } md:translate-x-0`}
@@ -164,7 +167,7 @@ export default function Sidebar({ isOpen = true, onClose }: SidebarProps) {
           <span className="text-lg font-bold text-[var(--text-primary)]">Pulse</span>
         </div>
 
-        <nav className="flex-1 px-3 space-y-1 overflow-y-auto">
+        <nav aria-label="Dashboard navigation" className="flex-1 px-3 space-y-1 overflow-y-auto">
           {mainNav.map((item) => (
             <NavItem key={item.href} {...item} onClick={handleNavClick} />
           ))}
