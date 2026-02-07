@@ -33,12 +33,19 @@ export class ApiClientError extends Error {
   }
 }
 
-interface LoginResponse {
+interface AuthUser {
   id: string;
   email: string;
-  name?: string;
-  role: string;
+  name: string | null;
+  githubUsername: string | null;
+  avatarUrl: string | null;
+  githubConnected: boolean;
+  createdAt: string;
+}
+
+interface LoginResponse {
   token: string;
+  user: AuthUser;
 }
 
 async function request<T>(

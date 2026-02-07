@@ -132,9 +132,10 @@ function NavItem({
 interface SidebarProps {
   isOpen?: boolean;
   onClose?: () => void;
+  onLogout?: () => void;
 }
 
-export default function Sidebar({ isOpen = true, onClose }: SidebarProps) {
+export default function Sidebar({ isOpen = true, onClose, onLogout }: SidebarProps) {
   const handleNavClick = () => {
     if (onClose) {
       onClose();
@@ -193,6 +194,7 @@ export default function Sidebar({ isOpen = true, onClose }: SidebarProps) {
 
         <div className="px-3 py-4 border-t border-[var(--border-card)]">
           <button
+            onClick={onLogout}
             className="w-full flex items-center gap-3 px-3 py-2.5 rounded-lg text-sm font-medium text-[var(--text-secondary)] hover:bg-[var(--bg-sidebar-hover)] hover:text-[var(--text-primary)] transition-colors"
           >
             <svg className="w-5 h-5" fill="none" viewBox="0 0 24 24" stroke="currentColor" strokeWidth={1.5}>

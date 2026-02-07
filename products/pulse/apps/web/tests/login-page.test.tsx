@@ -8,6 +8,25 @@ jest.mock('next/link', () => {
   };
 });
 
+// Mock next/navigation
+jest.mock('next/navigation', () => ({
+  useRouter: () => ({ push: jest.fn(), replace: jest.fn() }),
+  usePathname: () => '/login',
+}));
+
+// Mock useAuth hook
+jest.mock('../src/hooks/useAuth', () => ({
+  useAuth: () => ({
+    login: jest.fn(),
+    signup: jest.fn(),
+    logout: jest.fn(),
+    isLoading: false,
+    isAuthenticated: false,
+    user: null,
+    error: null,
+  }),
+}));
+
 describe('Login Page', () => {
   it('renders the login form with email and password fields', () => {
     render(<LoginPage />);

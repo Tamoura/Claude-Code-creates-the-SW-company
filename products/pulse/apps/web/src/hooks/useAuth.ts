@@ -8,7 +8,6 @@ export interface User {
   id: string;
   email: string;
   name?: string;
-  role: string;
   githubUsername?: string;
 }
 
@@ -46,10 +45,10 @@ export function useAuth() {
     try {
       const result = await apiClient.login(email, password);
       const user: User = {
-        id: result.id,
-        email: result.email,
-        role: result.role,
-        name: result.name,
+        id: result.user.id,
+        email: result.user.email,
+        name: result.user.name ?? undefined,
+        githubUsername: result.user.githubUsername ?? undefined,
       };
       storedUser = user;
 
@@ -63,6 +62,39 @@ export function useAuth() {
       return result;
     } catch (error) {
       const message = error instanceof Error ? error.message : 'Login failed';
+      setState({
+        user: null,
+        isAuthenticated: false,
+        isLoading: false,
+        error: message,
+      });
+      throw error;
+    }
+  }, []);
+
+  const signup = useCallback(async (name: string, email: string, password: string) => {
+    setState((prev) => ({ ...prev, isLoading: true, error: null }));
+
+    try {
+      const result = await apiClient.signup(name, email, password);
+      const user: User = {
+        id: result.user.id,
+        email: result.user.email,
+        name: result.user.name ?? undefined,
+        githubUsername: result.user.githubUsername ?? undefined,
+      };
+      storedUser = user;
+
+      setState({
+        user,
+        isAuthenticated: true,
+        isLoading: false,
+        error: null,
+      });
+
+      return result;
+    } catch (error) {
+      const message = error instanceof Error ? error.message : 'Registration failed';
       setState({
         user: null,
         isAuthenticated: false,
@@ -91,6 +123,7 @@ export function useAuth() {
   return {
     ...state,
     login,
+    signup,
     logout,
   };
 }
