@@ -29,7 +29,19 @@ A holistic child development platform for parents tracking children ages 3-16 ac
 - `feature/muaththir/inception`
 
 ## Current Phase
-- PRD-01: Product Manager writing PRD (in progress)
+- PRD-01: COMPLETE (CEO approved)
+- ARCH-01: COMPLETE (CEO checkpoint)
+- FRONTEND-01: COMPLETE (frontend foundation)
+
+## Frontend Foundation (FRONTEND-01)
+- 37 pages built (all routes from site map, zero 404s)
+- 38 tests passing (6 test suites)
+- Next.js 14 + React 18 + Tailwind CSS
+- Recharts radar chart (dynamically imported)
+- Dimension colours/icons as constants
+- Mobile-responsive, accessible, Arabic-ready fonts
+- Token Manager (XSS-safe, copied from registry)
+- useAuth hook (adapted from registry)
 
 ## Key Decisions
 - Age bands: 3-5 (Early Years), 6-9 (Primary), 10-12 (Upper Primary), 13-16 (Secondary)
@@ -47,6 +59,29 @@ The Islamic dimension is NOT separate -- it is woven throughout:
 - Shukr (gratitude) connects to social-emotional
 - Tawakkul (reliance on Allah) connects to aspirational
 
+## Architecture Decisions
+- **Fastify 5.x + Prisma 6.x** (aligns with InvoiceForge, greenfield = latest)
+- **Recharts 2.x** for radar/spider chart (React-native, SVG, accessible)
+- **Radar cache**: PostgreSQL write-through with staleness flag (no Redis for MVP)
+- **Milestone seed**: TypeScript data files + Prisma seed (240 milestones, UPSERT)
+- **Image storage**: Local filesystem for MVP, S3 path documented for later
+- **date-fns 3.x** for age band calculations
+- **sharp** for image resizing (200x200)
+- **Zod 3.x** for input validation
+
+## Cross-Product Compatibility (Verified)
+- Ports: 3108/5005 (no conflicts with Pulse 3106/5003 or InvoiceForge 3109/5004)
+- Database: muaththir_dev (unique)
+- Dependencies: isolated per product, no shared lockfile constraints
+- CI: path-scoped workflows, no interference
+
 ## Deliverables
-1. `products/muaththir/docs/PRD.md`
-2. `products/muaththir/.claude/addendum.md`
+1. `products/muaththir/docs/PRD.md` (1,007 lines)
+2. `products/muaththir/.claude/addendum.md` (420+ lines)
+3. `products/muaththir/docs/architecture.md` (1,087 lines)
+4. `products/muaththir/docs/api-schema.yml` (1,672 lines, OpenAPI 3.0)
+5. `products/muaththir/docs/db-schema.sql` (285 lines)
+6. `products/muaththir/docs/ADRs/001-tech-stack.md`
+7. `products/muaththir/docs/ADRs/002-radar-chart-calculation.md`
+8. `products/muaththir/docs/ADRs/003-milestone-data-model.md`
+9. `products/muaththir/.claude/task-graph.yml`
