@@ -18,7 +18,7 @@ const analyticsRoutes: FastifyPluginAsync = async (fastify) => {
     { onRequest: [fastify.authenticate, fastify.requirePermission('read')] },
     async (request, reply) => {
       try {
-        const query = analyticsOverviewQuerySchema.parse(request.query);
+        analyticsOverviewQuerySchema.parse(request.query);
         const userId = request.currentUser!.id;
         const overview = await analyticsService.getOverview(userId);
         return reply.send(overview);
