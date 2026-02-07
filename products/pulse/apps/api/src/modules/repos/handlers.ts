@@ -1,0 +1,88 @@
+import { FastifyRequest, FastifyReply } from 'fastify';
+import { RepoService } from './service.js';
+import {
+  connectRepoSchema,
+  repoIdParamSchema,
+  listReposQuerySchema,
+} from './schemas.js';
+import { BadRequestError } from '../../lib/errors.js';
+
+export class RepoHandlers {
+  constructor(private service: RepoService) {}
+
+  async listRepos(request: FastifyRequest, reply: FastifyReply) {
+    const query = listReposQuerySchema.parse(request.query);
+    const teamId = (request.query as Record<string, string>).teamId;
+
+    if (!teamId) {
+      throw new BadRequestError('teamId query parameter is required');
+    }
+
+    const result = await this.service.listRepos({
+      teamId,
+      page: query.page,
+      limit: query.limit,
+      syncStatus: query.syncStatus as any,
+    });
+
+    return reply.code(200).send(result);
+  }
+
+  async connectRepo(request: FastifyRequest, reply: FastifyReply) {
+    const body = request.body as Record<string, unknown>;
+    const teamId = body.teamId as string;
+
+    if (!teamId) {
+      throw new BadRequestError('teamId is required');
+    }
+
+    const parsed = connectRepoSchema.safeParse(body);
+    if (!parsed.success) {
+      return reply.code(422).send({
+        type: 'https://pulse.dev/errors/validation-error',
+        title: 'Validation Error',
+        status: 422,
+        detail: 'Request validation failed',
+        errors: parsed.error.errors.map((e) => ({
+          field: e.path.join('.'),
+          message: e.message,
+        })),
+      });
+    }
+
+    const result = await this.service.connectRepo(teamId, parsed.data);
+    return reply.code(201).send(result);
+  }
+
+  async availableRepos(request: FastifyRequest, reply: FastifyReply) {
+    const userId = request.currentUser!.id;
+
+    // This will throw BadRequestError if no GitHub token
+    await this.service.requireGitHubToken(userId);
+
+    // In production, this would call GitHub API via Octokit.
+    // For now, return a placeholder indicating the token is valid.
+    return reply.code(200).send({
+      data: [],
+      message: 'GitHub API integration pending',
+    });
+  }
+
+  async disconnectRepo(request: FastifyRequest, reply: FastifyReply) {
+    const params = repoIdParamSchema.parse(request.params);
+    const userId = request.currentUser!.id;
+    const teamId = await this.service.resolveTeamId(userId);
+
+    const result = await this.service.disconnectRepo(params.id, teamId);
+    return reply.code(200).send(result);
+  }
+
+  async getSyncStatus(request: FastifyRequest, reply: FastifyReply) {
+    const params = repoIdParamSchema.parse(request.params);
+    const userId = request.currentUser!.id;
+    const teamId = await this.service.resolveTeamId(userId);
+
+    const result = await this.service.getSyncStatus(params.id, teamId);
+    return reply.code(200).send(result);
+  }
+}
