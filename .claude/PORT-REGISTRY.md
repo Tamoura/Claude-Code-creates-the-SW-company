@@ -20,7 +20,7 @@
 | 3104 | stablecoin-gateway | Active | http://localhost:3104 |
 | 3105 | quantum-computing-usecases | Active | http://localhost:3105 |
 | 3106 | pulse | Active | http://localhost:3106 |
-| 3108 | *Available* | Free | - |
+| 3108 | muaththir | Active | http://localhost:3108 |
 | 3109 | invoiceforge | Active | http://localhost:3109 |
 | 3110-3199 | *Available* | Free | - |
 
@@ -31,6 +31,7 @@
 | 5001 | stablecoin-gateway | Active | http://localhost:5001 |
 | 5003 | pulse | Active | http://localhost:5003 |
 | 5004 | invoiceforge | Active | http://localhost:5004 |
+| 5005 | muaththir | Active | http://localhost:5005 |
 | 5007-5099 | *Available* | Free | - |
 
 ### Mobile Development (8081-8099)
