@@ -1,7 +1,9 @@
+import crypto from 'node:crypto';
 import { FastifyPluginAsync } from 'fastify';
 import { registerSchema, loginSchema } from './schemas.js';
 import { hashPassword, verifyPassword } from '../../utils/crypto.js';
 import { AppError, ConflictError, UnauthorizedError } from '../../lib/errors.js';
+import { encryptToken } from '../../utils/encryption.js';
 import { logger } from '../../utils/logger.js';
 
 const authRoutes: FastifyPluginAsync = async (fastify) => {
@@ -142,56 +144,159 @@ const authRoutes: FastifyPluginAsync = async (fastify) => {
 
   /**
    * GET /api/v1/auth/github
-   * Initiate GitHub OAuth flow. Stub for foundation.
+   * Initiate GitHub OAuth flow.
    */
-  fastify.get('/github', async (_request, reply) => {
+  fastify.get('/github', async (request, reply) => {
     const clientId = process.env.GITHUB_CLIENT_ID;
-    if (!clientId) {
+    if (!clientId || clientId === 'your_github_client_id') {
       return reply.code(500).send({
         type: 'https://pulse.dev/errors/configuration-error',
         title: 'Configuration Error',
         status: 500,
-        detail: 'GitHub OAuth is not configured',
+        detail: 'GitHub OAuth is not configured. Set GITHUB_CLIENT_ID in .env',
       });
     }
 
-    const frontendUrl = process.env.FRONTEND_URL || 'http://localhost:3106';
-    const redirectUri = `${frontendUrl}/api/v1/auth/github/callback`;
+    const port = process.env.PORT || '5003';
+    const redirectUri = `http://localhost:${port}/api/v1/auth/github/callback`;
     const scope = 'repo read:org read:user';
-    const githubUrl = `https://github.com/login/oauth/authorize?client_id=${clientId}&redirect_uri=${encodeURIComponent(redirectUri)}&scope=${encodeURIComponent(scope)}`;
+    const state = crypto.randomUUID();
+    const githubUrl = `https://github.com/login/oauth/authorize?client_id=${clientId}&redirect_uri=${encodeURIComponent(redirectUri)}&scope=${encodeURIComponent(scope)}&state=${state}`;
 
     return reply.redirect(githubUrl);
   });
 
   /**
    * GET /api/v1/auth/github/callback
-   * GitHub OAuth callback. Stub for foundation.
+   * GitHub OAuth callback. Exchanges code for token, upserts user, redirects to frontend.
    */
   fastify.get('/github/callback', async (request, reply) => {
     const { code } = request.query as { code?: string };
+    const frontendUrl = process.env.FRONTEND_URL || 'http://localhost:3106';
+
     if (!code) {
-      return reply.code(400).send({
-        type: 'https://pulse.dev/errors/bad-request',
-        title: 'Bad Request',
-        status: 400,
-        detail: 'Missing authorization code',
-      });
+      return reply.redirect(`${frontendUrl}/login?error=missing_code`);
     }
 
-    // TODO: Exchange code for token, create/update user
-    // When storing the GitHub OAuth token, encrypt it before saving:
-    //
-    //   import { encryptToken } from '../../utils/encryption.js';
-    //   const encryptedToken = encryptToken(githubAccessToken);
-    //   await fastify.prisma.user.update({
-    //     where: { id: userId },
-    //     data: { githubToken: encryptedToken },
-    //   });
-    //
-    return reply.code(200).send({
-      message: 'GitHub OAuth callback received',
-      code: 'received',
-    });
+    const clientId = process.env.GITHUB_CLIENT_ID;
+    const clientSecret = process.env.GITHUB_CLIENT_SECRET;
+    if (!clientId || !clientSecret) {
+      return reply.redirect(`${frontendUrl}/login?error=oauth_not_configured`);
+    }
+
+    try {
+      // 1. Exchange code for access token
+      const tokenRes = await fetch('https://github.com/login/oauth/access_token', {
+        method: 'POST',
+        headers: {
+          'Content-Type': 'application/json',
+          Accept: 'application/json',
+        },
+        body: JSON.stringify({
+          client_id: clientId,
+          client_secret: clientSecret,
+          code,
+        }),
+      });
+      const tokenData = await tokenRes.json() as { access_token?: string; error?: string };
+
+      if (!tokenData.access_token) {
+        logger.error('GitHub OAuth token exchange failed', { error: tokenData.error });
+        return reply.redirect(`${frontendUrl}/login?error=token_exchange_failed`);
+      }
+
+      const githubAccessToken = tokenData.access_token;
+
+      // 2. Fetch GitHub user profile
+      const userRes = await fetch('https://api.github.com/user', {
+        headers: {
+          Authorization: `Bearer ${githubAccessToken}`,
+          Accept: 'application/vnd.github+json',
+        },
+      });
+      const ghUser = await userRes.json() as {
+        login: string;
+        email: string | null;
+        name: string | null;
+        avatar_url: string;
+        id: number;
+      };
+
+      if (!ghUser.login) {
+        return reply.redirect(`${frontendUrl}/login?error=github_profile_failed`);
+      }
+
+      // If GitHub doesn't return a public email, fetch from emails API
+      let email = ghUser.email;
+      if (!email) {
+        const emailsRes = await fetch('https://api.github.com/user/emails', {
+          headers: {
+            Authorization: `Bearer ${githubAccessToken}`,
+            Accept: 'application/vnd.github+json',
+          },
+        });
+        const emails = await emailsRes.json() as Array<{ email: string; primary: boolean; verified: boolean }>;
+        const primary = emails.find((e) => e.primary && e.verified);
+        email = primary?.email || emails[0]?.email || null;
+      }
+
+      if (!email) {
+        return reply.redirect(`${frontendUrl}/login?error=no_github_email`);
+      }
+
+      // 3. Encrypt the GitHub token before storage
+      const encryptedGhToken = encryptToken(githubAccessToken);
+
+      // 4. Upsert user: find by githubUsername or email, create if neither exists
+      let user = await fastify.prisma.user.findFirst({
+        where: {
+          OR: [
+            { githubUsername: ghUser.login },
+            { email },
+          ],
+        },
+      });
+
+      if (user) {
+        user = await fastify.prisma.user.update({
+          where: { id: user.id },
+          data: {
+            githubUsername: ghUser.login,
+            githubToken: encryptedGhToken,
+            avatarUrl: ghUser.avatar_url,
+            name: user.name || ghUser.name || ghUser.login,
+          },
+        });
+        logger.info('GitHub OAuth login', { userId: user.id, github: ghUser.login });
+      } else {
+        user = await fastify.prisma.user.create({
+          data: {
+            email,
+            name: ghUser.name || ghUser.login,
+            githubUsername: ghUser.login,
+            githubToken: encryptedGhToken,
+            avatarUrl: ghUser.avatar_url,
+          },
+        });
+        logger.info('GitHub OAuth signup', { userId: user.id, github: ghUser.login });
+      }
+
+      // 5. Generate JWT
+      const jwt = fastify.jwt.sign(
+        {
+          sub: user.id,
+          email: user.email,
+          name: user.name,
+        },
+        { expiresIn: '1h' }
+      );
+
+      // 6. Redirect to frontend with token
+      return reply.redirect(`${frontendUrl}/auth/callback?token=${jwt}`);
+    } catch (err) {
+      logger.error('GitHub OAuth error', { error: err });
+      return reply.redirect(`${frontendUrl}/login?error=oauth_failed`);
+    }
   });
 };
 

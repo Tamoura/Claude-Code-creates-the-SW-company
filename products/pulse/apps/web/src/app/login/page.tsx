@@ -1,14 +1,30 @@
 'use client';
 
 import Link from 'next/link';
-import { useRouter } from 'next/navigation';
+import { useRouter, useSearchParams } from 'next/navigation';
 import { useState } from 'react';
 import { useAuth } from '../../hooks/useAuth';
 
+const API_BASE_URL = process.env.NEXT_PUBLIC_API_URL || 'http://localhost:5003';
+
+const OAUTH_ERROR_MESSAGES: Record<string, string> = {
+  missing_code: 'GitHub authorization was cancelled.',
+  oauth_not_configured: 'GitHub OAuth is not configured on the server.',
+  token_exchange_failed: 'Failed to authenticate with GitHub. Please try again.',
+  github_profile_failed: 'Could not retrieve your GitHub profile.',
+  no_github_email: 'No verified email found on your GitHub account.',
+  oauth_failed: 'GitHub sign-in failed. Please try again.',
+  auth_failed: 'Authentication failed. Please try again.',
+};
+
 export default function LoginPage() {
+  const searchParams = useSearchParams();
+  const oauthError = searchParams.get('error');
   const [email, setEmail] = useState('');
   const [password, setPassword] = useState('');
-  const [error, setError] = useState<string | null>(null);
+  const [error, setError] = useState<string | null>(
+    oauthError ? OAUTH_ERROR_MESSAGES[oauthError] || 'Sign-in failed.' : null
+  );
   const router = useRouter();
   const { login, isLoading } = useAuth();
 
@@ -24,8 +40,7 @@ export default function LoginPage() {
   };
 
   const handleGitHubLogin = () => {
-    // TODO: redirect to GitHub OAuth
-    window.location.href = 'http://localhost:5003/api/v1/auth/github';
+    window.location.href = `${API_BASE_URL}/api/v1/auth/github`;
   };
 
   return (
