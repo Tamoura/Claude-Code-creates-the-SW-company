@@ -225,12 +225,12 @@ The system requires 240+ milestones at launch (10 per dimension per age band, 6 
 | Frontend | Next.js 14 + React 18 | 14.x / 18.x | App Router, SSR for public pages |
 | Styling | Tailwind CSS | 3.x | Utility-first |
 | Components | shadcn/ui | latest | Built on Radix UI, accessible |
-| Backend | Fastify | 4.x | Monolith with module separation |
-| ORM | Prisma | 5.x | Type-safe DB access |
+| Backend | Fastify | 5.x | Monolith with module separation (see ADR-001) |
+| ORM | Prisma | 6.x | Type-safe DB access (see ADR-001) |
 | Database | PostgreSQL | 15+ | Database name: `muaththir_dev` |
 | Auth | Custom JWT + bcrypt | - | 1hr access, 7d refresh, cost-12 bcrypt |
 | Validation | Zod | 3.x | API input validation |
-| Charting | TBD (Architect decides) | - | Radar chart is core component |
+| Charting | Recharts | 2.x | Radar chart, trend charts (see ADR-001) |
 | Email | SendGrid or AWS SES | - | Transactional only |
 | Testing | Jest + RTL + Playwright | - | Unit, component, E2E |
 | Linting | ESLint + Prettier | - | Company standard |
@@ -317,12 +317,88 @@ Each module has: `routes.ts`, `handlers.ts`, `service.ts`, `schemas.ts`, `test.t
 ### Key Documents
 
 - PRD: `products/muaththir/docs/PRD.md`
-- Architecture: `products/muaththir/docs/architecture.md` (to be created by Architect)
-- API Schema: `products/muaththir/docs/api-schema.yml` (to be created by Architect)
-- DB Schema: `products/muaththir/docs/db-schema.sql` (to be created by Architect)
+- Architecture: `products/muaththir/docs/architecture.md`
+- API Schema: `products/muaththir/docs/api-schema.yml`
+- DB Schema: `products/muaththir/docs/db-schema.sql`
+- ADR-001: `products/muaththir/docs/ADRs/001-tech-stack.md`
+- ADR-002: `products/muaththir/docs/ADRs/002-radar-chart-calculation.md`
+- ADR-003: `products/muaththir/docs/ADRs/003-milestone-data-model.md`
+
+## Technical Architecture (Architect Decisions)
+
+This section summarises key decisions made during ARCH-01. Full details in the architecture doc and ADRs.
+
+### Dependency Versions (ADR-001)
+
+| Dependency | Version | Rationale |
+|-----------|---------|-----------|
+| Fastify | 5.x | Greenfield product, aligns with InvoiceForge |
+| Prisma | 6.x | Greenfield product, improved JSON filtering |
+| Recharts | 2.x | React-native radar chart, SVG (accessible) |
+| date-fns | 3.x | Age band calculation, date formatting |
+| sharp | latest | Child photo resizing (200x200) |
+
+### Radar Chart Caching (ADR-002)
+
+- **Strategy**: Write-through PostgreSQL cache with staleness flag.
+- **Cache table**: `score_cache` (6 rows per child, one per dimension).
+- **On write**: Set `stale = true` for all 6 dimensions of affected child.
+- **On read**: If stale, recalculate from 2 SQL queries + pure function. If fresh, return cached (~1ms).
+- **No Redis** for MVP. PostgreSQL cache is sufficient for 5,000 users.
+- **Score formula** (pure function, independently testable):
+  ```
+  score = (min(obs_count, 10)/10 * 40) + (achieved/total * 40) + (positive/total * 20)
+  ```
+
+### Milestone Seed Data (ADR-003)
+
+- **Storage**: `milestone_definitions` Prisma model + database table.
+- **Seed**: TypeScript data files per dimension, loaded via `npx prisma db seed`.
+- **Progress**: `child_milestones` junction table, lazy row creation.
+- **History**: JSONB column `achieved_history` on child_milestones (array of mark/unmark events).
+- **Count**: 240 milestones minimum (10 per dimension per age band).
+- **Idempotent**: Seed script uses UPSERT on unique constraint `(dimension, ageBand, sortOrder)`.
+
+### Image Storage
+
+- **MVP**: Local filesystem (`apps/api/uploads/children/{childId}/photo.jpg`).
+- **Access**: Served through authenticated API endpoint only (no direct URL access).
+- **Processing**: sharp resizes to 200x200 on upload.
+- **Post-MVP**: Migrate to S3 with pre-signed URLs.
+
+### Component Reuse from Registry
+
+The following components should be copied from the ConnectSW Component Registry:
+
+| Component | Source Product | Adaptation Needed |
+|-----------|---------------|-------------------|
+| Auth Plugin | stablecoin-gateway | Adapt for Fastify 5.x, remove API key auth |
+| Prisma Plugin | stablecoin-gateway | Adapt for Fastify 5.x |
+| Observability Plugin | stablecoin-gateway | Adapt for Fastify 5.x |
+| Logger | stablecoin-gateway | Copy as-is |
+| Error Classes | invoiceforge | Copy as-is |
+| Pagination Helper | invoiceforge | Copy as-is |
+| Crypto Utils | stablecoin-gateway | Adapt (remove API key features, keep password hashing) |
+| Token Manager | stablecoin-gateway/web | Copy as-is |
+| useAuth hook | stablecoin-gateway/web | Adapt user type fields |
+| useTheme hook | stablecoin-gateway/web | Change storage key |
+| ErrorBoundary | stablecoin-gateway/web | Copy as-is |
+
+### Cross-Product Port Assignments
+
+| Product | Frontend | Backend | Database |
+|---------|----------|---------|----------|
+| Mu'aththir | 3108 | 5005 | muaththir_dev |
+| Pulse | 3106 | 5003 | pulse_dev |
+| InvoiceForge | 3109 | 5004 | invoiceforge_dev |
+| Stablecoin GW | 3104 | 5001 | stablecoin_dev |
+
+### Plugin Registration Order
+
+Follows PATTERN-009: `observability -> prisma -> auth -> rate-limit -> routes`
 
 ---
 
-**Created by**: Product Manager
+**Created by**: Product Manager + Architect
 **Last Updated**: 2026-02-07
-**Status**: PRD complete, ready for architecture
+**Status**: Architecture complete, ready for foundation
