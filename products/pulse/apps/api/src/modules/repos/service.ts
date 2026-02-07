@@ -55,6 +55,20 @@ function formatRepo(repo: any): RepoResponse {
 export class RepoService {
   constructor(private prisma: PrismaClient) {}
 
+  /**
+   * Resolve the team ID for a user. Returns the first
+   * team membership found, or throws BadRequestError.
+   */
+  async resolveTeamId(userId: string): Promise<string> {
+    const member = await this.prisma.teamMember.findFirst({
+      where: { userId },
+    });
+    if (!member) {
+      throw new BadRequestError('User is not a member of any team');
+    }
+    return member.teamId;
+  }
+
   async listRepos(options: ListReposOptions) {
     const { teamId, page, limit, syncStatus } = options;
     const skip = (page - 1) * limit;

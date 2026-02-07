@@ -12,7 +12,7 @@ export class RepoHandlers {
 
   async listRepos(request: FastifyRequest, reply: FastifyReply) {
     const query = listReposQuerySchema.parse(request.query);
-    const teamId = (request.query as any).teamId as string;
+    const teamId = (request.query as Record<string, string>).teamId;
 
     if (!teamId) {
       throw new BadRequestError('teamId query parameter is required');
@@ -29,7 +29,7 @@ export class RepoHandlers {
   }
 
   async connectRepo(request: FastifyRequest, reply: FastifyReply) {
-    const body = request.body as any;
+    const body = request.body as Record<string, unknown>;
     const teamId = body.teamId as string;
 
     if (!teamId) {
@@ -56,38 +56,19 @@ export class RepoHandlers {
 
   async disconnectRepo(request: FastifyRequest, reply: FastifyReply) {
     const params = repoIdParamSchema.parse(request.params);
-    // Get teamId from user's team memberships
-    const user = request.currentUser!;
-    const teamMember = await (request.server as any).prisma.teamMember.findFirst({
-      where: { userId: user.id },
-    });
+    const userId = request.currentUser!.id;
+    const teamId = await this.service.resolveTeamId(userId);
 
-    if (!teamMember) {
-      throw new BadRequestError('User is not a member of any team');
-    }
-
-    const result = await this.service.disconnectRepo(
-      params.id,
-      teamMember.teamId
-    );
+    const result = await this.service.disconnectRepo(params.id, teamId);
     return reply.code(200).send(result);
   }
 
   async getSyncStatus(request: FastifyRequest, reply: FastifyReply) {
     const params = repoIdParamSchema.parse(request.params);
-    const user = request.currentUser!;
-    const teamMember = await (request.server as any).prisma.teamMember.findFirst({
-      where: { userId: user.id },
-    });
+    const userId = request.currentUser!.id;
+    const teamId = await this.service.resolveTeamId(userId);
 
-    if (!teamMember) {
-      throw new BadRequestError('User is not a member of any team');
-    }
-
-    const result = await this.service.getSyncStatus(
-      params.id,
-      teamMember.teamId
-    );
+    const result = await this.service.getSyncStatus(params.id, teamId);
     return reply.code(200).send(result);
   }
 }
