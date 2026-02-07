@@ -11,6 +11,9 @@ process.env.NODE_ENV = 'test';
 process.env.JWT_SECRET = 'test-jwt-secret-at-least-32-chars-long';
 process.env.DATABASE_URL =
   process.env.DATABASE_URL || 'postgresql://postgres@localhost:5432/pulse_test';
+// Encryption key for GitHub token encryption (test-only, 64 hex chars = 32 bytes)
+process.env.ENCRYPTION_KEY =
+  process.env.ENCRYPTION_KEY || 'a1b2c3d4e5f6a1b2c3d4e5f6a1b2c3d4a1b2c3d4e5f6a1b2c3d4e5f6a1b2c3d4';
 // Disable Redis for tests by default
 delete process.env.REDIS_URL;
 

@@ -2,6 +2,7 @@ import Fastify, { FastifyInstance } from 'fastify';
 import cors from '@fastify/cors';
 import jwt from '@fastify/jwt';
 import helmet from '@fastify/helmet';
+import rateLimit from '@fastify/rate-limit';
 import { ZodError } from 'zod';
 
 // Plugins
@@ -62,9 +63,26 @@ export async function buildApp(): Promise<FastifyInstance> {
     methods: ['GET', 'HEAD', 'POST', 'PUT', 'PATCH', 'DELETE', 'OPTIONS'],
   });
 
+  // Rate limiting (global default + per-route overrides)
+  await fastify.register(rateLimit, {
+    max: 100,          // 100 requests per window per IP
+    timeWindow: 60000, // 1 minute
+    // Auth endpoints get stricter limits via route-level config
+    allowList: [],
+    keyGenerator: (request) => {
+      return request.ip;
+    },
+  });
+
   // JWT
+  const jwtSecret = process.env.JWT_SECRET;
+  if (!jwtSecret && process.env.NODE_ENV === 'production') {
+    throw new Error(
+      'JWT_SECRET environment variable is required in production'
+    );
+  }
   await fastify.register(jwt, {
-    secret: process.env.JWT_SECRET || 'pulse-dev-secret',
+    secret: jwtSecret || 'pulse-dev-secret',
     sign: { algorithm: 'HS256' },
     verify: { algorithms: ['HS256'] },
   });

@@ -5,11 +5,24 @@ import { AppError, ConflictError, UnauthorizedError } from '../../lib/errors.js'
 import { logger } from '../../utils/logger.js';
 
 const authRoutes: FastifyPluginAsync = async (fastify) => {
+  // Stricter rate limits for auth endpoints.
+  // In test mode, use higher limits to avoid interfering
+  // with test suites that call register/login in beforeEach.
+  const isTest = process.env.NODE_ENV === 'test';
+  const authRateLimit = {
+    config: {
+      rateLimit: {
+        max: isTest ? 100 : 10,
+        timeWindow: 60000,
+      },
+    },
+  };
+
   /**
    * POST /api/v1/auth/register
    * Register a new user account.
    */
-  fastify.post('/register', async (request, reply) => {
+  fastify.post('/register', authRateLimit, async (request, reply) => {
     const parsed = registerSchema.safeParse(request.body);
     if (!parsed.success) {
       return reply.code(422).send({
@@ -73,7 +86,7 @@ const authRoutes: FastifyPluginAsync = async (fastify) => {
    * POST /api/v1/auth/login
    * Login with email and password.
    */
-  fastify.post('/login', async (request, reply) => {
+  fastify.post('/login', authRateLimit, async (request, reply) => {
     const parsed = loginSchema.safeParse(request.body);
     if (!parsed.success) {
       return reply.code(422).send({
