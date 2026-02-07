@@ -16,7 +16,10 @@ if [ -z "$GATE_TYPE" ] || [ -z "$PRODUCT" ]; then
   exit 1
 fi
 
-PRODUCT_PATH="products/$PRODUCT"
+SCRIPT_DIR_INIT="$(cd "$(dirname "${BASH_SOURCE[0]}")" && pwd)"
+REPO_ROOT="$(cd "$SCRIPT_DIR_INIT/../.." && pwd)"
+
+PRODUCT_PATH="$REPO_ROOT/products/$PRODUCT"
 REPORT_DIR="$PRODUCT_PATH/docs/quality-reports"
 mkdir -p "$REPORT_DIR"
 TIMESTAMP=$(date +%Y%m%d-%H%M%S)
@@ -24,7 +27,8 @@ REPORT_FILE="$REPORT_DIR/${GATE_TYPE}-gate-${TIMESTAMP}.md"
 
 # Initialize report
 {
-  echo "# ${GATE_TYPE^} Gate Report"
+  GATE_LABEL=$(echo "$GATE_TYPE" | awk '{print toupper(substr($0,1,1)) tolower(substr($0,2))}')
+  echo "# $GATE_LABEL Gate Report"
   echo "**Product**: $PRODUCT"
   echo "**Date**: $(date -Iseconds)"
   echo "**Status**: RUNNING"
@@ -84,6 +88,70 @@ case $GATE_TYPE in
       echo "Install: brew install git-secrets (macOS) or apt-get install git-secrets (Linux)" >> "$REPORT_FILE"
     fi
     echo "" >> "$REPORT_FILE"
+
+    # Hardcoded secrets pattern scan
+    echo "### Hardcoded Secret Patterns" >> "$REPORT_FILE"
+    SECRET_PATTERNS='(password|secret|api_key|apikey|token|private_key)\s*[:=]\s*["\x27][^\s"'\'']{8,}'
+    FOUND=$(grep -rEi "$SECRET_PATTERNS" "$PRODUCT_PATH/apps" --include='*.ts' --include='*.tsx' --include='*.js' --include='*.json' -l 2>/dev/null | grep -v node_modules | grep -v '.test.' | grep -v '__tests__' | head -10 || true)
+    if [ -n "$FOUND" ]; then
+      echo "❌ FAIL: Potential hardcoded secrets found in:" >> "$REPORT_FILE"
+      echo "$FOUND" | while read -r f; do echo "  - $f" >> "$REPORT_FILE"; done
+      GATE_PASSED=false
+      GATE_FAILURES+=("Hardcoded secrets")
+    else
+      echo "✅ PASS: No hardcoded secret patterns detected" >> "$REPORT_FILE"
+    fi
+    echo "" >> "$REPORT_FILE"
+
+    # SQL injection patterns
+    echo "### SQL Injection Patterns" >> "$REPORT_FILE"
+    SQLI_PATTERNS='(\$\{.*\}|`.*\$\{|\+ *req\.(body|query|params))'
+    SQLI_FOUND=$(grep -rEn "$SQLI_PATTERNS" "$PRODUCT_PATH/apps" --include='*.ts' --include='*.js' 2>/dev/null | grep -vi 'node_modules' | grep -i 'query\|sql\|exec\|raw' | head -10 || true)
+    if [ -n "$SQLI_FOUND" ]; then
+      echo "⚠️  WARN: Potential SQL injection patterns:" >> "$REPORT_FILE"
+      echo '```' >> "$REPORT_FILE"
+      echo "$SQLI_FOUND" >> "$REPORT_FILE"
+      echo '```' >> "$REPORT_FILE"
+      GATE_FAILURES+=("Potential SQL injection (review needed)")
+    else
+      echo "✅ PASS: No obvious SQL injection patterns" >> "$REPORT_FILE"
+    fi
+    echo "" >> "$REPORT_FILE"
+
+    # XSS patterns (dangerouslySetInnerHTML, innerHTML)
+    echo "### XSS Vulnerability Patterns" >> "$REPORT_FILE"
+    XSS_FOUND=$(grep -rEn 'dangerouslySetInnerHTML|\.innerHTML\s*=' "$PRODUCT_PATH/apps" --include='*.ts' --include='*.tsx' --include='*.js' --include='*.jsx' 2>/dev/null | grep -v node_modules | head -10 || true)
+    if [ -n "$XSS_FOUND" ]; then
+      echo "⚠️  WARN: Potential XSS patterns found:" >> "$REPORT_FILE"
+      echo '```' >> "$REPORT_FILE"
+      echo "$XSS_FOUND" >> "$REPORT_FILE"
+      echo '```' >> "$REPORT_FILE"
+      GATE_FAILURES+=("Potential XSS (review needed)")
+    else
+      echo "✅ PASS: No dangerouslySetInnerHTML or innerHTML usage" >> "$REPORT_FILE"
+    fi
+    echo "" >> "$REPORT_FILE"
+
+    # Environment variable validation
+    echo "### Environment Variable Safety" >> "$REPORT_FILE"
+    if [ -f "$PRODUCT_PATH/.env" ]; then
+      echo "⚠️  WARN: .env file exists in product root (should be .gitignored)" >> "$REPORT_FILE"
+      if grep -q '.env' "$PRODUCT_PATH/.gitignore" 2>/dev/null; then
+        echo "  ✅ .env is in .gitignore" >> "$REPORT_FILE"
+      else
+        echo "  ❌ .env is NOT in .gitignore" >> "$REPORT_FILE"
+        GATE_PASSED=false
+        GATE_FAILURES+=(".env not gitignored")
+      fi
+    else
+      echo "✅ PASS: No .env file in product root" >> "$REPORT_FILE"
+    fi
+    if [ -f "$PRODUCT_PATH/.env.example" ]; then
+      echo "✅ .env.example exists for documentation" >> "$REPORT_FILE"
+    else
+      echo "⚠️  WARN: No .env.example found" >> "$REPORT_FILE"
+    fi
+    echo "" >> "$REPORT_FILE"
     ;;
     
   performance)
@@ -112,6 +180,49 @@ case $GATE_TYPE in
       cd - > /dev/null
     fi
     
+    # Bundle size enforcement
+    if [ -f "$PRODUCT_PATH/apps/web/package.json" ]; then
+      echo "### Bundle Size Check" >> "$REPORT_FILE"
+      BUILD_DIR=""
+      for candidate in "$PRODUCT_PATH/apps/web/.next" "$PRODUCT_PATH/apps/web/dist" "$PRODUCT_PATH/apps/web/build"; do
+        [ -d "$candidate" ] && BUILD_DIR="$candidate" && break
+      done
+      if [ -n "$BUILD_DIR" ]; then
+        BUNDLE_KB=$(du -sk "$BUILD_DIR" 2>/dev/null | cut -f1 || echo "0")
+        BUNDLE_MB=$((BUNDLE_KB / 1024))
+        echo "Build output: ${BUNDLE_MB}MB (${BUNDLE_KB}KB)" >> "$REPORT_FILE"
+        if [ "$BUNDLE_KB" -gt 51200 ]; then
+          echo "⚠️  WARN: Bundle exceeds 50MB — review for optimization" >> "$REPORT_FILE"
+          GATE_FAILURES+=("Bundle size ${BUNDLE_MB}MB exceeds 50MB")
+        else
+          echo "✅ PASS: Bundle size within limits" >> "$REPORT_FILE"
+        fi
+      else
+        echo "⚠️  INFO: No build output found (run build first)" >> "$REPORT_FILE"
+      fi
+      echo "" >> "$REPORT_FILE"
+    fi
+
+    # TypeScript strict mode check
+    echo "### TypeScript Configuration" >> "$REPORT_FILE"
+    TS_STRICT=true
+    for tsconfig in "$PRODUCT_PATH/apps/api/tsconfig.json" "$PRODUCT_PATH/apps/web/tsconfig.json"; do
+      if [ -f "$tsconfig" ]; then
+        if grep -q '"strict"' "$tsconfig" 2>/dev/null; then
+          if grep '"strict"' "$tsconfig" | grep -q 'true' 2>/dev/null; then
+            echo "✅ strict mode enabled: $tsconfig" >> "$REPORT_FILE"
+          else
+            echo "⚠️  WARN: strict mode disabled: $tsconfig" >> "$REPORT_FILE"
+            TS_STRICT=false
+          fi
+        else
+          echo "⚠️  WARN: strict not set: $tsconfig" >> "$REPORT_FILE"
+          TS_STRICT=false
+        fi
+      fi
+    done
+    echo "" >> "$REPORT_FILE"
+
     # API performance benchmarks (if backend exists)
     if [ -f "$PRODUCT_PATH/apps/api/package.json" ]; then
       echo "### API Performance Benchmarks" >> "$REPORT_FILE"
@@ -119,11 +230,25 @@ case $GATE_TYPE in
       if npm run bench >> "$REPORT_FILE" 2>&1; then
         echo "✅ PASS: Performance benchmarks complete" >> "$REPORT_FILE"
       else
-        echo "⚠️  INFO: Benchmark script not configured" >> "$REPORT_FILE"
+        echo "⚠️  INFO: Benchmark script not configured (add 'bench' to package.json scripts)" >> "$REPORT_FILE"
       fi
       echo "" >> "$REPORT_FILE"
       cd - > /dev/null
     fi
+
+    # Dependency count check
+    echo "### Dependency Health" >> "$REPORT_FILE"
+    for app_dir in "$PRODUCT_PATH/apps/api" "$PRODUCT_PATH/apps/web"; do
+      if [ -f "$app_dir/package.json" ]; then
+        app_name=$(basename "$app_dir")
+        if command -v jq &> /dev/null; then
+          DEP_COUNT=$(jq '.dependencies | length // 0' "$app_dir/package.json" 2>/dev/null || echo "0")
+          DEVDEP_COUNT=$(jq '.devDependencies | length // 0' "$app_dir/package.json" 2>/dev/null || echo "0")
+          echo "  $app_name: $DEP_COUNT deps, $DEVDEP_COUNT devDeps" >> "$REPORT_FILE"
+        fi
+      fi
+    done
+    echo "" >> "$REPORT_FILE"
     ;;
     
   testing)
@@ -230,6 +355,52 @@ case $GATE_TYPE in
     done
     echo "" >> "$REPORT_FILE"
     
+    # CI/CD configuration
+    echo "### CI/CD Configuration" >> "$REPORT_FILE"
+    if [ -d "$REPO_ROOT/.github/workflows" ]; then
+      WORKFLOW_COUNT=$(ls "$REPO_ROOT"/.github/workflows/*.yml 2>/dev/null | wc -l | tr -d ' ')
+      echo "✅ GitHub Actions: $WORKFLOW_COUNT workflow(s) found" >> "$REPORT_FILE"
+    else
+      echo "⚠️  WARN: No .github/workflows directory" >> "$REPORT_FILE"
+    fi
+    echo "" >> "$REPORT_FILE"
+
+    # Dockerfile check
+    echo "### Container Configuration" >> "$REPORT_FILE"
+    DOCKER_FOUND=false
+    for dockerfile in "$PRODUCT_PATH/Dockerfile" "$PRODUCT_PATH/docker-compose.yml" "$PRODUCT_PATH/apps/api/Dockerfile"; do
+      if [ -f "$dockerfile" ]; then
+        echo "✅ Found: $(basename "$dockerfile")" >> "$REPORT_FILE"
+        DOCKER_FOUND=true
+      fi
+    done
+    if [ "$DOCKER_FOUND" = false ]; then
+      echo "⚠️  WARN: No Dockerfile or docker-compose.yml found" >> "$REPORT_FILE"
+    fi
+    echo "" >> "$REPORT_FILE"
+
+    # Logging configuration
+    echo "### Logging & Observability" >> "$REPORT_FILE"
+    LOG_FOUND=$(grep -rEl 'pino|winston|bunyan|morgan|logger' "$PRODUCT_PATH/apps" --include='*.ts' --include='*.js' 2>/dev/null | grep -v node_modules | head -5 || true)
+    if [ -n "$LOG_FOUND" ]; then
+      echo "✅ PASS: Structured logging detected" >> "$REPORT_FILE"
+    else
+      echo "⚠️  WARN: No structured logging library detected (pino, winston, bunyan)" >> "$REPORT_FILE"
+    fi
+    echo "" >> "$REPORT_FILE"
+
+    # Database migration safety
+    echo "### Database Migration Safety" >> "$REPORT_FILE"
+    if [ -d "$PRODUCT_PATH/apps/api/prisma/migrations" ]; then
+      MIGRATION_COUNT=$(ls -d "$PRODUCT_PATH/apps/api/prisma/migrations"/*/ 2>/dev/null | wc -l | tr -d ' ')
+      echo "✅ Prisma migrations: $MIGRATION_COUNT migration(s)" >> "$REPORT_FILE"
+    elif [ -f "$PRODUCT_PATH/apps/api/prisma/schema.prisma" ]; then
+      echo "⚠️  WARN: Prisma schema exists but no migrations directory" >> "$REPORT_FILE"
+    else
+      echo "ℹ️  No Prisma schema detected" >> "$REPORT_FILE"
+    fi
+    echo "" >> "$REPORT_FILE"
+
     # Live health check (if backend exists)
     if [ -f "$PRODUCT_PATH/apps/api/package.json" ]; then
       echo "### Health Check Endpoint (Live Verification)" >> "$REPORT_FILE"
@@ -316,6 +487,15 @@ esac
 # Update status in report
 sed -i.bak "s/\*\*Status\*\*: RUNNING/\*\*Status\*\*: $(if [ "$GATE_PASSED" = true ]; then echo '✅ PASS'; else echo '❌ FAIL'; fi)/" "$REPORT_FILE"
 rm -f "$REPORT_FILE.bak"
+
+# Record gate result in metrics
+METRICS_SCRIPT="$REPO_ROOT/.claude/scripts/update-gate-metrics.sh"
+if [ -f "$METRICS_SCRIPT" ]; then
+  RESULT=$([ "$GATE_PASSED" = true ] && echo "pass" || echo "fail")
+  FAILURE_COUNT=${#GATE_FAILURES[@]}
+  DETAILS="{\"product\":\"$PRODUCT\",\"failures\":$FAILURE_COUNT}"
+  bash "$METRICS_SCRIPT" "$GATE_TYPE" "$PRODUCT" "$RESULT" "$DETAILS" 2>/dev/null || true
+fi
 
 echo ""
 echo "📊 Report saved to: $REPORT_FILE"
