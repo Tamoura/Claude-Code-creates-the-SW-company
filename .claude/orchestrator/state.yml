@@ -14,28 +14,13 @@ products:
     path: "products/stablecoin-gateway"
     status: "active"
     notes: "Backend-only (apps/api). Most active product. Security audit in progress."
-  meetingmind:
-    path: "products/meetingmind"
-    status: "planned"
-    notes: "AI meeting assistant."
   quantum-computing-usecases:
     path: "products/quantum-computing-usecases"
     status: "planned"
     notes: "Quantum computing use case explorer."
-  deal-flow-platform:
-    path: "products/deal-flow-platform"
-    status: "active"
-    notes: "Qatar deal flow platform for institutional investors."
-  shipwright:
-    path: "products/shipwright"
-    status: "active"
-    notes: "AI Dev Team as a Service. Bolt.diy fork with multi-agent orchestrator. Port 3110."
 
 # Active worktrees (for parallel product development)
-worktrees:
-  shipwright:
-    path: ".tree/shipwright"
-    branch: "feature/shipwright/dev"
+worktrees: {}
 
 # Company-wide pending decisions (cross-product)
 pending_decisions: []

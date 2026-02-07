@@ -224,56 +224,6 @@ npm run dev
 
 ---
 
-### Deal Flow Platform
-
-Investment deal management platform for institutional investors.
-
-**Ports**: API on `5003`, Web on `3108`
-
-```bash
-cd products/deal-flow-platform/apps/api
-cp .env.example .env 2>/dev/null || true
-npm install
-
-# Create database
-docker exec -it $(docker compose ps -q postgres 2>/dev/null || echo "postgres") \
-  psql -U postgres -c "CREATE DATABASE deal_flow_dev;" 2>/dev/null || true
-
-# Set DATABASE_URL in .env
-# DATABASE_URL=postgresql://postgres:postgres@localhost:5432/deal_flow_dev
-
-npx prisma generate
-npx prisma migrate dev
-npm run dev
-# API at http://localhost:5003
-```
-
-Web frontend:
-
-```bash
-cd products/deal-flow-platform/apps/web
-npm install
-npm run dev
-# Web at http://localhost:3108
-```
-
----
-
-### MeetingMind
-
-AI meeting assistant (frontend only).
-
-**Port**: `3106`
-
-```bash
-cd products/meetingmind/apps/web
-npm install
-npm run dev
-# Available at http://localhost:3106
-```
-
----
-
 ### Quantum Computing Usecases
 
 Quantum computing educational explorer (frontend only).
@@ -297,10 +247,7 @@ All products use unique ports to run simultaneously.
 |------|---------|------|
 | 3104 | stablecoin-gateway | Frontend |
 | 3105 | quantum-computing-usecases | Frontend |
-| 3106 | meetingmind | Frontend |
-| 3108 | deal-flow-platform | Frontend |
 | 5001 | stablecoin-gateway | API |
-| 5003 | deal-flow-platform | API |
 | 5432 | PostgreSQL | Database |
 | 6379 | Redis | Cache/Queue |
 | 3150 | Agent Dashboard | Infrastructure |
@@ -410,12 +357,6 @@ gh pr create --base main
 ```bash
 # Stablecoin Gateway
 cd products/stablecoin-gateway/apps/api && npm test
-
-# Deal Flow Platform
-cd products/deal-flow-platform/apps/api && npm test
-
-# MeetingMind
-cd products/meetingmind/apps/web && npm test
 
 # Quantum Computing
 cd products/quantum-computing-usecases/apps/web && npm test

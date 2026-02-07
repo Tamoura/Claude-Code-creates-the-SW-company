@@ -30,6 +30,9 @@
     "polygon",
     "ethereum"
   ],
+  "engines": {
+    "node": ">=18.0.0"
+  },
   "author": "ConnectSW",
   "license": "MIT",
   "devDependencies": {
