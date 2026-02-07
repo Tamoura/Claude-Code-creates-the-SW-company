@@ -116,43 +116,43 @@ export class MetricsService {
       where.id = repoId;
     }
 
+    // Single query: fetch repos with their 2 most recent coverage
+    // reports via include. Eliminates N+1 (one query per repo).
     const repos = await this.prisma.repository.findMany({
       where,
-      select: { id: true, name: true, fullName: true },
+      select: {
+        id: true,
+        name: true,
+        fullName: true,
+        coverageReports: {
+          orderBy: { reportedAt: 'desc' },
+          take: 2,
+          select: { coverage: true, reportedAt: true },
+        },
+      },
     });
 
     if (repos.length === 0) {
       return { repositories: [], teamAverage: null };
     }
 
-    // Fetch coverage for all repos in parallel
-    const coveragePromises = repos.map(async (repo) => {
-      const reports = await this.prisma.coverageReport.findMany({
-        where: { repoId: repo.id },
-        orderBy: { reportedAt: 'desc' },
-        take: 2,
-        select: { coverage: true, reportedAt: true },
+    const results = repos
+      .filter((repo) => repo.coverageReports.length > 0)
+      .map((repo) => {
+        const reports = repo.coverageReports;
+        const latest = Number(reports[0].coverage);
+        const previous = reports.length > 1 ? Number(reports[1].coverage) : null;
+
+        return {
+          repoId: repo.id,
+          repoName: repo.name,
+          fullName: repo.fullName,
+          latestCoverage: latest,
+          previousCoverage: previous,
+          trend: determineTrend(latest, previous),
+          reportedAt: reports[0].reportedAt.toISOString(),
+        };
       });
-
-      if (reports.length === 0) return null;
-
-      const latest = Number(reports[0].coverage);
-      const previous = reports.length > 1 ? Number(reports[1].coverage) : null;
-
-      return {
-        repoId: repo.id,
-        repoName: repo.name,
-        fullName: repo.fullName,
-        latestCoverage: latest,
-        previousCoverage: previous,
-        trend: determineTrend(latest, previous),
-        reportedAt: reports[0].reportedAt.toISOString(),
-      };
-    });
-
-    const results = (await Promise.all(coveragePromises)).filter(
-      (r): r is NonNullable<typeof r> => r !== null
-    );
 
     const latestCoverages = results.map((r) => r.latestCoverage);
     const teamAverage =

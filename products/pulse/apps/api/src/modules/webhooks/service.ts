@@ -114,20 +114,13 @@ export class WebhookService {
       branch,
     }));
 
-    // Upsert each commit (avoid duplicates)
-    for (const data of commitData) {
-      await this.prisma.commit.upsert({
-        where: {
-          repoId_sha: { repoId: data.repoId, sha: data.sha },
-        },
-        create: data,
-        update: {
-          message: data.message,
-          additions: data.additions,
-          deletions: data.deletions,
-        },
-      });
-    }
+    // Batch insert commits, skipping duplicates.
+    // For pushes with many commits this is significantly faster
+    // than individual upserts (1 query vs N queries).
+    await this.prisma.commit.createMany({
+      data: commitData,
+      skipDuplicates: true,
+    });
 
     // Update last activity
     await this.prisma.repository.update({
