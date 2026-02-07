@@ -1,6 +1,6 @@
 # Parallel Execution Protocol
 
-This document describes how to execute multiple agent tasks in parallel using git worktrees.
+This document describes how to execute multiple agent tasks in parallel. The primary strategy uses the Task tool with `run_in_background: true`. Git worktrees are a documented fallback for rare edge cases.
 
 ## When to Use Parallel Execution
 
@@ -15,9 +15,56 @@ Examples of parallelizable work:
 - Multiple independent features
 - Documentation + Testing setup (after code is complete)
 
-## Option A: Sequential Execution (Simpler)
+## Strategy A: Task Tool with `run_in_background` (PRIMARY)
 
-If parallel execution isn't critical, run tasks sequentially in the same session:
+This is the default parallel execution strategy. The orchestrator launches multiple sub-agents simultaneously using Claude Code's Task tool.
+
+### How It Works
+
+```
+1. Orchestrator identifies ready tasks where parallel_ok = true
+2. Launch all independent tasks in a single message:
+
+   Task(
+     subagent_type: "general-purpose",
+     run_in_background: true,
+     prompt: "[compact sub-agent prompt with inline brief]",
+     description: "Backend: implement user API"
+   )
+
+   Task(
+     subagent_type: "general-purpose",
+     run_in_background: true,
+     prompt: "[compact sub-agent prompt with inline brief]",
+     description: "Frontend: build user dashboard"
+   )
+
+3. Monitor progress with TaskOutput(task_id, block: false)
+4. Collect results with TaskOutput(task_id, block: true)
+5. Update task graph with results
+6. Continue to next group of tasks
+```
+
+### Advantages
+- No CEO intervention required (fully automated)
+- No worktree setup or cleanup
+- Sub-agents work on the same codebase
+- Orchestrator monitors all tasks from a single session
+- Results collected programmatically
+
+### Conflict Prevention
+- Backend works on `apps/api/`, Frontend on `apps/web/`, DevOps on `.github/` and root configs
+- Shared code convention: if tasks need shared types, one task creates them first (via dependency)
+- Package.json coordination: only one task modifies root package.json
+
+### Error Recovery
+- If a background task fails, the orchestrator retries it (up to 3 times)
+- Other parallel tasks continue independently
+- Failed task details are available via TaskOutput
+
+## Strategy B: Sequential Execution (FALLBACK)
+
+When parallelism isn't possible (resource conflicts, shared files, tight dependencies):
 
 ```
 1. Orchestrator spawns Backend Engineer sub-agent
@@ -27,16 +74,18 @@ If parallel execution isn't critical, run tasks sequentially in the same session
 5. Continue...
 ```
 
-**Pros**: Simple, no extra setup
-**Cons**: Slower, one task at a time
+**When to use**: Tasks modify overlapping files, or dependency chain requires strict ordering.
 
-## Option B: True Parallel with Git Worktrees (Faster)
+## Strategy C: Git Worktrees (RARE — for extreme parallelism)
 
-For true parallel execution, use git worktrees to create separate working directories.
+For 4+ agents working on large codebases where Task tool parallelism is insufficient, use git worktrees. This requires CEO to open multiple Claude Code sessions.
 
-### Step 1: Create Worktrees
+### When to Use
+- 4+ agents need true filesystem isolation
+- Tasks modify shared configuration files
+- Large codebase where agents may interfere with each other's builds
 
-From the main repository root:
+### Setup
 
 ```bash
 # Create worktrees for parallel agents
@@ -45,181 +94,47 @@ git worktree add ../worktrees/frontend-work -b feature/{product}/frontend-{task-
 git worktree add ../worktrees/devops-work -b feature/{product}/devops-{task-id}
 ```
 
-### Step 2: Provide Instructions to CEO
+### CEO Instructions
 
-Tell the CEO:
+Tell the CEO to open separate Claude Code sessions in each worktree and run `/execute-task {product} {TASK-ID}`.
 
-```markdown
-## Parallel Execution Required
-
-The following tasks can run in parallel for faster completion:
-
-1. **Backend Task** (BACKEND-01)
-   - Open a new Claude Code session
-   - Navigate to: `../worktrees/backend-work`
-   - Run: `/execute-task {product} BACKEND-01`
-
-2. **Frontend Task** (FRONTEND-01)
-   - Open another Claude Code session
-   - Navigate to: `../worktrees/frontend-work`
-   - Run: `/execute-task {product} FRONTEND-01`
-
-3. **DevOps Task** (DEVOPS-01)
-   - Open another Claude Code session
-   - Navigate to: `../worktrees/devops-work`
-   - Run: `/execute-task {product} DEVOPS-01`
-
-**Once all three are complete**, return here and let me know so I can merge the work.
-```
-
-### Step 3: Open PRs (Required)
-
-After all parallel tasks complete, open PRs instead of merging directly to `main`:
+### Merge via PR (Never merge directly to main)
 
 ```bash
-# Return to main repository
-cd /path/to/main/repo
-
-# Push branches (if not already)
+# Push branches and create PRs
 git push -u origin feature/{product}/backend-{task-id}
-git push -u origin feature/{product}/frontend-{task-id}
-git push -u origin feature/{product}/devops-{task-id}
-
-# Create PRs (requires gh)
 gh pr create --title "feat({product}): backend foundation" --body "Implements BACKEND-01"
-gh pr create --title "feat({product}): frontend foundation" --body "Implements FRONTEND-01"
-gh pr create --title "ci({product}): CI/CD pipeline" --body "Implements DEVOPS-01"
-```
 
-If `gh` isn't available, open PRs manually in GitHub UI.
-
-### Step 4: Merge via PR (Never merge directly to main)
-
-Once PRs are approved:
-
-```bash
-# Merge PRs using GitHub (preferred) or gh
+# Merge PRs
 gh pr merge --merge --delete-branch <PR-number>
-
-# Pull latest main after merges
-git checkout main
-git pull
 
 # Clean up worktrees
 git worktree remove ../worktrees/backend-work
-git worktree remove ../worktrees/frontend-work
-git worktree remove ../worktrees/devops-work
 ```
 
-### Step 5: Update Task Graph
-
-After merging:
+### Worktree Commands
 
 ```bash
-# Update task graph status
-# Mark all parallel tasks as completed
-.claude/scripts/update-task-status.sh {product} BACKEND-01 completed
-.claude/scripts/update-task-status.sh {product} FRONTEND-01 completed
-.claude/scripts/update-task-status.sh {product} DEVOPS-01 completed
+git worktree list          # List all worktrees
+git worktree remove <path> # Remove a worktree (after merging)
+git worktree prune         # Prune stale references
 ```
-
-## Conflict Prevention
-
-To minimize merge conflicts:
-
-1. **Clear file boundaries**: Backend works on `apps/api/`, Frontend on `apps/web/`, DevOps on `.github/` and root configs
-2. **Shared code convention**: If tasks need shared types, one task creates them first, others depend on that task
-3. **Package.json coordination**: Only one task modifies root package.json; others modify their app's package.json
-
-## Worktree Management Commands
-
-```bash
-# List all worktrees
-git worktree list
-
-# Remove a worktree (after merging)
-git worktree remove <path>
-
-# Prune stale worktree references
-git worktree prune
-
-# Move a worktree
-git worktree move <old-path> <new-path>
-```
-
-## Error Recovery
-
-If a parallel task fails:
-
-1. **In the failed worktree**: Debug and fix the issue
-2. **Retry the task**: Run the agent again in that worktree
-3. **If still failing after 3 retries**: 
-   - Escalate to CEO
-   - Other parallel tasks can continue independently
-   - Failed task's branch remains for debugging
-
-If merging fails:
-
-1. **Identify conflicting files**: `git status`
-2. **Resolve conflicts manually** or use merge tool
-3. **Test the merged result**: Run tests in main repo
-4. **Commit the merge**: `git commit`
 
 ## Performance Comparison
 
-| Scenario | Sequential Time | Parallel Time | Savings |
-|----------|-----------------|---------------|---------|
-| 3 tasks × 2 hours each | 6 hours | 2 hours | 67% |
-| 2 tasks × 3 hours each | 6 hours | 3 hours | 50% |
-| 4 tasks × 1.5 hours each | 6 hours | 1.5 hours | 75% |
+| Scenario | Sequential | Task Tool Parallel | Worktree Parallel |
+|----------|-----------|-------------------|-------------------|
+| 3 tasks x 2h each | 6h | ~2.5h | ~2h |
+| 2 tasks x 3h each | 6h | ~3.5h | ~3h |
+| 4 tasks x 1.5h each | 6h | ~2h | ~1.5h |
 
-## Orchestrator Implementation
+Note: Task tool parallel has slight overhead from shared filesystem; worktrees have overhead from setup/merge.
 
-When the Orchestrator detects parallelizable tasks:
+## Decision Matrix
 
-```markdown
-1. Check task graph for tasks with same depends_on and parallel_ok: true
-
-2. If found, create worktrees:
-   ```bash
-   for task in parallel_tasks:
-     git worktree add ../worktrees/{agent}-work -b feature/{product}/{task-id}
-   ```
-
-3. Report to CEO with parallel execution instructions
-
-4. Wait for CEO to confirm all parallel tasks complete
-
-5. Merge branches and clean up worktrees
-
-6. Continue with next tasks in graph
-```
-
-## Single-Session Alternative
-
-If CEO prefers not to open multiple sessions, Orchestrator can simulate parallelism:
-
-```markdown
-1. Start Backend task → Wait for completion
-2. Start Frontend task → Wait for completion  
-3. Start DevOps task → Wait for completion
-
-Total time: Sequential (sum of all tasks)
-But: Simpler workflow, no worktree management
-```
-
-The Orchestrator should offer this as an option:
-
-```markdown
-## Parallel Tasks Ready
-
-Tasks BACKEND-01, FRONTEND-01, and DEVOPS-01 can run in parallel.
-
-**Option A (Faster)**: Open 3 Claude Code sessions in separate worktrees
-- Estimated time: 2 hours (parallel)
-
-**Option B (Simpler)**: Run sequentially in this session
-- Estimated time: 6 hours (sequential)
-
-Which approach would you prefer?
-```
+| Condition | Strategy |
+|-----------|----------|
+| 2-3 independent tasks, no file conflicts | **A: Task tool** (default) |
+| Tasks share files or have tight dependencies | **B: Sequential** |
+| 4+ agents, large codebase, file conflicts | **C: Worktrees** |
+| CEO requests simplicity | **B: Sequential** |
