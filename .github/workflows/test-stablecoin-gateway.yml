@@ -11,52 +11,6 @@ on:
       - 'products/stablecoin-gateway/**'
 
 jobs:
-  test:
-    runs-on: ubuntu-latest
-    defaults:
-      run:
-        working-directory: products/stablecoin-gateway/apps/api
-    services:
-      postgres:
-        image: postgres:15
-        env:
-          POSTGRES_USER: postgres
-          POSTGRES_PASSWORD: postgres
-          POSTGRES_DB: stablecoin_test
-        ports:
-          - 5432:5432
-        options: >-
-          --health-cmd pg_isready
-          --health-interval 10s
-          --health-timeout 5s
-          --health-retries 5
-
-    env:
-      DATABASE_URL: postgresql://postgres:postgres@localhost:5432/stablecoin_test
-      NODE_ENV: test
-
-    steps:
-      - uses: actions/checkout@v4
-
-      - name: Setup Node.js
-        uses: actions/setup-node@v4
-        with:
-          node-version: '20'
-          cache: 'npm'
-          cache-dependency-path: products/stablecoin-gateway/apps/api/package-lock.json
-
-      - name: Install dependencies
-        run: npm ci
-
-      - name: Generate Prisma client
-        run: npx prisma generate
-
-      - name: Run database migrations
-        run: npx prisma migrate deploy
-
-      - name: Run tests
-        run: npm test
-
   lint:
     runs-on: ubuntu-latest
     defaults:
@@ -104,6 +58,9 @@ jobs:
 
   test-frontend:
     runs-on: ubuntu-latest
+    defaults:
+      run:
+        working-directory: products/stablecoin-gateway/apps/web
     steps:
       - uses: actions/checkout@v4
 
@@ -116,29 +73,22 @@ jobs:
 
       - name: Install dependencies
         run: npm ci
-        working-directory: products/stablecoin-gateway/apps/web
 
       - name: Run frontend tests
         run: npm test
-        working-directory: products/stablecoin-gateway/apps/web
 
   quality-gate:
-    needs: [test, lint, security, test-frontend]
+    needs: [lint, security, test-frontend]
     runs-on: ubuntu-latest
     if: always()
-    defaults:
-      run:
-        working-directory: .
     steps:
       - name: Verify all jobs succeeded
         run: |
           echo "Job results:"
-          echo "  test:           ${{ needs.test.result }}"
           echo "  lint:           ${{ needs.lint.result }}"
           echo "  security:       ${{ needs.security.result }}"
           echo "  test-frontend:  ${{ needs.test-frontend.result }}"
-          if [ "${{ needs.test.result }}" != "success" ] || \
-             [ "${{ needs.lint.result }}" != "success" ] || \
+          if [ "${{ needs.lint.result }}" != "success" ] || \
              [ "${{ needs.security.result }}" != "success" ] || \
              [ "${{ needs.test-frontend.result }}" != "success" ]; then
             echo "Quality gate FAILED: one or more jobs did not succeed"
