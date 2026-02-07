@@ -14,33 +14,30 @@ feature/pulse/inception (already exists)
 - Existing hooks: useAuth, useWebSocket, useTheme
 - Existing pages: all placeholder pages in /dashboard/*
 
-## Plan (TDD approach)
+## Result
+- 103 tests passing across 16 test files (76 new tests)
+- All 5 core pages enhanced from placeholders to functional dashboards
 
-### 1. DateRangeSelector component
-- Shared component for 7d/30d/90d/custom filtering
-- Used across velocity, coverage, and repos pages
+## Components Created/Modified
 
-### 2. Activity Feed page enhancement
-- Connect ActivityFeed component to WebSocket
-- Add repo/team filter dropdowns
-- Show real-time event updates
-- Loading and error states
+### New Components
+- `DateRangeSelector` - Shared 7d/30d/90d range picker
+- `EventIcon` - Shared event type icon component
+- `activity-types.ts` - Shared ActivityEvent type
 
-### 3. Velocity Dashboard enhancement
-- Add VelocityChart with date range selector
-- Add stat cards for cycle time and review time
-- Line chart for cycle time trend
+### Enhanced Pages
+1. `/dashboard` - Added VelocityChart + CoverageChart widgets
+2. `/dashboard/activity` - Real-time WebSocket feed with filters
+3. `/dashboard/velocity` - Bar chart + line chart + stat cards
+4. `/dashboard/quality` - Area chart + bar chart + stat cards
+5. `/dashboard/repos` - Repo cards with metrics + status badges
 
-### 4. Coverage Trends page (quality page)
-- Area chart showing coverage over time per repo
-- Date range selector integration
-
-### 5. Repository Overview cards
-- Cards for each connected repo with key metrics
-- Connect Repository button
+### Refactored
+- Extracted EventIcon from duplicate code in ActivityFeed + activity page
+- Extracted ActivityEvent interface to shared types
 
 ## Decisions
 - recharts is already installed for charts
 - Use CSS variables from globals.css for theming
-- All pages are server components by default; 'use client' only for
-  interactive components
+- Pages needing state/effects use 'use client'; others remain server components
+- Mock data used for initial rendering; will be replaced by API calls
