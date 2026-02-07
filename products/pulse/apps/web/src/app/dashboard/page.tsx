@@ -1,6 +1,8 @@
 import StatCard from '../../components/dashboard/StatCard';
 import RiskGauge from '../../components/dashboard/RiskGauge';
 import ActivityFeed from '../../components/dashboard/ActivityFeed';
+import VelocityChart from '../../components/charts/VelocityChart';
+import CoverageChart from '../../components/charts/CoverageChart';
 
 const mockStats = [
   { title: 'PRs Merged (7d)', value: '24', trend: '+12% vs last week' },
@@ -32,6 +34,12 @@ export default function DashboardPage() {
         <div className="lg:col-span-2">
           <ActivityFeed />
         </div>
+      </div>
+
+      {/* Charts Row */}
+      <div className="grid grid-cols-1 lg:grid-cols-2 gap-6">
+        <VelocityChart />
+        <CoverageChart />
       </div>
     </div>
   );
