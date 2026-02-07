@@ -239,32 +239,65 @@ export async function computeCoverageDelta(
   sprintStart: Date,
   now: Date
 ): Promise<RiskFactor> {
+  if (repoIds.length === 0) {
+    return {
+      name: 'Test Coverage Delta',
+      score: 0,
+      weight: 0.10,
+      detail: 'No coverage data',
+    };
+  }
+
+  // Batch query 1: All reports near sprint start (+/- 3 days)
+  // for all repos at once
+  const startReports = await prisma.coverageReport.findMany({
+    where: {
+      repoId: { in: repoIds },
+      reportedAt: {
+        gte: new Date(sprintStart.getTime() - 3 * MS_PER_DAY),
+        lte: new Date(sprintStart.getTime() + 3 * MS_PER_DAY),
+      },
+    },
+    orderBy: { reportedAt: 'asc' },
+    select: { repoId: true, coverage: true, reportedAt: true },
+  });
+
+  // Batch query 2: All latest reports for all repos at once
+  const latestReports = await prisma.coverageReport.findMany({
+    where: {
+      repoId: { in: repoIds },
+    },
+    orderBy: { reportedAt: 'desc' },
+    select: { repoId: true, coverage: true, reportedAt: true },
+  });
+
+  // Pick earliest per repo from start reports (in-memory)
+  const startByRepo = new Map<string, number>();
+  for (const report of startReports) {
+    if (!startByRepo.has(report.repoId)) {
+      startByRepo.set(report.repoId, Number(report.coverage));
+    }
+  }
+
+  // Pick latest per repo from latest reports (in-memory)
+  const latestByRepo = new Map<string, number>();
+  for (const report of latestReports) {
+    if (!latestByRepo.has(report.repoId)) {
+      latestByRepo.set(report.repoId, Number(report.coverage));
+    }
+  }
+
+  // Compute delta across repos that have both start and latest
   let totalStart = 0;
   let totalLatest = 0;
   let count = 0;
 
   for (const repoId of repoIds) {
-    const startReport = await prisma.coverageReport.findFirst({
-      where: {
-        repoId,
-        reportedAt: {
-          gte: new Date(sprintStart.getTime() - 3 * MS_PER_DAY),
-          lte: new Date(sprintStart.getTime() + 3 * MS_PER_DAY),
-        },
-      },
-      orderBy: { reportedAt: 'asc' },
-      select: { coverage: true },
-    });
-
-    const latestReport = await prisma.coverageReport.findFirst({
-      where: { repoId },
-      orderBy: { reportedAt: 'desc' },
-      select: { coverage: true },
-    });
-
-    if (startReport && latestReport) {
-      totalStart += Number(startReport.coverage);
-      totalLatest += Number(latestReport.coverage);
+    const startCov = startByRepo.get(repoId);
+    const latestCov = latestByRepo.get(repoId);
+    if (startCov !== undefined && latestCov !== undefined) {
+      totalStart += startCov;
+      totalLatest += latestCov;
       count++;
     }
   }
