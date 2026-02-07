@@ -54,6 +54,20 @@ export class RepoHandlers {
     return reply.code(201).send(result);
   }
 
+  async availableRepos(request: FastifyRequest, reply: FastifyReply) {
+    const userId = request.currentUser!.id;
+
+    // This will throw BadRequestError if no GitHub token
+    await this.service.requireGitHubToken(userId);
+
+    // In production, this would call GitHub API via Octokit.
+    // For now, return a placeholder indicating the token is valid.
+    return reply.code(200).send({
+      data: [],
+      message: 'GitHub API integration pending',
+    });
+  }
+
   async disconnectRepo(request: FastifyRequest, reply: FastifyReply) {
     const params = repoIdParamSchema.parse(request.params);
     const userId = request.currentUser!.id;

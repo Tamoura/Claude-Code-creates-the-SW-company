@@ -20,6 +20,14 @@ const repoRoutes: FastifyPluginAsync = async (fastify) => {
   });
 
   /**
+   * GET /api/v1/repos/available
+   * List repos available from GitHub that can be connected.
+   */
+  fastify.get('/available', async (request, reply) => {
+    return handlers.availableRepos(request, reply);
+  });
+
+  /**
    * POST /api/v1/repos
    * Connect a new repository.
    */

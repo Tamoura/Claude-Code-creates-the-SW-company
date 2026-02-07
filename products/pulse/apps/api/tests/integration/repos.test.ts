@@ -118,6 +118,76 @@ describe('Repos Routes', () => {
       expect(body.pagination.total).toBe(2);
     });
 
+    it('should not include disconnected repos', async () => {
+      await app.prisma.repository.create({
+        data: {
+          teamId,
+          githubId: 12345,
+          name: 'active-repo',
+          fullName: 'org/active-repo',
+          syncStatus: 'complete',
+        },
+      });
+      await app.prisma.repository.create({
+        data: {
+          teamId,
+          githubId: 67890,
+          name: 'disconnected-repo',
+          fullName: 'org/disconnected-repo',
+          syncStatus: 'complete',
+          disconnectedAt: new Date(),
+        },
+      });
+
+      const response = await app.inject({
+        method: 'GET',
+        url: `/api/v1/repos?teamId=${teamId}`,
+        headers: { authorization: `Bearer ${authToken}` },
+      });
+
+      expect(response.statusCode).toBe(200);
+      const body = JSON.parse(response.payload);
+      expect(body.data).toHaveLength(1);
+      expect(body.data[0].name).toBe('active-repo');
+    });
+
+    it('should return 400 when teamId is missing', async () => {
+      const response = await app.inject({
+        method: 'GET',
+        url: '/api/v1/repos',
+        headers: { authorization: `Bearer ${authToken}` },
+      });
+
+      expect(response.statusCode).toBe(400);
+    });
+
+    it('should respect pagination limit', async () => {
+      // Create 3 repos
+      for (let i = 1; i <= 3; i++) {
+        await app.prisma.repository.create({
+          data: {
+            teamId,
+            githubId: 10000 + i,
+            name: `repo-${i}`,
+            fullName: `org/repo-${i}`,
+          },
+        });
+      }
+
+      const response = await app.inject({
+        method: 'GET',
+        url: `/api/v1/repos?teamId=${teamId}&limit=2&page=1`,
+        headers: { authorization: `Bearer ${authToken}` },
+      });
+
+      expect(response.statusCode).toBe(200);
+      const body = JSON.parse(response.payload);
+      expect(body.data).toHaveLength(2);
+      expect(body.pagination.total).toBe(3);
+      expect(body.pagination.totalPages).toBe(2);
+      expect(body.pagination.hasMore).toBe(true);
+    });
+
     it('should filter repos by syncStatus', async () => {
       await app.prisma.repository.create({
         data: {
@@ -148,6 +218,33 @@ describe('Repos Routes', () => {
       const body = JSON.parse(response.payload);
       expect(body.data).toHaveLength(1);
       expect(body.data[0].name).toBe('synced-repo');
+    });
+  });
+
+  // ────────────────────────────────────────
+  // GET /api/v1/repos/available
+  // ────────────────────────────────────────
+
+  describe('GET /api/v1/repos/available', () => {
+    it('should return 401 without auth token', async () => {
+      const response = await app.inject({
+        method: 'GET',
+        url: '/api/v1/repos/available',
+      });
+
+      expect(response.statusCode).toBe(401);
+    });
+
+    it('should return 400 when user has no GitHub token', async () => {
+      const response = await app.inject({
+        method: 'GET',
+        url: '/api/v1/repos/available',
+        headers: { authorization: `Bearer ${authToken}` },
+      });
+
+      expect(response.statusCode).toBe(400);
+      const body = JSON.parse(response.payload);
+      expect(body.detail).toContain('GitHub');
     });
   });
 

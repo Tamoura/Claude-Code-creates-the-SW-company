@@ -169,6 +169,25 @@ export class RepoService {
     return { message: 'Repository disconnected' };
   }
 
+  /**
+   * Check if a user has a GitHub token stored. Returns the
+   * token if present, or throws BadRequestError if not.
+   */
+  async requireGitHubToken(userId: string): Promise<string> {
+    const user = await this.prisma.user.findUnique({
+      where: { id: userId },
+      select: { githubToken: true },
+    });
+
+    if (!user?.githubToken) {
+      throw new BadRequestError(
+        'GitHub account not connected. Please connect your GitHub account first.'
+      );
+    }
+
+    return user.githubToken;
+  }
+
   async getSyncStatus(repoId: string, teamId: string) {
     const repo = await this.prisma.repository.findFirst({
       where: {
