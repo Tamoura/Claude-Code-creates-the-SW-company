@@ -239,7 +239,7 @@ export class PaymentLinkService {
     data: UpdatePaymentLinkData
   ): Promise<PaymentLink> {
     // Verify ownership
-    const existingLink = await this.getPaymentLink(id, userId);
+    await this.getPaymentLink(id, userId);
 
     const updateData: Prisma.PaymentLinkUpdateInput = {};
 

@@ -80,7 +80,7 @@ export class KMSSigningService {
       const signatureBuffer = Buffer.from(response.Signature);
       const decoded = ECDSASigValue.decode(signatureBuffer, 'der');
 
-      let r = BigInt('0x' + decoded.r.toString(16));
+      const r = BigInt('0x' + decoded.r.toString(16));
       let s = BigInt('0x' + decoded.s.toString(16));
 
       // Ensure s is in lower half of curve order (EIP-2)
