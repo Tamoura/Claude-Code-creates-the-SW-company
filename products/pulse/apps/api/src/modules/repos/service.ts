@@ -6,6 +6,7 @@ import {
   BadRequestError,
 } from '../../lib/errors.js';
 import { ConnectRepoInput } from './schemas.js';
+import { decryptToken, isEncrypted } from '../../utils/encryption.js';
 
 interface ListReposOptions {
   teamId: string;
@@ -171,7 +172,12 @@ export class RepoService {
 
   /**
    * Check if a user has a GitHub token stored. Returns the
-   * token if present, or throws BadRequestError if not.
+   * decrypted token if present, or throws BadRequestError if not.
+   *
+   * Handles migration from plaintext to encrypted tokens:
+   * - If the stored value looks encrypted (iv:tag:data hex format),
+   *   it is decrypted before returning.
+   * - If it is plaintext (legacy/pre-encryption), it is returned as-is.
    */
   async requireGitHubToken(userId: string): Promise<string> {
     const user = await this.prisma.user.findUnique({
@@ -183,6 +189,20 @@ export class RepoService {
       throw new BadRequestError(
         'GitHub account not connected. Please connect your GitHub account first.'
       );
+    }
+
+    // Decrypt if stored encrypted; return as-is for legacy plaintext tokens
+    if (isEncrypted(user.githubToken)) {
+      try {
+        return decryptToken(user.githubToken);
+      } catch (error) {
+        logger.error('Failed to decrypt GitHub token', error, {
+          userId,
+        });
+        throw new BadRequestError(
+          'GitHub token decryption failed. Please reconnect your GitHub account.'
+        );
+      }
     }
 
     return user.githubToken;

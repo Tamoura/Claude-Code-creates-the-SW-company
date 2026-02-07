@@ -179,6 +179,15 @@ const authRoutes: FastifyPluginAsync = async (fastify) => {
     }
 
     // TODO: Exchange code for token, create/update user
+    // When storing the GitHub OAuth token, encrypt it before saving:
+    //
+    //   import { encryptToken } from '../../utils/encryption.js';
+    //   const encryptedToken = encryptToken(githubAccessToken);
+    //   await fastify.prisma.user.update({
+    //     where: { id: userId },
+    //     data: { githubToken: encryptedToken },
+    //   });
+    //
     return reply.code(200).send({
       message: 'GitHub OAuth callback received',
       code: 'received',
