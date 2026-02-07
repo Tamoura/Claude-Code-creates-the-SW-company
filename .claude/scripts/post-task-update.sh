@@ -56,4 +56,10 @@ if [ -f "$SCRIPT_DIR/aggregate-metrics.sh" ]; then
   echo "Metrics aggregated."
 fi
 
+# 5. Structured audit log (monthly, append-only)
+if [ -f "$SCRIPT_DIR/audit-log.sh" ]; then
+  ACTION=$([ "$STATUS" = "success" ] && echo "TASK_COMPLETED" || echo "TASK_FAILED")
+  bash "$SCRIPT_DIR/audit-log.sh" "$ACTION" "$AGENT" "$PRODUCT/$TASK_ID" "$SUMMARY" 2>/dev/null || true
+fi
+
 echo "Post-task update complete for $AGENT/$TASK_ID ($STATUS)"
