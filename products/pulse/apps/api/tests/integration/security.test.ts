@@ -406,6 +406,59 @@ describe('Security: GitHub token encryption', () => {
     expect(body.user.passwordHash).toBeUndefined();
     expect(body.user.password).toBeUndefined();
   });
+
+  it('should decrypt an encrypted token via requireGitHubToken', async () => {
+    const { encryptToken, isEncrypted } = await import(
+      '../../src/utils/encryption.js'
+    );
+    const { RepoService } = await import(
+      '../../src/modules/repos/service.js'
+    );
+
+    // Create a user with an encrypted GitHub token
+    const plainToken = 'gho_test_decryption_12345';
+    const encryptedToken = encryptToken(plainToken);
+    expect(isEncrypted(encryptedToken)).toBe(true);
+
+    const user = await app.prisma.user.create({
+      data: {
+        email: 'encrypted-token@pulse.dev',
+        passwordHash: 'not-a-real-hash',
+        name: 'Encrypted Token User',
+        githubToken: encryptedToken,
+      },
+    });
+
+    const service = new RepoService(app.prisma);
+    const token = await service.requireGitHubToken(user.id);
+
+    // Should return the decrypted plaintext token, not the encrypted value
+    expect(token).toBe(plainToken);
+    expect(token).not.toBe(encryptedToken);
+  });
+
+  it('should handle plaintext tokens gracefully during migration', async () => {
+    const { RepoService } = await import(
+      '../../src/modules/repos/service.js'
+    );
+
+    // Create a user with a plaintext GitHub token (pre-encryption migration)
+    const plaintextToken = 'gho_plaintext_legacy_token';
+    const user = await app.prisma.user.create({
+      data: {
+        email: 'plaintext-token@pulse.dev',
+        passwordHash: 'not-a-real-hash',
+        name: 'Plaintext Token User',
+        githubToken: plaintextToken,
+      },
+    });
+
+    const service = new RepoService(app.prisma);
+    const token = await service.requireGitHubToken(user.id);
+
+    // Should return the plaintext token as-is (not encrypted format)
+    expect(token).toBe(plaintextToken);
+  });
 });
 
 // ── CORS configuration ──────────────────────────────

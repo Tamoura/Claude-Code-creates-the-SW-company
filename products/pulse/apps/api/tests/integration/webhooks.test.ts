@@ -305,5 +305,105 @@ describe('Webhook Routes', () => {
       const body = JSON.parse(response.payload);
       expect(body.status).toBe('ignored');
     });
+
+    // ── Fix 1: Raw body signature verification ──────
+    it('should verify signature against raw body bytes, not JSON.stringify', async () => {
+      // Craft a payload with extra whitespace that JSON.stringify would normalize.
+      // GitHub signs the exact bytes it sends, including any whitespace.
+      const rawPayload = '{"ref":"refs/heads/main","repository":{"id":12345,"full_name":"org/test-repo"},"commits":[{"id":"raw-body-test","message":"test raw body","timestamp":"2025-01-15T10:30:00Z","author":{"name":"Dev","email":"d@t.com","username":"dev"},"added":["x.ts"],"removed":[],"modified":[]}]}';
+      const signature = signPayload(rawPayload, WEBHOOK_SECRET);
+
+      const response = await app.inject({
+        method: 'POST',
+        url: '/api/v1/webhooks/github',
+        headers: {
+          'content-type': 'application/json',
+          'x-hub-signature-256': signature,
+          'x-github-event': 'push',
+          'x-github-delivery': 'test-delivery-rawbody',
+        },
+        payload: rawPayload,
+      });
+
+      expect(response.statusCode).toBe(200);
+      const body = JSON.parse(response.payload);
+      expect(body.status).toBe('processed');
+    });
+
+    // ── Fix 2: Zod payload validation ───────────────
+    it('should return 422 for push event with invalid payload schema', async () => {
+      // Missing required "ref" and "commits" fields
+      const payload = JSON.stringify({
+        repository: { id: 12345, full_name: 'org/test-repo' },
+      });
+      const signature = signPayload(payload, WEBHOOK_SECRET);
+
+      const response = await app.inject({
+        method: 'POST',
+        url: '/api/v1/webhooks/github',
+        headers: {
+          'content-type': 'application/json',
+          'x-hub-signature-256': signature,
+          'x-github-event': 'push',
+          'x-github-delivery': 'test-delivery-invalid-push',
+        },
+        payload,
+      });
+
+      expect(response.statusCode).toBe(422);
+      const body = JSON.parse(response.payload);
+      expect(body.title).toBe('Validation Error');
+    });
+
+    it('should return 422 for pull_request event with missing fields', async () => {
+      // Missing required "pull_request" field
+      const payload = JSON.stringify({
+        action: 'opened',
+        number: 42,
+        repository: { id: 12345, full_name: 'org/test-repo' },
+      });
+      const signature = signPayload(payload, WEBHOOK_SECRET);
+
+      const response = await app.inject({
+        method: 'POST',
+        url: '/api/v1/webhooks/github',
+        headers: {
+          'content-type': 'application/json',
+          'x-hub-signature-256': signature,
+          'x-github-event': 'pull_request',
+          'x-github-delivery': 'test-delivery-invalid-pr',
+        },
+        payload,
+      });
+
+      expect(response.statusCode).toBe(422);
+      const body = JSON.parse(response.payload);
+      expect(body.title).toBe('Validation Error');
+    });
+
+    it('should return 422 for deployment event with missing fields', async () => {
+      // Missing required "deployment" field
+      const payload = JSON.stringify({
+        action: 'created',
+        repository: { id: 12345, full_name: 'org/test-repo' },
+      });
+      const signature = signPayload(payload, WEBHOOK_SECRET);
+
+      const response = await app.inject({
+        method: 'POST',
+        url: '/api/v1/webhooks/github',
+        headers: {
+          'content-type': 'application/json',
+          'x-hub-signature-256': signature,
+          'x-github-event': 'deployment',
+          'x-github-delivery': 'test-delivery-invalid-deploy',
+        },
+        payload,
+      });
+
+      expect(response.statusCode).toBe(422);
+      const body = JSON.parse(response.payload);
+      expect(body.title).toBe('Validation Error');
+    });
   });
 });
