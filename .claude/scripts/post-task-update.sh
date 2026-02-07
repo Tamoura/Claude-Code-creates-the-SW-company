@@ -50,4 +50,10 @@ if [ -f "$SCRIPT_DIR/update-task-status.sh" ]; then
   bash "$SCRIPT_DIR/update-task-status.sh" "$PRODUCT" "$TASK_ID" "$STATUS" 2>/dev/null || true
 fi
 
+# 4. Aggregate metrics (updates agent-performance.json)
+if [ -f "$SCRIPT_DIR/aggregate-metrics.sh" ]; then
+  bash "$SCRIPT_DIR/aggregate-metrics.sh" 2>/dev/null || true
+  echo "Metrics aggregated."
+fi
+
 echo "Post-task update complete for $AGENT/$TASK_ID ($STATUS)"
