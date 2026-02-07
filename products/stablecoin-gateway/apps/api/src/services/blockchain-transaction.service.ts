@@ -266,30 +266,6 @@ export class BlockchainTransactionService {
   }
 
   /**
-   * Record a successful refund amount against the daily spend counter.
-   * Uses INCRBY for atomic increment (race-condition safe).
-   * Sets a 48-hour TTL so the key auto-expires after the day rolls over.
-   */
-  private async _recordSpend(amount: number): Promise<void> {
-    if (!this.redis) {
-      return;
-    }
-
-    try {
-      const key = this.getDailySpendKey();
-      const amountCents = dollarsToCents(amount);
-      await this.redis.incrby(key, amountCents);
-      await this.redis.expire(key, SPEND_KEY_TTL_SECONDS);
-    } catch (error: unknown) {
-      // Log but do not fail the refund -- the tx already succeeded
-      logger.warn(
-        'Failed to record spend in Redis after successful refund',
-        { error } as Record<string, unknown>
-      );
-    }
-  }
-
-  /**
    * Lazily initialize and cache a wallet per network via the signer
    * provider. Each network gets its own wallet instance to prevent
    * cross-network wallet reuse.
