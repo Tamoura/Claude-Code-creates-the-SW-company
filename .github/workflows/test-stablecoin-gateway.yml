@@ -10,13 +10,12 @@ on:
     paths:
       - 'products/stablecoin-gateway/**'
 
-defaults:
-  run:
-    working-directory: products/stablecoin-gateway/apps/api
-
 jobs:
   test:
     runs-on: ubuntu-latest
+    defaults:
+      run:
+        working-directory: products/stablecoin-gateway/apps/api
     services:
       postgres:
         image: postgres:15
@@ -60,6 +59,9 @@ jobs:
 
   lint:
     runs-on: ubuntu-latest
+    defaults:
+      run:
+        working-directory: products/stablecoin-gateway/apps/api
     steps:
       - uses: actions/checkout@v4
 
@@ -72,18 +74,18 @@ jobs:
 
       - name: Install dependencies
         run: npm ci
-        working-directory: products/stablecoin-gateway/apps/api
 
       - name: Run lint
         run: npm run lint --if-present
-        working-directory: products/stablecoin-gateway/apps/api
 
       - name: Run typecheck
         run: npx tsc --noEmit --pretty
-        working-directory: products/stablecoin-gateway/apps/api
 
   security:
     runs-on: ubuntu-latest
+    defaults:
+      run:
+        working-directory: products/stablecoin-gateway/apps/api
     steps:
       - uses: actions/checkout@v4
 
@@ -91,14 +93,14 @@ jobs:
         uses: actions/setup-node@v4
         with:
           node-version: '20'
+          cache: 'npm'
+          cache-dependency-path: products/stablecoin-gateway/apps/api/package-lock.json
 
       - name: Install dependencies
         run: npm ci
-        working-directory: products/stablecoin-gateway/apps/api
 
       - name: Run security audit
         run: npm audit --audit-level=high --production || exit 1
-        working-directory: products/stablecoin-gateway/apps/api
 
   test-frontend:
     runs-on: ubuntu-latest
@@ -124,6 +126,9 @@ jobs:
     needs: [test, lint, security, test-frontend]
     runs-on: ubuntu-latest
     if: always()
+    defaults:
+      run:
+        working-directory: .
     steps:
       - name: Verify all jobs succeeded
         run: |

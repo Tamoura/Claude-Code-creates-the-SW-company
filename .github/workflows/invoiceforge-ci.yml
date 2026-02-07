@@ -124,18 +124,9 @@ jobs:
       - uses: actions/checkout@v4
 
       - name: Audit API dependencies
-        run: npm audit --audit-level=high || true
+        run: npm audit --audit-level=critical --omit=dev
         working-directory: products/invoiceforge/apps/api
 
       - name: Audit Web dependencies
-        run: npm audit --audit-level=high || true
+        run: npm audit --audit-level=critical --omit=dev
         working-directory: products/invoiceforge/apps/web
-
-      - name: Strict audit (fail on critical)
-        run: |
-          echo "Checking API for critical vulnerabilities..."
-          npm audit --audit-level=critical --omit=dev
-          echo "Checking Web for critical vulnerabilities..."
-          cd ../../apps/web
-          npm audit --audit-level=critical --omit=dev
-        working-directory: products/invoiceforge/apps/api
