@@ -2,7 +2,23 @@
 
 > Before building anything, check this registry first. Reuse > rebuild.
 
-Last updated: 2026-02-02
+Last updated: 2026-02-09
+
+## Shared Package (NEW)
+
+The most-reused components have been extracted to `packages/shared/` (`@connectsw/shared`).
+
+**Extracted components:**
+- Logger (`@connectsw/shared/utils/logger`) — Structured logging with PII redaction
+- Crypto Utils (`@connectsw/shared/utils/crypto`) — Password hashing, API key HMAC, webhook signatures
+- Prisma Plugin (`@connectsw/shared/plugins/prisma`) — PrismaClient lifecycle with pool sizing
+- Redis Plugin (`@connectsw/shared/plugins/redis`) — Redis connection with TLS, retry, graceful degradation
+
+**For new products**: Import from `@connectsw/shared` instead of copying from another product.
+
+See `packages/shared/README.md` for usage examples.
+
+---
 
 ## How to Use This Registry
 
