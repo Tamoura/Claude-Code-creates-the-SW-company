@@ -136,6 +136,40 @@ For new work (not status update):
 5. Mark graph as active in company state
 ```
 
+### Step 3.3: Generate Backlog from Task Graph
+
+After instantiating the task graph (Step 3), auto-generate agile backlog items in `products/{PRODUCT}/docs/backlog.yml`. This provides full traceability: Epic → Feature → Story → Task.
+
+```markdown
+1. Determine backlog action based on CEO request type:
+
+   | Request Type    | Backlog Action |
+   |-----------------|----------------|
+   | "New product"   | Create Epic with Features derived from PRD sections |
+   | "Add feature"   | Create Feature with Stories derived from acceptance criteria |
+   | "Fix bug"       | Create Bug linked to affected Story |
+
+2. Map task graph → backlog:
+   - Each task in the task graph maps to a Task under the appropriate Story
+   - Group related tasks under Stories based on shared feature/acceptance criteria
+   - Assign story points based on task complexity:
+     - Simple task (1 file, clear scope): 1-2 points
+     - Medium task (2-3 files, some complexity): 3-5 points
+     - Complex task (multiple files, architectural): 8-13 points
+
+3. Initialize or update backlog:
+   - If no backlog exists: run `.claude/scripts/manage-backlog.sh init {PRODUCT}`
+   - Read existing backlog: `products/{PRODUCT}/docs/backlog.yml`
+   - Add new items without disturbing existing ones
+   - Update `updated_at` timestamp
+
+4. Assign sprint:
+   - New items go into the current active sprint
+   - If sprint is full (velocity exceeded), create next sprint
+
+5. Write updated backlog to `products/{PRODUCT}/docs/backlog.yml`
+```
+
 ### Step 3.5: Semantic Memory Injection (Pre-Filter for Sub-Agents)
 
 Before entering the execution loop, load memory files ONCE and score patterns against each task using 5-dimension semantic relevance. This replaces the old category-based filtering with task-aware scoring. See `.claude/memory/relevance-scoring.md` for the full rubric.
@@ -358,7 +392,7 @@ D. RECEIVE AGENT MESSAGES & DETECT OVERRUNS
       - Update estimation accuracy: `actual / estimated_minutes` ratio
       These overruns feed back into estimation-history.json on next aggregate-metrics run
 
-E. UPDATE TASK GRAPH
+E. UPDATE TASK GRAPH + BACKLOG
    Based on message:
 
    If status = "success":
@@ -368,6 +402,9 @@ E. UPDATE TASK GRAPH
      - Update agent memory (add to task_history)
      - Update performance metrics
      - If agent suggests learned pattern, add to memory
+     - **Update backlog**: Set corresponding backlog item status to match
+       Run: `.claude/scripts/manage-backlog.sh update {PRODUCT} {ITEM_ID} done`
+       (where ITEM_ID maps from task graph task to backlog story/task)
 
    If status = "failure":
      - Increment task.retry_count
@@ -389,14 +426,21 @@ E. UPDATE TASK GRAPH
 
 F. CHECK FOR CHECKPOINT
    If completed task has checkpoint = true:
-     - **Smoke Test (FIRST)**: `.claude/scripts/smoke-test-gate.sh [product]`
+     - **Browser Verification (FIRST — HIGHEST PRIORITY GATE)**:
+       Browser verification is the first and highest-priority gate.
+       If the browser gate fails, do NOT proceed to testing gate or audit gate.
+       Nothing else matters if the product doesn't work in the browser.
+       - Run: `.claude/scripts/smoke-test-gate.sh [product]`
        - Capture the `GATE_REPORT_FILE=...` line from output
-       - If FAIL: Run automated diagnosis (see Failure Diagnosis below)
+       - If FAIL: Run automated diagnosis (see Failure Diagnosis below).
+         Do NOT continue to testing gate or audit gate.
+         Fix browser issues first, then re-run smoke test.
        - If placeholder/Coming Soon pages found: BLOCK checkpoint.
          Placeholder pages mean the product is not shippable.
          Route to Frontend Engineer to replace with real UI.
        - If PASS: continue to testing gate.
      - Run Testing Gate: `.claude/scripts/testing-gate-checklist.sh [product]`
+       (Note: testing gate also runs browser verification as Phase 1 with hard exit)
        - Capture the `GATE_REPORT_FILE=...` line from output
        - If FAIL: Run automated diagnosis (see Failure Diagnosis below)
      - Run Audit Gate: `/audit [product]`
@@ -497,9 +541,20 @@ At checkpoints and completion:
 - Time spent: M minutes
 - Estimated remaining: N minutes
 
+**Sprint Progress** (from backlog):
+- Current Sprint: [sprint name]
+- Stories completed: X/Y (Z story points)
+- Sprint velocity: V points/sprint (rolling average)
+- Backlog: `.claude/scripts/manage-backlog.sh sprint {PRODUCT}`
+
 ---
 
 [CHECKPOINT MESSAGE if applicable]
+```
+
+After each checkpoint, sync backlog to GitHub:
+```bash
+.claude/scripts/sync-backlog-to-github.sh {PRODUCT}
 ```
 
 ## Decision Routing (Legacy - Being Enhanced)

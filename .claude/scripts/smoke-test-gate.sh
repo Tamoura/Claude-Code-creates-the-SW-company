@@ -208,7 +208,7 @@ if [ "$HAS_API" = true ]; then
   HEALTH_RESPONSE=$(curl -s -w "\n%{http_code}" "$HEALTH_URL" 2>/dev/null || echo -e "\n000")
   HEALTH_END=$(date +%s%N 2>/dev/null || date +%s)
 
-  HEALTH_BODY=$(echo "$HEALTH_RESPONSE" | head -n -1)
+  HEALTH_BODY=$(echo "$HEALTH_RESPONSE" | sed '$d')
   HEALTH_STATUS=$(echo "$HEALTH_RESPONSE" | tail -1)
 
   if [ "$HEALTH_STATUS" = "200" ]; then
@@ -237,7 +237,7 @@ if [ "$HAS_WEB" = true ]; then
   WEB_URL="http://localhost:$WEB_PORT"
   WEB_RESPONSE=$(curl -s -w "\n%{http_code}" "$WEB_URL" 2>/dev/null || echo -e "\n000")
 
-  WEB_BODY=$(echo "$WEB_RESPONSE" | head -n -1)
+  WEB_BODY=$(echo "$WEB_RESPONSE" | sed '$d')
   WEB_STATUS=$(echo "$WEB_RESPONSE" | tail -1)
 
   if [ "$WEB_STATUS" = "200" ]; then
@@ -295,11 +295,30 @@ echo "│ Check 5: Playwright Headless Verification (MANDATORY)        │"
 echo "└──────────────────────────────────────────────────────────────┘"
 
 if [ "$HAS_WEB" = true ] && command -v npx >/dev/null 2>&1; then
+  # Auto-install Playwright chromium if not present
+  PW_INSTALLED=false
   if [ -d "$PRODUCT_DIR/apps/web/node_modules/@playwright" ] || \
      [ -d "$PRODUCT_DIR/node_modules/@playwright" ] || \
      [ -d "$PRODUCT_DIR/e2e/node_modules/@playwright" ]; then
+    PW_INSTALLED=true
+  fi
 
-    SMOKE_SCRIPT_PW=$(mktemp /tmp/smoke-pw-XXXXXX.mjs)
+  if [ "$PW_INSTALLED" = false ]; then
+    echo "  Playwright not found — auto-installing chromium..."
+    npx playwright install chromium 2>/dev/null && PW_INSTALLED=true
+    if [ "$PW_INSTALLED" = true ]; then
+      echo "  Playwright chromium installed successfully."
+    else
+      echo "  Playwright install failed."
+    fi
+  fi
+
+  if [ "$PW_INSTALLED" = true ]; then
+    # Place the temp file inside the product dir so ESM can resolve local playwright
+    PW_RUN_DIR="$PRODUCT_DIR/apps/web"
+    [ ! -d "$PW_RUN_DIR/node_modules/@playwright" ] && PW_RUN_DIR="$PRODUCT_DIR"
+    [ ! -d "$PW_RUN_DIR/node_modules/@playwright" ] && PW_RUN_DIR="$PRODUCT_DIR/e2e"
+    SMOKE_SCRIPT_PW="$PW_RUN_DIR/.smoke-pw-$$.mjs"
     cat > "$SMOKE_SCRIPT_PW" << 'PLAYWRIGHT_EOF'
 import { chromium } from 'playwright';
 const url = process.argv[2] || 'http://localhost:3104';
@@ -308,31 +327,80 @@ const screenshotPath = process.argv[3] || '/tmp/smoke-screenshot.png';
   const browser = await chromium.launch({ headless: true });
   const page = await browser.newPage();
   const errors = [];
-  page.on('console', msg => { if (msg.type() === 'error') errors.push(msg.text()); });
-  page.on('pageerror', err => errors.push(err.message));
+  const hydrationErrors = [];
+  page.on('console', msg => {
+    if (msg.type() === 'error') {
+      const text = msg.text();
+      errors.push(text);
+      // Detect React/Next.js hydration errors
+      if (text.includes('Hydration') || text.includes('hydrat') ||
+          text.includes('server-rendered') || text.includes('did not match')) {
+        hydrationErrors.push(text);
+      }
+    }
+  });
+  page.on('pageerror', err => {
+    errors.push(err.message);
+    if (err.message.includes('Hydration') || err.message.includes('hydrat')) {
+      hydrationErrors.push(err.message);
+    }
+  });
+
+  const results = { pages: [] };
+
+  // Helper to check a single route
+  async function checkRoute(routeUrl, routeName) {
+    try {
+      const response = await page.goto(routeUrl, { waitUntil: 'networkidle', timeout: 15000 });
+      const status = response?.status() || 0;
+      const bodyText = await page.textContent('body');
+      const hasContent = bodyText && bodyText.trim().length > 10;
+      results.pages.push({ route: routeName, status, hasContent, ok: status >= 200 && status < 400 });
+    } catch (err) {
+      results.pages.push({ route: routeName, status: 0, hasContent: false, ok: false, error: err.message });
+    }
+  }
+
   try {
-    const response = await page.goto(url, { waitUntil: 'networkidle', timeout: 15000 });
-    const status = response?.status() || 0;
+    // Check homepage
+    await checkRoute(url, '/');
     await page.screenshot({ path: screenshotPath, fullPage: true });
-    const bodyText = await page.textContent('body');
-    const hasContent = bodyText && bodyText.trim().length > 10;
-    console.log(JSON.stringify({ status, hasContent, consoleErrors: errors.length, screenshotPath }));
+
+    // Check key routes (best effort — 404 is acceptable for missing routes)
+    for (const route of ['/login', '/dashboard']) {
+      await checkRoute(url + route, route);
+    }
+
+    const homeResult = results.pages.find(p => p.route === '/');
+    console.log(JSON.stringify({
+      status: homeResult?.status || 0,
+      hasContent: homeResult?.hasContent || false,
+      consoleErrors: errors.length,
+      hydrationErrors: hydrationErrors.length,
+      screenshotPath,
+      routes: results.pages
+    }));
   } catch (err) {
-    console.log(JSON.stringify({ status: 0, hasContent: false, consoleErrors: -1, error: err.message }));
+    console.log(JSON.stringify({ status: 0, hasContent: false, consoleErrors: -1, hydrationErrors: 0, error: err.message }));
   } finally { await browser.close(); }
 })();
 PLAYWRIGHT_EOF
 
     SCREENSHOT_PATH="$SCREENSHOT_DIR/smoke-$(date +%Y%m%d-%H%M%S).png"
-    PW_OUTPUT=$(npx --yes node "$SMOKE_SCRIPT_PW" "http://localhost:$WEB_PORT" "$SCREENSHOT_PATH" 2>/dev/null || echo '{"status":0,"error":"playwright not available"}')
+    # Script is placed in product dir so ESM resolves playwright from local node_modules
+    PW_OUTPUT=$(node "$SMOKE_SCRIPT_PW" "http://localhost:$WEB_PORT" "$SCREENSHOT_PATH" 2>/dev/null || echo '{"status":0,"error":"playwright not available"}')
     rm -f "$SMOKE_SCRIPT_PW"
 
-    PW_STATUS=$(echo "$PW_OUTPUT" | grep -oE '"status":[0-9]+' | grep -oE '[0-9]+' || echo "0")
-    PW_ERRORS=$(echo "$PW_OUTPUT" | grep -oE '"consoleErrors":[0-9-]+' | grep -oE '[0-9-]+' || echo "-1")
-    PW_HAS_CONTENT=$(echo "$PW_OUTPUT" | grep -oE '"hasContent":(true|false)' | grep -oE '(true|false)' || echo "false")
+    # Parse top-level status (first occurrence before "routes" array)
+    PW_STATUS=$(echo "$PW_OUTPUT" | grep -oE '"status":[0-9]+' | head -1 | grep -oE '[0-9]+' || echo "0")
+    PW_ERRORS=$(echo "$PW_OUTPUT" | grep -oE '"consoleErrors":[0-9-]+' | head -1 | grep -oE '[0-9-]+' || echo "-1")
+    PW_HYDRATION=$(echo "$PW_OUTPUT" | grep -oE '"hydrationErrors":[0-9]+' | head -1 | grep -oE '[0-9]+' || echo "0")
+    PW_HAS_CONTENT=$(echo "$PW_OUTPUT" | grep -oE '"hasContent":(true|false)' | head -1 | grep -oE '(true|false)' || echo "false")
 
-    if [ "$PW_STATUS" = "200" ] && [ "$PW_HAS_CONTENT" = "true" ] && [ "$PW_ERRORS" = "0" ]; then
-      record "PASS" "Playwright headless check" "Page loads, has content, 0 console errors"
+    if [ "$PW_HYDRATION" != "0" ]; then
+      record "FAIL" "Playwright headless check" "Hydration errors detected ($PW_HYDRATION) — React SSR/CSR mismatch"
+    elif [ "$PW_STATUS" = "200" ] && [ "$PW_HAS_CONTENT" = "true" ] && [ "$PW_ERRORS" = "0" ]; then
+      record "PASS" "Playwright headless check" "Page loads, has content, 0 console errors, routes checked"
     elif [ "$PW_STATUS" = "200" ] && [ "$PW_ERRORS" != "0" ]; then
       record "FAIL" "Playwright headless check" "Page loads but $PW_ERRORS console errors detected"
     else
@@ -340,8 +408,25 @@ PLAYWRIGHT_EOF
     fi
 
     [ -f "$SCREENSHOT_PATH" ] && echo "  Screenshot saved: $SCREENSHOT_PATH"
+
+    # Print route check summary
+    ROUTES_JSON=$(echo "$PW_OUTPUT" | grep -oE '"routes":\[.*\]' || true)
+    if [ -n "$ROUTES_JSON" ]; then
+      echo "  Route checks:"
+      echo "  $PW_OUTPUT" | grep -oE '"route":"[^"]*","status":[0-9]+' | while read -r line; do
+        route=$(echo "$line" | grep -oE '"route":"[^"]*"' | cut -d'"' -f4)
+        status=$(echo "$line" | grep -oE '"status":[0-9]+' | grep -oE '[0-9]+')
+        if [ "$status" -ge 200 ] && [ "$status" -lt 400 ]; then
+          echo "    $route → $status OK"
+        elif [ "$status" = "404" ]; then
+          echo "    $route → 404 (not found, acceptable)"
+        else
+          echo "    $route → $status (issue)"
+        fi
+      done
+    fi
   else
-    record "FAIL" "Playwright headless check" "Playwright not installed — install with: npx playwright install chromium"
+    record "FAIL" "Playwright headless check" "Playwright auto-install failed — run manually: npx playwright install chromium"
   fi
 else
   if [ "$HAS_WEB" = true ]; then

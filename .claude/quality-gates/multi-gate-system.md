@@ -6,14 +6,74 @@
 
 Catch issues earlier in the development process by running specialized checks at strategic points, not just before CEO review.
 
-## Four Quality Gates
+## Five Quality Gates
 
 ```
-Code → Security Gate → Performance Gate → Testing Gate → Production Gate → CEO
-         ↓                ↓                  ↓                ↓
-      Security        Performance        Quality         Deployment
-      Issues          Issues             Issues          Readiness
+Code → Browser Gate → Security Gate → Performance Gate → Testing Gate → Production Gate → CEO
+          ↓               ↓                ↓                  ↓                ↓
+       Browser         Security        Performance        Quality         Deployment
+       Works?          Issues          Issues             Issues          Readiness
 ```
+
+### 0. Browser-First Gate (FOUNDATIONAL)
+
+**When**: Before ANY other gate. This is the first thing checked.
+**Purpose**: Verify the product actually works in a browser. If it doesn't, nothing else matters.
+**Invoked By**: Automatically by `testing-gate-checklist.sh` (Phase 1) and orchestrator (Step 4.F)
+
+This gate exists because products consistently showed "clean test status" (unit tests pass) but didn't actually work in the browser. By making browser verification the very first check, we catch the most critical failures immediately.
+
+#### Checks
+
+```yaml
+Browser-First Checks:
+  - Server startup (API + Web)
+  - Health endpoint responds (200 OK)
+  - Frontend loads with content (HTML with app root)
+  - No placeholder/Coming Soon pages
+  - Playwright headless verification (auto-installs if missing)
+  - Route navigation (/login, /dashboard)
+  - No hydration errors (React SSR/CSR mismatch)
+  - No console errors
+  - Production build succeeds
+  - E2E test files exist (>= 3)
+```
+
+#### Implementation
+
+```bash
+# Run browser-first gate
+.claude/scripts/smoke-test-gate.sh [product]
+
+# Also enforced as Phase 1 of testing gate:
+.claude/scripts/testing-gate-checklist.sh [product]
+# ^ Phase 1 calls smoke-test-gate.sh. If FAIL → exit 1 immediately.
+#   Phases 2-6 are skipped entirely.
+```
+
+#### Pass Criteria
+
+```
+✅ PASS if:
+- Servers start and respond
+- Frontend loads with real content
+- No placeholder pages
+- Playwright verification succeeds
+- No hydration errors
+- No console errors
+
+❌ FAIL if ANY:
+- Server doesn't start
+- Frontend returns non-200
+- Placeholder/Coming Soon detected
+- Hydration errors present
+- Console errors present
+- Playwright check fails
+
+BLOCKING: If browser gate fails, ALL subsequent gates are skipped.
+```
+
+---
 
 ### 1. Security Gate 🔒
 
@@ -416,6 +476,7 @@ tasks:
 
 | Gate | Automatic? | When Run |
 |------|-----------|----------|
+| Browser-First | Automatic | Before ALL other gates (Phase 1 of testing gate) |
 | Security | Automatic in CI | On every PR |
 | Performance | Automatic | After staging deploy |
 | Testing | Automatic | Before CEO checkpoint |
@@ -424,6 +485,12 @@ tasks:
 ### Gate Failures
 
 ```markdown
+If Browser-First Gate FAILS:
+→ Block ALL subsequent gates (security, performance, testing, production)
+→ Route to Frontend/Backend engineer to fix
+→ Re-run smoke-test-gate.sh
+→ Nothing else runs until browser gate passes
+
 If Security Gate FAILS:
 → Block PR creation
 → Engineer must fix and re-run gate
