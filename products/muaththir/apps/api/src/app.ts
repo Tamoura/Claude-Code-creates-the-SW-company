@@ -10,6 +10,10 @@ import authPlugin from './plugins/auth';
 
 import healthRoutes from './routes/health';
 import authRoutes from './routes/auth';
+import childrenRoutes from './routes/children';
+import observationRoutes from './routes/observations';
+import { milestoneDefinitionRoutes, childMilestoneRoutes } from './routes/milestones';
+import dashboardRoutes from './routes/dashboard';
 
 import { logger } from './utils/logger';
 import { AppError, ValidationError } from './lib/errors';
@@ -123,6 +127,11 @@ export async function buildApp(
   // Routes
   await app.register(healthRoutes, { prefix: '/api' });
   await app.register(authRoutes, { prefix: '/api/auth' });
+  await app.register(childrenRoutes, { prefix: '/api/children' });
+  await app.register(observationRoutes, { prefix: '/api/children' });
+  await app.register(milestoneDefinitionRoutes, { prefix: '/api/milestones' });
+  await app.register(childMilestoneRoutes, { prefix: '/api/children/:childId/milestones' });
+  await app.register(dashboardRoutes, { prefix: '/api/dashboard' });
 
   return app;
 }
