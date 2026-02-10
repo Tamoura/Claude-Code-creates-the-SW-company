@@ -174,6 +174,43 @@ Before entering the execution loop, load memory files ONCE and pre-filter patter
    - GOTCHA-XXX: "[gotcha description]"
 ```
 
+### Step 3.7: Compute Adaptive Duration Estimates
+
+Before entering the execution loop, replace static `estimated_time_minutes` in each task with data-driven predictions from `.claude/memory/metrics/estimation-history.json`.
+
+```markdown
+1. Read `.claude/memory/metrics/estimation-history.json`
+
+2. For each task in the task graph:
+   a. Extract task type prefix from task ID (e.g., PRD-01 → PRD, ARCH-01 → ARCH,
+      BACKEND-01 → BACKEND, FRONTEND-01 → FRONTEND, QA-01 → QA, etc.)
+   b. Identify the assigned agent role
+   c. Look up: estimation-history.agents[agent-role][task-type-prefix]
+
+3. Compute estimate based on sample count:
+
+   | Samples | Estimate | Confidence | Range |
+   |---------|----------|------------|-------|
+   | >= 5    | p75      | high       | [p25, p90] |
+   | >= 3    | median   | medium     | [min, max] |
+   | >= 1    | mean     | low        | [min×0.7, max×1.5] |
+   | 0       | template default | none | [default×0.5, default×2.0] |
+
+4. Update each task with:
+   - `estimated_minutes`: computed estimate
+   - `estimation_confidence`: high | medium | low | none
+   - `estimation_range`: [low_bound, high_bound]
+
+5. Recompute workflow totals:
+   - `total_sequential_minutes`: sum of all task estimates (sequential execution)
+   - `critical_path_minutes`: longest chain through dependency graph
+   - These replace any static totals from the template
+
+Example: product-manager has 3 PRD samples with mean=45, median=45.
+  → PRD-01 gets estimated_minutes=45, confidence=medium, range=[45, 45]
+  → Template default of 120min is replaced.
+```
+
 ### Step 4: Execute Task Graph (PARALLEL-AWARE Execution Loop)
 
 ```markdown
@@ -272,13 +309,19 @@ C. INVOKE AGENTS (PARALLEL-AWARE)
    - Record started_at timestamp
    - Record assigned_to agent
 
-D. RECEIVE AGENT MESSAGES
+D. RECEIVE AGENT MESSAGES & DETECT OVERRUNS
    When agents report back:
 
    1. Parse AgentMessage JSON
    2. Extract task_id from metadata
    3. Extract status from payload
    4. Extract artifacts, context, metrics
+   5. **Overrun Detection**: Compare `metrics.time_spent_minutes` against
+      `task.estimation_range[high]` (from Step 3.7):
+      - If actual > range[high]: log overrun alert, flag for estimation recalibration
+      - If actual < range[low]: note as faster-than-expected (potential efficiency insight)
+      - Update estimation accuracy: `actual / estimated_minutes` ratio
+      These overruns feed back into estimation-history.json on next aggregate-metrics run
 
 E. UPDATE TASK GRAPH
    Based on message:
