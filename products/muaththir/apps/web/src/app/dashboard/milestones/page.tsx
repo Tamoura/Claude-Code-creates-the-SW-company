@@ -1,38 +1,168 @@
+'use client';
+
+import { useState, useEffect } from 'react';
 import Link from 'next/link';
 import { DIMENSIONS } from '../../../lib/dimensions';
+import { apiClient, type Child, type DashboardData } from '../../../lib/api-client';
 
 export default function MilestonesPage() {
+  const [children, setChildren] = useState<Child[]>([]);
+  const [selectedChildId, setSelectedChildId] = useState<string | null>(null);
+  const [dashboardData, setDashboardData] = useState<DashboardData | null>(null);
+  const [loading, setLoading] = useState(true);
+  const [error, setError] = useState<string | null>(null);
+
+  // Load children on mount
+  useEffect(() => {
+    const loadChildren = async () => {
+      try {
+        setLoading(true);
+        setError(null);
+        const response = await apiClient.getChildren(1, 50);
+        setChildren(response.data);
+
+        // Auto-select first child if available
+        if (response.data.length > 0) {
+          setSelectedChildId(response.data[0].id);
+        }
+      } catch (err) {
+        setError(err instanceof Error ? err.message : 'Failed to load children');
+      } finally {
+        setLoading(false);
+      }
+    };
+
+    loadChildren();
+  }, []);
+
+  // Load dashboard data when child is selected
+  useEffect(() => {
+    if (!selectedChildId) return;
+
+    const loadDashboard = async () => {
+      try {
+        setLoading(true);
+        setError(null);
+        const data = await apiClient.getDashboard(selectedChildId);
+        setDashboardData(data);
+      } catch (err) {
+        setError(err instanceof Error ? err.message : 'Failed to load milestone data');
+      } finally {
+        setLoading(false);
+      }
+    };
+
+    loadDashboard();
+  }, [selectedChildId]);
+
+  // Get milestone progress for a dimension
+  const getMilestoneProgress = (dimensionSlug: string) => {
+    if (!dashboardData) return { achieved: 0, total: 0 };
+    const dim = dashboardData.dimensions.find((d) => d.dimension === dimensionSlug);
+    return dim?.milestoneProgress || { achieved: 0, total: 0 };
+  };
+
+  // Show "No children" state
+  if (!loading && children.length === 0) {
+    return (
+      <div className="flex items-center justify-center min-h-[60vh]">
+        <div className="text-center max-w-md">
+          <div className="mx-auto h-16 w-16 rounded-full bg-emerald-100 flex items-center justify-center mb-4">
+            <svg
+              className="h-8 w-8 text-emerald-600"
+              fill="none"
+              viewBox="0 0 24 24"
+              stroke="currentColor"
+              aria-hidden="true"
+            >
+              <path
+                strokeLinecap="round"
+                strokeLinejoin="round"
+                strokeWidth={2}
+                d="M12 4v16m8-8H4"
+              />
+            </svg>
+          </div>
+          <h2 className="text-xl font-semibold text-slate-900 mb-2">
+            Add Your First Child
+          </h2>
+          <p className="text-sm text-slate-500 mb-6">
+            Create a child profile to start tracking their development milestones.
+          </p>
+          <Link href="/onboarding/child" className="btn-primary">
+            Add Child Profile
+          </Link>
+        </div>
+      </div>
+    );
+  }
+
   return (
     <div className="space-y-8">
-      <div>
-        <h1 className="text-2xl font-bold text-slate-900">Milestones</h1>
-        <p className="text-sm text-slate-500 mt-1">
-          Age-appropriate developmental milestones across all dimensions.
-        </p>
+      <div className="flex items-center justify-between">
+        <div>
+          <h1 className="text-2xl font-bold text-slate-900">Milestones</h1>
+          <p className="text-sm text-slate-500 mt-1">
+            Age-appropriate developmental milestones across all dimensions.
+          </p>
+        </div>
+
+        {/* Child Selector (if multiple children) */}
+        {children.length > 1 && (
+          <select
+            value={selectedChildId || ''}
+            onChange={(e) => setSelectedChildId(e.target.value)}
+            className="px-4 py-2 border border-slate-200 rounded-lg text-sm focus:outline-none focus:ring-2 focus:ring-emerald-500"
+            aria-label="Select child"
+          >
+            {children.map((child) => (
+              <option key={child.id} value={child.id}>
+                {child.name}
+              </option>
+            ))}
+          </select>
+        )}
       </div>
 
-      <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-3 gap-4">
-        {DIMENSIONS.map((dim) => (
-          <Link
-            key={dim.slug}
-            href={`/dashboard/milestones/${dim.slug}`}
-            className="card group hover:shadow-md transition-shadow"
-            style={{ borderLeft: `4px solid ${dim.colour}` }}
-          >
-            <h2 className="text-sm font-semibold text-slate-900 group-hover:text-emerald-700 transition-colors">
-              {dim.name}
-            </h2>
-            <p className="text-xs text-slate-500 mt-1">
-              View milestones for {dim.name.toLowerCase()}
-            </p>
-            <div className="mt-4 flex items-center gap-1 text-xs text-slate-400">
-              <span>0 completed</span>
-              <span className="mx-1">|</span>
-              <span>0 total</span>
-            </div>
-          </Link>
-        ))}
-      </div>
+      {error && (
+        <div className="card bg-red-50 border-red-200">
+          <p className="text-sm text-red-700">{error}</p>
+        </div>
+      )}
+
+      {loading ? (
+        <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-3 gap-4">
+          {DIMENSIONS.map((dim) => (
+            <div key={dim.slug} className="card animate-pulse h-32" />
+          ))}
+        </div>
+      ) : (
+        <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-3 gap-4">
+          {DIMENSIONS.map((dim) => {
+            const progress = getMilestoneProgress(dim.slug);
+            return (
+              <Link
+                key={dim.slug}
+                href={`/dashboard/milestones/${dim.slug}`}
+                className="card group hover:shadow-md transition-shadow"
+                style={{ borderLeft: `4px solid ${dim.colour}` }}
+              >
+                <h2 className="text-sm font-semibold text-slate-900 group-hover:text-emerald-700 transition-colors">
+                  {dim.name}
+                </h2>
+                <p className="text-xs text-slate-500 mt-1">
+                  View milestones for {dim.name.toLowerCase()}
+                </p>
+                <div className="mt-4 flex items-center gap-1 text-xs text-slate-400">
+                  <span>{progress.achieved} completed</span>
+                  <span className="mx-1">|</span>
+                  <span>{progress.total} total</span>
+                </div>
+              </Link>
+            );
+          })}
+        </div>
+      )}
     </div>
   );
 }

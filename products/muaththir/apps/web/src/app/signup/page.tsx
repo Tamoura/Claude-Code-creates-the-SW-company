@@ -2,9 +2,13 @@
 
 import Link from 'next/link';
 import { useState } from 'react';
+import { useRouter } from 'next/navigation';
 import Header from '../../components/layout/Header';
+import { useAuth } from '../../hooks/useAuth';
 
 export default function SignupPage() {
+  const router = useRouter();
+  const { signup } = useAuth();
   const [name, setName] = useState('');
   const [email, setEmail] = useState('');
   const [password, setPassword] = useState('');
@@ -17,8 +21,8 @@ export default function SignupPage() {
     setIsLoading(true);
 
     try {
-      // TODO: Connect to API when backend is ready
-      console.log('Signup:', { name, email, password });
+      await signup(name, email, password);
+      router.push('/onboarding');
     } catch (err) {
       setError(err instanceof Error ? err.message : 'Registration failed');
     } finally {

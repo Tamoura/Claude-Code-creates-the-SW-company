@@ -3,20 +3,24 @@
 import Link from 'next/link';
 import { useState } from 'react';
 import Header from '../../components/layout/Header';
+import { apiClient } from '../../lib/api-client';
 
 export default function ForgotPasswordPage() {
   const [email, setEmail] = useState('');
   const [submitted, setSubmitted] = useState(false);
+  const [error, setError] = useState('');
   const [isLoading, setIsLoading] = useState(false);
 
   const handleSubmit = async (e: React.FormEvent) => {
     e.preventDefault();
+    setError('');
     setIsLoading(true);
 
     try {
-      // TODO: Connect to API when backend is ready
-      console.log('Forgot password:', { email });
+      await apiClient.forgotPassword(email);
       setSubmitted(true);
+    } catch (err) {
+      setError(err instanceof Error ? err.message : 'Failed to send reset link');
     } finally {
       setIsLoading(false);
     }
@@ -59,6 +63,15 @@ export default function ForgotPasswordPage() {
             </div>
           ) : (
             <form onSubmit={handleSubmit} className="card space-y-5">
+              {error && (
+                <div
+                  className="rounded-xl bg-red-50 p-3 text-sm text-red-700"
+                  role="alert"
+                >
+                  {error}
+                </div>
+              )}
+
               <div>
                 <label htmlFor="email" className="label">
                   Email Address

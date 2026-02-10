@@ -1,7 +1,9 @@
 'use client';
 
-import { useState } from 'react';
+import { useState, useEffect } from 'react';
+import { useRouter } from 'next/navigation';
 import { DIMENSIONS } from '../../../lib/dimensions';
+import { apiClient, type Child } from '../../../lib/api-client';
 
 const sentiments = [
   { value: 'positive', label: 'Positive', emoji: 'Positive', colour: '#10B981' },
@@ -10,6 +12,7 @@ const sentiments = [
 ] as const;
 
 export default function ObservePage() {
+  const router = useRouter();
   const [selectedDimension, setSelectedDimension] = useState<string>('');
   const [text, setText] = useState('');
   const [sentiment, setSentiment] = useState<string>('');
@@ -19,8 +22,37 @@ export default function ObservePage() {
   const [tags, setTags] = useState<string[]>([]);
   const [tagInput, setTagInput] = useState('');
 
+  const [children, setChildren] = useState<Child[]>([]);
+  const [selectedChildId, setSelectedChildId] = useState<string>('');
+  const [isLoading, setIsLoading] = useState(true);
+  const [isSubmitting, setIsSubmitting] = useState(false);
+  const [error, setError] = useState<string>('');
+  const [successMessage, setSuccessMessage] = useState<string>('');
+
   const charCount = text.length;
   const charLimit = 1000;
+
+  // Fetch children on mount
+  useEffect(() => {
+    const fetchChildren = async () => {
+      try {
+        setIsLoading(true);
+        const response = await apiClient.getChildren(1, 50);
+        setChildren(response.data);
+
+        // If only one child, select automatically
+        if (response.data.length === 1) {
+          setSelectedChildId(response.data[0].id);
+        }
+      } catch (err) {
+        setError(err instanceof Error ? err.message : 'Failed to load children');
+      } finally {
+        setIsLoading(false);
+      }
+    };
+
+    fetchChildren();
+  }, []);
 
   const handleAddTag = () => {
     const trimmed = tagInput.trim();
@@ -43,15 +75,49 @@ export default function ObservePage() {
 
   const handleSubmit = async (e: React.FormEvent) => {
     e.preventDefault();
-    // TODO: Connect to API when backend is ready
-    console.log('Observation:', {
-      dimension: selectedDimension,
-      text,
-      sentiment,
-      observedAt,
-      tags,
-    });
+
+    if (!selectedChildId) {
+      setError('Please select a child');
+      return;
+    }
+
+    setIsSubmitting(true);
+    setError('');
+    setSuccessMessage('');
+
+    try {
+      await apiClient.createObservation(selectedChildId, {
+        dimension: selectedDimension,
+        content: text,
+        sentiment,
+        observedAt,
+        tags,
+      });
+
+      setSuccessMessage('Observation saved successfully!');
+
+      // Redirect to timeline after a short delay
+      setTimeout(() => {
+        router.push('/dashboard/timeline');
+      }, 1000);
+    } catch (err) {
+      setError(err instanceof Error ? err.message : 'Failed to save observation');
+    } finally {
+      setIsSubmitting(false);
+    }
   };
+
+  // Loading state
+  if (isLoading) {
+    return (
+      <div className="max-w-2xl mx-auto space-y-8">
+        <div className="h-8 w-48 bg-slate-200 rounded animate-pulse" />
+        <div className="card py-12 text-center">
+          <div className="h-6 w-32 bg-slate-200 rounded mx-auto animate-pulse" />
+        </div>
+      </div>
+    );
+  }
 
   return (
     <div className="max-w-2xl mx-auto space-y-8">
@@ -64,7 +130,56 @@ export default function ObservePage() {
         </p>
       </div>
 
-      <form onSubmit={handleSubmit} className="space-y-6">
+      {/* Success Message */}
+      {successMessage && (
+        <div className="p-4 rounded-lg bg-emerald-50 border border-emerald-200">
+          <p className="text-sm text-emerald-800">{successMessage}</p>
+        </div>
+      )}
+
+      {/* Error Message */}
+      {error && (
+        <div className="p-4 rounded-lg bg-red-50 border border-red-200">
+          <p className="text-sm text-red-800">{error}</p>
+        </div>
+      )}
+
+      {/* No children state */}
+      {children.length === 0 && (
+        <div className="card text-center py-12">
+          <h3 className="text-sm font-medium text-slate-900 mb-1">
+            No children found
+          </h3>
+          <p className="text-xs text-slate-500">
+            Please create a child profile first to log observations.
+          </p>
+        </div>
+      )}
+
+      {children.length > 0 && (
+        <form onSubmit={handleSubmit} className="space-y-6">
+          {/* Child Selector (if multiple children) */}
+          {children.length > 1 && (
+            <div>
+              <label htmlFor="child-select" className="label">
+                Select Child
+              </label>
+              <select
+                id="child-select"
+                className="input-field"
+                value={selectedChildId}
+                onChange={(e) => setSelectedChildId(e.target.value)}
+                required
+              >
+                <option value="">Choose a child...</option>
+                {children.map((child) => (
+                  <option key={child.id} value={child.id}>
+                    {child.name}
+                  </option>
+                ))}
+              </select>
+            </div>
+          )}
         {/* Dimension Selector */}
         <fieldset>
           <legend className="label mb-3">
@@ -224,15 +339,22 @@ export default function ObservePage() {
           )}
         </div>
 
-        {/* Submit */}
-        <button
-          type="submit"
-          className="btn-primary w-full"
-          disabled={!selectedDimension || !text.trim() || !sentiment}
-        >
-          Save Observation
-        </button>
-      </form>
+          {/* Submit */}
+          <button
+            type="submit"
+            className="btn-primary w-full"
+            disabled={
+              !selectedChildId ||
+              !selectedDimension ||
+              !text.trim() ||
+              !sentiment ||
+              isSubmitting
+            }
+          >
+            {isSubmitting ? 'Saving...' : 'Save Observation'}
+          </button>
+        </form>
+      )}
     </div>
   );
 }

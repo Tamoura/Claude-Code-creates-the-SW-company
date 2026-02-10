@@ -2,9 +2,13 @@
 
 import Link from 'next/link';
 import { useState } from 'react';
+import { useRouter } from 'next/navigation';
 import Header from '../../components/layout/Header';
+import { useAuth } from '../../hooks/useAuth';
 
 export default function LoginPage() {
+  const router = useRouter();
+  const { login } = useAuth();
   const [email, setEmail] = useState('');
   const [password, setPassword] = useState('');
   const [error, setError] = useState('');
@@ -16,8 +20,8 @@ export default function LoginPage() {
     setIsLoading(true);
 
     try {
-      // TODO: Connect to API when backend is ready
-      console.log('Login:', { email, password });
+      await login(email, password);
+      router.push('/dashboard');
     } catch (err) {
       setError(err instanceof Error ? err.message : 'Login failed');
     } finally {

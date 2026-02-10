@@ -1,16 +1,34 @@
 'use client';
 
 import { useState } from 'react';
+import { useRouter } from 'next/navigation';
+import { apiClient } from '../../../lib/api-client';
 
 export default function OnboardingChildPage() {
+  const router = useRouter();
   const [name, setName] = useState('');
   const [dateOfBirth, setDateOfBirth] = useState('');
   const [gender, setGender] = useState<string>('');
+  const [error, setError] = useState('');
+  const [isLoading, setIsLoading] = useState(false);
 
   const handleSubmit = async (e: React.FormEvent) => {
     e.preventDefault();
-    // TODO: Connect to API when backend is ready
-    console.log('Create child:', { name, dateOfBirth, gender });
+    setError('');
+    setIsLoading(true);
+
+    try {
+      await apiClient.createChild({
+        name,
+        dateOfBirth,
+        gender: gender ? (gender as 'male' | 'female') : undefined,
+      });
+      router.push('/dashboard');
+    } catch (err) {
+      setError(err instanceof Error ? err.message : 'Failed to create child profile');
+    } finally {
+      setIsLoading(false);
+    }
   };
 
   return (
@@ -27,6 +45,15 @@ export default function OnboardingChildPage() {
         </div>
 
         <form onSubmit={handleSubmit} className="card space-y-5">
+          {error && (
+            <div
+              className="rounded-xl bg-red-50 p-3 text-sm text-red-700"
+              role="alert"
+            >
+              {error}
+            </div>
+          )}
+
           <div>
             <label htmlFor="child-name" className="label">
               Child&apos;s Name
@@ -63,19 +90,22 @@ export default function OnboardingChildPage() {
           <fieldset>
             <legend className="label mb-2">Gender (optional)</legend>
             <div className="flex gap-3">
-              {['Boy', 'Girl'].map((option) => (
+              {[
+                { label: 'Boy', value: 'male' },
+                { label: 'Girl', value: 'female' },
+              ].map((option) => (
                 <button
-                  key={option}
+                  key={option.value}
                   type="button"
-                  onClick={() => setGender(option.toLowerCase())}
+                  onClick={() => setGender(option.value)}
                   className={`flex-1 p-3 rounded-xl border-2 text-sm font-medium transition-all ${
-                    gender === option.toLowerCase()
+                    gender === option.value
                       ? 'border-emerald-500 bg-emerald-50 text-emerald-700'
                       : 'border-slate-200 text-slate-600 hover:border-slate-300'
                   }`}
-                  aria-pressed={gender === option.toLowerCase()}
+                  aria-pressed={gender === option.value}
                 >
-                  {option}
+                  {option.label}
                 </button>
               ))}
             </div>
@@ -84,9 +114,9 @@ export default function OnboardingChildPage() {
           <button
             type="submit"
             className="btn-primary w-full"
-            disabled={!name.trim() || !dateOfBirth}
+            disabled={!name.trim() || !dateOfBirth || isLoading}
           >
-            Create Profile
+            {isLoading ? 'Creating Profile...' : 'Create Profile'}
           </button>
         </form>
       </div>

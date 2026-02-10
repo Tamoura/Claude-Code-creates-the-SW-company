@@ -1,19 +1,97 @@
+'use client';
+
+import { useState, useEffect } from 'react';
 import Link from 'next/link';
 import { DIMENSIONS } from '../../../../lib/dimensions';
 import DimensionBadge from '../../../../components/common/DimensionBadge';
+import { apiClient, type Child, type ChildMilestone } from '../../../../lib/api-client';
 
 interface MilestonesByDimensionPageProps {
   params: { dimension: string };
-}
-
-export function generateStaticParams() {
-  return DIMENSIONS.map((d) => ({ dimension: d.slug }));
 }
 
 export default function MilestonesByDimensionPage({
   params,
 }: MilestonesByDimensionPageProps) {
   const dimension = DIMENSIONS.find((d) => d.slug === params.dimension);
+  const [children, setChildren] = useState<Child[]>([]);
+  const [selectedChildId, setSelectedChildId] = useState<string | null>(null);
+  const [milestones, setMilestones] = useState<ChildMilestone[]>([]);
+  const [loading, setLoading] = useState(true);
+  const [error, setError] = useState<string | null>(null);
+
+  // Load children on mount
+  useEffect(() => {
+    const loadChildren = async () => {
+      try {
+        setLoading(true);
+        setError(null);
+        const response = await apiClient.getChildren(1, 50);
+        setChildren(response.data);
+
+        // Auto-select first child if available
+        if (response.data.length > 0) {
+          setSelectedChildId(response.data[0].id);
+        }
+      } catch (err) {
+        setError(err instanceof Error ? err.message : 'Failed to load children');
+      } finally {
+        setLoading(false);
+      }
+    };
+
+    loadChildren();
+  }, []);
+
+  // Load milestones when child or dimension changes
+  useEffect(() => {
+    if (!selectedChildId || !dimension) return;
+
+    const loadMilestones = async () => {
+      try {
+        setLoading(true);
+        setError(null);
+        const response = await apiClient.getChildMilestones(selectedChildId, {
+          dimension: dimension.slug,
+          limit: 100,
+        });
+        setMilestones(response.data);
+      } catch (err) {
+        setError(err instanceof Error ? err.message : 'Failed to load milestones');
+      } finally {
+        setLoading(false);
+      }
+    };
+
+    loadMilestones();
+  }, [selectedChildId, dimension]);
+
+  // Toggle milestone achievement with optimistic UI
+  const handleToggle = async (milestoneId: string, currentAchieved: boolean) => {
+    if (!selectedChildId) return;
+
+    // Optimistic update
+    const newAchieved = !currentAchieved;
+    setMilestones((prev) =>
+      prev.map((m) =>
+        m.id === milestoneId
+          ? { ...m, achieved: newAchieved, achievedAt: newAchieved ? new Date().toISOString() : null }
+          : m
+      )
+    );
+
+    try {
+      await apiClient.toggleMilestone(selectedChildId, milestoneId, newAchieved);
+    } catch (err) {
+      // Revert on error
+      setMilestones((prev) =>
+        prev.map((m) =>
+          m.id === milestoneId ? { ...m, achieved: currentAchieved } : m
+        )
+      );
+      setError(err instanceof Error ? err.message : 'Failed to update milestone');
+    }
+  };
 
   if (!dimension) {
     return (
@@ -27,6 +105,41 @@ export default function MilestonesByDimensionPage({
         >
           Back to Milestones
         </Link>
+      </div>
+    );
+  }
+
+  // Show "No children" state
+  if (!loading && children.length === 0) {
+    return (
+      <div className="flex items-center justify-center min-h-[60vh]">
+        <div className="text-center max-w-md">
+          <div className="mx-auto h-16 w-16 rounded-full bg-emerald-100 flex items-center justify-center mb-4">
+            <svg
+              className="h-8 w-8 text-emerald-600"
+              fill="none"
+              viewBox="0 0 24 24"
+              stroke="currentColor"
+              aria-hidden="true"
+            >
+              <path
+                strokeLinecap="round"
+                strokeLinejoin="round"
+                strokeWidth={2}
+                d="M12 4v16m8-8H4"
+              />
+            </svg>
+          </div>
+          <h2 className="text-xl font-semibold text-slate-900 mb-2">
+            Add Your First Child
+          </h2>
+          <p className="text-sm text-slate-500 mb-6">
+            Create a child profile to start tracking their development milestones.
+          </p>
+          <Link href="/onboarding/child" className="btn-primary">
+            Add Child Profile
+          </Link>
+        </div>
       </div>
     );
   }
@@ -49,23 +162,88 @@ export default function MilestonesByDimensionPage({
             {dimension.name} Milestones
           </h1>
         </div>
+
+        {/* Child Selector (if multiple children) */}
+        {children.length > 1 && (
+          <select
+            value={selectedChildId || ''}
+            onChange={(e) => setSelectedChildId(e.target.value)}
+            className="px-4 py-2 border border-slate-200 rounded-lg text-sm focus:outline-none focus:ring-2 focus:ring-emerald-500"
+            aria-label="Select child"
+          >
+            {children.map((child) => (
+              <option key={child.id} value={child.id}>
+                {child.name}
+              </option>
+            ))}
+          </select>
+        )}
       </div>
 
-      {/* Empty State */}
-      <div className="card text-center py-16">
-        <div className="mx-auto h-12 w-12 rounded-full bg-slate-100 flex items-center justify-center mb-4">
-          <svg className="h-6 w-6 text-slate-400" fill="none" viewBox="0 0 24 24" stroke="currentColor" aria-hidden="true">
-            <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M9 12l2 2 4-4M7.835 4.697a3.42 3.42 0 001.946-.806 3.42 3.42 0 014.438 0 3.42 3.42 0 001.946.806 3.42 3.42 0 013.138 3.138 3.42 3.42 0 00.806 1.946 3.42 3.42 0 010 4.438 3.42 3.42 0 00-.806 1.946 3.42 3.42 0 01-3.138 3.138 3.42 3.42 0 00-1.946.806 3.42 3.42 0 01-4.438 0 3.42 3.42 0 00-1.946-.806 3.42 3.42 0 01-3.138-3.138 3.42 3.42 0 00-.806-1.946 3.42 3.42 0 010-4.438 3.42 3.42 0 00.806-1.946 3.42 3.42 0 013.138-3.138z" />
-          </svg>
+      {error && (
+        <div className="card bg-red-50 border-red-200">
+          <p className="text-sm text-red-700">{error}</p>
         </div>
-        <h2 className="text-sm font-medium text-slate-900 mb-1">
-          Milestones coming soon
-        </h2>
-        <p className="text-xs text-slate-500">
-          Create a child profile to see age-appropriate {dimension.name.toLowerCase()}{' '}
-          milestones with checklists.
-        </p>
-      </div>
+      )}
+
+      {loading ? (
+        <div className="space-y-3">
+          {[1, 2, 3, 4, 5].map((i) => (
+            <div key={i} className="card animate-pulse h-24" />
+          ))}
+        </div>
+      ) : milestones.length === 0 ? (
+        <div className="card text-center py-16">
+          <div className="mx-auto h-12 w-12 rounded-full bg-slate-100 flex items-center justify-center mb-4">
+            <svg className="h-6 w-6 text-slate-400" fill="none" viewBox="0 0 24 24" stroke="currentColor" aria-hidden="true">
+              <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M9 12l2 2 4-4M7.835 4.697a3.42 3.42 0 001.946-.806 3.42 3.42 0 014.438 0 3.42 3.42 0 001.946.806 3.42 3.42 0 013.138 3.138 3.42 3.42 0 00.806 1.946 3.42 3.42 0 010 4.438 3.42 3.42 0 00-.806 1.946 3.42 3.42 0 01-3.138 3.138 3.42 3.42 0 00-1.946.806 3.42 3.42 0 01-4.438 0 3.42 3.42 0 00-1.946-.806 3.42 3.42 0 01-3.138-3.138 3.42 3.42 0 00-.806-1.946 3.42 3.42 0 010-4.438 3.42 3.42 0 00.806-1.946 3.42 3.42 0 013.138-3.138z" />
+            </svg>
+          </div>
+          <h2 className="text-sm font-medium text-slate-900 mb-1">
+            No milestones yet
+          </h2>
+          <p className="text-xs text-slate-500">
+            Milestones will appear here as they become available for your child&apos;s age band.
+          </p>
+        </div>
+      ) : (
+        <div className="space-y-3">
+          {milestones.map((milestone) => (
+            <div
+              key={milestone.id}
+              className="card hover:shadow-md transition-shadow"
+            >
+              <div className="flex items-start gap-4">
+                <input
+                  type="checkbox"
+                  checked={milestone.achieved}
+                  onChange={() => handleToggle(milestone.id, milestone.achieved)}
+                  className="mt-1 h-5 w-5 rounded border-slate-300 text-emerald-600 focus:ring-emerald-500"
+                  aria-label={`Mark "${milestone.title}" as ${milestone.achieved ? 'not achieved' : 'achieved'}`}
+                />
+                <div className="flex-1">
+                  <h3 className={`text-sm font-semibold ${milestone.achieved ? 'text-slate-500 line-through' : 'text-slate-900'}`}>
+                    {milestone.title}
+                  </h3>
+                  <p className="text-xs text-slate-500 mt-1">
+                    {milestone.description}
+                  </p>
+                  {milestone.guidance && (
+                    <p className="text-xs text-slate-400 mt-2 italic">
+                      {milestone.guidance}
+                    </p>
+                  )}
+                  {milestone.achieved && milestone.achievedAt && (
+                    <p className="text-xs text-emerald-600 mt-2">
+                      Achieved on {new Date(milestone.achievedAt).toLocaleDateString()}
+                    </p>
+                  )}
+                </div>
+              </div>
+            </div>
+          ))}
+        </div>
+      )}
     </div>
   );
 }
