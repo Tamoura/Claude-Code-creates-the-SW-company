@@ -1,0 +1,45 @@
+{
+  "id": "demo-meeting-001",
+  "title": "Q1 Engineering Team Sync - API Architecture Review",
+  "date": "2026-01-27T10:00:00Z",
+  "duration": 1080,
+  "participants": [
+    {
+      "id": "p1",
+      "name": "Sarah Chen",
+      "role": "Engineering Team Lead",
+      "avatar": "SC"
+    },
+    {
+      "id": "p2",
+      "name": "Marcus Johnson",
+      "role": "Senior Backend Engineer",
+      "avatar": "MJ"
+    },
+    {
+      "id": "p3",
+      "name": "Priya Patel",
+      "role": "Frontend Engineer",
+      "avatar": "PP"
+    },
+    {
+      "id": "p4",
+      "name": "Chen Wei",
+      "role": "DevOps Engineer",
+      "avatar": "CW"
+    },
+    {
+      "id": "p5",
+      "name": "Elena Rodriguez",
+      "role": "Backend Engineer",
+      "avatar": "ER"
+    },
+    {
+      "id": "p6",
+      "name": "David Kim",
+      "role": "QA Engineer",
+      "avatar": "DK"
+    }
+  ],
+  "tags": ["architecture", "api-design", "quarterly-planning"]
+}
