@@ -1,56 +1,25 @@
-import RiskGauge from '../../../components/dashboard/RiskGauge';
+'use client';
 
-const mockRiskData = {
-  score: 42,
-  level: 'medium' as const,
-  explanation:
-    'Sprint velocity has decreased by 15% compared to the 4-week rolling average. Two pull requests have been open for more than 5 days without review, and test coverage dipped below the 85% threshold on the auth module.',
-  factors: [
-    {
-      name: 'Velocity Trend',
-      score: 55,
-      weight: 0.25,
-      detail: 'Velocity down 15% vs 4-week average',
-    },
-    {
-      name: 'PR Cycle Time',
-      score: 48,
-      weight: 0.2,
-      detail: 'Median cycle time increased to 22h',
-    },
-    {
-      name: 'Test Coverage',
-      score: 38,
-      weight: 0.2,
-      detail: 'Coverage at 84.2%, below 85% target',
-    },
-    {
-      name: 'Code Churn',
-      score: 32,
-      weight: 0.15,
-      detail: 'Low churn rate, stable codebase',
-    },
-    {
-      name: 'Review Bottleneck',
-      score: 60,
-      weight: 0.1,
-      detail: '2 PRs waiting > 5 days for review',
-    },
-    {
-      name: 'Deployment Frequency',
-      score: 25,
-      weight: 0.05,
-      detail: '3 deploys this week, on track',
-    },
-    {
-      name: 'Incident Rate',
-      score: 10,
-      weight: 0.05,
-      detail: 'No incidents in past 14 days',
-    },
-  ],
-  calculatedAt: '2026-02-07T10:30:00Z',
-};
+import { useState, useEffect } from 'react';
+import { useSearchParams } from 'next/navigation';
+import RiskGauge from '../../../components/dashboard/RiskGauge';
+import { apiClient } from '../../../lib/api-client';
+
+interface RiskFactor {
+  name: string;
+  score: number;
+  weight: number;
+  detail: string;
+}
+
+interface RiskData {
+  score: number;
+  level: 'low' | 'medium' | 'high';
+  explanation: string;
+  recommendations: string[];
+  factors: RiskFactor[];
+  calculatedAt: string;
+}
 
 function getFactorColor(score: number): string {
   if (score <= 30) return 'bg-green-500';
@@ -59,6 +28,67 @@ function getFactorColor(score: number): string {
 }
 
 export default function RiskPage() {
+  const searchParams = useSearchParams();
+  const teamId = searchParams.get('teamId') || 'default';
+  const [data, setData] = useState<RiskData | null>(null);
+  const [loading, setLoading] = useState(true);
+  const [error, setError] = useState<string | null>(null);
+
+  useEffect(() => {
+    setLoading(true);
+    setError(null);
+
+    apiClient
+      .get<RiskData>(`/api/v1/risk/current?teamId=${encodeURIComponent(teamId)}`)
+      .then((result) => {
+        setData(result);
+      })
+      .catch((err) => {
+        setError(err instanceof Error ? err.message : 'Failed to load risk data');
+      })
+      .finally(() => {
+        setLoading(false);
+      });
+  }, [teamId]);
+
+  if (loading) {
+    return (
+      <div className="space-y-6">
+        <div>
+          <h1 className="text-2xl font-bold text-[var(--text-primary)]">AI Sprint Risk</h1>
+          <p className="text-[var(--text-secondary)] mt-1">Loading risk analysis...</p>
+        </div>
+        <div className="flex items-center justify-center py-20">
+          <div className="animate-spin rounded-full h-8 w-8 border-b-2 border-indigo-500" />
+        </div>
+      </div>
+    );
+  }
+
+  if (error || !data) {
+    return (
+      <div className="space-y-6">
+        <div>
+          <h1 className="text-2xl font-bold text-[var(--text-primary)]">AI Sprint Risk</h1>
+          <p className="text-[var(--text-secondary)] mt-1">
+            AI-predicted sprint risk with natural language explanations
+          </p>
+        </div>
+        <div className="bg-red-50 dark:bg-red-900/20 border border-red-200 dark:border-red-800 rounded-xl p-6 text-center">
+          <p className="text-red-600 dark:text-red-400">
+            {error || 'No risk data available'}
+          </p>
+          <button
+            onClick={() => window.location.reload()}
+            className="mt-3 text-sm text-indigo-600 dark:text-indigo-400 hover:underline"
+          >
+            Retry
+          </button>
+        </div>
+      </div>
+    );
+  }
+
   return (
     <div className="space-y-6">
       <div className="flex items-center justify-between">
@@ -79,10 +109,10 @@ export default function RiskPage() {
       {/* Risk Gauge */}
       <div className="grid grid-cols-1 lg:grid-cols-3 gap-6">
         <div className="lg:col-span-1">
-          <RiskGauge score={mockRiskData.score} label="Sprint Risk" />
+          <RiskGauge score={data.score} label="Sprint Risk" />
           <p className="text-xs text-[var(--text-muted)] mt-2">
-            <time dateTime={mockRiskData.calculatedAt}>
-              Last calculated: {new Date(mockRiskData.calculatedAt).toLocaleString()}
+            <time dateTime={data.calculatedAt}>
+              Last calculated: {new Date(data.calculatedAt).toLocaleString()}
             </time>
           </p>
         </div>
@@ -96,16 +126,36 @@ export default function RiskPage() {
             <h2 className="text-lg font-semibold text-[var(--text-primary)]">AI Explanation</h2>
           </div>
           <p className="text-[var(--text-secondary)] leading-relaxed">
-            {mockRiskData.explanation}
+            {data.explanation}
           </p>
         </section>
       </div>
+
+      {/* AI Recommendations */}
+      {data.recommendations.length > 0 && (
+        <section className="bg-[var(--bg-card)] border border-[var(--border-card)] rounded-xl p-6" aria-label="AI recommendations">
+          <div className="flex items-center gap-2 mb-3">
+            <svg className="w-5 h-5 text-green-500" fill="none" viewBox="0 0 24 24" stroke="currentColor" strokeWidth={2} aria-hidden="true">
+              <path strokeLinecap="round" strokeLinejoin="round" d="M9 12.75 11.25 15 15 9.75M21 12a9 9 0 1 1-18 0 9 9 0 0 1 18 0Z" />
+            </svg>
+            <h2 className="text-lg font-semibold text-[var(--text-primary)]">Recommendations</h2>
+          </div>
+          <ul className="space-y-2" role="list">
+            {data.recommendations.map((rec, i) => (
+              <li key={i} className="flex items-start gap-2 text-[var(--text-secondary)]">
+                <span className="text-green-500 mt-0.5 shrink-0" aria-hidden="true">&bull;</span>
+                <span>{rec}</span>
+              </li>
+            ))}
+          </ul>
+        </section>
+      )}
 
       {/* Factor Breakdown */}
       <section className="bg-[var(--bg-card)] border border-[var(--border-card)] rounded-xl p-6" aria-label="Risk factor breakdown">
         <h2 className="text-lg font-semibold text-[var(--text-primary)] mb-4">Risk Factors</h2>
         <ul className="space-y-4" role="list">
-          {mockRiskData.factors.map((factor) => (
+          {data.factors.map((factor) => (
             <li key={factor.name} className="flex items-center gap-4">
               <div className="w-36 shrink-0">
                 <div className="text-sm font-medium text-[var(--text-primary)]">{factor.name}</div>

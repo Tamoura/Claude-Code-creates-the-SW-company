@@ -9,6 +9,8 @@ import {
   computeLargePrRatio,
   computeReviewImbalance,
 } from './factors.js';
+import { generateCompletion, AIConfig } from '../../utils/ai-client.js';
+import { loadConfig } from '../../config.js';
 import { logger } from '../../utils/logger.js';
 
 const SPRINT_DAYS = 14;
@@ -39,7 +41,28 @@ export class RiskService {
     );
     const score = Math.min(Math.round(rawScore), 100);
     const level = scoreToLevel(score);
-    const explanation = generateExplanation(score, level, factors);
+
+    let explanation: string;
+    let recommendations: string[] = [];
+
+    const config = loadConfig();
+    if (config.openrouterApiKey) {
+      try {
+        const aiResult = await generateAIExplanation(
+          { apiKey: config.openrouterApiKey, model: config.openrouterModel },
+          score,
+          level,
+          factors
+        );
+        explanation = aiResult.explanation;
+        recommendations = aiResult.recommendations;
+      } catch (err) {
+        logger.warn('AI explanation failed, using fallback', { error: String(err) });
+        explanation = generateFallbackExplanation(score, level, factors);
+      }
+    } else {
+      explanation = generateFallbackExplanation(score, level, factors);
+    }
 
     await this.prisma.riskSnapshot.create({
       data: {
@@ -47,6 +70,9 @@ export class RiskService {
         score,
         level,
         explanation,
+        recommendations: recommendations.length > 0
+          ? JSON.stringify(recommendations)
+          : undefined,
         factors: JSON.stringify(factors),
         calculatedAt: now,
       },
@@ -58,6 +84,7 @@ export class RiskService {
       score,
       level,
       explanation,
+      recommendations,
       factors,
       calculatedAt: now.toISOString(),
     };
@@ -138,7 +165,7 @@ export class RiskService {
 }
 
 // ────────────────────────────────────────
-// Pure functions
+// Pure functions (exported for testing)
 // ────────────────────────────────────────
 
 function scoreToLevel(score: number): RiskLevel {
@@ -147,7 +174,7 @@ function scoreToLevel(score: number): RiskLevel {
   return 'high';
 }
 
-function generateExplanation(
+export function generateFallbackExplanation(
   score: number,
   level: string,
   factors: RiskFactor[]
@@ -171,6 +198,41 @@ function generateExplanation(
     .join(', ');
 
   return `Sprint risk is ${score} (${level}). Top factors: ${details}.`;
+}
+
+const SYSTEM_PROMPT = `You are a sprint risk analyst for a software development team. Analyze the risk factors and provide:
+1. A concise explanation of the current sprint risk (2-3 sentences)
+2. Actionable recommendations the team can take immediately
+
+Respond in JSON format: { "explanation": "string", "recommendations": ["string"] }
+Keep recommendations specific and actionable (3-5 items). Do not include markdown formatting.`;
+
+export async function generateAIExplanation(
+  config: AIConfig,
+  score: number,
+  level: string,
+  factors: RiskFactor[]
+): Promise<{ explanation: string; recommendations: string[] }> {
+  const factorSummary = factors
+    .map((f) => `- ${f.name}: score=${f.score}/100, weight=${(f.weight * 100).toFixed(0)}%, detail="${f.detail}"`)
+    .join('\n');
+
+  const userPrompt = `Sprint risk score: ${score}/100 (${level})
+
+Risk factors:
+${factorSummary}
+
+Analyze these factors and provide your assessment.`;
+
+  const raw = await generateCompletion(config, SYSTEM_PROMPT, userPrompt);
+
+  const parsed = JSON.parse(raw);
+  return {
+    explanation: parsed.explanation || `Sprint risk is ${score} (${level}).`,
+    recommendations: Array.isArray(parsed.recommendations)
+      ? parsed.recommendations
+      : [],
+  };
 }
 
 function emptyFactors(): RiskFactor[] {
