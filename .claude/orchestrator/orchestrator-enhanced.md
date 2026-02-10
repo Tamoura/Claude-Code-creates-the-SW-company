@@ -136,42 +136,114 @@ For new work (not status update):
 5. Mark graph as active in company state
 ```
 
-### Step 3.5: Load & Index Memory (Pre-Filter for Sub-Agents)
+### Step 3.5: Semantic Memory Injection (Pre-Filter for Sub-Agents)
 
-Before entering the execution loop, load memory files ONCE and pre-filter patterns for each agent role. This prevents every sub-agent from reading 200+ lines of JSON.
+Before entering the execution loop, load memory files ONCE and score patterns against each task using 5-dimension semantic relevance. This replaces the old category-based filtering with task-aware scoring. See `.claude/memory/relevance-scoring.md` for the full rubric.
 
 ```markdown
-1. Read `.claude/memory/company-knowledge.json`
+1. Read `.claude/memory/company-knowledge.json` (patterns, anti_patterns, common_gotchas)
 2. Read `.claude/memory/decision-log.json`
+3. Read agent experience files: `.claude/memory/agent-experiences/{agent}.json`
 
-3. For each task in the task graph, filter patterns by agent role:
+4. For each task in the task graph, score EVERY pattern using 5 dimensions (0-10):
 
-   | Agent Role | Filter Categories |
-   |------------|-------------------|
-   | Backend Engineer | backend, database, api, security |
-   | Frontend Engineer | frontend, ui, styling, testing |
-   | QA Engineer | testing, quality, frontend |
-   | Architect | backend, frontend, infrastructure |
-   | DevOps Engineer | infrastructure, ci-cd, security |
-   | Security Engineer | security, backend, infrastructure |
-   | Code Reviewer | security, backend, testing |
-   | Product Manager | product, business |
-   | Others | Match by keyword overlap with task description |
+   a. Task Description Match (0-3): Semantic similarity between task description
+      and pattern's `problem`, `solution`, `when_to_use` fields.
+      3 = directly addresses the task's core problem
+      2 = clearly relevant to the task domain
+      1 = tangentially related
+      0 = no meaningful connection
 
-4. For each matched pattern:
-   a. Check `applies_to` field for product name match
-   b. Check keyword overlap between pattern description and task description
-   c. Rank by `confidence` score (high > medium > low)
-   d. Select top 3-5 most relevant patterns
+   b. Product Context Match (0-2): Pattern's `learned_from.product` or
+      `applies_to` vs current product.
+      2 = same product or explicitly applies
+      1 = similar tech stack or domain
+      0 = unrelated product
 
-5. Cache filtered results per agent role. When spawning a sub-agent, inject as:
+   c. Agent Role Fit (0-2): How relevant to the assigned agent's role.
+      2 = core to agent's role
+      1 = adjacent — useful context
+      0 = irrelevant to agent
 
-   ## Relevant Patterns (from company knowledge)
-   - PATTERN-XXX (confidence: high): "[pattern description]"
-   - PATTERN-YYY (confidence: high): "[pattern description]"
+   d. Historical Success (0-2): Based on `confidence` and `times_applied`.
+      2 = high confidence AND times_applied >= 3
+      1 = high confidence (fewer applications) or medium confidence
+      0 = low confidence or untested
 
-   ## Gotchas to Avoid
-   - GOTCHA-XXX: "[gotcha description]"
+   e. Recency Bonus (0-1): Pattern learned within last 30 days.
+      1 = within 30 days
+      0 = older
+
+5. Select patterns:
+   - Include patterns with score >= 4 (up to 5 patterns, ranked by score)
+   - For score >= 7: include full code_snippet
+   - For score 4-6: include problem + solution only
+   - Fallback: if fewer than 3 qualify at >= 4, lower threshold to >= 3
+
+6. Score anti-patterns using dimensions (a) + (c) only (0-5 scale):
+   - Include anti-patterns with score >= 3 (up to 3)
+
+7. Match gotchas by category against agent domain + task keywords:
+   - Include up to 3 relevant gotchas
+
+8. Extract agent's own experience:
+   - `common_mistakes` from agent experience file (always include all)
+   - `preferred_approaches` from agent experience file (always include all)
+
+9. Cache results per (task_id, agent_role). When spawning a sub-agent, inject as:
+
+   ## Relevant Patterns (semantically matched, score >= 4/10)
+   - PATTERN-014 (score: 9/10, confidence: high): "Webhook Queue with Idempotency"
+     Problem: "Duplicate webhook deliveries..."
+     Solution: "Use idempotency keys..."
+     Code: {snippet — only for score >= 7}
+
+   ## Anti-Patterns to Avoid
+   - ANTI-001: "Using Mocks in E2E Tests" → Use real services with buildApp()
+
+   ## Gotchas
+   - "Port conflicts" → Use PORT-REGISTRY.md, ports 3100+ for frontend
+
+   ## Your Past Experience
+   - Common mistake to avoid: "Missing Zod validation"
+   - Preferred approach: "Route → Schema → Handler → Service"
+```
+
+### Step 3.7: Compute Adaptive Duration Estimates
+
+Before entering the execution loop, replace static `estimated_time_minutes` in each task with data-driven predictions from `.claude/memory/metrics/estimation-history.json`.
+
+```markdown
+1. Read `.claude/memory/metrics/estimation-history.json`
+
+2. For each task in the task graph:
+   a. Extract task type prefix from task ID (e.g., PRD-01 → PRD, ARCH-01 → ARCH,
+      BACKEND-01 → BACKEND, FRONTEND-01 → FRONTEND, QA-01 → QA, etc.)
+   b. Identify the assigned agent role
+   c. Look up: estimation-history.agents[agent-role][task-type-prefix]
+
+3. Compute estimate based on sample count:
+
+   | Samples | Estimate | Confidence | Range |
+   |---------|----------|------------|-------|
+   | >= 5    | p75      | high       | [p25, p90] |
+   | >= 3    | median   | medium     | [min, max] |
+   | >= 1    | mean     | low        | [min×0.7, max×1.5] |
+   | 0       | template default | none | [default×0.5, default×2.0] |
+
+4. Update each task with:
+   - `estimated_minutes`: computed estimate
+   - `estimation_confidence`: high | medium | low | none
+   - `estimation_range`: [low_bound, high_bound]
+
+5. Recompute workflow totals:
+   - `total_sequential_minutes`: sum of all task estimates (sequential execution)
+   - `critical_path_minutes`: longest chain through dependency graph
+   - These replace any static totals from the template
+
+Example: product-manager has 3 PRD samples with mean=45, median=45.
+  → PRD-01 gets estimated_minutes=45, confidence=medium, range=[45, 45]
+  → Template default of 120min is replaced.
 ```
 
 ### Step 4: Execute Task Graph (PARALLEL-AWARE Execution Loop)
@@ -272,13 +344,19 @@ C. INVOKE AGENTS (PARALLEL-AWARE)
    - Record started_at timestamp
    - Record assigned_to agent
 
-D. RECEIVE AGENT MESSAGES
+D. RECEIVE AGENT MESSAGES & DETECT OVERRUNS
    When agents report back:
 
    1. Parse AgentMessage JSON
    2. Extract task_id from metadata
    3. Extract status from payload
    4. Extract artifacts, context, metrics
+   5. **Overrun Detection**: Compare `metrics.time_spent_minutes` against
+      `task.estimation_range[high]` (from Step 3.7):
+      - If actual > range[high]: log overrun alert, flag for estimation recalibration
+      - If actual < range[low]: note as faster-than-expected (potential efficiency insight)
+      - Update estimation accuracy: `actual / estimated_minutes` ratio
+      These overruns feed back into estimation-history.json on next aggregate-metrics run
 
 E. UPDATE TASK GRAPH
    Based on message:
@@ -312,12 +390,15 @@ E. UPDATE TASK GRAPH
 F. CHECK FOR CHECKPOINT
    If completed task has checkpoint = true:
      - **Smoke Test (FIRST)**: `.claude/scripts/smoke-test-gate.sh [product]`
-       - If FAIL: DO NOT proceed. Route to appropriate engineer.
+       - Capture the `GATE_REPORT_FILE=...` line from output
+       - If FAIL: Run automated diagnosis (see Failure Diagnosis below)
        - If placeholder/Coming Soon pages found: BLOCK checkpoint.
          Placeholder pages mean the product is not shippable.
          Route to Frontend Engineer to replace with real UI.
        - If PASS: continue to testing gate.
      - Run Testing Gate: `.claude/scripts/testing-gate-checklist.sh [product]`
+       - Capture the `GATE_REPORT_FILE=...` line from output
+       - If FAIL: Run automated diagnosis (see Failure Diagnosis below)
      - Run Audit Gate: `/audit [product]`
      - If any audit dimension score < 8/10:
        - DO NOT pause for CEO
@@ -337,6 +418,42 @@ F. CHECK FOR CHECKPOINT
        - Wait for CEO approval
        - CEO may request higher scores (9-10) or accept
        - On approval: continue loop
+
+   **Failure Diagnosis Protocol** (when any gate reports FAIL):
+
+   1. Extract the report file path from gate output (`GATE_REPORT_FILE=...`)
+   2. Run: `.claude/scripts/diagnose-gate-failure.sh {gate-type} {product} {report_file}`
+   3. Parse the diagnosis JSON output:
+      - `failures`: array of classified failures with type, priority, route_to, suggestions
+      - `fix_order`: failure types sorted by priority (fix in this order)
+      - `routing`: unique agent roles needed for fixes
+   4. For each failure in priority order:
+      - Create a targeted fix task assigned to the `route_to` agent
+      - Include `common_causes` and `suggested_actions` in the task description
+      - Include the specific `fail_line` from the report for context
+   5. Execute fix tasks in priority order (highest priority = lowest number first)
+   6. After all fix tasks complete, re-run the failed gate
+   7. If gate still fails, repeat diagnosis (up to 3 total attempts)
+   8. If still failing after 3 attempts, escalate to CEO with full diagnosis report
+
+   Example diagnosis-driven fix task prompt:
+   ```
+   ## Fix Task (from gate diagnosis)
+   **Failure Type**: server-startup-failure (priority 1)
+   **Report Line**: "❌ FAIL: API server started — Port 5001 not responding after 30s"
+
+   ### Common Causes
+   - Missing environment variables
+   - Database connection refused
+   - Port already in use
+
+   ### Suggested Actions
+   - Check server logs for the first error
+   - Verify .env file exists with required variables
+   - Run `lsof -i :5001` to check port conflicts
+
+   Fix this issue and verify the server starts successfully.
+   ```
 
 G. CHECK FOR COMPLETION
    All tasks with status = "completed"?
@@ -409,13 +526,18 @@ Available in `.claude/workflows/templates/`:
 
 ## Agent Memory Integration
 
-Memory is now pre-filtered and injected inline (see Step 3.5). The orchestrator reads memory files once and includes only relevant patterns in each sub-agent prompt. This replaces the old approach of telling every agent to read full JSON files.
+Memory is now semantically scored and injected inline (see Step 3.5). The orchestrator reads memory files once and scores every pattern against each task using a 5-dimension rubric, injecting only the highest-relevance matches. This replaces the old category-based filtering.
 
 **For the orchestrator to prepare a sub-agent prompt:**
 1. Read the compact brief from `.claude/agents/briefs/{agent}.md` (50-80 lines)
 2. Insert it inline as the `## Your Brief` section
-3. Insert pre-filtered patterns from Step 3.5 as the `## Relevant Patterns` section
-4. The sub-agent receives everything it needs in its prompt — no file reads required for context
+3. Score all patterns from Step 3.5 → inject top matches as `## Relevant Patterns`
+4. Score anti-patterns → inject as `## Anti-Patterns to Avoid`
+5. Match gotchas → inject as `## Gotchas`
+6. Extract agent experience → inject as `## Your Past Experience`
+7. The sub-agent receives everything it needs in its prompt — no file reads required for context
+
+**Scoring reference**: `.claude/memory/relevance-scoring.md`
 
 **Original agent files** (`.claude/agents/{agent}.md`) are preserved as deep-dive reference documentation. They are NOT read by sub-agents during normal task execution.
 

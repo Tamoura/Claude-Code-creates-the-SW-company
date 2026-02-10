@@ -463,6 +463,7 @@ EOF
 
 echo "Report saved: $REPORT_FILE"
 echo ""
+echo "GATE_REPORT_FILE=$REPORT_FILE"
 
 if [ $FAILED -gt 0 ]; then
   echo "╔══════════════════════════════════════════════════════════════╗"

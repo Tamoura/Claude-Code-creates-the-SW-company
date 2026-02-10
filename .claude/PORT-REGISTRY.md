@@ -29,6 +29,7 @@
 | Port | Product | Status | URL |
 |------|---------|--------|-----|
 | 5001 | stablecoin-gateway | Active | http://localhost:5001 |
+| 5003 | pulse | Active | http://localhost:5003 |
 | 5003 | pulse | Reserved | http://localhost:5003 |
 | 5004 | invoiceforge | Active | http://localhost:5004 |
 | 5005 | muaththir | Active | http://localhost:5005 |
@@ -38,7 +39,8 @@
 
 | Port | Product | Status | URL |
 |------|---------|--------|-----|
-| 8081-8099 | *Available* | Free | - |
+| 8081 | pulse (mobile) | Active | http://localhost:8081 |
+| 8082-8099 | *Available* | Free | - |
 
 ### Databases
 
