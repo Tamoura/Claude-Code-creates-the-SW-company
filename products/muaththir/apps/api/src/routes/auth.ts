@@ -1,7 +1,9 @@
 import { FastifyInstance, FastifyPluginAsync, FastifyReply } from 'fastify';
 import { z } from 'zod';
+import * as crypto from 'crypto';
 import { hashPassword, verifyPassword, generateRefreshToken } from '../utils/crypto';
-import { ConflictError, UnauthorizedError, ValidationError } from '../lib/errors';
+import { BadRequestError, ConflictError, UnauthorizedError, ValidationError } from '../lib/errors';
+import { logger } from '../utils/logger';
 
 const passwordSchema = z
   .string()
@@ -18,6 +20,15 @@ const registerSchema = z.object({
 const loginSchema = z.object({
   email: z.string().email('Invalid email format'),
   password: z.string().min(1, 'Password is required'),
+});
+
+const forgotPasswordSchema = z.object({
+  email: z.string().email('Invalid email format'),
+});
+
+const resetPasswordSchema = z.object({
+  token: z.string().min(1, 'Token is required'),
+  password: passwordSchema,
 });
 
 const REFRESH_TOKEN_DAYS = parseInt(
@@ -189,6 +200,64 @@ const authRoutes: FastifyPluginAsync = async (fastify) => {
     const accessToken = await issueTokens(fastify, reply, session.parent);
 
     return reply.code(200).send({ accessToken });
+  });
+
+  fastify.post('/forgot-password', async (request, reply) => {
+    const { email } = validateBody(forgotPasswordSchema, request.body);
+
+    const parent = await fastify.prisma.parent.findUnique({
+      where: { email },
+    });
+
+    if (parent) {
+      const resetToken = crypto.randomUUID();
+      const resetTokenExp = new Date(Date.now() + 60 * 60 * 1000); // 1 hour
+
+      await fastify.prisma.parent.update({
+        where: { id: parent.id },
+        data: { resetToken, resetTokenExp },
+      });
+
+      logger.info('Password reset token generated', { email });
+    }
+
+    return reply.code(200).send({
+      message: 'If an account exists, a reset link has been sent',
+    });
+  });
+
+  fastify.post('/reset-password', async (request, reply) => {
+    const { token, password } = validateBody(
+      resetPasswordSchema,
+      request.body
+    );
+
+    const parent = await fastify.prisma.parent.findFirst({
+      where: { resetToken: token },
+    });
+
+    if (!parent) {
+      throw new BadRequestError('Invalid or expired reset token');
+    }
+
+    if (!parent.resetTokenExp || parent.resetTokenExp < new Date()) {
+      throw new BadRequestError('Invalid or expired reset token');
+    }
+
+    const passwordHash = await hashPassword(password);
+
+    await fastify.prisma.parent.update({
+      where: { id: parent.id },
+      data: {
+        passwordHash,
+        resetToken: null,
+        resetTokenExp: null,
+      },
+    });
+
+    return reply.code(200).send({
+      message: 'Password has been reset',
+    });
   });
 };
 

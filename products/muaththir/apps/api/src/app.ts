@@ -14,6 +14,7 @@ import childrenRoutes from './routes/children';
 import observationRoutes from './routes/observations';
 import { milestoneDefinitionRoutes, childMilestoneRoutes } from './routes/milestones';
 import dashboardRoutes from './routes/dashboard';
+import profileRoutes from './routes/profile';
 
 import { logger } from './utils/logger';
 import { AppError, ValidationError } from './lib/errors';
@@ -132,6 +133,7 @@ export async function buildApp(
   await app.register(milestoneDefinitionRoutes, { prefix: '/api/milestones' });
   await app.register(childMilestoneRoutes, { prefix: '/api/children/:childId/milestones' });
   await app.register(dashboardRoutes, { prefix: '/api/dashboard' });
+  await app.register(profileRoutes, { prefix: '/api/profile' });
 
   return app;
 }

@@ -34,6 +34,17 @@ export interface LoginPayload {
   password: string;
 }
 
+// ==================== Profile Types ====================
+
+export interface Profile {
+  id: string;
+  name: string;
+  email: string;
+  subscriptionTier: string;
+  createdAt: string;
+  childCount: number;
+}
+
 // ==================== Domain Types ====================
 
 export interface Child {
@@ -274,6 +285,22 @@ class ApiClient {
     });
   }
 
+  async updateObservation(
+    childId: string,
+    id: string,
+    data: {
+      content?: string;
+      sentiment?: string;
+      observedAt?: string;
+      tags?: string[];
+    }
+  ): Promise<Observation> {
+    return this.request(`/api/children/${childId}/observations/${id}`, {
+      method: 'PATCH',
+      body: JSON.stringify(data),
+    });
+  }
+
   async deleteObservation(childId: string, id: string): Promise<void> {
     return this.request(`/api/children/${childId}/observations/${id}`, {
       method: 'DELETE',
@@ -327,6 +354,44 @@ class ApiClient {
 
   async getDashboard(childId: string): Promise<DashboardData> {
     return this.request(`/api/dashboard/${childId}`);
+  }
+
+  async getRecentObservations(
+    childId: string
+  ): Promise<{ data: Observation[] }> {
+    return this.request(`/api/dashboard/${childId}/recent`);
+  }
+
+  async getMilestonesDue(
+    childId: string
+  ): Promise<{ data: MilestoneDefinition[] }> {
+    return this.request(`/api/dashboard/${childId}/milestones-due`);
+  }
+
+  // ==================== Profile ====================
+
+  async getProfile(): Promise<Profile> {
+    return this.request('/api/profile');
+  }
+
+  async updateProfile(data: {
+    name?: string;
+    email?: string;
+  }): Promise<Profile> {
+    return this.request('/api/profile', {
+      method: 'PUT',
+      body: JSON.stringify(data),
+    });
+  }
+
+  async changePassword(
+    currentPassword: string,
+    newPassword: string
+  ): Promise<{ message: string }> {
+    return this.request('/api/profile/password', {
+      method: 'PUT',
+      body: JSON.stringify({ currentPassword, newPassword }),
+    });
   }
 }
 

@@ -6,7 +6,7 @@ import Link from 'next/link';
 import { DIMENSIONS, getDimensionBySlug } from '../../lib/dimensions';
 import DimensionCard from '../../components/dashboard/DimensionCard';
 import ObservationCard from '../../components/dashboard/ObservationCard';
-import { apiClient, type DashboardData, type Child, type Observation } from '../../lib/api-client';
+import { apiClient, type DashboardData, type Child, type Observation, type MilestoneDefinition } from '../../lib/api-client';
 
 const RadarChart = dynamic(
   () => import('../../components/dashboard/RadarChart'),
@@ -18,6 +18,7 @@ export default function DashboardPage() {
   const [selectedChildId, setSelectedChildId] = useState<string | null>(null);
   const [dashboardData, setDashboardData] = useState<DashboardData | null>(null);
   const [observations, setObservations] = useState<Observation[]>([]);
+  const [milestonesDue, setMilestonesDue] = useState<MilestoneDefinition[]>([]);
   const [loading, setLoading] = useState(true);
   const [error, setError] = useState<string | null>(null);
 
@@ -53,14 +54,16 @@ export default function DashboardPage() {
         setLoading(true);
         setError(null);
 
-        // Fetch dashboard data and recent observations in parallel
-        const [dashData, obsResponse] = await Promise.all([
+        // Fetch dashboard data, recent observations, and milestones-due in parallel
+        const [dashData, obsResponse, milestonesResponse] = await Promise.all([
           apiClient.getDashboard(selectedChildId),
-          apiClient.getObservations(selectedChildId, { limit: 5 }),
+          apiClient.getRecentObservations(selectedChildId),
+          apiClient.getMilestonesDue(selectedChildId),
         ]);
 
         setDashboardData(dashData);
         setObservations(obsResponse.data);
+        setMilestonesDue(milestonesResponse.data);
       } catch (err) {
         setError(err instanceof Error ? err.message : 'Failed to load dashboard data');
       } finally {
@@ -301,30 +304,77 @@ export default function DashboardPage() {
         )}
       </section>
 
-      {/* Milestones Due - Empty State */}
+      {/* Milestones Due */}
       <section aria-labelledby="milestones-heading">
         <h2 id="milestones-heading" className="text-lg font-semibold text-slate-900 mb-4">
           Milestones Due
         </h2>
-        <div className="card text-center py-12">
-          <div className="mx-auto h-12 w-12 rounded-full bg-slate-100 flex items-center justify-center mb-4">
-            <svg className="h-6 w-6 text-slate-400" fill="none" viewBox="0 0 24 24" stroke="currentColor" aria-hidden="true">
-              <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M9 12l2 2 4-4M7.835 4.697a3.42 3.42 0 001.946-.806 3.42 3.42 0 014.438 0 3.42 3.42 0 001.946.806 3.42 3.42 0 013.138 3.138 3.42 3.42 0 00.806 1.946 3.42 3.42 0 010 4.438 3.42 3.42 0 00-.806 1.946 3.42 3.42 0 01-3.138 3.138 3.42 3.42 0 00-1.946.806 3.42 3.42 0 01-4.438 0 3.42 3.42 0 00-1.946-.806 3.42 3.42 0 01-3.138-3.138 3.42 3.42 0 00-.806-1.946 3.42 3.42 0 010-4.438 3.42 3.42 0 00.806-1.946 3.42 3.42 0 013.138-3.138z" />
-            </svg>
+        {loading ? (
+          <div className="space-y-3">
+            {[1, 2, 3].map((i) => (
+              <div key={i} className="h-20 bg-slate-100 rounded-2xl animate-pulse" />
+            ))}
           </div>
-          <h3 className="text-sm font-medium text-slate-900 mb-1">
-            No milestones loaded
-          </h3>
-          <p className="text-xs text-slate-500 mb-4">
-            Create a child profile to see age-appropriate milestones.
-          </p>
-          <Link
-            href="/dashboard/milestones"
-            className="btn-secondary text-sm py-2 px-4"
-          >
-            View Milestones
-          </Link>
-        </div>
+        ) : milestonesDue.length > 0 ? (
+          <div className="space-y-3">
+            {milestonesDue.map((milestone) => {
+              const dim = getDimensionBySlug(milestone.dimension);
+              return (
+                <Link
+                  key={milestone.id}
+                  href={`/dashboard/milestones/${milestone.dimension}`}
+                  className="card block hover:shadow-md transition-shadow"
+                >
+                  <div className="flex items-start gap-3">
+                    <div
+                      className="h-8 w-8 rounded-full flex items-center justify-center flex-shrink-0 text-sm"
+                      style={{ backgroundColor: dim?.colour ? `${dim.colour}20` : '#f1f5f9', color: dim?.colour || '#64748b' }}
+                    >
+                      {dim?.icon || '?'}
+                    </div>
+                    <div className="min-w-0">
+                      <h3 className="text-sm font-medium text-slate-900">
+                        {milestone.title}
+                      </h3>
+                      <p className="text-xs text-slate-500 mt-0.5 line-clamp-2">
+                        {milestone.description}
+                      </p>
+                      <span className="inline-block mt-1 text-xs text-slate-400">
+                        {dim?.name || milestone.dimension}
+                      </span>
+                    </div>
+                  </div>
+                </Link>
+              );
+            })}
+            <Link
+              href="/dashboard/milestones"
+              className="block text-center text-sm text-emerald-600 hover:text-emerald-700 mt-2"
+            >
+              View All Milestones
+            </Link>
+          </div>
+        ) : (
+          <div className="card text-center py-12">
+            <div className="mx-auto h-12 w-12 rounded-full bg-emerald-50 flex items-center justify-center mb-4">
+              <svg className="h-6 w-6 text-emerald-500" fill="none" viewBox="0 0 24 24" stroke="currentColor" aria-hidden="true">
+                <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M9 12l2 2 4-4M7.835 4.697a3.42 3.42 0 001.946-.806 3.42 3.42 0 014.438 0 3.42 3.42 0 001.946.806 3.42 3.42 0 013.138 3.138 3.42 3.42 0 00.806 1.946 3.42 3.42 0 010 4.438 3.42 3.42 0 00-.806 1.946 3.42 3.42 0 01-3.138 3.138 3.42 3.42 0 00-1.946.806 3.42 3.42 0 01-4.438 0 3.42 3.42 0 00-1.946-.806 3.42 3.42 0 01-3.138-3.138 3.42 3.42 0 00-.806-1.946 3.42 3.42 0 010-4.438 3.42 3.42 0 00.806-1.946 3.42 3.42 0 013.138-3.138z" />
+              </svg>
+            </div>
+            <h3 className="text-sm font-medium text-slate-900 mb-1">
+              All milestones achieved!
+            </h3>
+            <p className="text-xs text-slate-500 mb-4">
+              Great progress! Check the milestones page for details.
+            </p>
+            <Link
+              href="/dashboard/milestones"
+              className="btn-secondary text-sm py-2 px-4"
+            >
+              View Milestones
+            </Link>
+          </div>
+        )}
       </section>
 
       {/* Floating Action Button - Log Observation */}
