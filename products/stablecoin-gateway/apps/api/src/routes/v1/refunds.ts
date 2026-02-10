@@ -40,7 +40,7 @@ const listRefundsSchema = z.object({
   payment_session_id: z.string().optional(),
   status: z.enum(['PENDING', 'PROCESSING', 'COMPLETED', 'FAILED']).optional(),
   limit: z.coerce.number().int().positive().max(100).optional(),
-  offset: z.coerce.number().int().nonnegative().optional(),
+  offset: z.coerce.number().int().nonnegative().max(10000).optional(),
 });
 
 const refundRoutes: FastifyPluginAsync = async (fastify) => {

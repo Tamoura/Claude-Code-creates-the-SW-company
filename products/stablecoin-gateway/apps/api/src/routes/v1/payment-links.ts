@@ -78,7 +78,7 @@ const updatePaymentLinkSchema = z.object({
 
 const listPaymentLinksQuerySchema = z.object({
   limit: z.coerce.number().min(1).max(100).default(50),
-  offset: z.coerce.number().min(0).default(0),
+  offset: z.coerce.number().min(0).max(10000).default(0),
   active: z.coerce.boolean().optional(),
   created_after: z.string().datetime().optional(),
   created_before: z.string().datetime().optional(),
