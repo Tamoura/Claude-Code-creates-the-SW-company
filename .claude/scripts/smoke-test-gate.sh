@@ -208,7 +208,7 @@ if [ "$HAS_API" = true ]; then
   HEALTH_RESPONSE=$(curl -s -w "\n%{http_code}" "$HEALTH_URL" 2>/dev/null || echo -e "\n000")
   HEALTH_END=$(date +%s%N 2>/dev/null || date +%s)
 
-  HEALTH_BODY=$(echo "$HEALTH_RESPONSE" | head -n -1)
+  HEALTH_BODY=$(echo "$HEALTH_RESPONSE" | sed '$d')
   HEALTH_STATUS=$(echo "$HEALTH_RESPONSE" | tail -1)
 
   if [ "$HEALTH_STATUS" = "200" ]; then
@@ -237,7 +237,7 @@ if [ "$HAS_WEB" = true ]; then
   WEB_URL="http://localhost:$WEB_PORT"
   WEB_RESPONSE=$(curl -s -w "\n%{http_code}" "$WEB_URL" 2>/dev/null || echo -e "\n000")
 
-  WEB_BODY=$(echo "$WEB_RESPONSE" | head -n -1)
+  WEB_BODY=$(echo "$WEB_RESPONSE" | sed '$d')
   WEB_STATUS=$(echo "$WEB_RESPONSE" | tail -1)
 
   if [ "$WEB_STATUS" = "200" ]; then
@@ -314,7 +314,11 @@ if [ "$HAS_WEB" = true ] && command -v npx >/dev/null 2>&1; then
   fi
 
   if [ "$PW_INSTALLED" = true ]; then
-    SMOKE_SCRIPT_PW=$(mktemp /tmp/smoke-pw-XXXXXX.mjs)
+    # Place the temp file inside the product dir so ESM can resolve local playwright
+    PW_RUN_DIR="$PRODUCT_DIR/apps/web"
+    [ ! -d "$PW_RUN_DIR/node_modules/@playwright" ] && PW_RUN_DIR="$PRODUCT_DIR"
+    [ ! -d "$PW_RUN_DIR/node_modules/@playwright" ] && PW_RUN_DIR="$PRODUCT_DIR/e2e"
+    SMOKE_SCRIPT_PW="$PW_RUN_DIR/.smoke-pw-$$.mjs"
     cat > "$SMOKE_SCRIPT_PW" << 'PLAYWRIGHT_EOF'
 import { chromium } from 'playwright';
 const url = process.argv[2] || 'http://localhost:3104';
@@ -383,13 +387,15 @@ const screenshotPath = process.argv[3] || '/tmp/smoke-screenshot.png';
 PLAYWRIGHT_EOF
 
     SCREENSHOT_PATH="$SCREENSHOT_DIR/smoke-$(date +%Y%m%d-%H%M%S).png"
-    PW_OUTPUT=$(npx --yes node "$SMOKE_SCRIPT_PW" "http://localhost:$WEB_PORT" "$SCREENSHOT_PATH" 2>/dev/null || echo '{"status":0,"error":"playwright not available"}')
+    # Script is placed in product dir so ESM resolves playwright from local node_modules
+    PW_OUTPUT=$(node "$SMOKE_SCRIPT_PW" "http://localhost:$WEB_PORT" "$SCREENSHOT_PATH" 2>/dev/null || echo '{"status":0,"error":"playwright not available"}')
     rm -f "$SMOKE_SCRIPT_PW"
 
-    PW_STATUS=$(echo "$PW_OUTPUT" | grep -oE '"status":[0-9]+' | grep -oE '[0-9]+' || echo "0")
-    PW_ERRORS=$(echo "$PW_OUTPUT" | grep -oE '"consoleErrors":[0-9-]+' | grep -oE '[0-9-]+' || echo "-1")
-    PW_HYDRATION=$(echo "$PW_OUTPUT" | grep -oE '"hydrationErrors":[0-9]+' | grep -oE '[0-9]+' || echo "0")
-    PW_HAS_CONTENT=$(echo "$PW_OUTPUT" | grep -oE '"hasContent":(true|false)' | grep -oE '(true|false)' || echo "false")
+    # Parse top-level status (first occurrence before "routes" array)
+    PW_STATUS=$(echo "$PW_OUTPUT" | grep -oE '"status":[0-9]+' | head -1 | grep -oE '[0-9]+' || echo "0")
+    PW_ERRORS=$(echo "$PW_OUTPUT" | grep -oE '"consoleErrors":[0-9-]+' | head -1 | grep -oE '[0-9-]+' || echo "-1")
+    PW_HYDRATION=$(echo "$PW_OUTPUT" | grep -oE '"hydrationErrors":[0-9]+' | head -1 | grep -oE '[0-9]+' || echo "0")
+    PW_HAS_CONTENT=$(echo "$PW_OUTPUT" | grep -oE '"hasContent":(true|false)' | head -1 | grep -oE '(true|false)' || echo "false")
 
     if [ "$PW_HYDRATION" != "0" ]; then
       record "FAIL" "Playwright headless check" "Hydration errors detected ($PW_HYDRATION) — React SSR/CSR mismatch"
