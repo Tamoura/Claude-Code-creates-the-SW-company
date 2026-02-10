@@ -686,3 +686,165 @@ describe('GET /api/dashboard/:childId', () => {
     expect(physical.score).toBe(0);
   });
 });
+
+describe('GET /api/dashboard/:childId/recent', () => {
+  let authToken: string;
+  let childId: string;
+
+  beforeEach(async () => {
+    authToken = await registerAndGetToken();
+    const child = await createChild(authToken, 'Ahmad', 7);
+    childId = child.id;
+  });
+
+  it('should require authentication', async () => {
+    const res = await app.inject({
+      method: 'GET',
+      url: `/api/dashboard/${childId}/recent`,
+    });
+    expect(res.statusCode).toBe(401);
+  });
+
+  it('should return 404 for non-existent child', async () => {
+    const res = await app.inject({
+      method: 'GET',
+      url: '/api/dashboard/nonexistent-id/recent',
+      headers: { authorization: `Bearer ${authToken}` },
+    });
+    expect(res.statusCode).toBe(404);
+  });
+
+  it('should return empty array when no observations', async () => {
+    const res = await app.inject({
+      method: 'GET',
+      url: `/api/dashboard/${childId}/recent`,
+      headers: { authorization: `Bearer ${authToken}` },
+    });
+    expect(res.statusCode).toBe(200);
+    expect(res.json().data).toEqual([]);
+  });
+
+  it('should return at most 5 recent observations', async () => {
+    for (let i = 0; i < 7; i++) {
+      await createObservation(authToken, childId, 'academic', 'positive');
+    }
+    const res = await app.inject({
+      method: 'GET',
+      url: `/api/dashboard/${childId}/recent`,
+      headers: { authorization: `Bearer ${authToken}` },
+    });
+    expect(res.statusCode).toBe(200);
+    expect(res.json().data).toHaveLength(5);
+  });
+
+  it('should exclude soft-deleted observations', async () => {
+    const obs = await createObservation(authToken, childId, 'academic', 'positive');
+    await createObservation(authToken, childId, 'physical', 'neutral');
+    await prisma.observation.update({
+      where: { id: obs.id },
+      data: { deletedAt: new Date() },
+    });
+    const res = await app.inject({
+      method: 'GET',
+      url: `/api/dashboard/${childId}/recent`,
+      headers: { authorization: `Bearer ${authToken}` },
+    });
+    expect(res.statusCode).toBe(200);
+    expect(res.json().data).toHaveLength(1);
+  });
+});
+
+describe('GET /api/dashboard/:childId/milestones-due', () => {
+  let authToken: string;
+  let childId: string;
+
+  beforeEach(async () => {
+    authToken = await registerAndGetToken();
+    const child = await createChild(authToken, 'Ahmad', 7);
+    childId = child.id;
+  });
+
+  it('should require authentication', async () => {
+    const res = await app.inject({
+      method: 'GET',
+      url: `/api/dashboard/${childId}/milestones-due`,
+    });
+    expect(res.statusCode).toBe(401);
+  });
+
+  it('should return 404 for non-existent child', async () => {
+    const res = await app.inject({
+      method: 'GET',
+      url: '/api/dashboard/nonexistent-id/milestones-due',
+      headers: { authorization: `Bearer ${authToken}` },
+    });
+    expect(res.statusCode).toBe(404);
+  });
+
+  it('should return empty array when no milestones', async () => {
+    const res = await app.inject({
+      method: 'GET',
+      url: `/api/dashboard/${childId}/milestones-due`,
+      headers: { authorization: `Bearer ${authToken}` },
+    });
+    expect(res.statusCode).toBe(200);
+    expect(res.json().data).toEqual([]);
+  });
+
+  it('should return at most 3 unachieved milestones', async () => {
+    for (let i = 1; i <= 5; i++) {
+      await prisma.milestoneDefinition.create({
+        data: {
+          dimension: 'academic',
+          ageBand: 'primary',
+          title: `Academic milestone ${i}`,
+          description: `Desc ${i}`,
+          sortOrder: i,
+        },
+      });
+    }
+    const res = await app.inject({
+      method: 'GET',
+      url: `/api/dashboard/${childId}/milestones-due`,
+      headers: { authorization: `Bearer ${authToken}` },
+    });
+    expect(res.statusCode).toBe(200);
+    expect(res.json().data).toHaveLength(3);
+  });
+
+  it('should exclude achieved milestones', async () => {
+    const milestones = [];
+    for (let i = 1; i <= 4; i++) {
+      milestones.push(
+        await prisma.milestoneDefinition.create({
+          data: {
+            dimension: 'academic',
+            ageBand: 'primary',
+            title: `Academic milestone ${i}`,
+            description: `Desc ${i}`,
+            sortOrder: i,
+          },
+        })
+      );
+    }
+    for (let i = 0; i < 2; i++) {
+      await prisma.childMilestone.create({
+        data: {
+          childId,
+          milestoneId: milestones[i].id,
+          achieved: true,
+          achievedAt: new Date(),
+        },
+      });
+    }
+    const res = await app.inject({
+      method: 'GET',
+      url: `/api/dashboard/${childId}/milestones-due`,
+      headers: { authorization: `Bearer ${authToken}` },
+    });
+    expect(res.statusCode).toBe(200);
+    const data = res.json().data;
+    expect(data).toHaveLength(2);
+    expect(data[0].title).toBe('Academic milestone 3');
+  });
+});

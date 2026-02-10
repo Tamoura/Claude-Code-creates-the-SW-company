@@ -201,6 +201,92 @@ const dashboardRoutes: FastifyPluginAsync = async (fastify) => {
       calculatedAt: new Date().toISOString(),
     });
   });
+
+  // GET /api/dashboard/:childId/recent — 5 most recent observations
+  fastify.get('/:childId/recent', {
+    preHandler: [fastify.authenticate],
+  }, async (request, reply) => {
+    const { childId } = request.params as { childId: string };
+    const parentId = request.currentUser!.id;
+
+    const child = await fastify.prisma.child.findFirst({
+      where: { id: childId, parentId },
+    });
+
+    if (!child) {
+      throw new NotFoundError('Child not found');
+    }
+
+    const observations = await fastify.prisma.observation.findMany({
+      where: { childId, deletedAt: null },
+      orderBy: { observedAt: 'desc' },
+      take: 5,
+      select: {
+        id: true,
+        dimension: true,
+        content: true,
+        sentiment: true,
+        observedAt: true,
+        tags: true,
+        createdAt: true,
+      },
+    });
+
+    return reply.send({ data: observations });
+  });
+
+  // GET /api/dashboard/:childId/milestones-due — Next 3 unchecked milestones
+  fastify.get('/:childId/milestones-due', {
+    preHandler: [fastify.authenticate],
+  }, async (request, reply) => {
+    const { childId } = request.params as { childId: string };
+    const parentId = request.currentUser!.id;
+
+    const child = await fastify.prisma.child.findFirst({
+      where: { id: childId, parentId },
+    });
+
+    if (!child) {
+      throw new NotFoundError('Child not found');
+    }
+
+    const ageBand = getAgeBand(child.dateOfBirth);
+
+    if (ageBand === 'out_of_range') {
+      return reply.send({ data: [] });
+    }
+
+    const achievedMilestoneIds = await fastify.prisma.childMilestone.findMany({
+      where: { childId, achieved: true },
+      select: { milestoneId: true },
+    });
+
+    const achievedIds = achievedMilestoneIds.map(
+      (m: { milestoneId: string }) => m.milestoneId
+    );
+
+    const dueMilestones = await fastify.prisma.milestoneDefinition.findMany({
+      where: {
+        ageBand: ageBand as any,
+        id: { notIn: achievedIds },
+      },
+      orderBy: [
+        { dimension: 'asc' },
+        { sortOrder: 'asc' },
+      ],
+      take: 3,
+      select: {
+        id: true,
+        dimension: true,
+        title: true,
+        description: true,
+        ageBand: true,
+        sortOrder: true,
+      },
+    });
+
+    return reply.send({ data: dueMilestones });
+  });
 };
 
 export default dashboardRoutes;
