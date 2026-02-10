@@ -69,12 +69,20 @@ else
 
   # Append to issues_caught if details provided and result is fail
   if [ -n "$DETAILS" ]; then
+    # Attempt to run diagnosis if report file is available
+    DIAGNOSIS="{}"
+    REPORT_PATH=$(echo "$DETAILS" | jq -r '.report_file // empty' 2>/dev/null || true)
+    if [ -n "$REPORT_PATH" ] && [ -f "$REPORT_PATH" ] && [ -x "$SCRIPT_DIR/diagnose-gate-failure.sh" ]; then
+      DIAGNOSIS=$("$SCRIPT_DIR/diagnose-gate-failure.sh" "$GATE_TYPE" "$PRODUCT" "$REPORT_PATH" 2>/dev/null || echo '{}')
+    fi
+
     CURRENT=$(echo "$CURRENT" | jq --arg key "$GATE_KEY" \
-      --arg ts "$TIMESTAMP" --arg prod "$PRODUCT" --argjson det "$DETAILS" \
+      --arg ts "$TIMESTAMP" --arg prod "$PRODUCT" --argjson det "$DETAILS" --argjson diag "$DIAGNOSIS" \
       '.[$key].issues_caught = ((.[$key].issues_caught // []) + [{
         "timestamp": $ts,
         "product": $prod,
-        "details": $det
+        "details": $det,
+        "diagnosis": $diag
       }])' 2>/dev/null)
   fi
 fi

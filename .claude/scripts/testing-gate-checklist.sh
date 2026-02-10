@@ -309,6 +309,8 @@ if [ -f "$SCRIPT_DIR/update-gate-metrics.sh" ]; then
   bash "$SCRIPT_DIR/update-gate-metrics.sh" "testing" "$PRODUCT" "$RESULT" "$DETAILS" 2>/dev/null || true
 fi
 
+echo "GATE_REPORT_FILE=$REPORT_FILE"
+
 if [ $FAILED -gt 0 ]; then
   echo "╔══════════════════════════════════════════════════════════════╗"
   echo "║              ❌ TESTING GATE: FAIL                           ║"

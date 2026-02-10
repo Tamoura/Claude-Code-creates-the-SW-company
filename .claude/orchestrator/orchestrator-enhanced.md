@@ -312,12 +312,15 @@ E. UPDATE TASK GRAPH
 F. CHECK FOR CHECKPOINT
    If completed task has checkpoint = true:
      - **Smoke Test (FIRST)**: `.claude/scripts/smoke-test-gate.sh [product]`
-       - If FAIL: DO NOT proceed. Route to appropriate engineer.
+       - Capture the `GATE_REPORT_FILE=...` line from output
+       - If FAIL: Run automated diagnosis (see Failure Diagnosis below)
        - If placeholder/Coming Soon pages found: BLOCK checkpoint.
          Placeholder pages mean the product is not shippable.
          Route to Frontend Engineer to replace with real UI.
        - If PASS: continue to testing gate.
      - Run Testing Gate: `.claude/scripts/testing-gate-checklist.sh [product]`
+       - Capture the `GATE_REPORT_FILE=...` line from output
+       - If FAIL: Run automated diagnosis (see Failure Diagnosis below)
      - Run Audit Gate: `/audit [product]`
      - If any audit dimension score < 8/10:
        - DO NOT pause for CEO
@@ -337,6 +340,42 @@ F. CHECK FOR CHECKPOINT
        - Wait for CEO approval
        - CEO may request higher scores (9-10) or accept
        - On approval: continue loop
+
+   **Failure Diagnosis Protocol** (when any gate reports FAIL):
+
+   1. Extract the report file path from gate output (`GATE_REPORT_FILE=...`)
+   2. Run: `.claude/scripts/diagnose-gate-failure.sh {gate-type} {product} {report_file}`
+   3. Parse the diagnosis JSON output:
+      - `failures`: array of classified failures with type, priority, route_to, suggestions
+      - `fix_order`: failure types sorted by priority (fix in this order)
+      - `routing`: unique agent roles needed for fixes
+   4. For each failure in priority order:
+      - Create a targeted fix task assigned to the `route_to` agent
+      - Include `common_causes` and `suggested_actions` in the task description
+      - Include the specific `fail_line` from the report for context
+   5. Execute fix tasks in priority order (highest priority = lowest number first)
+   6. After all fix tasks complete, re-run the failed gate
+   7. If gate still fails, repeat diagnosis (up to 3 total attempts)
+   8. If still failing after 3 attempts, escalate to CEO with full diagnosis report
+
+   Example diagnosis-driven fix task prompt:
+   ```
+   ## Fix Task (from gate diagnosis)
+   **Failure Type**: server-startup-failure (priority 1)
+   **Report Line**: "❌ FAIL: API server started — Port 5001 not responding after 30s"
+
+   ### Common Causes
+   - Missing environment variables
+   - Database connection refused
+   - Port already in use
+
+   ### Suggested Actions
+   - Check server logs for the first error
+   - Verify .env file exists with required variables
+   - Run `lsof -i :5001` to check port conflicts
+
+   Fix this issue and verify the server starts successfully.
+   ```
 
 G. CHECK FOR COMPLETION
    All tasks with status = "completed"?
