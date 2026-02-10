@@ -419,3 +419,289 @@ describe('POST /api/auth/refresh', () => {
     expect(response.statusCode).toBe(401);
   });
 });
+
+describe('POST /api/auth/forgot-password', () => {
+  beforeEach(async () => {
+    await app.inject({
+      method: 'POST',
+      url: '/api/auth/register',
+      payload: validRegistration,
+    });
+  });
+
+  it('should return 200 with generic message for existing email', async () => {
+    const response = await app.inject({
+      method: 'POST',
+      url: '/api/auth/forgot-password',
+      payload: { email: 'fatima@example.com' },
+    });
+
+    expect(response.statusCode).toBe(200);
+    const body = response.json();
+    expect(body.message).toBe(
+      'If an account exists, a reset link has been sent'
+    );
+  });
+
+  it('should return 200 with same message for non-existent email', async () => {
+    const response = await app.inject({
+      method: 'POST',
+      url: '/api/auth/forgot-password',
+      payload: { email: 'nobody@example.com' },
+    });
+
+    expect(response.statusCode).toBe(200);
+    const body = response.json();
+    expect(body.message).toBe(
+      'If an account exists, a reset link has been sent'
+    );
+  });
+
+  it('should store reset token in the database', async () => {
+    await app.inject({
+      method: 'POST',
+      url: '/api/auth/forgot-password',
+      payload: { email: 'fatima@example.com' },
+    });
+
+    const parent = await prisma.parent.findUnique({
+      where: { email: 'fatima@example.com' },
+    });
+
+    expect(parent!.resetToken).not.toBeNull();
+    expect(parent!.resetTokenExp).not.toBeNull();
+  });
+
+  it('should set token expiry to roughly 1 hour from now', async () => {
+    await app.inject({
+      method: 'POST',
+      url: '/api/auth/forgot-password',
+      payload: { email: 'fatima@example.com' },
+    });
+
+    const parent = await prisma.parent.findUnique({
+      where: { email: 'fatima@example.com' },
+    });
+
+    const now = new Date();
+    const expiry = parent!.resetTokenExp!;
+    const diffMs = expiry.getTime() - now.getTime();
+    // Should be between 55 and 65 minutes (allowing for test execution time)
+    expect(diffMs).toBeGreaterThan(55 * 60 * 1000);
+    expect(diffMs).toBeLessThan(65 * 60 * 1000);
+  });
+
+  it('should reject invalid email format with 422', async () => {
+    const response = await app.inject({
+      method: 'POST',
+      url: '/api/auth/forgot-password',
+      payload: { email: 'not-an-email' },
+    });
+
+    expect(response.statusCode).toBe(422);
+  });
+
+  it('should reject missing email with 422', async () => {
+    const response = await app.inject({
+      method: 'POST',
+      url: '/api/auth/forgot-password',
+      payload: {},
+    });
+
+    expect(response.statusCode).toBe(422);
+  });
+});
+
+describe('POST /api/auth/reset-password', () => {
+  let resetToken: string;
+
+  beforeEach(async () => {
+    // Register and request forgot-password
+    await app.inject({
+      method: 'POST',
+      url: '/api/auth/register',
+      payload: validRegistration,
+    });
+
+    await app.inject({
+      method: 'POST',
+      url: '/api/auth/forgot-password',
+      payload: { email: 'fatima@example.com' },
+    });
+
+    const parent = await prisma.parent.findUnique({
+      where: { email: 'fatima@example.com' },
+    });
+    resetToken = parent!.resetToken!;
+  });
+
+  it('should reset password with valid token', async () => {
+    const response = await app.inject({
+      method: 'POST',
+      url: '/api/auth/reset-password',
+      payload: {
+        token: resetToken,
+        password: 'NewSecure1',
+      },
+    });
+
+    expect(response.statusCode).toBe(200);
+    const body = response.json();
+    expect(body.message).toBe('Password has been reset');
+  });
+
+  it('should allow login with new password after reset', async () => {
+    await app.inject({
+      method: 'POST',
+      url: '/api/auth/reset-password',
+      payload: {
+        token: resetToken,
+        password: 'NewSecure1',
+      },
+    });
+
+    const loginResponse = await app.inject({
+      method: 'POST',
+      url: '/api/auth/login',
+      payload: {
+        email: 'fatima@example.com',
+        password: 'NewSecure1',
+      },
+    });
+
+    expect(loginResponse.statusCode).toBe(200);
+  });
+
+  it('should reject login with old password after reset', async () => {
+    await app.inject({
+      method: 'POST',
+      url: '/api/auth/reset-password',
+      payload: {
+        token: resetToken,
+        password: 'NewSecure1',
+      },
+    });
+
+    const loginResponse = await app.inject({
+      method: 'POST',
+      url: '/api/auth/login',
+      payload: {
+        email: 'fatima@example.com',
+        password: 'SecurePass1',
+      },
+    });
+
+    expect(loginResponse.statusCode).toBe(401);
+  });
+
+  it('should clear reset token after successful reset', async () => {
+    await app.inject({
+      method: 'POST',
+      url: '/api/auth/reset-password',
+      payload: {
+        token: resetToken,
+        password: 'NewSecure1',
+      },
+    });
+
+    const parent = await prisma.parent.findUnique({
+      where: { email: 'fatima@example.com' },
+    });
+
+    expect(parent!.resetToken).toBeNull();
+    expect(parent!.resetTokenExp).toBeNull();
+  });
+
+  it('should reject reuse of token after reset', async () => {
+    await app.inject({
+      method: 'POST',
+      url: '/api/auth/reset-password',
+      payload: {
+        token: resetToken,
+        password: 'NewSecure1',
+      },
+    });
+
+    const response = await app.inject({
+      method: 'POST',
+      url: '/api/auth/reset-password',
+      payload: {
+        token: resetToken,
+        password: 'AnotherPass1',
+      },
+    });
+
+    expect(response.statusCode).toBe(400);
+  });
+
+  it('should reject invalid token with 400', async () => {
+    const response = await app.inject({
+      method: 'POST',
+      url: '/api/auth/reset-password',
+      payload: {
+        token: 'invalid-token-value',
+        password: 'NewSecure1',
+      },
+    });
+
+    expect(response.statusCode).toBe(400);
+  });
+
+  it('should reject expired token with 400', async () => {
+    // Manually set token expiry to the past
+    await prisma.parent.update({
+      where: { email: 'fatima@example.com' },
+      data: {
+        resetTokenExp: new Date(Date.now() - 60 * 60 * 1000),
+      },
+    });
+
+    const response = await app.inject({
+      method: 'POST',
+      url: '/api/auth/reset-password',
+      payload: {
+        token: resetToken,
+        password: 'NewSecure1',
+      },
+    });
+
+    expect(response.statusCode).toBe(400);
+  });
+
+  it('should reject weak new password with 422', async () => {
+    const response = await app.inject({
+      method: 'POST',
+      url: '/api/auth/reset-password',
+      payload: {
+        token: resetToken,
+        password: 'weak',
+      },
+    });
+
+    expect(response.statusCode).toBe(422);
+  });
+
+  it('should reject missing token with 422', async () => {
+    const response = await app.inject({
+      method: 'POST',
+      url: '/api/auth/reset-password',
+      payload: {
+        password: 'NewSecure1',
+      },
+    });
+
+    expect(response.statusCode).toBe(422);
+  });
+
+  it('should reject missing password with 422', async () => {
+    const response = await app.inject({
+      method: 'POST',
+      url: '/api/auth/reset-password',
+      payload: {
+        token: resetToken,
+      },
+    });
+
+    expect(response.statusCode).toBe(422);
+  });
+});
