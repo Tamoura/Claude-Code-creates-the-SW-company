@@ -256,9 +256,18 @@ export class BlockchainTransactionService {
 
       return true;
     } catch (error: unknown) {
-      // Graceful degradation: if Redis is broken, allow the refund
+      // RISK-003: Fail closed in production — deny refund if Redis is unavailable
+      // to prevent spending limit bypass. Only allow in development for convenience.
+      const isProduction = process.env.NODE_ENV === 'production';
+      if (isProduction) {
+        logger.error(
+          'Redis unavailable for spending limit check, denying refund (fail closed)',
+          { error } as Record<string, unknown>
+        );
+        return false;
+      }
       logger.warn(
-        'Redis unavailable for spending limit check, allowing refund',
+        'Redis unavailable for spending limit check, allowing refund (dev mode)',
         { error } as Record<string, unknown>
       );
       return true;

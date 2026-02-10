@@ -134,7 +134,7 @@ export const createPaymentSessionSchema = z.object({
 
 export const listPaymentSessionsQuerySchema = z.object({
   limit: z.coerce.number().min(1).max(100).default(50),
-  offset: z.coerce.number().min(0).default(0),
+  offset: z.coerce.number().min(0).max(10000).default(0),
   status: z.enum(['PENDING', 'CONFIRMING', 'COMPLETED', 'FAILED', 'REFUNDED']).optional(),
   network: z.enum(['polygon', 'ethereum']).optional(),
   created_after: z.string().datetime().optional(),
@@ -163,7 +163,7 @@ export const listRefundsQuerySchema = z.object({
   payment_session_id: z.string().optional(),
   status: z.enum(['PENDING', 'PROCESSING', 'COMPLETED', 'FAILED']).optional(),
   limit: z.coerce.number().min(1).max(100).default(50),
-  offset: z.coerce.number().min(0).default(0),
+  offset: z.coerce.number().min(0).max(10000).default(0),
 });
 
 // ==================== Webhook Schemas ====================
@@ -214,12 +214,12 @@ export const updateWebhookSchema = z.object({
 
 export const listApiKeysQuerySchema = z.object({
   limit: z.coerce.number().min(1).max(100).default(50),
-  offset: z.coerce.number().min(0).default(0),
+  offset: z.coerce.number().min(0).max(10000).default(0),
 });
 
 export const listWebhooksQuerySchema = z.object({
   limit: z.coerce.number().min(1).max(100).default(50),
-  offset: z.coerce.number().min(0).default(0),
+  offset: z.coerce.number().min(0).max(10000).default(0),
 });
 
 // ==================== API Key Schemas ====================

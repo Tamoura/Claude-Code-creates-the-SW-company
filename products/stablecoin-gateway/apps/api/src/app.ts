@@ -7,6 +7,7 @@ import compress from '@fastify/compress';
 import swagger from '@fastify/swagger';
 import swaggerUi from '@fastify/swagger-ui';
 import { ZodError } from 'zod';
+import crypto from 'crypto';
 
 // Plugins
 import prismaPlugin from './plugins/prisma.js';
@@ -318,7 +319,9 @@ export async function buildApp(): Promise<FastifyInstance> {
     // RISK-068: Only expose infrastructure details to authenticated internal callers
     const internalKey = process.env.INTERNAL_API_KEY;
     const providedKey = request.headers['x-internal-api-key'] as string | undefined;
-    const isAuthorized = internalKey && providedKey && internalKey === providedKey;
+    const isAuthorized = internalKey && providedKey &&
+      internalKey.length === providedKey.length &&
+      crypto.timingSafeEqual(Buffer.from(internalKey), Buffer.from(providedKey));
 
     if (isAuthorized) {
       return reply.code(statusCode).send({
