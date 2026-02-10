@@ -3,10 +3,9 @@ import {
   setupTestDb,
   cleanDb,
   closeDb,
+  createTestApp,
   prisma,
 } from '../helpers/build-app';
-import { buildApp } from '../../src/app';
-import observationRoutes from '../../src/routes/observations';
 
 let app: FastifyInstance;
 let accessToken: string;
@@ -61,9 +60,7 @@ async function createObservation(
 
 beforeAll(async () => {
   await setupTestDb();
-  app = await buildApp({ logger: false });
-  await app.register(observationRoutes, { prefix: '/api/children' });
-  await app.ready();
+  app = await createTestApp();
 });
 
 afterAll(async () => {

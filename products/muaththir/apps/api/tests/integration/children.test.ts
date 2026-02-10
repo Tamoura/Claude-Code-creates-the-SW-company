@@ -3,18 +3,15 @@ import {
   setupTestDb,
   cleanDb,
   closeDb,
+  createTestApp,
   prisma,
 } from '../helpers/build-app';
-import { buildApp } from '../../src/app';
-import childrenRoutes from '../../src/routes/children';
 
 let app: FastifyInstance;
 
 beforeAll(async () => {
   await setupTestDb();
-  app = await buildApp({ logger: false });
-  await app.register(childrenRoutes, { prefix: '/api/children' });
-  await app.ready();
+  app = await createTestApp();
 });
 
 afterAll(async () => {

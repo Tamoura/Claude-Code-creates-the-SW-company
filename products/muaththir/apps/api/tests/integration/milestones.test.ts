@@ -3,10 +3,9 @@ import {
   setupTestDb,
   cleanDb,
   closeDb,
+  createTestApp,
   prisma,
 } from '../helpers/build-app';
-import { buildApp } from '../../src/app';
-import { milestoneDefinitionRoutes, childMilestoneRoutes } from '../../src/routes/milestones';
 
 let app: FastifyInstance;
 let parentId: string;
@@ -91,10 +90,7 @@ async function seedDiverseMilestones(): Promise<void> {
 
 beforeAll(async () => {
   await setupTestDb();
-  app = await buildApp({ logger: false });
-  await app.register(milestoneDefinitionRoutes, { prefix: '/api/milestones' });
-  await app.register(childMilestoneRoutes, { prefix: '/api/children/:childId/milestones' });
-  await app.ready();
+  app = await createTestApp();
 });
 
 afterAll(async () => {
