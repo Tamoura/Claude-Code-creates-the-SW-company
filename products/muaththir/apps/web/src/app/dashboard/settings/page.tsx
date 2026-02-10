@@ -1,4 +1,8 @@
+'use client';
+
 import Link from 'next/link';
+import { useRouter } from 'next/navigation';
+import { useAuth } from '../../../hooks/useAuth';
 
 const settingsSections = [
   {
@@ -22,6 +26,14 @@ const settingsSections = [
 ];
 
 export default function SettingsPage() {
+  const router = useRouter();
+  const { user, logout } = useAuth();
+
+  const handleLogout = async () => {
+    await logout();
+    router.push('/login');
+  };
+
   return (
     <div className="max-w-2xl mx-auto space-y-8">
       <div>
@@ -51,36 +63,41 @@ export default function SettingsPage() {
         ))}
       </div>
 
-      {/* Profile Form Placeholder */}
+      {/* Profile Information */}
       <div className="card">
         <h2 className="text-lg font-semibold text-slate-900 mb-6">
           Profile Information
         </h2>
         <div className="space-y-4">
           <div>
-            <label htmlFor="settings-name" className="label">Full Name</label>
-            <input
-              id="settings-name"
-              type="text"
-              className="input-field"
-              placeholder="Your name"
-              disabled
-            />
+            <label className="label">Full Name</label>
+            <p className="text-sm text-slate-900">{user?.name || 'Not available'}</p>
           </div>
           <div>
-            <label htmlFor="settings-email" className="label">Email</label>
-            <input
-              id="settings-email"
-              type="email"
-              className="input-field"
-              placeholder="you@example.com"
-              disabled
-            />
+            <label className="label">Email</label>
+            <p className="text-sm text-slate-900">{user?.email || 'Not available'}</p>
+          </div>
+          <div>
+            <label className="label">Subscription Tier</label>
+            <p className="text-sm text-slate-900">Free (Basic)</p>
           </div>
           <p className="text-xs text-slate-400">
-            Profile editing will be available once connected to the backend.
+            Profile editing will be available in a future update.
           </p>
         </div>
+      </div>
+
+      {/* Account Actions */}
+      <div className="card">
+        <h2 className="text-lg font-semibold text-slate-900 mb-4">
+          Account Actions
+        </h2>
+        <button
+          onClick={handleLogout}
+          className="btn-secondary border-red-300 text-red-700 hover:bg-red-50 w-full"
+        >
+          Sign Out
+        </button>
       </div>
     </div>
   );

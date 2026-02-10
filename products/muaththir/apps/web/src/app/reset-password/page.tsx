@@ -1,15 +1,28 @@
 'use client';
 
 import Link from 'next/link';
-import { useState } from 'react';
+import { useState, useEffect, Suspense } from 'react';
+import { useSearchParams } from 'next/navigation';
 import Header from '../../components/layout/Header';
+import { apiClient } from '../../lib/api-client';
 
-export default function ResetPasswordPage() {
+function ResetPasswordForm() {
+  const searchParams = useSearchParams();
+  const [token, setToken] = useState('');
   const [password, setPassword] = useState('');
   const [confirmPassword, setConfirmPassword] = useState('');
   const [error, setError] = useState('');
   const [success, setSuccess] = useState(false);
   const [isLoading, setIsLoading] = useState(false);
+
+  useEffect(() => {
+    const tokenParam = searchParams.get('token');
+    if (tokenParam) {
+      setToken(tokenParam);
+    } else {
+      setError('Invalid or missing reset token');
+    }
+  }, [searchParams]);
 
   const handleSubmit = async (e: React.FormEvent) => {
     e.preventDefault();
@@ -20,11 +33,15 @@ export default function ResetPasswordPage() {
       return;
     }
 
+    if (!token) {
+      setError('Invalid or missing reset token');
+      return;
+    }
+
     setIsLoading(true);
 
     try {
-      // TODO: Connect to API when backend is ready
-      console.log('Reset password');
+      await apiClient.resetPassword(token, password);
       setSuccess(true);
     } catch (err) {
       setError(err instanceof Error ? err.message : 'Reset failed');
@@ -123,5 +140,13 @@ export default function ResetPasswordPage() {
         </div>
       </main>
     </div>
+  );
+}
+
+export default function ResetPasswordPage() {
+  return (
+    <Suspense fallback={<div className="min-h-screen bg-slate-50 flex items-center justify-center"><p className="text-slate-400">Loading...</p></div>}>
+      <ResetPasswordForm />
+    </Suspense>
   );
 }
