@@ -1,0 +1,168 @@
+generator client {
+  provider = "prisma-client-js"
+}
+
+datasource db {
+  provider = "postgresql"
+  url      = env("DATABASE_URL")
+}
+
+enum SubscriptionTier {
+  free
+  premium
+}
+
+enum DigestFrequency {
+  off
+  daily
+  weekly
+}
+
+enum Dimension {
+  academic
+  social_emotional
+  behavioural
+  aspirational
+  islamic
+  physical
+}
+
+enum Sentiment {
+  positive
+  neutral
+  needs_attention
+}
+
+enum AgeBand {
+  early_years
+  primary
+  upper_primary
+  secondary
+}
+
+enum Gender {
+  male
+  female
+}
+
+model Parent {
+  id               String           @id @default(cuid())
+  email            String           @unique
+  name             String
+  passwordHash     String           @map("password_hash")
+  subscriptionTier SubscriptionTier @default(free) @map("subscription_tier")
+  digestFrequency  DigestFrequency  @default(off) @map("digest_frequency")
+  resetToken       String?          @map("reset_token")
+  resetTokenExp    DateTime?        @map("reset_token_exp")
+  createdAt        DateTime         @default(now()) @map("created_at")
+  updatedAt        DateTime         @updatedAt @map("updated_at")
+
+  children Child[]
+  sessions Session[]
+
+  @@map("parents")
+}
+
+model Child {
+  id          String    @id @default(cuid())
+  parentId    String    @map("parent_id")
+  name        String
+  dateOfBirth DateTime  @map("date_of_birth") @db.Date
+  gender      Gender?
+  photoUrl    String?   @map("photo_url")
+  createdAt   DateTime  @default(now()) @map("created_at")
+  updatedAt   DateTime  @updatedAt @map("updated_at")
+
+  parent       Parent           @relation(fields: [parentId], references: [id], onDelete: Cascade)
+  observations Observation[]
+  milestones   ChildMilestone[]
+  scoreCache   ScoreCache[]
+
+  @@index([parentId])
+  @@map("children")
+}
+
+model Observation {
+  id         String    @id @default(cuid())
+  childId    String    @map("child_id")
+  dimension  Dimension
+  content    String    @db.VarChar(1000)
+  sentiment  Sentiment
+  observedAt DateTime  @map("observed_at") @db.Date
+  tags       String[]  @default([])
+  deletedAt  DateTime? @map("deleted_at")
+  createdAt  DateTime  @default(now()) @map("created_at")
+  updatedAt  DateTime  @updatedAt @map("updated_at")
+
+  child Child @relation(fields: [childId], references: [id], onDelete: Cascade)
+
+  @@index([childId, dimension])
+  @@index([childId, observedAt])
+  @@index([childId, deletedAt])
+  @@index([tags], type: Gin)
+  @@map("observations")
+}
+
+model MilestoneDefinition {
+  id          String    @id @default(cuid())
+  dimension   Dimension
+  ageBand     AgeBand   @map("age_band")
+  title       String    @db.VarChar(100)
+  description String    @db.VarChar(300)
+  guidance    String?   @db.VarChar(500)
+  sortOrder   Int       @map("sort_order")
+
+  childMilestones ChildMilestone[]
+
+  @@unique([dimension, ageBand, sortOrder])
+  @@index([dimension, ageBand])
+  @@map("milestone_definitions")
+}
+
+model ChildMilestone {
+  id              String    @id @default(cuid())
+  childId         String    @map("child_id")
+  milestoneId     String    @map("milestone_id")
+  achieved        Boolean   @default(false)
+  achievedAt      DateTime? @map("achieved_at")
+  achievedHistory Json?     @map("achieved_history")
+  createdAt       DateTime  @default(now()) @map("created_at")
+  updatedAt       DateTime  @updatedAt @map("updated_at")
+
+  child     Child               @relation(fields: [childId], references: [id], onDelete: Cascade)
+  milestone MilestoneDefinition @relation(fields: [milestoneId], references: [id], onDelete: Cascade)
+
+  @@unique([childId, milestoneId])
+  @@index([childId])
+  @@index([milestoneId])
+  @@map("child_milestones")
+}
+
+model ScoreCache {
+  id           String    @id @default(cuid())
+  childId      String    @map("child_id")
+  dimension    Dimension
+  score        Int       @default(0)
+  calculatedAt DateTime  @map("calculated_at") @default(now())
+  stale        Boolean   @default(true)
+
+  child Child @relation(fields: [childId], references: [id], onDelete: Cascade)
+
+  @@unique([childId, dimension])
+  @@index([childId, stale])
+  @@map("score_cache")
+}
+
+model Session {
+  id        String   @id @default(cuid())
+  parentId  String   @map("parent_id")
+  token     String   @unique
+  expiresAt DateTime @map("expires_at")
+  createdAt DateTime @default(now()) @map("created_at")
+
+  parent Parent @relation(fields: [parentId], references: [id], onDelete: Cascade)
+
+  @@index([token])
+  @@index([parentId])
+  @@map("sessions")
+}

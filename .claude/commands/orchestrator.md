@@ -80,8 +80,20 @@ If you build something new and generic, add it to the registry.
 ## Product Context
 Read: `products/{PRODUCT}/.claude/addendum.md`
 
-## Relevant Patterns (pre-filtered)
-{PRE_FILTERED_PATTERNS — top 3-5 patterns from company knowledge matching this agent's domain and task}
+## Relevant Patterns (semantically scored, threshold >= 4/10)
+{SCORED_PATTERNS — top 5 patterns from company knowledge, scored using 5-dimension rubric:
+  task-match(0-3) + product-context(0-2) + agent-fit(0-2) + historical-success(0-2) + recency(0-1)
+  For score >= 7: include code snippet. For 4-6: problem + solution only.
+  See .claude/memory/relevance-scoring.md for full rubric.}
+
+## Anti-Patterns to Avoid
+{SCORED_ANTI_PATTERNS — anti-patterns with task-match + agent-fit score >= 3, up to 3}
+
+## Gotchas
+{MATCHED_GOTCHAS — gotchas matching agent domain and task keywords, up to 3}
+
+## Your Past Experience
+{AGENT_EXPERIENCE — common_mistakes and preferred_approaches from agent experience file}
 
 ## Your Current Task
 **Task ID**: {TASK-ID}

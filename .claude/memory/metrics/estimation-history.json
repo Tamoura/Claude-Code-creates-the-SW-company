@@ -1,0 +1,129 @@
+{
+  "version": "1.0.0",
+  "updated_at": "2026-02-10T08:33:06Z",
+  "description": "Per-agent, per-task-type duration statistics. Used by orchestrator Step 3.7.",
+  "agents": {
+    "architect": {
+      "ARCH": {
+        "sample_count": 2,
+        "mean": 105,
+        "min": 90,
+        "max": 120,
+        "median": 105,
+        "p25": 90,
+        "p75": 120,
+        "p90": 120,
+        "stddev": 21.21
+      }
+    },
+    "backend-engineer": {
+      "FIX": {
+        "sample_count": 1,
+        "mean": 75,
+        "min": 75,
+        "max": 75,
+        "median": 75,
+        "p25": 75,
+        "p75": 75,
+        "p90": 75,
+        "stddev": 0
+      },
+      "PHASE2": {
+        "sample_count": 2,
+        "mean": 43.5,
+        "min": 12,
+        "max": 75,
+        "median": 43.5,
+        "p25": 12,
+        "p75": 75,
+        "p90": 75,
+        "stddev": 44.55
+      }
+    },
+    "devops-engineer": {
+      "FIX": {
+        "sample_count": 1,
+        "mean": 10,
+        "min": 10,
+        "max": 10,
+        "median": 10,
+        "p25": 10,
+        "p75": 10,
+        "p90": 10,
+        "stddev": 0
+      }
+    },
+    "frontend-engineer": {
+      "FRONTEND": {
+        "sample_count": 1,
+        "mean": 90,
+        "min": 90,
+        "max": 90,
+        "median": 90,
+        "p25": 90,
+        "p75": 90,
+        "p90": 90,
+        "stddev": 0
+      },
+      "PHASE2": {
+        "sample_count": 1,
+        "mean": 75,
+        "min": 75,
+        "max": 75,
+        "median": 75,
+        "p25": 75,
+        "p75": 75,
+        "p90": 75,
+        "stddev": 0
+      }
+    },
+    "product-manager": {
+      "PRD": {
+        "sample_count": 3,
+        "mean": 45,
+        "min": 45,
+        "max": 45,
+        "median": 45,
+        "p25": 45,
+        "p75": 45,
+        "p90": 45,
+        "stddev": 0
+      }
+    },
+    "security-engineer": {
+      "AUDIT": {
+        "sample_count": 1,
+        "mean": 85,
+        "min": 85,
+        "max": 85,
+        "median": 85,
+        "p25": 85,
+        "p75": 85,
+        "p90": 85,
+        "stddev": 0
+      },
+      "FIX": {
+        "sample_count": 1,
+        "mean": 45,
+        "min": 45,
+        "max": 45,
+        "median": 45,
+        "p25": 45,
+        "p75": 45,
+        "p90": 45,
+        "stddev": 0
+      },
+      "PHASE2": {
+        "sample_count": 1,
+        "mean": 55,
+        "min": 55,
+        "max": 55,
+        "median": 55,
+        "p25": 55,
+        "p75": 55,
+        "p90": 55,
+        "stddev": 0
+      }
+    }
+  }
+}

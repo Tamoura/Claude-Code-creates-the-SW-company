@@ -1,0 +1,272 @@
+{
+  "version": "1.0.0",
+  "updated_at": "2026-02-10T08:31:17Z",
+  "description": "Taxonomy of gate failure types with routing and suggested fixes. Used by diagnose-gate-failure.sh to classify failures and route to the correct specialist.",
+  "failure_types": {
+    "server-startup-failure": {
+      "description": "Backend or frontend server failed to start",
+      "priority": 1,
+      "route_to": "backend-engineer",
+      "common_causes": [
+        "Missing environment variables",
+        "Database connection refused",
+        "Port already in use by another process",
+        "Syntax error in server entry point",
+        "Missing dependency not in package.json"
+      ],
+      "suggested_actions": [
+        "Check server logs for the first error",
+        "Verify .env file exists with required variables",
+        "Run `lsof -i :<port>` to check port conflicts",
+        "Run `npm install` to ensure dependencies are installed",
+        "Check database is running: `pg_isready`"
+      ],
+      "match_patterns": [
+        "server started.*FAIL",
+        "Port.*not responding",
+        "EADDRINUSE",
+        "ECONNREFUSED",
+        "Cannot find module"
+      ]
+    },
+    "port-conflict": {
+      "description": "Port already in use or misconfigured",
+      "priority": 2,
+      "route_to": "devops-engineer",
+      "common_causes": [
+        "Another product using the same port",
+        "Previous process not cleaned up",
+        "Port not registered in PORT-REGISTRY.md"
+      ],
+      "suggested_actions": [
+        "Check .claude/PORT-REGISTRY.md for conflicts",
+        "Run `lsof -i :<port>` to find conflicting process",
+        "Kill stale processes: `kill $(lsof -t -i :<port>)`",
+        "Assign a new port from the registry"
+      ],
+      "match_patterns": [
+        "EADDRINUSE",
+        "port.*already in use",
+        "port.*conflict"
+      ]
+    },
+    "missing-dependency": {
+      "description": "Required npm package or system dependency not installed",
+      "priority": 3,
+      "route_to": "backend-engineer",
+      "common_causes": [
+        "Package added to code but not to package.json",
+        "node_modules out of sync after branch switch",
+        "Peer dependency not satisfied",
+        "Native module missing system library"
+      ],
+      "suggested_actions": [
+        "Run `npm install` in the failing app directory",
+        "Check if the missing module is in package.json",
+        "Run `npm ls <package>` to check dependency tree",
+        "For native modules: check system prerequisites"
+      ],
+      "match_patterns": [
+        "Cannot find module",
+        "Module not found",
+        "ERR_MODULE_NOT_FOUND",
+        "missing dependency",
+        "peer dep"
+      ]
+    },
+    "build-failure": {
+      "description": "TypeScript compilation or production build failed",
+      "priority": 4,
+      "route_to": "backend-engineer",
+      "common_causes": [
+        "TypeScript type errors",
+        "Import path resolution failure",
+        "Incompatible dependency versions",
+        "Missing type declarations"
+      ],
+      "suggested_actions": [
+        "Run `npx tsc --noEmit` to see type errors",
+        "Check import paths match actual file locations",
+        "Verify tsconfig.json paths and baseUrl",
+        "Run `npm run build` locally to reproduce"
+      ],
+      "match_patterns": [
+        "build.*FAIL",
+        "Production build failed",
+        "tsc.*error TS",
+        "Type error",
+        "compilation failed"
+      ]
+    },
+    "test-failure": {
+      "description": "Unit or integration tests failed",
+      "priority": 5,
+      "route_to": "backend-engineer",
+      "common_causes": [
+        "Code change broke existing test expectations",
+        "Test depends on external state (DB, network)",
+        "Race condition in async test",
+        "Missing test fixtures or seed data"
+      ],
+      "suggested_actions": [
+        "Run the failing test in isolation to confirm",
+        "Check if test depends on database state — seed if needed",
+        "Look for recent code changes that affect the tested function",
+        "Check for flaky async assertions — add proper awaits"
+      ],
+      "match_patterns": [
+        "tests.*FAIL",
+        "test.*failed",
+        "FAIL.*\\.test\\.",
+        "FAIL.*\\.spec\\.",
+        "Expected.*Received",
+        "AssertionError"
+      ]
+    },
+    "e2e-failure": {
+      "description": "Playwright E2E tests failed",
+      "priority": 6,
+      "route_to": "qa-engineer",
+      "common_causes": [
+        "UI element changed but test selector not updated",
+        "Server not fully started before test ran",
+        "Navigation or route changed",
+        "Timeout waiting for element"
+      ],
+      "suggested_actions": [
+        "Run `npx playwright test --debug` for interactive mode",
+        "Check if selectors match current DOM structure",
+        "Increase timeout if server startup is slow",
+        "Check screenshot artifacts for visual clues"
+      ],
+      "match_patterns": [
+        "E2E.*FAIL",
+        "playwright.*failed",
+        "Timeout.*waiting",
+        "locator.*not found",
+        "page\\.goto.*timeout"
+      ]
+    },
+    "console-errors": {
+      "description": "Browser console errors detected during smoke test",
+      "priority": 7,
+      "route_to": "frontend-engineer",
+      "common_causes": [
+        "Unhandled JavaScript exception in React component",
+        "Failed API call (CORS, 404, 500)",
+        "Missing environment variable in frontend",
+        "Hydration mismatch in SSR"
+      ],
+      "suggested_actions": [
+        "Check browser console for the exact error messages",
+        "Verify API URLs are correct and backend is running",
+        "Check .env.local for required NEXT_PUBLIC_ variables",
+        "Look for React error boundaries that may hide issues"
+      ],
+      "match_patterns": [
+        "console errors detected",
+        "console\\.error",
+        "consoleErrors.*[1-9]"
+      ]
+    },
+    "coverage-gap": {
+      "description": "Test coverage below minimum threshold (80%)",
+      "priority": 8,
+      "route_to": "qa-engineer",
+      "common_causes": [
+        "New code paths added without corresponding tests",
+        "Complex branching logic not fully tested",
+        "Error handling paths not covered"
+      ],
+      "suggested_actions": [
+        "Run coverage report: `npm test -- --coverage`",
+        "Focus on uncovered files with most business logic",
+        "Add edge case tests for error paths",
+        "Use coverage report to identify specific uncovered lines"
+      ],
+      "match_patterns": [
+        "Coverage.*FAIL",
+        "coverage.*below",
+        "coverage.*[0-7][0-9]%"
+      ]
+    },
+    "lint-error": {
+      "description": "ESLint or Prettier formatting errors",
+      "priority": 9,
+      "route_to": "backend-engineer",
+      "common_causes": [
+        "Code not formatted before commit",
+        "ESLint rule violation",
+        "Unused imports or variables"
+      ],
+      "suggested_actions": [
+        "Run `npx eslint . --fix` to auto-fix",
+        "Run `npx prettier --write .` to format",
+        "Remove unused imports flagged by linter"
+      ],
+      "match_patterns": [
+        "Linting.*FAIL",
+        "eslint.*error",
+        "prettier.*error",
+        "lint.*failed"
+      ]
+    },
+    "placeholder-page": {
+      "description": "Placeholder or 'Coming Soon' content found in UI",
+      "priority": 10,
+      "route_to": "frontend-engineer",
+      "common_causes": [
+        "Feature UI not yet implemented",
+        "Stub component left from scaffolding",
+        "Conditional render showing fallback instead of real content"
+      ],
+      "suggested_actions": [
+        "Replace placeholder text with real UI implementation",
+        "Check if the feature's API endpoints are ready",
+        "Implement the full component per the PRD specifications",
+        "Remove 'Coming Soon' / 'Under Construction' text"
+      ],
+      "match_patterns": [
+        "Placeholder.*FAIL",
+        "placeholder pages",
+        "Coming Soon",
+        "Under Construction",
+        "Not yet implemented"
+      ]
+    },
+    "e2e-missing": {
+      "description": "Product has fewer than 3 E2E test files",
+      "priority": 11,
+      "route_to": "qa-engineer",
+      "common_causes": [
+        "E2E tests not yet written for new product",
+        "E2E directory missing or misconfigured",
+        "Tests written but in wrong directory"
+      ],
+      "suggested_actions": [
+        "Create e2e/ directory with Playwright config",
+        "Write at least 3 E2E spec files covering core user flows",
+        "Use PATTERN-004 (Playwright E2E Configuration) as template",
+        "Ensure tests cover: navigation, core feature, error states"
+      ],
+      "match_patterns": [
+        "E2E test files.*FAIL",
+        "No E2E test files found",
+        "Minimum E2E.*FAIL",
+        "found [012]\\)"
+      ]
+    }
+  },
+  "failure_history": [
+    {
+      "timestamp": "2026-02-10T08:31:17Z",
+      "gate_type": "smoke-test",
+      "product": "stablecoin-gateway",
+      "failure_types": [
+        "build-failure",
+        "test-failure",
+        "placeholder-page"
+      ]
+    }
+  ]
+}

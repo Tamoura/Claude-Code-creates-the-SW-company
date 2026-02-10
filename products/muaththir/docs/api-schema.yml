@@ -1,0 +1,1672 @@
+openapi: 3.0.3
+info:
+  title: "Mu'aththir API"
+  description: |
+    Holistic child development platform API. Parents track children across
+    6 dimensions: Academic, Social-Emotional, Behavioural, Aspirational,
+    Islamic, and Physical.
+  version: 1.0.0
+  contact:
+    name: ConnectSW
+    url: https://muaththir.app
+
+servers:
+  - url: http://localhost:5005/api
+    description: Local development
+  - url: https://api.muaththir.app/api
+    description: Production
+
+tags:
+  - name: Auth
+    description: Authentication and session management
+  - name: Children
+    description: Child profile management
+  - name: Observations
+    description: Observation logging and management
+  - name: Milestones
+    description: Milestone definitions and progress tracking
+  - name: Dashboard
+    description: Radar chart scores and aggregated data
+  - name: Dimensions
+    description: Dimension detail views with trends
+  - name: Timeline
+    description: Chronological observation feed with filters
+  - name: Users
+    description: Parent profile and account management
+  - name: Health
+    description: Service health checks
+
+components:
+  securitySchemes:
+    BearerAuth:
+      type: http
+      scheme: bearer
+      bearerFormat: JWT
+      description: JWT access token (1hr expiry)
+
+  schemas:
+    # --- Enums ---
+    Dimension:
+      type: string
+      enum:
+        - academic
+        - social_emotional
+        - behavioural
+        - aspirational
+        - islamic
+        - physical
+
+    Sentiment:
+      type: string
+      enum:
+        - positive
+        - neutral
+        - needs_attention
+
+    AgeBand:
+      type: string
+      enum:
+        - early_years
+        - primary
+        - upper_primary
+        - secondary
+
+    SubscriptionTier:
+      type: string
+      enum:
+        - free
+        - premium
+
+    DigestFrequency:
+      type: string
+      enum:
+        - off
+        - daily
+        - weekly
+
+    Gender:
+      type: string
+      enum:
+        - male
+        - female
+
+    # --- Core Models ---
+    Parent:
+      type: object
+      properties:
+        id:
+          type: string
+          format: cuid
+          example: clx1234567890abcdef
+        email:
+          type: string
+          format: email
+          example: fatima@example.com
+        name:
+          type: string
+          example: Fatima
+        subscriptionTier:
+          $ref: "#/components/schemas/SubscriptionTier"
+        digestFrequency:
+          $ref: "#/components/schemas/DigestFrequency"
+        createdAt:
+          type: string
+          format: date-time
+        updatedAt:
+          type: string
+          format: date-time
+
+    Child:
+      type: object
+      properties:
+        id:
+          type: string
+          format: cuid
+        parentId:
+          type: string
+          format: cuid
+        name:
+          type: string
+          example: Ahmed
+        dateOfBirth:
+          type: string
+          format: date
+          example: "2020-03-15"
+        gender:
+          $ref: "#/components/schemas/Gender"
+          nullable: true
+        photoUrl:
+          type: string
+          nullable: true
+        ageBand:
+          $ref: "#/components/schemas/AgeBand"
+          description: Computed from dateOfBirth, never stored
+        ageYears:
+          type: integer
+          description: Computed from dateOfBirth
+          example: 5
+        createdAt:
+          type: string
+          format: date-time
+        updatedAt:
+          type: string
+          format: date-time
+
+    Observation:
+      type: object
+      properties:
+        id:
+          type: string
+          format: cuid
+        childId:
+          type: string
+          format: cuid
+        dimension:
+          $ref: "#/components/schemas/Dimension"
+        content:
+          type: string
+          minLength: 1
+          maxLength: 1000
+          example: "Prayed Isha in congregation at the masjid for the first time."
+        sentiment:
+          $ref: "#/components/schemas/Sentiment"
+        observedAt:
+          type: string
+          format: date
+          example: "2026-02-07"
+        tags:
+          type: array
+          items:
+            type: string
+            maxLength: 50
+          maxItems: 5
+          example: ["salah", "masjid"]
+        createdAt:
+          type: string
+          format: date-time
+        updatedAt:
+          type: string
+          format: date-time
+
+    MilestoneDefinition:
+      type: object
+      properties:
+        id:
+          type: string
+          format: cuid
+        dimension:
+          $ref: "#/components/schemas/Dimension"
+        ageBand:
+          $ref: "#/components/schemas/AgeBand"
+        title:
+          type: string
+          maxLength: 100
+          example: "Can make wudu independently"
+        description:
+          type: string
+          maxLength: 300
+          example: "Child can perform the complete wudu sequence without reminders."
+        guidance:
+          type: string
+          maxLength: 500
+          nullable: true
+          example: "Practice together, let them lead. Praise effort over perfection."
+        sortOrder:
+          type: integer
+
+    ChildMilestoneProgress:
+      type: object
+      properties:
+        milestoneId:
+          type: string
+          format: cuid
+        milestone:
+          $ref: "#/components/schemas/MilestoneDefinition"
+        achieved:
+          type: boolean
+        achievedAt:
+          type: string
+          format: date-time
+          nullable: true
+
+    DimensionScore:
+      type: object
+      properties:
+        dimension:
+          $ref: "#/components/schemas/Dimension"
+        score:
+          type: integer
+          minimum: 0
+          maximum: 100
+          example: 64
+        observationCount:
+          type: integer
+          description: Observations in last 30 days
+        milestoneProgress:
+          type: number
+          format: float
+          description: Milestone completion ratio (0-1)
+          example: 0.42
+        sentimentRatio:
+          type: number
+          format: float
+          description: Positive sentiment ratio (0-1)
+          example: 0.75
+
+    # --- Pagination ---
+    PaginationMeta:
+      type: object
+      properties:
+        page:
+          type: integer
+          example: 1
+        limit:
+          type: integer
+          example: 20
+        total:
+          type: integer
+          example: 147
+        totalPages:
+          type: integer
+          example: 8
+        hasMore:
+          type: boolean
+          example: true
+
+    # --- Error ---
+    ProblemDetail:
+      type: object
+      description: RFC 7807 Problem Details
+      properties:
+        type:
+          type: string
+          example: "https://muaththir.app/errors/validation-error"
+        title:
+          type: string
+          example: "Validation Error"
+        status:
+          type: integer
+          example: 422
+        detail:
+          type: string
+          example: "Observation text must be between 1 and 1000 characters"
+        instance:
+          type: string
+          example: "/api/observations"
+        errors:
+          type: object
+          additionalProperties:
+            type: string
+
+    # --- Request Bodies ---
+    RegisterRequest:
+      type: object
+      required: [name, email, password]
+      properties:
+        name:
+          type: string
+          minLength: 1
+          maxLength: 100
+          example: Fatima
+        email:
+          type: string
+          format: email
+          example: fatima@example.com
+        password:
+          type: string
+          minLength: 8
+          description: "Min 8 chars, 1 uppercase, 1 number"
+          example: MySecure1Pass
+
+    LoginRequest:
+      type: object
+      required: [email, password]
+      properties:
+        email:
+          type: string
+          format: email
+        password:
+          type: string
+
+    ForgotPasswordRequest:
+      type: object
+      required: [email]
+      properties:
+        email:
+          type: string
+          format: email
+
+    ResetPasswordRequest:
+      type: object
+      required: [token, password]
+      properties:
+        token:
+          type: string
+        password:
+          type: string
+          minLength: 8
+
+    CreateChildRequest:
+      type: object
+      required: [name, dateOfBirth]
+      properties:
+        name:
+          type: string
+          minLength: 1
+          maxLength: 100
+          example: Ahmed
+        dateOfBirth:
+          type: string
+          format: date
+          example: "2020-03-15"
+        gender:
+          $ref: "#/components/schemas/Gender"
+          nullable: true
+
+    UpdateChildRequest:
+      type: object
+      properties:
+        name:
+          type: string
+          minLength: 1
+          maxLength: 100
+        dateOfBirth:
+          type: string
+          format: date
+        gender:
+          $ref: "#/components/schemas/Gender"
+          nullable: true
+
+    CreateObservationRequest:
+      type: object
+      required: [childId, dimension, content, sentiment]
+      properties:
+        childId:
+          type: string
+          format: cuid
+        dimension:
+          $ref: "#/components/schemas/Dimension"
+        content:
+          type: string
+          minLength: 1
+          maxLength: 1000
+        sentiment:
+          $ref: "#/components/schemas/Sentiment"
+        observedAt:
+          type: string
+          format: date
+          description: Defaults to today. Can backdate up to 1 year.
+        tags:
+          type: array
+          items:
+            type: string
+            maxLength: 50
+          maxItems: 5
+
+    UpdateObservationRequest:
+      type: object
+      properties:
+        content:
+          type: string
+          minLength: 1
+          maxLength: 1000
+        sentiment:
+          $ref: "#/components/schemas/Sentiment"
+        tags:
+          type: array
+          items:
+            type: string
+            maxLength: 50
+          maxItems: 5
+
+    MilestoneProgressRequest:
+      type: object
+      required: [childId, achieved]
+      properties:
+        childId:
+          type: string
+          format: cuid
+        achieved:
+          type: boolean
+
+    UpdateProfileRequest:
+      type: object
+      properties:
+        name:
+          type: string
+          minLength: 1
+          maxLength: 100
+        email:
+          type: string
+          format: email
+
+    ChangePasswordRequest:
+      type: object
+      required: [currentPassword, newPassword]
+      properties:
+        currentPassword:
+          type: string
+        newPassword:
+          type: string
+          minLength: 8
+
+    UpdateNotificationsRequest:
+      type: object
+      properties:
+        digestFrequency:
+          $ref: "#/components/schemas/DigestFrequency"
+
+    # --- Auth Responses ---
+    AuthResponse:
+      type: object
+      properties:
+        user:
+          $ref: "#/components/schemas/Parent"
+        accessToken:
+          type: string
+          description: JWT access token (1hr expiry)
+
+    # --- Dimension Detail ---
+    DimensionTrendPoint:
+      type: object
+      properties:
+        month:
+          type: string
+          example: "2026-01"
+        observationCount:
+          type: integer
+        positiveCount:
+          type: integer
+        neutralCount:
+          type: integer
+        needsAttentionCount:
+          type: integer
+        positivePercentage:
+          type: number
+          format: float
+
+    DimensionDetail:
+      type: object
+      properties:
+        dimension:
+          $ref: "#/components/schemas/Dimension"
+        score:
+          type: integer
+          minimum: 0
+          maximum: 100
+        observations:
+          type: object
+          properties:
+            data:
+              type: array
+              items:
+                $ref: "#/components/schemas/Observation"
+            pagination:
+              $ref: "#/components/schemas/PaginationMeta"
+        milestones:
+          type: array
+          items:
+            $ref: "#/components/schemas/ChildMilestoneProgress"
+        trend:
+          type: array
+          items:
+            $ref: "#/components/schemas/DimensionTrendPoint"
+          description: Last 6 months of observation counts and sentiment
+
+paths:
+  # ===== AUTH =====
+  /auth/register:
+    post:
+      tags: [Auth]
+      summary: Register a new parent account
+      operationId: register
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              $ref: "#/components/schemas/RegisterRequest"
+      responses:
+        "201":
+          description: Account created
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/AuthResponse"
+          headers:
+            Set-Cookie:
+              description: HttpOnly refresh token cookie (7d)
+              schema:
+                type: string
+        "400":
+          description: Validation error
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/ProblemDetail"
+        "409":
+          description: Email already registered
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/ProblemDetail"
+        "429":
+          description: Rate limit exceeded (10/min per IP)
+
+  /auth/login:
+    post:
+      tags: [Auth]
+      summary: Authenticate with email and password
+      operationId: login
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              $ref: "#/components/schemas/LoginRequest"
+      responses:
+        "200":
+          description: Authentication successful
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/AuthResponse"
+          headers:
+            Set-Cookie:
+              description: HttpOnly refresh token cookie (7d)
+              schema:
+                type: string
+        "401":
+          description: Invalid email or password
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/ProblemDetail"
+        "429":
+          description: Rate limit exceeded (20/min per IP)
+
+  /auth/logout:
+    post:
+      tags: [Auth]
+      summary: Invalidate current session
+      operationId: logout
+      security:
+        - BearerAuth: []
+      responses:
+        "204":
+          description: Session invalidated
+        "401":
+          description: Unauthorized
+
+  /auth/refresh:
+    post:
+      tags: [Auth]
+      summary: Refresh access token using refresh token cookie
+      operationId: refreshToken
+      description: |
+        Refresh token is sent via HttpOnly cookie. A new access token
+        and new refresh token are returned. The old refresh token is
+        invalidated (rotation).
+      responses:
+        "200":
+          description: Token refreshed
+          content:
+            application/json:
+              schema:
+                type: object
+                properties:
+                  accessToken:
+                    type: string
+          headers:
+            Set-Cookie:
+              description: New HttpOnly refresh token cookie
+              schema:
+                type: string
+        "401":
+          description: Invalid or expired refresh token
+
+  /auth/forgot-password:
+    post:
+      tags: [Auth]
+      summary: Request password reset email
+      operationId: forgotPassword
+      description: Always returns 200 to prevent email enumeration.
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              $ref: "#/components/schemas/ForgotPasswordRequest"
+      responses:
+        "200":
+          description: If email exists, reset link sent
+          content:
+            application/json:
+              schema:
+                type: object
+                properties:
+                  message:
+                    type: string
+                    example: "If the email exists, a reset link has been sent."
+        "429":
+          description: Rate limit exceeded (5/min per IP)
+
+  /auth/reset-password:
+    post:
+      tags: [Auth]
+      summary: Reset password using token from email
+      operationId: resetPassword
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              $ref: "#/components/schemas/ResetPasswordRequest"
+      responses:
+        "200":
+          description: Password reset successfully
+          content:
+            application/json:
+              schema:
+                type: object
+                properties:
+                  message:
+                    type: string
+                    example: "Password reset successfully."
+        "400":
+          description: Invalid or expired token
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/ProblemDetail"
+
+  # ===== CHILDREN =====
+  /children:
+    get:
+      tags: [Children]
+      summary: List all children for the authenticated parent
+      operationId: listChildren
+      security:
+        - BearerAuth: []
+      responses:
+        "200":
+          description: List of children
+          content:
+            application/json:
+              schema:
+                type: object
+                properties:
+                  data:
+                    type: array
+                    items:
+                      $ref: "#/components/schemas/Child"
+        "401":
+          description: Unauthorized
+
+    post:
+      tags: [Children]
+      summary: Create a new child profile
+      operationId: createChild
+      security:
+        - BearerAuth: []
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              $ref: "#/components/schemas/CreateChildRequest"
+      responses:
+        "201":
+          description: Child profile created
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/Child"
+        "400":
+          description: Validation error
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/ProblemDetail"
+        "403":
+          description: Free tier child limit reached (1 child)
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/ProblemDetail"
+        "401":
+          description: Unauthorized
+
+  /children/{childId}:
+    parameters:
+      - name: childId
+        in: path
+        required: true
+        schema:
+          type: string
+          format: cuid
+
+    get:
+      tags: [Children]
+      summary: Get a child profile
+      operationId: getChild
+      security:
+        - BearerAuth: []
+      responses:
+        "200":
+          description: Child profile
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/Child"
+        "404":
+          description: Child not found (or not owned by parent)
+        "401":
+          description: Unauthorized
+
+    put:
+      tags: [Children]
+      summary: Update a child profile
+      operationId: updateChild
+      security:
+        - BearerAuth: []
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              $ref: "#/components/schemas/UpdateChildRequest"
+      responses:
+        "200":
+          description: Child profile updated
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/Child"
+        "400":
+          description: Validation error
+        "404":
+          description: Child not found
+        "401":
+          description: Unauthorized
+
+    delete:
+      tags: [Children]
+      summary: Delete a child profile and all associated data
+      operationId: deleteChild
+      description: |
+        Deletes the child profile, all observations, milestone progress,
+        and score cache. This action is irreversible. Frontend should
+        require confirmation before calling.
+      security:
+        - BearerAuth: []
+      responses:
+        "204":
+          description: Child deleted
+        "404":
+          description: Child not found
+        "401":
+          description: Unauthorized
+
+  /children/{childId}/photo:
+    parameters:
+      - name: childId
+        in: path
+        required: true
+        schema:
+          type: string
+          format: cuid
+
+    post:
+      tags: [Children]
+      summary: Upload or replace child profile photo
+      operationId: uploadChildPhoto
+      security:
+        - BearerAuth: []
+      requestBody:
+        required: true
+        content:
+          multipart/form-data:
+            schema:
+              type: object
+              properties:
+                photo:
+                  type: string
+                  format: binary
+                  description: JPEG or PNG, max 5MB
+      responses:
+        "200":
+          description: Photo uploaded and resized
+          content:
+            application/json:
+              schema:
+                type: object
+                properties:
+                  photoUrl:
+                    type: string
+        "400":
+          description: Invalid file type or size
+        "404":
+          description: Child not found
+        "401":
+          description: Unauthorized
+
+    get:
+      tags: [Children]
+      summary: Get child profile photo
+      operationId: getChildPhoto
+      security:
+        - BearerAuth: []
+      responses:
+        "200":
+          description: Photo file
+          content:
+            image/jpeg:
+              schema:
+                type: string
+                format: binary
+            image/png:
+              schema:
+                type: string
+                format: binary
+        "404":
+          description: No photo or child not found
+        "401":
+          description: Unauthorized
+
+  # ===== OBSERVATIONS =====
+  /observations:
+    get:
+      tags: [Observations]
+      summary: List observations with filters
+      operationId: listObservations
+      security:
+        - BearerAuth: []
+      parameters:
+        - name: childId
+          in: query
+          required: true
+          schema:
+            type: string
+            format: cuid
+        - name: dimension
+          in: query
+          schema:
+            type: array
+            items:
+              $ref: "#/components/schemas/Dimension"
+          style: form
+          explode: true
+          description: Filter by dimension(s). Multiple allowed.
+        - name: sentiment
+          in: query
+          schema:
+            type: array
+            items:
+              $ref: "#/components/schemas/Sentiment"
+          style: form
+          explode: true
+          description: Filter by sentiment(s). Multiple allowed.
+        - name: startDate
+          in: query
+          schema:
+            type: string
+            format: date
+          description: Filter observations on or after this date
+        - name: endDate
+          in: query
+          schema:
+            type: string
+            format: date
+          description: Filter observations on or before this date
+        - name: search
+          in: query
+          schema:
+            type: string
+            maxLength: 200
+          description: Full-text search in observation content
+        - name: page
+          in: query
+          schema:
+            type: integer
+            default: 1
+            minimum: 1
+        - name: limit
+          in: query
+          schema:
+            type: integer
+            default: 20
+            minimum: 1
+            maximum: 100
+      responses:
+        "200":
+          description: Paginated observations
+          content:
+            application/json:
+              schema:
+                type: object
+                properties:
+                  data:
+                    type: array
+                    items:
+                      $ref: "#/components/schemas/Observation"
+                  pagination:
+                    $ref: "#/components/schemas/PaginationMeta"
+        "401":
+          description: Unauthorized
+
+    post:
+      tags: [Observations]
+      summary: Create a new observation
+      operationId: createObservation
+      security:
+        - BearerAuth: []
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              $ref: "#/components/schemas/CreateObservationRequest"
+      responses:
+        "201":
+          description: Observation created
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/Observation"
+        "400":
+          description: Validation error
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/ProblemDetail"
+        "404":
+          description: Child not found
+        "401":
+          description: Unauthorized
+
+  /observations/{observationId}:
+    parameters:
+      - name: observationId
+        in: path
+        required: true
+        schema:
+          type: string
+          format: cuid
+
+    get:
+      tags: [Observations]
+      summary: Get a single observation
+      operationId: getObservation
+      security:
+        - BearerAuth: []
+      responses:
+        "200":
+          description: Observation detail
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/Observation"
+        "404":
+          description: Observation not found
+        "401":
+          description: Unauthorized
+
+    put:
+      tags: [Observations]
+      summary: Update an observation
+      operationId: updateObservation
+      description: Can update content, sentiment, and tags. Cannot change dimension or child.
+      security:
+        - BearerAuth: []
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              $ref: "#/components/schemas/UpdateObservationRequest"
+      responses:
+        "200":
+          description: Observation updated
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/Observation"
+        "400":
+          description: Validation error
+        "404":
+          description: Observation not found
+        "401":
+          description: Unauthorized
+
+    delete:
+      tags: [Observations]
+      summary: Soft-delete an observation
+      operationId: deleteObservation
+      description: |
+        Sets deleted_at timestamp. Observation is recoverable for 30 days.
+        After 30 days, a scheduled job permanently deletes it.
+        Radar chart scores are recalculated.
+      security:
+        - BearerAuth: []
+      responses:
+        "204":
+          description: Observation soft-deleted
+        "404":
+          description: Observation not found
+        "401":
+          description: Unauthorized
+
+  # ===== MILESTONES =====
+  /milestones:
+    get:
+      tags: [Milestones]
+      summary: List milestone definitions with child progress
+      operationId: listMilestones
+      security:
+        - BearerAuth: []
+      parameters:
+        - name: childId
+          in: query
+          required: true
+          schema:
+            type: string
+            format: cuid
+        - name: dimension
+          in: query
+          schema:
+            $ref: "#/components/schemas/Dimension"
+          description: Filter by dimension. If omitted, returns all dimensions.
+        - name: ageBand
+          in: query
+          schema:
+            $ref: "#/components/schemas/AgeBand"
+          description: |
+            Filter by age band. If omitted, uses the child's current
+            age band calculated from date of birth.
+      responses:
+        "200":
+          description: Milestone definitions with child progress
+          content:
+            application/json:
+              schema:
+                type: object
+                properties:
+                  data:
+                    type: array
+                    items:
+                      $ref: "#/components/schemas/ChildMilestoneProgress"
+                  summary:
+                    type: object
+                    properties:
+                      total:
+                        type: integer
+                        example: 10
+                      achieved:
+                        type: integer
+                        example: 4
+                      completionPercentage:
+                        type: number
+                        format: float
+                        example: 0.4
+                  ageBand:
+                    $ref: "#/components/schemas/AgeBand"
+                  dimension:
+                    $ref: "#/components/schemas/Dimension"
+        "404":
+          description: Child not found
+        "401":
+          description: Unauthorized
+
+  /milestones/{milestoneId}/progress:
+    parameters:
+      - name: milestoneId
+        in: path
+        required: true
+        schema:
+          type: string
+          format: cuid
+
+    post:
+      tags: [Milestones]
+      summary: Mark or unmark a milestone for a child
+      operationId: updateMilestoneProgress
+      description: |
+        Toggles milestone achievement status. When marking as achieved,
+        records the current timestamp. When unmarking, preserves the
+        original achievement date in the history array.
+        Invalidates radar chart score cache.
+      security:
+        - BearerAuth: []
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              $ref: "#/components/schemas/MilestoneProgressRequest"
+      responses:
+        "200":
+          description: Milestone progress updated
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/ChildMilestoneProgress"
+        "400":
+          description: Validation error
+        "404":
+          description: Milestone or child not found
+        "401":
+          description: Unauthorized
+
+    get:
+      tags: [Milestones]
+      summary: Get milestone progress for a child
+      operationId: getMilestoneProgress
+      security:
+        - BearerAuth: []
+      parameters:
+        - name: childId
+          in: query
+          required: true
+          schema:
+            type: string
+            format: cuid
+      responses:
+        "200":
+          description: Milestone progress
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/ChildMilestoneProgress"
+        "404":
+          description: Milestone or child not found
+        "401":
+          description: Unauthorized
+
+  # ===== DASHBOARD =====
+  /dashboard/{childId}/scores:
+    parameters:
+      - name: childId
+        in: path
+        required: true
+        schema:
+          type: string
+          format: cuid
+    get:
+      tags: [Dashboard]
+      summary: Get radar chart scores for all 6 dimensions
+      operationId: getDashboardScores
+      description: |
+        Returns pre-calculated scores for each dimension (0-100).
+        Scores are cached and recalculated when observations or
+        milestones change. Formula:
+        score = (observation_factor * 0.4) + (milestone_factor * 0.4) + (sentiment_factor * 0.2)
+      security:
+        - BearerAuth: []
+      responses:
+        "200":
+          description: Dimension scores
+          content:
+            application/json:
+              schema:
+                type: object
+                properties:
+                  childId:
+                    type: string
+                  scores:
+                    type: array
+                    items:
+                      $ref: "#/components/schemas/DimensionScore"
+                  lastUpdated:
+                    type: string
+                    format: date-time
+        "404":
+          description: Child not found
+        "401":
+          description: Unauthorized
+
+  /dashboard/{childId}/recent:
+    parameters:
+      - name: childId
+        in: path
+        required: true
+        schema:
+          type: string
+          format: cuid
+    get:
+      tags: [Dashboard]
+      summary: Get 5 most recent observations
+      operationId: getRecentObservations
+      security:
+        - BearerAuth: []
+      responses:
+        "200":
+          description: Recent observations
+          content:
+            application/json:
+              schema:
+                type: object
+                properties:
+                  data:
+                    type: array
+                    items:
+                      $ref: "#/components/schemas/Observation"
+                    maxItems: 5
+        "404":
+          description: Child not found
+        "401":
+          description: Unauthorized
+
+  /dashboard/{childId}/milestones-due:
+    parameters:
+      - name: childId
+        in: path
+        required: true
+        schema:
+          type: string
+          format: cuid
+    get:
+      tags: [Dashboard]
+      summary: Get next 3 unchecked milestones for child's age band
+      operationId: getMilestonesDue
+      security:
+        - BearerAuth: []
+      responses:
+        "200":
+          description: Upcoming milestones
+          content:
+            application/json:
+              schema:
+                type: object
+                properties:
+                  data:
+                    type: array
+                    items:
+                      $ref: "#/components/schemas/MilestoneDefinition"
+                    maxItems: 3
+                  ageBand:
+                    $ref: "#/components/schemas/AgeBand"
+        "404":
+          description: Child not found
+        "401":
+          description: Unauthorized
+
+  # ===== DIMENSIONS =====
+  /dimensions/{slug}:
+    parameters:
+      - name: slug
+        in: path
+        required: true
+        schema:
+          $ref: "#/components/schemas/Dimension"
+    get:
+      tags: [Dimensions]
+      summary: Get dimension detail with observations, milestones, and trend
+      operationId: getDimensionDetail
+      security:
+        - BearerAuth: []
+      parameters:
+        - name: childId
+          in: query
+          required: true
+          schema:
+            type: string
+            format: cuid
+        - name: page
+          in: query
+          schema:
+            type: integer
+            default: 1
+            minimum: 1
+        - name: limit
+          in: query
+          schema:
+            type: integer
+            default: 20
+            minimum: 1
+            maximum: 100
+      responses:
+        "200":
+          description: Dimension detail
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/DimensionDetail"
+        "404":
+          description: Child not found
+        "401":
+          description: Unauthorized
+
+  # ===== TIMELINE =====
+  /timeline:
+    get:
+      tags: [Timeline]
+      summary: Get paginated timeline of observations with filters
+      operationId: getTimeline
+      description: |
+        Returns observations in reverse chronological order.
+        Supports filtering by dimension, sentiment, date range,
+        and full-text search. Used for the /dashboard/timeline page.
+        Supports infinite scroll via page/limit pagination.
+      security:
+        - BearerAuth: []
+      parameters:
+        - name: childId
+          in: query
+          required: true
+          schema:
+            type: string
+            format: cuid
+        - name: dimension
+          in: query
+          schema:
+            type: array
+            items:
+              $ref: "#/components/schemas/Dimension"
+          style: form
+          explode: true
+        - name: sentiment
+          in: query
+          schema:
+            type: array
+            items:
+              $ref: "#/components/schemas/Sentiment"
+          style: form
+          explode: true
+        - name: startDate
+          in: query
+          schema:
+            type: string
+            format: date
+        - name: endDate
+          in: query
+          schema:
+            type: string
+            format: date
+        - name: search
+          in: query
+          schema:
+            type: string
+            maxLength: 200
+        - name: page
+          in: query
+          schema:
+            type: integer
+            default: 1
+            minimum: 1
+        - name: limit
+          in: query
+          schema:
+            type: integer
+            default: 20
+            minimum: 1
+            maximum: 100
+      responses:
+        "200":
+          description: Paginated timeline
+          content:
+            application/json:
+              schema:
+                type: object
+                properties:
+                  data:
+                    type: array
+                    items:
+                      $ref: "#/components/schemas/Observation"
+                  pagination:
+                    $ref: "#/components/schemas/PaginationMeta"
+        "404":
+          description: Child not found
+        "401":
+          description: Unauthorized
+
+  # ===== USERS =====
+  /users/me:
+    get:
+      tags: [Users]
+      summary: Get authenticated parent's profile
+      operationId: getProfile
+      security:
+        - BearerAuth: []
+      responses:
+        "200":
+          description: Parent profile
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/Parent"
+        "401":
+          description: Unauthorized
+
+    put:
+      tags: [Users]
+      summary: Update parent profile (name, email)
+      operationId: updateProfile
+      security:
+        - BearerAuth: []
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              $ref: "#/components/schemas/UpdateProfileRequest"
+      responses:
+        "200":
+          description: Profile updated
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/Parent"
+        "400":
+          description: Validation error
+        "409":
+          description: Email already in use
+        "401":
+          description: Unauthorized
+
+    delete:
+      tags: [Users]
+      summary: Delete parent account and all data
+      operationId: deleteAccount
+      description: |
+        Marks account for deletion. All data (parent, children,
+        observations, milestones) is permanently deleted within
+        30 days. Parent is logged out immediately.
+      security:
+        - BearerAuth: []
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              type: object
+              required: [confirmation]
+              properties:
+                confirmation:
+                  type: string
+                  description: Must be exactly "DELETE"
+                  example: DELETE
+      responses:
+        "204":
+          description: Account marked for deletion
+        "400":
+          description: Invalid confirmation text
+        "401":
+          description: Unauthorized
+
+  /users/me/password:
+    put:
+      tags: [Users]
+      summary: Change password
+      operationId: changePassword
+      description: |
+        Requires current password. On success, all existing sessions
+        except the current one are invalidated.
+      security:
+        - BearerAuth: []
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              $ref: "#/components/schemas/ChangePasswordRequest"
+      responses:
+        "200":
+          description: Password changed
+          content:
+            application/json:
+              schema:
+                type: object
+                properties:
+                  message:
+                    type: string
+                    example: "Password changed successfully."
+        "400":
+          description: Current password incorrect or new password invalid
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/ProblemDetail"
+        "401":
+          description: Unauthorized
+
+  /users/me/notifications:
+    get:
+      tags: [Users]
+      summary: Get notification preferences
+      operationId: getNotifications
+      security:
+        - BearerAuth: []
+      responses:
+        "200":
+          description: Notification preferences
+          content:
+            application/json:
+              schema:
+                type: object
+                properties:
+                  digestFrequency:
+                    $ref: "#/components/schemas/DigestFrequency"
+        "401":
+          description: Unauthorized
+
+    put:
+      tags: [Users]
+      summary: Update notification preferences
+      operationId: updateNotifications
+      security:
+        - BearerAuth: []
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              $ref: "#/components/schemas/UpdateNotificationsRequest"
+      responses:
+        "200":
+          description: Preferences updated
+          content:
+            application/json:
+              schema:
+                type: object
+                properties:
+                  digestFrequency:
+                    $ref: "#/components/schemas/DigestFrequency"
+        "401":
+          description: Unauthorized
+
+  /users/me/subscription:
+    get:
+      tags: [Users]
+      summary: Get subscription information
+      operationId: getSubscription
+      security:
+        - BearerAuth: []
+      responses:
+        "200":
+          description: Subscription details
+          content:
+            application/json:
+              schema:
+                type: object
+                properties:
+                  tier:
+                    $ref: "#/components/schemas/SubscriptionTier"
+                  childCount:
+                    type: integer
+                    description: Current number of child profiles
+                  childLimit:
+                    type: integer
+                    description: "Max children allowed (1 for free, unlimited for premium)"
+                    example: 1
+        "401":
+          description: Unauthorized
+
+  /users/me/export:
+    post:
+      tags: [Users]
+      summary: Request data export (GDPR)
+      operationId: requestDataExport
+      description: |
+        Exports all parent data including children, observations,
+        and milestone progress as a JSON file. Returns the data
+        directly in the response.
+      security:
+        - BearerAuth: []
+      responses:
+        "200":
+          description: Data export
+          content:
+            application/json:
+              schema:
+                type: object
+                properties:
+                  parent:
+                    $ref: "#/components/schemas/Parent"
+                  children:
+                    type: array
+                    items:
+                      type: object
+                      properties:
+                        child:
+                          $ref: "#/components/schemas/Child"
+                        observations:
+                          type: array
+                          items:
+                            $ref: "#/components/schemas/Observation"
+                        milestoneProgress:
+                          type: array
+                          items:
+                            $ref: "#/components/schemas/ChildMilestoneProgress"
+                  exportedAt:
+                    type: string
+                    format: date-time
+        "401":
+          description: Unauthorized
+
+  # ===== HEALTH =====
+  /health:
+    get:
+      tags: [Health]
+      summary: Health check
+      operationId: healthCheck
+      responses:
+        "200":
+          description: Service healthy
+          content:
+            application/json:
+              schema:
+                type: object
+                properties:
+                  status:
+                    type: string
+                    example: ok
+                  version:
+                    type: string
+                    example: "1.0.0"
+                  uptime:
+                    type: number
+                    description: Seconds since start
+                  database:
+                    type: string
+                    enum: [connected, disconnected]
