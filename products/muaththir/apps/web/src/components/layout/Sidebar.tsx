@@ -3,6 +3,7 @@
 import Link from 'next/link';
 import { usePathname } from 'next/navigation';
 import { DIMENSIONS } from '../../lib/dimensions';
+import LanguageSwitcher from '../LanguageSwitcher';
 
 interface NavItem {
   label: string;
@@ -193,6 +194,11 @@ export default function Sidebar() {
           </div>
         ))}
       </nav>
+
+      {/* Language Switcher */}
+      <div className="px-4 py-3 border-t border-slate-200">
+        <LanguageSwitcher />
+      </div>
     </aside>
   );
 }

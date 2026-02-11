@@ -2,6 +2,7 @@
 
 import Link from 'next/link';
 import { useState } from 'react';
+import LanguageSwitcher from '../LanguageSwitcher';
 
 export default function Header() {
   const [mobileMenuOpen, setMobileMenuOpen] = useState(false);
@@ -60,6 +61,7 @@ export default function Header() {
             >
               Log in
             </Link>
+            <LanguageSwitcher />
             <Link href="/signup" className="btn-primary text-sm py-2 px-4">
               Get Started
             </Link>
@@ -128,6 +130,9 @@ export default function Header() {
             >
               Log in
             </Link>
+            <div className="px-3 py-2">
+              <LanguageSwitcher />
+            </div>
             <Link
               href="/signup"
               className="block px-3 py-2 text-sm font-medium text-white bg-emerald-600 hover:bg-emerald-700 rounded-lg text-center"
