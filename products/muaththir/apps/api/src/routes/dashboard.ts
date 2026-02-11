@@ -1,5 +1,6 @@
 import { FastifyPluginAsync } from 'fastify';
 import { NotFoundError } from '../lib/errors';
+import { verifyChildOwnership } from '../lib/ownership';
 import { getAgeBand } from '../utils/age-band';
 import { DIMENSIONS, DimensionType } from '../types';
 import { Dimension } from '@prisma/client';
@@ -120,13 +121,7 @@ const dashboardRoutes: FastifyPluginAsync = async (fastify) => {
     const { childId } = request.params as { childId: string };
     const parentId = request.currentUser!.id;
 
-    const child = await fastify.prisma.child.findFirst({
-      where: { id: childId, parentId },
-    });
-
-    if (!child) {
-      throw new NotFoundError('Child not found');
-    }
+    const child = await verifyChildOwnership(fastify, childId, parentId);
 
     const ageBand = getAgeBand(child.dateOfBirth);
     const ageBandForQuery = ageBand === 'out_of_range' ? null : ageBand;
@@ -146,15 +141,14 @@ const dashboardRoutes: FastifyPluginAsync = async (fastify) => {
       const cached = cacheMap.get(dimension);
 
       if (cached && !cached.stale) {
-        // Return cached score — recalculate factors for the response
-        // but use the cached score value
-        const detail = await calculateDimensionScore(
-          fastify.prisma,
-          childId,
-          dimension as Dimension,
-          ageBandForQuery
-        );
-        scores.push({ ...detail, score: cached.score });
+        // Use cached score — return score with zero-cost metadata
+        scores.push({
+          dimension: dimension as DimensionType,
+          score: cached.score,
+          factors: { observation: 0, milestone: 0, sentiment: 0 },
+          observationCount: 0,
+          milestoneProgress: { achieved: 0, total: 0 },
+        });
       } else {
         // Calculate fresh score
         const detail = await calculateDimensionScore(
@@ -209,13 +203,7 @@ const dashboardRoutes: FastifyPluginAsync = async (fastify) => {
     const { childId } = request.params as { childId: string };
     const parentId = request.currentUser!.id;
 
-    const child = await fastify.prisma.child.findFirst({
-      where: { id: childId, parentId },
-    });
-
-    if (!child) {
-      throw new NotFoundError('Child not found');
-    }
+    await verifyChildOwnership(fastify, childId, parentId);
 
     const observations = await fastify.prisma.observation.findMany({
       where: { childId, deletedAt: null },
@@ -242,13 +230,7 @@ const dashboardRoutes: FastifyPluginAsync = async (fastify) => {
     const { childId } = request.params as { childId: string };
     const parentId = request.currentUser!.id;
 
-    const child = await fastify.prisma.child.findFirst({
-      where: { id: childId, parentId },
-    });
-
-    if (!child) {
-      throw new NotFoundError('Child not found');
-    }
+    const child = await verifyChildOwnership(fastify, childId, parentId);
 
     const ageBand = getAgeBand(child.dateOfBirth);
 

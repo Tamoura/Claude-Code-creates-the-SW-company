@@ -1,7 +1,8 @@
-import { FastifyInstance, FastifyPluginAsync } from 'fastify';
+import { FastifyPluginAsync } from 'fastify';
 import { z } from 'zod';
 import { NotFoundError, ValidationError } from '../lib/errors';
 import { parsePagination, paginatedResult } from '../lib/pagination';
+import { verifyChildOwnership } from '../lib/ownership';
 
 function validateBody<T>(schema: z.ZodType<T>, body: unknown): T {
   const parsed = schema.safeParse(body);
@@ -63,20 +64,6 @@ const listObservationsQuery = z.object({
   limit: z.string().optional(),
 });
 
-async function verifyChildOwnership(
-  fastify: FastifyInstance,
-  childId: string,
-  parentId: string
-) {
-  const child = await fastify.prisma.child.findFirst({
-    where: { id: childId, parentId },
-  });
-  if (!child) {
-    throw new NotFoundError('Child not found');
-  }
-  return child;
-}
-
 function formatObservation(obs: {
   id: string;
   childId: string;
@@ -128,21 +115,22 @@ const observationRoutes: FastifyPluginAsync = async (fastify) => {
       );
     }
 
-    const observation = await fastify.prisma.observation.create({
-      data: {
-        childId,
-        dimension: data.dimension,
-        content: data.content,
-        sentiment: data.sentiment,
-        observedAt: observedDate,
-        tags: data.tags,
-      },
-    });
-
-    // Mark ScoreCache as stale for the affected dimension
-    await fastify.prisma.scoreCache.updateMany({
-      where: { childId, dimension: data.dimension },
-      data: { stale: true },
+    const observation = await fastify.prisma.$transaction(async (tx) => {
+      const obs = await tx.observation.create({
+        data: {
+          childId,
+          dimension: data.dimension,
+          content: data.content,
+          sentiment: data.sentiment,
+          observedAt: observedDate,
+          tags: data.tags,
+        },
+      });
+      await tx.scoreCache.updateMany({
+        where: { childId, dimension: data.dimension },
+        data: { stale: true },
+      });
+      return obs;
     });
 
     return reply.code(201).send(formatObservation(observation));
@@ -258,15 +246,16 @@ const observationRoutes: FastifyPluginAsync = async (fastify) => {
       updateData.tags = data.tags;
     }
 
-    const updated = await fastify.prisma.observation.update({
-      where: { id },
-      data: updateData,
-    });
-
-    // Mark ScoreCache as stale for the affected dimension
-    await fastify.prisma.scoreCache.updateMany({
-      where: { childId, dimension: existing.dimension },
-      data: { stale: true },
+    const updated = await fastify.prisma.$transaction(async (tx) => {
+      const obs = await tx.observation.update({
+        where: { id },
+        data: updateData,
+      });
+      await tx.scoreCache.updateMany({
+        where: { childId, dimension: existing.dimension },
+        data: { stale: true },
+      });
+      return obs;
     });
 
     return reply.send(formatObservation(updated));
@@ -292,16 +281,16 @@ const observationRoutes: FastifyPluginAsync = async (fastify) => {
       throw new NotFoundError('Observation not found');
     }
 
-    // Soft delete
-    await fastify.prisma.observation.update({
-      where: { id },
-      data: { deletedAt: new Date() },
-    });
-
-    // Mark ScoreCache as stale
-    await fastify.prisma.scoreCache.updateMany({
-      where: { childId, dimension: observation.dimension },
-      data: { stale: true },
+    // Soft delete + cache invalidation in a transaction
+    await fastify.prisma.$transaction(async (tx) => {
+      await tx.observation.update({
+        where: { id },
+        data: { deletedAt: new Date() },
+      });
+      await tx.scoreCache.updateMany({
+        where: { childId, dimension: observation.dimension },
+        data: { stale: true },
+      });
     });
 
     return reply.code(204).send();

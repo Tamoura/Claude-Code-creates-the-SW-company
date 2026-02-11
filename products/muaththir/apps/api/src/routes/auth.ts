@@ -99,33 +99,47 @@ async function issueTokens(
 }
 
 const authRoutes: FastifyPluginAsync = async (fastify) => {
-  fastify.post('/register', async (request, reply) => {
+  fastify.post('/register', {
+    config: {
+      rateLimit: {
+        max: 5,
+        timeWindow: '1 minute',
+      },
+    },
+  }, async (request, reply) => {
     const { name, email, password } = validateBody(
       registerSchema,
       request.body
     );
 
-    const existing = await fastify.prisma.parent.findUnique({
-      where: { email },
-    });
-    if (existing) {
-      throw new ConflictError('Email already registered');
+    try {
+      const passwordHash = await hashPassword(password);
+      const parent = await fastify.prisma.parent.create({
+        data: { name, email, passwordHash },
+      });
+
+      const accessToken = await issueTokens(fastify, reply, parent);
+
+      return reply.code(201).send({
+        user: parentToResponse(parent),
+        accessToken,
+      });
+    } catch (error: any) {
+      if (error?.code === 'P2002') {
+        throw new ConflictError('Email already registered');
+      }
+      throw error;
     }
-
-    const passwordHash = await hashPassword(password);
-    const parent = await fastify.prisma.parent.create({
-      data: { name, email, passwordHash },
-    });
-
-    const accessToken = await issueTokens(fastify, reply, parent);
-
-    return reply.code(201).send({
-      user: parentToResponse(parent),
-      accessToken,
-    });
   });
 
-  fastify.post('/login', async (request, reply) => {
+  fastify.post('/login', {
+    config: {
+      rateLimit: {
+        max: 5,
+        timeWindow: '1 minute',
+      },
+    },
+  }, async (request, reply) => {
     const { email, password } = validateBody(loginSchema, request.body);
 
     const parent = await fastify.prisma.parent.findUnique({
@@ -202,7 +216,14 @@ const authRoutes: FastifyPluginAsync = async (fastify) => {
     return reply.code(200).send({ accessToken });
   });
 
-  fastify.post('/forgot-password', async (request, reply) => {
+  fastify.post('/forgot-password', {
+    config: {
+      rateLimit: {
+        max: 3,
+        timeWindow: '1 hour',
+      },
+    },
+  }, async (request, reply) => {
     const { email } = validateBody(forgotPasswordSchema, request.body);
 
     const parent = await fastify.prisma.parent.findUnique({
@@ -210,7 +231,7 @@ const authRoutes: FastifyPluginAsync = async (fastify) => {
     });
 
     if (parent) {
-      const resetToken = crypto.randomUUID();
+      const resetToken = crypto.randomBytes(32).toString('hex');
       const resetTokenExp = new Date(Date.now() + 60 * 60 * 1000); // 1 hour
 
       await fastify.prisma.parent.update({

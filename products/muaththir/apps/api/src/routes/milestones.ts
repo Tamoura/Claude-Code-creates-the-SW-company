@@ -7,6 +7,7 @@ import {
   ValidationError,
 } from '../lib/errors';
 import { parsePagination, paginatedResult } from '../lib/pagination';
+import { verifyChildOwnership } from '../lib/ownership';
 import { DIMENSIONS, AGE_BANDS } from '../types';
 
 const dimensionEnum = z.enum(DIMENSIONS as unknown as [string, ...string[]]);
@@ -101,14 +102,7 @@ const childMilestoneRoutes: FastifyPluginAsync = async (fastify) => {
     const parent = request.currentUser!;
     const { childId } = request.params as { childId: string };
 
-    // Verify child belongs to parent
-    const child = await fastify.prisma.child.findFirst({
-      where: { id: childId, parentId: parent.id },
-    });
-
-    if (!child) {
-      throw new NotFoundError('Child not found');
-    }
+    await verifyChildOwnership(fastify, childId, parent.id);
 
     const query = request.query as {
       page?: string;
@@ -188,14 +182,7 @@ const childMilestoneRoutes: FastifyPluginAsync = async (fastify) => {
       milestoneId: string;
     };
 
-    // Verify child belongs to parent
-    const child = await fastify.prisma.child.findFirst({
-      where: { id: childId, parentId: parent.id },
-    });
-
-    if (!child) {
-      throw new NotFoundError('Child not found');
-    }
+    await verifyChildOwnership(fastify, childId, parent.id);
 
     // Verify milestone exists
     const milestone = await fastify.prisma.milestoneDefinition.findUnique({
@@ -226,44 +213,44 @@ const childMilestoneRoutes: FastifyPluginAsync = async (fastify) => {
 
     const updatedHistory = [...existingHistory, historyEntry];
 
-    const childMilestone = await fastify.prisma.childMilestone.upsert({
-      where: {
-        childId_milestoneId: { childId, milestoneId },
-      },
-      create: {
-        childId,
-        milestoneId,
-        achieved,
-        achievedAt: achieved ? now : null,
-        achievedHistory: updatedHistory,
-      },
-      update: {
-        achieved,
-        achievedAt: achieved ? now : null,
-        achievedHistory: updatedHistory,
-      },
-      include: {
-        milestone: true,
-      },
-    });
-
-    // Mark ScoreCache as stale for this dimension
-    await fastify.prisma.scoreCache.upsert({
-      where: {
-        childId_dimension: {
+    const [childMilestone] = await fastify.prisma.$transaction([
+      fastify.prisma.childMilestone.upsert({
+        where: {
+          childId_milestoneId: { childId, milestoneId },
+        },
+        create: {
+          childId,
+          milestoneId,
+          achieved,
+          achievedAt: achieved ? now : null,
+          achievedHistory: updatedHistory,
+        },
+        update: {
+          achieved,
+          achievedAt: achieved ? now : null,
+          achievedHistory: updatedHistory,
+        },
+        include: {
+          milestone: true,
+        },
+      }),
+      fastify.prisma.scoreCache.upsert({
+        where: {
+          childId_dimension: {
+            childId,
+            dimension: milestone.dimension,
+          },
+        },
+        create: {
           childId,
           dimension: milestone.dimension,
+          stale: true,
         },
-      },
-      create: {
-        childId,
-        dimension: milestone.dimension,
-        stale: true,
-      },
-      update: {
-        stale: true,
-      },
-    });
+        update: {
+          stale: true,
+        },
+      }),
+    ]);
 
     return reply.code(200).send({
       id: childMilestone.milestone.id,

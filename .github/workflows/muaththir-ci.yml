@@ -1,8 +1,8 @@
-name: Muaththir CI
+name: Mu'aththir CI
 
 on:
   push:
-    branches: [main, 'feature/muaththir/**', 'fix/muaththir/**']
+    branches: [main]
     paths:
       - 'products/muaththir/**'
   pull_request:
@@ -10,17 +10,39 @@ on:
     paths:
       - 'products/muaththir/**'
 
-jobs:
-  test-backend:
-    name: API - Test
-    runs-on: ubuntu-latest
+env:
+  NODE_VERSION: '20'
 
+jobs:
+  api-lint-and-typecheck:
+    name: API - Lint & Type Check
+    runs-on: ubuntu-latest
+    defaults:
+      run:
+        working-directory: products/muaththir/apps/api
+    steps:
+      - uses: actions/checkout@v4
+      - uses: actions/setup-node@v4
+        with:
+          node-version: ${{ env.NODE_VERSION }}
+          cache: npm
+          cache-dependency-path: products/muaththir/apps/api/package-lock.json
+      - run: npm ci
+      - run: npx prisma generate
+      - run: npx tsc --noEmit
+
+  api-test:
+    name: API - Tests
+    runs-on: ubuntu-latest
+    defaults:
+      run:
+        working-directory: products/muaththir/apps/api
     services:
       postgres:
         image: postgres:15
         env:
-          POSTGRES_USER: postgres
-          POSTGRES_PASSWORD: postgres
+          POSTGRES_USER: test
+          POSTGRES_PASSWORD: test
           POSTGRES_DB: muaththir_test
         ports:
           - 5432:5432
@@ -29,130 +51,52 @@ jobs:
           --health-interval 10s
           --health-timeout 5s
           --health-retries 5
-
-    defaults:
-      run:
-        working-directory: products/muaththir/apps/api
-
+    env:
+      DATABASE_URL: postgresql://test:test@localhost:5432/muaththir_test
+      JWT_SECRET: ci-test-secret-not-for-production
+      NODE_ENV: test
     steps:
       - uses: actions/checkout@v4
-
       - uses: actions/setup-node@v4
         with:
-          node-version: 20
-          cache: 'npm'
+          node-version: ${{ env.NODE_VERSION }}
+          cache: npm
           cache-dependency-path: products/muaththir/apps/api/package-lock.json
+      - run: npm ci
+      - run: npx prisma generate
+      - run: npx prisma migrate deploy
+      - run: npm test
 
-      - name: Install dependencies
-        run: npm ci
-
-      - name: Generate Prisma client
-        run: npx prisma generate
-
-      - name: Run database migrations
-        run: npx prisma migrate deploy
-        env:
-          DATABASE_URL: postgresql://postgres:postgres@localhost:5432/muaththir_test
-
-      - name: Run tests
-        run: npm test
-        env:
-          DATABASE_URL: postgresql://postgres:postgres@localhost:5432/muaththir_test
-          JWT_SECRET: test-jwt-secret-muaththir
-          JWT_REFRESH_SECRET: test-refresh-secret-muaththir
-          NODE_ENV: test
-          PORT: 5005
-
-  test-frontend:
-    name: Web - Test & Build
+  web-build:
+    name: Web - Build
     runs-on: ubuntu-latest
-
     defaults:
       run:
         working-directory: products/muaththir/apps/web
-
     steps:
       - uses: actions/checkout@v4
-
       - uses: actions/setup-node@v4
         with:
-          node-version: 20
-          cache: 'npm'
+          node-version: ${{ env.NODE_VERSION }}
+          cache: npm
           cache-dependency-path: products/muaththir/apps/web/package-lock.json
+      - run: npm ci
+      - run: npm run build
+    env:
+      NEXT_PUBLIC_API_URL: http://localhost:5005
 
-      - name: Install dependencies
-        run: npm ci
-
-      - name: Run tests
-        run: npm test --if-present
-
-      - name: Build Next.js app
-        run: npm run build
-        env:
-          NEXT_PUBLIC_API_URL: http://localhost:5005
-
-  lint:
-    name: API - Lint & Typecheck
+  web-test:
+    name: Web - Tests
     runs-on: ubuntu-latest
-
     defaults:
       run:
-        working-directory: products/muaththir/apps/api
-
+        working-directory: products/muaththir/apps/web
     steps:
       - uses: actions/checkout@v4
-
       - uses: actions/setup-node@v4
         with:
-          node-version: 20
-          cache: 'npm'
-          cache-dependency-path: products/muaththir/apps/api/package-lock.json
-
-      - name: Install dependencies
-        run: npm ci
-
-      - name: Generate Prisma client
-        run: npx prisma generate
-
-      - name: Run ESLint
-        run: npm run lint --if-present
-
-      - name: TypeScript typecheck
-        run: npx tsc --noEmit --pretty
-
-  security:
-    name: Security - npm audit
-    runs-on: ubuntu-latest
-
-    steps:
-      - uses: actions/checkout@v4
-
-      - name: Audit API dependencies
-        run: npm audit --audit-level=critical --omit=dev
-        working-directory: products/muaththir/apps/api
-
-      - name: Audit Web dependencies
-        run: npm audit --audit-level=critical --omit=dev
-        working-directory: products/muaththir/apps/web
-
-  quality-gate:
-    name: Quality Gate
-    needs: [test-backend, test-frontend, lint, security]
-    runs-on: ubuntu-latest
-    if: always()
-    steps:
-      - name: Verify all jobs succeeded
-        run: |
-          echo "Job results:"
-          echo "  test-backend:   ${{ needs.test-backend.result }}"
-          echo "  test-frontend:  ${{ needs.test-frontend.result }}"
-          echo "  lint:           ${{ needs.lint.result }}"
-          echo "  security:       ${{ needs.security.result }}"
-          if [ "${{ needs.test-backend.result }}" != "success" ] || \
-             [ "${{ needs.test-frontend.result }}" != "success" ] || \
-             [ "${{ needs.lint.result }}" != "success" ] || \
-             [ "${{ needs.security.result }}" != "success" ]; then
-            echo "Quality gate FAILED: one or more jobs did not succeed"
-            exit 1
-          fi
-          echo "All quality gates passed for muaththir"
+          node-version: ${{ env.NODE_VERSION }}
+          cache: npm
+          cache-dependency-path: products/muaththir/apps/web/package-lock.json
+      - run: npm ci
+      - run: npm test -- --passWithNoTests

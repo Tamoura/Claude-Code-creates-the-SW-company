@@ -1,11 +1,14 @@
 import { buildApp } from './app';
 import { logger } from './utils/logger';
+import { validateEnv } from './lib/env';
 
 const PORT = parseInt(process.env.PORT || '5005', 10);
 const HOST = process.env.HOST || '0.0.0.0';
 
 async function start() {
   try {
+    validateEnv();
+
     const app = await buildApp({
       logger: process.env.NODE_ENV === 'development'
         ? {

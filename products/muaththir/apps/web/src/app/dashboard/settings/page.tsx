@@ -116,14 +116,16 @@ export default function SettingsPage() {
           </div>
         )}
         {profileMessage && (
-          <div className="rounded-xl bg-emerald-50 p-3 text-sm text-emerald-700">
+          <div className="rounded-xl bg-emerald-50 p-3 text-sm text-emerald-700" role="status">
             {profileMessage}
           </div>
         )}
 
         {profileLoading ? (
-          <div className="space-y-4">
-            <div className="h-10 bg-slate-100 rounded-xl animate-pulse" />
+          <div className="space-y-4" aria-live="polite" aria-busy="true">
+            <div className="h-10 bg-slate-100 rounded-xl animate-pulse">
+              <span className="sr-only">Loading profile...</span>
+            </div>
             <div className="h-10 bg-slate-100 rounded-xl animate-pulse" />
           </div>
         ) : (
@@ -193,7 +195,7 @@ export default function SettingsPage() {
           </div>
         )}
         {passwordMessage && (
-          <div className="rounded-xl bg-emerald-50 p-3 text-sm text-emerald-700">
+          <div className="rounded-xl bg-emerald-50 p-3 text-sm text-emerald-700" role="status">
             {passwordMessage}
           </div>
         )}

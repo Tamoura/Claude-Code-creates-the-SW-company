@@ -110,6 +110,7 @@ export default function SignupPage() {
               type="submit"
               className="btn-primary w-full"
               disabled={isLoading}
+              aria-busy={isLoading}
             >
               {isLoading ? 'Creating Account...' : 'Create Account'}
             </button>
