@@ -2,8 +2,11 @@ import { render, screen, waitFor } from '@testing-library/react';
 import userEvent from '@testing-library/user-event';
 import SettingsPage from '../../src/app/dashboard/settings/page';
 
-// Mock next/navigation
+// Stable mock references for hooks (ts-jest hoists mock* variables)
 const mockPush = jest.fn();
+const mockLogout = jest.fn().mockResolvedValue(undefined);
+
+// Mock next/navigation with stable push reference
 jest.mock('next/navigation', () => ({
   useRouter: () => ({
     push: mockPush,
@@ -12,33 +15,63 @@ jest.mock('next/navigation', () => ({
   }),
 }));
 
-// Mock useAuth hook
-const mockLogout = jest.fn();
-jest.mock('../../../src/hooks/useAuth', () => ({
+// Mock useAuth hook with stable logout reference
+jest.mock('../../src/hooks/useAuth', () => ({
   useAuth: () => ({
     logout: mockLogout,
   }),
 }));
 
-// Mock API client
-const mockGetProfile = jest.fn();
-const mockUpdateProfile = jest.fn();
-const mockChangePassword = jest.fn();
+// Mock next/link
+jest.mock('next/link', () => {
+  return function MockLink({
+    children,
+    href,
+    ...rest
+  }: {
+    children: React.ReactNode;
+    href: string;
+    [key: string]: unknown;
+  }) {
+    return (
+      <a href={href} {...rest}>
+        {children}
+      </a>
+    );
+  };
+});
 
-jest.mock('../../../src/lib/api-client', () => ({
+// Mock API client — create mocks INSIDE the factory
+jest.mock('../../src/lib/api-client', () => ({
   apiClient: {
-    getProfile: mockGetProfile,
-    updateProfile: mockUpdateProfile,
-    changePassword: mockChangePassword,
+    getProfile: jest.fn(),
+    updateProfile: jest.fn(),
+    changePassword: jest.fn(),
+    getChildren: jest.fn(),
+    updateChild: jest.fn(),
   },
 }));
+
+// Extract apiClient mock references (singleton, safe to extract once)
+import { apiClient } from '../../src/lib/api-client';
+const mockGetProfile = apiClient.getProfile as jest.Mock;
+const mockUpdateProfile = apiClient.updateProfile as jest.Mock;
+const mockChangePassword = apiClient.changePassword as jest.Mock;
+const mockGetChildren = apiClient.getChildren as jest.Mock;
 
 describe('SettingsPage', () => {
   beforeEach(() => {
     jest.clearAllMocks();
+    // Re-setup logout mock after clearAllMocks
+    mockLogout.mockResolvedValue(undefined);
+    // Default: children list returns empty
+    mockGetChildren.mockResolvedValue({
+      data: [],
+      pagination: { page: 1, limit: 50, total: 0, totalPages: 0, hasMore: false },
+    });
   });
 
-  it('renders page header', () => {
+  it('renders page header', async () => {
     mockGetProfile.mockResolvedValue({
       id: 'user-1',
       name: 'John Doe',
@@ -50,19 +83,23 @@ describe('SettingsPage', () => {
 
     render(<SettingsPage />);
 
-    expect(screen.getByText('Settings')).toBeInTheDocument();
-    expect(
-      screen.getByText(/Manage your account and preferences/)
-    ).toBeInTheDocument();
+    await waitFor(() => {
+      expect(screen.getByText('Settings')).toBeInTheDocument();
+      expect(
+        screen.getByText(/Manage your account and preferences/)
+      ).toBeInTheDocument();
+    });
   });
 
   it('shows loading state while fetching profile', () => {
     mockGetProfile.mockReturnValue(new Promise(() => {})); // Never resolves
+    mockGetChildren.mockReturnValue(new Promise(() => {}));
 
     render(<SettingsPage />);
 
-    const loadingElements = screen.getAllByLabelText(/loading/i);
-    expect(loadingElements.length).toBeGreaterThan(0);
+    // Loading skeletons use aria-busy="true"
+    const loadingContainers = document.querySelectorAll('[aria-busy="true"]');
+    expect(loadingContainers.length).toBeGreaterThan(0);
   });
 
   it('renders profile form with user data', async () => {
@@ -102,7 +139,7 @@ describe('SettingsPage', () => {
 
     await waitFor(() => {
       expect(screen.getByLabelText(/Current Password/i)).toBeInTheDocument();
-      expect(screen.getByLabelText(/New Password/i)).toBeInTheDocument();
+      expect(screen.getByLabelText(/^New Password$/i)).toBeInTheDocument();
       expect(screen.getByLabelText(/Confirm New Password/i)).toBeInTheDocument();
     });
   });
@@ -202,7 +239,7 @@ describe('SettingsPage', () => {
     });
 
     const currentPasswordInput = screen.getByLabelText(/Current Password/i);
-    const newPasswordInput = screen.getByLabelText(/New Password/i);
+    const newPasswordInput = screen.getByLabelText(/^New Password$/i);
     const confirmPasswordInput = screen.getByLabelText(/Confirm New Password/i);
     const changePasswordButton = screen.getByRole('button', {
       name: /Change Password/i,
@@ -243,7 +280,7 @@ describe('SettingsPage', () => {
     });
 
     const currentPasswordInput = screen.getByLabelText(/Current Password/i);
-    const newPasswordInput = screen.getByLabelText(/New Password/i);
+    const newPasswordInput = screen.getByLabelText(/^New Password$/i);
     const confirmPasswordInput = screen.getByLabelText(/Confirm New Password/i);
     const changePasswordButton = screen.getByRole('button', {
       name: /Change Password/i,
@@ -275,19 +312,19 @@ describe('SettingsPage', () => {
 
     await waitFor(() => {
       const currentPasswordInput = screen.getByLabelText(/Current Password/i);
-      const newPasswordInput = screen.getByLabelText(/New Password/i);
+      const newPasswordInput = screen.getByLabelText(/^New Password$/i);
       const confirmPasswordInput = screen.getByLabelText(/Confirm New Password/i);
 
       expect(currentPasswordInput).toHaveAttribute('type', 'password');
-      expect(currentPasswordInput).toHaveAttribute('autoComplete', 'current-password');
+      expect(currentPasswordInput).toHaveAttribute('autocomplete', 'current-password');
 
       expect(newPasswordInput).toHaveAttribute('type', 'password');
-      expect(newPasswordInput).toHaveAttribute('minLength', '8');
-      expect(newPasswordInput).toHaveAttribute('autoComplete', 'new-password');
+      expect(newPasswordInput).toHaveAttribute('minlength', '8');
+      expect(newPasswordInput).toHaveAttribute('autocomplete', 'new-password');
 
       expect(confirmPasswordInput).toHaveAttribute('type', 'password');
-      expect(confirmPasswordInput).toHaveAttribute('minLength', '8');
-      expect(confirmPasswordInput).toHaveAttribute('autoComplete', 'new-password');
+      expect(confirmPasswordInput).toHaveAttribute('minlength', '8');
+      expect(confirmPasswordInput).toHaveAttribute('autocomplete', 'new-password');
     });
   });
 
@@ -319,7 +356,6 @@ describe('SettingsPage', () => {
       createdAt: '2024-01-01T00:00:00Z',
       childCount: 0,
     });
-    mockLogout.mockResolvedValue(undefined);
 
     render(<SettingsPage />);
 
@@ -366,7 +402,7 @@ describe('SettingsPage', () => {
     render(<SettingsPage />);
 
     await waitFor(() => {
-      expect(screen.getByText(/1 child profile$/i)).toBeInTheDocument();
+      expect(screen.getByText(/1 child profile/i)).toBeInTheDocument();
     });
   });
 });

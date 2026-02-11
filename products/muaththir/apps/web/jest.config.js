@@ -6,6 +6,9 @@ module.exports = {
       tsconfig: 'tsconfig.test.json',
     }],
   },
+  transformIgnorePatterns: [
+    'node_modules/(?!(next-intl|use-intl|recharts|d3-.*|internmap)/)',
+  ],
   moduleNameMapper: {
     '^@/(.*)$': '<rootDir>/src/$1',
     '\\.(css|less|scss|sass)$': '<rootDir>/tests/__mocks__/styleMock.ts',

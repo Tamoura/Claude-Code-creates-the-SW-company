@@ -27,7 +27,7 @@ describe('DimensionBadge', () => {
   it('renders all dimension slugs correctly', () => {
     const slugs = [
       'academic',
-      'social-emotional',
+      'social_emotional',
       'behavioural',
       'aspirational',
       'islamic',
