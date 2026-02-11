@@ -202,7 +202,7 @@ export default function NewGoalPage() {
                       aria-hidden="true"
                     />
                     <h3 className="text-sm font-semibold text-slate-700">
-                      {dim?.name || dimSlug}
+                      {td(dimSlug as any)}
                     </h3>
                   </div>
                   <div className="grid grid-cols-1 sm:grid-cols-2 gap-3">

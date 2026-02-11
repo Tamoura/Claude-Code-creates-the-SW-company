@@ -9,6 +9,7 @@ import {
   ResponsiveContainer,
   Tooltip,
 } from 'recharts';
+import { useTranslations } from 'next-intl';
 import { DIMENSIONS } from '../../lib/dimensions';
 
 export interface DimensionScore {
@@ -21,13 +22,17 @@ interface RadarChartProps {
   scores?: DimensionScore[];
 }
 
-const defaultScores: DimensionScore[] = DIMENSIONS.map((d) => ({
-  dimension: d.name,
-  score: 0,
-  fullMark: 100,
-}));
+export default function RadarChart({ scores }: RadarChartProps) {
+  const td = useTranslations('dimensions');
 
-export default function RadarChart({ scores = defaultScores }: RadarChartProps) {
+  const defaultScores: DimensionScore[] = DIMENSIONS.map((d) => ({
+    dimension: td(d.slug),
+    score: 0,
+    fullMark: 100,
+  }));
+
+  const chartScores = scores || defaultScores;
+
   return (
     <div
       className="w-full h-80"
@@ -39,7 +44,7 @@ export default function RadarChart({ scores = defaultScores }: RadarChartProps) 
           cx="50%"
           cy="50%"
           outerRadius="75%"
-          data={scores}
+          data={chartScores}
         >
           <PolarGrid stroke="#e2e8f0" />
           <PolarAngleAxis

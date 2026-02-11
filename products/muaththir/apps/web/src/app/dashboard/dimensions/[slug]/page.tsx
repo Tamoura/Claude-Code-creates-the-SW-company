@@ -17,6 +17,8 @@ export default function DimensionDetailPage({
   const t = useTranslations('dimensionDetail');
   const tc = useTranslations('common');
   const td = useTranslations('dimensions');
+  const ttl = useTranslations('timeline');
+
   const dimension = DIMENSIONS.find((d) => d.slug === params.slug);
   const [children, setChildren] = useState<Child[]>([]);
   const [selectedChildId, setSelectedChildId] = useState<string>('');
@@ -260,10 +262,10 @@ export default function DimensionDetailPage({
                         }}
                       >
                         {obs.sentiment === 'positive'
-                          ? 'Positive'
+                          ? ttl('positive')
                           : obs.sentiment === 'neutral'
-                          ? 'Neutral'
-                          : 'Needs Attention'}
+                          ? ttl('neutral')
+                          : ttl('needsAttention')}
                       </span>
                       <span className="text-xs text-slate-500">
                         {new Date(obs.observedAt).toLocaleDateString('en-US', {

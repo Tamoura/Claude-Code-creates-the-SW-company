@@ -1,3 +1,6 @@
+'use client';
+
+import { useTranslations } from 'next-intl';
 import { getDimensionBySlug } from '../../lib/dimensions';
 
 interface DimensionBadgeProps {
@@ -9,6 +12,7 @@ export default function DimensionBadge({
   slug,
   size = 'sm',
 }: DimensionBadgeProps) {
+  const td = useTranslations('dimensions');
   const dimension = getDimensionBySlug(slug);
 
   if (!dimension) {
@@ -34,7 +38,7 @@ export default function DimensionBadge({
         style={{ backgroundColor: dimension.colour }}
         aria-hidden="true"
       />
-      {dimension.name}
+      {td(slug as any)}
     </span>
   );
 }

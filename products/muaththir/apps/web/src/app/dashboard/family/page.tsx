@@ -4,7 +4,7 @@ import { useState, useEffect } from 'react';
 import Link from 'next/link';
 import dynamic from 'next/dynamic';
 import { useTranslations } from 'next-intl';
-import { DIMENSIONS, getDimensionBySlug } from '../../../lib/dimensions';
+import { DIMENSIONS } from '../../../lib/dimensions';
 import { apiClient, type Child, type DashboardData } from '../../../lib/api-client';
 
 const RadarChart = dynamic(
@@ -112,11 +112,11 @@ export default function FamilyPage() {
             {children.map(child => {
               const radarScores = child.dashboard
                 ? child.dashboard.dimensions.map(d => ({
-                    dimension: getDimensionBySlug(d.dimension)?.name || d.dimension,
+                    dimension: td(d.dimension as any),
                     score: Math.round(d.score),
                     fullMark: 100,
                   }))
-                : DIMENSIONS.map(d => ({ dimension: d.name, score: 0, fullMark: 100 }));
+                : DIMENSIONS.map(d => ({ dimension: td(d.slug as any), score: 0, fullMark: 100 }));
 
               return (
                 <div key={child.id} className="card">

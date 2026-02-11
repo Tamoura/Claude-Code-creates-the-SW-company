@@ -5,13 +5,14 @@ import ComingSoon from '../../../../components/common/ComingSoon';
 
 export default function GenerateReportPage() {
   const t = useTranslations('generateReport');
+  const tc = useTranslations('common');
 
   return (
     <ComingSoon
       title={t('title')}
       description={t('description')}
       backHref="/dashboard/reports"
-      backLabel="Back to Reports"
+      backLabel={tc('back')}
     />
   );
 }

@@ -9,6 +9,7 @@ import { apiClient, type Child, type InsightsData } from '../../../lib/api-clien
 export default function InsightsPage() {
   const t = useTranslations('insights');
   const tc = useTranslations('common');
+  const td = useTranslations('dimensions');
   const [children, setChildren] = useState<Child[]>([]);
   const [selectedChildId, setSelectedChildId] = useState<string | null>(null);
   const [insights, setInsights] = useState<InsightsData | null>(null);
@@ -228,7 +229,7 @@ export default function InsightsPage() {
                         className="h-2 w-2 rounded-full flex-shrink-0"
                         style={{ backgroundColor: dimInfo?.colour || '#94a3b8' }}
                       />
-                      <span className="text-xs text-slate-600 flex-1">{dimInfo?.name || dim}</span>
+                      <span className="text-xs text-slate-600 flex-1">{td(dim as any)}</span>
                       {trendIcon(trend)}
                     </div>
                   );

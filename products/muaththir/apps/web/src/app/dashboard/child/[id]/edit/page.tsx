@@ -108,7 +108,7 @@ export default function EditChildProfilePage({ params }: EditChildProfilePagePro
           href="/dashboard"
           className="text-sm text-emerald-600 hover:text-emerald-700 mt-4 inline-block"
         >
-          Back to Dashboard
+          {tc('backToDashboard')}
         </Link>
       </div>
     );
