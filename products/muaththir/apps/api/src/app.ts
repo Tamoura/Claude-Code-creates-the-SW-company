@@ -16,7 +16,9 @@ import authRoutes from './routes/auth';
 import childrenRoutes from './routes/children';
 import observationRoutes from './routes/observations';
 import { milestoneDefinitionRoutes, childMilestoneRoutes } from './routes/milestones';
+import goalRoutes from './routes/goals';
 import dashboardRoutes from './routes/dashboard';
+import insightsRoutes from './routes/insights';
 import profileRoutes from './routes/profile';
 
 import { logger } from './utils/logger';
@@ -152,9 +154,11 @@ export async function buildApp(
   await app.register(authRoutes, { prefix: '/api/auth' });
   await app.register(childrenRoutes, { prefix: '/api/children' });
   await app.register(observationRoutes, { prefix: '/api/children' });
+  await app.register(goalRoutes, { prefix: '/api/children' });
   await app.register(milestoneDefinitionRoutes, { prefix: '/api/milestones' });
   await app.register(childMilestoneRoutes, { prefix: '/api/children/:childId/milestones' });
   await app.register(dashboardRoutes, { prefix: '/api/dashboard' });
+  await app.register(insightsRoutes, { prefix: '/api/dashboard' });
   await app.register(profileRoutes, { prefix: '/api/profile' });
 
   return app;

@@ -31,6 +31,7 @@ export async function cleanDb(): Promise<void> {
   await prisma.childMilestone.deleteMany();
   await prisma.milestoneDefinition.deleteMany();
   await prisma.observation.deleteMany();
+  await prisma.goal.deleteMany();
   await prisma.child.deleteMany();
   await prisma.session.deleteMany();
   await prisma.parent.deleteMany();
