@@ -84,7 +84,7 @@ test.describe('i18n Flow', () => {
       // Start in Arabic by setting the cookie
       await page.context().addCookies([
         {
-          name: 'NEXT_LOCALE',
+          name: 'locale',
           value: 'ar',
           domain: 'localhost',
           path: '/',
@@ -132,7 +132,7 @@ test.describe('i18n Flow', () => {
       // Set Arabic locale cookie before visiting
       await page.context().addCookies([
         {
-          name: 'NEXT_LOCALE',
+          name: 'locale',
           value: 'ar',
           domain: 'localhost',
           path: '/',
@@ -155,7 +155,7 @@ test.describe('i18n Flow', () => {
     test('Arabic login page applies RTL', async ({ page }) => {
       await page.context().addCookies([
         {
-          name: 'NEXT_LOCALE',
+          name: 'locale',
           value: 'ar',
           domain: 'localhost',
           path: '/',
@@ -177,7 +177,7 @@ test.describe('i18n Flow', () => {
     test('Arabic pricing page applies RTL', async ({ page }) => {
       await page.context().addCookies([
         {
-          name: 'NEXT_LOCALE',
+          name: 'locale',
           value: 'ar',
           domain: 'localhost',
           path: '/',
@@ -199,7 +199,7 @@ test.describe('i18n Flow', () => {
     test('Arabic about page applies RTL', async ({ page }) => {
       await page.context().addCookies([
         {
-          name: 'NEXT_LOCALE',
+          name: 'locale',
           value: 'ar',
           domain: 'localhost',
           path: '/',
@@ -223,7 +223,7 @@ test.describe('i18n Flow', () => {
       // Ensure English cookie (or no cookie, since en is default)
       await page.context().addCookies([
         {
-          name: 'NEXT_LOCALE',
+          name: 'locale',
           value: 'en',
           domain: 'localhost',
           path: '/',
@@ -250,7 +250,7 @@ test.describe('i18n Flow', () => {
     }) => {
       await page.context().addCookies([
         {
-          name: 'NEXT_LOCALE',
+          name: 'locale',
           value: 'ar',
           domain: 'localhost',
           path: '/',

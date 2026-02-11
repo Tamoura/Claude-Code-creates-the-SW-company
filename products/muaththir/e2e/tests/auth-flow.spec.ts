@@ -32,7 +32,7 @@ test.describe('Authentication Flow', () => {
     await page.goto('/login');
     await expect(page.locator('h1, h2').first()).toBeVisible({ timeout: 10000 });
 
-    const signupLink = page.locator('a[href="/signup"]');
+    const signupLink = page.locator('a[href="/signup"]').first();
     await expect(signupLink).toBeVisible();
   });
 
@@ -74,7 +74,7 @@ test.describe('Authentication Flow', () => {
     await page.goto('/signup');
     await expect(page.locator('h1, h2').first()).toBeVisible({ timeout: 10000 });
 
-    const loginLink = page.locator('a[href="/login"]');
+    const loginLink = page.locator('a[href="/login"]').first();
     await expect(loginLink).toBeVisible();
   });
 

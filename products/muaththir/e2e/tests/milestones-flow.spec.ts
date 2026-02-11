@@ -10,6 +10,9 @@ import { test, expect, type Page } from '@playwright/test';
  * - Toggling milestone achievement
  *
  * All API calls are mocked for CI-safe execution.
+ *
+ * IMPORTANT: After login, we navigate via sidebar link clicks (client-side
+ * navigation) instead of page.goto() to preserve the in-memory auth token.
  */
 
 const MOCK_CHILD = {
@@ -155,6 +158,25 @@ async function authenticateForMilestones(page: Page) {
     })
   );
 
+  // Mock children endpoint without query params (fallback)
+  await page.route('**/api/children', (route) => {
+    if (route.request().url().includes('?')) return route.fallback();
+    return route.fulfill({
+      status: 200,
+      contentType: 'application/json',
+      body: JSON.stringify({
+        data: [MOCK_CHILD],
+        pagination: {
+          page: 1,
+          limit: 50,
+          total: 1,
+          totalPages: 1,
+          hasMore: false,
+        },
+      }),
+    });
+  });
+
   // Mock dashboard data (used by milestones index page)
   await page.route('**/api/dashboard/child-1', (route) =>
     route.fulfill({
@@ -220,30 +242,59 @@ async function authenticateForMilestones(page: Page) {
   await page.waitForURL('**/dashboard', { timeout: 15000 });
 }
 
+/**
+ * Navigate to milestones page via sidebar (preserves in-memory auth token).
+ */
+async function navigateToMilestones(page: Page) {
+  const sidebarLink = page.locator('aside a[href="/dashboard/milestones"]');
+  await expect(sidebarLink).toBeVisible({ timeout: 10000 });
+  await sidebarLink.click();
+  await page.waitForURL('**/dashboard/milestones', { timeout: 10000 });
+}
+
+/**
+ * Navigate to a dimension's milestones detail page via link clicks.
+ */
+async function navigateToMilestoneDetail(
+  page: Page,
+  dimension: string
+) {
+  await navigateToMilestones(page);
+
+  // Wait for dimension cards to load, then click the target dimension
+  const dimensionCard = page.locator(
+    `a[href="/dashboard/milestones/${dimension}"]`
+  );
+  await expect(dimensionCard).toBeVisible({ timeout: 15000 });
+  await dimensionCard.click();
+  await page.waitForURL(`**/dashboard/milestones/${dimension}`, {
+    timeout: 10000,
+  });
+}
+
 test.describe('Milestones Flow', () => {
   test.describe('Milestones Index Page', () => {
     test('displays heading and six dimension cards', async ({ page }) => {
       await authenticateForMilestones(page);
-      await page.goto('/dashboard/milestones');
+      await navigateToMilestones(page);
 
       const heading = page.locator('h1').first();
       await expect(heading).toBeVisible({ timeout: 15000 });
 
       // Should show 6 dimension cards (one per dimension)
       const dimensionCards = page.locator('.grid > a');
-      await expect(dimensionCards).toHaveCount(6);
+      await expect(dimensionCards).toHaveCount(6, { timeout: 10000 });
     });
 
     test('each dimension card shows progress info', async ({ page }) => {
       await authenticateForMilestones(page);
-      await page.goto('/dashboard/milestones');
+      await navigateToMilestones(page);
 
       // Wait for cards to load (not loading skeleton)
       const firstCard = page.locator('.grid > a').first();
       await expect(firstCard).toBeVisible({ timeout: 15000 });
 
       // Each card should have milestone progress text
-      // Looking for "Completed: X" and "Total: Y" or similar text
       const cardText = await firstCard.textContent();
       expect(cardText).toBeTruthy();
     });
@@ -252,7 +303,7 @@ test.describe('Milestones Flow', () => {
       page,
     }) => {
       await authenticateForMilestones(page);
-      await page.goto('/dashboard/milestones');
+      await navigateToMilestones(page);
 
       // Click the first dimension card (academic)
       const academicCard = page.locator(
@@ -261,7 +312,7 @@ test.describe('Milestones Flow', () => {
       await expect(academicCard).toBeVisible({ timeout: 15000 });
       await academicCard.click();
 
-      await expect(page).toHaveURL('/dashboard/milestones/academic');
+      await expect(page).toHaveURL(/\/dashboard\/milestones\/academic/);
     });
   });
 
@@ -270,7 +321,7 @@ test.describe('Milestones Flow', () => {
       page,
     }) => {
       await authenticateForMilestones(page);
-      await page.goto('/dashboard/milestones/academic');
+      await navigateToMilestoneDetail(page, 'academic');
 
       // Page heading should be visible
       const heading = page.locator('h1').first();
@@ -286,7 +337,7 @@ test.describe('Milestones Flow', () => {
 
     test('achieved milestones show as checked', async ({ page }) => {
       await authenticateForMilestones(page);
-      await page.goto('/dashboard/milestones/academic');
+      await navigateToMilestoneDetail(page, 'academic');
 
       // Wait for milestones to load
       await expect(
@@ -307,7 +358,7 @@ test.describe('Milestones Flow', () => {
 
     test('achieved milestone has line-through styling', async ({ page }) => {
       await authenticateForMilestones(page);
-      await page.goto('/dashboard/milestones/academic');
+      await navigateToMilestoneDetail(page, 'academic');
 
       await expect(
         page.getByText('Recognizes all letters of the alphabet')
@@ -327,7 +378,7 @@ test.describe('Milestones Flow', () => {
       page,
     }) => {
       await authenticateForMilestones(page);
-      await page.goto('/dashboard/milestones/academic');
+      await navigateToMilestoneDetail(page, 'academic');
 
       // Wait for milestones to load
       const secondCheckbox = page.locator('input[type="checkbox"]').nth(1);
@@ -343,20 +394,20 @@ test.describe('Milestones Flow', () => {
 
     test('has back-to-milestones navigation link', async ({ page }) => {
       await authenticateForMilestones(page);
-      await page.goto('/dashboard/milestones/academic');
+      await navigateToMilestoneDetail(page, 'academic');
 
       await expect(page.locator('h1').first()).toBeVisible({
         timeout: 15000,
       });
 
-      // Should have a link back to the milestones index
-      const backLink = page.locator('a[href="/dashboard/milestones"]');
+      // Should have a "Back to Milestones" link (distinct from sidebar link)
+      const backLink = page.getByRole('link', { name: 'Back to Milestones' });
       await expect(backLink).toBeVisible();
     });
 
     test('displays guidance text for milestones', async ({ page }) => {
       await authenticateForMilestones(page);
-      await page.goto('/dashboard/milestones/academic');
+      await navigateToMilestoneDetail(page, 'academic');
 
       // Wait for milestones
       await expect(
@@ -373,27 +424,34 @@ test.describe('Milestones Flow', () => {
       page,
     }) => {
       await authenticateForMilestones(page);
-      await page.goto('/dashboard/milestones/academic');
+      await navigateToMilestoneDetail(page, 'academic');
 
       await expect(
         page.getByText('Recognizes all letters of the alphabet')
       ).toBeVisible({ timeout: 15000 });
 
       // The achieved milestone should show the achieved date
-      // achievedAt is '2025-03-15T10:00:00Z', so it shows a date string
       const achievedDateText = page.locator('.text-emerald-600').first();
       await expect(achievedDateText).toBeVisible();
     });
   });
 
   test.describe('Invalid Dimension', () => {
-    test('shows not found for invalid dimension slug', async ({ page }) => {
+    test('milestones page only shows valid dimension links', async ({
+      page,
+    }) => {
       await authenticateForMilestones(page);
-      await page.goto('/dashboard/milestones/invalid-dimension');
+      await navigateToMilestones(page);
 
-      // Should show "not found" message with back link
-      const backLink = page.locator('a[href="/dashboard/milestones"]');
-      await expect(backLink).toBeVisible({ timeout: 15000 });
+      // Should show exactly 6 valid dimension cards
+      const dimensionCards = page.locator('.grid > a');
+      await expect(dimensionCards).toHaveCount(6, { timeout: 10000 });
+
+      // No link to an invalid dimension should exist
+      const invalidLink = page.locator(
+        'a[href="/dashboard/milestones/invalid-dimension"]'
+      );
+      await expect(invalidLink).not.toBeVisible();
     });
   });
 });

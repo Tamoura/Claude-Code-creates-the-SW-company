@@ -7,9 +7,9 @@ test.describe('Public Pages', () => {
     // Page title or main heading should be visible
     await expect(page.locator('h1, h2').first()).toBeVisible({ timeout: 10000 });
 
-    // Navigation links should be present
-    const loginLink = page.locator('a[href="/login"]');
-    const signupLink = page.locator('a[href="/signup"]');
+    // Navigation links should be present (use .first() since nav + body may both have links)
+    const loginLink = page.locator('a[href="/login"]').first();
+    const signupLink = page.locator('a[href="/signup"]').first();
 
     await expect(loginLink).toBeVisible();
     await expect(signupLink).toBeVisible();
@@ -19,7 +19,7 @@ test.describe('Public Pages', () => {
     await page.goto('/');
 
     // Navigate to pricing
-    const pricingLink = page.locator('a[href="/pricing"]');
+    const pricingLink = page.locator('a[href="/pricing"]').first();
     if (await pricingLink.isVisible()) {
       await pricingLink.click();
       await expect(page).toHaveURL('/pricing');

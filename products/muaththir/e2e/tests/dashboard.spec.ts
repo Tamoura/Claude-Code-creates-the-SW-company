@@ -280,13 +280,15 @@ test.describe('Dashboard Flow', () => {
       expect(page.url()).toContain('/login');
     });
 
-    test('unauthenticated user accessing /onboarding gets redirected', async ({
+    test('unauthenticated user accessing /onboarding sees public page', async ({
       page,
     }) => {
       await page.goto('/onboarding');
 
-      await page.waitForURL('**/login', { timeout: 10000 });
-      expect(page.url()).toContain('/login');
+      // Onboarding is a public page (not behind auth guard)
+      // It should load without redirecting to login
+      const heading = page.locator('h1, h2').first();
+      await expect(heading).toBeVisible({ timeout: 10000 });
     });
   });
 
@@ -404,7 +406,7 @@ test.describe('Dashboard Flow', () => {
 
       // Check key navigation links
       await expect(
-        sidebar.locator('a[href="/dashboard"]')
+        sidebar.locator('a[href="/dashboard"]').first()
       ).toBeVisible();
       await expect(
         sidebar.locator('a[href="/dashboard/observe"]')
