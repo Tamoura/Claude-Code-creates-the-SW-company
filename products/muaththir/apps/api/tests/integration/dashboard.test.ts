@@ -514,6 +514,65 @@ describe('GET /api/dashboard/:childId', () => {
     expect(body.dimensions).toHaveLength(6);
   });
 
+  it('should return real observation counts from cache (not zeros)', async () => {
+    // Create observations before first call
+    for (let i = 0; i < 3; i++) {
+      await createObservation(authToken, childId, 'academic', 'positive');
+    }
+
+    // Seed milestones and achieve some
+    const milestones = [];
+    for (let i = 1; i <= 4; i++) {
+      milestones.push(
+        await prisma.milestoneDefinition.create({
+          data: {
+            dimension: 'academic',
+            ageBand: 'primary',
+            title: `Cache test milestone ${i}`,
+            description: `Desc ${i}`,
+            sortOrder: i,
+          },
+        })
+      );
+    }
+    for (let i = 0; i < 2; i++) {
+      await prisma.childMilestone.create({
+        data: {
+          childId,
+          milestoneId: milestones[i].id,
+          achieved: true,
+          achievedAt: new Date(),
+        },
+      });
+    }
+
+    // First call populates cache
+    await app.inject({
+      method: 'GET',
+      url: `/api/dashboard/${childId}`,
+      headers: { authorization: `Bearer ${authToken}` },
+    });
+
+    // Second call uses cache — should still show real counts
+    const res = await app.inject({
+      method: 'GET',
+      url: `/api/dashboard/${childId}`,
+      headers: { authorization: `Bearer ${authToken}` },
+    });
+
+    const body = res.json();
+    const academic = body.dimensions.find(
+      (d: any) => d.dimension === 'academic'
+    );
+
+    // These should be real counts, not hardcoded zeros
+    expect(academic.observationCount).toBe(3);
+    expect(academic.milestoneProgress).toEqual({
+      achieved: 2,
+      total: 4,
+    });
+  });
+
   it('should recalculate stale dimensions', async () => {
     // First call to populate cache
     await app.inject({

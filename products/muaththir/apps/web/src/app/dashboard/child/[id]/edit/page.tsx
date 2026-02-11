@@ -21,6 +21,12 @@ export default function EditChildProfilePage({ params }: EditChildProfilePagePro
   const [dateOfBirth, setDateOfBirth] = useState('');
   const [gender, setGender] = useState<'male' | 'female' | ''>('');
 
+  // Health fields
+  const [showHealth, setShowHealth] = useState(false);
+  const [medicalNotes, setMedicalNotes] = useState('');
+  const [allergiesText, setAllergiesText] = useState('');
+  const [specialNeeds, setSpecialNeeds] = useState('');
+
   useEffect(() => {
     const loadChild = async () => {
       try {
@@ -33,6 +39,16 @@ export default function EditChildProfilePage({ params }: EditChildProfilePagePro
         setName(data.name);
         setDateOfBirth(data.dateOfBirth.split('T')[0]); // Convert to YYYY-MM-DD
         setGender(data.gender || '');
+
+        // Pre-fill health fields
+        setMedicalNotes(data.medicalNotes || '');
+        setAllergiesText(data.allergies ? data.allergies.join(', ') : '');
+        setSpecialNeeds(data.specialNeeds || '');
+
+        // Auto-expand health section if any health data exists
+        if (data.medicalNotes || (data.allergies && data.allergies.length > 0) || data.specialNeeds) {
+          setShowHealth(true);
+        }
       } catch (err) {
         setError(err instanceof Error ? err.message : 'Failed to load child');
       } finally {
@@ -52,10 +68,18 @@ export default function EditChildProfilePage({ params }: EditChildProfilePagePro
       setSaving(true);
       setError(null);
 
+      const allergies = allergiesText
+        .split(',')
+        .map((a) => a.trim())
+        .filter(Boolean);
+
       await apiClient.updateChild(child.id, {
         name,
         dateOfBirth,
         gender: gender || null,
+        medicalNotes: medicalNotes || null,
+        allergies: allergies.length > 0 ? allergies : null,
+        specialNeeds: specialNeeds || null,
       });
 
       router.push(`/dashboard/child/${child.id}`);
@@ -156,6 +180,107 @@ export default function EditChildProfilePage({ params }: EditChildProfilePagePro
               <option value="male">Male</option>
               <option value="female">Female</option>
             </select>
+          </div>
+
+          {/* Health & Medical Section (collapsible) */}
+          <div className="border-t border-slate-100 pt-4">
+            <button
+              type="button"
+              onClick={() => setShowHealth(!showHealth)}
+              className="flex items-center justify-between w-full text-left"
+              aria-expanded={showHealth}
+            >
+              <div className="flex items-center gap-2">
+                <svg
+                  className="h-4 w-4 text-slate-400"
+                  fill="none"
+                  viewBox="0 0 24 24"
+                  stroke="currentColor"
+                  aria-hidden="true"
+                >
+                  <path
+                    strokeLinecap="round"
+                    strokeLinejoin="round"
+                    strokeWidth={2}
+                    d="M4.318 6.318a4.5 4.5 0 000 6.364L12 20.364l7.682-7.682a4.5 4.5 0 00-6.364-6.364L12 7.636l-1.318-1.318a4.5 4.5 0 00-6.364 0z"
+                  />
+                </svg>
+                <span className="text-sm font-medium text-slate-700">
+                  Health &amp; Medical
+                </span>
+                <span className="text-xs text-slate-400">(optional)</span>
+              </div>
+              <svg
+                className={`h-4 w-4 text-slate-400 transition-transform ${
+                  showHealth ? 'rotate-180' : ''
+                }`}
+                fill="none"
+                viewBox="0 0 24 24"
+                stroke="currentColor"
+                aria-hidden="true"
+              >
+                <path
+                  strokeLinecap="round"
+                  strokeLinejoin="round"
+                  strokeWidth={2}
+                  d="M19 9l-7 7-7-7"
+                />
+              </svg>
+            </button>
+
+            {showHealth && (
+              <div className="mt-4 space-y-4">
+                <div>
+                  <label htmlFor="medical-notes" className="label">
+                    Medical Notes
+                  </label>
+                  <textarea
+                    id="medical-notes"
+                    rows={2}
+                    className="input-field resize-none"
+                    placeholder="e.g., Asthma, uses inhaler"
+                    value={medicalNotes}
+                    onChange={(e) => setMedicalNotes(e.target.value)}
+                    maxLength={1000}
+                    disabled={saving}
+                  />
+                </div>
+
+                <div>
+                  <label htmlFor="allergies" className="label">
+                    Allergies
+                  </label>
+                  <input
+                    id="allergies"
+                    type="text"
+                    className="input-field"
+                    placeholder="e.g., Peanuts, Dairy (comma-separated)"
+                    value={allergiesText}
+                    onChange={(e) => setAllergiesText(e.target.value)}
+                    disabled={saving}
+                  />
+                  <p className="mt-1 text-xs text-slate-400">
+                    Separate multiple allergies with commas.
+                  </p>
+                </div>
+
+                <div>
+                  <label htmlFor="special-needs" className="label">
+                    Special Needs
+                  </label>
+                  <textarea
+                    id="special-needs"
+                    rows={2}
+                    className="input-field resize-none"
+                    placeholder="e.g., ADHD - on medication"
+                    value={specialNeeds}
+                    onChange={(e) => setSpecialNeeds(e.target.value)}
+                    maxLength={1000}
+                    disabled={saving}
+                  />
+                </div>
+              </div>
+            )}
           </div>
 
           <div className="flex gap-3">

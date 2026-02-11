@@ -23,6 +23,7 @@
     "@prisma/client": "^6.0.0",
     "bcrypt": "^5.1.1",
     "date-fns": "^3.6.0",
+    "fast-safe-stringify": "^2.1.1",
     "fastify": "^5.0.0",
     "fastify-plugin": "^5.0.0",
     "pino": "^9.0.0",

@@ -54,6 +54,9 @@ export interface Child {
   gender: 'male' | 'female' | null;
   ageBand: string | null;
   photoUrl: string | null;
+  medicalNotes: string | null;
+  allergies: string[] | null;
+  specialNeeds: string | null;
   createdAt: string;
   updatedAt: string;
   observationCount?: number;
@@ -103,6 +106,61 @@ export interface DashboardData {
   overallScore: number;
   dimensions: DimensionScore[];
   calculatedAt: string;
+}
+
+export interface Goal {
+  id: string;
+  childId: string;
+  dimension: string;
+  title: string;
+  description: string | null;
+  targetDate: string | null;
+  status: 'active' | 'completed' | 'paused';
+  createdAt: string;
+  updatedAt: string;
+}
+
+export interface GoalTemplate {
+  id: string;
+  dimension: string;
+  ageBand: string;
+  title: string;
+  description: string;
+}
+
+export interface InsightStrength {
+  dimension: string;
+  title: string;
+  detail: string;
+  score: number;
+}
+
+export interface InsightGrowthArea {
+  dimension: string;
+  title: string;
+  detail: string;
+  score: number;
+  suggestions: string[];
+}
+
+export interface InsightRecommendation {
+  type: string;
+  message: string;
+  priority: 'high' | 'medium' | 'low';
+}
+
+export interface InsightsData {
+  childId: string;
+  childName: string;
+  generatedAt: string;
+  summary: string;
+  strengths: InsightStrength[];
+  areasForGrowth: InsightGrowthArea[];
+  recommendations: InsightRecommendation[];
+  trends: {
+    overallDirection: string;
+    dimensionTrends: Record<string, string>;
+  };
 }
 
 export interface PaginatedResponse<T> {
@@ -222,6 +280,9 @@ class ApiClient {
     name: string;
     dateOfBirth: string;
     gender?: 'male' | 'female';
+    medicalNotes?: string;
+    allergies?: string[];
+    specialNeeds?: string;
   }): Promise<Child> {
     return this.request('/api/children', {
       method: 'POST',
@@ -231,7 +292,14 @@ class ApiClient {
 
   async updateChild(
     id: string,
-    data: { name?: string; dateOfBirth?: string; gender?: 'male' | 'female' | null }
+    data: {
+      name?: string;
+      dateOfBirth?: string;
+      gender?: 'male' | 'female' | null;
+      medicalNotes?: string | null;
+      allergies?: string[] | null;
+      specialNeeds?: string | null;
+    }
   ): Promise<Child> {
     return this.request(`/api/children/${id}`, {
       method: 'PATCH',
@@ -370,6 +438,84 @@ class ApiClient {
     childId: string
   ): Promise<{ data: MilestoneDefinition[] }> {
     return this.request(`/api/dashboard/${childId}/milestones-due`);
+  }
+
+  // ==================== Goals ====================
+
+  async getGoals(
+    childId: string,
+    params?: { dimension?: string; status?: string; page?: number; limit?: number }
+  ): Promise<PaginatedResponse<Goal>> {
+    const query = new URLSearchParams();
+    if (params?.dimension) query.set('dimension', params.dimension);
+    if (params?.status) query.set('status', params.status);
+    if (params?.page) query.set('page', String(params.page));
+    if (params?.limit) query.set('limit', String(params.limit));
+    const qs = query.toString();
+    return this.request(
+      `/api/children/${childId}/goals${qs ? `?${qs}` : ''}`
+    );
+  }
+
+  async getGoal(childId: string, goalId: string): Promise<Goal> {
+    return this.request(`/api/children/${childId}/goals/${goalId}`);
+  }
+
+  async createGoal(
+    childId: string,
+    data: {
+      title: string;
+      dimension: string;
+      description?: string;
+      targetDate?: string;
+    }
+  ): Promise<Goal> {
+    return this.request(`/api/children/${childId}/goals`, {
+      method: 'POST',
+      body: JSON.stringify(data),
+    });
+  }
+
+  async updateGoal(
+    childId: string,
+    goalId: string,
+    data: {
+      title?: string;
+      dimension?: string;
+      description?: string;
+      targetDate?: string;
+      status?: 'active' | 'completed' | 'paused';
+    }
+  ): Promise<Goal> {
+    return this.request(`/api/children/${childId}/goals/${goalId}`, {
+      method: 'PATCH',
+      body: JSON.stringify(data),
+    });
+  }
+
+  async deleteGoal(childId: string, goalId: string): Promise<void> {
+    return this.request(`/api/children/${childId}/goals/${goalId}`, {
+      method: 'DELETE',
+    });
+  }
+
+  // ==================== Goal Templates ====================
+
+  async getGoalTemplates(params?: {
+    dimension?: string;
+    ageBand?: string;
+  }): Promise<GoalTemplate[]> {
+    const query = new URLSearchParams();
+    if (params?.dimension) query.set('dimension', params.dimension);
+    if (params?.ageBand) query.set('ageBand', params.ageBand);
+    const qs = query.toString();
+    return this.request(`/api/goal-templates${qs ? `?${qs}` : ''}`);
+  }
+
+  // ==================== Insights ====================
+
+  async getInsights(childId: string): Promise<InsightsData> {
+    return this.request(`/api/dashboard/${childId}/insights`);
   }
 
   // ==================== Profile ====================

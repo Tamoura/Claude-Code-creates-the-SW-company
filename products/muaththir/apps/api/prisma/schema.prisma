@@ -45,6 +45,12 @@ enum Gender {
   female
 }
 
+enum GoalStatus {
+  active
+  completed
+  paused
+}
+
 model Parent {
   id               String           @id @default(cuid())
   email            String           @unique
@@ -64,19 +70,24 @@ model Parent {
 }
 
 model Child {
-  id          String    @id @default(cuid())
-  parentId    String    @map("parent_id")
-  name        String
-  dateOfBirth DateTime  @map("date_of_birth") @db.Date
-  gender      Gender?
-  photoUrl    String?   @map("photo_url")
-  createdAt   DateTime  @default(now()) @map("created_at")
-  updatedAt   DateTime  @updatedAt @map("updated_at")
+  id             String    @id @default(cuid())
+  parentId       String    @map("parent_id")
+  name           String
+  dateOfBirth    DateTime  @map("date_of_birth") @db.Date
+  gender         Gender?
+  photoUrl       String?   @map("photo_url")
+  isDemo         Boolean   @default(false) @map("is_demo")
+  medicalNotes   String?   @map("medical_notes") @db.VarChar(1000)
+  allergies      String[]  @default([])
+  specialNeeds   String?   @map("special_needs") @db.VarChar(500)
+  createdAt      DateTime  @default(now()) @map("created_at")
+  updatedAt      DateTime  @updatedAt @map("updated_at")
 
   parent       Parent           @relation(fields: [parentId], references: [id], onDelete: Cascade)
   observations Observation[]
   milestones   ChildMilestone[]
   scoreCache   ScoreCache[]
+  goals        Goal[]
 
   @@index([parentId])
   @@map("children")
@@ -153,6 +164,43 @@ model ScoreCache {
   @@index([childId, stale])
   @@index([calculatedAt])
   @@map("score_cache")
+}
+
+model Goal {
+  id          String        @id @default(cuid())
+  childId     String        @map("child_id")
+  dimension   Dimension
+  title       String        @db.VarChar(200)
+  description String?       @db.VarChar(500)
+  targetDate  DateTime?     @map("target_date") @db.Date
+  status      GoalStatus    @default(active)
+  templateId  String?       @map("template_id")
+  createdAt   DateTime      @default(now()) @map("created_at")
+  updatedAt   DateTime      @updatedAt @map("updated_at")
+
+  child    Child         @relation(fields: [childId], references: [id], onDelete: Cascade)
+  template GoalTemplate? @relation(fields: [templateId], references: [id], onDelete: SetNull)
+
+  @@index([childId, dimension])
+  @@index([childId, status])
+  @@index([templateId])
+  @@map("goals")
+}
+
+model GoalTemplate {
+  id          String    @id @default(cuid())
+  dimension   Dimension
+  ageBand     AgeBand   @map("age_band")
+  title       String    @db.VarChar(200)
+  description String?   @db.VarChar(500)
+  category    String?   @db.VarChar(50)
+  sortOrder   Int       @map("sort_order") @default(0)
+
+  goals Goal[]
+
+  @@unique([dimension, ageBand, sortOrder])
+  @@index([dimension, ageBand])
+  @@map("goal_templates")
 }
 
 model Session {
