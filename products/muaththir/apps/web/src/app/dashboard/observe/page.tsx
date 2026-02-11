@@ -1,6 +1,7 @@
 'use client';
 
 import { useState, useEffect } from 'react';
+import { useTranslations } from 'next-intl';
 import { useRouter } from 'next/navigation';
 import { DIMENSIONS } from '../../../lib/dimensions';
 import { apiClient, type Child } from '../../../lib/api-client';
@@ -12,6 +13,9 @@ const sentiments = [
 ] as const;
 
 export default function ObservePage() {
+  const t = useTranslations('observe');
+  const tc = useTranslations('common');
+  const td = useTranslations('dimensions');
   const router = useRouter();
   const [selectedDimension, setSelectedDimension] = useState<string>('');
   const [text, setText] = useState('');
@@ -77,7 +81,7 @@ export default function ObservePage() {
     e.preventDefault();
 
     if (!selectedChildId) {
-      setError('Please select a child');
+      setError(t('pleaseSelectChild'));
       return;
     }
 
@@ -94,7 +98,7 @@ export default function ObservePage() {
         tags,
       });
 
-      setSuccessMessage('Observation saved successfully!');
+      setSuccessMessage(t('observationSaved'));
 
       // Redirect to timeline after a short delay
       setTimeout(() => {
@@ -123,10 +127,10 @@ export default function ObservePage() {
     <div className="max-w-2xl mx-auto space-y-8">
       <div>
         <h1 className="text-2xl font-bold text-slate-900">
-          Log Observation
+          {t('title')}
         </h1>
         <p className="text-sm text-slate-500 mt-1">
-          Record a moment from your child&apos;s day.
+          {t('subtitle')}
         </p>
       </div>
 
@@ -148,10 +152,10 @@ export default function ObservePage() {
       {children.length === 0 && (
         <div className="card text-center py-12">
           <h3 className="text-sm font-medium text-slate-900 mb-1">
-            No children found
+            {t('noChildrenFound')}
           </h3>
           <p className="text-xs text-slate-500">
-            Please create a child profile first to log observations.
+            {t('noChildrenDesc')}
           </p>
         </div>
       )}
@@ -162,7 +166,7 @@ export default function ObservePage() {
           {children.length > 1 && (
             <div>
               <label htmlFor="child-select" className="label">
-                Select Child
+                {t('selectChild')}
               </label>
               <select
                 id="child-select"
@@ -171,7 +175,7 @@ export default function ObservePage() {
                 onChange={(e) => setSelectedChildId(e.target.value)}
                 required
               >
-                <option value="">Choose a child...</option>
+                <option value="">{tc('chooseChild')}</option>
                 {children.map((child) => (
                   <option key={child.id} value={child.id}>
                     {child.name}
@@ -183,7 +187,7 @@ export default function ObservePage() {
         {/* Dimension Selector */}
         <fieldset>
           <legend className="label mb-3">
-            Select Dimension
+            {t('selectDimension')}
           </legend>
           <div className="grid grid-cols-2 sm:grid-cols-3 gap-3">
             {DIMENSIONS.map((dim) => (
@@ -212,7 +216,7 @@ export default function ObservePage() {
                   aria-hidden="true"
                 />
                 <span className="text-sm font-medium text-slate-900">
-                  {dim.name}
+                  {td(dim.slug)}
                 </span>
               </button>
             ))}
@@ -222,13 +226,13 @@ export default function ObservePage() {
         {/* Observation Text */}
         <div>
           <label htmlFor="observation-text" className="label">
-            What did you observe?
+            {t('whatObserved')}
           </label>
           <textarea
             id="observation-text"
             rows={5}
             className="input-field resize-none"
-            placeholder="Describe what you noticed about your child today..."
+            placeholder={t('observationPlaceholder')}
             value={text}
             onChange={(e) => setText(e.target.value.slice(0, charLimit))}
             maxLength={charLimit}
@@ -245,7 +249,7 @@ export default function ObservePage() {
         {/* Sentiment Selector */}
         <fieldset>
           <legend className="label mb-3">
-            How would you describe this?
+            {t('howDescribe')}
           </legend>
           <div className="flex gap-3">
             {sentiments.map((s) => (
@@ -269,7 +273,7 @@ export default function ObservePage() {
                 }
                 aria-pressed={sentiment === s.value}
               >
-                {s.label}
+                {t(s.value)}
               </button>
             ))}
           </div>
@@ -278,7 +282,7 @@ export default function ObservePage() {
         {/* Date Picker */}
         <div>
           <label htmlFor="observed-at" className="label">
-            Date Observed
+            {t('dateObserved')}
           </label>
           <input
             id="observed-at"
@@ -293,14 +297,14 @@ export default function ObservePage() {
         {/* Tags Input */}
         <div>
           <label htmlFor="tag-input" className="label">
-            Tags (optional, max 5)
+            {t('tagsLabel')}
           </label>
           <div className="flex gap-2">
             <input
               id="tag-input"
               type="text"
               className="input-field flex-1"
-              placeholder="Add a tag and press Enter"
+              placeholder={t('tagPlaceholder')}
               value={tagInput}
               onChange={(e) => setTagInput(e.target.value)}
               onKeyDown={handleTagKeyDown}
@@ -312,7 +316,7 @@ export default function ObservePage() {
               className="btn-secondary py-2 px-4 text-sm"
               disabled={tags.length >= 5 || !tagInput.trim()}
             >
-              Add
+              {tc('add')}
             </button>
           </div>
           {tags.length > 0 && (
@@ -327,7 +331,7 @@ export default function ObservePage() {
                     type="button"
                     onClick={() => handleRemoveTag(tag)}
                     className="text-slate-400 hover:text-slate-600"
-                    aria-label={`Remove tag ${tag}`}
+                    aria-label={t('removeTag', { tag })}
                   >
                     <svg className="h-3 w-3" fill="none" viewBox="0 0 24 24" stroke="currentColor" aria-hidden="true">
                       <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M6 18L18 6M6 6l12 12" />
@@ -351,7 +355,7 @@ export default function ObservePage() {
               isSubmitting
             }
           >
-            {isSubmitting ? 'Saving...' : 'Save Observation'}
+            {isSubmitting ? t('saving') : t('saveObservation')}
           </button>
         </form>
       )}

@@ -1,4 +1,7 @@
+'use client';
+
 import Link from 'next/link';
+import { useTranslations } from 'next-intl';
 import Header from '../components/layout/Header';
 import { DIMENSIONS } from '../lib/dimensions';
 
@@ -28,28 +31,27 @@ function DimensionIcon({ icon, colour }: { icon: string; colour: string }) {
   );
 }
 
-const steps = [
-  {
-    number: '1',
-    title: 'Observe',
-    description:
-      'Notice moments in your child\'s day -- a kind word, a solved puzzle, a prayer on time. Write a short observation and tag it to a dimension.',
-  },
-  {
-    number: '2',
-    title: 'Track',
-    description:
-      'Watch patterns emerge on the radar chart. See which dimensions are thriving and which need more attention. Check milestones for their age.',
-  },
-  {
-    number: '3',
-    title: 'Grow',
-    description:
-      'Use insights to guide your parenting intentionally. Celebrate strengths, address gaps early, and build a rich record of your child\'s journey.',
-  },
-];
-
 export default function LandingPage() {
+  const t = useTranslations('landing');
+  const td = useTranslations('dimensions');
+
+  const steps = [
+    {
+      number: '1',
+      title: t('step1Title'),
+      description: t('step1Description'),
+    },
+    {
+      number: '2',
+      title: t('step2Title'),
+      description: t('step2Description'),
+    },
+    {
+      number: '3',
+      title: t('step3Title'),
+      description: t('step3Description'),
+    },
+  ];
   return (
     <div className="min-h-screen bg-white">
       <Header />
@@ -59,27 +61,25 @@ export default function LandingPage() {
         <div className="mx-auto max-w-7xl px-4 sm:px-6 lg:px-8 py-20 sm:py-28 lg:py-36">
           <div className="text-center max-w-3xl mx-auto">
             <h1 className="text-4xl sm:text-5xl lg:text-6xl font-bold text-slate-900 tracking-tight leading-tight">
-              Nurture every dimension
+              {t('heroTitle1')}
               <br />
-              <span className="text-emerald-600">of your child</span>
+              <span className="text-emerald-600">{t('heroTitle2')}</span>
             </h1>
             <p className="mt-6 text-lg sm:text-xl text-slate-600 leading-relaxed max-w-2xl mx-auto">
-              Track your child&apos;s development across six interconnected
-              dimensions. From academics to character, from health to
-              aspirations -- see the complete picture.
+              {t('heroDescription')}
             </p>
             <div className="mt-10 flex flex-col sm:flex-row items-center justify-center gap-4">
               <Link
                 href="/signup"
                 className="btn-primary text-base px-8 py-3.5"
               >
-                Start Tracking Free
+                {t('startTracking')}
               </Link>
               <Link
                 href="/about"
                 className="btn-secondary text-base px-8 py-3.5"
               >
-                Learn More
+                {t('learnMore')}
               </Link>
             </div>
           </div>
@@ -94,11 +94,10 @@ export default function LandingPage() {
               id="dimensions-heading"
               className="text-3xl sm:text-4xl font-bold text-slate-900"
             >
-              Six Dimensions of Growth
+              {t('dimensionsTitle')}
             </h2>
             <p className="mt-4 text-lg text-slate-600 max-w-2xl mx-auto">
-              Every child is a complete human being. We track the dimensions
-              that matter -- not just grades.
+              {t('dimensionsSubtitle')}
             </p>
           </div>
           <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-3 gap-6">
@@ -118,10 +117,10 @@ export default function LandingPage() {
                   />
                 </div>
                 <h3 className="text-lg font-semibold text-slate-900 mb-2">
-                  {dimension.name}
+                  {td(dimension.slug)}
                 </h3>
                 <p className="text-sm text-slate-600 leading-relaxed">
-                  {dimension.description}
+                  {td(`${dimension.slug}Desc`)}
                 </p>
               </div>
             ))}
@@ -140,10 +139,10 @@ export default function LandingPage() {
               id="how-it-works-heading"
               className="text-3xl sm:text-4xl font-bold text-slate-900"
             >
-              How It Works
+              {t('howItWorksTitle')}
             </h2>
             <p className="mt-4 text-lg text-slate-600">
-              Three simple steps to intentional parenting.
+              {t('howItWorksSubtitle')}
             </p>
           </div>
           <div className="grid grid-cols-1 md:grid-cols-3 gap-8 lg:gap-12">
@@ -168,17 +167,16 @@ export default function LandingPage() {
       <section className="py-20 sm:py-28 bg-emerald-600">
         <div className="mx-auto max-w-4xl px-4 sm:px-6 lg:px-8 text-center">
           <h2 className="text-3xl sm:text-4xl font-bold text-white">
-            Every child deserves to be seen -- completely.
+            {t('ctaTitle')}
           </h2>
           <p className="mt-6 text-lg text-emerald-100 max-w-2xl mx-auto">
-            Start tracking your child&apos;s development for free. No credit
-            card required.
+            {t('ctaDescription')}
           </p>
           <Link
             href="/signup"
             className="mt-10 inline-flex items-center justify-center rounded-xl bg-white px-8 py-3.5 text-base font-semibold text-emerald-700 shadow-sm hover:bg-emerald-50 transition-colors"
           >
-            Get Started Free
+            {t('getStartedFree')}
           </Link>
         </div>
       </section>
@@ -199,16 +197,16 @@ export default function LandingPage() {
             </div>
             <nav className="flex gap-6" aria-label="Footer navigation">
               <Link href="/about" className="text-sm text-slate-400 hover:text-white transition-colors">
-                About
+                {t('about')}
               </Link>
               <Link href="/pricing" className="text-sm text-slate-400 hover:text-white transition-colors">
-                Pricing
+                {t('pricing')}
               </Link>
               <Link href="/privacy" className="text-sm text-slate-400 hover:text-white transition-colors">
-                Privacy
+                {t('privacy')}
               </Link>
               <Link href="/terms" className="text-sm text-slate-400 hover:text-white transition-colors">
-                Terms
+                {t('terms')}
               </Link>
             </nav>
           </div>

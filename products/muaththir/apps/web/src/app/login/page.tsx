@@ -3,10 +3,12 @@
 import Link from 'next/link';
 import { useState } from 'react';
 import { useRouter } from 'next/navigation';
+import { useTranslations } from 'next-intl';
 import Header from '../../components/layout/Header';
 import { useAuth } from '../../hooks/useAuth';
 
 export default function LoginPage() {
+  const t = useTranslations('login');
   const router = useRouter();
   const { login } = useAuth();
   const [email, setEmail] = useState('');
@@ -35,9 +37,9 @@ export default function LoginPage() {
       <main className="flex items-center justify-center px-4 py-16 sm:py-24">
         <div className="w-full max-w-md">
           <div className="text-center mb-8">
-            <h1 className="text-2xl font-bold text-slate-900">Welcome back</h1>
+            <h1 className="text-2xl font-bold text-slate-900">{t('title')}</h1>
             <p className="mt-2 text-sm text-slate-600">
-              Log in to continue tracking your child&apos;s journey.
+              {t('subtitle')}
             </p>
           </div>
 
@@ -53,7 +55,7 @@ export default function LoginPage() {
 
             <div>
               <label htmlFor="email" className="label">
-                Email Address
+                {t('emailLabel')}
               </label>
               <input
                 id="email"
@@ -61,7 +63,7 @@ export default function LoginPage() {
                 type="email"
                 required
                 className="input-field"
-                placeholder="you@example.com"
+                placeholder={t('emailPlaceholder')}
                 value={email}
                 onChange={(e) => setEmail(e.target.value)}
                 autoComplete="email"
@@ -70,7 +72,7 @@ export default function LoginPage() {
 
             <div>
               <label htmlFor="password" className="label">
-                Password
+                {t('passwordLabel')}
               </label>
               <input
                 id="password"
@@ -78,7 +80,7 @@ export default function LoginPage() {
                 type="password"
                 required
                 className="input-field"
-                placeholder="Enter your password"
+                placeholder={t('passwordPlaceholder')}
                 value={password}
                 onChange={(e) => setPassword(e.target.value)}
                 autoComplete="current-password"
@@ -90,7 +92,7 @@ export default function LoginPage() {
                 href="/forgot-password"
                 className="text-sm font-medium text-emerald-600 hover:text-emerald-700"
               >
-                Forgot password?
+                {t('forgotPassword')}
               </Link>
             </div>
 
@@ -100,16 +102,16 @@ export default function LoginPage() {
               disabled={isLoading}
               aria-busy={isLoading}
             >
-              {isLoading ? 'Logging in...' : 'Log In'}
+              {isLoading ? t('loggingIn') : t('logIn')}
             </button>
 
             <p className="text-center text-sm text-slate-500">
-              Don&apos;t have an account?{' '}
+              {t('noAccount')}{' '}
               <Link
                 href="/signup"
                 className="font-medium text-emerald-600 hover:text-emerald-700"
               >
-                Sign up free
+                {t('signUpFree')}
               </Link>
             </p>
           </form>

@@ -1,45 +1,49 @@
+'use client';
+
 import Link from 'next/link';
+import { useTranslations } from 'next-intl';
 import Header from '../../components/layout/Header';
 
-const plans = [
-  {
-    name: 'Free',
-    price: '$0',
-    period: 'forever',
-    description: 'Perfect for getting started with one child.',
-    features: [
-      '1 child profile',
-      'Unlimited observations',
-      'All 6 dimensions',
-      'Milestone checklists',
-      'Radar chart dashboard',
-      'Timeline view',
-    ],
-    cta: 'Get Started Free',
-    href: '/signup',
-    featured: false,
-  },
-  {
-    name: 'Premium',
-    price: '$8',
-    period: '/month',
-    annualPrice: '$77/year (save 20%)',
-    description: 'For families who want the complete experience.',
-    features: [
-      'Unlimited child profiles',
-      'Everything in Free',
-      'Data export (CSV/PDF)',
-      'Weekly email digest',
-      'Priority support',
-      'Early access to new features',
-    ],
-    cta: 'Start Premium',
-    href: '/signup',
-    featured: true,
-  },
-];
-
 export default function PricingPage() {
+  const t = useTranslations('pricing');
+
+  const plans = [
+    {
+      name: t('freeName'),
+      price: t('freePrice'),
+      period: t('freePeriod'),
+      description: t('freeDescription'),
+      features: [
+        t('freeFeature1'),
+        t('freeFeature2'),
+        t('freeFeature3'),
+        t('freeFeature4'),
+        t('freeFeature5'),
+        t('freeFeature6'),
+      ],
+      cta: t('freeCta'),
+      href: '/signup',
+      featured: false,
+    },
+    {
+      name: t('premiumName'),
+      price: t('premiumPrice'),
+      period: t('premiumPeriod'),
+      annualPrice: t('premiumAnnual'),
+      description: t('premiumDescription'),
+      features: [
+        t('premiumFeature1'),
+        t('premiumFeature2'),
+        t('premiumFeature3'),
+        t('premiumFeature4'),
+        t('premiumFeature5'),
+        t('premiumFeature6'),
+      ],
+      cta: t('premiumCta'),
+      href: '/signup',
+      featured: true,
+    },
+  ];
   return (
     <div className="min-h-screen bg-slate-50">
       <Header />
@@ -47,10 +51,10 @@ export default function PricingPage() {
         <div className="mx-auto max-w-7xl px-4 sm:px-6 lg:px-8">
           <div className="text-center mb-16">
             <h1 className="text-3xl sm:text-4xl font-bold text-slate-900">
-              Simple, fair pricing
+              {t('title')}
             </h1>
             <p className="mt-4 text-lg text-slate-600 max-w-2xl mx-auto">
-              Start free with one child. Upgrade when your family grows.
+              {t('subtitle')}
             </p>
           </div>
 
@@ -66,7 +70,7 @@ export default function PricingPage() {
               >
                 {plan.featured && (
                   <span className="absolute -top-3 left-1/2 -translate-x-1/2 bg-emerald-600 text-white text-xs font-semibold px-3 py-1 rounded-full">
-                    Most Popular
+                    {t('mostPopular')}
                   </span>
                 )}
                 <h2 className="text-xl font-bold text-slate-900">

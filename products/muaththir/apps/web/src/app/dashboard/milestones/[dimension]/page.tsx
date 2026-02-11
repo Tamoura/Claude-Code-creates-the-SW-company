@@ -2,6 +2,7 @@
 
 import { useState, useEffect } from 'react';
 import Link from 'next/link';
+import { useTranslations } from 'next-intl';
 import { DIMENSIONS } from '../../../../lib/dimensions';
 import DimensionBadge from '../../../../components/common/DimensionBadge';
 import { apiClient, type Child, type ChildMilestone } from '../../../../lib/api-client';
@@ -13,6 +14,9 @@ interface MilestonesByDimensionPageProps {
 export default function MilestonesByDimensionPage({
   params,
 }: MilestonesByDimensionPageProps) {
+  const t = useTranslations('milestoneDetail');
+  const tc = useTranslations('common');
+  const td = useTranslations('dimensions');
   const dimension = DIMENSIONS.find((d) => d.slug === params.dimension);
   const [children, setChildren] = useState<Child[]>([]);
   const [selectedChildId, setSelectedChildId] = useState<string | null>(null);
@@ -97,13 +101,13 @@ export default function MilestonesByDimensionPage({
     return (
       <div className="text-center py-16">
         <h1 className="text-2xl font-bold text-slate-900">
-          Dimension not found
+          {t('notFound')}
         </h1>
         <Link
           href="/dashboard/milestones"
           className="text-sm text-emerald-600 hover:text-emerald-700 mt-4 inline-block"
         >
-          Back to Milestones
+          {t('backToMilestones')}
         </Link>
       </div>
     );
@@ -131,13 +135,13 @@ export default function MilestonesByDimensionPage({
             </svg>
           </div>
           <h2 className="text-xl font-semibold text-slate-900 mb-2">
-            Add Your First Child
+            {t('addFirstChild')}
           </h2>
           <p className="text-sm text-slate-500 mb-6">
-            Create a child profile to start tracking their development milestones.
+            {t('addFirstChildDesc')}
           </p>
           <Link href="/onboarding/child" className="btn-primary">
-            Add Child Profile
+            {tc('addChildProfile')}
           </Link>
         </div>
       </div>
@@ -153,13 +157,13 @@ export default function MilestonesByDimensionPage({
               href="/dashboard/milestones"
               className="text-sm text-slate-400 hover:text-slate-600"
             >
-              Milestones
+              {t('backToMilestones')}
             </Link>
             <span className="text-slate-300">/</span>
             <DimensionBadge slug={dimension.slug} />
           </div>
           <h1 className="text-2xl font-bold text-slate-900">
-            {dimension.name} Milestones
+            {t('milestonesTitle', { dimension: td(dimension.slug as any) })}
           </h1>
         </div>
 
@@ -169,7 +173,7 @@ export default function MilestonesByDimensionPage({
             value={selectedChildId || ''}
             onChange={(e) => setSelectedChildId(e.target.value)}
             className="px-4 py-2 border border-slate-200 rounded-lg text-sm focus:outline-none focus:ring-2 focus:ring-emerald-500"
-            aria-label="Select child"
+            aria-label={tc('selectChild')}
           >
             {children.map((child) => (
               <option key={child.id} value={child.id}>
@@ -200,10 +204,10 @@ export default function MilestonesByDimensionPage({
             </svg>
           </div>
           <h2 className="text-sm font-medium text-slate-900 mb-1">
-            No milestones yet
+            {t('noMilestonesTitle')}
           </h2>
           <p className="text-xs text-slate-500">
-            Milestones will appear here as they become available for your child&apos;s age band.
+            {t('noMilestonesDesc')}
           </p>
         </div>
       ) : (
@@ -219,7 +223,7 @@ export default function MilestonesByDimensionPage({
                   checked={milestone.achieved}
                   onChange={() => handleToggle(milestone.id, milestone.achieved)}
                   className="mt-1 h-5 w-5 rounded border-slate-300 text-emerald-600 focus:ring-emerald-500"
-                  aria-label={`Mark "${milestone.title}" as ${milestone.achieved ? 'not achieved' : 'achieved'}`}
+                  aria-label={milestone.achieved ? t('markNotAchieved', { title: milestone.title }) : t('markAchieved', { title: milestone.title })}
                 />
                 <div className="flex-1">
                   <h3 className={`text-sm font-semibold ${milestone.achieved ? 'text-slate-500 line-through' : 'text-slate-900'}`}>
@@ -235,7 +239,7 @@ export default function MilestonesByDimensionPage({
                   )}
                   {milestone.achieved && milestone.achievedAt && (
                     <p className="text-xs text-emerald-600 mt-2">
-                      Achieved on {new Date(milestone.achievedAt).toLocaleDateString()}
+                      {t('achievedOn', { date: new Date(milestone.achievedAt).toLocaleDateString() })}
                     </p>
                   )}
                 </div>

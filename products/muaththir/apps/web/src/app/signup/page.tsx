@@ -3,10 +3,12 @@
 import Link from 'next/link';
 import { useState } from 'react';
 import { useRouter } from 'next/navigation';
+import { useTranslations } from 'next-intl';
 import Header from '../../components/layout/Header';
 import { useAuth } from '../../hooks/useAuth';
 
 export default function SignupPage() {
+  const t = useTranslations('signup');
   const router = useRouter();
   const { signup } = useAuth();
   const [name, setName] = useState('');
@@ -37,10 +39,10 @@ export default function SignupPage() {
         <div className="w-full max-w-md">
           <div className="text-center mb-8">
             <h1 className="text-2xl font-bold text-slate-900">
-              Create your account
+              {t('title')}
             </h1>
             <p className="mt-2 text-sm text-slate-600">
-              Start tracking your child&apos;s development for free.
+              {t('subtitle')}
             </p>
           </div>
 
@@ -56,7 +58,7 @@ export default function SignupPage() {
 
             <div>
               <label htmlFor="name" className="label">
-                Full Name
+                {t('nameLabel')}
               </label>
               <input
                 id="name"
@@ -64,7 +66,7 @@ export default function SignupPage() {
                 type="text"
                 required
                 className="input-field"
-                placeholder="Your full name"
+                placeholder={t('namePlaceholder')}
                 value={name}
                 onChange={(e) => setName(e.target.value)}
                 autoComplete="name"
@@ -73,7 +75,7 @@ export default function SignupPage() {
 
             <div>
               <label htmlFor="email" className="label">
-                Email Address
+                {t('emailLabel')}
               </label>
               <input
                 id="email"
@@ -81,7 +83,7 @@ export default function SignupPage() {
                 type="email"
                 required
                 className="input-field"
-                placeholder="you@example.com"
+                placeholder={t('emailPlaceholder')}
                 value={email}
                 onChange={(e) => setEmail(e.target.value)}
                 autoComplete="email"
@@ -90,7 +92,7 @@ export default function SignupPage() {
 
             <div>
               <label htmlFor="password" className="label">
-                Password
+                {t('passwordLabel')}
               </label>
               <input
                 id="password"
@@ -98,7 +100,7 @@ export default function SignupPage() {
                 type="password"
                 required
                 className="input-field"
-                placeholder="Min 8 characters, 1 uppercase, 1 number"
+                placeholder={t('passwordPlaceholder')}
                 value={password}
                 onChange={(e) => setPassword(e.target.value)}
                 autoComplete="new-password"
@@ -112,16 +114,16 @@ export default function SignupPage() {
               disabled={isLoading}
               aria-busy={isLoading}
             >
-              {isLoading ? 'Creating Account...' : 'Create Account'}
+              {isLoading ? t('creatingAccount') : t('createAccount')}
             </button>
 
             <p className="text-center text-sm text-slate-500">
-              Already have an account?{' '}
+              {t('hasAccount')}{' '}
               <Link
                 href="/login"
                 className="font-medium text-emerald-600 hover:text-emerald-700"
               >
-                Log in
+                {t('logIn')}
               </Link>
             </p>
           </form>

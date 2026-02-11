@@ -3,6 +3,7 @@
 import { useState, useEffect } from 'react';
 import Link from 'next/link';
 import dynamic from 'next/dynamic';
+import { useTranslations } from 'next-intl';
 import { DIMENSIONS, getDimensionBySlug } from '../../../lib/dimensions';
 import { apiClient, type Child, type DashboardData } from '../../../lib/api-client';
 
@@ -16,6 +17,9 @@ interface ChildWithScores extends Child {
 }
 
 export default function FamilyPage() {
+  const t = useTranslations('family');
+  const tc = useTranslations('common');
+  const td = useTranslations('dimensions');
   const [children, setChildren] = useState<ChildWithScores[]>([]);
   const [loading, setLoading] = useState(true);
   const [error, setError] = useState<string | null>(null);
@@ -54,9 +58,9 @@ export default function FamilyPage() {
     return (
       <div className="flex items-center justify-center min-h-[60vh]">
         <div className="text-center max-w-md">
-          <h2 className="text-xl font-semibold text-slate-900 mb-2">No Children Yet</h2>
-          <p className="text-sm text-slate-500 mb-6">Add children to see the family overview.</p>
-          <Link href="/onboarding/child" className="btn-primary">Add Child Profile</Link>
+          <h2 className="text-xl font-semibold text-slate-900 mb-2">{tc('noChildrenYet')}</h2>
+          <p className="text-sm text-slate-500 mb-6">{t('noChildrenDesc')}</p>
+          <Link href="/onboarding/child" className="btn-primary">{tc('addChildProfile')}</Link>
         </div>
       </div>
     );
@@ -66,16 +70,16 @@ export default function FamilyPage() {
     return (
       <div className="space-y-6">
         <div>
-          <h1 className="text-2xl font-bold text-slate-900">Family Overview</h1>
-          <p className="text-sm text-slate-500 mt-1">Compare your children&apos;s development side by side.</p>
+          <h1 className="text-2xl font-bold text-slate-900">{t('title')}</h1>
+          <p className="text-sm text-slate-500 mt-1">{t('subtitle')}</p>
         </div>
         <div className="card text-center py-12">
-          <h3 className="text-sm font-medium text-slate-900 mb-1">Only one child profile</h3>
+          <h3 className="text-sm font-medium text-slate-900 mb-1">{t('onlyOneChild')}</h3>
           <p className="text-xs text-slate-500 mb-4">
-            The family view compares multiple children. Add another child to use this feature.
+            {t('onlyOneChildDesc')}
           </p>
           <Link href="/onboarding/child" className="btn-primary text-sm py-2 px-4">
-            Add Another Child
+            {t('addAnotherChild')}
           </Link>
         </div>
       </div>
@@ -85,8 +89,8 @@ export default function FamilyPage() {
   return (
     <div className="space-y-6">
       <div>
-        <h1 className="text-2xl font-bold text-slate-900">Family Overview</h1>
-        <p className="text-sm text-slate-500 mt-1">Compare your children&apos;s development side by side.</p>
+        <h1 className="text-2xl font-bold text-slate-900">{t('title')}</h1>
+        <p className="text-sm text-slate-500 mt-1">{t('subtitle')}</p>
       </div>
 
       {error && (
@@ -127,22 +131,22 @@ export default function FamilyPage() {
                       href={`/dashboard/child/${child.id}`}
                       className="text-xs text-emerald-600 hover:text-emerald-700 font-medium"
                     >
-                      View Details
+                      {tc('viewDetails')}
                     </Link>
                   </div>
                   <RadarChart scores={radarScores} />
                   <div className="grid grid-cols-3 gap-2 mt-4">
                     <div className="text-center p-2 bg-slate-50 rounded-lg">
                       <p className="text-lg font-bold text-slate-900">{child.observationCount || 0}</p>
-                      <p className="text-xs text-slate-500">Observations</p>
+                      <p className="text-xs text-slate-500">{t('observationsLabel')}</p>
                     </div>
                     <div className="text-center p-2 bg-slate-50 rounded-lg">
                       <p className="text-lg font-bold text-slate-900">{child.milestoneProgress?.achieved || 0}</p>
-                      <p className="text-xs text-slate-500">Milestones</p>
+                      <p className="text-xs text-slate-500">{t('milestonesLabel')}</p>
                     </div>
                     <div className="text-center p-2 bg-slate-50 rounded-lg">
                       <p className="text-lg font-bold text-emerald-600">{child.dashboard?.overallScore || 0}</p>
-                      <p className="text-xs text-slate-500">Score</p>
+                      <p className="text-xs text-slate-500">{t('scoreLabel')}</p>
                     </div>
                   </div>
                 </div>
@@ -152,11 +156,11 @@ export default function FamilyPage() {
 
           {/* Dimension Comparison Table */}
           <div className="card overflow-x-auto">
-            <h2 className="text-lg font-semibold text-slate-900 mb-4">Dimension Comparison</h2>
+            <h2 className="text-lg font-semibold text-slate-900 mb-4">{t('dimensionComparison')}</h2>
             <table className="w-full text-sm">
               <thead>
                 <tr className="border-b border-slate-200">
-                  <th className="text-left py-2 pr-4 text-xs font-medium text-slate-500">Dimension</th>
+                  <th className="text-left py-2 pr-4 text-xs font-medium text-slate-500">{t('dimensionHeader')}</th>
                   {children.map(child => (
                     <th key={child.id} className="text-center py-2 px-2 text-xs font-medium text-slate-500">
                       {child.name}
@@ -170,7 +174,7 @@ export default function FamilyPage() {
                     <td className="py-2.5 pr-4">
                       <div className="flex items-center gap-2">
                         <span className="h-2 w-2 rounded-full" style={{ backgroundColor: dim.colour }} />
-                        <span className="text-xs font-medium text-slate-700">{dim.name}</span>
+                        <span className="text-xs font-medium text-slate-700">{td(dim.slug as any)}</span>
                       </div>
                     </td>
                     {children.map(child => {
