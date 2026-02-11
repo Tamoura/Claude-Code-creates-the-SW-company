@@ -338,6 +338,76 @@ describe('POST /api/children', () => {
     expect(response.statusCode).toBe(201);
   });
 
+  it('should create a child with health fields', async () => {
+    const response = await app.inject({
+      method: 'POST',
+      url: '/api/children',
+      headers: { authorization: `Bearer ${token}` },
+      payload: {
+        name: 'Ahmad',
+        dateOfBirth: childDob(7),
+        gender: 'male',
+        medicalNotes: 'Asthma, uses inhaler when needed',
+        allergies: ['peanuts', 'shellfish'],
+        specialNeeds: 'ADHD - requires additional focus support',
+      },
+    });
+
+    expect(response.statusCode).toBe(201);
+    const body = response.json();
+    expect(body.medicalNotes).toBe('Asthma, uses inhaler when needed');
+    expect(body.allergies).toEqual(['peanuts', 'shellfish']);
+    expect(body.specialNeeds).toBe('ADHD - requires additional focus support');
+  });
+
+  it('should default health fields to null/empty when not provided', async () => {
+    const response = await app.inject({
+      method: 'POST',
+      url: '/api/children',
+      headers: { authorization: `Bearer ${token}` },
+      payload: {
+        name: 'Ahmad',
+        dateOfBirth: childDob(7),
+      },
+    });
+
+    expect(response.statusCode).toBe(201);
+    const body = response.json();
+    expect(body.medicalNotes).toBeNull();
+    expect(body.allergies).toEqual([]);
+    expect(body.specialNeeds).toBeNull();
+  });
+
+  it('should reject medicalNotes over 1000 characters', async () => {
+    const response = await app.inject({
+      method: 'POST',
+      url: '/api/children',
+      headers: { authorization: `Bearer ${token}` },
+      payload: {
+        name: 'Ahmad',
+        dateOfBirth: childDob(7),
+        medicalNotes: 'A'.repeat(1001),
+      },
+    });
+
+    expect(response.statusCode).toBe(422);
+  });
+
+  it('should reject specialNeeds over 500 characters', async () => {
+    const response = await app.inject({
+      method: 'POST',
+      url: '/api/children',
+      headers: { authorization: `Bearer ${token}` },
+      payload: {
+        name: 'Ahmad',
+        dateOfBirth: childDob(7),
+        specialNeeds: 'A'.repeat(501),
+      },
+    });
+
+    expect(response.statusCode).toBe(422);
+  });
+
   it('should store child in database with correct parentId', async () => {
     await app.inject({
       method: 'POST',
@@ -543,6 +613,34 @@ describe('GET /api/children/:id', () => {
     expect(body.ageBand).toBe('primary');
   });
 
+  it('should return health fields in GET response', async () => {
+    const createRes = await app.inject({
+      method: 'POST',
+      url: '/api/children',
+      headers: { authorization: `Bearer ${token}` },
+      payload: {
+        name: 'Ahmad',
+        dateOfBirth: childDob(7),
+        medicalNotes: 'Test notes',
+        allergies: ['dust'],
+        specialNeeds: 'Test needs',
+      },
+    });
+    const childId = createRes.json().id;
+
+    const response = await app.inject({
+      method: 'GET',
+      url: `/api/children/${childId}`,
+      headers: { authorization: `Bearer ${token}` },
+    });
+
+    expect(response.statusCode).toBe(200);
+    const body = response.json();
+    expect(body.medicalNotes).toBe('Test notes');
+    expect(body.allergies).toEqual(['dust']);
+    expect(body.specialNeeds).toBe('Test needs');
+  });
+
   it('should return 404 for non-existent child', async () => {
     const response = await app.inject({
       method: 'GET',
@@ -655,6 +753,63 @@ describe('PATCH /api/children/:id', () => {
 
     expect(response.statusCode).toBe(200);
     expect(response.json().gender).toBeNull();
+  });
+
+  it('should update medicalNotes', async () => {
+    const response = await app.inject({
+      method: 'PATCH',
+      url: `/api/children/${childId}`,
+      headers: { authorization: `Bearer ${token}` },
+      payload: { medicalNotes: 'Updated medical notes' },
+    });
+
+    expect(response.statusCode).toBe(200);
+    expect(response.json().medicalNotes).toBe('Updated medical notes');
+  });
+
+  it('should update allergies', async () => {
+    const response = await app.inject({
+      method: 'PATCH',
+      url: `/api/children/${childId}`,
+      headers: { authorization: `Bearer ${token}` },
+      payload: { allergies: ['peanuts', 'dairy'] },
+    });
+
+    expect(response.statusCode).toBe(200);
+    expect(response.json().allergies).toEqual(['peanuts', 'dairy']);
+  });
+
+  it('should update specialNeeds', async () => {
+    const response = await app.inject({
+      method: 'PATCH',
+      url: `/api/children/${childId}`,
+      headers: { authorization: `Bearer ${token}` },
+      payload: { specialNeeds: 'Updated special needs info' },
+    });
+
+    expect(response.statusCode).toBe(200);
+    expect(response.json().specialNeeds).toBe('Updated special needs info');
+  });
+
+  it('should allow setting medicalNotes to null', async () => {
+    // First set a value
+    await app.inject({
+      method: 'PATCH',
+      url: `/api/children/${childId}`,
+      headers: { authorization: `Bearer ${token}` },
+      payload: { medicalNotes: 'Some notes' },
+    });
+
+    // Then clear it
+    const response = await app.inject({
+      method: 'PATCH',
+      url: `/api/children/${childId}`,
+      headers: { authorization: `Bearer ${token}` },
+      payload: { medicalNotes: null },
+    });
+
+    expect(response.statusCode).toBe(200);
+    expect(response.json().medicalNotes).toBeNull();
   });
 
   it('should reject invalid age on dateOfBirth update', async () => {

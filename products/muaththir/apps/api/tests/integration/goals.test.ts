@@ -221,6 +221,142 @@ describe('POST /api/children/:childId/goals', () => {
   });
 });
 
+describe('POST /api/children/:childId/goals (template-based)', () => {
+  let templateId: string;
+
+  beforeEach(async () => {
+    const template = await prisma.goalTemplate.create({
+      data: {
+        dimension: 'islamic',
+        ageBand: 'primary',
+        title: 'Memorise 5 short surahs',
+        description: 'Learn surahs from Juz Amma by heart.',
+        category: 'quran',
+        sortOrder: 1,
+      },
+    });
+    templateId = template.id;
+  });
+
+  it('should create a goal from a template', async () => {
+    const response = await app.inject({
+      method: 'POST',
+      url: `/api/children/${childId}/goals`,
+      headers: { authorization: `Bearer ${accessToken}` },
+      payload: { templateId },
+    });
+
+    expect(response.statusCode).toBe(201);
+    const body = response.json();
+    expect(body.dimension).toBe('islamic');
+    expect(body.title).toBe('Memorise 5 short surahs');
+    expect(body.description).toBe('Learn surahs from Juz Amma by heart.');
+    expect(body.templateId).toBe(templateId);
+  });
+
+  it('should allow overriding title from template', async () => {
+    const response = await app.inject({
+      method: 'POST',
+      url: `/api/children/${childId}/goals`,
+      headers: { authorization: `Bearer ${accessToken}` },
+      payload: {
+        templateId,
+        title: 'My custom title',
+      },
+    });
+
+    expect(response.statusCode).toBe(201);
+    const body = response.json();
+    expect(body.title).toBe('My custom title');
+    expect(body.dimension).toBe('islamic');
+    expect(body.templateId).toBe(templateId);
+  });
+
+  it('should allow overriding description from template', async () => {
+    const response = await app.inject({
+      method: 'POST',
+      url: `/api/children/${childId}/goals`,
+      headers: { authorization: `Bearer ${accessToken}` },
+      payload: {
+        templateId,
+        description: 'Custom description',
+      },
+    });
+
+    expect(response.statusCode).toBe(201);
+    expect(response.json().description).toBe('Custom description');
+  });
+
+  it('should allow overriding dimension from template', async () => {
+    const response = await app.inject({
+      method: 'POST',
+      url: `/api/children/${childId}/goals`,
+      headers: { authorization: `Bearer ${accessToken}` },
+      payload: {
+        templateId,
+        dimension: 'academic',
+      },
+    });
+
+    expect(response.statusCode).toBe(201);
+    expect(response.json().dimension).toBe('academic');
+  });
+
+  it('should return 404 for non-existent template', async () => {
+    const response = await app.inject({
+      method: 'POST',
+      url: `/api/children/${childId}/goals`,
+      headers: { authorization: `Bearer ${accessToken}` },
+      payload: { templateId: 'nonexistent-template-id' },
+    });
+
+    expect(response.statusCode).toBe(404);
+    expect(response.json().detail).toBe('Goal template not found');
+  });
+
+  it('should store templateId on the goal', async () => {
+    const response = await app.inject({
+      method: 'POST',
+      url: `/api/children/${childId}/goals`,
+      headers: { authorization: `Bearer ${accessToken}` },
+      payload: { templateId },
+    });
+
+    const goalId = response.json().id;
+    const goal = await prisma.goal.findUnique({ where: { id: goalId } });
+    expect(goal!.templateId).toBe(templateId);
+  });
+
+  it('should return null templateId for non-template goals', async () => {
+    const response = await createGoal(accessToken, childId);
+
+    expect(response.statusCode).toBe(201);
+    expect(response.json().templateId).toBeNull();
+  });
+
+  it('should require dimension when not using template', async () => {
+    const response = await app.inject({
+      method: 'POST',
+      url: `/api/children/${childId}/goals`,
+      headers: { authorization: `Bearer ${accessToken}` },
+      payload: { title: 'Some goal' },
+    });
+
+    expect(response.statusCode).toBe(422);
+  });
+
+  it('should require title when not using template', async () => {
+    const response = await app.inject({
+      method: 'POST',
+      url: `/api/children/${childId}/goals`,
+      headers: { authorization: `Bearer ${accessToken}` },
+      payload: { dimension: 'academic' },
+    });
+
+    expect(response.statusCode).toBe(422);
+  });
+});
+
 describe('GET /api/children/:childId/goals', () => {
   beforeEach(async () => {
     // Create goals via Prisma directly to set different statuses

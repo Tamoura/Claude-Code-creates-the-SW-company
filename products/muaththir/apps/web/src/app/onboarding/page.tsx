@@ -2,7 +2,7 @@ import Link from 'next/link';
 
 export default function OnboardingPage() {
   return (
-    <div className="min-h-screen bg-gradient-to-br from-emerald-50 via-white to-blue-50 flex items-center justify-center px-4">
+    <div className="flex items-center justify-center px-4 py-12 min-h-[calc(100vh-3.5rem)]">
       <div className="w-full max-w-lg text-center">
         <div className="mb-8">
           <div className="mx-auto h-16 w-16 rounded-2xl bg-emerald-600 flex items-center justify-center mb-6">

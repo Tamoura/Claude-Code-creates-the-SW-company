@@ -38,17 +38,19 @@ const DIMENSIONS = [
 const GOAL_STATUSES = ['active', 'completed', 'paused'] as const;
 
 const createGoalSchema = z.object({
-  dimension: z.enum(DIMENSIONS),
+  dimension: z.enum(DIMENSIONS).optional(),
   title: z
     .string()
     .min(1, 'Title is required')
-    .max(200, 'Title must be 200 characters or less'),
+    .max(200, 'Title must be 200 characters or less')
+    .optional(),
   description: z
     .string()
     .max(500, 'Description must be 500 characters or less')
     .optional()
     .nullable(),
   targetDate: z.string().date().optional().nullable(),
+  templateId: z.string().optional().nullable(),
 });
 
 const updateGoalSchema = z.object({
@@ -82,6 +84,7 @@ function formatGoal(goal: {
   description: string | null;
   targetDate: Date | null;
   status: string;
+  templateId?: string | null;
   createdAt: Date;
   updatedAt: Date;
 }) {
@@ -95,6 +98,7 @@ function formatGoal(goal: {
       ? goal.targetDate.toISOString().split('T')[0]
       : null,
     status: goal.status,
+    templateId: goal.templateId ?? null,
     createdAt: goal.createdAt.toISOString(),
     updatedAt: goal.updatedAt.toISOString(),
   };
@@ -112,13 +116,47 @@ const goalRoutes: FastifyPluginAsync = async (fastify) => {
 
     const data = validateBody(createGoalSchema, request.body);
 
+    let dimension = data.dimension;
+    let title = data.title;
+    let description = data.description;
+    let templateId: string | null = null;
+
+    if (data.templateId) {
+      const template = await fastify.prisma.goalTemplate.findUnique({
+        where: { id: data.templateId },
+      });
+
+      if (!template) {
+        throw new NotFoundError('Goal template not found');
+      }
+
+      // Use template values as defaults, allow user overrides
+      dimension = data.dimension || (template.dimension as typeof dimension);
+      title = data.title || template.title;
+      description = data.description !== undefined ? data.description : template.description;
+      templateId = template.id;
+    }
+
+    // Validate required fields after template resolution
+    if (!dimension) {
+      throw new ValidationError('Dimension is required', {
+        dimension: ['Dimension is required when not using a template'],
+      });
+    }
+    if (!title) {
+      throw new ValidationError('Title is required', {
+        title: ['Title is required when not using a template'],
+      });
+    }
+
     const goal = await fastify.prisma.goal.create({
       data: {
         childId,
-        dimension: data.dimension,
-        title: data.title,
-        description: data.description ?? null,
+        dimension,
+        title,
+        description: description ?? null,
         targetDate: data.targetDate ? new Date(data.targetDate) : null,
+        templateId,
       },
     });
 

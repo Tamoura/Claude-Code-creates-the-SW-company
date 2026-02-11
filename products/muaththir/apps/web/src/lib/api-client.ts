@@ -54,6 +54,9 @@ export interface Child {
   gender: 'male' | 'female' | null;
   ageBand: string | null;
   photoUrl: string | null;
+  medicalNotes: string | null;
+  allergies: string[] | null;
+  specialNeeds: string | null;
   createdAt: string;
   updatedAt: string;
   observationCount?: number;
@@ -115,6 +118,14 @@ export interface Goal {
   status: 'active' | 'completed' | 'paused';
   createdAt: string;
   updatedAt: string;
+}
+
+export interface GoalTemplate {
+  id: string;
+  dimension: string;
+  ageBand: string;
+  title: string;
+  description: string;
 }
 
 export interface InsightStrength {
@@ -269,6 +280,9 @@ class ApiClient {
     name: string;
     dateOfBirth: string;
     gender?: 'male' | 'female';
+    medicalNotes?: string;
+    allergies?: string[];
+    specialNeeds?: string;
   }): Promise<Child> {
     return this.request('/api/children', {
       method: 'POST',
@@ -278,7 +292,14 @@ class ApiClient {
 
   async updateChild(
     id: string,
-    data: { name?: string; dateOfBirth?: string; gender?: 'male' | 'female' | null }
+    data: {
+      name?: string;
+      dateOfBirth?: string;
+      gender?: 'male' | 'female' | null;
+      medicalNotes?: string | null;
+      allergies?: string[] | null;
+      specialNeeds?: string | null;
+    }
   ): Promise<Child> {
     return this.request(`/api/children/${id}`, {
       method: 'PATCH',
@@ -476,6 +497,19 @@ class ApiClient {
     return this.request(`/api/children/${childId}/goals/${goalId}`, {
       method: 'DELETE',
     });
+  }
+
+  // ==================== Goal Templates ====================
+
+  async getGoalTemplates(params?: {
+    dimension?: string;
+    ageBand?: string;
+  }): Promise<GoalTemplate[]> {
+    const query = new URLSearchParams();
+    if (params?.dimension) query.set('dimension', params.dimension);
+    if (params?.ageBand) query.set('ageBand', params.ageBand);
+    const qs = query.toString();
+    return this.request(`/api/goal-templates${qs ? `?${qs}` : ''}`);
   }
 
   // ==================== Insights ====================

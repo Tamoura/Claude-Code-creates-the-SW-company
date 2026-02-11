@@ -141,13 +141,35 @@ const dashboardRoutes: FastifyPluginAsync = async (fastify) => {
       const cached = cacheMap.get(dimension);
 
       if (cached && !cached.stale) {
-        // Use cached score — return score with zero-cost metadata
+        // Use cached score — still query lightweight counts for metadata
+        const [obsCount, milestoneStats] = await Promise.all([
+          fastify.prisma.observation.count({
+            where: { childId, dimension: dimension as Dimension, deletedAt: null },
+          }),
+          fastify.prisma.childMilestone.findMany({
+            where: {
+              childId,
+              milestone: { dimension: dimension as Dimension, ageBand: ageBandForQuery as any },
+            },
+            select: { achieved: true },
+          }),
+        ]);
+
+        const milestoneAchieved = milestoneStats.filter(
+          (m: { achieved: boolean }) => m.achieved
+        ).length;
+        const milestoneTotal = ageBandForQuery
+          ? await fastify.prisma.milestoneDefinition.count({
+              where: { dimension: dimension as Dimension, ageBand: ageBandForQuery as any },
+            })
+          : 0;
+
         scores.push({
           dimension: dimension as DimensionType,
           score: cached.score,
           factors: { observation: 0, milestone: 0, sentiment: 0 },
-          observationCount: 0,
-          milestoneProgress: { achieved: 0, total: 0 },
+          observationCount: obsCount,
+          milestoneProgress: { achieved: milestoneAchieved, total: milestoneTotal },
         });
       } else {
         // Calculate fresh score
