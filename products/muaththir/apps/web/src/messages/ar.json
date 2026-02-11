@@ -162,7 +162,13 @@
     "viewAllMilestones": "عرض جميع المراحل",
     "logNewObservation": "تسجيل ملاحظة جديدة",
     "errorLoading": "خطأ في تحميل لوحة التحكم",
-    "errorSelectChild": "يرجى اختيار طفل"
+    "errorSelectChild": "يرجى اختيار طفل",
+    "activityFeed": "النشاط الأخير",
+    "activityFeedDesc": "آخر الملاحظات والمراحل والإنجازات",
+    "activityNoItems": "لا يوجد نشاط حديث",
+    "activityObserved": "ملاحظة",
+    "activityAchieved": "تحقيق مرحلة",
+    "activityCompleted": "إتمام هدف"
   },
   "observe": {
     "title": "تسجيل ملاحظة",
