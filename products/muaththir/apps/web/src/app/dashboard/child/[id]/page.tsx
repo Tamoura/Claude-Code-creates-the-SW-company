@@ -3,6 +3,7 @@
 import { useState, useEffect } from 'react';
 import Link from 'next/link';
 import { useRouter } from 'next/navigation';
+import { useTranslations } from 'next-intl';
 import { apiClient, type Child } from '../../../../lib/api-client';
 
 interface ChildProfilePageProps {
@@ -11,6 +12,8 @@ interface ChildProfilePageProps {
 
 export default function ChildProfilePage({ params }: ChildProfilePageProps) {
   const router = useRouter();
+  const t = useTranslations('childProfile');
+  const tc = useTranslations('common');
   const [child, setChild] = useState<Child | null>(null);
   const [loading, setLoading] = useState(true);
   const [error, setError] = useState<string | null>(null);
@@ -78,12 +81,12 @@ export default function ChildProfilePage({ params }: ChildProfilePageProps) {
   if (error || !child) {
     return (
       <div className="card bg-red-50 border-red-200">
-        <p className="text-sm text-red-700">{error || 'Child not found'}</p>
+        <p className="text-sm text-red-700">{error || t('childNotFound')}</p>
         <Link
           href="/dashboard"
           className="text-sm text-emerald-600 hover:text-emerald-700 mt-4 inline-block"
         >
-          Back to Dashboard
+          {t('backToDashboard')}
         </Link>
       </div>
     );
@@ -98,7 +101,7 @@ export default function ChildProfilePage({ params }: ChildProfilePageProps) {
             href="/dashboard"
             className="text-sm text-slate-400 hover:text-slate-600 mb-2 inline-block"
           >
-            Dashboard
+            {t('backToDashboard')}
           </Link>
           <h1 className="text-2xl font-bold text-slate-900">{child.name}</h1>
         </div>
@@ -106,38 +109,38 @@ export default function ChildProfilePage({ params }: ChildProfilePageProps) {
           href={`/dashboard/child/${child.id}/edit`}
           className="btn-secondary"
         >
-          Edit Profile
+          {t('editProfile')}
         </Link>
       </div>
 
       {/* Profile Card */}
       <div className="card">
         <h2 className="text-lg font-semibold text-slate-900 mb-6">
-          Profile Information
+          {t('profileInfo')}
         </h2>
         <div className="space-y-4">
           <div className="grid grid-cols-2 gap-4">
             <div>
-              <label className="label">Name</label>
+              <label className="label">{t('name')}</label>
               <p className="text-sm text-slate-900">{child.name}</p>
             </div>
             <div>
-              <label className="label">Gender</label>
+              <label className="label">{t('gender')}</label>
               <p className="text-sm text-slate-900 capitalize">
-                {child.gender || 'Not specified'}
+                {child.gender || t('notSpecified')}
               </p>
             </div>
           </div>
 
           <div className="grid grid-cols-2 gap-4">
             <div>
-              <label className="label">Date of Birth</label>
+              <label className="label">{t('dateOfBirth')}</label>
               <p className="text-sm text-slate-900">
                 {new Date(child.dateOfBirth).toLocaleDateString()}
               </p>
             </div>
             <div>
-              <label className="label">Age</label>
+              <label className="label">{t('age')}</label>
               <p className="text-sm text-slate-900">
                 {calculateAge(child.dateOfBirth)}
               </p>
@@ -145,25 +148,25 @@ export default function ChildProfilePage({ params }: ChildProfilePageProps) {
           </div>
 
           <div>
-            <label className="label">Age Band</label>
+            <label className="label">{t('ageBand')}</label>
             <p className="text-sm text-slate-900">
-              {child.ageBand || 'Not determined'}
+              {child.ageBand || t('notDetermined')}
             </p>
           </div>
 
           <div className="grid grid-cols-2 gap-4">
             <div>
-              <label className="label">Total Observations</label>
+              <label className="label">{t('totalObservations')}</label>
               <p className="text-sm text-slate-900">
                 {child.observationCount || 0}
               </p>
             </div>
             <div>
-              <label className="label">Milestone Progress</label>
+              <label className="label">{t('milestoneProgress')}</label>
               <p className="text-sm text-slate-900">
                 {child.milestoneProgress
                   ? `${child.milestoneProgress.achieved} / ${child.milestoneProgress.total}`
-                  : 'No data'}
+                  : t('noData')}
               </p>
             </div>
           </div>
@@ -173,20 +176,20 @@ export default function ChildProfilePage({ params }: ChildProfilePageProps) {
       {/* Quick Actions */}
       <div className="card">
         <h2 className="text-lg font-semibold text-slate-900 mb-4">
-          Quick Actions
+          {t('quickActions')}
         </h2>
         <div className="space-y-3">
           <Link
             href={`/dashboard/observe?childId=${child.id}`}
             className="btn-primary w-full"
           >
-            Log New Observation
+            {t('logNewObservation')}
           </Link>
           <Link
             href="/dashboard/milestones"
             className="btn-secondary w-full"
           >
-            View Milestones
+            {t('viewMilestones')}
           </Link>
         </div>
       </div>
@@ -194,20 +197,19 @@ export default function ChildProfilePage({ params }: ChildProfilePageProps) {
       {/* Danger Zone */}
       <div className="card border-red-200">
         <h2 className="text-lg font-semibold text-red-700 mb-4">
-          Danger Zone
+          {t('dangerZone')}
         </h2>
         {!showDeleteConfirm ? (
           <button
             onClick={() => setShowDeleteConfirm(true)}
             className="btn-secondary border-red-300 text-red-700 hover:bg-red-50 w-full"
           >
-            Delete Child Profile
+            {t('deleteProfile')}
           </button>
         ) : (
           <div className="space-y-3">
             <p className="text-sm text-red-700">
-              Are you sure? This will permanently delete {child.name}&apos;s profile and all
-              associated observations and milestone data. This action cannot be undone.
+              {t('deleteConfirm', { name: child.name })}
             </p>
             <div className="flex gap-3">
               <button
@@ -215,14 +217,14 @@ export default function ChildProfilePage({ params }: ChildProfilePageProps) {
                 disabled={deleting}
                 className="btn-primary bg-red-600 hover:bg-red-700 flex-1"
               >
-                {deleting ? 'Deleting...' : 'Yes, Delete Permanently'}
+                {deleting ? t('deleting') : t('deleteConfirmBtn')}
               </button>
               <button
                 onClick={() => setShowDeleteConfirm(false)}
                 disabled={deleting}
                 className="btn-secondary flex-1"
               >
-                Cancel
+                {tc('cancel')}
               </button>
             </div>
           </div>

@@ -3,6 +3,7 @@
 import { useState, useEffect } from 'react';
 import Link from 'next/link';
 import { useRouter } from 'next/navigation';
+import { useTranslations } from 'next-intl';
 import { apiClient, type Child } from '../../../../../lib/api-client';
 
 interface EditChildProfilePageProps {
@@ -11,6 +12,8 @@ interface EditChildProfilePageProps {
 
 export default function EditChildProfilePage({ params }: EditChildProfilePageProps) {
   const router = useRouter();
+  const t = useTranslations('editChild');
+  const tc = useTranslations('common');
   const [child, setChild] = useState<Child | null>(null);
   const [loading, setLoading] = useState(true);
   const [saving, setSaving] = useState(false);
@@ -119,9 +122,9 @@ export default function EditChildProfilePage({ params }: EditChildProfilePagePro
           href={`/dashboard/child/${params.id}`}
           className="text-sm text-slate-400 hover:text-slate-600 mb-2 inline-block"
         >
-          Back to Profile
+          {t('backToProfile')}
         </Link>
-        <h1 className="text-2xl font-bold text-slate-900">Edit Child Profile</h1>
+        <h1 className="text-2xl font-bold text-slate-900">{t('title')}</h1>
       </div>
 
       {/* Edit Form */}
@@ -135,7 +138,7 @@ export default function EditChildProfilePage({ params }: EditChildProfilePagePro
 
           <div>
             <label htmlFor="name" className="label">
-              Name <span className="text-red-500">*</span>
+              {t('nameLabel')} <span className="text-red-500">*</span>
             </label>
             <input
               id="name"
@@ -143,7 +146,7 @@ export default function EditChildProfilePage({ params }: EditChildProfilePagePro
               value={name}
               onChange={(e) => setName(e.target.value)}
               className="input-field"
-              placeholder="Child's name"
+              placeholder={t('namePlaceholder')}
               required
               disabled={saving}
             />
@@ -151,7 +154,7 @@ export default function EditChildProfilePage({ params }: EditChildProfilePagePro
 
           <div>
             <label htmlFor="dateOfBirth" className="label">
-              Date of Birth <span className="text-red-500">*</span>
+              {t('dateOfBirth')} <span className="text-red-500">*</span>
             </label>
             <input
               id="dateOfBirth"
@@ -167,7 +170,7 @@ export default function EditChildProfilePage({ params }: EditChildProfilePagePro
 
           <div>
             <label htmlFor="gender" className="label">
-              Gender
+              {t('gender')}
             </label>
             <select
               id="gender"
@@ -176,9 +179,9 @@ export default function EditChildProfilePage({ params }: EditChildProfilePagePro
               className="input-field"
               disabled={saving}
             >
-              <option value="">Prefer not to say</option>
-              <option value="male">Male</option>
-              <option value="female">Female</option>
+              <option value="">{t('preferNotToSay')}</option>
+              <option value="male">{t('male')}</option>
+              <option value="female">{t('female')}</option>
             </select>
           </div>
 
@@ -206,9 +209,9 @@ export default function EditChildProfilePage({ params }: EditChildProfilePagePro
                   />
                 </svg>
                 <span className="text-sm font-medium text-slate-700">
-                  Health &amp; Medical
+                  {t('healthMedical')}
                 </span>
-                <span className="text-xs text-slate-400">(optional)</span>
+                <span className="text-xs text-slate-400">{t('optional')}</span>
               </div>
               <svg
                 className={`h-4 w-4 text-slate-400 transition-transform ${
@@ -232,13 +235,13 @@ export default function EditChildProfilePage({ params }: EditChildProfilePagePro
               <div className="mt-4 space-y-4">
                 <div>
                   <label htmlFor="medical-notes" className="label">
-                    Medical Notes
+                    {t('medicalNotes')}
                   </label>
                   <textarea
                     id="medical-notes"
                     rows={2}
                     className="input-field resize-none"
-                    placeholder="e.g., Asthma, uses inhaler"
+                    placeholder={t('medicalPlaceholder')}
                     value={medicalNotes}
                     onChange={(e) => setMedicalNotes(e.target.value)}
                     maxLength={1000}
@@ -248,31 +251,31 @@ export default function EditChildProfilePage({ params }: EditChildProfilePagePro
 
                 <div>
                   <label htmlFor="allergies" className="label">
-                    Allergies
+                    {t('allergies')}
                   </label>
                   <input
                     id="allergies"
                     type="text"
                     className="input-field"
-                    placeholder="e.g., Peanuts, Dairy (comma-separated)"
+                    placeholder={t('allergiesPlaceholder')}
                     value={allergiesText}
                     onChange={(e) => setAllergiesText(e.target.value)}
                     disabled={saving}
                   />
                   <p className="mt-1 text-xs text-slate-400">
-                    Separate multiple allergies with commas.
+                    {t('allergiesHint')}
                   </p>
                 </div>
 
                 <div>
                   <label htmlFor="special-needs" className="label">
-                    Special Needs
+                    {t('specialNeeds')}
                   </label>
                   <textarea
                     id="special-needs"
                     rows={2}
                     className="input-field resize-none"
-                    placeholder="e.g., ADHD - on medication"
+                    placeholder={t('specialNeedsPlaceholder')}
                     value={specialNeeds}
                     onChange={(e) => setSpecialNeeds(e.target.value)}
                     maxLength={1000}
@@ -289,13 +292,13 @@ export default function EditChildProfilePage({ params }: EditChildProfilePagePro
               disabled={saving || !name || !dateOfBirth}
               className="btn-primary flex-1"
             >
-              {saving ? 'Saving...' : 'Save Changes'}
+              {saving ? t('saving') : t('saveChanges')}
             </button>
             <Link
               href={`/dashboard/child/${params.id}`}
               className="btn-secondary flex-1 text-center"
             >
-              Cancel
+              {tc('cancel')}
             </Link>
           </div>
         </form>

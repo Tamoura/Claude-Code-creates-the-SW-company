@@ -3,10 +3,12 @@
 import Link from 'next/link';
 import { useState, useEffect, Suspense } from 'react';
 import { useSearchParams } from 'next/navigation';
+import { useTranslations } from 'next-intl';
 import Header from '../../components/layout/Header';
 import { apiClient } from '../../lib/api-client';
 
 function ResetPasswordForm() {
+  const t = useTranslations('resetPassword');
   const searchParams = useSearchParams();
   const [token, setToken] = useState('');
   const [password, setPassword] = useState('');
@@ -20,8 +22,9 @@ function ResetPasswordForm() {
     if (tokenParam) {
       setToken(tokenParam);
     } else {
-      setError('Invalid or missing reset token');
+      setError(t('invalidToken'));
     }
+  // eslint-disable-next-line react-hooks/exhaustive-deps
   }, [searchParams]);
 
   const handleSubmit = async (e: React.FormEvent) => {
@@ -29,12 +32,12 @@ function ResetPasswordForm() {
     setError('');
 
     if (password !== confirmPassword) {
-      setError('Passwords do not match');
+      setError(t('passwordsMismatch'));
       return;
     }
 
     if (!token) {
-      setError('Invalid or missing reset token');
+      setError(t('invalidToken'));
       return;
     }
 
@@ -57,10 +60,10 @@ function ResetPasswordForm() {
         <div className="w-full max-w-md">
           <div className="text-center mb-8">
             <h1 className="text-2xl font-bold text-slate-900">
-              Set new password
+              {t('title')}
             </h1>
             <p className="mt-2 text-sm text-slate-600">
-              Choose a strong password for your account.
+              {t('subtitle')}
             </p>
           </div>
 
@@ -72,13 +75,13 @@ function ResetPasswordForm() {
                 </svg>
               </div>
               <h2 className="text-lg font-semibold text-slate-900 mb-2">
-                Password updated
+                {t('passwordUpdated')}
               </h2>
               <p className="text-sm text-slate-600 mb-6">
-                Your password has been reset. You can now log in.
+                {t('passwordUpdatedDesc')}
               </p>
               <Link href="/login" className="btn-primary">
-                Log In
+                {t('logIn')}
               </Link>
             </div>
           ) : (
@@ -94,7 +97,7 @@ function ResetPasswordForm() {
 
               <div>
                 <label htmlFor="password" className="label">
-                  New Password
+                  {t('newPassword')}
                 </label>
                 <input
                   id="password"
@@ -102,7 +105,7 @@ function ResetPasswordForm() {
                   type="password"
                   required
                   className="input-field"
-                  placeholder="Min 8 characters, 1 uppercase, 1 number"
+                  placeholder={t('newPasswordPlaceholder')}
                   value={password}
                   onChange={(e) => setPassword(e.target.value)}
                   autoComplete="new-password"
@@ -112,7 +115,7 @@ function ResetPasswordForm() {
 
               <div>
                 <label htmlFor="confirmPassword" className="label">
-                  Confirm Password
+                  {t('confirmPassword')}
                 </label>
                 <input
                   id="confirmPassword"
@@ -120,7 +123,7 @@ function ResetPasswordForm() {
                   type="password"
                   required
                   className="input-field"
-                  placeholder="Re-enter your password"
+                  placeholder={t('confirmPlaceholder')}
                   value={confirmPassword}
                   onChange={(e) => setConfirmPassword(e.target.value)}
                   autoComplete="new-password"
@@ -133,7 +136,7 @@ function ResetPasswordForm() {
                 className="btn-primary w-full"
                 disabled={isLoading}
               >
-                {isLoading ? 'Resetting...' : 'Reset Password'}
+                {isLoading ? t('resetting') : t('resetPassword')}
               </button>
             </form>
           )}

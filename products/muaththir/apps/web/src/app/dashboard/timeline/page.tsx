@@ -1,10 +1,14 @@
 'use client';
 
 import { useState, useEffect } from 'react';
+import { useTranslations } from 'next-intl';
 import { DIMENSIONS } from '../../../lib/dimensions';
 import { apiClient, type Child, type Observation } from '../../../lib/api-client';
 
 export default function TimelinePage() {
+  const t = useTranslations('timeline');
+  const tc = useTranslations('common');
+  const td = useTranslations('dimensions');
   const [selectedDimension, setSelectedDimension] = useState<string>('all');
   const [selectedSentiment, setSelectedSentiment] = useState<string>('');
   const [children, setChildren] = useState<Child[]>([]);
@@ -130,7 +134,7 @@ export default function TimelinePage() {
 
   const handleDelete = async (observationId: string) => {
     if (!selectedChildId) return;
-    if (!confirm('Are you sure you want to delete this observation?')) return;
+    if (!confirm(t('confirmDelete'))) return;
 
     try {
       await apiClient.deleteObservation(selectedChildId, observationId);
@@ -155,12 +159,7 @@ export default function TimelinePage() {
   };
 
   const getSentimentLabel = (sentiment: string): string => {
-    const labels: Record<string, string> = {
-      positive: 'Positive',
-      neutral: 'Neutral',
-      needs_attention: 'Needs Attention',
-    };
-    return labels[sentiment] || sentiment;
+    return t(sentiment as 'positive' | 'neutral' | 'needsAttention');
   };
 
   // Loading state
@@ -178,9 +177,9 @@ export default function TimelinePage() {
   return (
     <div className="space-y-8">
       <div>
-        <h1 className="text-2xl font-bold text-slate-900">Timeline</h1>
+        <h1 className="text-2xl font-bold text-slate-900">{t('title')}</h1>
         <p className="text-sm text-slate-500 mt-1">
-          A chronological view of all observations.
+          {t('subtitle')}
         </p>
       </div>
 
@@ -188,7 +187,7 @@ export default function TimelinePage() {
       {children.length > 1 && (
         <div className="mb-4">
           <label htmlFor="child-select-timeline" className="label">
-            Select Child
+            {tc('selectChild')}
           </label>
           <select
             id="child-select-timeline"
@@ -196,7 +195,7 @@ export default function TimelinePage() {
             value={selectedChildId}
             onChange={(e) => setSelectedChildId(e.target.value)}
           >
-            <option value="">Choose a child...</option>
+            <option value="">{tc('chooseChild')}</option>
             {children.map((child) => (
               <option key={child.id} value={child.id}>
                 {child.name}
@@ -225,7 +224,7 @@ export default function TimelinePage() {
                 : 'bg-slate-100 text-slate-600 hover:bg-slate-200'
             }`}
           >
-            All Dimensions
+            {t('allDimensions')}
           </button>
           {DIMENSIONS.map((dim) => (
             <button
@@ -254,7 +253,7 @@ export default function TimelinePage() {
                 }
                 aria-hidden="true"
               />
-              {dim.name}
+              {td(dim.slug)}
             </button>
           ))}
         </div>
@@ -266,10 +265,10 @@ export default function TimelinePage() {
             value={selectedSentiment}
             onChange={(e) => setSelectedSentiment(e.target.value)}
           >
-            <option value="">All Sentiments</option>
-            <option value="positive">Positive</option>
-            <option value="neutral">Neutral</option>
-            <option value="needs_attention">Needs Attention</option>
+            <option value="">{t('allSentiments')}</option>
+            <option value="positive">{t('positive')}</option>
+            <option value="neutral">{t('neutral')}</option>
+            <option value="needs_attention">{t('needsAttention')}</option>
           </select>
 
           <input
@@ -298,7 +297,7 @@ export default function TimelinePage() {
               }}
               className="text-xs text-slate-600 hover:text-slate-900 underline"
             >
-              Clear Filters
+              {t('clearFilters')}
             </button>
           )}
         </div>
@@ -308,10 +307,10 @@ export default function TimelinePage() {
       {!selectedChildId && (
         <div className="card text-center py-16">
           <h2 className="text-sm font-medium text-slate-900 mb-1">
-            No child selected
+            {t('noChildSelected')}
           </h2>
           <p className="text-xs text-slate-500">
-            Please select a child to view their timeline.
+            {t('noChildSelectedDesc')}
           </p>
         </div>
       )}
@@ -325,10 +324,10 @@ export default function TimelinePage() {
             </svg>
           </div>
           <h2 className="text-sm font-medium text-slate-900 mb-1">
-            No observations yet
+            {t('noObservationsTitle')}
           </h2>
           <p className="text-xs text-slate-500">
-            Your child&apos;s timeline will appear here as you log observations.
+            {t('noObservationsDesc')}
           </p>
         </div>
       )}
@@ -350,7 +349,7 @@ export default function TimelinePage() {
                       color: getDimensionColor(obs.dimension),
                     }}
                   >
-                    {DIMENSIONS.find((d) => d.slug === obs.dimension)?.name || obs.dimension}
+                    {td(obs.dimension)}
                   </span>
                   <span
                     className="text-xs font-medium px-2 py-0.5 rounded-full"
@@ -366,7 +365,7 @@ export default function TimelinePage() {
                   type="button"
                   onClick={() => handleDelete(obs.id)}
                   className="text-slate-400 hover:text-red-600 transition-colors"
-                  aria-label="Delete observation"
+                  aria-label={t('deleteObservation')}
                 >
                   <svg className="h-4 w-4" fill="none" viewBox="0 0 24 24" stroke="currentColor">
                     <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M19 7l-.867 12.142A2 2 0 0116.138 21H7.862a2 2 0 01-1.995-1.858L5 7m5 4v6m4-6v6m1-10V4a1 1 0 00-1-1h-4a1 1 0 00-1 1v3M4 7h16" />
@@ -409,7 +408,7 @@ export default function TimelinePage() {
                 disabled={isLoadingMore}
                 className="btn-secondary py-2 px-6 text-sm"
               >
-                {isLoadingMore ? 'Loading...' : 'Load More'}
+                {isLoadingMore ? t('loadingMore') : t('loadMore')}
               </button>
             </div>
           )}

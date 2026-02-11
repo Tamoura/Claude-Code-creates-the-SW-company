@@ -2,10 +2,13 @@
 
 import { useState, useEffect } from 'react';
 import Link from 'next/link';
+import { useTranslations } from 'next-intl';
 import { getDimensionBySlug } from '../../../lib/dimensions';
 import { apiClient, type Child, type InsightsData } from '../../../lib/api-client';
 
 export default function InsightsPage() {
+  const t = useTranslations('insights');
+  const tc = useTranslations('common');
   const [children, setChildren] = useState<Child[]>([]);
   const [selectedChildId, setSelectedChildId] = useState<string | null>(null);
   const [insights, setInsights] = useState<InsightsData | null>(null);
@@ -51,11 +54,11 @@ export default function InsightsPage() {
   }, [selectedChildId]);
 
   const trendIcon = (trend: string) => {
-    if (trend === 'improving') return <span className="text-emerald-500" title="Improving">&#9650;</span>;
-    if (trend === 'declining') return <span className="text-red-500" title="Declining">&#9660;</span>;
-    if (trend === 'needs_attention') return <span className="text-amber-500" title="Needs attention">&#9888;</span>;
-    if (trend === 'no_data') return <span className="text-slate-300" title="No data">&mdash;</span>;
-    return <span className="text-slate-400" title="Stable">&#9644;</span>;
+    if (trend === 'improving') return <span className="text-emerald-500" title={t('improving')}>&#9650;</span>;
+    if (trend === 'declining') return <span className="text-red-500" title={t('declining')}>&#9660;</span>;
+    if (trend === 'needs_attention') return <span className="text-amber-500" title={t('needsAttention')}>&#9888;</span>;
+    if (trend === 'no_data') return <span className="text-slate-300" title={t('noData')}>&mdash;</span>;
+    return <span className="text-slate-400" title={t('stable')}>&#9644;</span>;
   };
 
   const priorityBadge = (priority: string) => {
@@ -75,9 +78,9 @@ export default function InsightsPage() {
     return (
       <div className="flex items-center justify-center min-h-[60vh]">
         <div className="text-center max-w-md">
-          <h2 className="text-xl font-semibold text-slate-900 mb-2">No Children Yet</h2>
-          <p className="text-sm text-slate-500 mb-6">Add a child profile and log observations to see insights.</p>
-          <Link href="/onboarding/child" className="btn-primary">Add Child Profile</Link>
+          <h2 className="text-xl font-semibold text-slate-900 mb-2">{tc('noChildrenYet')}</h2>
+          <p className="text-sm text-slate-500 mb-6">{t('noChildrenDesc')}</p>
+          <Link href="/onboarding/child" className="btn-primary">{tc('addChildProfile')}</Link>
         </div>
       </div>
     );
@@ -87,9 +90,9 @@ export default function InsightsPage() {
     <div className="space-y-6">
       <div className="flex items-center justify-between">
         <div>
-          <h1 className="text-2xl font-bold text-slate-900">AI Insights</h1>
+          <h1 className="text-2xl font-bold text-slate-900">{t('title')}</h1>
           <p className="text-sm text-slate-500 mt-1">
-            Development analysis and personalised recommendations.
+            {t('subtitle')}
           </p>
         </div>
         {children.length > 1 && (
@@ -97,7 +100,7 @@ export default function InsightsPage() {
             value={selectedChildId || ''}
             onChange={(e) => setSelectedChildId(e.target.value)}
             className="px-3 py-2 border border-slate-200 rounded-lg text-sm"
-            aria-label="Select child"
+            aria-label={tc('selectChild')}
           >
             {children.map(c => <option key={c.id} value={c.id}>{c.name}</option>)}
           </select>
@@ -120,14 +123,14 @@ export default function InsightsPage() {
         <>
           {/* Summary */}
           <div className="card border-l-4 border-l-emerald-500">
-            <h2 className="text-lg font-semibold text-slate-900 mb-2">Summary</h2>
+            <h2 className="text-lg font-semibold text-slate-900 mb-2">{t('summary')}</h2>
             <p className="text-sm text-slate-600">{insights.summary}</p>
           </div>
 
           {/* Strengths */}
           {insights.strengths.length > 0 && (
             <section>
-              <h2 className="text-lg font-semibold text-slate-900 mb-3">Strengths</h2>
+              <h2 className="text-lg font-semibold text-slate-900 mb-3">{t('strengths')}</h2>
               <div className="grid gap-3 sm:grid-cols-2 lg:grid-cols-3">
                 {insights.strengths.map((s, i) => {
                   const dim = getDimensionBySlug(s.dimension);
@@ -151,7 +154,7 @@ export default function InsightsPage() {
           {/* Areas for Growth */}
           {insights.areasForGrowth.length > 0 && (
             <section>
-              <h2 className="text-lg font-semibold text-slate-900 mb-3">Areas for Growth</h2>
+              <h2 className="text-lg font-semibold text-slate-900 mb-3">{t('areasForGrowth')}</h2>
               <div className="space-y-3">
                 {insights.areasForGrowth.map((a, i) => {
                   const dim = getDimensionBySlug(a.dimension);
@@ -191,7 +194,7 @@ export default function InsightsPage() {
           {/* Recommendations */}
           {insights.recommendations.length > 0 && (
             <section>
-              <h2 className="text-lg font-semibold text-slate-900 mb-3">Recommendations</h2>
+              <h2 className="text-lg font-semibold text-slate-900 mb-3">{t('recommendations')}</h2>
               <div className="space-y-2">
                 {insights.recommendations.map((r, i) => (
                   <div key={i} className="card flex items-start gap-3">
@@ -207,10 +210,10 @@ export default function InsightsPage() {
 
           {/* Dimension Trends */}
           <section>
-            <h2 className="text-lg font-semibold text-slate-900 mb-3">Dimension Trends</h2>
+            <h2 className="text-lg font-semibold text-slate-900 mb-3">{t('dimensionTrends')}</h2>
             <div className="card">
               <div className="flex items-center gap-2 mb-4">
-                <span className="text-sm text-slate-600">Overall:</span>
+                <span className="text-sm text-slate-600">{t('overall')}</span>
                 <span className="text-sm font-medium text-slate-900 capitalize">
                   {insights.trends.overallDirection.replace('_', ' ')}
                 </span>
@@ -235,17 +238,17 @@ export default function InsightsPage() {
           </section>
 
           <p className="text-xs text-slate-400 text-center">
-            Generated at {new Date(insights.generatedAt).toLocaleString()}
+            {t('generatedAt', { time: new Date(insights.generatedAt).toLocaleString() })}
           </p>
         </>
       ) : (
         <div className="card text-center py-12">
-          <h3 className="text-sm font-medium text-slate-900 mb-1">No insights available</h3>
+          <h3 className="text-sm font-medium text-slate-900 mb-1">{t('noInsightsTitle')}</h3>
           <p className="text-xs text-slate-500 mb-4">
-            Log more observations to generate AI insights.
+            {t('noInsightsDesc')}
           </p>
           <Link href="/dashboard/observe" className="btn-primary text-sm py-2 px-4">
-            Log Observation
+            {t('logObservation')}
           </Link>
         </div>
       )}

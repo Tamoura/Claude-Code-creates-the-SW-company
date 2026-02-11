@@ -1,6 +1,7 @@
 'use client';
 
 import { useEffect, useState } from 'react';
+import { useTranslations } from 'next-intl';
 import { useRouter } from 'next/navigation';
 import Sidebar from './Sidebar';
 import { TokenManager } from '../../lib/token-manager';
@@ -10,6 +11,7 @@ export default function DashboardLayout({
 }: {
   children: React.ReactNode;
 }) {
+  const t = useTranslations('dashboardLayout');
   const router = useRouter();
   const [isAuthenticated, setIsAuthenticated] = useState(false);
   const [isChecking, setIsChecking] = useState(true);
@@ -34,7 +36,7 @@ export default function DashboardLayout({
       <div className="min-h-screen bg-slate-50 flex items-center justify-center">
         <div className="text-center">
           <div className="inline-block h-8 w-8 animate-spin rounded-full border-4 border-solid border-emerald-600 border-r-transparent"></div>
-          <p className="mt-4 text-sm text-slate-500">Loading...</p>
+          <p className="mt-4 text-sm text-slate-500">{t('loading')}</p>
         </div>
       </div>
     );
@@ -43,7 +45,7 @@ export default function DashboardLayout({
   return (
     <div className="min-h-screen bg-slate-50">
       <Sidebar />
-      <main className="lg:pl-64">
+      <main className="lg:ps-64">
         <div className="px-4 sm:px-6 lg:px-8 py-6">{children}</div>
       </main>
     </div>

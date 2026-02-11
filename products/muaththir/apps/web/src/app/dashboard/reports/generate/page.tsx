@@ -1,10 +1,15 @@
+'use client';
+
+import { useTranslations } from 'next-intl';
 import ComingSoon from '../../../../components/common/ComingSoon';
 
 export default function GenerateReportPage() {
+  const t = useTranslations('generateReport');
+
   return (
     <ComingSoon
-      title="Generate Report"
-      description="Configure report format, date range, and dimensions to include. Coming in Phase 2."
+      title={t('title')}
+      description={t('description')}
       backHref="/dashboard/reports"
       backLabel="Back to Reports"
     />

@@ -2,10 +2,14 @@
 
 import { useState, useEffect } from 'react';
 import Link from 'next/link';
-import { DIMENSIONS, getDimensionBySlug } from '../../../lib/dimensions';
+import { useTranslations } from 'next-intl';
+import { getDimensionBySlug } from '../../../lib/dimensions';
 import { apiClient, type Child, type DashboardData } from '../../../lib/api-client';
 
 export default function ReportsPage() {
+  const t = useTranslations('reports');
+  const tc = useTranslations('common');
+  const td = useTranslations('dimensions');
   const [children, setChildren] = useState<Child[]>([]);
   const [selectedChildId, setSelectedChildId] = useState<string | null>(null);
   const [dashboard, setDashboard] = useState<DashboardData | null>(null);
@@ -58,9 +62,9 @@ export default function ReportsPage() {
     return (
       <div className="flex items-center justify-center min-h-[60vh]">
         <div className="text-center max-w-md">
-          <h2 className="text-xl font-semibold text-slate-900 mb-2">No Children Yet</h2>
-          <p className="text-sm text-slate-500 mb-6">Add a child profile to generate reports.</p>
-          <Link href="/onboarding/child" className="btn-primary">Add Child Profile</Link>
+          <h2 className="text-xl font-semibold text-slate-900 mb-2">{tc('noChildrenYet')}</h2>
+          <p className="text-sm text-slate-500 mb-6">{t('noChildrenDesc')}</p>
+          <Link href="/onboarding/child" className="btn-primary">{tc('addChildProfile')}</Link>
         </div>
       </div>
     );
@@ -70,8 +74,8 @@ export default function ReportsPage() {
     <div className="space-y-6">
       <div className="flex items-center justify-between print:hidden">
         <div>
-          <h1 className="text-2xl font-bold text-slate-900">Progress Report</h1>
-          <p className="text-sm text-slate-500 mt-1">View and print your child&apos;s development summary.</p>
+          <h1 className="text-2xl font-bold text-slate-900">{t('title')}</h1>
+          <p className="text-sm text-slate-500 mt-1">{t('subtitle')}</p>
         </div>
         <div className="flex items-center gap-3">
           {children.length > 1 && (
@@ -79,13 +83,13 @@ export default function ReportsPage() {
               value={selectedChildId || ''}
               onChange={(e) => setSelectedChildId(e.target.value)}
               className="px-3 py-2 border border-slate-200 rounded-lg text-sm"
-              aria-label="Select child"
+              aria-label={tc('selectChild')}
             >
               {children.map(c => <option key={c.id} value={c.id}>{c.name}</option>)}
             </select>
           )}
           <button onClick={handlePrint} className="btn-primary text-sm py-2 px-4">
-            Print Report
+            {t('printReport')}
           </button>
         </div>
       </div>
@@ -110,22 +114,22 @@ export default function ReportsPage() {
               <div>
                 <h2 className="text-xl font-bold text-slate-900">{dashboard.childName}</h2>
                 <p className="text-sm text-slate-500">
-                  Age Band: {dashboard.ageBand ? dashboard.ageBand.replace('_', ' ') : 'N/A'}
+                  {t('ageBand', { band: dashboard.ageBand ? dashboard.ageBand.replace('_', ' ') : 'N/A' })}
                 </p>
               </div>
               <div className="text-right">
                 <p className="text-3xl font-bold text-emerald-600">{dashboard.overallScore}</p>
-                <p className="text-xs text-slate-500">Overall Score</p>
+                <p className="text-xs text-slate-500">{t('overallScore')}</p>
               </div>
             </div>
             <p className="text-xs text-slate-400 mt-3">
-              Report generated: {new Date().toLocaleDateString('en-GB', { day: 'numeric', month: 'long', year: 'numeric' })}
+              {t('reportGenerated', { date: new Date().toLocaleDateString('en-GB', { day: 'numeric', month: 'long', year: 'numeric' }) })}
             </p>
           </div>
 
           {/* Dimension Scores */}
           <div className="card">
-            <h3 className="text-lg font-semibold text-slate-900 mb-4">Dimension Scores</h3>
+            <h3 className="text-lg font-semibold text-slate-900 mb-4">{t('dimensionScores')}</h3>
             <div className="space-y-4">
               {dashboard.dimensions.map(dimScore => {
                 const dim = getDimensionBySlug(dimScore.dimension);
@@ -135,7 +139,7 @@ export default function ReportsPage() {
                     <div className="flex items-center justify-between mb-1">
                       <div className="flex items-center gap-2">
                         <span className="h-3 w-3 rounded-full" style={{ backgroundColor: dim?.colour || '#94a3b8' }} />
-                        <span className="text-sm font-medium text-slate-700">{dim?.name || dimScore.dimension}</span>
+                        <span className="text-sm font-medium text-slate-700">{dim ? td(dim.slug as any) : dimScore.dimension}</span>
                       </div>
                       <span className="text-sm font-bold text-slate-900">{score}/100</span>
                     </div>
@@ -146,9 +150,9 @@ export default function ReportsPage() {
                       />
                     </div>
                     <div className="flex justify-between text-xs text-slate-400 mt-1">
-                      <span>{dimScore.observationCount} observations</span>
+                      <span>{t('observations', { count: dimScore.observationCount })}</span>
                       <span>
-                        {dimScore.milestoneProgress.achieved}/{dimScore.milestoneProgress.total} milestones
+                        {t('milestonesProgress', { achieved: dimScore.milestoneProgress.achieved, total: dimScore.milestoneProgress.total })}
                       </span>
                     </div>
                   </div>
@@ -159,16 +163,16 @@ export default function ReportsPage() {
 
           {/* Score Breakdown */}
           <div className="card">
-            <h3 className="text-lg font-semibold text-slate-900 mb-4">Score Factors</h3>
+            <h3 className="text-lg font-semibold text-slate-900 mb-4">{t('scoreFactors')}</h3>
             <div className="overflow-x-auto">
               <table className="w-full text-sm">
                 <thead>
                   <tr className="border-b border-slate-200">
-                    <th className="text-left py-2 text-xs font-medium text-slate-500">Dimension</th>
-                    <th className="text-center py-2 text-xs font-medium text-slate-500">Observation (40%)</th>
-                    <th className="text-center py-2 text-xs font-medium text-slate-500">Milestone (40%)</th>
-                    <th className="text-center py-2 text-xs font-medium text-slate-500">Sentiment (20%)</th>
-                    <th className="text-center py-2 text-xs font-medium text-slate-500">Total</th>
+                    <th className="text-left py-2 text-xs font-medium text-slate-500">{t('dimensionHeader')}</th>
+                    <th className="text-center py-2 text-xs font-medium text-slate-500">{t('observationFactor')}</th>
+                    <th className="text-center py-2 text-xs font-medium text-slate-500">{t('milestoneFactor')}</th>
+                    <th className="text-center py-2 text-xs font-medium text-slate-500">{t('sentimentFactor')}</th>
+                    <th className="text-center py-2 text-xs font-medium text-slate-500">{t('totalFactor')}</th>
                   </tr>
                 </thead>
                 <tbody>
@@ -177,7 +181,7 @@ export default function ReportsPage() {
                     return (
                       <tr key={dimScore.dimension} className="border-b border-slate-100">
                         <td className="py-2">
-                          <span className="text-xs font-medium text-slate-700">{dim?.name || dimScore.dimension}</span>
+                          <span className="text-xs font-medium text-slate-700">{dim ? td(dim.slug as any) : dimScore.dimension}</span>
                         </td>
                         <td className="text-center py-2 text-xs text-slate-600">{dimScore.factors.observation}</td>
                         <td className="text-center py-2 text-xs text-slate-600">{dimScore.factors.milestone}</td>
@@ -193,7 +197,7 @@ export default function ReportsPage() {
 
           {/* Print-only footer */}
           <div className="hidden print:block text-center text-xs text-slate-400 mt-8 pt-4 border-t">
-            <p>Generated by Mu&apos;aththir - Holistic Child Development Tracker</p>
+            <p>{t('generatedBy')}</p>
             <p>www.muaththir.app</p>
           </div>
         </div>
