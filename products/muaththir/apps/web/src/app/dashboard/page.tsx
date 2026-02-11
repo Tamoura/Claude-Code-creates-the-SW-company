@@ -24,11 +24,15 @@ export default function DashboardPage() {
 
   // Load children on mount
   useEffect(() => {
+    let cancelled = false;
+
     const loadChildren = async () => {
       try {
         setLoading(true);
         setError(null);
         const response = await apiClient.getChildren(1, 50);
+        if (cancelled) return;
+
         setChildren(response.data);
 
         // Auto-select first child if available
@@ -36,18 +40,24 @@ export default function DashboardPage() {
           setSelectedChildId(response.data[0].id);
         }
       } catch (err) {
+        if (cancelled) return;
         setError(err instanceof Error ? err.message : 'Failed to load children');
       } finally {
-        setLoading(false);
+        if (!cancelled) setLoading(false);
       }
     };
 
     loadChildren();
+    return () => {
+      cancelled = true;
+    };
   }, []);
 
   // Load dashboard data and observations when child is selected
   useEffect(() => {
     if (!selectedChildId) return;
+
+    let cancelled = false;
 
     const loadChildData = async () => {
       try {
@@ -61,17 +71,23 @@ export default function DashboardPage() {
           apiClient.getMilestonesDue(selectedChildId),
         ]);
 
+        if (cancelled) return;
+
         setDashboardData(dashData);
         setObservations(obsResponse.data);
         setMilestonesDue(milestonesResponse.data);
       } catch (err) {
+        if (cancelled) return;
         setError(err instanceof Error ? err.message : 'Failed to load dashboard data');
       } finally {
-        setLoading(false);
+        if (!cancelled) setLoading(false);
       }
     };
 
     loadChildData();
+    return () => {
+      cancelled = true;
+    };
   }, [selectedChildId]);
 
   // Transform dashboard data to radar chart format
@@ -154,13 +170,14 @@ export default function DashboardPage() {
 
       {/* Error State */}
       {error && (
-        <div className="card bg-red-50 border border-red-200">
+        <div className="card bg-red-50 border border-red-200" role="alert">
           <div className="flex items-start gap-3">
             <svg
               className="h-5 w-5 text-red-500 flex-shrink-0 mt-0.5"
               fill="none"
               viewBox="0 0 24 24"
               stroke="currentColor"
+              aria-hidden="true"
             >
               <path
                 strokeLinecap="round"
@@ -183,7 +200,9 @@ export default function DashboardPage() {
           Development Overview
         </h2>
         {loading ? (
-          <div className="w-full h-80 bg-slate-100 rounded-2xl animate-pulse" />
+          <div className="w-full h-80 bg-slate-100 rounded-2xl animate-pulse" aria-live="polite" aria-busy="true">
+            <span className="sr-only">Loading chart data...</span>
+          </div>
         ) : (
           <>
             <RadarChart scores={radarScores} />
@@ -206,12 +225,14 @@ export default function DashboardPage() {
           Dimensions
         </h2>
         {loading ? (
-          <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-3 gap-4">
+          <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-3 gap-4" aria-live="polite" aria-busy="true">
             {DIMENSIONS.map((dimension) => (
               <div
                 key={dimension.slug}
                 className="h-40 bg-slate-100 rounded-2xl animate-pulse"
-              />
+              >
+                <span className="sr-only">Loading {dimension.name} dimension...</span>
+              </div>
             ))}
           </div>
         ) : (
@@ -239,12 +260,14 @@ export default function DashboardPage() {
           Recent Observations
         </h2>
         {loading ? (
-          <div className="space-y-3">
+          <div className="space-y-3" aria-live="polite" aria-busy="true">
             {[1, 2, 3].map((i) => (
               <div
                 key={i}
                 className="h-32 bg-slate-100 rounded-2xl animate-pulse"
-              />
+              >
+                <span className="sr-only">Loading observation {i}...</span>
+              </div>
             ))}
           </div>
         ) : observations.length > 0 ? (
@@ -310,9 +333,11 @@ export default function DashboardPage() {
           Milestones Due
         </h2>
         {loading ? (
-          <div className="space-y-3">
+          <div className="space-y-3" aria-live="polite" aria-busy="true">
             {[1, 2, 3].map((i) => (
-              <div key={i} className="h-20 bg-slate-100 rounded-2xl animate-pulse" />
+              <div key={i} className="h-20 bg-slate-100 rounded-2xl animate-pulse">
+                <span className="sr-only">Loading milestone {i}...</span>
+              </div>
             ))}
           </div>
         ) : milestonesDue.length > 0 ? (

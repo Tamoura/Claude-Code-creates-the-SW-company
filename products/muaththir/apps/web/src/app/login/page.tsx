@@ -98,6 +98,7 @@ export default function LoginPage() {
               type="submit"
               className="btn-primary w-full"
               disabled={isLoading}
+              aria-busy={isLoading}
             >
               {isLoading ? 'Logging in...' : 'Log In'}
             </button>

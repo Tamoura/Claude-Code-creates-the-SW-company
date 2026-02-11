@@ -227,7 +227,7 @@ class ApiClient {
 
   async updateChild(
     id: string,
-    data: { name?: string; dateOfBirth?: string; gender?: string | null }
+    data: { name?: string; dateOfBirth?: string; gender?: 'male' | 'female' | null }
   ): Promise<Child> {
     return this.request(`/api/children/${id}`, {
       method: 'PATCH',

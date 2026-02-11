@@ -2,8 +2,11 @@ import Fastify, { FastifyInstance } from 'fastify';
 import cors from '@fastify/cors';
 import jwt from '@fastify/jwt';
 import cookie from '@fastify/cookie';
+import helmet from '@fastify/helmet';
+import rateLimit from '@fastify/rate-limit';
 import { ZodError } from 'zod';
 
+import requestIdPlugin from './plugins/request-id';
 import prismaPlugin from './plugins/prisma';
 import observabilityPlugin from './plugins/observability';
 import authPlugin from './plugins/auth';
@@ -45,9 +48,27 @@ export async function buildApp(
     methods: ['GET', 'HEAD', 'POST', 'PUT', 'PATCH', 'DELETE', 'OPTIONS'],
   });
 
+  // Helmet (security headers)
+  await app.register(helmet, {
+    contentSecurityPolicy: process.env.NODE_ENV === 'production',
+  });
+
+  // Rate limiting (global) - disabled in test environment
+  if (process.env.NODE_ENV !== 'test') {
+    await app.register(rateLimit, {
+      max: 100,
+      timeWindow: '1 minute',
+    });
+  }
+
   // JWT
+  const jwtSecret = process.env.JWT_SECRET;
+  if (!jwtSecret && process.env.NODE_ENV === 'production') {
+    throw new Error('JWT_SECRET environment variable is required in production');
+  }
+
   await app.register(jwt, {
-    secret: process.env.JWT_SECRET || 'test-secret-do-not-use-in-production',
+    secret: jwtSecret || 'test-secret-do-not-use-in-production',
     sign: { algorithm: 'HS256' },
     verify: { algorithms: ['HS256'] },
   });
@@ -120,7 +141,8 @@ export async function buildApp(
     });
   });
 
-  // Plugins (order: observability -> prisma -> auth)
+  // Plugins (order: request-id -> observability -> prisma -> auth)
+  await app.register(requestIdPlugin);
   await app.register(observabilityPlugin);
   await app.register(prismaPlugin);
   await app.register(authPlugin);

@@ -8,6 +8,7 @@ import {
   ValidationError,
 } from '../lib/errors';
 import { parsePagination, paginatedResult } from '../lib/pagination';
+import { verifyChildOwnership } from '../lib/ownership';
 import { getAgeBand } from '../utils/age-band';
 import { Child } from '@prisma/client';
 
@@ -156,13 +157,7 @@ const childrenRoutes: FastifyPluginAsync = async (fastify) => {
     const parent = request.currentUser!;
     const { id } = request.params as { id: string };
 
-    const child = await fastify.prisma.child.findFirst({
-      where: { id, parentId: parent.id },
-    });
-
-    if (!child) {
-      throw new NotFoundError('Child not found');
-    }
+    const child = await verifyChildOwnership(fastify, id, parent.id);
 
     return reply.code(200).send(childToResponse(child));
   });
@@ -174,13 +169,7 @@ const childrenRoutes: FastifyPluginAsync = async (fastify) => {
     const parent = request.currentUser!;
     const { id } = request.params as { id: string };
 
-    const existing = await fastify.prisma.child.findFirst({
-      where: { id, parentId: parent.id },
-    });
-
-    if (!existing) {
-      throw new NotFoundError('Child not found');
-    }
+    await verifyChildOwnership(fastify, id, parent.id);
 
     const updates = validateBody(updateChildSchema, request.body);
 
@@ -215,13 +204,7 @@ const childrenRoutes: FastifyPluginAsync = async (fastify) => {
     const parent = request.currentUser!;
     const { id } = request.params as { id: string };
 
-    const existing = await fastify.prisma.child.findFirst({
-      where: { id, parentId: parent.id },
-    });
-
-    if (!existing) {
-      throw new NotFoundError('Child not found');
-    }
+    await verifyChildOwnership(fastify, id, parent.id);
 
     await fastify.prisma.child.delete({
       where: { id },

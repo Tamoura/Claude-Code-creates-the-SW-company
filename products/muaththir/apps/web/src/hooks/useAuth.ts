@@ -9,7 +9,7 @@
 
 'use client';
 
-import { useState, useEffect, useCallback } from 'react';
+import { useState, useEffect, useCallback, useRef } from 'react';
 import { apiClient } from '../lib/api-client';
 import type { User } from '../lib/api-client';
 import { TokenManager } from '../lib/token-manager';
@@ -21,11 +21,10 @@ interface AuthState {
   error: string | null;
 }
 
-let storedUser: User | null = null;
-
 export function useAuth() {
+  const userRef = useRef<User | null>(null);
   const [state, setState] = useState<AuthState>({
-    user: storedUser,
+    user: null,
     isAuthenticated: false,
     isLoading: false,
     error: null,
@@ -33,11 +32,11 @@ export function useAuth() {
 
   useEffect(() => {
     const token = TokenManager.getToken();
-    if (token) {
+    if (token && userRef.current) {
       setState((prev) => ({
         ...prev,
         isAuthenticated: true,
-        user: storedUser,
+        user: userRef.current,
       }));
     }
   }, []);
@@ -48,7 +47,7 @@ export function useAuth() {
     try {
       const result = await apiClient.login(email, password);
       const user = result.user;
-      storedUser = user;
+      userRef.current = user;
 
       setState({
         user,
@@ -80,7 +79,7 @@ export function useAuth() {
       try {
         const result = await apiClient.signup({ name, email, password });
         const user = result.user;
-        storedUser = user;
+        userRef.current = user;
 
         setState({
           user,
@@ -113,7 +112,7 @@ export function useAuth() {
     try {
       await apiClient.logout();
     } finally {
-      storedUser = null;
+      userRef.current = null;
       setState({
         user: null,
         isAuthenticated: false,

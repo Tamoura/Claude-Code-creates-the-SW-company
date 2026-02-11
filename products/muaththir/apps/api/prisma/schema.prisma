@@ -99,6 +99,7 @@ model Observation {
   @@index([childId, dimension])
   @@index([childId, observedAt])
   @@index([childId, deletedAt])
+  @@index([childId, dimension, observedAt])
   @@index([tags], type: Gin)
   @@map("observations")
 }
@@ -150,6 +151,7 @@ model ScoreCache {
 
   @@unique([childId, dimension])
   @@index([childId, stale])
+  @@index([calculatedAt])
   @@map("score_cache")
 }
 
@@ -164,5 +166,6 @@ model Session {
 
   @@index([token])
   @@index([parentId])
+  @@index([expiresAt])
   @@map("sessions")
 }
