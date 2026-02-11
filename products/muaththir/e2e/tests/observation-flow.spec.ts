@@ -13,6 +13,9 @@ import { test, expect, type Page } from '@playwright/test';
  * - Submit and verify success
  *
  * All API calls are mocked for CI-safe execution.
+ *
+ * IMPORTANT: After login, we navigate via sidebar link clicks (client-side
+ * navigation) instead of page.goto() to preserve the in-memory auth token.
  */
 
 const MOCK_CHILD = {
@@ -100,6 +103,25 @@ async function authenticateForObservation(
     })
   );
 
+  // Mock children endpoint without query params (fallback)
+  await page.route('**/api/children', (route) => {
+    if (route.request().url().includes('?')) return route.fallback();
+    return route.fulfill({
+      status: 200,
+      contentType: 'application/json',
+      body: JSON.stringify({
+        data: childrenData,
+        pagination: {
+          page: 1,
+          limit: 50,
+          total: childrenData.length,
+          totalPages: 1,
+          hasMore: false,
+        },
+      }),
+    });
+  });
+
   // Mock observation creation
   await page.route('**/api/children/*/observations', (route) => {
     if (route.request().method() === 'POST') {
@@ -126,8 +148,24 @@ async function authenticateForObservation(
     });
   });
 
-  // Mock dashboard endpoints (needed for the dashboard layout)
-  await page.route('**/api/dashboard/**', (route) =>
+  // Mock dashboard data (specific endpoint first, then fallback)
+  await page.route('**/api/dashboard/*/recent', (route) =>
+    route.fulfill({
+      status: 200,
+      contentType: 'application/json',
+      body: JSON.stringify({ data: [] }),
+    })
+  );
+
+  await page.route('**/api/dashboard/*/milestones-due', (route) =>
+    route.fulfill({
+      status: 200,
+      contentType: 'application/json',
+      body: JSON.stringify({ data: [] }),
+    })
+  );
+
+  await page.route('**/api/dashboard/child-1', (route) =>
     route.fulfill({
       status: 200,
       contentType: 'application/json',
@@ -135,6 +173,21 @@ async function authenticateForObservation(
         childId: 'child-1',
         childName: 'Ahmad',
         ageBand: '3-4',
+        overallScore: 0,
+        dimensions: [],
+        calculatedAt: new Date().toISOString(),
+      }),
+    })
+  );
+
+  await page.route('**/api/dashboard/child-2', (route) =>
+    route.fulfill({
+      status: 200,
+      contentType: 'application/json',
+      body: JSON.stringify({
+        childId: 'child-2',
+        childName: 'Fatima',
+        ageBand: '1-2',
         overallScore: 0,
         dimensions: [],
         calculatedAt: new Date().toISOString(),
@@ -150,19 +203,39 @@ async function authenticateForObservation(
   await page.waitForURL('**/dashboard', { timeout: 15000 });
 }
 
+/**
+ * Navigate to observe page via sidebar (preserves in-memory auth token).
+ * Waits for the dashboard page to fully render before clicking to avoid
+ * "element detached from DOM" errors caused by React re-renders.
+ */
+async function navigateToObserve(page: Page) {
+  // Wait for dashboard heading to appear (signals page has rendered)
+  await expect(page.locator('h1').first()).toBeVisible({ timeout: 15000 });
+
+  const sidebarLink = page.locator('aside a[href="/dashboard/observe"]');
+  await expect(sidebarLink).toBeVisible({ timeout: 10000 });
+  // Use force click to avoid issues with element detaching during React re-renders
+  await sidebarLink.click({ force: true });
+  await page.waitForURL('**/dashboard/observe', { timeout: 10000 });
+}
+
 test.describe('Observation Flow', () => {
   test.describe('Observe Page Rendering', () => {
     test('observe page loads with form elements', async ({ page }) => {
       await authenticateForObservation(page);
-
-      await page.goto('/dashboard/observe');
+      await navigateToObserve(page);
 
       // Page heading
       const heading = page.locator('h1').first();
       await expect(heading).toBeVisible({ timeout: 15000 });
 
-      // Dimension selector (6 buttons for 6 dimensions)
-      const dimensionButtons = page.locator('fieldset button[aria-pressed]');
+      // Dimension selector (6 buttons) + Sentiment selector (3 buttons) = 9 total
+      const allButtons = page.locator('fieldset button[aria-pressed]');
+      await expect(allButtons).toHaveCount(9);
+
+      // First fieldset has 6 dimension buttons
+      const dimensionFieldset = page.locator('fieldset').first();
+      const dimensionButtons = dimensionFieldset.locator('button[aria-pressed]');
       await expect(dimensionButtons).toHaveCount(6);
 
       // Observation text area
@@ -194,8 +267,7 @@ test.describe('Observation Flow', () => {
       page,
     }) => {
       await authenticateForObservation(page, { childCount: 'multiple' });
-
-      await page.goto('/dashboard/observe');
+      await navigateToObserve(page);
 
       const childSelect = page.locator('#child-select');
       await expect(childSelect).toBeVisible({ timeout: 15000 });
@@ -210,8 +282,7 @@ test.describe('Observation Flow', () => {
       page,
     }) => {
       await authenticateForObservation(page, { childCount: 'none' });
-
-      await page.goto('/dashboard/observe');
+      await navigateToObserve(page);
 
       // Should show "no children found" message, not the form
       const heading = page.locator('h1').first();
@@ -226,7 +297,7 @@ test.describe('Observation Flow', () => {
   test.describe('Form Interaction', () => {
     test('selecting a dimension enables it visually', async ({ page }) => {
       await authenticateForObservation(page);
-      await page.goto('/dashboard/observe');
+      await navigateToObserve(page);
 
       // Wait for the form to load
       const dimensionButtons = page.locator('fieldset button[aria-pressed]');
@@ -244,7 +315,7 @@ test.describe('Observation Flow', () => {
       page,
     }) => {
       await authenticateForObservation(page);
-      await page.goto('/dashboard/observe');
+      await navigateToObserve(page);
 
       const textarea = page.locator('#observation-text');
       await expect(textarea).toBeVisible({ timeout: 15000 });
@@ -259,7 +330,7 @@ test.describe('Observation Flow', () => {
 
     test('selecting sentiment marks it as pressed', async ({ page }) => {
       await authenticateForObservation(page);
-      await page.goto('/dashboard/observe');
+      await navigateToObserve(page);
 
       // Wait for sentiment buttons
       const sentimentFieldset = page.locator('fieldset').nth(1);
@@ -276,7 +347,7 @@ test.describe('Observation Flow', () => {
 
     test('can add and remove tags', async ({ page }) => {
       await authenticateForObservation(page);
-      await page.goto('/dashboard/observe');
+      await navigateToObserve(page);
 
       const tagInput = page.locator('#tag-input');
       await expect(tagInput).toBeVisible({ timeout: 15000 });
@@ -303,7 +374,7 @@ test.describe('Observation Flow', () => {
       page,
     }) => {
       await authenticateForObservation(page);
-      await page.goto('/dashboard/observe');
+      await navigateToObserve(page);
 
       const submitButton = page.locator('button[type="submit"]');
       await expect(submitButton).toBeVisible({ timeout: 15000 });
@@ -338,7 +409,7 @@ test.describe('Observation Flow', () => {
       page,
     }) => {
       await authenticateForObservation(page);
-      await page.goto('/dashboard/observe');
+      await navigateToObserve(page);
 
       // Wait for form to load
       const dimensionButtons = page.locator('fieldset button[aria-pressed]');
@@ -405,7 +476,7 @@ test.describe('Observation Flow', () => {
       });
 
       await authenticateForObservation(page);
-      await page.goto('/dashboard/observe');
+      await navigateToObserve(page);
 
       // Fill in the form
       const dimensionButtons = page.locator('fieldset button[aria-pressed]');
