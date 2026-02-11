@@ -178,7 +178,12 @@ const authRoutes: FastifyPluginAsync = async (fastify) => {
       });
     }
 
-    reply.clearCookie('refreshToken', { path: '/api/auth' });
+    reply.clearCookie('refreshToken', {
+      path: '/api/auth',
+      httpOnly: true,
+      secure: process.env.NODE_ENV === 'production',
+      sameSite: 'strict',
+    });
 
     return reply.code(200).send({ message: 'Logged out successfully' });
   });
