@@ -139,7 +139,7 @@ export default function ReportsPage() {
                     <div className="flex items-center justify-between mb-1">
                       <div className="flex items-center gap-2">
                         <span className="h-3 w-3 rounded-full" style={{ backgroundColor: dim?.colour || '#94a3b8' }} />
-                        <span className="text-sm font-medium text-slate-700">{dim ? td(dim.slug as any) : dimScore.dimension}</span>
+                        <span className="text-sm font-medium text-slate-700">{td(dimScore.dimension as any)}</span>
                       </div>
                       <span className="text-sm font-bold text-slate-900">{score}/100</span>
                     </div>
@@ -177,11 +177,10 @@ export default function ReportsPage() {
                 </thead>
                 <tbody>
                   {dashboard.dimensions.map(dimScore => {
-                    const dim = getDimensionBySlug(dimScore.dimension);
                     return (
                       <tr key={dimScore.dimension} className="border-b border-slate-100">
                         <td className="py-2">
-                          <span className="text-xs font-medium text-slate-700">{dim ? td(dim.slug as any) : dimScore.dimension}</span>
+                          <span className="text-xs font-medium text-slate-700">{td(dimScore.dimension as any)}</span>
                         </td>
                         <td className="text-center py-2 text-xs text-slate-600">{dimScore.factors.observation}</td>
                         <td className="text-center py-2 text-xs text-slate-600">{dimScore.factors.milestone}</td>

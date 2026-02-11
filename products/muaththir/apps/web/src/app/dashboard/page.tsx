@@ -98,12 +98,12 @@ export default function DashboardPage() {
   // Transform dashboard data to radar chart format
   const radarScores = dashboardData
     ? dashboardData.dimensions.map((d) => ({
-        dimension: getDimensionBySlug(d.dimension)?.name || d.dimension,
+        dimension: td(d.dimension),
         score: Math.round(d.score),
         fullMark: 100,
       }))
     : DIMENSIONS.map((d) => ({
-        dimension: d.name,
+        dimension: td(d.slug),
         score: 0,
         fullMark: 100,
       }));
@@ -369,7 +369,7 @@ export default function DashboardPage() {
                         {milestone.description}
                       </p>
                       <span className="inline-block mt-1 text-xs text-slate-400">
-                        {dim?.name || milestone.dimension}
+                        {td(milestone.dimension)}
                       </span>
                     </div>
                   </div>

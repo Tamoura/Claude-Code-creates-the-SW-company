@@ -9,6 +9,7 @@ import { apiClient, type Child, type Goal } from '../../../lib/api-client';
 export default function GoalsPage() {
   const t = useTranslations('goals');
   const tc = useTranslations('common');
+  const td = useTranslations('dimensions');
   const [children, setChildren] = useState<Child[]>([]);
   const [selectedChildId, setSelectedChildId] = useState<string | null>(null);
   const [goals, setGoals] = useState<Goal[]>([]);
@@ -196,7 +197,7 @@ export default function GoalsPage() {
                       <p className="text-xs text-slate-500 mb-2 line-clamp-2">{goal.description}</p>
                     )}
                     <div className="flex items-center gap-4 text-xs text-slate-400">
-                      <span>{dim?.name || goal.dimension}</span>
+                      <span>{td(goal.dimension as any)}</span>
                       {goal.targetDate && (
                         <span>{t('target', { date: new Date(goal.targetDate).toLocaleDateString() })}</span>
                       )}
