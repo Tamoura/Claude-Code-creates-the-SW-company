@@ -22,7 +22,7 @@
 | 3106 | pulse | Reserved | http://localhost:3106 |
 | 3108 | muaththir | Active | http://localhost:3108 |
 | 3109 | invoiceforge | Active | http://localhost:3109 |
-| 3110 | connectgrc | Reserved | http://localhost:3110 |
+| 3110 | connectgrc | Active | http://localhost:3110 |
 | 3111-3199 | *Available* | Free | - |
 
 ### Backend APIs (5000-5099)
