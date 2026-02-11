@@ -11,6 +11,7 @@ const config: Config = {
   setupFilesAfterEnv: [],
   testTimeout: 30000,
   verbose: true,
+  maxWorkers: 1,
 };
 
 export default config;
