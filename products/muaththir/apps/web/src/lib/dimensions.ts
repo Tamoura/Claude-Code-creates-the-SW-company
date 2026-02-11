@@ -36,7 +36,7 @@ export const DIMENSIONS: Dimension[] = [
   },
   {
     name: 'Social-Emotional',
-    slug: 'social-emotional',
+    slug: 'social_emotional',
     colour: '#EC4899',
     bgClass: 'bg-dimension-social-emotional',
     textClass: 'text-dimension-social-emotional',
