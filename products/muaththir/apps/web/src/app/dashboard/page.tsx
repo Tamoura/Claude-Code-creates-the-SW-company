@@ -70,7 +70,8 @@ export default function DashboardPage() {
         setError(null);
 
         // Fetch dashboard data, recent observations, and milestones-due in parallel
-        const [dashData, obsResponse, milestonesResponse] = await Promise.all([
+        // Use allSettled so partial failures don't block the entire dashboard
+        const [dashResult, obsResult, milestonesResult] = await Promise.allSettled([
           apiClient.getDashboard(selectedChildId),
           apiClient.getRecentObservations(selectedChildId),
           apiClient.getMilestonesDue(selectedChildId),
@@ -78,9 +79,20 @@ export default function DashboardPage() {
 
         if (cancelled) return;
 
-        setDashboardData(dashData);
-        setObservations(obsResponse.data);
-        setMilestonesDue(milestonesResponse.data);
+        if (dashResult.status === 'fulfilled') {
+          setDashboardData(dashResult.value);
+        }
+        if (obsResult.status === 'fulfilled') {
+          setObservations(obsResult.value.data);
+        }
+        if (milestonesResult.status === 'fulfilled') {
+          setMilestonesDue(milestonesResult.value.data);
+        }
+
+        // If all failed, show error from the first one
+        if (dashResult.status === 'rejected' && obsResult.status === 'rejected' && milestonesResult.status === 'rejected') {
+          throw dashResult.reason;
+        }
       } catch (err) {
         if (cancelled) return;
         setError(err instanceof Error ? err.message : 'Failed to load dashboard data');
