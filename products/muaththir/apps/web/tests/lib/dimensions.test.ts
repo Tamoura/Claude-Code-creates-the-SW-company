@@ -12,7 +12,7 @@ describe('dimensions', () => {
   it('has all required dimension slugs', () => {
     expect(DIMENSION_SLUGS).toEqual([
       'academic',
-      'social-emotional',
+      'social_emotional',
       'behavioural',
       'aspirational',
       'islamic',
@@ -54,7 +54,7 @@ describe('dimensions', () => {
   it('dimensions have the correct colours', () => {
     const colourMap: Record<string, string> = {
       academic: '#3B82F6',
-      'social-emotional': '#EC4899',
+      'social_emotional': '#EC4899',
       behavioural: '#F59E0B',
       aspirational: '#8B5CF6',
       islamic: '#10B981',

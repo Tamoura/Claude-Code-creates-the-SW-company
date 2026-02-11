@@ -1,12 +1,18 @@
+'use client';
+
+import { useTranslations } from 'next-intl';
 import ComingSoon from '../../../../components/common/ComingSoon';
 
 export default function SharingSettingsPage() {
+  const t = useTranslations('sharing');
+  const tc = useTranslations('common');
+
   return (
     <ComingSoon
-      title="Family Sharing"
-      description="Share access with co-parents, grandparents, and tutors. Coming in Phase 2."
+      title={t('title')}
+      description={t('description')}
       backHref="/dashboard/settings"
-      backLabel="Back to Settings"
+      backLabel={tc('back')}
     />
   );
 }

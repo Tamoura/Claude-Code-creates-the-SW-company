@@ -2,10 +2,14 @@
 
 import { useState, useEffect } from 'react';
 import Link from 'next/link';
-import { DIMENSIONS, getDimensionBySlug } from '../../../lib/dimensions';
+import { useTranslations } from 'next-intl';
+import { getDimensionBySlug } from '../../../lib/dimensions';
 import { apiClient, type Child, type Goal } from '../../../lib/api-client';
 
 export default function GoalsPage() {
+  const t = useTranslations('goals');
+  const tc = useTranslations('common');
+  const td = useTranslations('dimensions');
   const [children, setChildren] = useState<Child[]>([]);
   const [selectedChildId, setSelectedChildId] = useState<string | null>(null);
   const [goals, setGoals] = useState<Goal[]>([]);
@@ -90,9 +94,9 @@ export default function GoalsPage() {
     return (
       <div className="flex items-center justify-center min-h-[60vh]">
         <div className="text-center max-w-md">
-          <h2 className="text-xl font-semibold text-slate-900 mb-2">No Children Yet</h2>
-          <p className="text-sm text-slate-500 mb-6">Add a child profile first to set goals.</p>
-          <Link href="/onboarding/child" className="btn-primary">Add Child Profile</Link>
+          <h2 className="text-xl font-semibold text-slate-900 mb-2">{tc('noChildrenYet')}</h2>
+          <p className="text-sm text-slate-500 mb-6">{t('noChildrenDesc')}</p>
+          <Link href="/onboarding/child" className="btn-primary">{tc('addChildProfile')}</Link>
         </div>
       </div>
     );
@@ -102,8 +106,8 @@ export default function GoalsPage() {
     <div className="space-y-6">
       <div className="flex items-center justify-between">
         <div>
-          <h1 className="text-2xl font-bold text-slate-900">Goals</h1>
-          <p className="text-sm text-slate-500 mt-1">Set and track development goals for your child.</p>
+          <h1 className="text-2xl font-bold text-slate-900">{t('title')}</h1>
+          <p className="text-sm text-slate-500 mt-1">{t('subtitle')}</p>
         </div>
         <div className="flex items-center gap-3">
           {children.length > 1 && (
@@ -111,7 +115,7 @@ export default function GoalsPage() {
               value={selectedChildId || ''}
               onChange={(e) => setSelectedChildId(e.target.value)}
               className="px-3 py-2 border border-slate-200 rounded-lg text-sm"
-              aria-label="Select child"
+              aria-label={tc('selectChild')}
             >
               {children.map(c => <option key={c.id} value={c.id}>{c.name}</option>)}
             </select>
@@ -121,7 +125,7 @@ export default function GoalsPage() {
               href={`/dashboard/goals/new?childId=${selectedChildId}`}
               className="btn-primary text-sm py-2 px-4"
             >
-              New Goal
+              {t('newGoal')}
             </Link>
           )}
         </div>
@@ -139,7 +143,7 @@ export default function GoalsPage() {
                 : 'bg-slate-100 text-slate-600 hover:bg-slate-200'
             }`}
           >
-            {s || 'All'}
+            {s ? t(s as 'active' | 'completed' | 'paused') : t('all')}
           </button>
         ))}
       </div>
@@ -163,11 +167,11 @@ export default function GoalsPage() {
               <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M13 10V3L4 14h7v7l9-11h-7z" />
             </svg>
           </div>
-          <h3 className="text-sm font-medium text-slate-900 mb-1">No goals yet</h3>
-          <p className="text-xs text-slate-500 mb-4">Create your first goal to start tracking progress.</p>
+          <h3 className="text-sm font-medium text-slate-900 mb-1">{t('noGoalsTitle')}</h3>
+          <p className="text-xs text-slate-500 mb-4">{t('noGoalsDesc')}</p>
           {selectedChildId && (
             <Link href={`/dashboard/goals/new?childId=${selectedChildId}`} className="btn-primary text-sm py-2 px-4">
-              Create First Goal
+              {t('createFirstGoal')}
             </Link>
           )}
         </div>
@@ -193,9 +197,9 @@ export default function GoalsPage() {
                       <p className="text-xs text-slate-500 mb-2 line-clamp-2">{goal.description}</p>
                     )}
                     <div className="flex items-center gap-4 text-xs text-slate-400">
-                      <span>{dim?.name || goal.dimension}</span>
+                      <span>{td(goal.dimension as any)}</span>
                       {goal.targetDate && (
-                        <span>Target: {new Date(goal.targetDate).toLocaleDateString()}</span>
+                        <span>{t('target', { date: new Date(goal.targetDate).toLocaleDateString() })}</span>
                       )}
                     </div>
                   </div>
@@ -204,7 +208,7 @@ export default function GoalsPage() {
                       <button
                         onClick={() => handleStatusChange(goal, 'completed')}
                         className="p-1.5 rounded-lg text-emerald-500 hover:bg-emerald-50 transition-colors"
-                        title="Mark complete"
+                        title={t('markComplete')}
                       >
                         <svg className="h-4 w-4" fill="none" viewBox="0 0 24 24" stroke="currentColor">
                           <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M5 13l4 4L19 7" />
@@ -215,7 +219,7 @@ export default function GoalsPage() {
                       <button
                         onClick={() => handleStatusChange(goal, 'paused')}
                         className="p-1.5 rounded-lg text-slate-400 hover:bg-slate-100 transition-colors"
-                        title="Pause"
+                        title={t('pause')}
                       >
                         <svg className="h-4 w-4" fill="none" viewBox="0 0 24 24" stroke="currentColor">
                           <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M10 9v6m4-6v6m7-3a9 9 0 11-18 0 9 9 0 0118 0z" />
@@ -226,7 +230,7 @@ export default function GoalsPage() {
                       <button
                         onClick={() => handleStatusChange(goal, 'active')}
                         className="p-1.5 rounded-lg text-blue-500 hover:bg-blue-50 transition-colors"
-                        title="Reactivate"
+                        title={t('reactivate')}
                       >
                         <svg className="h-4 w-4" fill="none" viewBox="0 0 24 24" stroke="currentColor">
                           <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M4 4v5h.582m15.356 2A8.001 8.001 0 004.582 9m0 0H9m11 11v-5h-.581m0 0a8.003 8.003 0 01-15.357-2m15.357 2H15" />
@@ -236,7 +240,7 @@ export default function GoalsPage() {
                     <button
                       onClick={() => handleDelete(goal.id)}
                       className="p-1.5 rounded-lg text-red-400 hover:bg-red-50 transition-colors"
-                      title="Delete"
+                      title={tc('delete')}
                     >
                       <svg className="h-4 w-4" fill="none" viewBox="0 0 24 24" stroke="currentColor">
                         <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M19 7l-.867 12.142A2 2 0 0116.138 21H7.862a2 2 0 01-1.995-1.858L5 7m5 4v6m4-6v6m1-10V4a1 1 0 00-1-1h-4a1 1 0 00-1 1v3M4 7h16" />

@@ -2,10 +2,14 @@
 
 import { useState, useEffect, useCallback } from 'react';
 import { useRouter, useSearchParams } from 'next/navigation';
+import { useTranslations } from 'next-intl';
 import { DIMENSIONS, getDimensionBySlug } from '../../../../lib/dimensions';
 import { apiClient, type GoalTemplate, type Child } from '../../../../lib/api-client';
 
 export default function NewGoalPage() {
+  const t = useTranslations('newGoal');
+  const tc = useTranslations('common');
+  const td = useTranslations('dimensions');
   const router = useRouter();
   const searchParams = useSearchParams();
   const childId = searchParams.get('childId');
@@ -101,7 +105,7 @@ export default function NewGoalPage() {
   if (!childId) {
     return (
       <div className="text-center py-20">
-        <p className="text-sm text-slate-500">No child selected. Go back to goals.</p>
+        <p className="text-sm text-slate-500">{t('noChildSelected')}</p>
       </div>
     );
   }
@@ -118,9 +122,9 @@ export default function NewGoalPage() {
   return (
     <div className="max-w-3xl mx-auto space-y-8">
       <div>
-        <h1 className="text-2xl font-bold text-slate-900">Create Goal</h1>
+        <h1 className="text-2xl font-bold text-slate-900">{t('title')}</h1>
         <p className="text-sm text-slate-500 mt-1">
-          Choose from a template or create a custom goal for your child.
+          {t('subtitle')}
         </p>
       </div>
 
@@ -128,11 +132,11 @@ export default function NewGoalPage() {
       <section aria-labelledby="templates-heading">
         <div className="flex items-center justify-between mb-4">
           <h2 id="templates-heading" className="text-lg font-semibold text-slate-900">
-            Choose from Templates
+            {t('chooseFromTemplates')}
           </h2>
           {child?.ageBand && (
             <span className="text-xs text-slate-400">
-              Showing for age: {child.ageBand.replace(/_/g, ' ')}
+              {t('showingForAge', { ageBand: child.ageBand.replace(/_/g, ' ') })}
             </span>
           )}
         </div>
@@ -147,7 +151,7 @@ export default function NewGoalPage() {
                 : 'bg-slate-100 text-slate-600 hover:bg-slate-200'
             }`}
           >
-            All
+            {t('allTemplates')}
           </button>
           {DIMENSIONS.map((dim) => (
             <button
@@ -164,7 +168,7 @@ export default function NewGoalPage() {
                   : {}
               }
             >
-              {dim.name}
+              {td(dim.slug as any)}
             </button>
           ))}
         </div>
@@ -182,8 +186,7 @@ export default function NewGoalPage() {
         ) : templates.length === 0 ? (
           <div className="card text-center py-8">
             <p className="text-sm text-slate-500">
-              No templates available{templateDimFilter ? ' for this dimension' : ''}.
-              Create a custom goal below.
+              {templateDimFilter ? t('noTemplatesForDimension') : t('noTemplates')} {t('createCustomBelow')}
             </p>
           </div>
         ) : (
@@ -199,7 +202,7 @@ export default function NewGoalPage() {
                       aria-hidden="true"
                     />
                     <h3 className="text-sm font-semibold text-slate-700">
-                      {dim?.name || dimSlug}
+                      {td(dimSlug as any)}
                     </h3>
                   </div>
                   <div className="grid grid-cols-1 sm:grid-cols-2 gap-3">
@@ -240,8 +243,8 @@ export default function NewGoalPage() {
                           style={{ color: dim?.colour || '#10b981' }}
                         >
                           {selectedTemplateId === template.id
-                            ? 'Selected'
-                            : 'Use this goal'}
+                            ? t('selected')
+                            : t('useThisGoal')}
                           <svg
                             className="h-3 w-3 ml-1"
                             fill="none"
@@ -274,7 +277,7 @@ export default function NewGoalPage() {
         </div>
         <div className="relative flex justify-center">
           <span className="bg-slate-50 px-4 text-sm text-slate-400">
-            Or create custom goal
+            {t('orCreateCustom')}
           </span>
         </div>
       </div>
@@ -296,14 +299,14 @@ export default function NewGoalPage() {
 
         <div>
           <label htmlFor="goal-title" className="label">
-            Goal Title
+            {t('goalTitle')}
           </label>
           <input
             id="goal-title"
             type="text"
             required
             className="input-field"
-            placeholder="e.g., Read 20 books this year"
+            placeholder={t('goalTitlePlaceholder')}
             value={title}
             onChange={(e) => {
               setTitle(e.target.value);
@@ -314,7 +317,7 @@ export default function NewGoalPage() {
         </div>
 
         <fieldset>
-          <legend className="label mb-3">Dimension</legend>
+          <legend className="label mb-3">{t('dimension')}</legend>
           <div className="grid grid-cols-2 sm:grid-cols-3 gap-3">
             {DIMENSIONS.map((dim) => (
               <button
@@ -342,7 +345,7 @@ export default function NewGoalPage() {
                   aria-hidden="true"
                 />
                 <span className="text-sm font-medium text-slate-900">
-                  {dim.name}
+                  {td(dim.slug as any)}
                 </span>
               </button>
             ))}
@@ -351,13 +354,13 @@ export default function NewGoalPage() {
 
         <div>
           <label htmlFor="goal-desc" className="label">
-            Description (optional)
+            {t('descriptionOptional')}
           </label>
           <textarea
             id="goal-desc"
             rows={3}
             className="input-field resize-none"
-            placeholder="Add details about this goal..."
+            placeholder={t('descriptionPlaceholder')}
             value={description}
             onChange={(e) => {
               setDescription(e.target.value);
@@ -369,7 +372,7 @@ export default function NewGoalPage() {
 
         <div>
           <label htmlFor="target-date" className="label">
-            Target Date (optional)
+            {t('targetDateOptional')}
           </label>
           <input
             id="target-date"
@@ -387,14 +390,14 @@ export default function NewGoalPage() {
             onClick={() => router.back()}
             className="btn-secondary flex-1"
           >
-            Cancel
+            {tc('cancel')}
           </button>
           <button
             type="submit"
             className="btn-primary flex-1"
             disabled={!title.trim() || !dimension || isSubmitting}
           >
-            {isSubmitting ? 'Creating...' : 'Create Goal'}
+            {isSubmitting ? t('creating') : t('createGoal')}
           </button>
         </div>
       </form>

@@ -1,6 +1,7 @@
 'use client';
 
 import { useState, useEffect } from 'react';
+import { useTranslations } from 'next-intl';
 import dynamic from 'next/dynamic';
 import Link from 'next/link';
 import { DIMENSIONS, getDimensionBySlug } from '../../lib/dimensions';
@@ -14,6 +15,10 @@ const RadarChart = dynamic(
 );
 
 export default function DashboardPage() {
+  const t = useTranslations('dashboard');
+  const tc = useTranslations('common');
+  const td = useTranslations('dimensions');
+
   const [children, setChildren] = useState<Child[]>([]);
   const [selectedChildId, setSelectedChildId] = useState<string | null>(null);
   const [dashboardData, setDashboardData] = useState<DashboardData | null>(null);
@@ -93,12 +98,12 @@ export default function DashboardPage() {
   // Transform dashboard data to radar chart format
   const radarScores = dashboardData
     ? dashboardData.dimensions.map((d) => ({
-        dimension: getDimensionBySlug(d.dimension)?.name || d.dimension,
+        dimension: td(d.dimension),
         score: Math.round(d.score),
         fullMark: 100,
       }))
     : DIMENSIONS.map((d) => ({
-        dimension: d.name,
+        dimension: td(d.slug),
         score: 0,
         fullMark: 100,
       }));
@@ -125,13 +130,13 @@ export default function DashboardPage() {
             </svg>
           </div>
           <h2 className="text-xl font-semibold text-slate-900 mb-2">
-            Add Your First Child
+            {t('addFirstChild')}
           </h2>
           <p className="text-sm text-slate-500 mb-6">
-            Create a child profile to start tracking their development journey.
+            {t('addFirstChildDesc')}
           </p>
           <Link href="/onboarding/child" className="btn-primary">
-            Add Child Profile
+            {tc('addChildProfile')}
           </Link>
         </div>
       </div>
@@ -143,11 +148,11 @@ export default function DashboardPage() {
       {/* Page Header */}
       <div className="flex items-center justify-between">
         <div>
-          <h1 className="text-2xl font-bold text-slate-900">Dashboard</h1>
+          <h1 className="text-2xl font-bold text-slate-900">{t('title')}</h1>
           <p className="text-sm text-slate-500 mt-1">
             {dashboardData
-              ? `${dashboardData.childName}'s development at a glance.`
-              : 'Your child\'s development at a glance.'}
+              ? t('subtitleWithName', { name: dashboardData.childName })
+              : t('subtitleDefault')}
           </p>
         </div>
 
@@ -157,7 +162,7 @@ export default function DashboardPage() {
             value={selectedChildId || ''}
             onChange={(e) => setSelectedChildId(e.target.value)}
             className="px-4 py-2 border border-slate-200 rounded-lg text-sm focus:outline-none focus:ring-2 focus:ring-emerald-500"
-            aria-label="Select child"
+            aria-label={tc('selectChild')}
           >
             {children.map((child) => (
               <option key={child.id} value={child.id}>
@@ -187,7 +192,7 @@ export default function DashboardPage() {
               />
             </svg>
             <div>
-              <h3 className="text-sm font-medium text-red-800">Error loading dashboard</h3>
+              <h3 className="text-sm font-medium text-red-800">{t('errorLoading')}</h3>
               <p className="text-xs text-red-600 mt-1">{error}</p>
             </div>
           </div>
@@ -197,22 +202,22 @@ export default function DashboardPage() {
       {/* Radar Chart */}
       <div className="card">
         <h2 className="text-lg font-semibold text-slate-900 mb-4">
-          Development Overview
+          {t('developmentOverview')}
         </h2>
         {loading ? (
           <div className="w-full h-80 bg-slate-100 rounded-2xl animate-pulse" aria-live="polite" aria-busy="true">
-            <span className="sr-only">Loading chart data...</span>
+            <span className="sr-only">{t('loadingChart')}</span>
           </div>
         ) : (
           <>
             <RadarChart scores={radarScores} />
             {dashboardData && dashboardData.overallScore === 0 ? (
               <p className="text-center text-xs text-slate-400 mt-2">
-                Start logging observations to see your child&apos;s profile take shape.
+                {t('startLogging')}
               </p>
             ) : (
               <p className="text-center text-xs text-slate-500 mt-2">
-                Overall development score: {dashboardData?.overallScore.toFixed(1) || 0}
+                {t('overallScore', { score: dashboardData?.overallScore.toFixed(1) || 0 })}
               </p>
             )}
           </>
@@ -222,7 +227,7 @@ export default function DashboardPage() {
       {/* Dimension Cards Grid */}
       <section aria-labelledby="dimensions-heading">
         <h2 id="dimensions-heading" className="text-lg font-semibold text-slate-900 mb-4">
-          Dimensions
+          {t('dimensions')}
         </h2>
         {loading ? (
           <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-3 gap-4" aria-live="polite" aria-busy="true">
@@ -231,7 +236,7 @@ export default function DashboardPage() {
                 key={dimension.slug}
                 className="h-40 bg-slate-100 rounded-2xl animate-pulse"
               >
-                <span className="sr-only">Loading {dimension.name} dimension...</span>
+                <span className="sr-only">{t('loadingDimension', { name: td(dimension.slug) })}</span>
               </div>
             ))}
           </div>
@@ -257,7 +262,7 @@ export default function DashboardPage() {
       {/* Recent Observations */}
       <section aria-labelledby="observations-heading">
         <h2 id="observations-heading" className="text-lg font-semibold text-slate-900 mb-4">
-          Recent Observations
+          {t('recentObservations')}
         </h2>
         {loading ? (
           <div className="space-y-3" aria-live="polite" aria-busy="true">
@@ -266,7 +271,7 @@ export default function DashboardPage() {
                 key={i}
                 className="h-32 bg-slate-100 rounded-2xl animate-pulse"
               >
-                <span className="sr-only">Loading observation {i}...</span>
+                <span className="sr-only">{t('loadingObservation', { number: i })}</span>
               </div>
             ))}
           </div>
@@ -311,17 +316,16 @@ export default function DashboardPage() {
               </svg>
             </div>
             <h3 className="text-sm font-medium text-slate-900 mb-1">
-              No observations yet
+              {t('noObservationsTitle')}
             </h3>
             <p className="text-xs text-slate-500 mb-4">
-              Log your first observation to start building your child&apos;s
-              development profile.
+              {t('noObservationsDesc')}
             </p>
             <Link
               href="/dashboard/observe"
               className="btn-primary text-sm py-2 px-4"
             >
-              Log First Observation
+              {t('logFirstObservation')}
             </Link>
           </div>
         )}
@@ -330,13 +334,13 @@ export default function DashboardPage() {
       {/* Milestones Due */}
       <section aria-labelledby="milestones-heading">
         <h2 id="milestones-heading" className="text-lg font-semibold text-slate-900 mb-4">
-          Milestones Due
+          {t('milestonesDue')}
         </h2>
         {loading ? (
           <div className="space-y-3" aria-live="polite" aria-busy="true">
             {[1, 2, 3].map((i) => (
               <div key={i} className="h-20 bg-slate-100 rounded-2xl animate-pulse">
-                <span className="sr-only">Loading milestone {i}...</span>
+                <span className="sr-only">{t('loadingMilestone', { number: i })}</span>
               </div>
             ))}
           </div>
@@ -365,7 +369,7 @@ export default function DashboardPage() {
                         {milestone.description}
                       </p>
                       <span className="inline-block mt-1 text-xs text-slate-400">
-                        {dim?.name || milestone.dimension}
+                        {td(milestone.dimension)}
                       </span>
                     </div>
                   </div>
@@ -376,7 +380,7 @@ export default function DashboardPage() {
               href="/dashboard/milestones"
               className="block text-center text-sm text-emerald-600 hover:text-emerald-700 mt-2"
             >
-              View All Milestones
+              {t('viewAllMilestones')}
             </Link>
           </div>
         ) : (
@@ -387,16 +391,16 @@ export default function DashboardPage() {
               </svg>
             </div>
             <h3 className="text-sm font-medium text-slate-900 mb-1">
-              All milestones achieved!
+              {t('allMilestonesAchieved')}
             </h3>
             <p className="text-xs text-slate-500 mb-4">
-              Great progress! Check the milestones page for details.
+              {t('allMilestonesDesc')}
             </p>
             <Link
               href="/dashboard/milestones"
               className="btn-secondary text-sm py-2 px-4"
             >
-              View Milestones
+              {t('viewMilestones')}
             </Link>
           </div>
         )}
@@ -406,7 +410,7 @@ export default function DashboardPage() {
       <Link
         href="/dashboard/observe"
         className="fixed bottom-6 right-6 h-14 w-14 rounded-full bg-emerald-600 text-white shadow-lg hover:bg-emerald-700 transition-colors flex items-center justify-center z-40"
-        aria-label="Log new observation"
+        aria-label={t('logNewObservation')}
       >
         <svg className="h-6 w-6" fill="none" viewBox="0 0 24 24" stroke="currentColor" aria-hidden="true">
           <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M12 4v16m8-8H4" />

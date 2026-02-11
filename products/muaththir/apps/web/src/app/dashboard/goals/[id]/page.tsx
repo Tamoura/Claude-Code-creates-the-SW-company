@@ -1,12 +1,18 @@
+'use client';
+
+import { useTranslations } from 'next-intl';
 import ComingSoon from '../../../../components/common/ComingSoon';
 
 export default function GoalDetailPage() {
+  const t = useTranslations('goalDetail');
+  const tc = useTranslations('common');
+
   return (
     <ComingSoon
-      title="Goal Detail"
-      description="Track progress toward this goal. Coming in Phase 2."
+      title={t('title')}
+      description={t('description')}
       backHref="/dashboard/goals"
-      backLabel="Back to Goals"
+      backLabel={tc('back')}
     />
   );
 }

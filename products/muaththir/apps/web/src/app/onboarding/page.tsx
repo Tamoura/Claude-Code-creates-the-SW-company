@@ -1,6 +1,11 @@
+'use client';
+
 import Link from 'next/link';
+import { useTranslations } from 'next-intl';
 
 export default function OnboardingPage() {
+  const t = useTranslations('onboarding');
+
   return (
     <div className="flex items-center justify-center px-4 py-12 min-h-[calc(100vh-3.5rem)]">
       <div className="w-full max-w-lg text-center">
@@ -22,43 +27,42 @@ export default function OnboardingPage() {
             </svg>
           </div>
           <h1 className="text-3xl font-bold text-slate-900">
-            Welcome to Mu&apos;aththir
+            {t('welcomeTitle')}
           </h1>
           <p className="mt-4 text-lg text-slate-600 max-w-md mx-auto">
-            Track your child&apos;s holistic development across six dimensions:
-            academic, social-emotional, behavioural, aspirational, Islamic, and physical.
+            {t('welcomeSubtitle')}
           </p>
         </div>
 
         <div className="card text-left">
           <h2 className="text-lg font-semibold text-slate-900 mb-4">
-            Get Started
+            {t('getStarted')}
           </h2>
           <ul className="space-y-3 mb-6">
             <li className="flex items-center gap-3 text-sm text-slate-600">
               <span className="flex-shrink-0 h-6 w-6 rounded-full bg-emerald-100 text-emerald-700 flex items-center justify-center text-xs font-bold">
                 1
               </span>
-              Create your child&apos;s profile (name, date of birth)
+              {t('step1')}
             </li>
             <li className="flex items-center gap-3 text-sm text-slate-600">
               <span className="flex-shrink-0 h-6 w-6 rounded-full bg-slate-100 text-slate-500 flex items-center justify-center text-xs font-bold">
                 2
               </span>
-              Review age-appropriate milestones
+              {t('step2')}
             </li>
             <li className="flex items-center gap-3 text-sm text-slate-600">
               <span className="flex-shrink-0 h-6 w-6 rounded-full bg-slate-100 text-slate-500 flex items-center justify-center text-xs font-bold">
                 3
               </span>
-              Log your first observation
+              {t('step3')}
             </li>
           </ul>
           <Link
             href="/onboarding/child"
             className="btn-primary w-full text-center block"
           >
-            Create Child Profile
+            {t('createChildProfile')}
           </Link>
         </div>
 
@@ -72,13 +76,12 @@ export default function OnboardingPage() {
               </svg>
             </div>
             <div>
-              <h3 className="text-sm font-semibold text-slate-900">Explore with Demo Data</h3>
+              <h3 className="text-sm font-semibold text-slate-900">{t('demoTitle')}</h3>
               <p className="text-xs text-slate-500 mt-1 mb-3">
-                See what a fully-tracked child looks like. Log in as the demo account
-                to explore insights, goals, and reports with pre-populated data.
+                {t('demoDesc')}
               </p>
               <p className="text-xs text-slate-400">
-                Demo login: <strong>demo@muaththir.app</strong> / <strong>DemoPassword123!</strong>
+                {t('demoLogin')} <strong>demo@muaththir.app</strong> / <strong>DemoPassword123!</strong>
               </p>
             </div>
           </div>

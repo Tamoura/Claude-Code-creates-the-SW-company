@@ -1,0 +1,89 @@
+# ConnectGRC - Docker Compose Configuration
+#
+# SECURITY NOTE: This file requires environment variables for secrets.
+# Copy .env.example files and configure secrets before running.
+#
+# Usage:
+#   cp apps/api/.env.example apps/api/.env
+#   cp apps/web/.env.example apps/web/.env
+#   # Edit .env files with secure values
+#   docker-compose up -d
+
+services:
+  postgres:
+    image: postgres:15-alpine
+    container_name: connectgrc-postgres
+    environment:
+      POSTGRES_USER: ${POSTGRES_USER:-postgres}
+      POSTGRES_PASSWORD: ${POSTGRES_PASSWORD:?POSTGRES_PASSWORD is required}
+      POSTGRES_DB: ${POSTGRES_DB:-connectgrc_dev}
+    ports:
+      - "127.0.0.1:5433:5432"
+    volumes:
+      - connectgrc_postgres_data:/var/lib/postgresql/data
+    healthcheck:
+      test: ["CMD-SHELL", "pg_isready -U ${POSTGRES_USER:-postgres}"]
+      interval: 10s
+      timeout: 5s
+      retries: 5
+
+  redis:
+    image: redis:7-alpine
+    container_name: connectgrc-redis
+    command: redis-server --requirepass ${REDIS_PASSWORD:-devpassword}
+    ports:
+      - "127.0.0.1:6380:6379"
+    volumes:
+      - connectgrc_redis_data:/data
+    healthcheck:
+      test: ["CMD", "redis-cli", "-a", "${REDIS_PASSWORD:-devpassword}", "ping"]
+      interval: 10s
+      timeout: 5s
+      retries: 5
+
+  api:
+    build:
+      context: apps/api
+      dockerfile: Dockerfile
+    container_name: connectgrc-api
+    ports:
+      - "127.0.0.1:5006:5006"
+    environment:
+      - NODE_ENV=${NODE_ENV:-development}
+      - PORT=5006
+      - DATABASE_URL=postgresql://${POSTGRES_USER:-postgres}:${POSTGRES_PASSWORD:?POSTGRES_PASSWORD is required}@postgres:5432/${POSTGRES_DB:-connectgrc_dev}
+      - REDIS_URL=redis://:${REDIS_PASSWORD:-devpassword}@redis:6379
+      - JWT_SECRET=${JWT_SECRET:?JWT_SECRET is required - generate with: openssl rand -hex 32}
+      - JWT_REFRESH_SECRET=${JWT_REFRESH_SECRET:?JWT_REFRESH_SECRET is required - generate with: openssl rand -hex 32}
+      - JWT_EXPIRES_IN=${JWT_EXPIRES_IN:-1h}
+      - JWT_REFRESH_EXPIRES_IN=${JWT_REFRESH_EXPIRES_IN:-7d}
+      - FRONTEND_URL=${FRONTEND_URL:-http://localhost:3110}
+      - ALLOWED_ORIGINS=${ALLOWED_ORIGINS:-http://localhost:3110}
+      - LOG_LEVEL=${LOG_LEVEL:-info}
+    depends_on:
+      postgres:
+        condition: service_healthy
+      redis:
+        condition: service_healthy
+    command: sh -c "npx prisma migrate deploy && node dist/server.js"
+
+  web:
+    build:
+      context: apps/web
+      dockerfile: Dockerfile
+      args:
+        NEXT_PUBLIC_API_URL: ${NEXT_PUBLIC_API_URL:-http://localhost:5006}
+    container_name: connectgrc-web
+    ports:
+      - "127.0.0.1:3110:3110"
+    environment:
+      - NODE_ENV=${NODE_ENV:-production}
+      - PORT=3110
+    depends_on:
+      - api
+
+volumes:
+  connectgrc_postgres_data:
+    driver: local
+  connectgrc_redis_data:
+    driver: local

@@ -1,65 +1,55 @@
+'use client';
+
+import { useTranslations } from 'next-intl';
 import Header from '../../components/layout/Header';
 
 export default function PrivacyPage() {
+  const t = useTranslations('privacy');
   return (
     <div className="min-h-screen bg-white">
       <Header />
       <main className="py-16 sm:py-24">
         <div className="mx-auto max-w-3xl px-4 sm:px-6 lg:px-8">
           <h1 className="text-3xl sm:text-4xl font-bold text-slate-900 mb-8">
-            Privacy Policy
+            {t('title')}
           </h1>
 
           <div className="prose prose-slate max-w-none space-y-6 text-slate-600 leading-relaxed">
             <p>
-              <strong>Last updated:</strong> February 2026
+              <strong>{t('lastUpdated')}</strong> {t('lastUpdatedDate')}
             </p>
 
             <p>
-              Mu&apos;aththir takes your family&apos;s privacy seriously. This
-              policy outlines how we collect, use, and protect your data and
-              your children&apos;s data.
+              {t('intro')}
             </p>
 
             <h2 className="text-xl font-bold text-slate-900 mt-8">
-              Our Commitments
+              {t('commitmentsTitle')}
             </h2>
             <ul className="list-disc pl-6 space-y-2">
-              <li>All child data is encrypted at rest</li>
-              <li>No analytics tracking pixels on pages that display child data</li>
-              <li>No third-party data sharing under any circumstances</li>
-              <li>
-                GDPR compliant: data export within 24 hours, full deletion within
-                30 days
-              </li>
-              <li>
-                COPPA compliant: all child data is treated as sensitive regardless
-                of jurisdiction
-              </li>
+              <li>{t('commitment1')}</li>
+              <li>{t('commitment2')}</li>
+              <li>{t('commitment3')}</li>
+              <li>{t('commitment4')}</li>
+              <li>{t('commitment5')}</li>
             </ul>
 
             <h2 className="text-xl font-bold text-slate-900 mt-8">
-              Data We Collect
+              {t('dataCollectedTitle')}
             </h2>
             <p>
-              We collect only the data necessary to provide the service: your
-              name, email, and the observations and milestones you choose to
-              record about your children. We do not collect data about your
-              browsing habits, location, or contacts.
+              {t('dataCollectedText')}
             </p>
 
             <h2 className="text-xl font-bold text-slate-900 mt-8">
-              Data Retention
+              {t('retentionTitle')}
             </h2>
             <p>
-              Your data remains as long as your account is active. Deleted
-              observations are soft-deleted and recoverable for 30 days, then
-              permanently removed. Account deletion removes all data within 30
-              days.
+              {t('retentionText')}
             </p>
 
             <p className="text-sm text-slate-400 mt-12">
-              Full privacy policy details will be published before launch.
+              {t('fullPolicyNote')}
             </p>
           </div>
         </div>

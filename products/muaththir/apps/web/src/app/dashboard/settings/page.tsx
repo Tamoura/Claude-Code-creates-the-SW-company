@@ -3,6 +3,7 @@
 import { useState, useEffect } from 'react';
 import Link from 'next/link';
 import { useRouter } from 'next/navigation';
+import { useTranslations } from 'next-intl';
 import { useAuth } from '../../../hooks/useAuth';
 import { apiClient, type Profile, type Child } from '../../../lib/api-client';
 
@@ -15,6 +16,8 @@ interface ChildHealthForm {
 export default function SettingsPage() {
   const router = useRouter();
   const { logout } = useAuth();
+  const t = useTranslations('settings');
+  const tc = useTranslations('common');
 
   // Profile state
   const [profile, setProfile] = useState<Profile | null>(null);
@@ -97,7 +100,7 @@ export default function SettingsPage() {
     try {
       const updated = await apiClient.updateProfile({ name, email });
       setProfile(updated);
-      setProfileMessage('Profile updated successfully.');
+      setProfileMessage(t('profileUpdated'));
     } catch (err) {
       setProfileError(
         err instanceof Error ? err.message : 'Failed to update profile'
@@ -113,7 +116,7 @@ export default function SettingsPage() {
     setPasswordMessage('');
 
     if (newPassword !== confirmPassword) {
-      setPasswordError('Passwords do not match.');
+      setPasswordError(t('passwordsMismatch'));
       return;
     }
 
@@ -121,7 +124,7 @@ export default function SettingsPage() {
 
     try {
       await apiClient.changePassword(currentPassword, newPassword);
-      setPasswordMessage('Password changed successfully.');
+      setPasswordMessage(t('passwordChanged'));
       setCurrentPassword('');
       setNewPassword('');
       setConfirmPassword('');
@@ -159,7 +162,7 @@ export default function SettingsPage() {
         prev.map((c) => (c.id === childId ? updated : c))
       );
       setEditingChildId(null);
-      setHealthMessage(`Health info updated for ${updated.name}.`);
+      setHealthMessage(t('healthUpdated', { name: updated.name }));
     } catch (err) {
       setHealthError(
         err instanceof Error ? err.message : 'Failed to update health info'
@@ -187,16 +190,16 @@ export default function SettingsPage() {
   return (
     <div className="max-w-2xl mx-auto space-y-8">
       <div>
-        <h1 className="text-2xl font-bold text-slate-900">Settings</h1>
+        <h1 className="text-2xl font-bold text-slate-900">{t('title')}</h1>
         <p className="text-sm text-slate-500 mt-1">
-          Manage your account and preferences.
+          {t('subtitle')}
         </p>
       </div>
 
       {/* Profile Information */}
       <form onSubmit={handleProfileSubmit} className="card space-y-5">
         <h2 className="text-lg font-semibold text-slate-900">
-          Profile Information
+          {t('profileInfo')}
         </h2>
 
         {profileError && (
@@ -213,7 +216,7 @@ export default function SettingsPage() {
         {profileLoading ? (
           <div className="space-y-4" aria-live="polite" aria-busy="true">
             <div className="h-10 bg-slate-100 rounded-xl animate-pulse">
-              <span className="sr-only">Loading profile...</span>
+              <span className="sr-only">{t('loadingProfile')}</span>
             </div>
             <div className="h-10 bg-slate-100 rounded-xl animate-pulse" />
           </div>
@@ -221,7 +224,7 @@ export default function SettingsPage() {
           <>
             <div>
               <label htmlFor="name" className="label">
-                Full Name
+                {t('fullName')}
               </label>
               <input
                 id="name"
@@ -235,7 +238,7 @@ export default function SettingsPage() {
 
             <div>
               <label htmlFor="email" className="label">
-                Email
+                {t('email')}
               </label>
               <input
                 id="email"
@@ -248,16 +251,16 @@ export default function SettingsPage() {
             </div>
 
             <div>
-              <label className="label">Subscription</label>
+              <label className="label">{t('subscription')}</label>
               <p className="text-sm text-slate-600">
-                {profile?.subscriptionTier || 'free'} plan
+                {t('plan', { tier: profile?.subscriptionTier || 'free' })}
               </p>
             </div>
 
             <div>
-              <label className="label">Children</label>
+              <label className="label">{t('children')}</label>
               <p className="text-sm text-slate-600">
-                {profile?.childCount ?? 0} child profile{profile?.childCount !== 1 ? 's' : ''}
+                {profile?.childCount === 1 ? t('childCount', { count: profile.childCount }) : t('childCountPlural', { count: profile?.childCount ?? 0 })}
               </p>
             </div>
 
@@ -266,7 +269,7 @@ export default function SettingsPage() {
               className="btn-primary w-full"
               disabled={profileSaving}
             >
-              {profileSaving ? 'Saving...' : 'Save Changes'}
+              {profileSaving ? tc('saving') : t('saveChanges')}
             </button>
           </>
         )}
@@ -276,13 +279,13 @@ export default function SettingsPage() {
       <div className="card space-y-5">
         <div className="flex items-center justify-between">
           <h2 className="text-lg font-semibold text-slate-900">
-            Children Health Info
+            {t('childrenHealthInfo')}
           </h2>
           <Link
             href="/onboarding/child"
             className="text-xs text-emerald-600 hover:text-emerald-700 font-medium"
           >
-            Add Child
+            {t('addChild')}
           </Link>
         </div>
 
@@ -300,14 +303,14 @@ export default function SettingsPage() {
         {childrenLoading ? (
           <div className="space-y-3" aria-live="polite" aria-busy="true">
             <div className="h-16 bg-slate-100 rounded-xl animate-pulse">
-              <span className="sr-only">Loading children...</span>
+              <span className="sr-only">{t('loadingChildren')}</span>
             </div>
           </div>
         ) : children.length === 0 ? (
           <p className="text-sm text-slate-500 py-4 text-center">
-            No child profiles yet.{' '}
+            {t('noChildProfiles')}{' '}
             <Link href="/onboarding/child" className="text-emerald-600 hover:text-emerald-700 font-medium">
-              Add one
+              {t('addOne')}
             </Link>
           </p>
         ) : (
@@ -341,7 +344,7 @@ export default function SettingsPage() {
                       }
                       className="text-xs text-emerald-600 hover:text-emerald-700 font-medium"
                     >
-                      {isEditing ? 'Cancel' : 'Edit Health'}
+                      {isEditing ? t('cancelEdit') : t('editHealth')}
                     </button>
                   </div>
 
@@ -351,13 +354,13 @@ export default function SettingsPage() {
                       <div className="space-y-1.5">
                         {child.medicalNotes && (
                           <p className="text-xs text-slate-600">
-                            <span className="font-medium text-slate-700">Medical:</span>{' '}
+                            <span className="font-medium text-slate-700">{t('medicalLabel')}</span>{' '}
                             {child.medicalNotes}
                           </p>
                         )}
                         {child.allergies && child.allergies.length > 0 && (
                           <div className="flex flex-wrap items-center gap-1">
-                            <span className="text-xs font-medium text-slate-700">Allergies:</span>
+                            <span className="text-xs font-medium text-slate-700">{t('allergiesLabel')}</span>
                             {child.allergies.map((allergy) => (
                               <span
                                 key={allergy}
@@ -370,14 +373,14 @@ export default function SettingsPage() {
                         )}
                         {child.specialNeeds && (
                           <p className="text-xs text-slate-600">
-                            <span className="font-medium text-slate-700">Special Needs:</span>{' '}
+                            <span className="font-medium text-slate-700">{t('specialNeedsLabel')}</span>{' '}
                             {child.specialNeeds}
                           </p>
                         )}
                       </div>
                     ) : (
                       <p className="text-xs text-slate-400">
-                        No health information recorded.
+                        {t('noHealthInfo')}
                       </p>
                     )
                   ) : (
@@ -389,13 +392,13 @@ export default function SettingsPage() {
                             htmlFor={`medical-${child.id}`}
                             className="label"
                           >
-                            Medical Notes
+                            {t('medicalNotes')}
                           </label>
                           <textarea
                             id={`medical-${child.id}`}
                             rows={2}
                             className="input-field resize-none"
-                            placeholder="e.g., Asthma, uses inhaler"
+                            placeholder={t('medicalPlaceholder')}
                             value={form.medicalNotes}
                             onChange={(e) =>
                               updateHealthForm(
@@ -414,13 +417,13 @@ export default function SettingsPage() {
                             htmlFor={`allergies-${child.id}`}
                             className="label"
                           >
-                            Allergies
+                            {t('allergies')}
                           </label>
                           <input
                             id={`allergies-${child.id}`}
                             type="text"
                             className="input-field"
-                            placeholder="e.g., Peanuts, Dairy (comma-separated)"
+                            placeholder={t('allergiesPlaceholder')}
                             value={form.allergiesText}
                             onChange={(e) =>
                               updateHealthForm(
@@ -432,7 +435,7 @@ export default function SettingsPage() {
                             disabled={healthSaving}
                           />
                           <p className="mt-1 text-xs text-slate-400">
-                            Separate multiple allergies with commas.
+                            {t('allergiesHint')}
                           </p>
                         </div>
 
@@ -441,13 +444,13 @@ export default function SettingsPage() {
                             htmlFor={`special-${child.id}`}
                             className="label"
                           >
-                            Special Needs
+                            {t('specialNeeds')}
                           </label>
                           <textarea
                             id={`special-${child.id}`}
                             rows={2}
                             className="input-field resize-none"
-                            placeholder="e.g., ADHD - on medication"
+                            placeholder={t('specialNeedsPlaceholder')}
                             value={form.specialNeeds}
                             onChange={(e) =>
                               updateHealthForm(
@@ -467,7 +470,7 @@ export default function SettingsPage() {
                           className="btn-primary w-full text-sm py-2"
                           disabled={healthSaving}
                         >
-                          {healthSaving ? 'Saving...' : 'Save Health Info'}
+                          {healthSaving ? tc('saving') : t('saveHealthInfo')}
                         </button>
                       </div>
                     )
@@ -482,7 +485,7 @@ export default function SettingsPage() {
       {/* Change Password */}
       <form onSubmit={handlePasswordSubmit} className="card space-y-5">
         <h2 className="text-lg font-semibold text-slate-900">
-          Change Password
+          {t('changePassword')}
         </h2>
 
         {passwordError && (
@@ -498,7 +501,7 @@ export default function SettingsPage() {
 
         <div>
           <label htmlFor="currentPassword" className="label">
-            Current Password
+            {t('currentPassword')}
           </label>
           <input
             id="currentPassword"
@@ -513,13 +516,13 @@ export default function SettingsPage() {
 
         <div>
           <label htmlFor="newPassword" className="label">
-            New Password
+            {t('newPassword')}
           </label>
           <input
             id="newPassword"
             type="password"
             className="input-field"
-            placeholder="Min 8 characters, 1 uppercase, 1 number"
+            placeholder={t('newPasswordPlaceholder')}
             value={newPassword}
             onChange={(e) => setNewPassword(e.target.value)}
             required
@@ -530,7 +533,7 @@ export default function SettingsPage() {
 
         <div>
           <label htmlFor="confirmPassword" className="label">
-            Confirm New Password
+            {t('confirmPassword')}
           </label>
           <input
             id="confirmPassword"
@@ -549,20 +552,20 @@ export default function SettingsPage() {
           className="btn-primary w-full"
           disabled={passwordSaving}
         >
-          {passwordSaving ? 'Changing...' : 'Change Password'}
+          {passwordSaving ? t('changingPassword') : t('changePasswordBtn')}
         </button>
       </form>
 
       {/* Account Actions */}
       <div className="card">
         <h2 className="text-lg font-semibold text-slate-900 mb-4">
-          Account Actions
+          {t('accountActions')}
         </h2>
         <button
           onClick={handleLogout}
           className="btn-secondary border-red-300 text-red-700 hover:bg-red-50 w-full"
         >
-          Sign Out
+          {t('signOut')}
         </button>
       </div>
     </div>

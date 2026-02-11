@@ -1,11 +1,14 @@
 'use client';
 
 import { useState, useEffect } from 'react';
+import { useTranslations } from 'next-intl';
 import { DIMENSIONS } from '../../../lib/dimensions';
 import DimensionCard from '../../../components/dashboard/DimensionCard';
 import { apiClient, type Child, type DashboardData } from '../../../lib/api-client';
 
 export default function DimensionsPage() {
+  const t = useTranslations('dimensionsPage');
+  const tc = useTranslations('common');
   const [children, setChildren] = useState<Child[]>([]);
   const [selectedChildId, setSelectedChildId] = useState<string>('');
   const [dashboardData, setDashboardData] = useState<DashboardData | null>(null);
@@ -82,9 +85,9 @@ export default function DimensionsPage() {
   return (
     <div className="space-y-8">
       <div>
-        <h1 className="text-2xl font-bold text-slate-900">Dimensions</h1>
+        <h1 className="text-2xl font-bold text-slate-900">{t('title')}</h1>
         <p className="text-sm text-slate-500 mt-1">
-          Explore all six dimensions of your child&apos;s development.
+          {t('subtitle')}
         </p>
       </div>
 
@@ -92,7 +95,7 @@ export default function DimensionsPage() {
       {children.length > 1 && (
         <div>
           <label htmlFor="child-select-dimensions" className="label">
-            Select Child
+            {tc('selectChild')}
           </label>
           <select
             id="child-select-dimensions"
@@ -100,7 +103,7 @@ export default function DimensionsPage() {
             value={selectedChildId}
             onChange={(e) => setSelectedChildId(e.target.value)}
           >
-            <option value="">Choose a child...</option>
+            <option value="">{tc('chooseChild')}</option>
             {children.map((child) => (
               <option key={child.id} value={child.id}>
                 {child.name}
@@ -121,10 +124,10 @@ export default function DimensionsPage() {
       {!selectedChildId && (
         <div className="card text-center py-16">
           <h2 className="text-sm font-medium text-slate-900 mb-1">
-            No child selected
+            {t('noChildSelected')}
           </h2>
           <p className="text-xs text-slate-500">
-            Please select a child to view their dimensions.
+            {t('noChildSelectedDesc')}
           </p>
         </div>
       )}

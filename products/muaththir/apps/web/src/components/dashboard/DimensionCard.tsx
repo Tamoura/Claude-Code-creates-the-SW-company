@@ -1,4 +1,7 @@
+'use client';
+
 import Link from 'next/link';
+import { useTranslations } from 'next-intl';
 import type { Dimension } from '../../lib/dimensions';
 
 interface DimensionCardProps {
@@ -38,11 +41,12 @@ export default function DimensionCard({
   score,
   observationCount = 0,
 }: DimensionCardProps) {
+  const td = useTranslations('dimensions');
   return (
     <Link
       href={`/dashboard/dimensions/${dimension.slug}`}
       className="card group hover:shadow-md transition-shadow duration-200"
-      aria-label={`${dimension.name} dimension - score ${score ?? 0}`}
+      aria-label={`${td(dimension.slug as any)} - ${score ?? 0}`}
     >
       <div className="flex items-start justify-between mb-3">
         <div
@@ -61,17 +65,17 @@ export default function DimensionCard({
         )}
       </div>
       <h3 className="text-sm font-semibold text-slate-900 mb-1 group-hover:text-emerald-700 transition-colors">
-        {dimension.name}
+        {td(dimension.slug as any)}
       </h3>
       <p className="text-xs text-slate-500 line-clamp-2 mb-3">
-        {dimension.description}
+        {td(`${dimension.slug}Desc` as any)}
       </p>
       <div className="flex items-center gap-1 text-xs text-slate-400">
         <svg className="h-3.5 w-3.5" fill="none" viewBox="0 0 24 24" stroke="currentColor" aria-hidden="true">
           <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M15 12a3 3 0 11-6 0 3 3 0 016 0z" />
           <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M2.458 12C3.732 7.943 7.523 5 12 5c4.478 0 8.268 2.943 9.542 7-1.274 4.057-5.064 7-9.542 7-4.477 0-8.268-2.943-9.542-7z" />
         </svg>
-        {observationCount} observation{observationCount !== 1 ? 's' : ''}
+        {observationCount}
       </div>
     </Link>
   );

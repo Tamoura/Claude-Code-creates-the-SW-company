@@ -1,12 +1,18 @@
+'use client';
+
+import { useTranslations } from 'next-intl';
+
 export default function NotificationsSettingsPage() {
+  const t = useTranslations('notifications');
+
   return (
     <div className="max-w-2xl mx-auto space-y-8">
       <div>
         <h1 className="text-2xl font-bold text-slate-900">
-          Notification Preferences
+          {t('title')}
         </h1>
         <p className="text-sm text-slate-500 mt-1">
-          Configure how and when you receive reminders.
+          {t('subtitle')}
         </p>
       </div>
 
@@ -14,10 +20,10 @@ export default function NotificationsSettingsPage() {
         <div className="flex items-center justify-between">
           <div>
             <h2 className="text-sm font-medium text-slate-900">
-              Daily Observation Reminder
+              {t('dailyReminder')}
             </h2>
             <p className="text-xs text-slate-500 mt-0.5">
-              Get a gentle reminder to log an observation each evening.
+              {t('dailyReminderDesc')}
             </p>
           </div>
           <button
@@ -33,10 +39,10 @@ export default function NotificationsSettingsPage() {
         <div className="flex items-center justify-between">
           <div>
             <h2 className="text-sm font-medium text-slate-900">
-              Weekly Digest Email
+              {t('weeklyDigest')}
             </h2>
             <p className="text-xs text-slate-500 mt-0.5">
-              Receive a weekly summary of your child&apos;s progress.
+              {t('weeklyDigestDesc')}
             </p>
           </div>
           <button
@@ -52,11 +58,10 @@ export default function NotificationsSettingsPage() {
         <div className="flex items-center justify-between">
           <div>
             <h2 className="text-sm font-medium text-slate-900">
-              Milestone Alerts
+              {t('milestoneAlerts')}
             </h2>
             <p className="text-xs text-slate-500 mt-0.5">
-              Get notified when new milestones become relevant for your
-              child&apos;s age.
+              {t('milestoneAlertsDesc')}
             </p>
           </div>
           <button
@@ -70,8 +75,7 @@ export default function NotificationsSettingsPage() {
         </div>
 
         <p className="text-xs text-slate-400 pt-2 border-t border-slate-100">
-          Notification settings will be available once connected to the
-          backend.
+          {t('comingSoon')}
         </p>
       </div>
     </div>
