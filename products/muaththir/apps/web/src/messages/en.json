@@ -162,7 +162,13 @@
     "viewAllMilestones": "View All Milestones",
     "logNewObservation": "Log new observation",
     "errorLoading": "Error loading dashboard",
-    "errorSelectChild": "Please select a child"
+    "errorSelectChild": "Please select a child",
+    "activityFeed": "Recent Activity",
+    "activityFeedDesc": "Latest observations, milestones, and achievements",
+    "activityNoItems": "No recent activity",
+    "activityObserved": "Observed",
+    "activityAchieved": "Achieved milestone",
+    "activityCompleted": "Completed goal"
   },
   "observe": {
     "title": "Log Observation",
