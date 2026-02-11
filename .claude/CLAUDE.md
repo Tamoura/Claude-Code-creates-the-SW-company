@@ -112,6 +112,36 @@ This rule exists because ConnectSW has 25+ production-tested components across p
 - `.claude/COMPONENT-REGISTRY.md` — Reusable code components
 - `.claude/PORT-REGISTRY.md` — Port assignments
 
+### Specification-Driven Development (spec-kit)
+
+ConnectSW uses [GitHub's spec-kit](https://github.com/github/spec-kit) methodology for specification-driven development. All product and feature work follows a structured spec → plan → tasks → implement pipeline.
+
+**Commands:**
+
+| Command | Agent | Purpose |
+|---------|-------|---------|
+| `/speckit.specify` | Product Manager | Create structured feature specs from CEO briefs |
+| `/speckit.clarify` | Product Manager | Resolve ambiguities in specs (up to 5 questions) |
+| `/speckit.plan` | Architect | Create traceable implementation plans from specs |
+| `/speckit.tasks` | Orchestrator | Generate dependency-ordered task lists from plans |
+| `/speckit.analyze` | QA Engineer | Validate spec/plan/tasks consistency (quality gate) |
+| `/speckit.checklist` | QA Engineer | Generate requirements-quality checklists |
+| `/speckit.constitution` | Orchestrator | Update governing principles |
+| `/speckit.implement` | Orchestrator | Execute tasks via specialist agents |
+
+**Key files:**
+- `.specify/memory/constitution.md` — Governing principles (9 articles)
+- `.specify/templates/` — Spec, plan, tasks, checklist templates
+- `.specify/templates/commands/` — Command definitions
+- `products/[product]/docs/specs/` — Feature specifications
+- `products/[product]/docs/plan.md` — Implementation plans
+- `products/[product]/docs/tasks.md` — Task lists
+
+**Workflow:**
+```
+CEO brief → /speckit.specify → /speckit.clarify → /speckit.plan → /speckit.tasks → /speckit.analyze → Implementation
+```
+
 ## Directory Structure
 
 ```
@@ -120,6 +150,7 @@ This rule exists because ConnectSW has 25+ production-tested components across p
 /docs/                   # Company documentation
 /notes/                  # CEO briefs, decisions
 /.claude/                # Agent definitions, workflows
+/.specify/               # Spec-kit constitution, templates, commands
 ```
 
 ## Product Structure
@@ -142,7 +173,11 @@ products/[name]/
 ├── docs/
 │   ├── PRD.md          # Product Requirements
 │   ├── API.md          # API documentation
-│   └── ADRs/           # Architecture decisions
+│   ├── ADRs/           # Architecture decisions
+│   ├── specs/          # Feature specifications (spec-kit)
+│   ├── plan.md         # Implementation plan (spec-kit)
+│   ├── tasks.md        # Task list (spec-kit)
+│   └── quality-reports/ # Spec consistency & gate reports
 ├── package.json        # Monorepo root
 └── README.md
 ```
@@ -226,10 +261,12 @@ The Orchestrator manages all work. It will:
 - Any blocker or decision needed
 - After 3 failed retries on any task
 
-### Testing Gate
+### Quality Gates
 
-Before any checkpoint where you'll review the product, the Orchestrator automatically:
-1. Invokes QA Engineer to run Testing Gate
-2. QA runs: unit tests, E2E tests, visual verification
-3. Only proceeds to checkpoint if QA reports PASS
-4. If FAIL, routes to engineer for fix, then re-runs Testing Gate
+Before any checkpoint where you'll review the product, the Orchestrator automatically runs:
+
+1. **Spec Consistency Gate** — `/speckit.analyze` validates spec/plan/tasks alignment
+2. **Browser-First Gate** — Product works in a real browser
+3. **Testing Gate** — Unit tests, E2E tests, visual verification all pass
+4. Only proceeds to checkpoint if ALL gates report PASS
+5. If FAIL, routes to appropriate agent for fix, then re-runs gates

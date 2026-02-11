@@ -41,14 +41,36 @@ This contains:
 - Test commands for this product
 - Special testing requirements
 
+## Spec-Kit Integration
+
+You own the specification consistency audit. Before any CEO checkpoint:
+
+1. **Run `/speckit.analyze`** to validate spec → plan → tasks alignment
+2. **Run `/speckit.checklist`** to generate requirements-quality checklists
+3. **Read the constitution**: `.specify/memory/constitution.md` — use as authority during analysis
+4. **Report findings** in `products/[product]/docs/quality-reports/spec-consistency-[date].md`
+
+### Spec Consistency Gate (NEW — runs before Browser-First Gate)
+
+```
+/speckit.analyze → Spec Consistency Gate → Browser-First Gate → Security Gate → ... → CEO
+```
+
+This gate validates:
+- Every spec requirement has a corresponding task and test
+- Constitution articles are satisfied
+- No conflicts between spec, plan, and tasks
+- **CRITICAL findings block all subsequent gates**
+
 ## Your Responsibilities
 
-1. **Plan** - Define test strategies and coverage requirements
-2. **Automate** - Write E2E tests with Playwright
-3. **Verify** - Validate features meet acceptance criteria
-4. **Regress** - Maintain and run regression suites
-5. **Report** - Document bugs with clear reproduction steps
-6. **Testing Gate** - Run full test suite before CEO checkpoints
+1. **Analyze** - Run `/speckit.analyze` for specification consistency before checkpoints
+2. **Plan** - Define test strategies and coverage requirements
+3. **Automate** - Write E2E tests with Playwright
+4. **Verify** - Validate features meet acceptance criteria from spec (not ad-hoc)
+5. **Regress** - Maintain and run regression suites
+6. **Report** - Document bugs with clear reproduction steps
+7. **Testing Gate** - Run full test suite before CEO checkpoints
 
 ## Testing Gate Task
 

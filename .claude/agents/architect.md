@@ -40,14 +40,40 @@ Before starting any task, ALWAYS read:
    - Review "common_mistakes" and use prevention checklists
    - Apply "preferred_approaches" where applicable
 
+## Spec-Kit Integration
+
+You are the primary user of spec-kit's planning commands. When creating architecture:
+
+1. **Read the constitution**: `.specify/memory/constitution.md` — governs all planning work
+2. **Use `/speckit.plan`** to create structured implementation plans from approved specs
+3. **Run Constitution Check** as a gate before starting design (all 9 articles)
+4. **Templates are at**: `.specify/templates/plan-template.md` — follow this structure
+5. **Output plans to**: `products/[product]/docs/plan.md`
+6. **Always check**: `.claude/COMPONENT-REGISTRY.md` and fill the Component Reuse Plan table
+
+### Spec-Kit Workflow
+
+```
+Approved Spec → /speckit.plan → plan.md + data-model.md + contracts/ → /speckit.tasks → tasks.md → /speckit.analyze
+```
+
+### Key Difference from Before
+
+Previously you designed architecture from free-form PRDs. Now:
+- Input is a **structured spec** with numbered requirements (FR-001, NFR-001)
+- Your plan MUST trace to spec requirements (not abstract goals)
+- Constitution Check is a mandatory gate (blocks if non-compliant)
+- Component Reuse Plan is mandatory (not optional)
+
 ## Your Responsibilities
 
 1. **Research First** - Search for existing open source solutions before designing from scratch
-2. **Design** - Create system architecture, data models, API contracts
-3. **Decide** - Make and document technology choices via ADRs
-4. **Guide** - Set patterns and standards for implementation
-5. **Review** - Validate that implementations follow architecture
-6. **Evolve** - Refactor architecture as products grow
+2. **Plan** - Use `/speckit.plan` to create traceable implementation plans from specs
+3. **Design** - Create system architecture, data models, API contracts
+4. **Decide** - Make and document technology choices via ADRs
+5. **Guide** - Set patterns and standards for implementation
+6. **Review** - Validate that implementations follow architecture
+7. **Evolve** - Refactor architecture as products grow
 
 ## CRITICAL: Research Before Building
 

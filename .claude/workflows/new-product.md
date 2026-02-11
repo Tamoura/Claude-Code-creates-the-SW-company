@@ -34,11 +34,17 @@ Step 1.2: Gather Requirements
 │   └── Any constraints
 └── Save brief to notes/briefs/[product-name].md
 
-Step 1.3: Product Manager Creates PRD
+Step 1.3: Product Manager Creates Specification (spec-kit enhanced)
 ├── Invoke Product Manager agent
-├── Input: CEO brief
-├── Output:
-│   ├── products/[product-name]/docs/PRD.md
+├── Run `/speckit.specify` with CEO brief as input
+│   ├── Generates structured feature spec at products/[product]/docs/specs/product-mvp.md
+│   ├── Fills all template sections (user stories, requirements, acceptance criteria)
+│   ├── Checks COMPONENT-REGISTRY.md for reusable components
+│   └── Marks unclear areas with [NEEDS CLARIFICATION]
+├── If [NEEDS CLARIFICATION] markers exist:
+│   └── Run `/speckit.clarify` to resolve (up to 5 targeted questions to CEO)
+├── Also produce:
+│   ├── products/[product-name]/docs/PRD.md (generated from spec)
 │   └── products/[product-name]/.claude/addendum.md (initial)
 ├── Addendum sections:
 │   ├── Product Overview
@@ -47,9 +53,9 @@ Step 1.3: Product Manager Creates PRD
 │   └── Special Considerations
 └── Commit to branch: feature/[product]/prd
 
-CHECKPOINT: PRD Review
-├── Notify CEO: "PRD ready for review"
-├── Provide: Link to PRD
+CHECKPOINT: Specification Review
+├── Notify CEO: "Product specification ready for review"
+├── Provide: Link to spec + PRD
 ├── Wait for: CEO approval
 └── On approval: Merge PRD branch
 ```
@@ -57,23 +63,23 @@ CHECKPOINT: PRD Review
 ### Phase 2: Architecture
 
 ```
-Step 2.1: Research Open Source
+Step 2.1: Technical Planning (spec-kit enhanced)
 ├── Invoke Architect agent
-├── Search for existing solutions:
-│   ├── GitHub repos solving similar problems
-│   ├── npm packages for key functionality
-│   └── UI component libraries
-├── Evaluate and document findings
-└── Output: products/[product]/docs/ADRs/ADR-001-open-source-research.md
-
-Step 2.2: System Design
-├── Invoke Architect agent
-├── Input: Approved PRD + research findings
-├── Outputs:
+├── Run `/speckit.plan` with approved spec as input
+│   ├── Constitution Check gate (all articles verified)
+│   ├── Phase 0: Research open source solutions
+│   │   ├── GitHub repos solving similar problems
+│   │   ├── npm packages for key functionality
+│   │   ├── UI component libraries
+│   │   └── Output: products/[product]/docs/research.md
+│   └── Phase 1: Design & Contracts
+│       ├── Output: products/[product]/docs/data-model.md
+│       ├── Output: products/[product]/docs/contracts/ (API contracts)
+│       ├── Output: products/[product]/docs/plan.md
+│       └── Output: products/[product]/docs/ADRs/ADR-001-*.md
+├── Also produce:
 │   ├── products/[product]/docs/architecture.md
 │   ├── products/[product]/docs/api-contract.yml (if API needed)
-│   ├── products/[product]/docs/data-model.md
-│   ├── products/[product]/docs/ADRs/ADR-002-*.md
 │   └── products/[product]/.claude/addendum.md (complete tech sections)
 ├── Addendum sections to complete:
 │   ├── Tech Stack
@@ -83,9 +89,26 @@ Step 2.2: System Design
 │   └── Performance Requirements
 └── Commit to branch: arch/[product]
 
+Step 2.2: Generate Task List (spec-kit enhanced)
+├── Run `/speckit.tasks` from the implementation plan
+│   ├── Generates dependency-ordered task list
+│   ├── Tasks organized by user story for independent delivery
+│   ├── TDD ordering enforced (tests before implementation)
+│   ├── Parallel tasks marked for git worktree execution
+│   └── Output: products/[product]/docs/tasks.md
+├── Run `/speckit.analyze` for consistency check
+│   ├── Validates spec → plan → tasks alignment
+│   ├── Checks constitution compliance
+│   ├── Identifies coverage gaps
+│   └── Output: products/[product]/docs/quality-reports/spec-consistency-[date].md
+└── Commit to branch: arch/[product]
+
 CHECKPOINT: Architecture Review
-├── Notify CEO: "Architecture ready for review"
-├── Provide: Summary of key decisions
+├── Notify CEO: "Architecture and implementation plan ready for review"
+├── Provide:
+│   ├── Summary of key decisions
+│   ├── Specification consistency report (from /speckit.analyze)
+│   └── Task list with estimated phases
 ├── Wait for: CEO approval
 └── On approval: Merge architecture branch
 ```

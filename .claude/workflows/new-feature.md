@@ -17,17 +17,23 @@ CEO says something like:
 
 ## Workflow Steps
 
-### Phase 1: Validation
+### Phase 1: Specification (spec-kit enhanced)
 
 ```
-Step 1.1: Verify Feature Coverage
-├── Check if feature is in PRD
-├── If not in PRD:
-│   ├── Ask CEO: "This feature isn't in the PRD. Should I:"
-│   │   ├── A) Add it to PRD and proceed
-│   │   └── B) Implement as requested (skip PRD update)
-│   └── If A: Invoke Product Manager to update PRD
-└── Get acceptance criteria from PRD
+Step 1.1: Create Feature Specification
+├── Invoke Product Manager agent
+├── Run `/speckit.specify` with CEO's feature request as input
+│   ├── Generates structured spec at products/[product]/docs/specs/[feature-name].md
+│   ├── User stories with acceptance criteria (Given/When/Then)
+│   ├── Functional and non-functional requirements (FR-xxx, NFR-xxx)
+│   ├── Component reuse check (from COMPONENT-REGISTRY.md)
+│   └── Marks unclear areas with [NEEDS CLARIFICATION]
+├── If [NEEDS CLARIFICATION] markers exist:
+│   └── Run `/speckit.clarify` (up to 5 targeted questions to CEO)
+├── Check if feature is in PRD:
+│   ├── If not: Update PRD with new feature section
+│   └── If yes: Verify spec aligns with existing PRD entry
+└── Get acceptance criteria from spec (not free-form PRD)
 
 Step 1.2: Check Dependencies
 ├── Are there blocking issues?
@@ -36,16 +42,29 @@ Step 1.2: Check Dependencies
 └── If blocked: Report to CEO, suggest resolution
 ```
 
-### Phase 2: Planning
+### Phase 2: Planning (spec-kit enhanced)
 
 ```
-Step 2.1: Analyze Scope
+Step 2.1: Create Implementation Plan
+├── Invoke Architect agent
+├── Run `/speckit.plan` with approved spec
+│   ├── Constitution Check gate (all articles verified)
+│   ├── Research phase (open source solutions)
+│   ├── Design & Contracts (data model, API contracts)
+│   └── Output: products/[product]/docs/plan.md
+├── Run `/speckit.tasks` to generate task list
+│   ├── Tasks organized by user story, TDD-ordered
+│   ├── Parallel tasks marked for worktree execution
+│   └── Output: products/[product]/docs/tasks.md
+├── Run `/speckit.analyze` for consistency check
+│   ├── Validates spec → plan → tasks alignment
+│   └── Output: consistency report
 ├── What needs to be built:
 │   ├── Backend changes? (API, database)
 │   ├── Frontend changes? (UI, pages)
 │   └── Both?
 ├── Can backend and frontend work in parallel?
-└── Estimated components to create/modify
+└── Components to create/modify (from task list)
 
 Step 2.2: Create Feature Branch
 ├── Branch from main: feature/[product]/[feature-id]
@@ -138,10 +157,11 @@ Step 4.3: Documentation
 ```
 
 **CRITICAL: Never send to CEO checkpoint without:**
-1. All unit tests passing
-2. All E2E/Playwright tests passing
-3. Visual verification that UI renders correctly
-4. Manual verification that all interactions work
+1. `/speckit.analyze` passes (no CRITICAL findings in spec consistency)
+2. All unit tests passing
+3. All E2E/Playwright tests passing
+4. Visual verification that UI renders correctly
+5. Manual verification that all interactions work
 
 ### Phase 5: Review
 

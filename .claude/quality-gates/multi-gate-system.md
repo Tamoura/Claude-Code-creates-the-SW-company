@@ -1,23 +1,88 @@
 # Multi-Gate Quality System
 
-**Phase 2 Enhancement**: Comprehensive quality verification at multiple stages.
+**Phase 2 Enhancement + Spec-Kit Integration**: Comprehensive quality verification at multiple stages, now starting with specification consistency.
 
 ## Purpose
 
-Catch issues earlier in the development process by running specialized checks at strategic points, not just before CEO review.
+Catch issues earlier in the development process by running specialized checks at strategic points, not just before CEO review. The Spec Consistency Gate (powered by spec-kit) catches specification-level issues before any code is written or tested.
 
-## Five Quality Gates
+## Six Quality Gates
 
 ```
-Code → Browser Gate → Security Gate → Performance Gate → Testing Gate → Production Gate → CEO
-          ↓               ↓                ↓                  ↓                ↓
-       Browser         Security        Performance        Quality         Deployment
-       Works?          Issues          Issues             Issues          Readiness
+Spec → Spec Consistency Gate → Browser Gate → Security Gate → Performance Gate → Testing Gate → Production Gate → CEO
+              ↓                     ↓               ↓                ↓                  ↓                ↓
+          Spec/Plan            Browser         Security        Performance        Quality         Deployment
+          Aligned?             Works?          Issues          Issues             Issues          Readiness
 ```
+
+### -1. Spec Consistency Gate (SPECIFICATION QUALITY) — spec-kit powered
+
+**When**: After task generation, before implementation begins. Also before any CEO checkpoint.
+**Purpose**: Verify that spec, plan, and tasks are aligned and constitution-compliant. Catches requirement gaps before code is written.
+**Invoked By**: QA Engineer (via `/speckit.analyze`) or Orchestrator automatically
+
+#### Checks
+
+```yaml
+Spec Consistency Checks:
+  - Spec exists and all sections filled (no empty templates)
+  - No unresolved [NEEDS CLARIFICATION] markers
+  - Every spec requirement (FR-xxx) maps to at least one task
+  - Every task maps back to a spec requirement (no orphan tasks)
+  - TDD ordering verified (test tasks before implementation tasks)
+  - Constitution compliance (all 9 articles checked)
+  - Component reuse table references valid registry entries
+  - Terminology consistent across spec, plan, and tasks
+  - No conflicts between spec entities and data model
+  - Port assignments match PORT-REGISTRY.md
+```
+
+#### Implementation
+
+```bash
+# Run spec consistency gate (via /speckit.analyze)
+# This is a read-only audit — it does not modify any files
+
+# Artifacts checked:
+# - products/[product]/docs/specs/[feature-name].md
+# - products/[product]/docs/plan.md
+# - products/[product]/docs/tasks.md
+# - .specify/memory/constitution.md
+# - .claude/COMPONENT-REGISTRY.md
+
+# Output: products/[product]/docs/quality-reports/spec-consistency-[date].md
+```
+
+#### Pass Criteria
+
+```
+✅ PASS if:
+- All spec requirements covered by tasks
+- Constitution compliance: 9/9 articles satisfied
+- No CRITICAL or HIGH findings
+- Terminology consistent across artifacts
+
+⚠️ WARN if:
+- MEDIUM findings exist (terminology inconsistencies, minor gaps)
+- Some LOW findings (style, documentation gaps)
+
+❌ FAIL if:
+- Any spec requirement has no corresponding task (CRITICAL)
+- Constitution violation detected (CRITICAL)
+- Unresolved [NEEDS CLARIFICATION] markers (CRITICAL)
+- Spec-plan conflicts (HIGH)
+- TDD ordering violated (HIGH)
+
+BLOCKING: If spec consistency gate has CRITICAL findings, flag for resolution.
+Unlike browser-first gate, this does NOT block subsequent gates for existing code,
+but MUST pass before CEO checkpoint.
+```
+
+---
 
 ### 0. Browser-First Gate (FOUNDATIONAL)
 
-**When**: Before ANY other gate. This is the first thing checked.
+**When**: Before ANY other code-level gate. This is the first code-level thing checked.
 **Purpose**: Verify the product actually works in a browser. If it doesn't, nothing else matters.
 **Invoked By**: Automatically by `testing-gate-checklist.sh` (Phase 1) and orchestrator (Step 4.F)
 
@@ -476,7 +541,8 @@ tasks:
 
 | Gate | Automatic? | When Run |
 |------|-----------|----------|
-| Browser-First | Automatic | Before ALL other gates (Phase 1 of testing gate) |
+| Spec Consistency | Automatic | After task generation + before CEO checkpoint |
+| Browser-First | Automatic | Before ALL code-level gates (Phase 1 of testing gate) |
 | Security | Automatic in CI | On every PR |
 | Performance | Automatic | After staging deploy |
 | Testing | Automatic | Before CEO checkpoint |
@@ -605,9 +671,27 @@ Track in `.claude/memory/metrics/gate-metrics.json`:
 }
 ```
 
+## Spec-Kit Integration Summary
+
+The spec-kit integration adds a **Specification Consistency Gate** as the earliest quality check:
+
+```
+/speckit.specify → /speckit.clarify → /speckit.plan → /speckit.tasks → /speckit.analyze (Gate -1)
+                                                                              ↓
+                                                                    Browser Gate (Gate 0) → ... → CEO
+```
+
+**Key benefit**: Catches misalignment between what was specified and what is being built BEFORE any code is written. This eliminates the most expensive category of rework — building the wrong thing.
+
+**Powered by**: `.specify/templates/commands/analyze.md` (command definition)
+**Constitution**: `.specify/memory/constitution.md` (governing principles)
+**Templates**: `.specify/templates/` (spec, plan, tasks, checklist templates)
+
 ## Future Enhancements
 
 - **Automated security fixes**: Auto-create PRs for dependency updates
 - **Performance budgets**: Fail if bundle size increases by >10%
 - **Visual regression testing**: Catch UI changes automatically
 - **Compliance gate**: Check for GDPR, SOC2, etc. requirements
+- **Spec regression**: Detect when code changes drift from specifications
+- **Cross-product spec analysis**: Validate consistency across all ConnectSW products
