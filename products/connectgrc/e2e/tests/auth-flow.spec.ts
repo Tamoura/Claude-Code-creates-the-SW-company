@@ -46,7 +46,7 @@ test.describe('Authentication Flow', () => {
   test.describe('Register Page', () => {
     test('displays registration form', async ({ page }) => {
       await page.goto('/register');
-      await expect(page.locator('text=Create Account')).toBeVisible();
+      await expect(page.getByRole('heading', { name: 'Create Account' })).toBeVisible();
       await expect(page.locator('input[type="email"]')).toBeVisible();
       await expect(page.locator('input[type="password"]').first()).toBeVisible();
     });
@@ -61,9 +61,9 @@ test.describe('Authentication Flow', () => {
 
     test('has name, email, role, and password fields', async ({ page }) => {
       await page.goto('/register');
-      await expect(page.locator('input[name="name"], input[placeholder*="name" i]').first()).toBeVisible();
+      await expect(page.locator('input#name')).toBeVisible();
       await expect(page.locator('input[type="email"]')).toBeVisible();
-      await expect(page.locator('select[name="role"], input[name="role"]').first()).toBeVisible();
+      await expect(page.locator('select#role')).toBeVisible();
       await expect(page.locator('input[type="password"]').first()).toBeVisible();
     });
   });
@@ -80,7 +80,7 @@ test.describe('Authentication Flow', () => {
   test.describe('Reset Password Page', () => {
     test('displays reset password form', async ({ page }) => {
       await page.goto('/reset-password?token=test-token');
-      await expect(page.locator('text=Reset Password')).toBeVisible({ timeout: 5000 });
+      await expect(page.getByRole('heading', { name: 'Reset Password' })).toBeVisible({ timeout: 5000 });
       await expect(page.locator('input[type="password"]').first()).toBeVisible();
       await expect(page.locator('button:has-text("Reset Password")')).toBeVisible();
     });

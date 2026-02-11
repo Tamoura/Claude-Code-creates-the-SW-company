@@ -29,7 +29,11 @@ const AuthContext = createContext<AuthContextValue | undefined>(undefined);
 const REFRESH_TOKEN_KEY = 'grc_refresh_token';
 
 // Public routes that don't require authentication
-const PUBLIC_ROUTES = ['/', '/login', '/register', '/forgot-password', '/reset-password', '/verify-email'];
+const PUBLIC_ROUTES = [
+  '/', '/login', '/register', '/forgot-password', '/reset-password', '/verify-email',
+  '/about', '/how-it-works', '/for-talents', '/for-employers', '/pricing',
+  '/resources', '/contact', '/terms',
+];
 
 // Auth routes that authenticated users shouldn't access
 const AUTH_ROUTES = ['/login', '/register', '/forgot-password', '/reset-password'];

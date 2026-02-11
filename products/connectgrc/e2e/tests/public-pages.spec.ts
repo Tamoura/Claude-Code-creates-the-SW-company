@@ -3,7 +3,7 @@ import { test, expect } from '@playwright/test';
 test.describe('Public Pages', () => {
   test('landing page loads with correct content', async ({ page }) => {
     await page.goto('/');
-    await expect(page.locator('text=ConnectGRC')).toBeVisible();
+    await expect(page.locator('text=ConnectGRC').first()).toBeVisible();
   });
 
   test('about page loads', async ({ page }) => {
