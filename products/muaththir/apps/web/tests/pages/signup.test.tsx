@@ -69,8 +69,9 @@ describe('SignupPage', () => {
   it('renders link to login page', () => {
     render(<SignupPage />);
 
-    const loginLink = screen.getByText(/Log in/i);
-    expect(loginLink.closest('a')).toHaveAttribute('href', '/login');
+    const loginLinks = screen.getAllByText(/Log in/i);
+    const formLink = loginLinks.find((el) => el.closest('a')?.getAttribute('href') === '/login');
+    expect(formLink).toBeTruthy();
   });
 
   it('has proper input types and attributes', () => {
