@@ -1,0 +1,1284 @@
+# ConnectGRC Task Graph
+# AI-First GRC Platform for Talent Assessment & Career Development
+#
+# Based on: .claude/workflows/templates/new-product-tasks.yml
+# Updated to reflect actual project state as of 2026-02-11
+
+metadata:
+  product: "connectgrc"
+  version: "1.0.0"
+  workflow_type: "new-product"
+  created_at: "2026-02-11"
+  updated_at: "2026-02-11"
+  ports:
+    frontend: 3110
+    backend: 5010
+
+tasks:
+  # ============================================================================
+  # PHASE 1: INCEPTION & PLANNING (completed)
+  # ============================================================================
+
+  - id: "PRD-01"
+    name: "Create Product Requirements Document"
+    description: |
+      CEO provided the BRD (Business Requirements Document) defining
+      ConnectGRC as an AI-first GRC platform with six journeys:
+      - Aspirant, Professional, Vanguard, Recruiter, Employer, Admin
+      MVP scope: Aspirant + Professional + Admin journeys.
+      Saved as products/connectgrc/docs/PRD.md.
+    agent: "product-manager"
+    depends_on: []
+    produces:
+      - name: "PRD"
+        type: "document"
+        path: "products/connectgrc/docs/PRD.md"
+      - name: "Product Addendum"
+        type: "document"
+        path: "products/connectgrc/.claude/addendum.md"
+    parallel_ok: false
+    checkpoint: true
+    priority: "critical"
+    estimated_time_minutes: 120
+    acceptance_criteria:
+      - "PRD follows template structure"
+      - "All user stories have acceptance criteria"
+      - "Success metrics are measurable"
+      - "MVP scope is clearly defined"
+      - "Product addendum created with tech stack and conventions"
+    status: "completed"
+    completed_at: "2026-02-11"
+    notes: "BRD provided by CEO, formalized as PRD.md"
+
+  # ============================================================================
+  # PHASE 1: ARCHITECTURE (completed)
+  # ============================================================================
+
+  - id: "ARCH-01"
+    name: "Design System Architecture"
+    description: |
+      Full architecture designed including:
+      - Fastify + Prisma + PostgreSQL backend on port 5010
+      - Next.js 14 + Tailwind frontend on port 3110
+      - JWT auth with refresh tokens
+      - Redis for caching & rate limiting
+      - 5 ADRs covering tech stack, auth, assessment engine, AI, and audit
+      - OpenAPI 3.0 API contract (api-schema.yml)
+      - PostgreSQL database schema (db-schema.sql)
+      - Prisma schema implemented
+    agent: "architect"
+    depends_on: ["PRD-01"]
+    consumes:
+      - name: "PRD"
+        required_from_task: "PRD-01"
+    produces:
+      - name: "Architecture Document"
+        type: "document"
+        path: "products/connectgrc/docs/architecture.md"
+      - name: "API Schema"
+        type: "file"
+        path: "products/connectgrc/docs/api-schema.yml"
+      - name: "Database Schema"
+        type: "file"
+        path: "products/connectgrc/docs/db-schema.sql"
+      - name: "ADRs"
+        type: "directory"
+        path: "products/connectgrc/docs/ADRs/"
+    parallel_ok: false
+    checkpoint: true
+    priority: "critical"
+    estimated_time_minutes: 180
+    acceptance_criteria:
+      - "API contracts define all MVP endpoints"
+      - "Database schema is normalized"
+      - "At least 2 ADRs documenting key decisions"
+      - "Security considerations documented"
+      - "Tech stack confirmed and documented"
+    status: "completed"
+    completed_at: "2026-02-11"
+    notes: "5 ADRs, full OpenAPI spec, Prisma schema, db-schema.sql"
+
+  # ============================================================================
+  # PHASE 2: FOUNDATION (in progress)
+  # ============================================================================
+
+  - id: "DEVOPS-01"
+    name: "Setup CI/CD Pipeline"
+    description: |
+      Configure deployment infrastructure:
+      - GitHub Actions workflows (build, test, deploy)
+      - Docker configuration for API and Web
+      - docker-compose for local development
+      - Environment setup (dev, staging, prod)
+    agent: "devops-engineer"
+    depends_on: ["ARCH-01"]
+    consumes:
+      - name: "Architecture Document"
+        required_from_task: "ARCH-01"
+    produces:
+      - name: "GitHub Actions Workflow"
+        type: "file"
+        path: ".github/workflows/connectgrc-ci.yml"
+      - name: "API Dockerfile"
+        type: "file"
+        path: "products/connectgrc/apps/api/Dockerfile"
+      - name: "Web Dockerfile"
+        type: "file"
+        path: "products/connectgrc/apps/web/Dockerfile"
+      - name: "Docker Compose"
+        type: "file"
+        path: "products/connectgrc/docker-compose.yml"
+    parallel_ok: true
+    checkpoint: false
+    priority: "high"
+    estimated_time_minutes: 90
+    acceptance_criteria:
+      - "CI workflow runs on PR"
+      - "Docker build succeeds for API and Web"
+      - "docker-compose up starts full stack"
+      - "Environment variables documented"
+    status: "completed"
+    completed_at: "2026-02-11"
+    notes: "CI pipeline configured, Docker files created"
+
+  - id: "BACKEND-01"
+    name: "Implement Backend Foundation"
+    description: |
+      Backend API foundation implemented:
+      - Fastify application with plugins (prisma, redis, auth, observability)
+      - Prisma ORM with User, ApiKey, Session, AuditLog models
+      - Database migrations (20260211201745_init)
+      - Middleware: CORS, rate limiting, JWT, error handling
+      - Health check endpoint at /api/v1/health
+      - Utility modules: logger, crypto, errors, pagination
+      - 36 integration tests passing (health, config, errors, utils)
+    agent: "backend-engineer"
+    depends_on: ["ARCH-01"]
+    consumes:
+      - name: "API Schema"
+        required_from_task: "ARCH-01"
+      - name: "Database Schema"
+        required_from_task: "ARCH-01"
+    produces:
+      - name: "Backend App"
+        type: "directory"
+        path: "products/connectgrc/apps/api"
+      - name: "Prisma Schema"
+        type: "file"
+        path: "products/connectgrc/apps/api/prisma/schema.prisma"
+      - name: "Integration Tests"
+        type: "directory"
+        path: "products/connectgrc/apps/api/tests"
+    parallel_ok: true
+    checkpoint: false
+    priority: "high"
+    estimated_time_minutes: 150
+    acceptance_criteria:
+      - "Fastify server starts on port 5010"
+      - "Database connection works"
+      - "Health check endpoint returns 200"
+      - "At least 10 unit tests passing"
+      - "Test coverage > 80%"
+    status: "completed"
+    completed_at: "2026-02-11"
+    notes: "36 tests passing, full plugin stack, seed script ready"
+
+  - id: "FRONTEND-01"
+    name: "Implement Frontend Foundation"
+    description: |
+      Frontend application foundation in progress:
+      - Next.js 14 App Router with route groups
+      - Tailwind CSS configuration
+      - Layout components (Header, Footer, Sidebar)
+      - UI components (Button, Card, Input)
+      - Route groups: (public), (auth), (app), (admin)
+      - All page stubs created for every route
+      - API client and token manager
+      - useAuth hook
+      - Jest + React Testing Library configured
+      - Component tests for Button, Footer, Header
+      - Page tests for landing, not-found
+    agent: "frontend-engineer"
+    depends_on: ["ARCH-01"]
+    consumes:
+      - name: "Architecture Document"
+        required_from_task: "ARCH-01"
+    produces:
+      - name: "Frontend App"
+        type: "directory"
+        path: "products/connectgrc/apps/web"
+      - name: "Layout Components"
+        type: "directory"
+        path: "products/connectgrc/apps/web/src/components/layout"
+      - name: "UI Components"
+        type: "directory"
+        path: "products/connectgrc/apps/web/src/components/ui"
+      - name: "Unit Tests"
+        type: "directory"
+        path: "products/connectgrc/apps/web/tests"
+    parallel_ok: true
+    checkpoint: false
+    priority: "high"
+    estimated_time_minutes: 120
+    acceptance_criteria:
+      - "Next.js dev server starts on port 3110"
+      - "Home page renders without errors"
+      - "Tailwind CSS styles apply correctly"
+      - "Layout is responsive"
+      - "At least 5 component tests passing"
+      - "All route groups configured with layouts"
+    status: "in_progress"
+    notes: "Structure and stubs created, needs styling polish and more tests"
+
+  - id: "QA-01"
+    name: "Setup E2E Test Framework"
+    description: |
+      Configure end-to-end testing infrastructure:
+      - Playwright configuration
+      - Test utilities and helpers
+      - Page Object Models for auth, dashboard, assessment
+      - Database seeding for tests
+      - Basic smoke tests (health, landing, navigation)
+    agent: "qa-engineer"
+    depends_on: ["FRONTEND-01"]
+    consumes:
+      - name: "Frontend App"
+        required_from_task: "FRONTEND-01"
+    produces:
+      - name: "E2E Test Setup"
+        type: "directory"
+        path: "products/connectgrc/e2e"
+      - name: "Playwright Config"
+        type: "file"
+        path: "products/connectgrc/e2e/playwright.config.ts"
+      - name: "Smoke Tests"
+        type: "directory"
+        path: "products/connectgrc/e2e/tests/smoke"
+    parallel_ok: false
+    checkpoint: false
+    priority: "high"
+    estimated_time_minutes: 60
+    acceptance_criteria:
+      - "Playwright installed and configured"
+      - "At least 3 smoke tests created"
+      - "Tests can run headless and headed"
+      - "Test data seeding works"
+    status: "pending"
+
+  - id: "QA-02"
+    name: "Run Testing Gate - Foundation"
+    description: |
+      Execute complete Testing Gate before CEO review:
+      - Run all unit tests (backend + frontend)
+      - Run all E2E smoke tests
+      - Start dev servers and verify app loads
+      - Visual verification (buttons, forms, layout)
+      - Check for console errors
+      - Generate test report
+    agent: "qa-engineer"
+    depends_on: ["BACKEND-01", "FRONTEND-01", "DEVOPS-01", "QA-01"]
+    consumes:
+      - name: "Backend App"
+        required_from_task: "BACKEND-01"
+      - name: "Frontend App"
+        required_from_task: "FRONTEND-01"
+    produces:
+      - name: "Test Report"
+        type: "document"
+        path: "products/connectgrc/docs/test-reports/foundation.md"
+    parallel_ok: false
+    checkpoint: false
+    priority: "critical"
+    estimated_time_minutes: 45
+    acceptance_criteria:
+      - "All unit tests pass (backend + frontend)"
+      - "All E2E smoke tests pass"
+      - "App loads without errors on http://localhost:3110"
+      - "API responds on http://localhost:5010/api/v1/health"
+      - "All UI elements visible and styled"
+      - "No console errors"
+    status: "pending"
+
+  - id: "DOCS-01"
+    name: "Create Initial Documentation"
+    description: |
+      Document the foundation:
+      - README with setup instructions
+      - API documentation with endpoint examples
+      - Development guide (local setup, testing, database)
+      - Deployment guide (Docker, environment variables)
+    agent: "technical-writer"
+    depends_on: ["BACKEND-01", "FRONTEND-01", "DEVOPS-01"]
+    consumes:
+      - name: "Backend App"
+        required_from_task: "BACKEND-01"
+      - name: "Frontend App"
+        required_from_task: "FRONTEND-01"
+    produces:
+      - name: "README"
+        type: "file"
+        path: "products/connectgrc/README.md"
+      - name: "API Docs"
+        type: "file"
+        path: "products/connectgrc/docs/API.md"
+      - name: "Development Guide"
+        type: "file"
+        path: "products/connectgrc/docs/DEVELOPMENT.md"
+    parallel_ok: true
+    checkpoint: false
+    priority: "normal"
+    estimated_time_minutes: 60
+    acceptance_criteria:
+      - "README has clear setup instructions"
+      - "API endpoints documented with examples"
+      - "Development guide covers local setup, testing, database"
+    status: "pending"
+
+  # ============================================================================
+  # CHECKPOINT: FOUNDATION COMPLETE
+  # ============================================================================
+
+  - id: "CHECKPOINT-FOUNDATION"
+    name: "Foundation Complete - CEO Review"
+    description: |
+      Foundation is complete and tested. Ready for CEO to review:
+      - Product structure in place
+      - Backend API running on port 5010
+      - Frontend app running on port 3110
+      - All tests passing (unit + E2E)
+      - Documentation complete
+      CEO can test the foundation before feature development begins.
+    agent: "orchestrator"
+    depends_on: ["QA-02", "DOCS-01"]
+    parallel_ok: false
+    checkpoint: true
+    priority: "critical"
+    estimated_time_minutes: 0
+    status: "pending"
+
+  # ============================================================================
+  # PHASE 3: CORE FEATURES - SPRINT 1 (Auth & Onboarding)
+  # ============================================================================
+
+  - id: "AUTH-BACKEND-01"
+    name: "Auth API Endpoints"
+    description: |
+      Implement authentication API endpoints:
+      - POST /api/v1/auth/register (email, password, name, role)
+      - POST /api/v1/auth/login (email, password)
+      - POST /api/v1/auth/verify-email (token)
+      - POST /api/v1/auth/forgot-password (email)
+      - POST /api/v1/auth/reset-password (token, newPassword)
+      - POST /api/v1/auth/refresh-token (refreshToken)
+      - POST /api/v1/auth/logout (invalidate session)
+      Add Prisma models: EmailVerification, PasswordReset.
+      Add email service stub for verification/reset emails.
+      Integration tests for all endpoints.
+    agent: "backend-engineer"
+    depends_on: ["CHECKPOINT-FOUNDATION"]
+    consumes:
+      - name: "Backend App"
+        required_from_task: "BACKEND-01"
+    produces:
+      - name: "Auth Routes"
+        type: "file"
+        path: "products/connectgrc/apps/api/src/routes/auth.ts"
+      - name: "Auth Tests"
+        type: "file"
+        path: "products/connectgrc/apps/api/tests/integration/auth.test.ts"
+    parallel_ok: false
+    checkpoint: false
+    priority: "critical"
+    estimated_time_minutes: 240
+    acceptance_criteria:
+      - "All 7 auth endpoints return correct responses"
+      - "Passwords hashed with bcrypt (cost factor 12)"
+      - "JWT access tokens expire in 15 minutes"
+      - "Refresh tokens expire in 7 days"
+      - "Email verification tokens expire in 24 hours"
+      - "Rate limiting on login (5 attempts per 15 min)"
+      - "All auth tests passing (>= 20 tests)"
+    status: "pending"
+
+  - id: "AUTH-FRONTEND-01"
+    name: "Auth UI Pages"
+    description: |
+      Implement authentication UI pages:
+      - Register page with form validation
+      - Login page with error handling
+      - Verify email page (token from URL)
+      - Forgot password page
+      - Reset password page (token from URL)
+      - Auth layout with branding
+      Wire all pages to real API via api-client.
+      Add component tests for forms.
+    agent: "frontend-engineer"
+    depends_on: ["AUTH-BACKEND-01"]
+    consumes:
+      - name: "Auth Routes"
+        required_from_task: "AUTH-BACKEND-01"
+    produces:
+      - name: "Auth Pages"
+        type: "directory"
+        path: "products/connectgrc/apps/web/src/app/(auth)"
+      - name: "Auth Tests"
+        type: "directory"
+        path: "products/connectgrc/apps/web/tests/pages/auth"
+    parallel_ok: false
+    checkpoint: false
+    priority: "critical"
+    estimated_time_minutes: 180
+    acceptance_criteria:
+      - "Register form validates email, password strength, name"
+      - "Login form shows error on invalid credentials"
+      - "Verify email page processes token and shows result"
+      - "Forgot password sends reset email"
+      - "Reset password form validates matching passwords"
+      - "All forms accessible (labels, aria, keyboard nav)"
+      - "Component tests passing (>= 10 tests)"
+    status: "pending"
+
+  - id: "AUTH-QA-01"
+    name: "Auth E2E Tests"
+    description: |
+      End-to-end tests for the authentication flow:
+      - Full registration flow
+      - Login and logout flow
+      - Email verification flow
+      - Password reset flow
+      - Session persistence across page reload
+      - Protected route redirection
+    agent: "qa-engineer"
+    depends_on: ["AUTH-FRONTEND-01"]
+    consumes:
+      - name: "Auth Pages"
+        required_from_task: "AUTH-FRONTEND-01"
+    produces:
+      - name: "Auth E2E Tests"
+        type: "file"
+        path: "products/connectgrc/e2e/tests/auth.spec.ts"
+    parallel_ok: false
+    checkpoint: false
+    priority: "high"
+    estimated_time_minutes: 90
+    acceptance_criteria:
+      - "Registration E2E test passes"
+      - "Login/logout E2E test passes"
+      - "Protected route redirect E2E test passes"
+      - "All tests run in < 60 seconds"
+    status: "pending"
+
+  # ============================================================================
+  # PHASE 3: CORE FEATURES - SPRINT 2 (Profile Management)
+  # ============================================================================
+
+  - id: "PROF-BACKEND-01"
+    name: "Profile API Endpoints"
+    description: |
+      Implement profile management API:
+      - GET /api/v1/profile (get current user profile)
+      - PUT /api/v1/profile (update profile fields)
+      - POST /api/v1/profile/resume (upload resume, parse stub)
+      - GET /api/v1/profile/certifications (list)
+      - POST /api/v1/profile/certifications (add)
+      - DELETE /api/v1/profile/certifications/:id (remove)
+      - GET /api/v1/profile/frameworks (declared frameworks)
+      - POST /api/v1/profile/frameworks (declare framework)
+      - GET /api/v1/profile/completion (completion percentage)
+      - PUT /api/v1/profile/privacy (privacy settings)
+      Add Prisma models: Profile, Certification, FrameworkDeclaration.
+      File upload via multipart/form-data.
+    agent: "backend-engineer"
+    depends_on: ["AUTH-QA-01"]
+    consumes:
+      - name: "Auth Routes"
+        required_from_task: "AUTH-BACKEND-01"
+    produces:
+      - name: "Profile Routes"
+        type: "file"
+        path: "products/connectgrc/apps/api/src/routes/profile.ts"
+      - name: "Profile Tests"
+        type: "file"
+        path: "products/connectgrc/apps/api/tests/integration/profile.test.ts"
+    parallel_ok: false
+    checkpoint: false
+    priority: "high"
+    estimated_time_minutes: 210
+    acceptance_criteria:
+      - "Profile CRUD endpoints work correctly"
+      - "Resume upload accepts PDF/DOCX (max 10MB)"
+      - "Certifications CRUD with validation"
+      - "Framework declarations with GRC framework list"
+      - "Completion percentage calculated correctly"
+      - "Privacy settings control profile visibility"
+      - "All profile tests passing (>= 15 tests)"
+    status: "pending"
+
+  - id: "PROF-FRONTEND-01"
+    name: "Profile UI Pages"
+    description: |
+      Implement profile management UI:
+      - Profile page with editable fields
+      - Resume upload with drag-and-drop
+      - Certification management (add/remove)
+      - Framework declaration selector
+      - Profile completion progress bar
+      - Privacy settings panel
+      Wire to real API endpoints.
+    agent: "frontend-engineer"
+    depends_on: ["PROF-BACKEND-01"]
+    consumes:
+      - name: "Profile Routes"
+        required_from_task: "PROF-BACKEND-01"
+    produces:
+      - name: "Profile Pages"
+        type: "directory"
+        path: "products/connectgrc/apps/web/src/app/(app)/profile"
+      - name: "Profile Tests"
+        type: "directory"
+        path: "products/connectgrc/apps/web/tests/pages/profile"
+    parallel_ok: false
+    checkpoint: false
+    priority: "high"
+    estimated_time_minutes: 180
+    acceptance_criteria:
+      - "Profile page displays all user fields"
+      - "Inline editing with save/cancel"
+      - "Resume upload shows progress and preview"
+      - "Certifications can be added and removed"
+      - "Framework selector shows available GRC frameworks"
+      - "Completion bar updates in real-time"
+      - "Component tests passing (>= 10 tests)"
+    status: "pending"
+
+  - id: "PROF-QA-01"
+    name: "Profile E2E Tests"
+    description: |
+      End-to-end tests for profile management:
+      - Profile creation and editing
+      - Resume upload flow
+      - Certification management
+      - Framework declaration
+      - Completion tracking
+    agent: "qa-engineer"
+    depends_on: ["PROF-FRONTEND-01"]
+    produces:
+      - name: "Profile E2E Tests"
+        type: "file"
+        path: "products/connectgrc/e2e/tests/profile.spec.ts"
+    parallel_ok: false
+    checkpoint: false
+    priority: "high"
+    estimated_time_minutes: 90
+    acceptance_criteria:
+      - "Profile edit E2E test passes"
+      - "Resume upload E2E test passes"
+      - "Certification management E2E test passes"
+      - "All tests run in < 60 seconds"
+    status: "pending"
+
+  # ============================================================================
+  # PHASE 3: CORE FEATURES - SPRINT 3 (AI Assessment System)
+  # ============================================================================
+
+  - id: "ASMT-BACKEND-01"
+    name: "Assessment API Endpoints"
+    description: |
+      Implement assessment API:
+      - POST /api/v1/assessments/start (create new assessment session)
+      - GET /api/v1/assessments/:id/questions (get questions for section)
+      - POST /api/v1/assessments/:id/answers (submit answers)
+      - GET /api/v1/assessments/:id/results (get scored results)
+      - GET /api/v1/assessments/history (list past assessments)
+      - GET /api/v1/assessments/:id/retake-eligibility (check cooldown)
+      Add Prisma models: Assessment, Question, Answer, AssessmentResult.
+      Question bank seeding for GRC domains.
+    agent: "backend-engineer"
+    depends_on: ["PROF-QA-01"]
+    consumes:
+      - name: "Profile Routes"
+        required_from_task: "PROF-BACKEND-01"
+    produces:
+      - name: "Assessment Routes"
+        type: "file"
+        path: "products/connectgrc/apps/api/src/routes/assessments.ts"
+      - name: "Assessment Tests"
+        type: "file"
+        path: "products/connectgrc/apps/api/tests/integration/assessments.test.ts"
+    parallel_ok: false
+    checkpoint: false
+    priority: "critical"
+    estimated_time_minutes: 300
+    acceptance_criteria:
+      - "Assessment session lifecycle works end-to-end"
+      - "Questions served by domain/section"
+      - "Answers validated and stored"
+      - "Results endpoint returns domain breakdown"
+      - "Retake eligibility enforces 30-day cooldown"
+      - "Assessment history paginated"
+      - "All assessment tests passing (>= 20 tests)"
+    status: "pending"
+
+  - id: "ASMT-BACKEND-02"
+    name: "Assessment Scoring Engine"
+    description: |
+      Implement the scoring engine:
+      - RAG scoring stub (returns mock AI scores initially)
+      - Tier calculation (Aspirant/Professional/Vanguard)
+      - Domain breakdown scoring (Governance, Risk, Compliance, etc.)
+      - Score normalization and percentile calculation
+      - Scoring audit trail for transparency
+    agent: "backend-engineer"
+    depends_on: ["ASMT-BACKEND-01"]
+    consumes:
+      - name: "Assessment Routes"
+        required_from_task: "ASMT-BACKEND-01"
+    produces:
+      - name: "Scoring Service"
+        type: "file"
+        path: "products/connectgrc/apps/api/src/services/scoring.ts"
+      - name: "Scoring Tests"
+        type: "file"
+        path: "products/connectgrc/apps/api/tests/integration/scoring.test.ts"
+    parallel_ok: false
+    checkpoint: false
+    priority: "critical"
+    estimated_time_minutes: 240
+    acceptance_criteria:
+      - "Scoring engine produces consistent results"
+      - "Tier calculation maps scores to correct tiers"
+      - "Domain breakdown covers all GRC domains"
+      - "Scoring audit trail stored in database"
+      - "All scoring tests passing (>= 15 tests)"
+    status: "pending"
+
+  - id: "ASMT-FRONTEND-01"
+    name: "Assessment UI Pages"
+    description: |
+      Implement assessment UI:
+      - Assessment start flow (select framework, confirm)
+      - Question display (text, multiple choice, scenario)
+      - Audio waveform placeholder for future voice input
+      - Progress indicator during assessment
+      - Results page with domain breakdown
+      - Radar chart visualization (Chart.js or Recharts)
+      - Assessment history list
+    agent: "frontend-engineer"
+    depends_on: ["ASMT-BACKEND-02"]
+    consumes:
+      - name: "Assessment Routes"
+        required_from_task: "ASMT-BACKEND-01"
+      - name: "Scoring Service"
+        required_from_task: "ASMT-BACKEND-02"
+    produces:
+      - name: "Assessment Pages"
+        type: "directory"
+        path: "products/connectgrc/apps/web/src/app/(app)/assessment"
+      - name: "Assessment Tests"
+        type: "directory"
+        path: "products/connectgrc/apps/web/tests/pages/assessment"
+    parallel_ok: false
+    checkpoint: false
+    priority: "critical"
+    estimated_time_minutes: 240
+    acceptance_criteria:
+      - "Assessment start flow works end-to-end"
+      - "Questions display correctly by type"
+      - "Progress bar tracks completion"
+      - "Results page shows radar chart"
+      - "Domain breakdown displayed clearly"
+      - "Assessment history shows past attempts"
+      - "Component tests passing (>= 12 tests)"
+    status: "pending"
+
+  - id: "ASMT-QA-01"
+    name: "Assessment E2E Tests"
+    description: |
+      End-to-end tests for the assessment system:
+      - Full assessment flow (start to results)
+      - Question navigation
+      - Results display and radar chart
+      - Assessment history
+      - Retake eligibility enforcement
+    agent: "qa-engineer"
+    depends_on: ["ASMT-FRONTEND-01"]
+    produces:
+      - name: "Assessment E2E Tests"
+        type: "file"
+        path: "products/connectgrc/e2e/tests/assessment.spec.ts"
+    parallel_ok: false
+    checkpoint: false
+    priority: "high"
+    estimated_time_minutes: 120
+    acceptance_criteria:
+      - "Full assessment E2E test passes"
+      - "Results display E2E test passes"
+      - "History page E2E test passes"
+      - "All tests run in < 90 seconds"
+    status: "pending"
+
+  # ============================================================================
+  # PHASE 3: CORE FEATURES - SPRINT 4 (Career Simulator)
+  # ============================================================================
+
+  - id: "CAREER-BACKEND-01"
+    name: "Career Simulator API"
+    description: |
+      Implement career simulator API:
+      - GET /api/v1/career/paths (available career paths)
+      - POST /api/v1/career/simulations (run simulation)
+      - GET /api/v1/career/simulations/:id (simulation result)
+      - GET /api/v1/career/simulations (simulation history)
+      - POST /api/v1/career/counselor/chat (AI counselor stub)
+      - GET /api/v1/career/counselor/history (chat history)
+      Add Prisma models: CareerPath, Simulation, CounselorChat.
+    agent: "backend-engineer"
+    depends_on: ["PROF-QA-01"]
+    consumes:
+      - name: "Profile Routes"
+        required_from_task: "PROF-BACKEND-01"
+    produces:
+      - name: "Career Routes"
+        type: "file"
+        path: "products/connectgrc/apps/api/src/routes/career.ts"
+      - name: "Career Tests"
+        type: "file"
+        path: "products/connectgrc/apps/api/tests/integration/career.test.ts"
+    parallel_ok: true
+    checkpoint: false
+    priority: "high"
+    estimated_time_minutes: 210
+    acceptance_criteria:
+      - "Career path listing with filters"
+      - "Simulation endpoint returns projected outcomes"
+      - "AI counselor chat stub returns structured responses"
+      - "Chat history paginated and persistent"
+      - "All career tests passing (>= 15 tests)"
+    status: "pending"
+    notes: "Can run in parallel with Sprint 3 (Assessment)"
+
+  - id: "CAREER-FRONTEND-01"
+    name: "Career Simulator UI"
+    description: |
+      Implement career simulator UI:
+      - Career path explorer (filterable list)
+      - Goal setting interface
+      - AI counselor chat interface
+      - Simulation comparison view
+      - Simulation history
+    agent: "frontend-engineer"
+    depends_on: ["CAREER-BACKEND-01"]
+    consumes:
+      - name: "Career Routes"
+        required_from_task: "CAREER-BACKEND-01"
+    produces:
+      - name: "Career Pages"
+        type: "directory"
+        path: "products/connectgrc/apps/web/src/app/(app)/career"
+      - name: "Career Tests"
+        type: "directory"
+        path: "products/connectgrc/apps/web/tests/pages/career"
+    parallel_ok: false
+    checkpoint: false
+    priority: "high"
+    estimated_time_minutes: 180
+    acceptance_criteria:
+      - "Career path explorer shows available paths"
+      - "Goal setting form works"
+      - "AI chat interface sends/receives messages"
+      - "Simulation comparison side-by-side view"
+      - "Component tests passing (>= 10 tests)"
+    status: "pending"
+
+  - id: "CAREER-QA-01"
+    name: "Career Simulator E2E Tests"
+    description: |
+      End-to-end tests for career simulator:
+      - Career path browsing
+      - Running a simulation
+      - AI counselor chat interaction
+      - Simulation comparison
+    agent: "qa-engineer"
+    depends_on: ["CAREER-FRONTEND-01"]
+    produces:
+      - name: "Career E2E Tests"
+        type: "file"
+        path: "products/connectgrc/e2e/tests/career.spec.ts"
+    parallel_ok: false
+    checkpoint: false
+    priority: "high"
+    estimated_time_minutes: 90
+    acceptance_criteria:
+      - "Career exploration E2E test passes"
+      - "Simulation flow E2E test passes"
+      - "Chat interaction E2E test passes"
+    status: "pending"
+
+  # ============================================================================
+  # PHASE 3: CORE FEATURES - SPRINT 5 (Public Pages)
+  # ============================================================================
+
+  - id: "PUB-FRONTEND-01"
+    name: "Public Pages Implementation"
+    description: |
+      Implement all public-facing pages with full content and styling:
+      - Landing page (hero, features, testimonials, CTA)
+      - About page (mission, team, values)
+      - Pricing page (tier comparison table)
+      - For Talents page (benefits, assessment preview)
+      - For Employers page (talent pool, compliance value)
+      - How It Works page (step-by-step flow)
+      - Resources preview page (teaser for resource hub)
+      - Contact page (form with validation)
+      - Terms of Service page
+      All pages responsive, accessible (WCAG 2.1 AA).
+    agent: "frontend-engineer"
+    depends_on: ["CHECKPOINT-FOUNDATION"]
+    consumes:
+      - name: "Frontend App"
+        required_from_task: "FRONTEND-01"
+    produces:
+      - name: "Public Pages"
+        type: "directory"
+        path: "products/connectgrc/apps/web/src/app/(public)"
+      - name: "Public Page Tests"
+        type: "directory"
+        path: "products/connectgrc/apps/web/tests/pages/public"
+    parallel_ok: true
+    checkpoint: false
+    priority: "normal"
+    estimated_time_minutes: 240
+    acceptance_criteria:
+      - "All 9 public pages render correctly"
+      - "Landing page has hero, features, testimonials, CTA"
+      - "Pricing page has tier comparison"
+      - "Contact form validates and submits"
+      - "All pages responsive (mobile, tablet, desktop)"
+      - "WCAG 2.1 AA compliance"
+      - "Component tests passing (>= 8 tests)"
+    status: "pending"
+    notes: "Can run in parallel with Sprints 3 and 4"
+
+  - id: "PUB-QA-01"
+    name: "Public Pages E2E Tests"
+    description: |
+      End-to-end tests for public pages:
+      - Landing page load and navigation
+      - All public page rendering
+      - Contact form submission
+      - Responsive layout checks
+    agent: "qa-engineer"
+    depends_on: ["PUB-FRONTEND-01"]
+    produces:
+      - name: "Public Pages E2E Tests"
+        type: "file"
+        path: "products/connectgrc/e2e/tests/public-pages.spec.ts"
+    parallel_ok: false
+    checkpoint: false
+    priority: "normal"
+    estimated_time_minutes: 60
+    acceptance_criteria:
+      - "All public pages load without errors"
+      - "Navigation between pages works"
+      - "Contact form E2E test passes"
+    status: "pending"
+
+  # ============================================================================
+  # PHASE 3: CORE FEATURES - SPRINT 6 (Admin Dashboard)
+  # ============================================================================
+
+  - id: "ADMIN-BACKEND-01"
+    name: "Admin API Endpoints"
+    description: |
+      Implement admin management API (ADMIN role required):
+      - GET/PUT /api/v1/admin/users (user management)
+      - CRUD /api/v1/admin/frameworks (GRC framework management)
+      - CRUD /api/v1/admin/questions (question bank management)
+      - CRUD /api/v1/admin/golden-answers (answer key management)
+      - GET /api/v1/admin/analytics (platform analytics)
+      - GET /api/v1/admin/analytics/assessments (assessment stats)
+      - GET /api/v1/admin/analytics/users (user growth stats)
+      Role-based access control (ADMIN only).
+    agent: "backend-engineer"
+    depends_on: ["AUTH-QA-01", "PROF-QA-01", "ASMT-QA-01", "CAREER-QA-01"]
+    produces:
+      - name: "Admin Routes"
+        type: "file"
+        path: "products/connectgrc/apps/api/src/routes/admin.ts"
+      - name: "Admin Tests"
+        type: "file"
+        path: "products/connectgrc/apps/api/tests/integration/admin.test.ts"
+    parallel_ok: false
+    checkpoint: false
+    priority: "high"
+    estimated_time_minutes: 240
+    acceptance_criteria:
+      - "All admin endpoints require ADMIN role"
+      - "User management: list, view, update role, deactivate"
+      - "Framework CRUD works correctly"
+      - "Question management with bulk import"
+      - "Analytics endpoints return aggregated data"
+      - "All admin tests passing (>= 20 tests)"
+    status: "pending"
+
+  - id: "ADMIN-FRONTEND-01"
+    name: "Admin Dashboard UI"
+    description: |
+      Implement admin dashboard UI:
+      - Admin dashboard overview (key metrics, charts)
+      - User management table (search, filter, actions)
+      - Framework management (add/edit/archive)
+      - Question management (CRUD, bulk import)
+      - Analytics charts (user growth, assessment stats)
+      Admin layout with sidebar navigation.
+    agent: "frontend-engineer"
+    depends_on: ["ADMIN-BACKEND-01"]
+    consumes:
+      - name: "Admin Routes"
+        required_from_task: "ADMIN-BACKEND-01"
+    produces:
+      - name: "Admin Pages"
+        type: "directory"
+        path: "products/connectgrc/apps/web/src/app/(admin)"
+      - name: "Admin Tests"
+        type: "directory"
+        path: "products/connectgrc/apps/web/tests/pages/admin"
+    parallel_ok: false
+    checkpoint: false
+    priority: "high"
+    estimated_time_minutes: 240
+    acceptance_criteria:
+      - "Dashboard shows key platform metrics"
+      - "User management table with pagination"
+      - "Framework CRUD forms work"
+      - "Question management with bulk import"
+      - "Charts render correctly with real data"
+      - "Component tests passing (>= 12 tests)"
+    status: "pending"
+
+  - id: "ADMIN-QA-01"
+    name: "Admin Dashboard E2E Tests"
+    description: |
+      End-to-end tests for admin dashboard:
+      - Admin login and dashboard access
+      - User management operations
+      - Framework management operations
+      - Analytics page rendering
+      - Non-admin access rejection
+    agent: "qa-engineer"
+    depends_on: ["ADMIN-FRONTEND-01"]
+    produces:
+      - name: "Admin E2E Tests"
+        type: "file"
+        path: "products/connectgrc/e2e/tests/admin.spec.ts"
+    parallel_ok: false
+    checkpoint: false
+    priority: "high"
+    estimated_time_minutes: 90
+    acceptance_criteria:
+      - "Admin dashboard E2E test passes"
+      - "User management E2E test passes"
+      - "Non-admin rejection E2E test passes"
+    status: "pending"
+
+  # ============================================================================
+  # PHASE 4: FINAL DELIVERY - SPRINT 7 (Resource Hub)
+  # ============================================================================
+
+  - id: "RES-BACKEND-01"
+    name: "Resource Hub API"
+    description: |
+      Implement resource hub API:
+      - GET /api/v1/resources (browse with pagination)
+      - GET /api/v1/resources/search (full-text search)
+      - GET /api/v1/resources/:id (resource detail)
+      - POST /api/v1/resources/:id/bookmark (toggle bookmark)
+      - GET /api/v1/resources/bookmarks (user bookmarks)
+      - POST /api/v1/resources/:id/download (track download)
+      Add Prisma models: Resource, Bookmark, DownloadLog.
+      Seed initial resource data (articles, guides, templates).
+    agent: "backend-engineer"
+    depends_on: ["CHECKPOINT-FOUNDATION"]
+    produces:
+      - name: "Resource Routes"
+        type: "file"
+        path: "products/connectgrc/apps/api/src/routes/resources.ts"
+      - name: "Resource Tests"
+        type: "file"
+        path: "products/connectgrc/apps/api/tests/integration/resources.test.ts"
+    parallel_ok: true
+    checkpoint: false
+    priority: "normal"
+    estimated_time_minutes: 180
+    acceptance_criteria:
+      - "Browse endpoint with category/type filters"
+      - "Full-text search works"
+      - "Bookmark toggle works"
+      - "Download tracking persists"
+      - "All resource tests passing (>= 12 tests)"
+    status: "pending"
+    notes: "Can start after foundation checkpoint"
+
+  - id: "RES-FRONTEND-01"
+    name: "Resource Hub UI"
+    description: |
+      Implement resource hub UI:
+      - Browse page with category filters
+      - Search with autocomplete
+      - Resource cards with metadata
+      - Bookmark toggle
+      - Resource detail modal/page
+      - Filter panel (category, type, framework)
+    agent: "frontend-engineer"
+    depends_on: ["RES-BACKEND-01"]
+    consumes:
+      - name: "Resource Routes"
+        required_from_task: "RES-BACKEND-01"
+    produces:
+      - name: "Resource Pages"
+        type: "directory"
+        path: "products/connectgrc/apps/web/src/app/(app)/resources"
+      - name: "Resource Tests"
+        type: "directory"
+        path: "products/connectgrc/apps/web/tests/pages/resources"
+    parallel_ok: false
+    checkpoint: false
+    priority: "normal"
+    estimated_time_minutes: 150
+    acceptance_criteria:
+      - "Browse page displays resource cards"
+      - "Filter panel filters correctly"
+      - "Search returns matching results"
+      - "Bookmark toggle updates UI"
+      - "Component tests passing (>= 8 tests)"
+    status: "pending"
+
+  - id: "RES-QA-01"
+    name: "Resource Hub E2E Tests"
+    description: |
+      End-to-end tests for resource hub:
+      - Browse and filter resources
+      - Search functionality
+      - Bookmark toggle
+      - Download tracking
+    agent: "qa-engineer"
+    depends_on: ["RES-FRONTEND-01"]
+    produces:
+      - name: "Resource E2E Tests"
+        type: "file"
+        path: "products/connectgrc/e2e/tests/resources.spec.ts"
+    parallel_ok: false
+    checkpoint: false
+    priority: "normal"
+    estimated_time_minutes: 60
+    acceptance_criteria:
+      - "Browse and filter E2E test passes"
+      - "Search E2E test passes"
+      - "Bookmark E2E test passes"
+    status: "pending"
+
+  # ============================================================================
+  # PHASE 4: FINAL DELIVERY - SPRINT 8 (Notifications)
+  # ============================================================================
+
+  - id: "NOTIF-BACKEND-01"
+    name: "Notification API"
+    description: |
+      Implement notification system API:
+      - GET /api/v1/notifications (list with pagination)
+      - PUT /api/v1/notifications/:id/read (mark as read)
+      - PUT /api/v1/notifications/read-all (mark all read)
+      - GET /api/v1/notifications/preferences (get preferences)
+      - PUT /api/v1/notifications/preferences (update preferences)
+      - GET /api/v1/notifications/unread-count (badge count)
+      Add Prisma models: Notification, NotificationPreference.
+      Email trigger stubs for assessment results, profile updates.
+    agent: "backend-engineer"
+    depends_on: ["AUTH-QA-01"]
+    produces:
+      - name: "Notification Routes"
+        type: "file"
+        path: "products/connectgrc/apps/api/src/routes/notifications.ts"
+      - name: "Notification Tests"
+        type: "file"
+        path: "products/connectgrc/apps/api/tests/integration/notifications.test.ts"
+    parallel_ok: true
+    checkpoint: false
+    priority: "normal"
+    estimated_time_minutes: 150
+    acceptance_criteria:
+      - "Notification CRUD works"
+      - "Mark read/unread toggles"
+      - "Preferences control notification types"
+      - "Unread count is accurate"
+      - "All notification tests passing (>= 10 tests)"
+    status: "pending"
+    notes: "Can start after Sprint 1 (Auth)"
+
+  - id: "NOTIF-FRONTEND-01"
+    name: "Notification UI"
+    description: |
+      Implement notification UI:
+      - Notification bell icon with unread badge
+      - Notification dropdown/panel
+      - Notification preferences page
+      - Mark as read on click
+      - Mark all as read button
+    agent: "frontend-engineer"
+    depends_on: ["NOTIF-BACKEND-01"]
+    consumes:
+      - name: "Notification Routes"
+        required_from_task: "NOTIF-BACKEND-01"
+    produces:
+      - name: "Notification Components"
+        type: "directory"
+        path: "products/connectgrc/apps/web/src/components/notifications"
+      - name: "Notification Tests"
+        type: "directory"
+        path: "products/connectgrc/apps/web/tests/components/notifications"
+    parallel_ok: false
+    checkpoint: false
+    priority: "normal"
+    estimated_time_minutes: 120
+    acceptance_criteria:
+      - "Bell icon shows unread count"
+      - "Dropdown lists recent notifications"
+      - "Clicking notification marks as read"
+      - "Preferences page saves correctly"
+      - "Component tests passing (>= 6 tests)"
+    status: "pending"
+
+  - id: "NOTIF-QA-01"
+    name: "Notification E2E Tests"
+    description: |
+      End-to-end tests for notification system:
+      - Notification display and interaction
+      - Mark as read flow
+      - Preferences update
+    agent: "qa-engineer"
+    depends_on: ["NOTIF-FRONTEND-01"]
+    produces:
+      - name: "Notification E2E Tests"
+        type: "file"
+        path: "products/connectgrc/e2e/tests/notifications.spec.ts"
+    parallel_ok: false
+    checkpoint: false
+    priority: "normal"
+    estimated_time_minutes: 60
+    acceptance_criteria:
+      - "Notification interaction E2E test passes"
+      - "Preferences E2E test passes"
+    status: "pending"
+
+  # ============================================================================
+  # PHASE 4: FINAL DELIVERY - SPRINT 9 (Polish & Security)
+  # ============================================================================
+
+  - id: "SEC-01"
+    name: "Security Review and Hardening"
+    description: |
+      Comprehensive security review:
+      - OWASP Top 10 audit
+      - Input validation review (all endpoints)
+      - Authentication flow security
+      - Authorization (RBAC) verification
+      - CSRF protection
+      - Content Security Policy headers
+      - Rate limiting adequacy
+      - SQL injection prevention (Prisma parameterization)
+      - XSS prevention review
+      - Dependency vulnerability scan (npm audit)
+    agent: "security-engineer"
+    depends_on: ["ADMIN-QA-01", "RES-QA-01", "NOTIF-QA-01"]
+    produces:
+      - name: "Security Report"
+        type: "document"
+        path: "products/connectgrc/docs/security-report.md"
+    parallel_ok: true
+    checkpoint: false
+    priority: "critical"
+    estimated_time_minutes: 180
+    acceptance_criteria:
+      - "OWASP Top 10 audit complete"
+      - "No critical or high vulnerabilities"
+      - "All inputs validated"
+      - "CSP headers configured"
+      - "npm audit shows 0 critical vulnerabilities"
+    status: "pending"
+
+  - id: "PERF-01"
+    name: "Performance Optimization"
+    description: |
+      Performance optimization pass:
+      - Lighthouse audit (target 90+ all categories)
+      - API response time optimization (< 200ms p95)
+      - Database query optimization (N+1 detection)
+      - Bundle size analysis and optimization
+      - Image optimization
+      - Lazy loading for non-critical components
+      - Caching strategy review (Redis)
+    agent: "performance-engineer"
+    depends_on: ["ADMIN-QA-01", "RES-QA-01", "NOTIF-QA-01"]
+    produces:
+      - name: "Performance Report"
+        type: "document"
+        path: "products/connectgrc/docs/performance-report.md"
+    parallel_ok: true
+    checkpoint: false
+    priority: "high"
+    estimated_time_minutes: 180
+    acceptance_criteria:
+      - "Lighthouse score 90+ in all categories"
+      - "API p95 response time < 200ms"
+      - "No N+1 queries"
+      - "Bundle size < 500KB (first load JS)"
+    status: "pending"
+
+  # ============================================================================
+  # CHECKPOINT: FINAL DELIVERY
+  # ============================================================================
+
+  - id: "CHECKPOINT-DELIVERY"
+    name: "Final Delivery - CEO Review"
+    description: |
+      All features complete. Final review:
+      - All unit tests passing
+      - All E2E tests passing
+      - Security review passed
+      - Performance targets met
+      - Documentation complete
+      - Ready for production deployment
+    agent: "orchestrator"
+    depends_on: ["SEC-01", "PERF-01", "PUB-QA-01"]
+    parallel_ok: false
+    checkpoint: true
+    priority: "critical"
+    estimated_time_minutes: 0
+    status: "pending"
+
+# ============================================================================
+# EXECUTION ESTIMATES
+# ============================================================================
+# Phase 1 (Inception):     300 min  - COMPLETED
+# Phase 2 (Foundation):    525 min  - IN PROGRESS
+# Phase 3 (Core Features): 3,180 min (~53 hrs)
+#   Sprint 1 (Auth):         510 min
+#   Sprint 2 (Profile):      480 min
+#   Sprint 3 (Assessment):   900 min
+#   Sprint 4 (Career):       480 min
+#   Sprint 5 (Public):       300 min
+#   Sprint 6 (Admin):        570 min
+# Phase 4 (Final Delivery): 1,080 min (~18 hrs)
+#   Sprint 7 (Resources):    390 min
+#   Sprint 8 (Notifications): 330 min
+#   Sprint 9 (Polish):       360 min
+#
+# Total sequential:   ~5,085 min (~85 hrs)
+# Parallel optimized: ~3,200 min (~53 hrs)
+# Savings from parallelization: ~37%
+#
+# Parallelizable pairs:
+# - Sprint 3 (Assessment) || Sprint 4 (Career) — both depend on Sprint 2
+# - Sprint 5 (Public) || Sprint 3/4 — depends only on Foundation
+# - Sprint 7 (Resources) || Sprint 8 (Notifications) — independent
+# - SEC-01 || PERF-01 — independent reviews
