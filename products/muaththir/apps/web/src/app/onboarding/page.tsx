@@ -80,9 +80,12 @@ export default function OnboardingPage() {
               <p className="text-xs text-slate-500 mt-1 mb-3">
                 {t('demoDesc')}
               </p>
-              <p className="text-xs text-slate-400">
-                {t('demoLogin')} <strong>demo@muaththir.app</strong> / <strong>DemoPassword123!</strong>
-              </p>
+              <Link
+                href="/login?demo=true"
+                className="inline-flex items-center text-xs font-medium text-blue-600 hover:text-blue-700"
+              >
+                {t('demoLogin')} &rarr;
+              </Link>
             </div>
           </div>
         </div>

@@ -147,6 +147,8 @@ const authRoutes: FastifyPluginAsync = async (fastify) => {
     });
 
     if (!parent) {
+      // Constant-time: run a dummy hash to prevent timing-based email enumeration
+      await verifyPassword(password, '$2b$10$abcdefghijklmnopqrstuuABCDEFGHIJKLMNOPQRSTUVWXYZ012');
       throw new UnauthorizedError('Invalid email or password');
     }
 
@@ -252,7 +254,14 @@ const authRoutes: FastifyPluginAsync = async (fastify) => {
     });
   });
 
-  fastify.post('/reset-password', async (request, reply) => {
+  fastify.post('/reset-password', {
+    config: {
+      rateLimit: {
+        max: 5,
+        timeWindow: '15 minutes',
+      },
+    },
+  }, async (request, reply) => {
     const { token, password } = validateBody(
       resetPasswordSchema,
       request.body

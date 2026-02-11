@@ -126,80 +126,77 @@ const dashboardRoutes: FastifyPluginAsync = async (fastify) => {
     const ageBand = getAgeBand(child.dateOfBirth);
     const ageBandForQuery = ageBand === 'out_of_range' ? null : ageBand;
 
-    // Check which dimensions have stale caches
-    const existingCaches = await fastify.prisma.scoreCache.findMany({
-      where: { childId },
-    });
+    // Batch-fetch all data upfront (4 queries instead of 12-18 sequential)
+    const [existingCaches, allObsCounts, allChildMilestones, allMilestoneDefs] = await Promise.all([
+      fastify.prisma.scoreCache.findMany({ where: { childId } }),
+      fastify.prisma.observation.groupBy({
+        by: ['dimension'],
+        where: { childId, deletedAt: null },
+        _count: true,
+      }),
+      fastify.prisma.childMilestone.findMany({
+        where: { childId },
+        select: { achieved: true, milestone: { select: { dimension: true, ageBand: true } } },
+      }),
+      ageBandForQuery
+        ? fastify.prisma.milestoneDefinition.groupBy({
+            by: ['dimension'],
+            where: { ageBand: ageBandForQuery as any },
+            _count: true,
+          })
+        : Promise.resolve([]),
+    ]);
 
-    const cacheMap = new Map(
-      existingCaches.map((c: any) => [c.dimension, c])
-    );
+    const cacheMap = new Map(existingCaches.map((c: any) => [c.dimension, c]));
+    const obsCountMap = new Map(allObsCounts.map((g: any) => [g.dimension, g._count]));
+    const milestoneDefMap = new Map((allMilestoneDefs as any[]).map((g: any) => [g.dimension, g._count]));
+
+    // Group child milestones by dimension for the target age band
+    const achievedByDim = new Map<string, number>();
+    for (const cm of allChildMilestones as any[]) {
+      if (ageBandForQuery && cm.milestone.ageBand === ageBandForQuery && cm.achieved) {
+        achievedByDim.set(cm.milestone.dimension, (achievedByDim.get(cm.milestone.dimension) || 0) + 1);
+      }
+    }
 
     const scores: DimensionScore[] = [];
 
+    // Calculate stale dimensions in parallel
+    const staleDimensions = DIMENSIONS.filter((d) => {
+      const cached = cacheMap.get(d);
+      return !cached || cached.stale;
+    });
+
+    const staleResults = await Promise.all(
+      staleDimensions.map((dimension) =>
+        calculateDimensionScore(fastify.prisma, childId, dimension as Dimension, ageBandForQuery)
+          .then(async (detail) => {
+            await fastify.prisma.scoreCache.upsert({
+              where: { childId_dimension: { childId, dimension: dimension as Dimension } },
+              create: { childId, dimension: dimension as Dimension, score: detail.score, calculatedAt: new Date(), stale: false },
+              update: { score: detail.score, calculatedAt: new Date(), stale: false },
+            });
+            return { dimension, detail };
+          })
+      )
+    );
+    const staleResultMap = new Map(staleResults.map((r) => [r.dimension, r.detail]));
+
     for (const dimension of DIMENSIONS) {
       const cached = cacheMap.get(dimension);
-
       if (cached && !cached.stale) {
-        // Use cached score — still query lightweight counts for metadata
-        const [obsCount, milestoneStats] = await Promise.all([
-          fastify.prisma.observation.count({
-            where: { childId, dimension: dimension as Dimension, deletedAt: null },
-          }),
-          fastify.prisma.childMilestone.findMany({
-            where: {
-              childId,
-              milestone: { dimension: dimension as Dimension, ageBand: ageBandForQuery as any },
-            },
-            select: { achieved: true },
-          }),
-        ]);
-
-        const milestoneAchieved = milestoneStats.filter(
-          (m: { achieved: boolean }) => m.achieved
-        ).length;
-        const milestoneTotal = ageBandForQuery
-          ? await fastify.prisma.milestoneDefinition.count({
-              where: { dimension: dimension as Dimension, ageBand: ageBandForQuery as any },
-            })
-          : 0;
-
         scores.push({
           dimension: dimension as DimensionType,
           score: cached.score,
           factors: { observation: 0, milestone: 0, sentiment: 0 },
-          observationCount: obsCount,
-          milestoneProgress: { achieved: milestoneAchieved, total: milestoneTotal },
+          observationCount: obsCountMap.get(dimension) || 0,
+          milestoneProgress: {
+            achieved: achievedByDim.get(dimension) || 0,
+            total: milestoneDefMap.get(dimension) || 0,
+          },
         });
       } else {
-        // Calculate fresh score
-        const detail = await calculateDimensionScore(
-          fastify.prisma,
-          childId,
-          dimension as Dimension,
-          ageBandForQuery
-        );
-
-        // Upsert cache
-        await fastify.prisma.scoreCache.upsert({
-          where: {
-            childId_dimension: { childId, dimension: dimension as Dimension },
-          },
-          create: {
-            childId,
-            dimension: dimension as Dimension,
-            score: detail.score,
-            calculatedAt: new Date(),
-            stale: false,
-          },
-          update: {
-            score: detail.score,
-            calculatedAt: new Date(),
-            stale: false,
-          },
-        });
-
-        scores.push(detail);
+        scores.push(staleResultMap.get(dimension)!);
       }
     }
 

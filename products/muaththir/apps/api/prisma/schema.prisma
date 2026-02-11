@@ -66,6 +66,7 @@ model Parent {
   children Child[]
   sessions Session[]
 
+  @@index([resetToken])
   @@map("parents")
 }
 
@@ -146,6 +147,7 @@ model ChildMilestone {
 
   @@unique([childId, milestoneId])
   @@index([childId])
+  @@index([childId, achieved])
   @@index([milestoneId])
   @@map("child_milestones")
 }
