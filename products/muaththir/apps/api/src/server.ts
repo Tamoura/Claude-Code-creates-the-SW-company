@@ -1,6 +1,7 @@
 import { buildApp } from './app';
 import { logger } from './utils/logger';
 import { validateEnv } from './lib/env';
+import { setupGracefulShutdown } from './lib/shutdown';
 
 const PORT = parseInt(process.env.PORT || '5005', 10);
 const HOST = process.env.HOST || '0.0.0.0';
@@ -23,6 +24,8 @@ async function start() {
           }
         : false,
     });
+
+    setupGracefulShutdown(app);
 
     await app.listen({ port: PORT, host: HOST });
     logger.info(`Server listening on ${HOST}:${PORT}`);
