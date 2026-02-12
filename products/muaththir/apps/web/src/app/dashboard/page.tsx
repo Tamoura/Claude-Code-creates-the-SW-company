@@ -7,6 +7,7 @@ import Link from 'next/link';
 import { DIMENSIONS, getDimensionBySlug } from '../../lib/dimensions';
 import DimensionCard from '../../components/dashboard/DimensionCard';
 import ObservationCard from '../../components/dashboard/ObservationCard';
+import QuickLog from '../../components/dashboard/QuickLog';
 import { apiClient, type DashboardData, type Child, type Observation, type MilestoneDefinition } from '../../lib/api-client';
 
 const RadarChart = dynamic(
@@ -184,6 +185,14 @@ export default function DashboardPage() {
           </select>
         )}
       </div>
+
+      {/* Quick Log Form */}
+      {selectedChildId && !loading && (
+        <QuickLog
+          childId={selectedChildId}
+          onSuccess={() => setSelectedChildId((prev) => prev)}
+        />
+      )}
 
       {/* Error State */}
       {error && (
