@@ -67,3 +67,127 @@
            dark:text-slate-300;
   }
 }
+
+/* ==================== Print Styles ==================== */
+@media print {
+  /* Reset page setup */
+  @page {
+    size: A4;
+    margin: 20mm 15mm;
+  }
+
+  /* Counter for page numbers */
+  html {
+    counter-reset: page;
+  }
+
+  /* Hide non-report elements */
+  body {
+    background: white !important;
+    color: #0f172a !important;
+    -webkit-print-color-adjust: exact;
+    print-color-adjust: exact;
+  }
+
+  /* Hide sidebar, header, navigation */
+  nav,
+  aside,
+  .lg\\:ps-64 > .px-4:first-child header,
+  [aria-label="Dashboard sidebar"],
+  [aria-label="Sidebar navigation"],
+  .print\\:hidden {
+    display: none !important;
+  }
+
+  /* Remove layout offset from sidebar */
+  .lg\\:ps-64 {
+    padding-inline-start: 0 !important;
+  }
+
+  /* Mobile header */
+  .lg\\:hidden.sticky {
+    display: none !important;
+  }
+
+  /* Full width content */
+  .print-ready {
+    width: 100% !important;
+    max-width: 100% !important;
+    padding: 0 !important;
+    margin: 0 !important;
+  }
+
+  /* Remove card shadows and borders for clean print */
+  .print-ready .card {
+    box-shadow: none !important;
+    ring: none !important;
+    border: 1px solid #e2e8f0 !important;
+    background: white !important;
+    color: #0f172a !important;
+    break-inside: avoid;
+  }
+
+  /* Force page breaks between report sections */
+  .print-ready .card + .card {
+    page-break-before: auto;
+  }
+
+  .print-page-break {
+    page-break-before: always;
+  }
+
+  /* Print header visibility */
+  .print-header {
+    display: block !important;
+  }
+
+  /* Print footer with page numbers */
+  .print-footer {
+    display: block !important;
+    position: fixed;
+    bottom: 0;
+    left: 0;
+    right: 0;
+    text-align: center;
+    font-size: 10px;
+    color: #94a3b8;
+    padding: 8px 0;
+    border-top: 1px solid #e2e8f0;
+  }
+
+  .print-footer::after {
+    counter-increment: page;
+    content: "Page " counter(page);
+  }
+
+  /* Ensure progress bars print with color */
+  [role="progressbar"] > div {
+    -webkit-print-color-adjust: exact;
+    print-color-adjust: exact;
+  }
+
+  /* Dark mode overrides for print */
+  .dark .card,
+  .dark [class*="bg-slate"],
+  .dark [class*="bg-emerald"] {
+    background: white !important;
+    color: #0f172a !important;
+  }
+
+  .dark [class*="text-white"],
+  .dark [class*="text-slate"] {
+    color: #0f172a !important;
+  }
+
+  /* Radar chart SVG prints correctly */
+  .recharts-wrapper {
+    -webkit-print-color-adjust: exact;
+    print-color-adjust: exact;
+  }
+
+  /* Links show as text in print */
+  a {
+    text-decoration: none !important;
+    color: inherit !important;
+  }
+}

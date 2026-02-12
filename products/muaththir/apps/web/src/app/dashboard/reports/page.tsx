@@ -62,6 +62,23 @@ export default function ReportsPage() {
     window.print();
   };
 
+  const handleDownloadReport = () => {
+    const content = document.getElementById('report-content');
+    if (content) {
+      content.classList.add('print-ready');
+    }
+
+    const cleanup = () => {
+      if (content) {
+        content.classList.remove('print-ready');
+      }
+      window.removeEventListener('afterprint', cleanup);
+    };
+    window.addEventListener('afterprint', cleanup);
+
+    window.print();
+  };
+
   if (!loading && children.length === 0) {
     return (
       <div className="flex items-center justify-center min-h-[60vh]">
@@ -98,7 +115,10 @@ export default function ReportsPage() {
           <Link href="/dashboard/reports/generate" className="btn-secondary text-sm py-2 px-4">
             {t('generateDetailed')}
           </Link>
-          <button onClick={handlePrint} className="btn-primary text-sm py-2 px-4">
+          <button onClick={handleDownloadReport} className="btn-primary text-sm py-2 px-4">
+            {t('downloadReport')}
+          </button>
+          <button onClick={handlePrint} className="btn-secondary text-sm py-2 px-4">
             {t('printReport')}
           </button>
         </div>
@@ -124,6 +144,23 @@ export default function ReportsPage() {
         </div>
       ) : dashboard ? (
         <div className="space-y-6" id="report-content">
+          {/* Print-only header */}
+          <div
+            data-testid="print-header"
+            className="hidden print:block text-center mb-6 pb-4 border-b border-slate-200"
+          >
+            <h1 className="text-2xl font-bold text-slate-900">{dashboard.childName}</h1>
+            <p className="text-sm text-slate-500 mt-1">
+              {t('reportGenerated', { date: formatDateLong(new Date(), locale) })}
+            </p>
+            <p className="text-xs text-slate-400 mt-1">
+              {t('ageBand', { band: dashboard.ageBand ? dashboard.ageBand.replace('_', ' ') : 'N/A' })}
+            </p>
+          </div>
+
+          {/* Print footer with page numbers */}
+          <div className="hidden print:block print-footer" aria-hidden="true" />
+
           {/* Report Header */}
           <div className="card border-t-4 border-t-emerald-500">
             <div className="flex items-center justify-between">
