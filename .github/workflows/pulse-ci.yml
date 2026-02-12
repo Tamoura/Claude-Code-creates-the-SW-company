@@ -80,14 +80,11 @@ jobs:
         uses: actions/setup-node@v4
         with:
           node-version: '20'
+          cache: 'npm'
+          cache-dependency-path: products/pulse/apps/web/package-lock.json
 
       - name: Install dependencies
-        run: |
-          if [ -f "package-lock.json" ]; then
-            npm ci
-          else
-            npm install
-          fi
+        run: npm ci
 
       - name: Run frontend tests
         run: npm test -- --passWithNoTests
@@ -109,6 +106,9 @@ jobs:
 
       - name: Install dependencies
         run: npm ci
+
+      - name: Generate Prisma client
+        run: npx prisma generate
 
       - name: Run lint
         run: npm run lint --if-present

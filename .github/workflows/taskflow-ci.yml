@@ -65,7 +65,8 @@ jobs:
           cache-dependency-path: products/taskflow/apps/api/package-lock.json
       - run: npm ci
       - run: npx prisma generate
-      - run: npx prisma migrate deploy
+      - name: Setup database schema
+        run: npx prisma db push --force-reset --accept-data-loss
       - run: npm test
 
   web-build:
