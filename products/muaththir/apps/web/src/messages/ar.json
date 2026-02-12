@@ -674,6 +674,7 @@
     "tryDemo": "جرّب حسابًا تجريبيًا"
   },
   "dashboardLayout": {
-    "loading": "جارٍ التحميل..."
+    "loading": "جارٍ التحميل...",
+    "menuToggle": "القائمة"
   }
 }

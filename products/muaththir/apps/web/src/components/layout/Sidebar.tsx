@@ -109,7 +109,12 @@ const navItemDefs: NavItemDef[] = [
   },
 ];
 
-export default function Sidebar() {
+interface SidebarProps {
+  mobileOpen?: boolean;
+  onMobileClose?: () => void;
+}
+
+export default function Sidebar({ mobileOpen = false, onMobileClose: _onMobileClose }: SidebarProps) {
   const pathname = usePathname();
   const t = useTranslations('sidebar');
   const td = useTranslations('dimensions');
@@ -119,9 +124,13 @@ export default function Sidebar() {
     return pathname.startsWith(href);
   };
 
+  const sidebarClasses = mobileOpen
+    ? 'fixed inset-y-0 start-0 z-50 flex flex-col w-64 bg-white border-e border-slate-200 dark:bg-slate-900 dark:border-slate-700 transform transition-transform duration-200 ease-in-out translate-x-0'
+    : 'hidden lg:flex lg:flex-col lg:w-64 lg:fixed lg:inset-y-0 bg-white border-e border-slate-200 dark:bg-slate-900 dark:border-slate-700';
+
   return (
     <aside
-      className="hidden lg:flex lg:flex-col lg:w-64 lg:fixed lg:inset-y-0 bg-white border-e border-slate-200 dark:bg-slate-900 dark:border-slate-700"
+      className={sidebarClasses}
       aria-label={t('ariaLabel')}
     >
       {/* Logo */}

@@ -674,6 +674,7 @@
     "tryDemo": "Try Demo Account"
   },
   "dashboardLayout": {
-    "loading": "Loading..."
+    "loading": "Loading...",
+    "menuToggle": "Toggle menu"
   }
 }
