@@ -1,26 +1,15 @@
 import { FastifyPluginAsync } from 'fastify';
 import fp from 'fastify-plugin';
-import { PrismaClient, Prisma } from '@prisma/client';
+import { PrismaClient } from '@prisma/client';
 import { logger } from '../utils/logger';
-
-/**
- * Models that use soft-delete (have a `deletedAt` column).
- * The middleware automatically injects `deletedAt: null` into
- * findMany, findFirst, findUnique, and count queries on these
- * models to prevent accidental data leakage.
- */
-const SOFT_DELETE_MODELS = ['Observation'] as const;
-
-function isSoftDeleteModel(model: string | undefined): boolean {
-  if (!model) return false;
-  return (SOFT_DELETE_MODELS as readonly string[]).includes(model);
-}
 
 /**
  * Inject `deletedAt: null` into a where clause if not already
  * specified. This is idempotent: if the caller already filters
  * on deletedAt (e.g., `deletedAt: null` or `deletedAt: { not: null }`),
  * the middleware leaves it alone.
+ *
+ * Applied to soft-delete models: Observation
  */
 function injectSoftDeleteFilter(
   args: { where?: Record<string, unknown> }

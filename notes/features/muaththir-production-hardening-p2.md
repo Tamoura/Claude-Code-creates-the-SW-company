@@ -58,12 +58,14 @@ feature/muaththir/production-hardening-p2
 - 35 tests failing before this work (DimensionCard, dashboard, etc.)
 
 ## Progress
-- [ ] Write tests for CSP headers
-- [ ] Implement CSP headers
-- [ ] Write tests for soft-delete middleware
-- [ ] Implement soft-delete middleware
-- [ ] Fix children observation count to exclude soft-deleted
+- [x] Write tests for CSP headers (9 tests)
+- [x] Implement CSP headers
+- [x] Write tests for soft-delete middleware (4 tests)
+- [x] Implement soft-delete middleware using Prisma $extends
+- [x] Fix children observation count to exclude soft-deleted
+- [x] Write query optimization tests (6 tests)
+- [x] Refactor: remove unused isSoftDeleteModel function
+- [x] Run full test suite - 432 passing (413 original + 19 new)
 - [x] RadarChart memoization
 - [x] API schemas with Zod validation
 - [x] Loading/error state improvements with retry buttons
-- [ ] Run full test suite & build
