@@ -265,8 +265,8 @@ test.describe('Reports Flow', () => {
       await expect(heading).toBeVisible({ timeout: 15000 });
       await expect(heading).toHaveText('Progress Report');
 
-      // Child name should appear in the report header
-      await expect(page.getByText('Ahmad')).toBeVisible({ timeout: 10000 });
+      // Child name should appear in the visible report header (h2, not print-only h1)
+      await expect(page.locator('h2:has-text("Ahmad")')).toBeVisible({ timeout: 10000 });
     });
 
     test('displays overall score', async ({ page }) => {

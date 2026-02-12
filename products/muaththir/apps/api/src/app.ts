@@ -27,6 +27,8 @@ import sharingRoutes from './routes/sharing';
 import exportRoutes from './routes/export';
 import digestRoutes from './routes/digest';
 import activityRoutes from './routes/activity';
+import streakRoutes from './routes/streaks';
+import compareRoutes from './routes/compare';
 
 import { logger } from './utils/logger';
 import { AppError, ValidationError } from './lib/errors';
@@ -227,6 +229,8 @@ export async function buildApp(
   await app.register(exportRoutes, { prefix: '/api/export' });
   await app.register(digestRoutes, { prefix: '/api/digest' });
   await app.register(activityRoutes, { prefix: '/api/activity' });
+  await app.register(streakRoutes, { prefix: '/api/children' });
+  await app.register(compareRoutes, { prefix: '/api/children' });
 
   // Photo upload routes — optional, requires @fastify/multipart
   try {

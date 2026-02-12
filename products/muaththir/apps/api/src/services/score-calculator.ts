@@ -115,6 +115,130 @@ export async function calculateDimensionScore(
   };
 }
 
+export interface ChildSummary {
+  childId: string;
+  childName: string;
+  overallScore: number;
+  dimensions: Array<{ dimension: DimensionType; score: number }>;
+}
+
+/**
+ * Calculate a compact dashboard summary for a child.
+ * Used by the compare endpoint to avoid duplicating scoring logic.
+ */
+export async function calculateChildSummary(
+  prisma: any,
+  childId: string,
+  childName: string,
+  ageBand: string | null
+): Promise<ChildSummary> {
+  const thirtyDaysAgo = new Date();
+  thirtyDaysAgo.setDate(thirtyDaysAgo.getDate() - 30);
+
+  const ageBandForQuery = ageBand === 'out_of_range' ? null : ageBand;
+
+  const [recentObservations, allChildMilestones, allMilestoneDefs] =
+    await Promise.all([
+      prisma.observation.findMany({
+        where: {
+          childId,
+          deletedAt: null,
+          observedAt: { gte: thirtyDaysAgo },
+        },
+        select: { dimension: true, sentiment: true },
+      }),
+      prisma.childMilestone.findMany({
+        where: { childId },
+        select: {
+          achieved: true,
+          milestone: { select: { dimension: true, ageBand: true } },
+        },
+      }),
+      ageBandForQuery
+        ? prisma.milestoneDefinition.groupBy({
+            by: ['dimension'],
+            where: { ageBand: ageBandForQuery },
+            _count: true,
+          })
+        : Promise.resolve([]),
+    ]);
+
+  const milestoneDefMap = new Map(
+    (allMilestoneDefs as any[]).map((g: any) => [g.dimension, g._count])
+  );
+
+  const obsByDim = new Map<
+    string,
+    { count: number; positiveCount: number }
+  >();
+  for (const obs of recentObservations as any[]) {
+    const entry = obsByDim.get(obs.dimension) || {
+      count: 0,
+      positiveCount: 0,
+    };
+    entry.count++;
+    if (obs.sentiment === 'positive') {
+      entry.positiveCount++;
+    }
+    obsByDim.set(obs.dimension, entry);
+  }
+
+  const achievedByDim = new Map<string, number>();
+  for (const cm of allChildMilestones as any[]) {
+    if (
+      ageBandForQuery &&
+      cm.milestone.ageBand === ageBandForQuery &&
+      cm.achieved
+    ) {
+      achievedByDim.set(
+        cm.milestone.dimension,
+        (achievedByDim.get(cm.milestone.dimension) || 0) + 1
+      );
+    }
+  }
+
+  const dimensions: Array<{ dimension: DimensionType; score: number }> =
+    [];
+
+  for (const dimension of DIMENSIONS) {
+    const dimObs = obsByDim.get(dimension) || {
+      count: 0,
+      positiveCount: 0,
+    };
+    const observationFactor =
+      (Math.min(dimObs.count, 10) / 10) * 100;
+    const sentimentFactor =
+      dimObs.count > 0
+        ? (dimObs.positiveCount / dimObs.count) * 100
+        : 0;
+
+    const milestoneTotal = milestoneDefMap.get(dimension) || 0;
+    const milestoneAchieved = achievedByDim.get(dimension) || 0;
+    const milestoneFactor =
+      milestoneTotal > 0
+        ? (milestoneAchieved / milestoneTotal) * 100
+        : 0;
+
+    const score = Math.round(
+      observationFactor * 0.4 +
+        milestoneFactor * 0.4 +
+        sentimentFactor * 0.2
+    );
+
+    dimensions.push({ dimension: dimension as DimensionType, score });
+  }
+
+  const overallScore =
+    dimensions.length > 0
+      ? Math.round(
+          dimensions.reduce((sum, d) => sum + d.score, 0) /
+            dimensions.length
+        )
+      : 0;
+
+  return { childId, childName, overallScore, dimensions };
+}
+
 export async function gatherDimensionData(
   prisma: any,
   childId: string,

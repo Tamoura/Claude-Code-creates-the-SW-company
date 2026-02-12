@@ -45,7 +45,8 @@ const childPhotoRoutes: FastifyPluginAsync = async (fastify) => {
 
     await verifyChildOwnership(fastify, childId, parentId);
 
-    const data = await request.file();
+    // eslint-disable-next-line @typescript-eslint/no-explicit-any
+    const data = await (request as any).file();
 
     if (!data) {
       throw new BadRequestError('No file uploaded. Send a "photo" field with multipart/form-data.');
