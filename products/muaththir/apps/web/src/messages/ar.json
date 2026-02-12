@@ -342,6 +342,7 @@
     "totalFactor": "المجموع",
     "reportGenerated": "تم إنشاء التقرير: {date}",
     "generatedBy": "أُنشئ بواسطة مؤثّر - متتبع تطور الطفل الشامل",
+    "downloadReport": "تحميل التقرير",
     "downloadCSV": "تصدير CSV",
     "downloadingCSV": "جارٍ التصدير...",
     "downloadData": "تحميل بيانات الملاحظات كملف CSV"
@@ -758,6 +759,11 @@
     "notAchieved": "لم يتحقق بعد",
     "noMilestones": "لا توجد معالم متاحة لهذا البُعد.",
     "loading": "جارٍ تحميل المعالم..."
+  },
+  "familyActivity": {
+    "title": "نشاط العائلة",
+    "description": "النشاط الأخير عبر جميع الأطفال.",
+    "noActivity": "لا يوجد نشاط عائلي حديث"
   },
   "dashboardLayout": {
     "loading": "جارٍ التحميل...",

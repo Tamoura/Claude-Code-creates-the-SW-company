@@ -6,6 +6,7 @@ import dynamic from 'next/dynamic';
 import { useTranslations } from 'next-intl';
 import { DIMENSIONS } from '../../../lib/dimensions';
 import { apiClient, type Child, type DashboardData } from '../../../lib/api-client';
+import FamilyActivityFeed, { type FamilyActivity } from '../../../components/dashboard/FamilyActivityFeed';
 
 const RadarChart = dynamic(
   () => import('../../../components/dashboard/RadarChart'),
@@ -26,6 +27,7 @@ export default function FamilyPage() {
   const tc = useTranslations('common');
   const td = useTranslations('dimensions');
   const [children, setChildren] = useState<ChildWithScores[]>([]);
+  const [familyActivities, setFamilyActivities] = useState<FamilyActivity[]>([]);
   const [loading, setLoading] = useState(true);
   const [error, setError] = useState<string | null>(null);
 
@@ -49,6 +51,29 @@ export default function FamilyPage() {
         );
 
         if (!cancelled) setChildren(childrenWithScores);
+
+        // Fetch recent observations for all children to build activity feed
+        const allActivities: FamilyActivity[] = [];
+        await Promise.all(
+          res.data.map(async (child) => {
+            try {
+              const obsResult = await apiClient.getObservations(child.id, { limit: 5 });
+              for (const obs of obsResult.data) {
+                allActivities.push({
+                  id: `obs-${obs.id}`,
+                  type: 'observation',
+                  text: obs.content.length > 80 ? obs.content.slice(0, 80) + '...' : obs.content,
+                  childName: child.name,
+                  dimensionSlug: obs.dimension,
+                  timestamp: obs.createdAt,
+                });
+              }
+            } catch {
+              // Silently skip if observations fail
+            }
+          })
+        );
+        if (!cancelled) setFamilyActivities(allActivities);
       } catch (err) {
         if (!cancelled) setError(err instanceof Error ? err.message : 'Failed to load');
       } finally {
@@ -158,6 +183,9 @@ export default function FamilyPage() {
               );
             })}
           </div>
+
+          {/* Family Activity Feed */}
+          <FamilyActivityFeed activities={familyActivities} loading={false} />
 
           {/* Progress Comparison Chart */}
           <div className="card">
