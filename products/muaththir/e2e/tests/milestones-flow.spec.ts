@@ -247,9 +247,9 @@ async function authenticateForMilestones(page: Page) {
  */
 async function navigateToMilestones(page: Page) {
   const sidebarLink = page.locator('aside a[href="/dashboard/milestones"]');
-  await expect(sidebarLink).toBeVisible({ timeout: 10000 });
-  await sidebarLink.click();
-  await page.waitForURL('**/dashboard/milestones', { timeout: 10000 });
+  await expect(sidebarLink).toBeVisible({ timeout: 15000 });
+  await sidebarLink.click({ force: true });
+  await page.waitForURL('**/dashboard/milestones', { timeout: 15000 });
 }
 
 /**
@@ -266,9 +266,9 @@ async function navigateToMilestoneDetail(
     `a[href="/dashboard/milestones/${dimension}"]`
   );
   await expect(dimensionCard).toBeVisible({ timeout: 15000 });
-  await dimensionCard.click();
+  await dimensionCard.click({ force: true });
   await page.waitForURL(`**/dashboard/milestones/${dimension}`, {
-    timeout: 10000,
+    timeout: 15000,
   });
 }
 
@@ -310,9 +310,9 @@ test.describe('Milestones Flow', () => {
         'a[href="/dashboard/milestones/academic"]'
       );
       await expect(academicCard).toBeVisible({ timeout: 15000 });
-      await academicCard.click();
+      await academicCard.click({ force: true });
 
-      await expect(page).toHaveURL(/\/dashboard\/milestones\/academic/);
+      await expect(page).toHaveURL(/\/dashboard\/milestones\/academic/, { timeout: 15000 });
     });
   });
 

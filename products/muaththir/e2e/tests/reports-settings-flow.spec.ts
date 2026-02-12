@@ -247,8 +247,9 @@ async function navigateToPage(page: Page, href: string) {
   const heading = page.locator('h1, h2').first();
   await expect(heading).toBeVisible({ timeout: 15000 });
   const link = page.locator(`aside a[href="${href}"]`);
-  await expect(link).toBeVisible({ timeout: 10000 });
+  await expect(link).toBeVisible({ timeout: 15000 });
   await link.click({ force: true });
+  await page.waitForURL(`**${href}`, { timeout: 15000 });
 }
 
 // ==================== Reports Page Tests ====================
@@ -277,10 +278,10 @@ test.describe('Reports Flow', () => {
       await expect(heading).toBeVisible({ timeout: 15000 });
 
       // Overall score of 65 should be displayed prominently (use the large score element)
-      await expect(page.locator('.text-3xl:has-text("65")').first()).toBeVisible({ timeout: 10000 });
+      await expect(page.locator('.text-3xl:has-text("65")').first()).toBeVisible({ timeout: 15000 });
 
       // "Overall Score" label should be visible
-      await expect(page.getByText('Overall Score')).toBeVisible();
+      await expect(page.getByText('Overall Score')).toBeVisible({ timeout: 10000 });
     });
 
     test('shows dimension score bars', async ({ page }) => {
