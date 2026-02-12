@@ -650,6 +650,26 @@ class ApiClient {
     });
   }
 
+  // ==================== Export ====================
+
+  async exportData(format: 'json' | 'csv' = 'json'): Promise<Blob> {
+    const token = TokenManager.getToken();
+    const headers: Record<string, string> = {};
+    if (token) headers['Authorization'] = `Bearer ${token}`;
+
+    const response = await fetch(`${this.baseUrl}/api/export?format=${format}`, {
+      headers,
+      credentials: 'include',
+    });
+
+    if (!response.ok) {
+      const error = await response.json().catch(() => ({ detail: 'Export failed' }));
+      throw new Error(error.detail || `HTTP ${response.status}`);
+    }
+
+    return response.blob();
+  }
+
   // ==================== Sharing ====================
 
   async getShares(): Promise<FamilyShare[]> {
