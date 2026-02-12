@@ -390,7 +390,12 @@
     "passwordsMismatch": "كلمات المرور غير متطابقة.",
     "accountActions": "إجراءات الحساب",
     "signOut": "تسجيل الخروج",
-    "loadingChildren": "جارٍ تحميل الأطفال..."
+    "loadingChildren": "جارٍ تحميل الأطفال...",
+    "exportTitle": "تصدير البيانات",
+    "exportDesc": "تحميل جميع بيانات أطفالك كملف JSON.",
+    "exportButton": "تحميل جميع البيانات",
+    "exporting": "جارٍ التصدير...",
+    "exportError": "فشل تصدير البيانات. حاول مرة أخرى."
   },
   "onboarding": {
     "welcomeTitle": "مرحباً بك في مؤثّر",
@@ -544,7 +549,8 @@
     "weeklyDigestDesc": "تلقَّ ملخصاً أسبوعياً لتقدم طفلك.",
     "milestoneAlerts": "تنبيهات المراحل",
     "milestoneAlertsDesc": "احصل على إشعار عندما تصبح مراحل جديدة مناسبة لعمر طفلك.",
-    "comingSoon": "ستكون إعدادات الإشعارات متاحة عند الاتصال بالخادم."
+    "comingSoon": "ستكون إعدادات الإشعارات متاحة عند الاتصال بالخادم.",
+    "saved": "تم حفظ التفضيلات"
   },
   "subscription": {
     "title": "الاشتراك",

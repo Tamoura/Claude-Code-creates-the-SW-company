@@ -390,7 +390,12 @@
     "passwordsMismatch": "Passwords do not match.",
     "accountActions": "Account Actions",
     "signOut": "Sign Out",
-    "loadingChildren": "Loading children..."
+    "loadingChildren": "Loading children...",
+    "exportTitle": "Export Data",
+    "exportDesc": "Download all your children's data as a JSON file.",
+    "exportButton": "Download All Data",
+    "exporting": "Exporting...",
+    "exportError": "Failed to export data. Please try again."
   },
   "onboarding": {
     "welcomeTitle": "Welcome to Mu'aththir",
@@ -544,7 +549,8 @@
     "weeklyDigestDesc": "Receive a weekly summary of your child's progress.",
     "milestoneAlerts": "Milestone Alerts",
     "milestoneAlertsDesc": "Get notified when new milestones become relevant for your child's age.",
-    "comingSoon": "Notification settings will be available once connected to the backend."
+    "comingSoon": "Notification settings will be available once connected to the backend.",
+    "saved": "Preferences saved"
   },
   "subscription": {
     "title": "Subscription",

@@ -1,11 +1,11 @@
 'use client';
 
-import { useState, useEffect } from 'react';
+import { useState, useEffect, useCallback } from 'react';
 import Link from 'next/link';
 import { useRouter } from 'next/navigation';
 import { useTranslations } from 'next-intl';
 import { useAuth } from '../../../hooks/useAuth';
-import { apiClient, type Profile, type Child } from '../../../lib/api-client';
+import { apiClient, type Profile, type Child, type DashboardData } from '../../../lib/api-client';
 
 interface ChildHealthForm {
   medicalNotes: string;
@@ -44,6 +44,10 @@ export default function SettingsPage() {
   const [healthSaving, setHealthSaving] = useState(false);
   const [healthMessage, setHealthMessage] = useState('');
   const [healthError, setHealthError] = useState('');
+
+  // Export state
+  const [exporting, setExporting] = useState(false);
+  const [exportError, setExportError] = useState('');
 
   useEffect(() => {
     const loadProfile = async () => {
@@ -186,6 +190,49 @@ export default function SettingsPage() {
     await logout();
     router.push('/login');
   };
+
+  const handleExport = useCallback(async () => {
+    setExporting(true);
+    setExportError('');
+
+    try {
+      const childrenRes = await apiClient.getChildren(1, 50);
+      const dashboards: (DashboardData | null)[] = await Promise.all(
+        childrenRes.data.map(async (child) => {
+          try {
+            return await apiClient.getDashboard(child.id);
+          } catch {
+            return null;
+          }
+        })
+      );
+
+      const exportData = {
+        exportedAt: new Date().toISOString(),
+        children: childrenRes.data.map((child, index) => ({
+          ...child,
+          dashboard: dashboards[index],
+        })),
+      };
+
+      const blob = new Blob([JSON.stringify(exportData, null, 2)], {
+        type: 'application/json',
+      });
+      const url = URL.createObjectURL(blob);
+      const date = new Date().toISOString().split('T')[0];
+      const a = document.createElement('a');
+      a.href = url;
+      a.download = `muaththir-export-${date}.json`;
+      document.body.appendChild(a);
+      a.click();
+      document.body.removeChild(a);
+      URL.revokeObjectURL(url);
+    } catch {
+      setExportError(t('exportError'));
+    } finally {
+      setExporting(false);
+    }
+  }, [t]);
 
   return (
     <div className="max-w-2xl mx-auto space-y-8">
@@ -555,6 +602,31 @@ export default function SettingsPage() {
           {passwordSaving ? t('changingPassword') : t('changePasswordBtn')}
         </button>
       </form>
+
+      {/* Export Data */}
+      <div className="card space-y-4">
+        <h2 className="text-lg font-semibold text-slate-900">
+          {t('exportTitle')}
+        </h2>
+        <p className="text-sm text-slate-500">
+          {t('exportDesc')}
+        </p>
+
+        {exportError && (
+          <div className="rounded-xl bg-red-50 p-3 text-sm text-red-700" role="alert">
+            {exportError}
+          </div>
+        )}
+
+        <button
+          type="button"
+          onClick={handleExport}
+          className="btn-primary w-full"
+          disabled={exporting}
+        >
+          {exporting ? t('exporting') : t('exportButton')}
+        </button>
+      </div>
 
       {/* Account Actions */}
       <div className="card">
