@@ -14,6 +14,7 @@ export default function DimensionsPage() {
   const [dashboardData, setDashboardData] = useState<DashboardData | null>(null);
   const [isLoading, setIsLoading] = useState(true);
   const [error, setError] = useState<string>('');
+  const [retryCount, setRetryCount] = useState(0);
 
   // Fetch children on mount
   useEffect(() => {
@@ -54,7 +55,7 @@ export default function DimensionsPage() {
     };
 
     fetchDashboard();
-  }, [selectedChildId]);
+  }, [selectedChildId, retryCount]);
 
   const getScoreForDimension = (dimensionSlug: string): number => {
     if (!dashboardData) return 0;
@@ -117,6 +118,12 @@ export default function DimensionsPage() {
       {error && (
         <div className="p-4 rounded-lg bg-red-50 dark:bg-red-900/30 border border-red-200 dark:border-slate-700">
           <p className="text-sm text-red-800 dark:text-red-400">{error}</p>
+          <button
+            onClick={() => setRetryCount((c) => c + 1)}
+            className="mt-2 text-xs font-medium text-red-700 dark:text-red-300 hover:text-red-900 dark:hover:text-red-100 underline"
+          >
+            {tc('retry')}
+          </button>
         </div>
       )}
 

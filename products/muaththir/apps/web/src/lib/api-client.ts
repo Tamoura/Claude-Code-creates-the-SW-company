@@ -6,6 +6,13 @@
  */
 
 import { TokenManager } from './token-manager';
+import {
+  DashboardDataSchema,
+  ChildSchema,
+  ObservationSchema,
+  validateResponse,
+} from './api-schemas';
+import { z } from 'zod';
 
 const API_BASE_URL =
   process.env.NEXT_PUBLIC_API_URL || 'http://localhost:5005';
@@ -341,7 +348,8 @@ class ApiClient {
   }
 
   async getChild(id: string): Promise<Child> {
-    return this.request(`/api/children/${id}`);
+    const data = await this.request<Child>(`/api/children/${id}`);
+    return validateResponse(ChildSchema, data, 'getChild') as Child;
   }
 
   async createChild(data: {
@@ -441,9 +449,24 @@ class ApiClient {
     if (params?.from) query.set('from', params.from);
     if (params?.to) query.set('to', params.to);
     const qs = query.toString();
-    return this.request(
+    const PaginatedObservationsSchema = z.object({
+      data: z.array(ObservationSchema),
+      pagination: z.object({
+        page: z.number(),
+        limit: z.number(),
+        total: z.number(),
+        totalPages: z.number(),
+        hasMore: z.boolean(),
+      }),
+    });
+    const result = await this.request<PaginatedResponse<Observation>>(
       `/api/children/${childId}/observations${qs ? `?${qs}` : ''}`
     );
+    return validateResponse(
+      PaginatedObservationsSchema,
+      result,
+      'getObservations'
+    ) as PaginatedResponse<Observation>;
   }
 
   async getObservation(childId: string, id: string): Promise<Observation> {
@@ -534,7 +557,14 @@ class ApiClient {
   // ==================== Dashboard ====================
 
   async getDashboard(childId: string): Promise<DashboardData> {
-    return this.request(`/api/dashboard/${childId}`);
+    const data = await this.request<DashboardData>(
+      `/api/dashboard/${childId}`
+    );
+    return validateResponse(
+      DashboardDataSchema,
+      data,
+      'getDashboard'
+    ) as DashboardData;
   }
 
   async getRecentObservations(

@@ -19,6 +19,7 @@ export default function ChildProfilePage({ params }: ChildProfilePageProps) {
   const [error, setError] = useState<string | null>(null);
   const [showDeleteConfirm, setShowDeleteConfirm] = useState(false);
   const [deleting, setDeleting] = useState(false);
+  const [retryCount, setRetryCount] = useState(0);
 
   useEffect(() => {
     const loadChild = async () => {
@@ -35,7 +36,7 @@ export default function ChildProfilePage({ params }: ChildProfilePageProps) {
     };
 
     loadChild();
-  }, [params.id]);
+  }, [params.id, retryCount]);
 
   const handleDelete = async () => {
     if (!child) return;
@@ -82,12 +83,20 @@ export default function ChildProfilePage({ params }: ChildProfilePageProps) {
     return (
       <div className="card bg-red-50 dark:bg-red-900/30 border-red-200 dark:border-slate-700">
         <p className="text-sm text-red-700 dark:text-red-400">{error || t('childNotFound')}</p>
-        <Link
-          href="/dashboard"
-          className="text-sm text-emerald-600 dark:text-emerald-400 hover:text-emerald-700 dark:hover:text-emerald-300 mt-4 inline-block"
-        >
-          {t('backToDashboard')}
-        </Link>
+        <div className="flex items-center gap-4 mt-4">
+          <button
+            onClick={() => setRetryCount((c) => c + 1)}
+            className="text-sm font-medium text-red-700 dark:text-red-300 hover:text-red-900 dark:hover:text-red-100 underline"
+          >
+            {tc('retry')}
+          </button>
+          <Link
+            href="/dashboard"
+            className="text-sm text-emerald-600 dark:text-emerald-400 hover:text-emerald-700 dark:hover:text-emerald-300"
+          >
+            {t('backToDashboard')}
+          </Link>
+        </div>
       </div>
     );
   }

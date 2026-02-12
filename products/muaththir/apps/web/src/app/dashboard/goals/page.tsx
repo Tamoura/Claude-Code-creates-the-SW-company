@@ -18,6 +18,7 @@ export default function GoalsPage() {
   const [loading, setLoading] = useState(true);
   const [error, setError] = useState<string | null>(null);
   const [filterStatus, setFilterStatus] = useState<string>('');
+  const [retryCount, setRetryCount] = useState(0);
 
   useEffect(() => {
     let cancelled = false;
@@ -57,7 +58,7 @@ export default function GoalsPage() {
     };
     load();
     return () => { cancelled = true; };
-  }, [selectedChildId, filterStatus]);
+  }, [selectedChildId, filterStatus, retryCount]);
 
   const handleStatusChange = async (goal: Goal, newStatus: 'active' | 'completed' | 'paused') => {
     if (!selectedChildId) return;
@@ -153,6 +154,12 @@ export default function GoalsPage() {
       {error && (
         <div className="card bg-red-50 border border-red-200 dark:bg-red-900/30 dark:border-red-700" role="alert">
           <p className="text-sm text-red-700 dark:text-red-400">{error}</p>
+          <button
+            onClick={() => setRetryCount((c) => c + 1)}
+            className="mt-2 text-xs font-medium text-red-700 dark:text-red-300 hover:text-red-900 dark:hover:text-red-100 underline"
+          >
+            {tc('retry')}
+          </button>
         </div>
       )}
 

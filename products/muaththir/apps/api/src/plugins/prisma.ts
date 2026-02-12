@@ -3,12 +3,56 @@ import fp from 'fastify-plugin';
 import { PrismaClient } from '@prisma/client';
 import { logger } from '../utils/logger';
 
+/**
+ * Inject `deletedAt: null` into a where clause if not already
+ * specified. This is idempotent: if the caller already filters
+ * on deletedAt (e.g., `deletedAt: null` or `deletedAt: { not: null }`),
+ * the middleware leaves it alone.
+ *
+ * Applied to soft-delete models: Observation
+ */
+function injectSoftDeleteFilter(
+  args: { where?: Record<string, unknown> }
+): void {
+  if (!args.where) {
+    args.where = { deletedAt: null };
+    return;
+  }
+  if (!('deletedAt' in args.where)) {
+    args.where.deletedAt = null;
+  }
+}
+
 const prismaPlugin: FastifyPluginAsync = async (fastify) => {
-  const prisma = new PrismaClient({
+  const basePrisma = new PrismaClient({
     log: process.env.NODE_ENV === 'development'
       ? ['query', 'error', 'warn']
       : ['error'],
   });
+
+  // Extend with soft-delete query filter middleware
+  const prisma = basePrisma.$extends({
+    query: {
+      observation: {
+        async findMany({ args, query }) {
+          injectSoftDeleteFilter(args);
+          return query(args);
+        },
+        async findFirst({ args, query }) {
+          injectSoftDeleteFilter(args);
+          return query(args);
+        },
+        async findUnique({ args, query }) {
+          injectSoftDeleteFilter(args as { where?: Record<string, unknown> });
+          return query(args);
+        },
+        async count({ args, query }) {
+          injectSoftDeleteFilter(args);
+          return query(args);
+        },
+      },
+    },
+  }) as unknown as PrismaClient;
 
   try {
     await prisma.$connect();

@@ -1,5 +1,6 @@
 'use client';
 
+import { memo, useMemo } from 'react';
 import {
   Radar,
   RadarChart as RechartsRadarChart,
@@ -22,16 +23,23 @@ interface RadarChartProps {
   scores?: DimensionScore[];
 }
 
-export default function RadarChart({ scores }: RadarChartProps) {
+const RadarChart = memo(function RadarChart({ scores }: RadarChartProps) {
   const td = useTranslations('dimensions');
 
-  const defaultScores: DimensionScore[] = DIMENSIONS.map((d) => ({
-    dimension: td(d.slug),
-    score: 0,
-    fullMark: 100,
-  }));
+  const defaultScores: DimensionScore[] = useMemo(
+    () =>
+      DIMENSIONS.map((d) => ({
+        dimension: td(d.slug),
+        score: 0,
+        fullMark: 100,
+      })),
+    [td]
+  );
 
-  const chartScores = scores || defaultScores;
+  const chartScores = useMemo(
+    () => scores || defaultScores,
+    [scores, defaultScores]
+  );
 
   return (
     <div
@@ -76,4 +84,6 @@ export default function RadarChart({ scores }: RadarChartProps) {
       </ResponsiveContainer>
     </div>
   );
-}
+});
+
+export default RadarChart;
