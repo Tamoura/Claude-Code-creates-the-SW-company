@@ -36,5 +36,20 @@ Final production polish on the frontend covering:
 - Only one `<img>` tag in child profile (user photo, external URL)
 - No other heavy imports identified
 
+## Backend Polish Tasks
+1. Run full test suite - DONE (432/432 passing)
+2. API Documentation - update docs/API.md with all endpoints
+3. Health check enhancement - add /api/health/ready for K8s readiness
+4. Graceful shutdown - SIGTERM/SIGINT handling in server.ts
+5. Environment validation - startup validation for required env vars
+
+### Backend Findings
+- Existing API.md covers: Health, Auth, Children, Observations, Milestones, Dashboard, Profile
+- Missing from API.md: Goals, Goal Templates, Insights, Reports, Sharing, Export, Demo Login, Activity Feed, Notifications, Photo Upload
+- health.ts already checks DB connectivity on /api/health, but no separate /ready endpoint
+- server.ts has no graceful shutdown handling
+- env.ts validates DATABASE_URL and JWT_SECRET (in production), but no warnings for optional vars
+- app.ts validates JWT_SECRET length >= 32 at startup
+
 ## Changes Made
 - (tracked as work progresses)

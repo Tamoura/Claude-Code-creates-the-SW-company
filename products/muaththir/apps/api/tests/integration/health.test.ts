@@ -75,3 +75,38 @@ describe('GET /api/health', () => {
     expect(response.headers['content-type']).toMatch(/application\/json/);
   });
 });
+
+describe('GET /api/health/ready', () => {
+  it('should return 200 when database is reachable', async () => {
+    const response = await app.inject({
+      method: 'GET',
+      url: '/api/health/ready',
+    });
+
+    expect(response.statusCode).toBe(200);
+    const body = response.json();
+    expect(body.status).toBe('ready');
+    expect(body.database).toBe('connected');
+  });
+
+  it('should include a valid ISO timestamp', async () => {
+    const response = await app.inject({
+      method: 'GET',
+      url: '/api/health/ready',
+    });
+
+    const body = response.json();
+    expect(body.timestamp).toBeDefined();
+    const timestamp = new Date(body.timestamp);
+    expect(timestamp.toISOString()).toBe(body.timestamp);
+  });
+
+  it('should return JSON content type', async () => {
+    const response = await app.inject({
+      method: 'GET',
+      url: '/api/health/ready',
+    });
+
+    expect(response.headers['content-type']).toMatch(/application\/json/);
+  });
+});
