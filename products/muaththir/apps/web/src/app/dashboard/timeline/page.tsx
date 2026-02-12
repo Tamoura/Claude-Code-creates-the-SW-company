@@ -19,6 +19,7 @@ export default function TimelinePage() {
   const [isLoading, setIsLoading] = useState(true);
   const [isLoadingMore, setIsLoadingMore] = useState(false);
   const [error, setError] = useState<string>('');
+  const [retryCount, setRetryCount] = useState(0);
   const [currentPage, setCurrentPage] = useState(1);
   const [hasMore, setHasMore] = useState(false);
   const [dateFrom, setDateFrom] = useState('');
@@ -91,7 +92,7 @@ export default function TimelinePage() {
     };
 
     fetchObservations();
-  }, [selectedChildId, selectedDimension, selectedSentiment, dateFrom, dateTo]);
+  }, [selectedChildId, selectedDimension, selectedSentiment, dateFrom, dateTo, retryCount]);
 
   const handleLoadMore = async () => {
     if (!selectedChildId || !hasMore || isLoadingMore) return;
@@ -211,6 +212,12 @@ export default function TimelinePage() {
       {error && (
         <div className="p-4 rounded-lg bg-red-50 dark:bg-red-900/30 border border-red-200 dark:border-red-800">
           <p className="text-sm text-red-800 dark:text-red-400">{error}</p>
+          <button
+            onClick={() => setRetryCount((c) => c + 1)}
+            className="mt-2 text-xs font-medium text-red-700 dark:text-red-300 hover:text-red-900 dark:hover:text-red-100 underline"
+          >
+            {tc('retry')}
+          </button>
         </div>
       )}
 

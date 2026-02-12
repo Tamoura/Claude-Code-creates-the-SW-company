@@ -17,6 +17,7 @@ export default function InsightsPage() {
   const [insights, setInsights] = useState<InsightsData | null>(null);
   const [loading, setLoading] = useState(true);
   const [error, setError] = useState<string | null>(null);
+  const [retryCount, setRetryCount] = useState(0);
 
   useEffect(() => {
     let cancelled = false;
@@ -54,7 +55,7 @@ export default function InsightsPage() {
     };
     load();
     return () => { cancelled = true; };
-  }, [selectedChildId]);
+  }, [selectedChildId, retryCount]);
 
   const trendIcon = (trend: string) => {
     if (trend === 'improving') return <span className="text-emerald-500" role="img" aria-label={t('improving')}>&#9650; <span className="sr-only">{t('improving')}</span></span>;
@@ -113,6 +114,12 @@ export default function InsightsPage() {
       {error && (
         <div className="card bg-red-50 dark:bg-red-900/30 border border-red-200 dark:border-slate-700" role="alert">
           <p className="text-sm text-red-700 dark:text-red-400">{error}</p>
+          <button
+            onClick={() => setRetryCount((c) => c + 1)}
+            className="mt-2 text-xs font-medium text-red-700 dark:text-red-300 hover:text-red-900 dark:hover:text-red-100 underline"
+          >
+            {tc('retry')}
+          </button>
         </div>
       )}
 

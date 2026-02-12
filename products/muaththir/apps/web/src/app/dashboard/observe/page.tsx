@@ -31,6 +31,7 @@ export default function ObservePage() {
   const [isLoading, setIsLoading] = useState(true);
   const [isSubmitting, setIsSubmitting] = useState(false);
   const [error, setError] = useState<string>('');
+  const [retryCount, setRetryCount] = useState(0);
   const [successMessage, setSuccessMessage] = useState<string>('');
 
   const charCount = text.length;
@@ -56,7 +57,7 @@ export default function ObservePage() {
     };
 
     fetchChildren();
-  }, []);
+  }, [retryCount]);
 
   const handleAddTag = () => {
     const trimmed = tagInput.trim();
@@ -145,6 +146,12 @@ export default function ObservePage() {
       {error && (
         <div className="p-4 rounded-lg bg-red-50 dark:bg-red-900/30 border border-red-200 dark:border-red-800">
           <p className="text-sm text-red-800 dark:text-red-400">{error}</p>
+          <button
+            onClick={() => setRetryCount((c) => c + 1)}
+            className="mt-2 text-xs font-medium text-red-700 dark:text-red-300 hover:text-red-900 dark:hover:text-red-100 underline"
+          >
+            {tc('retry')}
+          </button>
         </div>
       )}
 

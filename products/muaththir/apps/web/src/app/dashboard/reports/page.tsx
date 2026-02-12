@@ -18,6 +18,7 @@ export default function ReportsPage() {
   const [dashboard, setDashboard] = useState<DashboardData | null>(null);
   const [loading, setLoading] = useState(true);
   const [error, setError] = useState<string | null>(null);
+  const [retryCount, setRetryCount] = useState(0);
 
   useEffect(() => {
     let cancelled = false;
@@ -55,7 +56,7 @@ export default function ReportsPage() {
     };
     load();
     return () => { cancelled = true; };
-  }, [selectedChildId]);
+  }, [selectedChildId, retryCount]);
 
   const handlePrint = () => {
     window.print();
@@ -106,6 +107,12 @@ export default function ReportsPage() {
       {error && (
         <div className="card bg-red-50 border border-red-200 print:hidden" role="alert">
           <p className="text-sm text-red-700">{error}</p>
+          <button
+            onClick={() => setRetryCount((c) => c + 1)}
+            className="mt-2 text-xs font-medium text-red-700 hover:text-red-900 underline"
+          >
+            {tc('retry')}
+          </button>
         </div>
       )}
 

@@ -25,6 +25,7 @@ export default function MilestonesByDimensionPage({
   const [milestones, setMilestones] = useState<ChildMilestone[]>([]);
   const [loading, setLoading] = useState(true);
   const [error, setError] = useState<string | null>(null);
+  const [retryCount, setRetryCount] = useState(0);
 
   // Load children on mount
   useEffect(() => {
@@ -70,7 +71,7 @@ export default function MilestonesByDimensionPage({
     };
 
     loadMilestones();
-  }, [selectedChildId, dimension]);
+  }, [selectedChildId, dimension, retryCount]);
 
   // Toggle milestone achievement with optimistic UI
   const handleToggle = async (milestoneId: string, currentAchieved: boolean) => {
@@ -189,6 +190,12 @@ export default function MilestonesByDimensionPage({
       {error && (
         <div className="card bg-red-50 dark:bg-red-900/30 border-red-200 dark:border-red-800">
           <p className="text-sm text-red-700 dark:text-red-400">{error}</p>
+          <button
+            onClick={() => setRetryCount((c) => c + 1)}
+            className="mt-2 text-xs font-medium text-red-700 dark:text-red-300 hover:text-red-900 dark:hover:text-red-100 underline"
+          >
+            {tc('retry')}
+          </button>
         </div>
       )}
 
