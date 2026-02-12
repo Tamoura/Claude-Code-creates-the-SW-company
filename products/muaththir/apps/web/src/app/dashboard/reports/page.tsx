@@ -88,6 +88,9 @@ export default function ReportsPage() {
               {children.map(c => <option key={c.id} value={c.id}>{c.name}</option>)}
             </select>
           )}
+          <Link href="/dashboard/reports/generate" className="btn-secondary text-sm py-2 px-4">
+            {t('generateDetailed')}
+          </Link>
           <button onClick={handlePrint} className="btn-primary text-sm py-2 px-4">
             {t('printReport')}
           </button>

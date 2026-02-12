@@ -163,6 +163,31 @@ export interface InsightsData {
   };
 }
 
+export interface ReportSummaryData {
+  childId: string;
+  childName: string;
+  ageBand: string | null;
+  generatedAt: string;
+  dateRange: { from: string; to: string };
+  overallScore: number;
+  dimensions: DimensionScore[];
+  insights: {
+    summary: string;
+    strengths: InsightStrength[];
+    areasForGrowth: InsightGrowthArea[];
+    recommendations: InsightRecommendation[];
+    trends: { overallDirection: string; dimensionTrends: Record<string, string> };
+  };
+  recentObservations: Observation[];
+  milestoneProgress: {
+    totalAchieved: number;
+    totalAvailable: number;
+    byDimension: Record<string, { achieved: number; total: number }>;
+  };
+  goals: { active: number; completed: number; paused: number };
+  observationsByDimension: Record<string, number>;
+}
+
 export interface PaginatedResponse<T> {
   data: T[];
   pagination: {
@@ -516,6 +541,20 @@ class ApiClient {
 
   async getInsights(childId: string): Promise<InsightsData> {
     return this.request(`/api/dashboard/${childId}/insights`);
+  }
+
+  // ==================== Reports ====================
+
+  async getReportSummary(
+    childId: string,
+    params?: { from?: string; to?: string; observations?: number }
+  ): Promise<ReportSummaryData> {
+    const query = new URLSearchParams();
+    if (params?.from) query.set('from', params.from);
+    if (params?.to) query.set('to', params.to);
+    if (params?.observations) query.set('observations', String(params.observations));
+    const qs = query.toString();
+    return this.request(`/api/children/${childId}/reports/summary${qs ? `?${qs}` : ''}`);
   }
 
   // ==================== Profile ====================
