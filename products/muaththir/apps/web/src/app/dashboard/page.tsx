@@ -123,7 +123,24 @@ export default function DashboardPage() {
     return () => {
       cancelled = true;
     };
-  }, [selectedChildId, retryCount]);
+  }, [selectedChildId, retryCount, t]);
+
+  // Compute stats from dashboard data and observations
+  const totalObservations = dashboardData
+    ? dashboardData.dimensions.reduce((sum, d) => sum + d.observationCount, 0)
+    : 0;
+
+  const daysSinceFirst = (() => {
+    if (observations.length === 0) return 0;
+    const dates = observations.map((o) => new Date(o.observedAt).getTime());
+    const earliest = Math.min(...dates);
+    return Math.max(1, Math.floor((Date.now() - earliest) / (1000 * 60 * 60 * 24)));
+  })();
+
+  const observedAtDates = observations.map((o) => o.observedAt);
+  const currentStreak = calculateCurrentStreak(observedAtDates);
+  const bestStreak = calculateBestStreak(observedAtDates);
+  const streakMessageKey = getStreakMessage(currentStreak);
 
   // Compute stats from dashboard data and observations
   const totalObservations = dashboardData

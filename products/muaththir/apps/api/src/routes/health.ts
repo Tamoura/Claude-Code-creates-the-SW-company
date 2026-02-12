@@ -18,6 +18,8 @@ const healthRoutes: FastifyPluginAsync = async (fastify) => {
     const statusCode = dbStatus === 'connected' ? 200 : 503;
     const mem = process.memoryUsage();
 
+    reply.header('Cache-Control', 'no-cache');
+
     return reply.code(statusCode).send({
       status: dbStatus === 'connected' ? 'ok' : 'error',
       database: dbStatus,

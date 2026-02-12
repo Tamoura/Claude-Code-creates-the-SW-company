@@ -811,6 +811,13 @@
     "loading": "Loading...",
     "menuToggle": "Toggle menu"
   },
+  "errorPage": {
+    "title": "Something went wrong",
+    "description": "An unexpected error occurred. Please try again or return to the dashboard.",
+    "tryAgain": "Try Again",
+    "goToDashboard": "Go to Dashboard",
+    "errorId": "Error ID: {digest}"
+  },
   "analytics": {
     "title": "Observation Analytics",
     "subtitle": "Visualise observation patterns across dimensions.",

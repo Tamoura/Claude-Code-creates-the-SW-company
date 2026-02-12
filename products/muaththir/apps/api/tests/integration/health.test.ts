@@ -74,6 +74,15 @@ describe('GET /api/health', () => {
 
     expect(response.headers['content-type']).toMatch(/application\/json/);
   });
+
+  it('should return Cache-Control: no-cache header', async () => {
+    const response = await app.inject({
+      method: 'GET',
+      url: '/api/health',
+    });
+
+    expect(response.headers['cache-control']).toBe('no-cache');
+  });
 });
 
 describe('GET /api/health/ready', () => {

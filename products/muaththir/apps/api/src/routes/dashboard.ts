@@ -1,9 +1,15 @@
+import { createHash } from 'crypto';
 import { FastifyPluginAsync } from 'fastify';
 import { verifyChildOwnership } from '../lib/ownership';
 import { getAgeBand } from '../utils/age-band';
 import { DIMENSIONS, DimensionType } from '../types';
-import { Dimension } from '@prisma/client';
+import { AgeBand, Dimension } from '@prisma/client';
 import { DimensionScore } from '../services/score-calculator';
+import {
+  GroupByDimension,
+  ChildMilestoneForScoring,
+  ChildMilestoneWithMilestone,
+} from '../types/prisma-results';
 
 /**
  * Dashboard Scores API
@@ -65,14 +71,20 @@ const dashboardRoutes: FastifyPluginAsync = async (fastify) => {
       ageBandForQuery
         ? fastify.prisma.milestoneDefinition.groupBy({
             by: ['dimension'],
-            where: { ageBand: ageBandForQuery as any },
+            where: { ageBand: ageBandForQuery as AgeBand },
             _count: true,
           })
         : Promise.resolve([]),
     ]);
 
-    const cacheMap = new Map(existingCaches.map((c: any) => [c.dimension, c]));
-    const milestoneDefMap = new Map((allMilestoneDefs as any[]).map((g: any) => [g.dimension, g._count]));
+    const cacheMap = new Map(
+      existingCaches.map((c) => [c.dimension, c] as const)
+    );
+    const milestoneDefMap = new Map(
+      (allMilestoneDefs as GroupByDimension[]).map(
+        (g) => [g.dimension, g._count] as const
+      )
+    );
 
     // Group recent observations by dimension (in-memory, no extra query)
     const obsByDim = new Map<string, { count: number; positiveCount: number }>();
@@ -87,7 +99,7 @@ const dashboardRoutes: FastifyPluginAsync = async (fastify) => {
 
     // Group achieved milestones by dimension for the target age band (in-memory)
     const achievedByDim = new Map<string, number>();
-    for (const cm of allChildMilestones as any[]) {
+    for (const cm of allChildMilestones as ChildMilestoneForScoring[]) {
       if (ageBandForQuery && cm.milestone.ageBand === ageBandForQuery && cm.achieved) {
         achievedByDim.set(cm.milestone.dimension, (achievedByDim.get(cm.milestone.dimension) || 0) + 1);
       }
@@ -95,7 +107,7 @@ const dashboardRoutes: FastifyPluginAsync = async (fastify) => {
 
     // Calculate scores for all dimensions from batch data
     const scores: DimensionScore[] = [];
-    const cacheUpserts: Promise<any>[] = [];
+    const cacheUpserts: Promise<unknown>[] = [];
 
     for (const dimension of DIMENSIONS) {
       const cached = cacheMap.get(dimension);
@@ -170,13 +182,37 @@ const dashboardRoutes: FastifyPluginAsync = async (fastify) => {
         ? Math.round(scores.reduce((sum, s) => sum + s.score, 0) / scores.length)
         : 0;
 
+    const calculatedAt = new Date().toISOString();
+
+    // Generate ETag from stable score data for cache validation.
+    // Uses overallScore + per-dimension scores so ETag only changes
+    // when the underlying data changes.
+    const scoreFingerprint = scores
+      .map((s) => `${s.dimension}:${s.score}`)
+      .join(',');
+    const etagHash = createHash('md5')
+      .update(`${childId}:${overallScore}:${scoreFingerprint}`)
+      .digest('hex');
+    const etag = `"${etagHash}"`;
+
+    // Return 304 if client has a matching ETag
+    const ifNoneMatch = request.headers['if-none-match'];
+    if (ifNoneMatch === etag) {
+      reply.header('ETag', etag);
+      reply.header('Cache-Control', 'private, max-age=30');
+      return reply.code(304).send();
+    }
+
+    reply.header('Cache-Control', 'private, max-age=30');
+    reply.header('ETag', etag);
+
     return reply.send({
       childId,
       childName: child.name,
       ageBand: ageBand === 'out_of_range' ? null : ageBand,
       overallScore,
       dimensions: scores,
-      calculatedAt: new Date().toISOString(),
+      calculatedAt,
     });
   });
 
@@ -274,7 +310,7 @@ const dashboardRoutes: FastifyPluginAsync = async (fastify) => {
       });
     }
 
-    for (const cm of milestones as any[]) {
+    for (const cm of milestones as ChildMilestoneWithMilestone[]) {
       const ts = cm.achievedAt
         ? cm.achievedAt.toISOString()
         : cm.createdAt.toISOString();
@@ -334,7 +370,7 @@ const dashboardRoutes: FastifyPluginAsync = async (fastify) => {
 
     const dueMilestones = await fastify.prisma.milestoneDefinition.findMany({
       where: {
-        ageBand: ageBand as any,
+        ageBand: ageBand as AgeBand,
         id: { notIn: achievedIds },
       },
       orderBy: [
