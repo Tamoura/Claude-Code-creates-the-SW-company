@@ -7,7 +7,7 @@ This document provides product-specific context for ConnectSW agents working on 
 **Name**: RecomEngine
 **Tagline**: AI-Powered Product Recommendation Orchestrator for E-Commerce
 **Type**: Web App (Full B2B SaaS Product)
-**Status**: Pre-Development (PRD Complete)
+**Status**: Architecture Complete
 **Product Directory**: `products/recomengine/`
 **Frontend Port**: 3112
 **Backend Port**: 5008
@@ -207,11 +207,18 @@ Widget config changes propagate to the SDK within 60 seconds (config cached with
 - **Database**: 5432 (shared PostgreSQL instance)
 - **Redis**: 6379 (shared Redis instance)
 
-## Architecture
+## Technical Architecture
+
+> Full details: `products/recomengine/docs/architecture.md`
+> API contract: `products/recomengine/docs/api-schema.yml` (OpenAPI 3.0)
+> Database DDL: `products/recomengine/docs/db-schema.sql`
+> ADRs: `products/recomengine/docs/ADRs/`
+
+### Architecture Style
+
+**Modular monolith** (see [ADR-001](../docs/ADRs/001-monolith-architecture.md)). Single Fastify process with 10 domain modules, shared PostgreSQL database, and Redis cache. No microservices for MVP. Module boundaries are designed for future extraction if scaling demands it.
 
 ### System Design
-
-Monolith backend with clean module separation. No microservices for MVP.
 
 ```
 Browser (Dashboard) -> Next.js (3112) -> Fastify API (5008) -> PostgreSQL
@@ -243,7 +250,7 @@ apps/api/src/modules/
   health/        - Readiness/liveness checks
 ```
 
-Each module has: `routes.ts`, `handlers.ts`, `service.ts`, `schemas.ts`, `test.ts`
+Each module has: `routes.ts`, `handlers.ts`, `service.ts`, `schemas.ts`
 
 ### SDK Architecture
 
@@ -263,14 +270,51 @@ sdk/
 
 The SDK uses an IIFE (Immediately Invoked Function Expression) to avoid global namespace pollution. Only `window.RecomEngine` is exposed.
 
+### API Surface
+
+All endpoints versioned under `/api/v1/`. Full OpenAPI 3.0 spec in `docs/api-schema.yml`.
+
+| Group | Endpoints | Auth | Description |
+|-------|-----------|------|-------------|
+| Auth | POST /signup, /login, /logout, /forgot-password, /reset-password | None / JWT | Admin authentication |
+| Tenants | GET/POST /tenants, GET/PUT/DELETE /tenants/:id | JWT | Tenant lifecycle |
+| API Keys | GET/POST /tenants/:id/api-keys, DELETE /tenants/:id/api-keys/:keyId | JWT | Key provisioning |
+| Events | POST /events, POST /events/batch | API Key (write) | Behavioral event ingestion |
+| Catalog | GET/POST /catalog, POST /catalog/batch, GET/PUT/DELETE /catalog/:productId | API Key | Product catalog CRUD |
+| Recommendations | GET /recommendations | API Key (read) | Personalized recommendations |
+| Experiments | CRUD /tenants/:id/experiments, GET .../results | JWT | A/B testing |
+| Analytics | GET .../overview, .../timeseries, .../top-products, .../export | JWT | Dashboard analytics |
+| Widgets | CRUD /tenants/:id/widgets | JWT / API Key (read) | Widget configuration |
+| Health | GET /health, GET /ready | None | Liveness and readiness |
+
+### Database Schema
+
+Full DDL in `docs/db-schema.sql`. Key tables:
+
+| Table | Notes |
+|-------|-------|
+| `admins` | Platform administrators (email, bcrypt password, role) |
+| `tenants` | Customer orgs with JSONB config (owner_id FK to admins) |
+| `api_keys` | HMAC-SHA256 hashed keys with read/read_write permissions |
+| `catalog_items` | Product catalog per tenant (UNIQUE on tenant_id + product_id) |
+| `events` | **Partitioned by month** on `created_at` (see ADR-002) |
+| `experiments` | A/B tests with unique running constraint per placement |
+| `experiment_results` | Aggregated metrics per variant (control/variant) |
+| `analytics_daily` | Pre-aggregated daily stats per tenant |
+| `widget_configs` | Widget appearance config per tenant per placement |
+| `revenue_attributions` | Links recommendation clicks to purchases (30-min window) |
+
+Materialized views: `analytics_summary` (KPI totals), `top_recommended_products` (click/impression rankings).
+
 ### Design Patterns
 
 - **Route-Handler-Service**: Routes define endpoints, handlers parse requests, services contain business logic. Services are testable independently.
 - **Tenant-Scoped Queries**: Every database query includes `tenantId` in the WHERE clause. Prisma middleware enforces this automatically.
 - **Zod at Boundaries**: All API inputs validated with Zod before reaching handlers.
-- **Pre-computed Recommendations**: Recommendation scores are computed on event ingestion (async) and cached in Redis. API reads serve from cache for <100ms latency.
+- **Redis Caching**: Recommendations cached with 5-min TTL; cache miss triggers synchronous computation. See [ADR-003](../docs/ADRs/003-recommendation-caching.md).
 - **Deterministic A/B Assignment**: SHA-256 hash of userId + experimentId ensures consistent variant assignment without storing assignments in the database.
 - **Event Sourcing (Lite)**: Raw events are immutable and append-only. Analytics are derived from events via aggregation.
+- **Event Partitioning**: Monthly PostgreSQL range partitions for events table. See [ADR-002](../docs/ADRs/002-event-storage-strategy.md).
 
 ### Data Models (Key Entities)
 
@@ -280,11 +324,26 @@ The SDK uses an IIFE (Immediately Invoked Function Expression) to avoid global n
 | Tenant | name, status, config (JSON), ownerId | belongs to Admin, has many ApiKeys, Events, CatalogItems, Experiments |
 | ApiKey | keyHash, keyPrefix, permissions, tenantId, lastUsedAt | belongs to Tenant |
 | CatalogItem | productId, name, category, price, imageUrl, attributes (JSON), available | belongs to Tenant |
-| Event | eventType, userId, productId, sessionId, metadata (JSON), timestamp, tenantId | belongs to Tenant |
+| Event | eventType, userId, productId, sessionId, metadata (JSON), timestamp, tenantId | belongs to Tenant (partitioned by month) |
 | Experiment | name, controlStrategy, variantStrategy, trafficSplit, metric, status, tenantId | belongs to Tenant |
 | ExperimentResult | experimentId, variant, impressions, clicks, conversions, revenue, sampleSize | belongs to Experiment |
-| AnalyticsDaily | tenantId, date, impressions, clicks, conversions, revenue | belongs to Tenant |
+| AnalyticsDaily | tenantId, date, impressions, clicks, conversions, revenue, placementId, strategy | belongs to Tenant |
 | WidgetConfig | tenantId, placementId, layout, columns, theme (JSON), maxItems | belongs to Tenant |
+| RevenueAttribution | tenantId, userId, productId, clickEventId, purchaseEventId, revenue | belongs to Tenant |
+
+### Caching Strategy
+
+Redis key patterns (see [ADR-003](../docs/ADRs/003-recommendation-caching.md) for full details):
+
+| Key | TTL | Purpose |
+|-----|-----|---------|
+| `reco:{tenantId}:{userId}:{strategy}` | 5 min | Per-user recommendations |
+| `reco:trending:{tenantId}` | 15 min | Trending products |
+| `reco:fbt:{tenantId}:{productId}` | 30 min | Frequently bought together |
+| `reco:counter:{tenantId}:{date}:{metric}` | 48 hr | Real-time analytics counters |
+| `reco:widget:{tenantId}:{placementId}` | 60 sec | Widget config |
+| `reco:catalog:{tenantId}:available` | 10 min | Available product set |
+| `reco:ratelimit:{apiKeyPrefix}:{window}` | Per window | Rate limit tracking |
 
 ### Security
 
@@ -297,6 +356,28 @@ The SDK uses an IIFE (Immediately Invoked Function Expression) to avoid global n
 - Security headers via @fastify/helmet
 - CORS configured per tenant (allowable origins stored in tenant config)
 - SDK served over HTTPS only; no third-party requests
+- RFC 7807 error responses on all endpoints
+- CSRF protection via SameSite cookies + custom header (double-submit cookie pattern)
+
+### Performance Budget
+
+| Operation | Target (p95) |
+|-----------|-------------|
+| Recommendation API response | <100ms |
+| Event ingestion (single) | <50ms |
+| Event ingestion (batch, 100) | <200ms |
+| Dashboard page load (LCP) | <2s |
+| SDK bundle load | <100ms |
+| Widget render | <200ms |
+| Analytics query (30d) | <500ms |
+
+### Key ADRs
+
+| ADR | Decision | Rationale |
+|-----|----------|-----------|
+| [ADR-001](../docs/ADRs/001-monolith-architecture.md) | Modular monolith | Simplicity for MVP; module boundaries allow future extraction |
+| [ADR-002](../docs/ADRs/002-event-storage-strategy.md) | PostgreSQL partitioned tables | No additional dependency; native partitioning sufficient for MVP scale |
+| [ADR-003](../docs/ADRs/003-recommendation-caching.md) | Redis with 5-min TTL | Shared cache across instances; meets <100ms target |
 
 ### ConnectSW Components to Reuse
 
@@ -365,5 +446,6 @@ This is a last-click attribution model. A purchase can only be attributed to one
 ---
 
 **Created by**: Product Manager
+**Architecture by**: Architect
 **Last Updated**: 2026-02-12
-**Status**: PRD complete, ready for Architect review
+**Status**: Architecture complete, ready for implementation
