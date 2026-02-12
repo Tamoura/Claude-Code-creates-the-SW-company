@@ -4,6 +4,7 @@ import { NotFoundError, ValidationError } from '../lib/errors';
 import { parsePagination, paginatedResult } from '../lib/pagination';
 import { verifyChildOwnership } from '../lib/ownership';
 import { validateBody, validateQuery } from '../utils/validation';
+import { getLocale } from '../lib/locale';
 
 const DIMENSIONS = [
   'academic',
@@ -48,17 +49,19 @@ function formatObservation(obs: {
   childId: string;
   dimension: string;
   content: string;
+  contentAr?: string | null;
   sentiment: string;
   observedAt: Date;
   tags: string[];
   createdAt: Date;
   updatedAt: Date;
-}) {
+}, locale: string = 'en') {
+  const isAr = locale === 'ar';
   return {
     id: obs.id,
     childId: obs.childId,
     dimension: obs.dimension,
-    content: obs.content,
+    content: (isAr && obs.contentAr) || obs.content,
     sentiment: obs.sentiment,
     observedAt: obs.observedAt.toISOString().split('T')[0],
     tags: obs.tags,
@@ -152,6 +155,8 @@ const observationRoutes: FastifyPluginAsync = async (fastify) => {
       where.observedAt = observedAt;
     }
 
+    const locale = getLocale(request);
+
     const [observations, total] = await Promise.all([
       fastify.prisma.observation.findMany({
         where,
@@ -162,7 +167,7 @@ const observationRoutes: FastifyPluginAsync = async (fastify) => {
       fastify.prisma.observation.count({ where }),
     ]);
 
-    const formatted = observations.map(formatObservation);
+    const formatted = observations.map((o) => formatObservation(o, locale));
     return reply.send(paginatedResult(formatted, total, pagination));
   });
 
@@ -178,6 +183,8 @@ const observationRoutes: FastifyPluginAsync = async (fastify) => {
 
     await verifyChildOwnership(fastify, childId, parentId);
 
+    const locale = getLocale(request);
+
     const observation = await fastify.prisma.observation.findFirst({
       where: { id, childId, deletedAt: null },
     });
@@ -186,7 +193,7 @@ const observationRoutes: FastifyPluginAsync = async (fastify) => {
       throw new NotFoundError('Observation not found');
     }
 
-    return reply.send(formatObservation(observation));
+    return reply.send(formatObservation(observation, locale));
   });
 
   // PATCH /api/children/:childId/observations/:id

@@ -1,6 +1,7 @@
 import { FastifyPluginAsync } from 'fastify';
 import { z } from 'zod';
 import { paginatedResult } from '../lib/pagination';
+import { getLocale } from '../lib/locale';
 
 const DIMENSIONS = [
   'academic',
@@ -58,6 +59,8 @@ const goalTemplateRoutes: FastifyPluginAsync = async (fastify) => {
       where.ageBand = ageBand;
     }
 
+    const locale = getLocale(request);
+
     const [templates, total] = await Promise.all([
       fastify.prisma.goalTemplate.findMany({
         where,
@@ -72,7 +75,19 @@ const goalTemplateRoutes: FastifyPluginAsync = async (fastify) => {
       fastify.prisma.goalTemplate.count({ where }),
     ]);
 
-    return reply.send(paginatedResult(templates, total, pagination));
+    const isAr = locale === 'ar';
+    const data = templates.map((t) => ({
+      id: t.id,
+      dimension: t.dimension,
+      ageBand: t.ageBand,
+      title: (isAr && t.titleAr) || t.title,
+      description: (isAr && t.descriptionAr) || t.description,
+      category: t.category,
+      sortOrder: t.sortOrder,
+    }));
+
+    reply.header('Vary', 'Accept-Language');
+    return reply.send(paginatedResult(data, total, pagination));
   });
 };
 
