@@ -5,7 +5,7 @@ import Link from 'next/link';
 import { useRouter } from 'next/navigation';
 import { useTranslations } from 'next-intl';
 import { useAuth } from '../../../hooks/useAuth';
-import { apiClient, type Profile, type Child, type DashboardData } from '../../../lib/api-client';
+import { apiClient, type Profile, type Child } from '../../../lib/api-client';
 
 interface ChildHealthForm {
   medicalNotes: string;
@@ -48,6 +48,7 @@ export default function SettingsPage() {
   // Export state
   const [exporting, setExporting] = useState(false);
   const [exportError, setExportError] = useState('');
+  const [exportFormat, setExportFormat] = useState<'json' | 'csv'>('json');
 
   useEffect(() => {
     const loadProfile = async () => {
@@ -196,33 +197,13 @@ export default function SettingsPage() {
     setExportError('');
 
     try {
-      const childrenRes = await apiClient.getChildren(1, 50);
-      const dashboards: (DashboardData | null)[] = await Promise.all(
-        childrenRes.data.map(async (child) => {
-          try {
-            return await apiClient.getDashboard(child.id);
-          } catch {
-            return null;
-          }
-        })
-      );
-
-      const exportData = {
-        exportedAt: new Date().toISOString(),
-        children: childrenRes.data.map((child, index) => ({
-          ...child,
-          dashboard: dashboards[index],
-        })),
-      };
-
-      const blob = new Blob([JSON.stringify(exportData, null, 2)], {
-        type: 'application/json',
-      });
+      const blob = await apiClient.exportData(exportFormat);
       const url = URL.createObjectURL(blob);
       const date = new Date().toISOString().split('T')[0];
+      const ext = exportFormat === 'csv' ? 'csv' : 'json';
       const a = document.createElement('a');
       a.href = url;
-      a.download = `muaththir-export-${date}.json`;
+      a.download = `muaththir-export-${date}.${ext}`;
       document.body.appendChild(a);
       a.click();
       document.body.removeChild(a);
@@ -232,7 +213,7 @@ export default function SettingsPage() {
     } finally {
       setExporting(false);
     }
-  }, [t]);
+  }, [t, exportFormat]);
 
   return (
     <div className="max-w-2xl mx-auto space-y-8">
@@ -659,6 +640,22 @@ export default function SettingsPage() {
             {exportError}
           </div>
         )}
+
+        <div>
+          <label htmlFor="export-format" className="label">
+            {t('exportFormat')}
+          </label>
+          <select
+            id="export-format"
+            className="input-field"
+            value={exportFormat}
+            onChange={(e) => setExportFormat(e.target.value as 'json' | 'csv')}
+            disabled={exporting}
+          >
+            <option value="json">JSON</option>
+            <option value="csv">CSV</option>
+          </select>
+        </div>
 
         <button
           type="button"
