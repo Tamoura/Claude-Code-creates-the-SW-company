@@ -656,9 +656,9 @@ test.describe('Goals Flow', () => {
       ).toBeVisible({ timeout: 15000 });
 
       // The complete button (checkmark icon) should be visible for active goals.
-      // It has title="Mark complete"
+      // It has aria-label="Mark complete"
       const completeButton = page
-        .locator('button[title="Mark complete"]')
+        .locator('button[aria-label="Mark complete"]')
         .first();
       await expect(completeButton).toBeVisible();
 
