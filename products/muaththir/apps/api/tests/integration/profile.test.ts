@@ -356,3 +356,145 @@ describe('PUT /api/profile/password', () => {
     expect(response.statusCode).toBe(401);
   });
 });
+
+describe('GET /api/profile/notifications', () => {
+  it('should return default notification preferences', async () => {
+    const accessToken = await registerAndGetToken();
+
+    const response = await app.inject({
+      method: 'GET',
+      url: '/api/profile/notifications',
+      headers: { authorization: `Bearer ${accessToken}` },
+    });
+
+    expect(response.statusCode).toBe(200);
+    const body = response.json();
+    expect(body.dailyReminder).toBe(false);
+    expect(body.weeklyDigest).toBe(false);
+    expect(body.milestoneAlerts).toBe(false);
+  });
+
+  it('should reject unauthenticated request with 401', async () => {
+    const response = await app.inject({
+      method: 'GET',
+      url: '/api/profile/notifications',
+    });
+
+    expect(response.statusCode).toBe(401);
+  });
+});
+
+describe('PUT /api/profile/notifications', () => {
+  it('should update a single preference', async () => {
+    const accessToken = await registerAndGetToken();
+
+    const response = await app.inject({
+      method: 'PUT',
+      url: '/api/profile/notifications',
+      headers: { authorization: `Bearer ${accessToken}` },
+      payload: { dailyReminder: true },
+    });
+
+    expect(response.statusCode).toBe(200);
+    const body = response.json();
+    expect(body.dailyReminder).toBe(true);
+    expect(body.weeklyDigest).toBe(false);
+    expect(body.milestoneAlerts).toBe(false);
+  });
+
+  it('should update multiple preferences', async () => {
+    const accessToken = await registerAndGetToken();
+
+    const response = await app.inject({
+      method: 'PUT',
+      url: '/api/profile/notifications',
+      headers: { authorization: `Bearer ${accessToken}` },
+      payload: { dailyReminder: true, weeklyDigest: true, milestoneAlerts: true },
+    });
+
+    expect(response.statusCode).toBe(200);
+    const body = response.json();
+    expect(body.dailyReminder).toBe(true);
+    expect(body.weeklyDigest).toBe(true);
+    expect(body.milestoneAlerts).toBe(true);
+  });
+
+  it('should persist preferences across requests', async () => {
+    const accessToken = await registerAndGetToken();
+
+    await app.inject({
+      method: 'PUT',
+      url: '/api/profile/notifications',
+      headers: { authorization: `Bearer ${accessToken}` },
+      payload: { milestoneAlerts: true },
+    });
+
+    const response = await app.inject({
+      method: 'GET',
+      url: '/api/profile/notifications',
+      headers: { authorization: `Bearer ${accessToken}` },
+    });
+
+    expect(response.statusCode).toBe(200);
+    expect(response.json().milestoneAlerts).toBe(true);
+  });
+
+  it('should toggle preference off', async () => {
+    const accessToken = await registerAndGetToken();
+
+    // Turn on
+    await app.inject({
+      method: 'PUT',
+      url: '/api/profile/notifications',
+      headers: { authorization: `Bearer ${accessToken}` },
+      payload: { dailyReminder: true },
+    });
+
+    // Turn off
+    const response = await app.inject({
+      method: 'PUT',
+      url: '/api/profile/notifications',
+      headers: { authorization: `Bearer ${accessToken}` },
+      payload: { dailyReminder: false },
+    });
+
+    expect(response.statusCode).toBe(200);
+    expect(response.json().dailyReminder).toBe(false);
+  });
+
+  it('should accept empty body without error', async () => {
+    const accessToken = await registerAndGetToken();
+
+    const response = await app.inject({
+      method: 'PUT',
+      url: '/api/profile/notifications',
+      headers: { authorization: `Bearer ${accessToken}` },
+      payload: {},
+    });
+
+    expect(response.statusCode).toBe(200);
+  });
+
+  it('should reject non-boolean values with 422', async () => {
+    const accessToken = await registerAndGetToken();
+
+    const response = await app.inject({
+      method: 'PUT',
+      url: '/api/profile/notifications',
+      headers: { authorization: `Bearer ${accessToken}` },
+      payload: { dailyReminder: 'yes' },
+    });
+
+    expect(response.statusCode).toBe(422);
+  });
+
+  it('should reject unauthenticated request with 401', async () => {
+    const response = await app.inject({
+      method: 'PUT',
+      url: '/api/profile/notifications',
+      payload: { dailyReminder: true },
+    });
+
+    expect(response.statusCode).toBe(401);
+  });
+});

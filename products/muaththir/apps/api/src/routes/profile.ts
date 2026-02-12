@@ -30,6 +30,12 @@ const changePasswordSchema = z.object({
   newPassword: passwordSchema,
 });
 
+const notificationPrefsSchema = z.object({
+  dailyReminder: z.boolean().optional(),
+  weeklyDigest: z.boolean().optional(),
+  milestoneAlerts: z.boolean().optional(),
+});
+
 function validateBody<T>(schema: z.ZodType<T>, body: unknown): T {
   const parsed = schema.safeParse(body);
   if (!parsed.success) {
@@ -124,6 +130,43 @@ const profileRoutes: FastifyPluginAsync = async (fastify) => {
 
     return reply.code(200).send({
       message: 'Password updated successfully',
+    });
+  });
+
+  // GET /api/profile/notifications - Get notification preferences
+  fastify.get('/notifications', {
+    preHandler: [fastify.authenticate],
+  }, async (request, reply) => {
+    const parent = request.currentUser!;
+
+    return reply.code(200).send({
+      dailyReminder: parent.dailyReminder,
+      weeklyDigest: parent.weeklyDigest,
+      milestoneAlerts: parent.milestoneAlerts,
+    });
+  });
+
+  // PUT /api/profile/notifications - Update notification preferences
+  fastify.put('/notifications', {
+    preHandler: [fastify.authenticate],
+  }, async (request, reply) => {
+    const parent = request.currentUser!;
+    const updates = validateBody(notificationPrefsSchema, request.body);
+
+    const data: Record<string, boolean> = {};
+    if (updates.dailyReminder !== undefined) data.dailyReminder = updates.dailyReminder;
+    if (updates.weeklyDigest !== undefined) data.weeklyDigest = updates.weeklyDigest;
+    if (updates.milestoneAlerts !== undefined) data.milestoneAlerts = updates.milestoneAlerts;
+
+    const updated = await fastify.prisma.parent.update({
+      where: { id: parent.id },
+      data,
+    });
+
+    return reply.code(200).send({
+      dailyReminder: updated.dailyReminder,
+      weeklyDigest: updated.weeklyDigest,
+      milestoneAlerts: updated.milestoneAlerts,
     });
   });
 };

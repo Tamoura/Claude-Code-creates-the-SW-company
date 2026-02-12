@@ -202,6 +202,12 @@ export interface FamilyShare {
   updatedAt: string;
 }
 
+export interface NotificationPrefs {
+  dailyReminder: boolean;
+  weeklyDigest: boolean;
+  milestoneAlerts: boolean;
+}
+
 export interface PaginatedResponse<T> {
   data: T[];
   pagination: {
@@ -628,6 +634,19 @@ class ApiClient {
     return this.request('/api/profile/password', {
       method: 'PUT',
       body: JSON.stringify({ currentPassword, newPassword }),
+    });
+  }
+
+  async getNotificationPrefs(): Promise<NotificationPrefs> {
+    return this.request('/api/profile/notifications');
+  }
+
+  async updateNotificationPrefs(
+    data: Partial<NotificationPrefs>
+  ): Promise<NotificationPrefs> {
+    return this.request('/api/profile/notifications', {
+      method: 'PUT',
+      body: JSON.stringify(data),
     });
   }
 

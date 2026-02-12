@@ -564,8 +564,9 @@
     "weeklyDigestDesc": "Receive a weekly summary of your child's progress.",
     "milestoneAlerts": "Milestone Alerts",
     "milestoneAlertsDesc": "Get notified when new milestones become relevant for your child's age.",
-    "comingSoon": "Notification settings will be available once connected to the backend.",
-    "saved": "Preferences saved"
+    "saved": "Preferences saved",
+    "errorLoad": "Failed to load notification preferences.",
+    "errorSave": "Failed to save preference. Please try again."
   },
   "subscription": {
     "title": "Subscription",
