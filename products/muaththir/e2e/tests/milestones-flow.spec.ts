@@ -4,7 +4,8 @@ import { test, expect, type Page } from '@playwright/test';
  * Milestones Flow E2E Tests
  *
  * Tests:
- * - Viewing the milestones index page (dimension overview)
+ * - Viewing the milestones index page (accordion dimension cards)
+ * - Expanding a dimension to reveal its link
  * - Navigating to a specific dimension's milestones
  * - Viewing milestone details with checkboxes
  * - Toggling milestone achievement
@@ -253,7 +254,9 @@ async function navigateToMilestones(page: Page) {
 }
 
 /**
- * Navigate to a dimension's milestones detail page via link clicks.
+ * Navigate to a dimension's milestones detail page.
+ * The milestones page uses accordion cards - click the toggle to expand,
+ * then click the "View All" link inside the expanded section.
  */
 async function navigateToMilestoneDetail(
   page: Page,
@@ -261,12 +264,19 @@ async function navigateToMilestoneDetail(
 ) {
   await navigateToMilestones(page);
 
-  // Wait for dimension cards to load, then click the target dimension
-  const dimensionCard = page.locator(
-    `a[href="/dashboard/milestones/${dimension}"]`
+  // Wait for dimension cards to load, then expand the target dimension
+  const dimensionToggle = page.locator(
+    `[data-testid="dimension-toggle-${dimension}"]`
   );
-  await expect(dimensionCard).toBeVisible({ timeout: 15000 });
-  await dimensionCard.click({ force: true });
+  await expect(dimensionToggle).toBeVisible({ timeout: 15000 });
+  await dimensionToggle.click({ force: true });
+
+  // Click the "View All" link inside the expanded section
+  const dimensionLink = page.locator(
+    `[data-testid="dimension-link-${dimension}"]`
+  );
+  await expect(dimensionLink).toBeVisible({ timeout: 10000 });
+  await dimensionLink.click({ force: true });
   await page.waitForURL(`**/dashboard/milestones/${dimension}`, {
     timeout: 15000,
   });
@@ -274,16 +284,16 @@ async function navigateToMilestoneDetail(
 
 test.describe('Milestones Flow', () => {
   test.describe('Milestones Index Page', () => {
-    test('displays heading and six dimension cards', async ({ page }) => {
+    test('displays heading and six dimension accordion cards', async ({ page }) => {
       await authenticateForMilestones(page);
       await navigateToMilestones(page);
 
       const heading = page.locator('h1').first();
       await expect(heading).toBeVisible({ timeout: 15000 });
 
-      // Should show 6 dimension cards (one per dimension)
-      const dimensionCards = page.locator('.grid > a');
-      await expect(dimensionCards).toHaveCount(6, { timeout: 10000 });
+      // Should show 6 dimension toggle buttons (one per dimension)
+      const dimensionToggles = page.locator('[data-testid^="dimension-toggle-"]');
+      await expect(dimensionToggles).toHaveCount(6, { timeout: 10000 });
     });
 
     test('each dimension card shows progress info', async ({ page }) => {
@@ -291,26 +301,33 @@ test.describe('Milestones Flow', () => {
       await navigateToMilestones(page);
 
       // Wait for cards to load (not loading skeleton)
-      const firstCard = page.locator('.grid > a').first();
-      await expect(firstCard).toBeVisible({ timeout: 15000 });
+      const firstToggle = page.locator('[data-testid^="dimension-toggle-"]').first();
+      await expect(firstToggle).toBeVisible({ timeout: 15000 });
 
-      // Each card should have milestone progress text
-      const cardText = await firstCard.textContent();
+      // Each card should have progress text
+      const cardText = await firstToggle.textContent();
       expect(cardText).toBeTruthy();
     });
 
-    test('clicking a dimension card navigates to detail page', async ({
+    test('expanding a dimension and clicking navigates to detail page', async ({
       page,
     }) => {
       await authenticateForMilestones(page);
       await navigateToMilestones(page);
 
-      // Click the first dimension card (academic)
-      const academicCard = page.locator(
-        'a[href="/dashboard/milestones/academic"]'
+      // Click the academic dimension toggle to expand
+      const academicToggle = page.locator(
+        '[data-testid="dimension-toggle-academic"]'
       );
-      await expect(academicCard).toBeVisible({ timeout: 15000 });
-      await academicCard.click({ force: true });
+      await expect(academicToggle).toBeVisible({ timeout: 15000 });
+      await academicToggle.click({ force: true });
+
+      // The "View All" link should appear
+      const academicLink = page.locator(
+        '[data-testid="dimension-link-academic"]'
+      );
+      await expect(academicLink).toBeVisible({ timeout: 10000 });
+      await academicLink.click({ force: true });
 
       await expect(page).toHaveURL(/\/dashboard\/milestones\/academic/, { timeout: 15000 });
     });
@@ -400,8 +417,8 @@ test.describe('Milestones Flow', () => {
         timeout: 15000,
       });
 
-      // Should have a "Back to Milestones" link (distinct from sidebar link)
-      const backLink = page.getByRole('link', { name: 'Back to Milestones' });
+      // Should have a "Back to Milestones" link
+      const backLink = page.getByRole('link', { name: /back to milestones/i });
       await expect(backLink).toBeVisible();
     });
 
@@ -431,27 +448,21 @@ test.describe('Milestones Flow', () => {
       ).toBeVisible({ timeout: 15000 });
 
       // The achieved milestone should show the achieved date
-      const achievedDateText = page.locator('.text-emerald-600').first();
+      const achievedDateText = page.locator('.text-emerald-600, .text-emerald-400').first();
       await expect(achievedDateText).toBeVisible();
     });
   });
 
-  test.describe('Invalid Dimension', () => {
-    test('milestones page only shows valid dimension links', async ({
+  test.describe('Dimension Cards', () => {
+    test('milestones page shows exactly 6 dimension cards', async ({
       page,
     }) => {
       await authenticateForMilestones(page);
       await navigateToMilestones(page);
 
-      // Should show exactly 6 valid dimension cards
-      const dimensionCards = page.locator('.grid > a');
-      await expect(dimensionCards).toHaveCount(6, { timeout: 10000 });
-
-      // No link to an invalid dimension should exist
-      const invalidLink = page.locator(
-        'a[href="/dashboard/milestones/invalid-dimension"]'
-      );
-      await expect(invalidLink).not.toBeVisible();
+      // Should show exactly 6 valid dimension toggle buttons
+      const dimensionToggles = page.locator('[data-testid^="dimension-toggle-"]');
+      await expect(dimensionToggles).toHaveCount(6, { timeout: 10000 });
     });
   });
 });

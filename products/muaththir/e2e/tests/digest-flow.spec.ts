@@ -302,7 +302,7 @@ test.describe('Weekly Digest Flow', () => {
       ).toBeVisible({ timeout: 10000 });
 
       // Log Observation CTA
-      const logLink = page.locator('a[href="/dashboard/observe"]');
+      const logLink = page.locator('a[href="/dashboard/observe"]').first();
       await expect(logLink).toBeVisible({ timeout: 10000 });
     });
   });
