@@ -70,6 +70,12 @@ const sharingRoutes: FastifyPluginAsync = async (fastify) => {
   // POST /api/sharing/invite — Invite a family member
   fastify.post('/invite', {
     preHandler: [fastify.authenticate],
+    config: {
+      rateLimit: {
+        max: 10,
+        timeWindow: '1 hour',
+      },
+    },
   }, async (request, reply) => {
     const parent = request.currentUser!;
     const { email, role, childIds } = validateBody(inviteSchema, request.body);
