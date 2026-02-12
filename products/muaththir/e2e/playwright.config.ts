@@ -17,7 +17,7 @@ export default defineConfig({
   workers: 1, // Sequential execution
   reporter: 'html',
   use: {
-    baseURL: 'http://localhost:3108',
+    baseURL: process.env.E2E_BASE_URL || 'http://localhost:3108',
     trace: 'on-first-retry',
   },
   projects: [
@@ -28,7 +28,7 @@ export default defineConfig({
   ],
   webServer: {
     command: 'cd ../apps/web && npm run dev',
-    url: 'http://localhost:3108',
+    url: process.env.E2E_BASE_URL || 'http://localhost:3108',
     reuseExistingServer: !process.env.CI,
     timeout: 120000, // 2 minutes for startup
   },

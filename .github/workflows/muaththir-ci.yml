@@ -99,7 +99,7 @@ jobs:
           cache: npm
           cache-dependency-path: products/muaththir/apps/web/package-lock.json
       - run: npm ci
-      - run: npm test -- --passWithNoTests
+      - run: npm test
 
   e2e-test:
     name: E2E - Playwright

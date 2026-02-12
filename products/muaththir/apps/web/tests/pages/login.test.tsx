@@ -23,12 +23,14 @@ jest.mock('next/link', () => {
 
 // Mock next/navigation
 const mockPush = jest.fn();
+const mockSearchParams = new URLSearchParams();
 jest.mock('next/navigation', () => ({
   useRouter: () => ({
     push: mockPush,
     replace: jest.fn(),
     prefetch: jest.fn(),
   }),
+  useSearchParams: () => mockSearchParams,
 }));
 
 // Mock useAuth hook
@@ -39,6 +41,13 @@ jest.mock('../../src/hooks/useAuth', () => ({
     isLoading: false,
     error: null,
   }),
+}));
+
+// Mock apiClient for demo login
+jest.mock('../../src/lib/api-client', () => ({
+  apiClient: {
+    demoLogin: jest.fn(),
+  },
 }));
 
 describe('LoginPage', () => {
