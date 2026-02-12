@@ -447,7 +447,7 @@ test.describe('Observation Flow', () => {
       await submitButton.click();
 
       // Should show success message
-      const successMsg = page.locator('.bg-emerald-50');
+      const successMsg = page.locator('div.bg-emerald-50').filter({ hasText: 'success' });
       await expect(successMsg).toBeVisible({ timeout: 10000 });
 
       // Should eventually redirect to timeline
