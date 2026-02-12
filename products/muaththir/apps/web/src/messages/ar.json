@@ -172,7 +172,12 @@
     "activityNoItems": "لا يوجد نشاط حديث",
     "activityObserved": "ملاحظة",
     "activityAchieved": "تحقيق مرحلة",
-    "activityCompleted": "إتمام هدف"
+    "activityCompleted": "إتمام هدف",
+    "quickLog": "تسجيل سريع",
+    "quickLogPlaceholder": "ماذا لاحظت؟",
+    "quickLogSubmit": "سجّل",
+    "quickLogSuccess": "تم تسجيل الملاحظة!",
+    "quickLogDimension": "البُعد"
   },
   "observe": {
     "title": "تسجيل ملاحظة",
@@ -305,7 +310,8 @@
     "milestonesLabel": "المراحل",
     "scoreLabel": "الدرجة",
     "dimensionComparison": "مقارنة الأبعاد",
-    "dimensionHeader": "البُعد"
+    "dimensionHeader": "البُعد",
+    "progressComparison": "مقارنة التقدم"
   },
   "reports": {
     "title": "تقرير التقدم",
@@ -325,7 +331,10 @@
     "sentimentFactor": "المشاعر (20%)",
     "totalFactor": "المجموع",
     "reportGenerated": "تم إنشاء التقرير: {date}",
-    "generatedBy": "أُنشئ بواسطة مؤثّر - متتبع تطور الطفل الشامل"
+    "generatedBy": "أُنشئ بواسطة مؤثّر - متتبع تطور الطفل الشامل",
+    "downloadCSV": "تصدير CSV",
+    "downloadingCSV": "جارٍ التصدير...",
+    "downloadData": "تحميل بيانات الملاحظات كملف CSV"
   },
   "milestonesPage": {
     "title": "المراحل المهمة",

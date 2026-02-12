@@ -12,6 +12,11 @@ const RadarChart = dynamic(
   { ssr: false, loading: () => <div className="w-full h-64 bg-slate-100 rounded-2xl animate-pulse" /> }
 );
 
+const ProgressComparison = dynamic(
+  () => import('../../../components/family/ProgressComparison'),
+  { ssr: false, loading: () => <div className="w-full h-64 bg-slate-100 rounded-2xl animate-pulse" /> }
+);
+
 interface ChildWithScores extends Child {
   dashboard?: DashboardData;
 }
@@ -152,6 +157,22 @@ export default function FamilyPage() {
                 </div>
               );
             })}
+          </div>
+
+          {/* Progress Comparison Chart */}
+          <div className="card">
+            <h2 className="text-lg font-semibold text-slate-900 mb-4">{t('progressComparison')}</h2>
+            <ProgressComparison
+              childProfiles={children
+                .filter(c => c.dashboard)
+                .map(c => ({
+                  name: c.name,
+                  dimensions: c.dashboard!.dimensions.map(d => ({
+                    dimension: d.dimension,
+                    score: Math.round(d.score),
+                  })),
+                }))}
+            />
           </div>
 
           {/* Dimension Comparison Table */}

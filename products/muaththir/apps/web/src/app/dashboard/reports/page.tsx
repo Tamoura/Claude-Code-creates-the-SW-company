@@ -5,6 +5,7 @@ import Link from 'next/link';
 import { useTranslations } from 'next-intl';
 import { getDimensionBySlug } from '../../../lib/dimensions';
 import { apiClient, type Child, type DashboardData } from '../../../lib/api-client';
+import ExportCSV from '../../../components/reports/ExportCSV';
 
 export default function ReportsPage() {
   const t = useTranslations('reports');
@@ -87,6 +88,9 @@ export default function ReportsPage() {
             >
               {children.map(c => <option key={c.id} value={c.id}>{c.name}</option>)}
             </select>
+          )}
+          {selectedChildId && dashboard && (
+            <ExportCSV childId={selectedChildId} childName={dashboard.childName} />
           )}
           <Link href="/dashboard/reports/generate" className="btn-secondary text-sm py-2 px-4">
             {t('generateDetailed')}
