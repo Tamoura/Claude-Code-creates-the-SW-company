@@ -177,7 +177,12 @@
     "quickLogPlaceholder": "ماذا لاحظت؟",
     "quickLogSubmit": "سجّل",
     "quickLogSuccess": "تم تسجيل الملاحظة!",
-    "quickLogDimension": "البُعد"
+    "quickLogDimension": "البُعد",
+    "partialLoadWarning": "تعذّر تحميل بعض البيانات",
+    "failedDashboard": "تعذّر تحميل درجات لوحة التحكم",
+    "failedObservations": "تعذّر تحميل الملاحظات الأخيرة",
+    "failedMilestones": "تعذّر تحميل المراحل المستحقة",
+    "saving": "جارٍ الحفظ..."
   },
   "observe": {
     "title": "تسجيل ملاحظة",
@@ -217,7 +222,9 @@
     "deleteObservation": "حذف الملاحظة",
     "confirmDelete": "هل أنت متأكد من حذف هذه الملاحظة؟",
     "loadMore": "تحميل المزيد",
-    "loadingMore": "جارٍ التحميل..."
+    "loadingMore": "جارٍ التحميل...",
+    "filterDateFrom": "تصفية من تاريخ",
+    "filterDateTo": "تصفية إلى تاريخ"
   },
   "dimensionsPage": {
     "title": "الأبعاد",

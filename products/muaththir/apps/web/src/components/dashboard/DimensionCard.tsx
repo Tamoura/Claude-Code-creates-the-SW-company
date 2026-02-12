@@ -46,7 +46,7 @@ export default function DimensionCard({
     <Link
       href={`/dashboard/dimensions/${dimension.slug}`}
       className="card group hover:shadow-md transition-shadow duration-200"
-      aria-label={`${td(dimension.slug as any)} - ${score ?? 0}`}
+      aria-label={`${td(dimension.slug as any)} - score ${score ?? 0} out of 100, ${observationCount} observations`}
     >
       <div className="flex items-start justify-between mb-3">
         <div
@@ -56,12 +56,15 @@ export default function DimensionCard({
           <DimensionIcon icon={dimension.icon} colour={dimension.colour} />
         </div>
         {score !== undefined && (
-          <span
-            className="text-2xl font-bold"
-            style={{ color: dimension.colour }}
-          >
-            {score}
-          </span>
+          <div className="text-right">
+            <span
+              className="text-2xl font-bold"
+              style={{ color: dimension.colour }}
+            >
+              {score}
+            </span>
+            <span className="text-xs text-slate-400 dark:text-slate-500">/100</span>
+          </div>
         )}
       </div>
       <h3 className="text-sm font-semibold text-slate-900 mb-1 group-hover:text-emerald-700 transition-colors">
@@ -70,12 +73,12 @@ export default function DimensionCard({
       <p className="text-xs text-slate-500 line-clamp-2 mb-3">
         {td(`${dimension.slug}Desc` as any)}
       </p>
-      <div className="flex items-center gap-1 text-xs text-slate-400">
+      <div className="flex items-center gap-1 text-xs text-slate-400 dark:text-slate-500">
         <svg className="h-3.5 w-3.5" fill="none" viewBox="0 0 24 24" stroke="currentColor" aria-hidden="true">
           <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M15 12a3 3 0 11-6 0 3 3 0 016 0z" />
           <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M2.458 12C3.732 7.943 7.523 5 12 5c4.478 0 8.268 2.943 9.542 7-1.274 4.057-5.064 7-9.542 7-4.477 0-8.268-2.943-9.542-7z" />
         </svg>
-        {observationCount}
+        <span>{observationCount} observations</span>
       </div>
     </Link>
   );

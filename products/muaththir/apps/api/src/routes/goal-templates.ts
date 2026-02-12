@@ -1,5 +1,6 @@
 import { FastifyPluginAsync } from 'fastify';
 import { z } from 'zod';
+import { paginatedResult } from '../lib/pagination';
 
 const DIMENSIONS = [
   'academic',
@@ -20,7 +21,17 @@ const AGE_BANDS = [
 const listQuerySchema = z.object({
   dimension: z.enum(DIMENSIONS).optional(),
   ageBand: z.enum(AGE_BANDS).optional(),
+  page: z.string().optional(),
+  limit: z.string().optional(),
 });
+
+function parseGoalTemplatePagination(
+  query: { page?: string; limit?: string }
+): { page: number; limit: number } {
+  const page = Math.max(1, parseInt(query.page || '1', 10));
+  const limit = Math.min(100, Math.max(1, parseInt(query.limit || '50', 10)));
+  return { page, limit };
+}
 
 const goalTemplateRoutes: FastifyPluginAsync = async (fastify) => {
   // GET /api/goal-templates — List goal templates (no auth required)
@@ -37,6 +48,7 @@ const goalTemplateRoutes: FastifyPluginAsync = async (fastify) => {
     }
 
     const { dimension, ageBand } = parsed.data;
+    const pagination = parseGoalTemplatePagination(parsed.data);
     const where: Record<string, unknown> = {};
 
     if (dimension) {
@@ -46,16 +58,21 @@ const goalTemplateRoutes: FastifyPluginAsync = async (fastify) => {
       where.ageBand = ageBand;
     }
 
-    const templates = await fastify.prisma.goalTemplate.findMany({
-      where,
-      orderBy: [
-        { dimension: 'asc' },
-        { ageBand: 'asc' },
-        { sortOrder: 'asc' },
-      ],
-    });
+    const [templates, total] = await Promise.all([
+      fastify.prisma.goalTemplate.findMany({
+        where,
+        orderBy: [
+          { dimension: 'asc' },
+          { ageBand: 'asc' },
+          { sortOrder: 'asc' },
+        ],
+        skip: (pagination.page - 1) * pagination.limit,
+        take: pagination.limit,
+      }),
+      fastify.prisma.goalTemplate.count({ where }),
+    ]);
 
-    return reply.send({ data: templates });
+    return reply.send(paginatedResult(templates, total, pagination));
   });
 };
 

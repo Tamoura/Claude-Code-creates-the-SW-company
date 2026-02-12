@@ -177,7 +177,12 @@
     "quickLogPlaceholder": "What did you observe?",
     "quickLogSubmit": "Log",
     "quickLogSuccess": "Observation logged!",
-    "quickLogDimension": "Dimension"
+    "quickLogDimension": "Dimension",
+    "partialLoadWarning": "Some data could not be loaded",
+    "failedDashboard": "Dashboard scores could not be loaded",
+    "failedObservations": "Recent observations could not be loaded",
+    "failedMilestones": "Milestones due could not be loaded",
+    "saving": "Saving..."
   },
   "observe": {
     "title": "Log Observation",
@@ -217,7 +222,9 @@
     "deleteObservation": "Delete observation",
     "confirmDelete": "Are you sure you want to delete this observation?",
     "loadMore": "Load More",
-    "loadingMore": "Loading..."
+    "loadingMore": "Loading...",
+    "filterDateFrom": "Filter from date",
+    "filterDateTo": "Filter to date"
   },
   "dimensionsPage": {
     "title": "Dimensions",

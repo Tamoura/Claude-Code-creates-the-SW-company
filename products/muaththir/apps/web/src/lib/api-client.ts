@@ -231,7 +231,7 @@ class ApiClient {
   private async request<T>(
     path: string,
     options: RequestInit = {},
-    timeoutMs = 30000
+    timeoutMs = 15000
   ): Promise<T> {
     const token = TokenManager.getToken();
     const headers: Record<string, string> = {
@@ -657,17 +657,30 @@ class ApiClient {
     const headers: Record<string, string> = {};
     if (token) headers['Authorization'] = `Bearer ${token}`;
 
-    const response = await fetch(`${this.baseUrl}/api/export?format=${format}`, {
-      headers,
-      credentials: 'include',
-    });
+    const controller = new AbortController();
+    const timeoutId = setTimeout(() => controller.abort(), 30000);
 
-    if (!response.ok) {
-      const error = await response.json().catch(() => ({ detail: 'Export failed' }));
-      throw new Error(error.detail || `HTTP ${response.status}`);
+    try {
+      const response = await fetch(`${this.baseUrl}/api/export?format=${format}`, {
+        headers,
+        credentials: 'include',
+        signal: controller.signal,
+      });
+
+      if (!response.ok) {
+        const error = await response.json().catch(() => ({ detail: 'Export failed' }));
+        throw new Error(error.detail || `HTTP ${response.status}`);
+      }
+
+      return response.blob();
+    } catch (err) {
+      if (err instanceof DOMException && err.name === 'AbortError') {
+        throw new Error('Export request timed out. Please try again.');
+      }
+      throw err;
+    } finally {
+      clearTimeout(timeoutId);
     }
-
-    return response.blob();
   }
 
   // ==================== Sharing ====================

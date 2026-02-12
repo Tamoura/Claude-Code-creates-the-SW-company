@@ -2,14 +2,16 @@
 
 import { useState, useEffect } from 'react';
 import Link from 'next/link';
-import { useTranslations } from 'next-intl';
+import { useTranslations, useLocale } from 'next-intl';
 import { getDimensionBySlug } from '../../../../lib/dimensions';
 import { apiClient, type Child, type ReportSummaryData } from '../../../../lib/api-client';
+import { formatDate, formatDateTime } from '../../../../lib/date-format';
 
 export default function GenerateReportPage() {
   const t = useTranslations('generateReport');
   const tc = useTranslations('common');
   const td = useTranslations('dimensions');
+  const locale = useLocale();
 
   // State for configuration step
   const [children, setChildren] = useState<Child[]>([]);
@@ -186,7 +188,7 @@ export default function GenerateReportPage() {
           </Link>
           <h1 className="text-2xl font-bold text-slate-900">{t('title')}</h1>
           <p className="text-sm text-slate-500">
-            {t('reportPeriod', { from: new Date(report.dateRange.from).toLocaleDateString(), to: new Date(report.dateRange.to).toLocaleDateString() })}
+            {t('reportPeriod', { from: formatDate(report.dateRange.from, locale), to: formatDate(report.dateRange.to, locale) })}
           </p>
         </div>
         <button onClick={handlePrint} className="btn-primary text-sm py-2 px-4">
@@ -209,7 +211,7 @@ export default function GenerateReportPage() {
           </div>
         </div>
         <p className="text-xs text-slate-400 mt-3">
-          {new Date(report.generatedAt).toLocaleDateString('en-GB', { day: 'numeric', month: 'long', year: 'numeric', hour: '2-digit', minute: '2-digit' })}
+          {formatDateTime(report.generatedAt, locale)}
         </p>
       </div>
 
@@ -440,7 +442,7 @@ export default function GenerateReportPage() {
                   </div>
                   <p className="text-sm text-slate-700">{obs.content}</p>
                   <p className="text-xs text-slate-400 mt-1">
-                    {new Date(obs.observedAt).toLocaleDateString()}
+                    <time dateTime={obs.observedAt}>{formatDate(obs.observedAt, locale)}</time>
                   </p>
                 </div>
               );

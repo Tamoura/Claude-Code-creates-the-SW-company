@@ -27,6 +27,7 @@ export default function DashboardPage() {
   const [milestonesDue, setMilestonesDue] = useState<MilestoneDefinition[]>([]);
   const [loading, setLoading] = useState(true);
   const [error, setError] = useState<string | null>(null);
+  const [partialFailures, setPartialFailures] = useState<string[]>([]);
 
   // Load children on mount
   useEffect(() => {
@@ -69,6 +70,7 @@ export default function DashboardPage() {
       try {
         setLoading(true);
         setError(null);
+        setPartialFailures([]);
 
         // Fetch dashboard data, recent observations, and milestones-due in parallel
         // Use allSettled so partial failures don't block the entire dashboard
@@ -80,14 +82,26 @@ export default function DashboardPage() {
 
         if (cancelled) return;
 
+        const failures: string[] = [];
+
         if (dashResult.status === 'fulfilled') {
           setDashboardData(dashResult.value);
+        } else {
+          failures.push(t('failedDashboard'));
         }
         if (obsResult.status === 'fulfilled') {
           setObservations(obsResult.value.data);
+        } else {
+          failures.push(t('failedObservations'));
         }
         if (milestonesResult.status === 'fulfilled') {
           setMilestonesDue(milestonesResult.value.data);
+        } else {
+          failures.push(t('failedMilestones'));
+        }
+
+        if (failures.length > 0 && failures.length < 3) {
+          setPartialFailures(failures);
         }
 
         // If all failed, show error from the first one
@@ -194,9 +208,39 @@ export default function DashboardPage() {
         />
       )}
 
+      {/* Partial Failure Warning */}
+      {partialFailures.length > 0 && (
+        <div className="card bg-amber-50 dark:bg-amber-900/20 border border-amber-200 dark:border-amber-800" role="status">
+          <div className="flex items-start gap-3">
+            <svg
+              className="h-5 w-5 text-amber-500 flex-shrink-0 mt-0.5"
+              fill="none"
+              viewBox="0 0 24 24"
+              stroke="currentColor"
+              aria-hidden="true"
+            >
+              <path
+                strokeLinecap="round"
+                strokeLinejoin="round"
+                strokeWidth={2}
+                d="M12 9v2m0 4h.01m-6.938 4h13.856c1.54 0 2.502-1.667 1.732-2.5L13.732 4.5c-.77-.833-2.694-.833-3.464 0L3.34 16.5c-.77.833.192 2.5 1.732 2.5z"
+              />
+            </svg>
+            <div>
+              <h3 className="text-sm font-medium text-amber-800 dark:text-amber-300">{t('partialLoadWarning')}</h3>
+              <ul className="text-xs text-amber-600 dark:text-amber-400 mt-1 list-disc list-inside">
+                {partialFailures.map((msg, i) => (
+                  <li key={i}>{msg}</li>
+                ))}
+              </ul>
+            </div>
+          </div>
+        </div>
+      )}
+
       {/* Error State */}
       {error && (
-        <div className="card bg-red-50 border border-red-200" role="alert">
+        <div className="card bg-red-50 dark:bg-red-900/20 border border-red-200 dark:border-red-800" role="alert">
           <div className="flex items-start gap-3">
             <svg
               className="h-5 w-5 text-red-500 flex-shrink-0 mt-0.5"
@@ -213,8 +257,8 @@ export default function DashboardPage() {
               />
             </svg>
             <div>
-              <h3 className="text-sm font-medium text-red-800">{t('errorLoading')}</h3>
-              <p className="text-xs text-red-600 mt-1">{error}</p>
+              <h3 className="text-sm font-medium text-red-800 dark:text-red-300">{t('errorLoading')}</h3>
+              <p className="text-xs text-red-600 dark:text-red-400 mt-1">{error}</p>
             </div>
           </div>
         </div>

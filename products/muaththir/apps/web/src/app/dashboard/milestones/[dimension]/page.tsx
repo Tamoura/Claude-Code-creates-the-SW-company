@@ -2,10 +2,11 @@
 
 import { useState, useEffect } from 'react';
 import Link from 'next/link';
-import { useTranslations } from 'next-intl';
+import { useTranslations, useLocale } from 'next-intl';
 import { DIMENSIONS } from '../../../../lib/dimensions';
 import DimensionBadge from '../../../../components/common/DimensionBadge';
 import { apiClient, type Child, type ChildMilestone } from '../../../../lib/api-client';
+import { formatDate } from '../../../../lib/date-format';
 
 interface MilestonesByDimensionPageProps {
   params: { dimension: string };
@@ -17,6 +18,7 @@ export default function MilestonesByDimensionPage({
   const t = useTranslations('milestoneDetail');
   const tc = useTranslations('common');
   const td = useTranslations('dimensions');
+  const locale = useLocale();
   const dimension = DIMENSIONS.find((d) => d.slug === params.dimension);
   const [children, setChildren] = useState<Child[]>([]);
   const [selectedChildId, setSelectedChildId] = useState<string | null>(null);
@@ -239,7 +241,7 @@ export default function MilestonesByDimensionPage({
                   )}
                   {milestone.achieved && milestone.achievedAt && (
                     <p className="text-xs text-emerald-600 dark:text-emerald-400 mt-2">
-                      {t('achievedOn', { date: new Date(milestone.achievedAt).toLocaleDateString() })}
+                      {t('achievedOn', { date: formatDate(milestone.achievedAt, locale) })}
                     </p>
                   )}
                 </div>

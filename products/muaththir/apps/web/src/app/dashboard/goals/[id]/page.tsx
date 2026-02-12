@@ -3,9 +3,10 @@
 import { useState, useEffect } from 'react';
 import Link from 'next/link';
 import { useRouter, useSearchParams } from 'next/navigation';
-import { useTranslations } from 'next-intl';
+import { useTranslations, useLocale } from 'next-intl';
 import { getDimensionBySlug } from '../../../../lib/dimensions';
 import { apiClient, type Goal, type Child } from '../../../../lib/api-client';
+import { formatDate } from '../../../../lib/date-format';
 
 interface GoalDetailPageProps {
   params: { id: string };
@@ -15,6 +16,7 @@ export default function GoalDetailPage({ params }: GoalDetailPageProps) {
   const t = useTranslations('goalDetail');
   const tc = useTranslations('common');
   const td = useTranslations('dimensions');
+  const locale = useLocale();
   const router = useRouter();
   const searchParams = useSearchParams();
   const childIdParam = searchParams.get('childId');
@@ -225,20 +227,20 @@ export default function GoalDetailPage({ params }: GoalDetailPageProps) {
               />
             ) : (
               <p className="text-sm font-medium text-slate-900 dark:text-white">
-                {goal.targetDate ? new Date(goal.targetDate).toLocaleDateString() : t('noTarget')}
+                {goal.targetDate ? formatDate(goal.targetDate, locale) : t('noTarget')}
               </p>
             )}
           </div>
           <div>
             <p className="text-xs text-slate-500 dark:text-slate-400 mb-1">{t('created')}</p>
             <p className="text-sm font-medium text-slate-900 dark:text-white">
-              {new Date(goal.createdAt).toLocaleDateString()}
+              {formatDate(goal.createdAt, locale)}
             </p>
           </div>
           <div>
             <p className="text-xs text-slate-500 dark:text-slate-400 mb-1">{t('lastUpdated')}</p>
             <p className="text-sm font-medium text-slate-900 dark:text-white">
-              {new Date(goal.updatedAt).toLocaleDateString()}
+              {formatDate(goal.updatedAt, locale)}
             </p>
           </div>
           <div>

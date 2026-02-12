@@ -52,6 +52,8 @@ describe('GET /api/goal-templates', () => {
     expect(res.statusCode).toBe(200);
     const body = res.json();
     expect(body.data).toHaveLength(6);
+    expect(body.pagination).toBeDefined();
+    expect(body.pagination.total).toBe(6);
   });
 
   it('should return empty array when no templates exist', async () => {
@@ -62,6 +64,7 @@ describe('GET /api/goal-templates', () => {
 
     expect(res.statusCode).toBe(200);
     expect(res.json().data).toEqual([]);
+    expect(res.json().pagination.total).toBe(0);
   });
 
   it('should not require authentication', async () => {
@@ -175,5 +178,74 @@ describe('GET /api/goal-templates', () => {
     });
 
     expect(res.statusCode).toBe(422);
+  });
+
+  it('should default to limit 50', async () => {
+    await seedTemplates();
+
+    const res = await app.inject({
+      method: 'GET',
+      url: '/api/goal-templates',
+    });
+
+    const body = res.json();
+    expect(body.pagination.limit).toBe(50);
+  });
+
+  it('should respect custom page and limit', async () => {
+    await seedTemplates();
+
+    const res = await app.inject({
+      method: 'GET',
+      url: '/api/goal-templates?page=1&limit=2',
+    });
+
+    const body = res.json();
+    expect(body.data).toHaveLength(2);
+    expect(body.pagination.page).toBe(1);
+    expect(body.pagination.limit).toBe(2);
+    expect(body.pagination.total).toBe(6);
+    expect(body.pagination.totalPages).toBe(3);
+    expect(body.pagination.hasMore).toBe(true);
+  });
+
+  it('should return second page correctly', async () => {
+    await seedTemplates();
+
+    const res = await app.inject({
+      method: 'GET',
+      url: '/api/goal-templates?page=2&limit=2',
+    });
+
+    const body = res.json();
+    expect(body.data).toHaveLength(2);
+    expect(body.pagination.page).toBe(2);
+    expect(body.pagination.hasMore).toBe(true);
+  });
+
+  it('should return last page with hasMore false', async () => {
+    await seedTemplates();
+
+    const res = await app.inject({
+      method: 'GET',
+      url: '/api/goal-templates?page=3&limit=2',
+    });
+
+    const body = res.json();
+    expect(body.data).toHaveLength(2);
+    expect(body.pagination.page).toBe(3);
+    expect(body.pagination.hasMore).toBe(false);
+  });
+
+  it('should cap limit at 100', async () => {
+    await seedTemplates();
+
+    const res = await app.inject({
+      method: 'GET',
+      url: '/api/goal-templates?limit=200',
+    });
+
+    const body = res.json();
+    expect(body.pagination.limit).toBe(100);
   });
 });

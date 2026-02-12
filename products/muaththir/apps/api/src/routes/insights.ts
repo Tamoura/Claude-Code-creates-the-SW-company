@@ -166,12 +166,25 @@ async function buildRecommendations(
     }
   }
 
+  // Batch: fetch milestone + streak data in parallel
+  const [achievedIds, recentWeekCount] = await Promise.all([
+    ageBand
+      ? prisma.childMilestone.findMany({
+          where: { childId, achieved: true },
+          select: { milestoneId: true },
+        })
+      : Promise.resolve([]),
+    prisma.observation.count({
+      where: {
+        childId,
+        deletedAt: null,
+        observedAt: { gte: sevenDaysAgo },
+      },
+    }),
+  ]);
+
   // 3. milestone_reminder: > 2 milestones due for age band
   if (ageBand) {
-    const achievedIds = await prisma.childMilestone.findMany({
-      where: { childId, achieved: true },
-      select: { milestoneId: true },
-    });
     const achieved = achievedIds.map(
       (m: { milestoneId: string }) => m.milestoneId
     );
@@ -207,14 +220,6 @@ async function buildRecommendations(
   }
 
   // 5. streak_notice: > 5 observations in last 7 days
-  const recentWeekCount = await prisma.observation.count({
-    where: {
-      childId,
-      deletedAt: null,
-      observedAt: { gte: sevenDaysAgo },
-    },
-  });
-
   if (recentWeekCount > 5) {
     recs.push({
       type: 'streak_notice',
