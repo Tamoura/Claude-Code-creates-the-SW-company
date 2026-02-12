@@ -5,6 +5,7 @@ import { useTranslations, useLocale } from 'next-intl';
 import { DIMENSIONS } from '../../../lib/dimensions';
 import { apiClient, type Child, type Observation } from '../../../lib/api-client';
 import { formatDate } from '../../../lib/date-format';
+import { SkeletonTimeline } from '../../../components/ui/Skeleton';
 
 export default function TimelinePage() {
   const t = useTranslations('timeline');
@@ -26,6 +27,7 @@ export default function TimelinePage() {
   const [dateTo, setDateTo] = useState('');
   const [isExporting, setIsExporting] = useState(false);
   const [exportError, setExportError] = useState('');
+  const [searchQuery, setSearchQuery] = useState('');
 
   // Fetch children on mount
   useEffect(() => {
@@ -187,16 +189,16 @@ export default function TimelinePage() {
     return t(sentiment as 'positive' | 'neutral' | 'needsAttention');
   };
 
+  // Client-side search filter on observation content
+  const filteredObservations = searchQuery.trim()
+    ? observations.filter((obs) =>
+        obs.content.toLowerCase().includes(searchQuery.trim().toLowerCase())
+      )
+    : observations;
+
   // Loading state
   if (isLoading && observations.length === 0) {
-    return (
-      <div className="space-y-8">
-        <div className="h-8 w-48 bg-slate-200 dark:bg-slate-700 rounded animate-pulse" />
-        <div className="card py-12 text-center">
-          <div className="h-6 w-32 bg-slate-200 dark:bg-slate-700 rounded mx-auto animate-pulse" />
-        </div>
-      </div>
-    );
+    return <SkeletonTimeline />;
   }
 
   return (
@@ -261,6 +263,29 @@ export default function TimelinePage() {
           >
             {tc('retry')}
           </button>
+        </div>
+      )}
+
+      {/* Search Input */}
+      {selectedChildId && (
+        <div className="relative">
+          <svg
+            className="absolute start-3 top-1/2 -translate-y-1/2 h-4 w-4 text-slate-400 dark:text-slate-500 pointer-events-none"
+            fill="none"
+            viewBox="0 0 24 24"
+            stroke="currentColor"
+            aria-hidden="true"
+          >
+            <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M21 21l-6-6m2-5a7 7 0 11-14 0 7 7 0 0114 0z" />
+          </svg>
+          <input
+            type="text"
+            className="input-field ps-10 text-sm"
+            placeholder={t('searchPlaceholder')}
+            aria-label={t('searchAriaLabel')}
+            value={searchQuery}
+            onChange={(e) => setSearchQuery(e.target.value)}
+          />
         </div>
       )}
 
@@ -385,9 +410,18 @@ export default function TimelinePage() {
         </div>
       )}
 
-      {selectedChildId && observations.length > 0 && (
+      {/* No search results */}
+      {selectedChildId && observations.length > 0 && filteredObservations.length === 0 && !isLoading && (
+        <div className="card text-center py-16">
+          <p className="text-sm text-slate-500 dark:text-slate-400">
+            {t('noSearchResults')}
+          </p>
+        </div>
+      )}
+
+      {selectedChildId && filteredObservations.length > 0 && (
         <div className="space-y-4">
-          {observations.map((obs) => (
+          {filteredObservations.map((obs) => (
             <div
               key={obs.id}
               className="card hover:shadow-md transition-shadow"

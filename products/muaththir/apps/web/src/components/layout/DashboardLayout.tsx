@@ -35,6 +35,24 @@ export default function DashboardLayout({
     setMobileMenuOpen(false);
   }, [pathname]);
 
+  // Keyboard shortcut: Ctrl+N / Cmd+N to navigate to observation form
+  useEffect(() => {
+    const handleKeyDown = (e: KeyboardEvent) => {
+      if ((e.ctrlKey || e.metaKey) && e.key === 'n') {
+        // Don't intercept if user is typing in an input/textarea
+        const target = e.target as HTMLElement;
+        if (target.tagName === 'INPUT' || target.tagName === 'TEXTAREA' || target.isContentEditable) {
+          return;
+        }
+        e.preventDefault();
+        router.push('/dashboard/observe');
+      }
+    };
+
+    document.addEventListener('keydown', handleKeyDown);
+    return () => document.removeEventListener('keydown', handleKeyDown);
+  }, [router]);
+
   const toggleMobileMenu = useCallback(() => {
     setMobileMenuOpen(prev => !prev);
   }, []);

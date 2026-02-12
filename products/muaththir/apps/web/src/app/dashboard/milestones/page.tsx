@@ -5,6 +5,7 @@ import Link from 'next/link';
 import { useTranslations } from 'next-intl';
 import { DIMENSIONS } from '../../../lib/dimensions';
 import { apiClient, type Child, type DashboardData } from '../../../lib/api-client';
+import { SkeletonMilestones } from '../../../components/ui/Skeleton';
 
 export default function MilestonesPage() {
   const t = useTranslations('milestonesPage');
@@ -142,11 +143,7 @@ export default function MilestonesPage() {
       )}
 
       {loading ? (
-        <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-3 gap-4">
-          {DIMENSIONS.map((dim) => (
-            <div key={dim.slug} className="card animate-pulse h-32" />
-          ))}
-        </div>
+        <SkeletonMilestones />
       ) : (
         <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-3 gap-4">
           {DIMENSIONS.map((dim) => {

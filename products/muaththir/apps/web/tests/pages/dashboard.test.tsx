@@ -346,6 +346,161 @@ describe('DashboardPage', () => {
     });
   });
 
+  describe('Stats Summary', () => {
+    it('renders stats row with total observations', async () => {
+      const mockDashboardData = {
+        childId: 'child-1',
+        childName: 'Sarah',
+        ageBand: '3-4',
+        overallScore: 75.5,
+        dimensions: [
+          {
+            dimension: 'academic',
+            score: 80,
+            factors: { observation: 30, milestone: 30, sentiment: 20 },
+            observationCount: 5,
+            milestoneProgress: { achieved: 8, total: 10 },
+          },
+          {
+            dimension: 'islamic',
+            score: 60,
+            factors: { observation: 20, milestone: 20, sentiment: 20 },
+            observationCount: 3,
+            milestoneProgress: { achieved: 4, total: 10 },
+          },
+        ],
+        calculatedAt: '2024-01-01T00:00:00Z',
+      };
+
+      mockGetChildren.mockResolvedValue({
+        data: [
+          {
+            id: 'child-1', name: 'Sarah', dateOfBirth: '2020-01-01',
+            gender: 'female' as const, ageBand: '3-4', photoUrl: null,
+            createdAt: '2024-01-01T00:00:00Z', updatedAt: '2024-01-01T00:00:00Z',
+          },
+        ],
+        pagination: { page: 1, limit: 50, total: 1, totalPages: 1, hasMore: false },
+      });
+      mockGetDashboard.mockResolvedValue(mockDashboardData);
+      mockGetRecentObservations.mockResolvedValue({
+        data: [
+          {
+            id: 'obs-1', childId: 'child-1', dimension: 'academic',
+            content: 'Test', sentiment: 'positive',
+            observedAt: '2024-01-01T10:00:00Z', tags: [],
+            createdAt: '2024-01-01T10:00:00Z', updatedAt: '2024-01-01T10:00:00Z',
+          },
+        ],
+      });
+      mockGetMilestonesDue.mockResolvedValue({ data: [] });
+
+      render(<DashboardPage />);
+
+      await waitFor(() => {
+        // The stats row should show total observations (sum of observationCount across dimensions)
+        expect(screen.getByTestId('stats-total-observations')).toBeInTheDocument();
+        expect(screen.getByTestId('stats-total-observations')).toHaveTextContent('8');
+      });
+    });
+
+    it('renders stats row with days tracking', async () => {
+      const mockDashboardData = {
+        childId: 'child-1',
+        childName: 'Sarah',
+        ageBand: '3-4',
+        overallScore: 75.5,
+        dimensions: [
+          {
+            dimension: 'academic',
+            score: 80,
+            factors: { observation: 30, milestone: 30, sentiment: 20 },
+            observationCount: 5,
+            milestoneProgress: { achieved: 8, total: 10 },
+          },
+        ],
+        calculatedAt: '2024-01-01T00:00:00Z',
+      };
+
+      mockGetChildren.mockResolvedValue({
+        data: [
+          {
+            id: 'child-1', name: 'Sarah', dateOfBirth: '2020-01-01',
+            gender: 'female' as const, ageBand: '3-4', photoUrl: null,
+            createdAt: '2024-01-01T00:00:00Z', updatedAt: '2024-01-01T00:00:00Z',
+          },
+        ],
+        pagination: { page: 1, limit: 50, total: 1, totalPages: 1, hasMore: false },
+      });
+      mockGetDashboard.mockResolvedValue(mockDashboardData);
+      mockGetRecentObservations.mockResolvedValue({
+        data: [
+          {
+            id: 'obs-1', childId: 'child-1', dimension: 'academic',
+            content: 'Test', sentiment: 'positive',
+            observedAt: '2024-01-01T10:00:00Z', tags: [],
+            createdAt: '2024-01-01T10:00:00Z', updatedAt: '2024-01-01T10:00:00Z',
+          },
+        ],
+      });
+      mockGetMilestonesDue.mockResolvedValue({ data: [] });
+
+      render(<DashboardPage />);
+
+      await waitFor(() => {
+        expect(screen.getByTestId('stats-days-tracking')).toBeInTheDocument();
+      });
+    });
+
+    it('renders stats row with current streak', async () => {
+      const mockDashboardData = {
+        childId: 'child-1',
+        childName: 'Sarah',
+        ageBand: '3-4',
+        overallScore: 75.5,
+        dimensions: [
+          {
+            dimension: 'academic',
+            score: 80,
+            factors: { observation: 30, milestone: 30, sentiment: 20 },
+            observationCount: 5,
+            milestoneProgress: { achieved: 8, total: 10 },
+          },
+        ],
+        calculatedAt: '2024-01-01T00:00:00Z',
+      };
+
+      mockGetChildren.mockResolvedValue({
+        data: [
+          {
+            id: 'child-1', name: 'Sarah', dateOfBirth: '2020-01-01',
+            gender: 'female' as const, ageBand: '3-4', photoUrl: null,
+            createdAt: '2024-01-01T00:00:00Z', updatedAt: '2024-01-01T00:00:00Z',
+          },
+        ],
+        pagination: { page: 1, limit: 50, total: 1, totalPages: 1, hasMore: false },
+      });
+      mockGetDashboard.mockResolvedValue(mockDashboardData);
+      mockGetRecentObservations.mockResolvedValue({
+        data: [
+          {
+            id: 'obs-1', childId: 'child-1', dimension: 'academic',
+            content: 'Test', sentiment: 'positive',
+            observedAt: '2024-01-01T10:00:00Z', tags: [],
+            createdAt: '2024-01-01T10:00:00Z', updatedAt: '2024-01-01T10:00:00Z',
+          },
+        ],
+      });
+      mockGetMilestonesDue.mockResolvedValue({ data: [] });
+
+      render(<DashboardPage />);
+
+      await waitFor(() => {
+        expect(screen.getByTestId('stats-current-streak')).toBeInTheDocument();
+      });
+    });
+  });
+
   it('shows child selector when multiple children exist', async () => {
     mockGetChildren.mockResolvedValue({
       data: [
