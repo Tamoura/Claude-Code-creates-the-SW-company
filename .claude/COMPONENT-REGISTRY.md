@@ -2,7 +2,7 @@
 
 > Before building anything, check this registry first. Reuse > rebuild.
 
-Last updated: 2026-02-09
+Last updated: 2026-02-12
 
 ## Shared Package (NEW)
 
@@ -57,6 +57,9 @@ See `packages/shared/README.md` for usage examples.
 | Navigation sidebar         | Sidebar component (role-aware, admin sections)                                |
 | Error boundary             | ErrorBoundary component (React class component with fallback UI)              |
 | Route protection           | ProtectedRoute component (token-based redirect)                               |
+| A/B testing                | Experiment Assignment (deterministic hash) + Statistics (z-test, Wilson CI)   |
+| Real-time counters         | Redis Counters (pipeline-based daily counters with TTL)                       |
+| Embeddable JS SDK          | SDK pattern (IIFE bundle via esbuild, auto-init from script attributes)       |
 
 ---
 
@@ -188,6 +191,33 @@ See `packages/shared/README.md` for usage examples.
 - **Used by**: stablecoin-gateway
 - **Description**: Distributed rate limiting store implementing the `@fastify/rate-limit` store interface. Uses Redis atomic INCR for token bucket counting with automatic TTL cleanup. Supports route-specific TTL via the `child()` method. Works across multiple server instances. The static `setRedis()` method allows setting the Redis instance once at startup.
 - **To reuse**: Copy the file. Call `RedisRateLimitStore.setRedis(redisInstance)` at startup, then pass the class to `@fastify/rate-limit` config.
+
+#### Experiment Assignment
+- **Source**: `recomengine/apps/api/src/modules/experiments/assignment.ts`
+- **Maturity**: Production
+- **Reuse**: Copy as-is
+- **Dependencies**: Node `crypto` built-in
+- **Used by**: recomengine
+- **Description**: Deterministic A/B test user assignment using SHA-256 hash of `userId:experimentId` mod 100. Returns variant ('control' or 'variant') and bucket number (0-99). Same input always produces same output (consistent experience across sessions). Configurable traffic split percentage.
+- **To reuse**: Copy the file. Call `getExperimentAssignment(userId, experimentId, trafficSplit)`.
+
+#### Experiment Statistics
+- **Source**: `recomengine/apps/api/src/modules/experiments/statistics.ts`
+- **Maturity**: Production
+- **Reuse**: Copy as-is
+- **Dependencies**: None
+- **Used by**: recomengine
+- **Description**: Two-proportion z-test for comparing CTR, conversion rate, and revenue per visitor between control and variant groups. Computes lift, p-value (via normal CDF approximation), statistical significance at alpha=0.05, and Wilson score 95% confidence intervals. Handles edge cases (zero impressions, identical metrics).
+- **To reuse**: Copy the file. Call `computeExperimentResults(metric, controlMetrics, variantMetrics)`.
+
+#### Real-time Redis Counters
+- **Source**: `recomengine/apps/api/src/modules/events/counters.ts`
+- **Maturity**: Production
+- **Reuse**: Copy and adapt counter keys
+- **Dependencies**: `ioredis`
+- **Used by**: recomengine
+- **Description**: Redis pipeline-based daily counter service. Atomically increments multiple counters per event (total events, event type, impressions, clicks, conversions) with 48-hour TTL. Uses date-based keys for natural aggregation. Fire-and-forget pattern — failures don't block request processing.
+- **To reuse**: Copy the file. Adjust the counter key patterns and increment logic for your domain's metrics.
 
 #### Validation Schemas (generic parts)
 - **Source**: `stablecoin-gateway/apps/api/src/utils/validation.ts`
@@ -501,6 +531,7 @@ Components in this registry are sourced from these products:
 |----------------------|------------|---------|----------|------------|--------|
 | stablecoin-gateway   | Production | Yes     | Yes      | Yes        | Yes    |
 | invoiceforge         | Production | Yes     | Yes      | Yes        | Yes    |
+| recomengine          | Active     | Yes     | Yes      | Yes        | --     |
 | motqen               | Active     | --      | --       | --         | --     |
 
 ---
