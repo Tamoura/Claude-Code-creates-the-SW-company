@@ -55,7 +55,7 @@ COPY --from=build --chown=nodejs:nodejs /app/prisma ./prisma
 COPY --from=build --chown=nodejs:nodejs /app/package.json ./package.json
 
 # Uploads directory for child photos
-RUN mkdir -p /app/uploads && chown nodejs:nodejs /app/uploads
+RUN mkdir -p /app/uploads/photos && chown -R nodejs:nodejs /app/uploads
 
 USER nodejs
 
