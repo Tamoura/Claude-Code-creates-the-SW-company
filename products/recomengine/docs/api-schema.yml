@@ -1,0 +1,2479 @@
+openapi: 3.0.3
+info:
+  title: RecomEngine API
+  description: |
+    B2B SaaS Product Recommendation Orchestrator for E-Commerce.
+
+    RecomEngine provides personalized product recommendations via REST API and
+    embeddable JavaScript SDK. Features include real-time event ingestion,
+    configurable recommendation strategies, A/B testing, and analytics.
+
+    ## Authentication
+
+    Two authentication methods are supported:
+
+    ### JWT Bearer Token (Dashboard)
+    Used by admin users for tenant management, experiments, analytics, and widget configuration.
+    Obtain a token via `POST /api/v1/auth/login`.
+
+    ### API Key (SDK / Server-to-Server)
+    Used by merchant integrations for event ingestion, catalog management, and recommendation requests.
+    Include the key in the `X-API-Key` header.
+
+    API keys have two permission levels:
+    - `read` -- recommendations, catalog queries, widget config
+    - `read_write` -- all read operations plus event ingestion and catalog management
+
+    ## Rate Limiting
+    - Read operations: 1,000 requests/minute per API key
+    - Write operations: 500 requests/minute per API key
+    - Rate limit headers: `X-RateLimit-Limit`, `X-RateLimit-Remaining`, `X-RateLimit-Reset`
+
+    ## Error Format
+    All errors follow RFC 7807 Problem Details:
+    ```json
+    {
+      "type": "https://api.recomengine.com/errors/not-found",
+      "title": "Not Found",
+      "status": 404,
+      "detail": "Tenant with ID 'abc123' not found"
+    }
+    ```
+  version: 1.0.0
+  contact:
+    name: ConnectSW
+    url: https://connectsw.com
+  license:
+    name: Proprietary
+
+servers:
+  - url: http://localhost:5008
+    description: Local development
+  - url: https://api.recomengine.com
+    description: Production
+
+tags:
+  - name: Auth
+    description: Admin authentication (signup, login, password reset)
+  - name: Tenants
+    description: Tenant lifecycle management
+  - name: API Keys
+    description: API key provisioning per tenant
+  - name: Events
+    description: Behavioral event ingestion
+  - name: Catalog
+    description: Product catalog management
+  - name: Recommendations
+    description: Product recommendation retrieval
+  - name: Experiments
+    description: A/B testing framework
+  - name: Analytics
+    description: Recommendation performance analytics
+  - name: Widgets
+    description: Widget appearance configuration
+  - name: Health
+    description: Health and readiness checks
+
+# ============================================================
+# Security Schemes
+# ============================================================
+
+security: []
+
+components:
+  securitySchemes:
+    BearerAuth:
+      type: http
+      scheme: bearer
+      bearerFormat: JWT
+      description: JWT access token obtained via POST /api/v1/auth/login
+
+    ApiKeyAuth:
+      type: apiKey
+      in: header
+      name: X-API-Key
+      description: Tenant API key (recom_live_... or recom_test_...)
+
+  # ============================================================
+  # Reusable Schemas
+  # ============================================================
+
+  schemas:
+    # --- Error ---
+    ProblemDetail:
+      type: object
+      required: [type, title, status, detail]
+      properties:
+        type:
+          type: string
+          format: uri
+          example: https://api.recomengine.com/errors/bad-request
+        title:
+          type: string
+          example: Bad Request
+        status:
+          type: integer
+          example: 400
+        detail:
+          type: string
+          example: "Field 'email' is required"
+        errors:
+          type: array
+          items:
+            type: object
+            properties:
+              field:
+                type: string
+              message:
+                type: string
+          description: Field-level validation errors (for 422 responses)
+
+    # --- Pagination ---
+    PaginationMeta:
+      type: object
+      properties:
+        total:
+          type: integer
+          example: 42
+        limit:
+          type: integer
+          example: 20
+        offset:
+          type: integer
+          example: 0
+        hasMore:
+          type: boolean
+          example: true
+
+    # --- Auth ---
+    SignupRequest:
+      type: object
+      required: [email, password]
+      properties:
+        email:
+          type: string
+          format: email
+          example: admin@example.com
+        password:
+          type: string
+          format: password
+          minLength: 8
+          example: "SecureP@ss123"
+
+    LoginRequest:
+      type: object
+      required: [email, password]
+      properties:
+        email:
+          type: string
+          format: email
+          example: admin@example.com
+        password:
+          type: string
+          format: password
+          example: "SecureP@ss123"
+
+    AuthResponse:
+      type: object
+      properties:
+        data:
+          type: object
+          properties:
+            token:
+              type: string
+              description: JWT access token (1 hour expiry)
+            user:
+              type: object
+              properties:
+                id:
+                  type: string
+                email:
+                  type: string
+                  format: email
+                role:
+                  type: string
+                  enum: [admin, super_admin]
+
+    ForgotPasswordRequest:
+      type: object
+      required: [email]
+      properties:
+        email:
+          type: string
+          format: email
+
+    ResetPasswordRequest:
+      type: object
+      required: [token, password]
+      properties:
+        token:
+          type: string
+        password:
+          type: string
+          format: password
+          minLength: 8
+
+    # --- Tenant ---
+    Tenant:
+      type: object
+      properties:
+        id:
+          type: string
+          example: "cuid_tenant_123"
+        name:
+          type: string
+          example: "Acme Store"
+        status:
+          type: string
+          enum: [active, suspended, deleted]
+        config:
+          $ref: '#/components/schemas/TenantConfig'
+        ownerId:
+          type: string
+        createdAt:
+          type: string
+          format: date-time
+        updatedAt:
+          type: string
+          format: date-time
+
+    TenantConfig:
+      type: object
+      properties:
+        defaultStrategy:
+          type: string
+          enum: [collaborative, content_based, trending, frequently_bought_together]
+          default: trending
+        excludePurchased:
+          type: boolean
+          default: true
+        maxApiKeys:
+          type: integer
+          default: 10
+        corsOrigins:
+          type: array
+          items:
+            type: string
+          default: []
+
+    CreateTenantRequest:
+      type: object
+      required: [name]
+      properties:
+        name:
+          type: string
+          minLength: 1
+          maxLength: 255
+          example: "Acme Store"
+        config:
+          $ref: '#/components/schemas/TenantConfig'
+
+    UpdateTenantRequest:
+      type: object
+      properties:
+        name:
+          type: string
+          minLength: 1
+          maxLength: 255
+        status:
+          type: string
+          enum: [active, suspended]
+        config:
+          $ref: '#/components/schemas/TenantConfig'
+
+    # --- API Key ---
+    ApiKey:
+      type: object
+      properties:
+        id:
+          type: string
+        name:
+          type: string
+          example: "Production SDK"
+        keyPrefix:
+          type: string
+          example: "recom_live_abc1"
+        permissions:
+          type: string
+          enum: [read, read_write]
+        tenantId:
+          type: string
+        lastUsedAt:
+          type: string
+          format: date-time
+          nullable: true
+        createdAt:
+          type: string
+          format: date-time
+
+    CreateApiKeyRequest:
+      type: object
+      required: [name, permissions]
+      properties:
+        name:
+          type: string
+          minLength: 1
+          maxLength: 255
+          example: "Production SDK"
+        permissions:
+          type: string
+          enum: [read, read_write]
+          example: read
+
+    CreateApiKeyResponse:
+      type: object
+      properties:
+        data:
+          type: object
+          properties:
+            id:
+              type: string
+            name:
+              type: string
+            key:
+              type: string
+              description: "Full API key (shown only once)"
+              example: "recom_live_abc123def456"
+            keyPrefix:
+              type: string
+              example: "recom_live_abc1"
+            permissions:
+              type: string
+            tenantId:
+              type: string
+            createdAt:
+              type: string
+              format: date-time
+
+    # --- Event ---
+    Event:
+      type: object
+      required: [eventType, userId, productId]
+      properties:
+        eventType:
+          type: string
+          enum:
+            - product_viewed
+            - product_clicked
+            - add_to_cart
+            - remove_from_cart
+            - purchase
+            - recommendation_clicked
+            - recommendation_impressed
+        userId:
+          type: string
+          minLength: 1
+          maxLength: 256
+          example: "user-123"
+        productId:
+          type: string
+          minLength: 1
+          maxLength: 256
+          example: "prod-456"
+        sessionId:
+          type: string
+          maxLength: 256
+          example: "sess-789"
+        timestamp:
+          type: string
+          format: date-time
+          description: "ISO 8601 timestamp. Defaults to server time if omitted."
+        metadata:
+          type: object
+          description: "Arbitrary JSON metadata (max 4KB)"
+          additionalProperties: true
+          example:
+            price: 29.99
+            currency: "USD"
+            placementId: "product-page-sidebar"
+
+    BatchEventsRequest:
+      type: object
+      required: [events]
+      properties:
+        events:
+          type: array
+          items:
+            $ref: '#/components/schemas/Event'
+          minItems: 1
+          maxItems: 100
+
+    BatchEventsResponse:
+      type: object
+      properties:
+        data:
+          type: object
+          properties:
+            accepted:
+              type: integer
+              example: 98
+            rejected:
+              type: integer
+              example: 2
+            errors:
+              type: array
+              items:
+                type: object
+                properties:
+                  index:
+                    type: integer
+                  message:
+                    type: string
+
+    # --- Catalog Item ---
+    CatalogItem:
+      type: object
+      properties:
+        id:
+          type: string
+        productId:
+          type: string
+          example: "prod-456"
+        name:
+          type: string
+          example: "Blue Running Shoes"
+        description:
+          type: string
+          example: "Lightweight running shoes with gel cushioning"
+        category:
+          type: string
+          example: "Footwear"
+        price:
+          type: number
+          format: double
+          example: 89.99
+        imageUrl:
+          type: string
+          format: uri
+          example: "https://example.com/images/shoes.jpg"
+        attributes:
+          type: object
+          additionalProperties: true
+          example:
+            color: "blue"
+            size: ["8", "9", "10"]
+            brand: "SpeedRun"
+        available:
+          type: boolean
+          default: true
+        tenantId:
+          type: string
+        createdAt:
+          type: string
+          format: date-time
+        updatedAt:
+          type: string
+          format: date-time
+
+    CreateCatalogItemRequest:
+      type: object
+      required: [productId, name]
+      properties:
+        productId:
+          type: string
+          minLength: 1
+          maxLength: 256
+        name:
+          type: string
+          minLength: 1
+          maxLength: 512
+        description:
+          type: string
+          maxLength: 5000
+        category:
+          type: string
+          maxLength: 255
+        price:
+          type: number
+          format: double
+          minimum: 0
+        imageUrl:
+          type: string
+          format: uri
+        attributes:
+          type: object
+          additionalProperties: true
+        available:
+          type: boolean
+          default: true
+
+    UpdateCatalogItemRequest:
+      type: object
+      properties:
+        name:
+          type: string
+          minLength: 1
+          maxLength: 512
+        description:
+          type: string
+          maxLength: 5000
+        category:
+          type: string
+          maxLength: 255
+        price:
+          type: number
+          format: double
+          minimum: 0
+        imageUrl:
+          type: string
+          format: uri
+        attributes:
+          type: object
+          additionalProperties: true
+        available:
+          type: boolean
+
+    BatchCatalogRequest:
+      type: object
+      required: [items]
+      properties:
+        items:
+          type: array
+          items:
+            $ref: '#/components/schemas/CreateCatalogItemRequest'
+          minItems: 1
+          maxItems: 500
+
+    BatchCatalogResponse:
+      type: object
+      properties:
+        data:
+          type: object
+          properties:
+            created:
+              type: integer
+              example: 480
+            updated:
+              type: integer
+              example: 15
+            rejected:
+              type: integer
+              example: 5
+            errors:
+              type: array
+              items:
+                type: object
+                properties:
+                  index:
+                    type: integer
+                  message:
+                    type: string
+
+    # --- Recommendation ---
+    Recommendation:
+      type: object
+      properties:
+        productId:
+          type: string
+          example: "prod-789"
+        name:
+          type: string
+          example: "Red Running Shoes"
+        imageUrl:
+          type: string
+          format: uri
+        price:
+          type: number
+          format: double
+          example: 79.99
+        score:
+          type: number
+          format: double
+          minimum: 0
+          maximum: 1
+          example: 0.92
+          description: "Confidence score (0-1)"
+        reason:
+          type: string
+          example: "Users who viewed this also liked"
+          description: "Human-readable explanation for this recommendation"
+
+    RecommendationResponse:
+      type: object
+      properties:
+        data:
+          type: array
+          items:
+            $ref: '#/components/schemas/Recommendation'
+        meta:
+          type: object
+          properties:
+            strategy:
+              type: string
+              enum: [collaborative, content_based, trending, frequently_bought_together]
+            isFallback:
+              type: boolean
+              description: "True if the strategy fell back to a default (e.g., trending for cold-start users)"
+            experimentId:
+              type: string
+              nullable: true
+              description: "Experiment ID if user is enrolled in an A/B test"
+            variant:
+              type: string
+              nullable: true
+              enum: [control, variant]
+            cached:
+              type: boolean
+              description: "True if result was served from cache"
+
+    # --- Experiment ---
+    Experiment:
+      type: object
+      properties:
+        id:
+          type: string
+        name:
+          type: string
+          example: "Collab vs Content Q1"
+        controlStrategy:
+          type: string
+          enum: [collaborative, content_based, trending, frequently_bought_together]
+        variantStrategy:
+          type: string
+          enum: [collaborative, content_based, trending, frequently_bought_together]
+        trafficSplit:
+          type: integer
+          minimum: 1
+          maximum: 99
+          example: 50
+          description: "Percentage of traffic assigned to control group"
+        metric:
+          type: string
+          enum: [ctr, conversion_rate, revenue_per_visitor]
+        status:
+          type: string
+          enum: [draft, running, paused, completed]
+        placementId:
+          type: string
+          nullable: true
+        tenantId:
+          type: string
+        startedAt:
+          type: string
+          format: date-time
+          nullable: true
+        completedAt:
+          type: string
+          format: date-time
+          nullable: true
+        createdAt:
+          type: string
+          format: date-time
+        updatedAt:
+          type: string
+          format: date-time
+
+    CreateExperimentRequest:
+      type: object
+      required: [name, controlStrategy, variantStrategy, trafficSplit, metric]
+      properties:
+        name:
+          type: string
+          minLength: 1
+          maxLength: 255
+        controlStrategy:
+          type: string
+          enum: [collaborative, content_based, trending, frequently_bought_together]
+        variantStrategy:
+          type: string
+          enum: [collaborative, content_based, trending, frequently_bought_together]
+        trafficSplit:
+          type: integer
+          minimum: 1
+          maximum: 99
+        metric:
+          type: string
+          enum: [ctr, conversion_rate, revenue_per_visitor]
+        placementId:
+          type: string
+          maxLength: 255
+
+    UpdateExperimentRequest:
+      type: object
+      properties:
+        name:
+          type: string
+          minLength: 1
+          maxLength: 255
+        status:
+          type: string
+          enum: [running, paused, completed]
+          description: "Transition experiment state. Valid transitions: draft->running, running->paused, running->completed, paused->running, paused->completed"
+        trafficSplit:
+          type: integer
+          minimum: 1
+          maximum: 99
+
+    ExperimentResults:
+      type: object
+      properties:
+        data:
+          type: object
+          properties:
+            experimentId:
+              type: string
+            experimentName:
+              type: string
+            status:
+              type: string
+            metric:
+              type: string
+            control:
+              $ref: '#/components/schemas/VariantResult'
+            variant:
+              $ref: '#/components/schemas/VariantResult'
+            lift:
+              type: number
+              format: double
+              example: 0.12
+              description: "Relative improvement of variant over control"
+            pValue:
+              type: number
+              format: double
+              example: 0.032
+              description: "Statistical significance p-value"
+            isSignificant:
+              type: boolean
+              description: "True if p-value < 0.05"
+            duration:
+              type: object
+              properties:
+                startedAt:
+                  type: string
+                  format: date-time
+                days:
+                  type: integer
+
+    VariantResult:
+      type: object
+      properties:
+        strategy:
+          type: string
+        sampleSize:
+          type: integer
+          example: 5420
+        impressions:
+          type: integer
+          example: 24000
+        clicks:
+          type: integer
+          example: 1800
+        conversions:
+          type: integer
+          example: 360
+        revenue:
+          type: number
+          format: double
+          example: 12500.00
+        metricValue:
+          type: number
+          format: double
+          example: 0.075
+          description: "Computed value for the experiment's success metric"
+        confidenceInterval:
+          type: object
+          properties:
+            lower:
+              type: number
+              format: double
+            upper:
+              type: number
+              format: double
+
+    # --- Analytics ---
+    AnalyticsOverview:
+      type: object
+      properties:
+        data:
+          type: object
+          properties:
+            impressions:
+              type: integer
+              example: 150000
+            clicks:
+              type: integer
+              example: 12000
+            ctr:
+              type: number
+              format: double
+              example: 0.08
+            conversions:
+              type: integer
+              example: 2400
+            revenue:
+              type: number
+              format: double
+              example: 85000.00
+            period:
+              type: object
+              properties:
+                from:
+                  type: string
+                  format: date
+                to:
+                  type: string
+                  format: date
+
+    AnalyticsTimeseries:
+      type: object
+      properties:
+        data:
+          type: array
+          items:
+            type: object
+            properties:
+              date:
+                type: string
+                format: date
+              impressions:
+                type: integer
+              clicks:
+                type: integer
+              conversions:
+                type: integer
+              revenue:
+                type: number
+                format: double
+
+    TopProducts:
+      type: object
+      properties:
+        data:
+          type: array
+          items:
+            type: object
+            properties:
+              productId:
+                type: string
+              productName:
+                type: string
+              imageUrl:
+                type: string
+              impressions:
+                type: integer
+              clicks:
+                type: integer
+              ctr:
+                type: number
+                format: double
+              conversions:
+                type: integer
+              revenue:
+                type: number
+                format: double
+
+    # --- Widget Config ---
+    WidgetConfig:
+      type: object
+      properties:
+        id:
+          type: string
+        tenantId:
+          type: string
+        placementId:
+          type: string
+          example: "product-page-sidebar"
+        layout:
+          type: string
+          enum: [grid, carousel, list]
+          default: grid
+        columns:
+          type: integer
+          minimum: 2
+          maximum: 6
+          default: 4
+        theme:
+          type: object
+          properties:
+            primaryColor:
+              type: string
+              example: "#2563EB"
+            fontFamily:
+              type: string
+              example: "inherit"
+        maxItems:
+          type: integer
+          minimum: 4
+          maximum: 20
+          default: 8
+        showPrice:
+          type: boolean
+          default: true
+        ctaText:
+          type: string
+          default: "View Product"
+        createdAt:
+          type: string
+          format: date-time
+        updatedAt:
+          type: string
+          format: date-time
+
+    CreateWidgetConfigRequest:
+      type: object
+      required: [placementId]
+      properties:
+        placementId:
+          type: string
+          minLength: 1
+          maxLength: 255
+        layout:
+          type: string
+          enum: [grid, carousel, list]
+        columns:
+          type: integer
+          minimum: 2
+          maximum: 6
+        theme:
+          type: object
+          properties:
+            primaryColor:
+              type: string
+            fontFamily:
+              type: string
+        maxItems:
+          type: integer
+          minimum: 4
+          maximum: 20
+        showPrice:
+          type: boolean
+        ctaText:
+          type: string
+          maxLength: 100
+
+    UpdateWidgetConfigRequest:
+      type: object
+      properties:
+        layout:
+          type: string
+          enum: [grid, carousel, list]
+        columns:
+          type: integer
+          minimum: 2
+          maximum: 6
+        theme:
+          type: object
+          properties:
+            primaryColor:
+              type: string
+            fontFamily:
+              type: string
+        maxItems:
+          type: integer
+          minimum: 4
+          maximum: 20
+        showPrice:
+          type: boolean
+        ctaText:
+          type: string
+          maxLength: 100
+
+    # --- Health ---
+    HealthResponse:
+      type: object
+      properties:
+        status:
+          type: string
+          enum: [ok, degraded, unhealthy]
+        timestamp:
+          type: string
+          format: date-time
+        version:
+          type: string
+
+    ReadinessResponse:
+      type: object
+      properties:
+        status:
+          type: string
+          enum: [ready, not_ready]
+        checks:
+          type: object
+          properties:
+            database:
+              type: string
+              enum: [connected, disconnected]
+            redis:
+              type: string
+              enum: [connected, disconnected]
+
+  # ============================================================
+  # Reusable Parameters
+  # ============================================================
+
+  parameters:
+    TenantId:
+      name: tenantId
+      in: path
+      required: true
+      schema:
+        type: string
+      description: Tenant identifier
+
+    Limit:
+      name: limit
+      in: query
+      schema:
+        type: integer
+        minimum: 1
+        maximum: 100
+        default: 20
+      description: Number of items to return
+
+    Offset:
+      name: offset
+      in: query
+      schema:
+        type: integer
+        minimum: 0
+        default: 0
+      description: Number of items to skip
+
+  # ============================================================
+  # Reusable Responses
+  # ============================================================
+
+  responses:
+    BadRequest:
+      description: Bad Request -- invalid input
+      content:
+        application/json:
+          schema:
+            $ref: '#/components/schemas/ProblemDetail'
+
+    Unauthorized:
+      description: Unauthorized -- missing or invalid authentication
+      content:
+        application/json:
+          schema:
+            $ref: '#/components/schemas/ProblemDetail'
+
+    Forbidden:
+      description: Forbidden -- insufficient permissions
+      content:
+        application/json:
+          schema:
+            $ref: '#/components/schemas/ProblemDetail'
+
+    NotFound:
+      description: Resource not found
+      content:
+        application/json:
+          schema:
+            $ref: '#/components/schemas/ProblemDetail'
+
+    Conflict:
+      description: Conflict -- resource already exists
+      content:
+        application/json:
+          schema:
+            $ref: '#/components/schemas/ProblemDetail'
+
+    ValidationError:
+      description: Validation Error -- field-level errors
+      content:
+        application/json:
+          schema:
+            $ref: '#/components/schemas/ProblemDetail'
+
+    TooManyRequests:
+      description: Rate limit exceeded
+      content:
+        application/json:
+          schema:
+            $ref: '#/components/schemas/ProblemDetail'
+      headers:
+        X-RateLimit-Limit:
+          schema:
+            type: integer
+        X-RateLimit-Remaining:
+          schema:
+            type: integer
+        X-RateLimit-Reset:
+          schema:
+            type: integer
+          description: Unix timestamp when the rate limit resets
+
+# ============================================================
+# Paths
+# ============================================================
+
+paths:
+
+  # ----------------------------------------------------------
+  # Auth
+  # ----------------------------------------------------------
+
+  /api/v1/auth/signup:
+    post:
+      tags: [Auth]
+      summary: Register a new admin account
+      operationId: signup
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              $ref: '#/components/schemas/SignupRequest'
+      responses:
+        '201':
+          description: Account created successfully
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/AuthResponse'
+        '400':
+          $ref: '#/components/responses/BadRequest'
+        '409':
+          $ref: '#/components/responses/Conflict'
+        '422':
+          $ref: '#/components/responses/ValidationError'
+
+  /api/v1/auth/login:
+    post:
+      tags: [Auth]
+      summary: Login with email and password
+      operationId: login
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              $ref: '#/components/schemas/LoginRequest'
+      responses:
+        '200':
+          description: Login successful
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/AuthResponse'
+          headers:
+            Set-Cookie:
+              description: HttpOnly refresh token cookie (7-day expiry)
+              schema:
+                type: string
+        '401':
+          $ref: '#/components/responses/Unauthorized'
+        '422':
+          $ref: '#/components/responses/ValidationError'
+        '429':
+          $ref: '#/components/responses/TooManyRequests'
+
+  /api/v1/auth/logout:
+    post:
+      tags: [Auth]
+      summary: Logout and invalidate tokens
+      operationId: logout
+      security:
+        - BearerAuth: []
+      responses:
+        '200':
+          description: Logout successful
+          content:
+            application/json:
+              schema:
+                type: object
+                properties:
+                  data:
+                    type: object
+                    properties:
+                      message:
+                        type: string
+                        example: "Logged out successfully"
+        '401':
+          $ref: '#/components/responses/Unauthorized'
+
+  /api/v1/auth/forgot-password:
+    post:
+      tags: [Auth]
+      summary: Request password reset email
+      operationId: forgotPassword
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              $ref: '#/components/schemas/ForgotPasswordRequest'
+      responses:
+        '200':
+          description: |
+            Password reset instructions sent (always returns 200 regardless
+            of whether the email exists, to prevent user enumeration)
+          content:
+            application/json:
+              schema:
+                type: object
+                properties:
+                  data:
+                    type: object
+                    properties:
+                      message:
+                        type: string
+                        example: "If an account with that email exists, a reset link has been sent."
+        '422':
+          $ref: '#/components/responses/ValidationError'
+        '429':
+          $ref: '#/components/responses/TooManyRequests'
+
+  /api/v1/auth/reset-password:
+    post:
+      tags: [Auth]
+      summary: Reset password with token
+      operationId: resetPassword
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              $ref: '#/components/schemas/ResetPasswordRequest'
+      responses:
+        '200':
+          description: Password reset successfully
+          content:
+            application/json:
+              schema:
+                type: object
+                properties:
+                  data:
+                    type: object
+                    properties:
+                      message:
+                        type: string
+                        example: "Password has been reset successfully"
+        '400':
+          $ref: '#/components/responses/BadRequest'
+        '422':
+          $ref: '#/components/responses/ValidationError'
+
+  # ----------------------------------------------------------
+  # Tenants
+  # ----------------------------------------------------------
+
+  /api/v1/tenants:
+    get:
+      tags: [Tenants]
+      summary: List all tenants for the authenticated admin
+      operationId: listTenants
+      security:
+        - BearerAuth: []
+      parameters:
+        - $ref: '#/components/parameters/Limit'
+        - $ref: '#/components/parameters/Offset'
+        - name: status
+          in: query
+          schema:
+            type: string
+            enum: [active, suspended, deleted]
+          description: Filter by tenant status
+      responses:
+        '200':
+          description: List of tenants
+          content:
+            application/json:
+              schema:
+                type: object
+                properties:
+                  data:
+                    type: array
+                    items:
+                      $ref: '#/components/schemas/Tenant'
+                  meta:
+                    type: object
+                    properties:
+                      pagination:
+                        $ref: '#/components/schemas/PaginationMeta'
+        '401':
+          $ref: '#/components/responses/Unauthorized'
+
+    post:
+      tags: [Tenants]
+      summary: Create a new tenant
+      operationId: createTenant
+      security:
+        - BearerAuth: []
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              $ref: '#/components/schemas/CreateTenantRequest'
+      responses:
+        '201':
+          description: Tenant created
+          content:
+            application/json:
+              schema:
+                type: object
+                properties:
+                  data:
+                    $ref: '#/components/schemas/Tenant'
+        '400':
+          $ref: '#/components/responses/BadRequest'
+        '401':
+          $ref: '#/components/responses/Unauthorized'
+        '422':
+          $ref: '#/components/responses/ValidationError'
+
+  /api/v1/tenants/{tenantId}:
+    get:
+      tags: [Tenants]
+      summary: Get tenant details
+      operationId: getTenant
+      security:
+        - BearerAuth: []
+      parameters:
+        - $ref: '#/components/parameters/TenantId'
+      responses:
+        '200':
+          description: Tenant details
+          content:
+            application/json:
+              schema:
+                type: object
+                properties:
+                  data:
+                    $ref: '#/components/schemas/Tenant'
+        '401':
+          $ref: '#/components/responses/Unauthorized'
+        '404':
+          $ref: '#/components/responses/NotFound'
+
+    put:
+      tags: [Tenants]
+      summary: Update tenant configuration or status
+      operationId: updateTenant
+      security:
+        - BearerAuth: []
+      parameters:
+        - $ref: '#/components/parameters/TenantId'
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              $ref: '#/components/schemas/UpdateTenantRequest'
+      responses:
+        '200':
+          description: Tenant updated
+          content:
+            application/json:
+              schema:
+                type: object
+                properties:
+                  data:
+                    $ref: '#/components/schemas/Tenant'
+        '400':
+          $ref: '#/components/responses/BadRequest'
+        '401':
+          $ref: '#/components/responses/Unauthorized'
+        '404':
+          $ref: '#/components/responses/NotFound'
+
+    delete:
+      tags: [Tenants]
+      summary: Soft-delete a tenant
+      description: |
+        Marks the tenant as deleted. Data is retained for 30 days before permanent removal.
+        All API keys for this tenant are immediately revoked.
+      operationId: deleteTenant
+      security:
+        - BearerAuth: []
+      parameters:
+        - $ref: '#/components/parameters/TenantId'
+      responses:
+        '200':
+          description: Tenant deleted (soft)
+          content:
+            application/json:
+              schema:
+                type: object
+                properties:
+                  data:
+                    type: object
+                    properties:
+                      message:
+                        type: string
+                        example: "Tenant deleted. Data will be retained for 30 days."
+        '401':
+          $ref: '#/components/responses/Unauthorized'
+        '404':
+          $ref: '#/components/responses/NotFound'
+
+  # ----------------------------------------------------------
+  # API Keys
+  # ----------------------------------------------------------
+
+  /api/v1/tenants/{tenantId}/api-keys:
+    get:
+      tags: [API Keys]
+      summary: List API keys for a tenant
+      operationId: listApiKeys
+      security:
+        - BearerAuth: []
+      parameters:
+        - $ref: '#/components/parameters/TenantId'
+      responses:
+        '200':
+          description: List of API keys (key hashes are not included)
+          content:
+            application/json:
+              schema:
+                type: object
+                properties:
+                  data:
+                    type: array
+                    items:
+                      $ref: '#/components/schemas/ApiKey'
+        '401':
+          $ref: '#/components/responses/Unauthorized'
+        '404':
+          $ref: '#/components/responses/NotFound'
+
+    post:
+      tags: [API Keys]
+      summary: Generate a new API key for a tenant
+      description: |
+        The full API key is returned only in this response and cannot be retrieved again.
+        Store it securely.
+      operationId: createApiKey
+      security:
+        - BearerAuth: []
+      parameters:
+        - $ref: '#/components/parameters/TenantId'
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              $ref: '#/components/schemas/CreateApiKeyRequest'
+      responses:
+        '201':
+          description: API key created (full key shown only once)
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/CreateApiKeyResponse'
+        '400':
+          $ref: '#/components/responses/BadRequest'
+        '401':
+          $ref: '#/components/responses/Unauthorized'
+        '404':
+          $ref: '#/components/responses/NotFound'
+        '409':
+          description: Maximum API keys (10) reached for this tenant
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/ProblemDetail'
+
+  /api/v1/tenants/{tenantId}/api-keys/{keyId}:
+    delete:
+      tags: [API Keys]
+      summary: Revoke an API key
+      operationId: revokeApiKey
+      security:
+        - BearerAuth: []
+      parameters:
+        - $ref: '#/components/parameters/TenantId'
+        - name: keyId
+          in: path
+          required: true
+          schema:
+            type: string
+      responses:
+        '200':
+          description: API key revoked
+          content:
+            application/json:
+              schema:
+                type: object
+                properties:
+                  data:
+                    type: object
+                    properties:
+                      message:
+                        type: string
+                        example: "API key revoked"
+        '401':
+          $ref: '#/components/responses/Unauthorized'
+        '404':
+          $ref: '#/components/responses/NotFound'
+
+  # ----------------------------------------------------------
+  # Events
+  # ----------------------------------------------------------
+
+  /api/v1/events:
+    post:
+      tags: [Events]
+      summary: Ingest a single behavioral event
+      description: |
+        Records a user behavioral event. Events are idempotent: submitting the same
+        event (same userId + eventType + productId + timestamp) returns 200 without
+        creating a duplicate.
+      operationId: ingestEvent
+      security:
+        - ApiKeyAuth: []
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              $ref: '#/components/schemas/Event'
+      responses:
+        '202':
+          description: Event accepted
+          content:
+            application/json:
+              schema:
+                type: object
+                properties:
+                  data:
+                    type: object
+                    properties:
+                      id:
+                        type: string
+                      status:
+                        type: string
+                        example: "accepted"
+        '200':
+          description: Duplicate event (idempotent response)
+          content:
+            application/json:
+              schema:
+                type: object
+                properties:
+                  data:
+                    type: object
+                    properties:
+                      status:
+                        type: string
+                        example: "duplicate"
+        '400':
+          $ref: '#/components/responses/BadRequest'
+        '401':
+          $ref: '#/components/responses/Unauthorized'
+        '403':
+          $ref: '#/components/responses/Forbidden'
+        '422':
+          $ref: '#/components/responses/ValidationError'
+        '429':
+          $ref: '#/components/responses/TooManyRequests'
+
+  /api/v1/events/batch:
+    post:
+      tags: [Events]
+      summary: Ingest a batch of events (up to 100)
+      description: |
+        Accepts up to 100 events in a single request. Returns count of accepted
+        and rejected events with per-event error details for rejected events.
+      operationId: ingestEventsBatch
+      security:
+        - ApiKeyAuth: []
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              $ref: '#/components/schemas/BatchEventsRequest'
+      responses:
+        '202':
+          description: Batch processed
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/BatchEventsResponse'
+        '400':
+          $ref: '#/components/responses/BadRequest'
+        '401':
+          $ref: '#/components/responses/Unauthorized'
+        '403':
+          $ref: '#/components/responses/Forbidden'
+        '422':
+          $ref: '#/components/responses/ValidationError'
+        '429':
+          $ref: '#/components/responses/TooManyRequests'
+
+  # ----------------------------------------------------------
+  # Catalog
+  # ----------------------------------------------------------
+
+  /api/v1/catalog:
+    get:
+      tags: [Catalog]
+      summary: List catalog items for the tenant
+      operationId: listCatalogItems
+      security:
+        - ApiKeyAuth: []
+      parameters:
+        - $ref: '#/components/parameters/Limit'
+        - $ref: '#/components/parameters/Offset'
+        - name: category
+          in: query
+          schema:
+            type: string
+          description: Filter by category
+        - name: search
+          in: query
+          schema:
+            type: string
+          description: Search by product name (full-text search)
+        - name: available
+          in: query
+          schema:
+            type: boolean
+          description: Filter by availability status
+      responses:
+        '200':
+          description: List of catalog items
+          content:
+            application/json:
+              schema:
+                type: object
+                properties:
+                  data:
+                    type: array
+                    items:
+                      $ref: '#/components/schemas/CatalogItem'
+                  meta:
+                    type: object
+                    properties:
+                      pagination:
+                        $ref: '#/components/schemas/PaginationMeta'
+        '401':
+          $ref: '#/components/responses/Unauthorized'
+        '429':
+          $ref: '#/components/responses/TooManyRequests'
+
+    post:
+      tags: [Catalog]
+      summary: Create a catalog item
+      operationId: createCatalogItem
+      security:
+        - ApiKeyAuth: []
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              $ref: '#/components/schemas/CreateCatalogItemRequest'
+      responses:
+        '201':
+          description: Catalog item created
+          content:
+            application/json:
+              schema:
+                type: object
+                properties:
+                  data:
+                    $ref: '#/components/schemas/CatalogItem'
+        '400':
+          $ref: '#/components/responses/BadRequest'
+        '401':
+          $ref: '#/components/responses/Unauthorized'
+        '403':
+          $ref: '#/components/responses/Forbidden'
+        '409':
+          $ref: '#/components/responses/Conflict'
+        '422':
+          $ref: '#/components/responses/ValidationError'
+        '429':
+          $ref: '#/components/responses/TooManyRequests'
+
+  /api/v1/catalog/batch:
+    post:
+      tags: [Catalog]
+      summary: Batch upload catalog items (up to 500)
+      description: |
+        Accepts up to 500 catalog items. Items with existing productId are updated (upsert).
+        Returns count of created, updated, and rejected items.
+      operationId: batchUploadCatalog
+      security:
+        - ApiKeyAuth: []
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              $ref: '#/components/schemas/BatchCatalogRequest'
+      responses:
+        '200':
+          description: Batch processed
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/BatchCatalogResponse'
+        '400':
+          $ref: '#/components/responses/BadRequest'
+        '401':
+          $ref: '#/components/responses/Unauthorized'
+        '403':
+          $ref: '#/components/responses/Forbidden'
+        '422':
+          $ref: '#/components/responses/ValidationError'
+        '429':
+          $ref: '#/components/responses/TooManyRequests'
+
+  /api/v1/catalog/{productId}:
+    get:
+      tags: [Catalog]
+      summary: Get a catalog item by product ID
+      operationId: getCatalogItem
+      security:
+        - ApiKeyAuth: []
+      parameters:
+        - name: productId
+          in: path
+          required: true
+          schema:
+            type: string
+      responses:
+        '200':
+          description: Catalog item details
+          content:
+            application/json:
+              schema:
+                type: object
+                properties:
+                  data:
+                    $ref: '#/components/schemas/CatalogItem'
+        '401':
+          $ref: '#/components/responses/Unauthorized'
+        '404':
+          $ref: '#/components/responses/NotFound'
+
+    put:
+      tags: [Catalog]
+      summary: Update a catalog item
+      operationId: updateCatalogItem
+      security:
+        - ApiKeyAuth: []
+      parameters:
+        - name: productId
+          in: path
+          required: true
+          schema:
+            type: string
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              $ref: '#/components/schemas/UpdateCatalogItemRequest'
+      responses:
+        '200':
+          description: Catalog item updated
+          content:
+            application/json:
+              schema:
+                type: object
+                properties:
+                  data:
+                    $ref: '#/components/schemas/CatalogItem'
+        '400':
+          $ref: '#/components/responses/BadRequest'
+        '401':
+          $ref: '#/components/responses/Unauthorized'
+        '403':
+          $ref: '#/components/responses/Forbidden'
+        '404':
+          $ref: '#/components/responses/NotFound'
+        '422':
+          $ref: '#/components/responses/ValidationError'
+
+    delete:
+      tags: [Catalog]
+      summary: Soft-delete a catalog item (mark unavailable)
+      operationId: deleteCatalogItem
+      security:
+        - ApiKeyAuth: []
+      parameters:
+        - name: productId
+          in: path
+          required: true
+          schema:
+            type: string
+      responses:
+        '200':
+          description: Catalog item marked as unavailable
+          content:
+            application/json:
+              schema:
+                type: object
+                properties:
+                  data:
+                    type: object
+                    properties:
+                      message:
+                        type: string
+                        example: "Product marked as unavailable"
+        '401':
+          $ref: '#/components/responses/Unauthorized'
+        '403':
+          $ref: '#/components/responses/Forbidden'
+        '404':
+          $ref: '#/components/responses/NotFound'
+
+  # ----------------------------------------------------------
+  # Recommendations
+  # ----------------------------------------------------------
+
+  /api/v1/recommendations:
+    get:
+      tags: [Recommendations]
+      summary: Get product recommendations
+      description: |
+        Returns personalized product recommendations for the given user. If an A/B test
+        is active, the user is assigned to a variant deterministically based on their ID.
+
+        For cold-start users (fewer than 5 events), trending products are returned as fallback.
+      operationId: getRecommendations
+      security:
+        - ApiKeyAuth: []
+      parameters:
+        - name: userId
+          in: query
+          required: true
+          schema:
+            type: string
+            minLength: 1
+            maxLength: 256
+          description: Merchant's user identifier
+        - name: limit
+          in: query
+          schema:
+            type: integer
+            minimum: 1
+            maximum: 50
+            default: 8
+          description: Number of recommendations to return
+        - name: strategy
+          in: query
+          schema:
+            type: string
+            enum: [collaborative, content_based, trending, frequently_bought_together]
+          description: Override the tenant's default strategy
+        - name: productId
+          in: query
+          schema:
+            type: string
+          description: Context product ID (required for frequently_bought_together strategy)
+        - name: context
+          in: query
+          schema:
+            type: string
+            enum: [product_page, cart_page, homepage, search_results]
+          description: Page context for contextual recommendations
+        - name: placementId
+          in: query
+          schema:
+            type: string
+          description: Widget placement identifier (for A/B test routing)
+      responses:
+        '200':
+          description: Recommendations returned successfully
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/RecommendationResponse'
+        '400':
+          $ref: '#/components/responses/BadRequest'
+        '401':
+          $ref: '#/components/responses/Unauthorized'
+        '429':
+          $ref: '#/components/responses/TooManyRequests'
+
+  # ----------------------------------------------------------
+  # Experiments
+  # ----------------------------------------------------------
+
+  /api/v1/tenants/{tenantId}/experiments:
+    get:
+      tags: [Experiments]
+      summary: List experiments for a tenant
+      operationId: listExperiments
+      security:
+        - BearerAuth: []
+      parameters:
+        - $ref: '#/components/parameters/TenantId'
+        - $ref: '#/components/parameters/Limit'
+        - $ref: '#/components/parameters/Offset'
+        - name: status
+          in: query
+          schema:
+            type: string
+            enum: [draft, running, paused, completed]
+      responses:
+        '200':
+          description: List of experiments
+          content:
+            application/json:
+              schema:
+                type: object
+                properties:
+                  data:
+                    type: array
+                    items:
+                      $ref: '#/components/schemas/Experiment'
+                  meta:
+                    type: object
+                    properties:
+                      pagination:
+                        $ref: '#/components/schemas/PaginationMeta'
+        '401':
+          $ref: '#/components/responses/Unauthorized'
+        '404':
+          $ref: '#/components/responses/NotFound'
+
+    post:
+      tags: [Experiments]
+      summary: Create a new A/B test experiment
+      operationId: createExperiment
+      security:
+        - BearerAuth: []
+      parameters:
+        - $ref: '#/components/parameters/TenantId'
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              $ref: '#/components/schemas/CreateExperimentRequest'
+      responses:
+        '201':
+          description: Experiment created
+          content:
+            application/json:
+              schema:
+                type: object
+                properties:
+                  data:
+                    $ref: '#/components/schemas/Experiment'
+        '400':
+          $ref: '#/components/responses/BadRequest'
+        '401':
+          $ref: '#/components/responses/Unauthorized'
+        '404':
+          $ref: '#/components/responses/NotFound'
+        '409':
+          description: Another experiment is already running for this placement
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/ProblemDetail'
+        '422':
+          $ref: '#/components/responses/ValidationError'
+
+  /api/v1/tenants/{tenantId}/experiments/{experimentId}:
+    get:
+      tags: [Experiments]
+      summary: Get experiment details
+      operationId: getExperiment
+      security:
+        - BearerAuth: []
+      parameters:
+        - $ref: '#/components/parameters/TenantId'
+        - name: experimentId
+          in: path
+          required: true
+          schema:
+            type: string
+      responses:
+        '200':
+          description: Experiment details
+          content:
+            application/json:
+              schema:
+                type: object
+                properties:
+                  data:
+                    $ref: '#/components/schemas/Experiment'
+        '401':
+          $ref: '#/components/responses/Unauthorized'
+        '404':
+          $ref: '#/components/responses/NotFound'
+
+    put:
+      tags: [Experiments]
+      summary: Update an experiment (name, status, traffic split)
+      operationId: updateExperiment
+      security:
+        - BearerAuth: []
+      parameters:
+        - $ref: '#/components/parameters/TenantId'
+        - name: experimentId
+          in: path
+          required: true
+          schema:
+            type: string
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              $ref: '#/components/schemas/UpdateExperimentRequest'
+      responses:
+        '200':
+          description: Experiment updated
+          content:
+            application/json:
+              schema:
+                type: object
+                properties:
+                  data:
+                    $ref: '#/components/schemas/Experiment'
+        '400':
+          $ref: '#/components/responses/BadRequest'
+        '401':
+          $ref: '#/components/responses/Unauthorized'
+        '404':
+          $ref: '#/components/responses/NotFound'
+        '409':
+          $ref: '#/components/responses/Conflict'
+
+    delete:
+      tags: [Experiments]
+      summary: Delete an experiment
+      description: Only experiments in draft or completed state can be deleted.
+      operationId: deleteExperiment
+      security:
+        - BearerAuth: []
+      parameters:
+        - $ref: '#/components/parameters/TenantId'
+        - name: experimentId
+          in: path
+          required: true
+          schema:
+            type: string
+      responses:
+        '200':
+          description: Experiment deleted
+          content:
+            application/json:
+              schema:
+                type: object
+                properties:
+                  data:
+                    type: object
+                    properties:
+                      message:
+                        type: string
+                        example: "Experiment deleted"
+        '400':
+          description: Cannot delete a running or paused experiment
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/ProblemDetail'
+        '401':
+          $ref: '#/components/responses/Unauthorized'
+        '404':
+          $ref: '#/components/responses/NotFound'
+
+  /api/v1/tenants/{tenantId}/experiments/{experimentId}/results:
+    get:
+      tags: [Experiments]
+      summary: Get experiment results
+      description: |
+        Returns statistical analysis of experiment results including sample sizes,
+        metric values per variant, confidence intervals, p-value, and significance.
+      operationId: getExperimentResults
+      security:
+        - BearerAuth: []
+      parameters:
+        - $ref: '#/components/parameters/TenantId'
+        - name: experimentId
+          in: path
+          required: true
+          schema:
+            type: string
+      responses:
+        '200':
+          description: Experiment results
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/ExperimentResults'
+        '401':
+          $ref: '#/components/responses/Unauthorized'
+        '404':
+          $ref: '#/components/responses/NotFound'
+
+  # ----------------------------------------------------------
+  # Analytics
+  # ----------------------------------------------------------
+
+  /api/v1/tenants/{tenantId}/analytics/overview:
+    get:
+      tags: [Analytics]
+      summary: Get analytics overview (KPI summary)
+      operationId: getAnalyticsOverview
+      security:
+        - BearerAuth: []
+      parameters:
+        - $ref: '#/components/parameters/TenantId'
+        - name: period
+          in: query
+          schema:
+            type: string
+            enum: ['7d', '30d', '90d']
+            default: '30d'
+          description: Predefined time period
+        - name: from
+          in: query
+          schema:
+            type: string
+            format: date
+          description: Custom start date (overrides period)
+        - name: to
+          in: query
+          schema:
+            type: string
+            format: date
+          description: Custom end date (overrides period)
+      responses:
+        '200':
+          description: Analytics overview
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/AnalyticsOverview'
+        '401':
+          $ref: '#/components/responses/Unauthorized'
+        '404':
+          $ref: '#/components/responses/NotFound'
+
+  /api/v1/tenants/{tenantId}/analytics/timeseries:
+    get:
+      tags: [Analytics]
+      summary: Get time-series analytics data
+      operationId: getAnalyticsTimeseries
+      security:
+        - BearerAuth: []
+      parameters:
+        - $ref: '#/components/parameters/TenantId'
+        - name: period
+          in: query
+          schema:
+            type: string
+            enum: ['7d', '30d', '90d']
+            default: '30d'
+        - name: from
+          in: query
+          schema:
+            type: string
+            format: date
+        - name: to
+          in: query
+          schema:
+            type: string
+            format: date
+        - name: granularity
+          in: query
+          schema:
+            type: string
+            enum: [daily, weekly]
+            default: daily
+      responses:
+        '200':
+          description: Time-series data
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/AnalyticsTimeseries'
+        '401':
+          $ref: '#/components/responses/Unauthorized'
+        '404':
+          $ref: '#/components/responses/NotFound'
+
+  /api/v1/tenants/{tenantId}/analytics/top-products:
+    get:
+      tags: [Analytics]
+      summary: Get top-performing recommended products
+      operationId: getTopProducts
+      security:
+        - BearerAuth: []
+      parameters:
+        - $ref: '#/components/parameters/TenantId'
+        - name: limit
+          in: query
+          schema:
+            type: integer
+            minimum: 1
+            maximum: 50
+            default: 10
+        - name: sortBy
+          in: query
+          schema:
+            type: string
+            enum: [clicks, impressions, ctr, conversions, revenue]
+            default: clicks
+        - name: period
+          in: query
+          schema:
+            type: string
+            enum: ['7d', '30d', '90d']
+            default: '30d'
+      responses:
+        '200':
+          description: Top products
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/TopProducts'
+        '401':
+          $ref: '#/components/responses/Unauthorized'
+        '404':
+          $ref: '#/components/responses/NotFound'
+
+  /api/v1/tenants/{tenantId}/analytics/export:
+    get:
+      tags: [Analytics]
+      summary: Export analytics data as CSV
+      operationId: exportAnalytics
+      security:
+        - BearerAuth: []
+      parameters:
+        - $ref: '#/components/parameters/TenantId'
+        - name: period
+          in: query
+          schema:
+            type: string
+            enum: ['7d', '30d', '90d']
+            default: '30d'
+        - name: from
+          in: query
+          schema:
+            type: string
+            format: date
+        - name: to
+          in: query
+          schema:
+            type: string
+            format: date
+        - name: format
+          in: query
+          schema:
+            type: string
+            enum: [csv]
+            default: csv
+      responses:
+        '200':
+          description: CSV file download
+          content:
+            text/csv:
+              schema:
+                type: string
+          headers:
+            Content-Disposition:
+              schema:
+                type: string
+                example: 'attachment; filename="analytics-2026-02-12.csv"'
+        '401':
+          $ref: '#/components/responses/Unauthorized'
+        '404':
+          $ref: '#/components/responses/NotFound'
+
+  # ----------------------------------------------------------
+  # Widgets
+  # ----------------------------------------------------------
+
+  /api/v1/tenants/{tenantId}/widgets:
+    get:
+      tags: [Widgets]
+      summary: List widget configurations for a tenant
+      operationId: listWidgets
+      security:
+        - BearerAuth: []
+      parameters:
+        - $ref: '#/components/parameters/TenantId'
+      responses:
+        '200':
+          description: List of widget configs
+          content:
+            application/json:
+              schema:
+                type: object
+                properties:
+                  data:
+                    type: array
+                    items:
+                      $ref: '#/components/schemas/WidgetConfig'
+        '401':
+          $ref: '#/components/responses/Unauthorized'
+        '404':
+          $ref: '#/components/responses/NotFound'
+
+    post:
+      tags: [Widgets]
+      summary: Create a widget configuration
+      operationId: createWidget
+      security:
+        - BearerAuth: []
+      parameters:
+        - $ref: '#/components/parameters/TenantId'
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              $ref: '#/components/schemas/CreateWidgetConfigRequest'
+      responses:
+        '201':
+          description: Widget config created
+          content:
+            application/json:
+              schema:
+                type: object
+                properties:
+                  data:
+                    $ref: '#/components/schemas/WidgetConfig'
+        '400':
+          $ref: '#/components/responses/BadRequest'
+        '401':
+          $ref: '#/components/responses/Unauthorized'
+        '404':
+          $ref: '#/components/responses/NotFound'
+        '409':
+          description: Widget config already exists for this placement
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/ProblemDetail'
+
+  /api/v1/tenants/{tenantId}/widgets/{widgetId}:
+    get:
+      tags: [Widgets]
+      summary: Get widget configuration
+      operationId: getWidget
+      security:
+        - BearerAuth: []
+        - ApiKeyAuth: []
+      parameters:
+        - $ref: '#/components/parameters/TenantId'
+        - name: widgetId
+          in: path
+          required: true
+          schema:
+            type: string
+      responses:
+        '200':
+          description: Widget config details
+          content:
+            application/json:
+              schema:
+                type: object
+                properties:
+                  data:
+                    $ref: '#/components/schemas/WidgetConfig'
+        '401':
+          $ref: '#/components/responses/Unauthorized'
+        '404':
+          $ref: '#/components/responses/NotFound'
+
+    put:
+      tags: [Widgets]
+      summary: Update widget configuration
+      operationId: updateWidget
+      security:
+        - BearerAuth: []
+      parameters:
+        - $ref: '#/components/parameters/TenantId'
+        - name: widgetId
+          in: path
+          required: true
+          schema:
+            type: string
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              $ref: '#/components/schemas/UpdateWidgetConfigRequest'
+      responses:
+        '200':
+          description: Widget config updated
+          content:
+            application/json:
+              schema:
+                type: object
+                properties:
+                  data:
+                    $ref: '#/components/schemas/WidgetConfig'
+        '400':
+          $ref: '#/components/responses/BadRequest'
+        '401':
+          $ref: '#/components/responses/Unauthorized'
+        '404':
+          $ref: '#/components/responses/NotFound'
+
+    delete:
+      tags: [Widgets]
+      summary: Delete widget configuration
+      operationId: deleteWidget
+      security:
+        - BearerAuth: []
+      parameters:
+        - $ref: '#/components/parameters/TenantId'
+        - name: widgetId
+          in: path
+          required: true
+          schema:
+            type: string
+      responses:
+        '200':
+          description: Widget config deleted
+          content:
+            application/json:
+              schema:
+                type: object
+                properties:
+                  data:
+                    type: object
+                    properties:
+                      message:
+                        type: string
+                        example: "Widget config deleted"
+        '401':
+          $ref: '#/components/responses/Unauthorized'
+        '404':
+          $ref: '#/components/responses/NotFound'
+
+  # ----------------------------------------------------------
+  # Health
+  # ----------------------------------------------------------
+
+  /health:
+    get:
+      tags: [Health]
+      summary: Liveness check
+      operationId: healthCheck
+      responses:
+        '200':
+          description: Service is alive
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/HealthResponse'
+
+  /ready:
+    get:
+      tags: [Health]
+      summary: Readiness check
+      description: |
+        Returns ready status only when all dependencies (PostgreSQL, Redis)
+        are connected and responsive.
+      operationId: readinessCheck
+      responses:
+        '200':
+          description: Service is ready
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/ReadinessResponse'
+        '503':
+          description: Service is not ready (dependency unavailable)
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/ReadinessResponse'

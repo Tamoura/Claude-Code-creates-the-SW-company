@@ -1,0 +1,33 @@
+version: '3.8'
+
+services:
+  postgres:
+    image: postgres:15-alpine
+    container_name: recomengine-postgres
+    environment:
+      POSTGRES_USER: recomengine
+      POSTGRES_PASSWORD: recomengine_dev
+      POSTGRES_DB: recomengine_dev
+    ports:
+      - '5432:5432'
+    volumes:
+      - recomengine_pgdata:/var/lib/postgresql/data
+    healthcheck:
+      test: ['CMD-SHELL', 'pg_isready -U recomengine']
+      interval: 5s
+      timeout: 5s
+      retries: 5
+
+  redis:
+    image: redis:7-alpine
+    container_name: recomengine-redis
+    ports:
+      - '6379:6379'
+    healthcheck:
+      test: ['CMD', 'redis-cli', 'ping']
+      interval: 5s
+      timeout: 5s
+      retries: 5
+
+volumes:
+  recomengine_pgdata:
