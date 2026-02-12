@@ -401,8 +401,9 @@ test.describe('Analytics Flow', () => {
         page.getByText('Start logging observations to see analytics.')
       ).toBeVisible({ timeout: 10000 });
 
-      // "Log Observation" CTA link
-      const logLink = page.locator('a[href="/dashboard/observe"]');
+      // "Log Observation" CTA link (use role selector to avoid strict mode violation
+      // when multiple links point to /dashboard/observe on the page)
+      const logLink = page.getByRole('link', { name: 'Log Observation' });
       await expect(logLink).toBeVisible({ timeout: 10000 });
     });
   });
