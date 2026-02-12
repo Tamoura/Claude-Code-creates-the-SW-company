@@ -113,18 +113,22 @@ jobs:
       - uses: actions/setup-node@v4
         with:
           node-version: ${{ env.NODE_VERSION }}
-      - name: Install dependencies
+      - name: Install E2E dependencies
         run: |
           if [ -f "package-lock.json" ]; then
             npm ci
           else
             npm install
           fi
+      - name: Install web app dependencies
+        working-directory: products/muaththir/apps/web
+        run: npm ci
       - run: npx playwright install --with-deps chromium
       - name: Run Playwright tests
         run: npx playwright test
         env:
           CI: true
+          NEXT_PUBLIC_API_URL: http://localhost:5005
       - uses: actions/upload-artifact@v4
         if: failure()
         with:
