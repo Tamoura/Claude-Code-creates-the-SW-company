@@ -2,6 +2,7 @@ import { FastifyPluginAsync } from 'fastify';
 import { z } from 'zod';
 import { verifyChildOwnership } from '../lib/ownership';
 import { getAgeBand } from '../utils/age-band';
+import { ValidationError } from '../lib/errors';
 import { DIMENSIONS, DimensionType } from '../types';
 import { Dimension } from '@prisma/client';
 import {
@@ -373,13 +374,13 @@ const reportRoutes: FastifyPluginAsync = async (fastify) => {
       const { childId } = request.params as { childId: string };
       const parentId = request.currentUser!.id;
 
-      // Validate query parameters
+      // Validate query parameters (throws ValidationError for central error handler)
       const parsed = reportQuerySchema.safeParse(request.query);
       if (!parsed.success) {
-        return reply.code(400).send({
-          error: 'Validation error',
-          message: parsed.error.errors[0]?.message || 'Invalid query parameters',
-        });
+        throw new ValidationError(
+          parsed.error.errors[0]?.message || 'Invalid query parameters',
+          parsed.error.flatten().fieldErrors as Record<string, string[]>
+        );
       }
       const validatedQuery = parsed.data;
 
