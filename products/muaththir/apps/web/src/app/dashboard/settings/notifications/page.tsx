@@ -3,7 +3,14 @@
 import { useState, useEffect, useCallback } from 'react';
 import Link from 'next/link';
 import { useTranslations } from 'next-intl';
-import { apiClient, type NotificationPrefs } from '../../../../lib/api-client';
+
+interface NotificationPrefs {
+  dailyReminder: boolean;
+  weeklyDigest: boolean;
+  milestoneAlerts: boolean;
+}
+
+const STORAGE_KEY = 'muaththir-notification-prefs';
 
 const defaultPrefs: NotificationPrefs = {
   dailyReminder: false,
@@ -11,54 +18,45 @@ const defaultPrefs: NotificationPrefs = {
   milestoneAlerts: false,
 };
 
+function loadPrefsFromStorage(): NotificationPrefs {
+  try {
+    const raw = localStorage.getItem(STORAGE_KEY);
+    if (!raw) return defaultPrefs;
+    const parsed = JSON.parse(raw);
+    return {
+      dailyReminder: Boolean(parsed.dailyReminder),
+      weeklyDigest: Boolean(parsed.weeklyDigest),
+      milestoneAlerts: Boolean(parsed.milestoneAlerts),
+    };
+  } catch {
+    return defaultPrefs;
+  }
+}
+
+function savePrefsToStorage(prefs: NotificationPrefs): void {
+  localStorage.setItem(STORAGE_KEY, JSON.stringify(prefs));
+}
+
 export default function NotificationsSettingsPage() {
   const t = useTranslations('notifications');
   const tc = useTranslations('common');
 
   const [prefs, setPrefs] = useState<NotificationPrefs>(defaultPrefs);
-  const [loading, setLoading] = useState(true);
   const [savedMessage, setSavedMessage] = useState(false);
-  const [errorMessage, setErrorMessage] = useState('');
-  const [togglingKey, setTogglingKey] = useState<string | null>(null);
-
-  const loadPrefs = useCallback(async () => {
-    try {
-      const data = await apiClient.getNotificationPrefs();
-      setPrefs(data);
-    } catch {
-      setErrorMessage(t('errorLoad'));
-    } finally {
-      setLoading(false);
-    }
-  }, [t]);
 
   useEffect(() => {
-    loadPrefs();
-  }, [loadPrefs]);
+    setPrefs(loadPrefsFromStorage());
+  }, []);
 
   const toggle = useCallback(
-    async (key: keyof NotificationPrefs) => {
-      setTogglingKey(key);
-      setErrorMessage('');
+    (key: keyof NotificationPrefs) => {
       const updated = { ...prefs, [key]: !prefs[key] };
-      setPrefs(updated); // Optimistic update
-
-      try {
-        const result = await apiClient.updateNotificationPrefs({
-          [key]: updated[key],
-        });
-        setPrefs(result);
-        setSavedMessage(true);
-        setTimeout(() => setSavedMessage(false), 2000);
-      } catch {
-        // Revert on error
-        setPrefs(prefs);
-        setErrorMessage(t('errorSave'));
-      } finally {
-        setTogglingKey(null);
-      }
+      setPrefs(updated);
+      savePrefsToStorage(updated);
+      setSavedMessage(true);
+      setTimeout(() => setSavedMessage(false), 2000);
     },
-    [prefs, t]
+    [prefs]
   );
 
   const toggleItems: Array<{
@@ -113,57 +111,38 @@ export default function NotificationsSettingsPage() {
         </div>
       )}
 
-      {errorMessage && (
-        <div
-          className="rounded-xl bg-red-50 dark:bg-red-900/30 p-3 text-sm text-red-700 dark:text-red-400"
-          role="alert"
-        >
-          {errorMessage}
-        </div>
-      )}
-
-      {loading ? (
-        <div className="text-center py-8">
-          <div className="inline-block h-6 w-6 animate-spin rounded-full border-2 border-solid border-emerald-600 border-r-transparent" />
-          <p className="text-sm text-slate-500 dark:text-slate-400 mt-2">
-            {tc('loading')}
-          </p>
-        </div>
-      ) : (
-        <div className="card space-y-6">
-          {toggleItems.map(({ key, title, desc, label }) => (
-            <div key={key} className="flex items-center justify-between">
-              <div>
-                <h2 className="text-sm font-medium text-slate-900 dark:text-white">
-                  {title}
-                </h2>
-                <p className="text-xs text-slate-500 dark:text-slate-400 mt-0.5">
-                  {desc}
-                </p>
-              </div>
-              <button
-                type="button"
-                role="switch"
-                aria-checked={prefs[key]}
-                onClick={() => toggle(key)}
-                disabled={togglingKey === key}
-                className={`relative inline-flex h-6 w-11 flex-shrink-0 cursor-pointer rounded-full border-2 border-transparent transition-colors disabled:opacity-50 ${
-                  prefs[key]
-                    ? 'bg-emerald-500'
-                    : 'bg-slate-200 dark:bg-slate-600'
-                }`}
-                aria-label={label}
-              >
-                <span
-                  className={`${
-                    prefs[key] ? 'translate-x-5' : 'translate-x-0'
-                  } pointer-events-none inline-block h-5 w-5 transform rounded-full bg-white shadow ring-0 transition-transform`}
-                />
-              </button>
+      <div className="card space-y-6">
+        {toggleItems.map(({ key, title, desc, label }) => (
+          <div key={key} className="flex items-center justify-between">
+            <div>
+              <h2 className="text-sm font-medium text-slate-900 dark:text-white">
+                {title}
+              </h2>
+              <p className="text-xs text-slate-500 dark:text-slate-400 mt-0.5">
+                {desc}
+              </p>
             </div>
-          ))}
-        </div>
-      )}
+            <button
+              type="button"
+              role="switch"
+              aria-checked={prefs[key]}
+              onClick={() => toggle(key)}
+              className={`relative inline-flex h-6 w-11 flex-shrink-0 cursor-pointer rounded-full border-2 border-transparent transition-colors ${
+                prefs[key]
+                  ? 'bg-emerald-500'
+                  : 'bg-slate-200 dark:bg-slate-600'
+              }`}
+              aria-label={label}
+            >
+              <span
+                className={`${
+                  prefs[key] ? 'translate-x-5' : 'translate-x-0'
+                } pointer-events-none inline-block h-5 w-5 transform rounded-full bg-white shadow ring-0 transition-transform`}
+              />
+            </button>
+          </div>
+        ))}
+      </div>
     </div>
   );
 }
