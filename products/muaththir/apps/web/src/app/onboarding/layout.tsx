@@ -11,9 +11,9 @@ export default function OnboardingLayout({
   const t = useTranslations('common');
 
   return (
-    <div className="min-h-screen bg-gradient-to-br from-emerald-50 via-white to-blue-50">
+    <div className="min-h-screen bg-gradient-to-br from-emerald-50 via-white to-blue-50 dark:from-slate-900 dark:via-slate-900 dark:to-slate-900">
       {/* Top navigation bar */}
-      <header className="sticky top-0 z-40 bg-white/80 backdrop-blur-sm border-b border-slate-200/60">
+      <header className="sticky top-0 z-40 bg-white/80 dark:bg-slate-800/80 backdrop-blur-sm border-b border-slate-200/60 dark:border-slate-700">
         <div className="mx-auto max-w-7xl px-4 sm:px-6 lg:px-8">
           <div className="flex h-14 items-center justify-between">
             {/* Logo */}
@@ -38,7 +38,7 @@ export default function OnboardingLayout({
                   />
                 </svg>
               </div>
-              <span className="text-base font-bold text-slate-900">
+              <span className="text-base font-bold text-slate-900 dark:text-white">
                 Mu&apos;aththir
               </span>
             </Link>
@@ -46,7 +46,7 @@ export default function OnboardingLayout({
             {/* Back to Dashboard link */}
             <Link
               href="/dashboard"
-              className="flex items-center gap-1.5 text-sm font-medium text-slate-500 hover:text-slate-700 transition-colors"
+              className="flex items-center gap-1.5 text-sm font-medium text-slate-500 dark:text-slate-400 hover:text-slate-700 dark:hover:text-slate-300 transition-colors"
             >
               <svg
                 className="h-4 w-4"

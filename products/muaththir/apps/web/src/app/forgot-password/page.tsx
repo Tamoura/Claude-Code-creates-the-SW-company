@@ -29,30 +29,30 @@ export default function ForgotPasswordPage() {
   };
 
   return (
-    <div className="min-h-screen bg-slate-50">
+    <div className="min-h-screen bg-slate-50 dark:bg-slate-900">
       <Header />
       <main className="flex items-center justify-center px-4 py-16 sm:py-24">
         <div className="w-full max-w-md">
           <div className="text-center mb-8">
-            <h1 className="text-2xl font-bold text-slate-900">
+            <h1 className="text-2xl font-bold text-slate-900 dark:text-white">
               {t('title')}
             </h1>
-            <p className="mt-2 text-sm text-slate-600">
+            <p className="mt-2 text-sm text-slate-600 dark:text-slate-400">
               {t('subtitle')}
             </p>
           </div>
 
           {submitted ? (
             <div className="card text-center">
-              <div className="mx-auto h-12 w-12 rounded-full bg-emerald-50 flex items-center justify-center mb-4">
+              <div className="mx-auto h-12 w-12 rounded-full bg-emerald-50 dark:bg-emerald-900/20 flex items-center justify-center mb-4">
                 <svg className="h-6 w-6 text-emerald-600" fill="none" viewBox="0 0 24 24" stroke="currentColor" aria-hidden="true">
                   <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M3 8l7.89 5.26a2 2 0 002.22 0L21 8M5 19h14a2 2 0 002-2V7a2 2 0 00-2-2H5a2 2 0 00-2 2v10a2 2 0 002 2z" />
                 </svg>
               </div>
-              <h2 className="text-lg font-semibold text-slate-900 mb-2">
+              <h2 className="text-lg font-semibold text-slate-900 dark:text-white mb-2">
                 {t('checkEmail')}
               </h2>
-              <p className="text-sm text-slate-600 mb-6">
+              <p className="text-sm text-slate-600 dark:text-slate-400 mb-6">
                 {t('checkEmailDesc', { email })}
               </p>
               <Link
@@ -66,7 +66,7 @@ export default function ForgotPasswordPage() {
             <form onSubmit={handleSubmit} className="card space-y-5">
               {error && (
                 <div
-                  className="rounded-xl bg-red-50 p-3 text-sm text-red-700"
+                  className="rounded-xl bg-red-50 dark:bg-red-900/20 p-3 text-sm text-red-700 dark:text-red-400"
                   role="alert"
                 >
                   {error}
@@ -98,7 +98,7 @@ export default function ForgotPasswordPage() {
                 {isLoading ? t('sending') : t('sendResetLink')}
               </button>
 
-              <p className="text-center text-sm text-slate-500">
+              <p className="text-center text-sm text-slate-500 dark:text-slate-400">
                 <Link
                   href="/login"
                   className="font-medium text-emerald-600 hover:text-emerald-700"

@@ -237,35 +237,35 @@ export default function SettingsPage() {
   return (
     <div className="max-w-2xl mx-auto space-y-8">
       <div>
-        <h1 className="text-2xl font-bold text-slate-900">{t('title')}</h1>
-        <p className="text-sm text-slate-500 mt-1">
+        <h1 className="text-2xl font-bold text-slate-900 dark:text-white">{t('title')}</h1>
+        <p className="text-sm text-slate-500 dark:text-slate-400 mt-1">
           {t('subtitle')}
         </p>
       </div>
 
       {/* Profile Information */}
       <form onSubmit={handleProfileSubmit} className="card space-y-5">
-        <h2 className="text-lg font-semibold text-slate-900">
+        <h2 className="text-lg font-semibold text-slate-900 dark:text-white">
           {t('profileInfo')}
         </h2>
 
         {profileError && (
-          <div className="rounded-xl bg-red-50 p-3 text-sm text-red-700" role="alert">
+          <div className="rounded-xl bg-red-50 dark:bg-red-900/30 p-3 text-sm text-red-700 dark:text-red-400" role="alert">
             {profileError}
           </div>
         )}
         {profileMessage && (
-          <div className="rounded-xl bg-emerald-50 p-3 text-sm text-emerald-700" role="status">
+          <div className="rounded-xl bg-emerald-50 dark:bg-emerald-900/30 p-3 text-sm text-emerald-700 dark:text-emerald-400" role="status">
             {profileMessage}
           </div>
         )}
 
         {profileLoading ? (
           <div className="space-y-4" aria-live="polite" aria-busy="true">
-            <div className="h-10 bg-slate-100 rounded-xl animate-pulse">
+            <div className="h-10 bg-slate-100 dark:bg-slate-800 rounded-xl animate-pulse">
               <span className="sr-only">{t('loadingProfile')}</span>
             </div>
-            <div className="h-10 bg-slate-100 rounded-xl animate-pulse" />
+            <div className="h-10 bg-slate-100 dark:bg-slate-800 rounded-xl animate-pulse" />
           </div>
         ) : (
           <>
@@ -299,14 +299,14 @@ export default function SettingsPage() {
 
             <div>
               <label className="label">{t('subscription')}</label>
-              <p className="text-sm text-slate-600">
+              <p className="text-sm text-slate-600 dark:text-slate-400">
                 {t('plan', { tier: profile?.subscriptionTier || 'free' })}
               </p>
             </div>
 
             <div>
               <label className="label">{t('children')}</label>
-              <p className="text-sm text-slate-600">
+              <p className="text-sm text-slate-600 dark:text-slate-400">
                 {profile?.childCount === 1 ? t('childCount', { count: profile.childCount }) : t('childCountPlural', { count: profile?.childCount ?? 0 })}
               </p>
             </div>
@@ -325,36 +325,36 @@ export default function SettingsPage() {
       {/* Children Health Information */}
       <div className="card space-y-5">
         <div className="flex items-center justify-between">
-          <h2 className="text-lg font-semibold text-slate-900">
+          <h2 className="text-lg font-semibold text-slate-900 dark:text-white">
             {t('childrenHealthInfo')}
           </h2>
           <Link
             href="/onboarding/child"
-            className="text-xs text-emerald-600 hover:text-emerald-700 font-medium"
+            className="text-xs text-emerald-600 dark:text-emerald-400 hover:text-emerald-700 dark:hover:text-emerald-300 font-medium"
           >
             {t('addChild')}
           </Link>
         </div>
 
         {healthError && (
-          <div className="rounded-xl bg-red-50 p-3 text-sm text-red-700" role="alert">
+          <div className="rounded-xl bg-red-50 dark:bg-red-900/30 p-3 text-sm text-red-700 dark:text-red-400" role="alert">
             {healthError}
           </div>
         )}
         {healthMessage && (
-          <div className="rounded-xl bg-emerald-50 p-3 text-sm text-emerald-700" role="status">
+          <div className="rounded-xl bg-emerald-50 dark:bg-emerald-900/30 p-3 text-sm text-emerald-700 dark:text-emerald-400" role="status">
             {healthMessage}
           </div>
         )}
 
         {childrenLoading ? (
           <div className="space-y-3" aria-live="polite" aria-busy="true">
-            <div className="h-16 bg-slate-100 rounded-xl animate-pulse">
+            <div className="h-16 bg-slate-100 dark:bg-slate-800 rounded-xl animate-pulse">
               <span className="sr-only">{t('loadingChildren')}</span>
             </div>
           </div>
         ) : children.length === 0 ? (
-          <p className="text-sm text-slate-500 py-4 text-center">
+          <p className="text-sm text-slate-500 dark:text-slate-400 py-4 text-center">
             {t('noChildProfiles')}{' '}
             <Link href="/onboarding/child" className="text-emerald-600 hover:text-emerald-700 font-medium">
               {t('addOne')}
@@ -373,14 +373,14 @@ export default function SettingsPage() {
               return (
                 <div
                   key={child.id}
-                  className="border border-slate-100 rounded-xl p-4"
+                  className="border border-slate-100 dark:border-slate-700 rounded-xl p-4"
                 >
                   <div className="flex items-center justify-between mb-2">
                     <div className="flex items-center gap-2">
-                      <span className="text-sm font-semibold text-slate-900">
+                      <span className="text-sm font-semibold text-slate-900 dark:text-white">
                         {child.name}
                       </span>
-                      <span className="text-xs text-slate-400">
+                      <span className="text-xs text-slate-400 dark:text-slate-500">
                         {child.ageBand ? child.ageBand.replace(/_/g, ' ') : ''}
                       </span>
                     </div>
@@ -389,7 +389,7 @@ export default function SettingsPage() {
                       onClick={() =>
                         setEditingChildId(isEditing ? null : child.id)
                       }
-                      className="text-xs text-emerald-600 hover:text-emerald-700 font-medium"
+                      className="text-xs text-emerald-600 dark:text-emerald-400 hover:text-emerald-700 dark:hover:text-emerald-300 font-medium"
                     >
                       {isEditing ? t('cancelEdit') : t('editHealth')}
                     </button>
@@ -400,18 +400,18 @@ export default function SettingsPage() {
                     hasHealthData ? (
                       <div className="space-y-1.5">
                         {child.medicalNotes && (
-                          <p className="text-xs text-slate-600">
-                            <span className="font-medium text-slate-700">{t('medicalLabel')}</span>{' '}
+                          <p className="text-xs text-slate-600 dark:text-slate-400">
+                            <span className="font-medium text-slate-700 dark:text-slate-300">{t('medicalLabel')}</span>{' '}
                             {child.medicalNotes}
                           </p>
                         )}
                         {child.allergies && child.allergies.length > 0 && (
                           <div className="flex flex-wrap items-center gap-1">
-                            <span className="text-xs font-medium text-slate-700">{t('allergiesLabel')}</span>
+                            <span className="text-xs font-medium text-slate-700 dark:text-slate-300">{t('allergiesLabel')}</span>
                             {child.allergies.map((allergy) => (
                               <span
                                 key={allergy}
-                                className="text-xs bg-red-50 text-red-700 px-2 py-0.5 rounded-full"
+                                className="text-xs bg-red-50 dark:bg-red-900/30 text-red-700 dark:text-red-400 px-2 py-0.5 rounded-full"
                               >
                                 {allergy}
                               </span>
@@ -419,14 +419,14 @@ export default function SettingsPage() {
                           </div>
                         )}
                         {child.specialNeeds && (
-                          <p className="text-xs text-slate-600">
-                            <span className="font-medium text-slate-700">{t('specialNeedsLabel')}</span>{' '}
+                          <p className="text-xs text-slate-600 dark:text-slate-400">
+                            <span className="font-medium text-slate-700 dark:text-slate-300">{t('specialNeedsLabel')}</span>{' '}
                             {child.specialNeeds}
                           </p>
                         )}
                       </div>
                     ) : (
-                      <p className="text-xs text-slate-400">
+                      <p className="text-xs text-slate-400 dark:text-slate-500">
                         {t('noHealthInfo')}
                       </p>
                     )
@@ -481,7 +481,7 @@ export default function SettingsPage() {
                             }
                             disabled={healthSaving}
                           />
-                          <p className="mt-1 text-xs text-slate-400">
+                          <p className="mt-1 text-xs text-slate-400 dark:text-slate-500">
                             {t('allergiesHint')}
                           </p>
                         </div>
@@ -531,17 +531,17 @@ export default function SettingsPage() {
 
       {/* Change Password */}
       <form onSubmit={handlePasswordSubmit} className="card space-y-5">
-        <h2 className="text-lg font-semibold text-slate-900">
+        <h2 className="text-lg font-semibold text-slate-900 dark:text-white">
           {t('changePassword')}
         </h2>
 
         {passwordError && (
-          <div className="rounded-xl bg-red-50 p-3 text-sm text-red-700" role="alert">
+          <div className="rounded-xl bg-red-50 dark:bg-red-900/30 p-3 text-sm text-red-700 dark:text-red-400" role="alert">
             {passwordError}
           </div>
         )}
         {passwordMessage && (
-          <div className="rounded-xl bg-emerald-50 p-3 text-sm text-emerald-700" role="status">
+          <div className="rounded-xl bg-emerald-50 dark:bg-emerald-900/30 p-3 text-sm text-emerald-700 dark:text-emerald-400" role="status">
             {passwordMessage}
           </div>
         )}
@@ -605,15 +605,15 @@ export default function SettingsPage() {
 
       {/* Export Data */}
       <div className="card space-y-4">
-        <h2 className="text-lg font-semibold text-slate-900">
+        <h2 className="text-lg font-semibold text-slate-900 dark:text-white">
           {t('exportTitle')}
         </h2>
-        <p className="text-sm text-slate-500">
+        <p className="text-sm text-slate-500 dark:text-slate-400">
           {t('exportDesc')}
         </p>
 
         {exportError && (
-          <div className="rounded-xl bg-red-50 p-3 text-sm text-red-700" role="alert">
+          <div className="rounded-xl bg-red-50 dark:bg-red-900/30 p-3 text-sm text-red-700 dark:text-red-400" role="alert">
             {exportError}
           </div>
         )}
@@ -630,12 +630,12 @@ export default function SettingsPage() {
 
       {/* Account Actions */}
       <div className="card">
-        <h2 className="text-lg font-semibold text-slate-900 mb-4">
+        <h2 className="text-lg font-semibold text-slate-900 dark:text-white mb-4">
           {t('accountActions')}
         </h2>
         <button
           onClick={handleLogout}
-          className="btn-secondary border-red-300 text-red-700 hover:bg-red-50 w-full"
+          className="btn-secondary border-red-300 dark:border-red-700 text-red-700 dark:text-red-400 hover:bg-red-50 dark:hover:bg-red-900/30 w-full"
         >
           {t('signOut')}
         </button>

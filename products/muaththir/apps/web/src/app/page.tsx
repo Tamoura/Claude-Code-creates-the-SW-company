@@ -53,19 +53,19 @@ export default function LandingPage() {
     },
   ];
   return (
-    <div className="min-h-screen bg-white">
+    <div className="min-h-screen bg-white dark:bg-slate-900">
       <Header />
 
       {/* Hero Section */}
-      <section className="relative overflow-hidden bg-gradient-to-br from-emerald-50 via-white to-blue-50">
+      <section className="relative overflow-hidden bg-gradient-to-br from-emerald-50 via-white to-blue-50 dark:from-slate-900 dark:via-slate-900 dark:to-slate-900">
         <div className="mx-auto max-w-7xl px-4 sm:px-6 lg:px-8 py-20 sm:py-28 lg:py-36">
           <div className="text-center max-w-3xl mx-auto">
-            <h1 className="text-4xl sm:text-5xl lg:text-6xl font-bold text-slate-900 tracking-tight leading-tight">
+            <h1 className="text-4xl sm:text-5xl lg:text-6xl font-bold text-slate-900 dark:text-white tracking-tight leading-tight">
               {t('heroTitle1')}
               <br />
               <span className="text-emerald-600">{t('heroTitle2')}</span>
             </h1>
-            <p className="mt-6 text-lg sm:text-xl text-slate-600 leading-relaxed max-w-2xl mx-auto">
+            <p className="mt-6 text-lg sm:text-xl text-slate-600 dark:text-slate-300 leading-relaxed max-w-2xl mx-auto">
               {t('heroDescription')}
             </p>
             <div className="mt-10 flex flex-col sm:flex-row items-center justify-center gap-4">
@@ -87,16 +87,16 @@ export default function LandingPage() {
       </section>
 
       {/* Six Dimensions Grid */}
-      <section className="py-20 sm:py-28 bg-white" aria-labelledby="dimensions-heading">
+      <section className="py-20 sm:py-28 bg-white dark:bg-slate-900" aria-labelledby="dimensions-heading">
         <div className="mx-auto max-w-7xl px-4 sm:px-6 lg:px-8">
           <div className="text-center mb-16">
             <h2
               id="dimensions-heading"
-              className="text-3xl sm:text-4xl font-bold text-slate-900"
+              className="text-3xl sm:text-4xl font-bold text-slate-900 dark:text-white"
             >
               {t('dimensionsTitle')}
             </h2>
-            <p className="mt-4 text-lg text-slate-600 max-w-2xl mx-auto">
+            <p className="mt-4 text-lg text-slate-600 dark:text-slate-300 max-w-2xl mx-auto">
               {t('dimensionsSubtitle')}
             </p>
           </div>
@@ -104,7 +104,7 @@ export default function LandingPage() {
             {DIMENSIONS.map((dimension) => (
               <div
                 key={dimension.slug}
-                className="rounded-2xl p-6 border border-slate-100 hover:shadow-lg transition-shadow duration-300"
+                className="rounded-2xl p-6 border border-slate-100 dark:border-slate-700 hover:shadow-lg transition-shadow duration-300"
                 style={{ borderLeftWidth: '4px', borderLeftColor: dimension.colour }}
               >
                 <div
@@ -116,10 +116,10 @@ export default function LandingPage() {
                     colour={dimension.colour}
                   />
                 </div>
-                <h3 className="text-lg font-semibold text-slate-900 mb-2">
+                <h3 className="text-lg font-semibold text-slate-900 dark:text-white mb-2">
                   {td(dimension.slug)}
                 </h3>
-                <p className="text-sm text-slate-600 leading-relaxed">
+                <p className="text-sm text-slate-600 dark:text-slate-400 leading-relaxed">
                   {td(`${dimension.slug}Desc`)}
                 </p>
               </div>
@@ -130,18 +130,18 @@ export default function LandingPage() {
 
       {/* How It Works */}
       <section
-        className="py-20 sm:py-28 bg-slate-50"
+        className="py-20 sm:py-28 bg-slate-50 dark:bg-slate-900"
         aria-labelledby="how-it-works-heading"
       >
         <div className="mx-auto max-w-7xl px-4 sm:px-6 lg:px-8">
           <div className="text-center mb-16">
             <h2
               id="how-it-works-heading"
-              className="text-3xl sm:text-4xl font-bold text-slate-900"
+              className="text-3xl sm:text-4xl font-bold text-slate-900 dark:text-white"
             >
               {t('howItWorksTitle')}
             </h2>
-            <p className="mt-4 text-lg text-slate-600">
+            <p className="mt-4 text-lg text-slate-600 dark:text-slate-300">
               {t('howItWorksSubtitle')}
             </p>
           </div>
@@ -151,10 +151,10 @@ export default function LandingPage() {
                 <div className="mx-auto h-14 w-14 rounded-2xl bg-emerald-600 text-white flex items-center justify-center text-xl font-bold mb-6">
                   {step.number}
                 </div>
-                <h3 className="text-xl font-semibold text-slate-900 mb-3">
+                <h3 className="text-xl font-semibold text-slate-900 dark:text-white mb-3">
                   {step.title}
                 </h3>
-                <p className="text-sm text-slate-600 leading-relaxed">
+                <p className="text-sm text-slate-600 dark:text-slate-400 leading-relaxed">
                   {step.description}
                 </p>
               </div>
