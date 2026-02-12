@@ -188,6 +188,20 @@ export interface ReportSummaryData {
   observationsByDimension: Record<string, number>;
 }
 
+export interface FamilyShare {
+  id: string;
+  parentId: string;
+  inviteeEmail: string;
+  inviteeId: string | null;
+  role: 'viewer' | 'contributor';
+  status: 'pending' | 'accepted' | 'declined';
+  childIds: string[];
+  invitedAt: string;
+  respondedAt: string | null;
+  createdAt: string;
+  updatedAt: string;
+}
+
 export interface PaginatedResponse<T> {
   data: T[];
   pagination: {
@@ -488,6 +502,17 @@ class ApiClient {
     return this.request(`/api/dashboard/${childId}/milestones-due`);
   }
 
+  async getActivityFeed(
+    childId: string,
+    params?: { limit?: number; offset?: number }
+  ): Promise<{ data: Array<{ type: string; timestamp: string; [key: string]: unknown }> }> {
+    const query = new URLSearchParams();
+    if (params?.limit) query.set('limit', String(params.limit));
+    if (params?.offset) query.set('offset', String(params.offset));
+    const qs = query.toString();
+    return this.request(`/api/dashboard/${childId}/activity${qs ? `?${qs}` : ''}`);
+  }
+
   // ==================== Goals ====================
 
   async getGoals(
@@ -603,6 +628,51 @@ class ApiClient {
     return this.request('/api/profile/password', {
       method: 'PUT',
       body: JSON.stringify({ currentPassword, newPassword }),
+    });
+  }
+
+  // ==================== Sharing ====================
+
+  async getShares(): Promise<FamilyShare[]> {
+    return this.request('/api/sharing');
+  }
+
+  async inviteShare(data: {
+    email: string;
+    role?: 'viewer' | 'contributor';
+    childIds?: string[];
+  }): Promise<FamilyShare> {
+    return this.request('/api/sharing/invite', {
+      method: 'POST',
+      body: JSON.stringify(data),
+    });
+  }
+
+  async updateShare(
+    id: string,
+    data: { role?: 'viewer' | 'contributor'; childIds?: string[] }
+  ): Promise<FamilyShare> {
+    return this.request(`/api/sharing/${id}`, {
+      method: 'PATCH',
+      body: JSON.stringify(data),
+    });
+  }
+
+  async revokeShare(id: string): Promise<void> {
+    return this.request(`/api/sharing/${id}`, { method: 'DELETE' });
+  }
+
+  async getSharedWithMe(): Promise<FamilyShare[]> {
+    return this.request('/api/sharing/shared-with-me');
+  }
+
+  async respondToShare(
+    id: string,
+    action: 'accept' | 'decline'
+  ): Promise<FamilyShare> {
+    return this.request(`/api/sharing/${id}/respond`, {
+      method: 'POST',
+      body: JSON.stringify({ action }),
     });
   }
 }

@@ -27,6 +27,7 @@ export async function setupTestDb(): Promise<void> {
 
 export async function cleanDb(): Promise<void> {
   // Delete in dependency order
+  await prisma.familyAccess.deleteMany();
   await prisma.scoreCache.deleteMany();
   await prisma.childMilestone.deleteMany();
   await prisma.milestoneDefinition.deleteMany();

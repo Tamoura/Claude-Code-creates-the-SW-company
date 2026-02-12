@@ -5,7 +5,7 @@ import { useTranslations } from 'next-intl';
 import Link from 'next/link';
 import { DIMENSIONS } from '../../../../lib/dimensions';
 import DimensionBadge from '../../../../components/common/DimensionBadge';
-import { apiClient, type Child, type Observation, type DashboardData } from '../../../../lib/api-client';
+import { apiClient, type Child, type Observation, type DashboardData, type ChildMilestone } from '../../../../lib/api-client';
 
 interface DimensionDetailPageProps {
   params: { slug: string };
@@ -18,12 +18,15 @@ export default function DimensionDetailPage({
   const tc = useTranslations('common');
   const td = useTranslations('dimensions');
   const ttl = useTranslations('timeline');
+  const tm = useTranslations('milestonePreview');
 
   const dimension = DIMENSIONS.find((d) => d.slug === params.slug);
   const [children, setChildren] = useState<Child[]>([]);
   const [selectedChildId, setSelectedChildId] = useState<string>('');
   const [observations, setObservations] = useState<Observation[]>([]);
   const [dashboardData, setDashboardData] = useState<DashboardData | null>(null);
+  const [milestones, setMilestones] = useState<ChildMilestone[]>([]);
+  const [milestonesLoading, setMilestonesLoading] = useState(false);
   const [isLoading, setIsLoading] = useState(true);
   const [error, setError] = useState<string>('');
 
@@ -76,6 +79,53 @@ export default function DimensionDetailPage({
 
     fetchData();
   }, [selectedChildId, dimension]);
+
+  // Fetch milestones when child is selected
+  useEffect(() => {
+    if (!selectedChildId || !dimension) return;
+
+    const fetchMilestones = async () => {
+      try {
+        setMilestonesLoading(true);
+        const response = await apiClient.getChildMilestones(selectedChildId, {
+          dimension: dimension.slug,
+          limit: 5,
+        });
+        setMilestones(response.data);
+      } catch {
+        // Silently fail - milestone preview is supplementary
+      } finally {
+        setMilestonesLoading(false);
+      }
+    };
+
+    fetchMilestones();
+  }, [selectedChildId, dimension]);
+
+  // Toggle milestone achievement with optimistic UI
+  const handleToggleMilestone = async (milestoneId: string, currentAchieved: boolean) => {
+    if (!selectedChildId) return;
+
+    const newAchieved = !currentAchieved;
+    setMilestones((prev) =>
+      prev.map((m) =>
+        m.id === milestoneId
+          ? { ...m, achieved: newAchieved, achievedAt: newAchieved ? new Date().toISOString() : null }
+          : m
+      )
+    );
+
+    try {
+      await apiClient.toggleMilestone(selectedChildId, milestoneId, newAchieved);
+    } catch {
+      // Revert on error
+      setMilestones((prev) =>
+        prev.map((m) =>
+          m.id === milestoneId ? { ...m, achieved: currentAchieved } : m
+        )
+      );
+    }
+  };
 
   const getDimensionScore = (): number => {
     if (!dashboardData || !dimension) return 0;
@@ -302,23 +352,98 @@ export default function DimensionDetailPage({
       <section>
         <div className="flex items-center justify-between mb-4">
           <h2 className="text-lg font-semibold text-slate-900 dark:text-white">
-            {t('milestones')}
+            {tm('title')}
           </h2>
           <Link
             href={`/dashboard/milestones/${dimension.slug}`}
             className="text-sm font-medium text-emerald-600 dark:text-emerald-400 hover:text-emerald-700 dark:hover:text-emerald-300"
           >
-            {tc('viewAll')}
+            {tm('viewAll')}
           </Link>
         </div>
-        <div className="card text-center py-12">
-          <h3 className="text-sm font-medium text-slate-900 dark:text-white mb-1">
-            {t('milestonesComingSoon')}
-          </h3>
-          <p className="text-xs text-slate-500 dark:text-slate-400">
-            {t('milestonesComingSoonDesc')}
-          </p>
-        </div>
+
+        {milestonesLoading ? (
+          <div className="card py-8 text-center">
+            <p className="text-sm text-slate-500 dark:text-slate-400">
+              {tm('loading')}
+            </p>
+          </div>
+        ) : !selectedChildId ? (
+          <div className="card text-center py-12">
+            <h3 className="text-sm font-medium text-slate-900 dark:text-white mb-1">
+              {t('noChildSelected')}
+            </h3>
+            <p className="text-xs text-slate-500 dark:text-slate-400">
+              {t('noChildSelectedDesc')}
+            </p>
+          </div>
+        ) : milestones.length === 0 ? (
+          <div className="card text-center py-12">
+            <p className="text-sm text-slate-500 dark:text-slate-400">
+              {tm('noMilestones')}
+            </p>
+          </div>
+        ) : (
+          <div className="card space-y-3">
+            {milestones.map((milestone) => (
+              <div
+                key={milestone.id}
+                className="flex items-center gap-3"
+              >
+                <button
+                  type="button"
+                  onClick={() => handleToggleMilestone(milestone.id, milestone.achieved)}
+                  className="flex-shrink-0"
+                  aria-label={milestone.achieved ? tm('achieved') : tm('notAchieved')}
+                >
+                  {milestone.achieved ? (
+                    <svg
+                      className="h-5 w-5 text-emerald-500 dark:text-emerald-400"
+                      fill="currentColor"
+                      viewBox="0 0 20 20"
+                      aria-hidden="true"
+                    >
+                      <path
+                        fillRule="evenodd"
+                        d="M10 18a8 8 0 100-16 8 8 0 000 16zm3.707-9.293a1 1 0 00-1.414-1.414L9 10.586 7.707 9.293a1 1 0 00-1.414 1.414l2 2a1 1 0 001.414 0l4-4z"
+                        clipRule="evenodd"
+                      />
+                    </svg>
+                  ) : (
+                    <svg
+                      className="h-5 w-5 text-slate-300 dark:text-slate-600"
+                      fill="none"
+                      viewBox="0 0 24 24"
+                      stroke="currentColor"
+                      strokeWidth={2}
+                      aria-hidden="true"
+                    >
+                      <circle cx="12" cy="12" r="10" />
+                    </svg>
+                  )}
+                </button>
+                <span
+                  className={`text-sm ${
+                    milestone.achieved
+                      ? 'text-slate-500 dark:text-slate-500 line-through'
+                      : 'text-slate-900 dark:text-white'
+                  }`}
+                >
+                  {milestone.title}
+                </span>
+              </div>
+            ))}
+
+            <div className="pt-2 border-t border-slate-100 dark:border-slate-700">
+              <Link
+                href={`/dashboard/milestones/${dimension.slug}`}
+                className="text-sm font-medium text-emerald-600 dark:text-emerald-400 hover:text-emerald-700 dark:hover:text-emerald-300"
+              >
+                {tm('viewAll')} &rarr;
+              </Link>
+            </div>
+          </div>
+        )}
       </section>
     </div>
   );
