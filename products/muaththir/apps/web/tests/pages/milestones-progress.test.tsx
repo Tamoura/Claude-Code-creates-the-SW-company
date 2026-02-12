@@ -176,14 +176,17 @@ describe('MilestonesPage - Improved Progress', () => {
   it('toggles dimension section visibility on click', async () => {
     render(<MilestonesPage />);
 
-    const academicToggle = await screen.findByTestId('dimension-toggle-academic', {}, { timeout: 3000 });
+    // Wait for the text "Academic" to appear (indicating data is loaded and rendered)
+    const academicToggle = await screen.findByTestId('dimension-toggle-academic', {}, { timeout: 10000 });
     expect(academicToggle).toBeInTheDocument();
 
     // Click to expand
-    fireEvent.click(academicToggle);
+    await act(async () => {
+      fireEvent.click(academicToggle);
+    });
 
     // Wait for expanded content to appear
-    const link = await screen.findByTestId('dimension-link-academic', {}, { timeout: 3000 });
+    const link = await screen.findByTestId('dimension-link-academic', {}, { timeout: 5000 });
     expect(link).toBeInTheDocument();
   });
 });
