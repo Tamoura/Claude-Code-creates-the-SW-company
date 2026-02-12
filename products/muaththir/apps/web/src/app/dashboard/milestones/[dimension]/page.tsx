@@ -100,12 +100,12 @@ export default function MilestonesByDimensionPage({
   if (!dimension) {
     return (
       <div className="text-center py-16">
-        <h1 className="text-2xl font-bold text-slate-900">
+        <h1 className="text-2xl font-bold text-slate-900 dark:text-white">
           {t('notFound')}
         </h1>
         <Link
           href="/dashboard/milestones"
-          className="text-sm text-emerald-600 hover:text-emerald-700 mt-4 inline-block"
+          className="text-sm text-emerald-600 dark:text-emerald-400 hover:text-emerald-700 dark:hover:text-emerald-300 mt-4 inline-block"
         >
           {t('backToMilestones')}
         </Link>
@@ -118,9 +118,9 @@ export default function MilestonesByDimensionPage({
     return (
       <div className="flex items-center justify-center min-h-[60vh]">
         <div className="text-center max-w-md">
-          <div className="mx-auto h-16 w-16 rounded-full bg-emerald-100 flex items-center justify-center mb-4">
+          <div className="mx-auto h-16 w-16 rounded-full bg-emerald-100 dark:bg-emerald-900/30 flex items-center justify-center mb-4">
             <svg
-              className="h-8 w-8 text-emerald-600"
+              className="h-8 w-8 text-emerald-600 dark:text-emerald-400"
               fill="none"
               viewBox="0 0 24 24"
               stroke="currentColor"
@@ -134,10 +134,10 @@ export default function MilestonesByDimensionPage({
               />
             </svg>
           </div>
-          <h2 className="text-xl font-semibold text-slate-900 mb-2">
+          <h2 className="text-xl font-semibold text-slate-900 dark:text-white mb-2">
             {t('addFirstChild')}
           </h2>
-          <p className="text-sm text-slate-500 mb-6">
+          <p className="text-sm text-slate-500 dark:text-slate-400 mb-6">
             {t('addFirstChildDesc')}
           </p>
           <Link href="/onboarding/child" className="btn-primary">
@@ -155,14 +155,14 @@ export default function MilestonesByDimensionPage({
           <div className="flex items-center gap-3 mb-2">
             <Link
               href="/dashboard/milestones"
-              className="text-sm text-slate-400 hover:text-slate-600"
+              className="text-sm text-slate-400 dark:text-slate-500 hover:text-slate-600 dark:hover:text-slate-300"
             >
               {t('backToMilestones')}
             </Link>
-            <span className="text-slate-300">/</span>
+            <span className="text-slate-300 dark:text-slate-600">/</span>
             <DimensionBadge slug={dimension.slug} />
           </div>
-          <h1 className="text-2xl font-bold text-slate-900">
+          <h1 className="text-2xl font-bold text-slate-900 dark:text-white">
             {t('milestonesTitle', { dimension: td(dimension.slug as any) })}
           </h1>
         </div>
@@ -172,7 +172,7 @@ export default function MilestonesByDimensionPage({
           <select
             value={selectedChildId || ''}
             onChange={(e) => setSelectedChildId(e.target.value)}
-            className="px-4 py-2 border border-slate-200 rounded-lg text-sm focus:outline-none focus:ring-2 focus:ring-emerald-500"
+            className="px-4 py-2 border border-slate-200 dark:border-slate-700 rounded-lg text-sm focus:outline-none focus:ring-2 focus:ring-emerald-500"
             aria-label={tc('selectChild')}
           >
             {children.map((child) => (
@@ -185,8 +185,8 @@ export default function MilestonesByDimensionPage({
       </div>
 
       {error && (
-        <div className="card bg-red-50 border-red-200">
-          <p className="text-sm text-red-700">{error}</p>
+        <div className="card bg-red-50 dark:bg-red-900/30 border-red-200 dark:border-red-800">
+          <p className="text-sm text-red-700 dark:text-red-400">{error}</p>
         </div>
       )}
 
@@ -198,15 +198,15 @@ export default function MilestonesByDimensionPage({
         </div>
       ) : milestones.length === 0 ? (
         <div className="card text-center py-16">
-          <div className="mx-auto h-12 w-12 rounded-full bg-slate-100 flex items-center justify-center mb-4">
-            <svg className="h-6 w-6 text-slate-400" fill="none" viewBox="0 0 24 24" stroke="currentColor" aria-hidden="true">
+          <div className="mx-auto h-12 w-12 rounded-full bg-slate-100 dark:bg-slate-800 flex items-center justify-center mb-4">
+            <svg className="h-6 w-6 text-slate-400 dark:text-slate-500" fill="none" viewBox="0 0 24 24" stroke="currentColor" aria-hidden="true">
               <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M9 12l2 2 4-4M7.835 4.697a3.42 3.42 0 001.946-.806 3.42 3.42 0 014.438 0 3.42 3.42 0 001.946.806 3.42 3.42 0 013.138 3.138 3.42 3.42 0 00.806 1.946 3.42 3.42 0 010 4.438 3.42 3.42 0 00-.806 1.946 3.42 3.42 0 01-3.138 3.138 3.42 3.42 0 00-1.946.806 3.42 3.42 0 01-4.438 0 3.42 3.42 0 00-1.946-.806 3.42 3.42 0 01-3.138-3.138 3.42 3.42 0 00-.806-1.946 3.42 3.42 0 010-4.438 3.42 3.42 0 00.806-1.946 3.42 3.42 0 013.138-3.138z" />
             </svg>
           </div>
-          <h2 className="text-sm font-medium text-slate-900 mb-1">
+          <h2 className="text-sm font-medium text-slate-900 dark:text-white mb-1">
             {t('noMilestonesTitle')}
           </h2>
-          <p className="text-xs text-slate-500">
+          <p className="text-xs text-slate-500 dark:text-slate-400">
             {t('noMilestonesDesc')}
           </p>
         </div>
@@ -226,19 +226,19 @@ export default function MilestonesByDimensionPage({
                   aria-label={milestone.achieved ? t('markNotAchieved', { title: milestone.title }) : t('markAchieved', { title: milestone.title })}
                 />
                 <div className="flex-1">
-                  <h3 className={`text-sm font-semibold ${milestone.achieved ? 'text-slate-500 line-through' : 'text-slate-900'}`}>
+                  <h3 className={`text-sm font-semibold ${milestone.achieved ? 'text-slate-500 dark:text-slate-500 line-through' : 'text-slate-900 dark:text-white'}`}>
                     {milestone.title}
                   </h3>
-                  <p className="text-xs text-slate-500 mt-1">
+                  <p className="text-xs text-slate-500 dark:text-slate-400 mt-1">
                     {milestone.description}
                   </p>
                   {milestone.guidance && (
-                    <p className="text-xs text-slate-400 mt-2 italic">
+                    <p className="text-xs text-slate-400 dark:text-slate-500 mt-2 italic">
                       {milestone.guidance}
                     </p>
                   )}
                   {milestone.achieved && milestone.achievedAt && (
-                    <p className="text-xs text-emerald-600 mt-2">
+                    <p className="text-xs text-emerald-600 dark:text-emerald-400 mt-2">
                       {t('achievedOn', { date: new Date(milestone.achievedAt).toLocaleDateString() })}
                     </p>
                   )}

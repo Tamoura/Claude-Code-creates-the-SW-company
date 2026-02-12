@@ -102,11 +102,11 @@ export default function EditChildProfilePage({ params }: EditChildProfilePagePro
 
   if (error && !child) {
     return (
-      <div className="card bg-red-50 border-red-200">
-        <p className="text-sm text-red-700">{error}</p>
+      <div className="card bg-red-50 border-red-200 dark:bg-red-900/30 dark:border-red-700">
+        <p className="text-sm text-red-700 dark:text-red-400">{error}</p>
         <Link
           href="/dashboard"
-          className="text-sm text-emerald-600 hover:text-emerald-700 mt-4 inline-block"
+          className="text-sm text-emerald-600 hover:text-emerald-700 dark:text-emerald-400 dark:hover:text-emerald-300 mt-4 inline-block"
         >
           {tc('backToDashboard')}
         </Link>
@@ -120,19 +120,19 @@ export default function EditChildProfilePage({ params }: EditChildProfilePagePro
       <div>
         <Link
           href={`/dashboard/child/${params.id}`}
-          className="text-sm text-slate-400 hover:text-slate-600 mb-2 inline-block"
+          className="text-sm text-slate-400 hover:text-slate-600 dark:text-slate-500 dark:hover:text-slate-400 mb-2 inline-block"
         >
           {t('backToProfile')}
         </Link>
-        <h1 className="text-2xl font-bold text-slate-900">{t('title')}</h1>
+        <h1 className="text-2xl font-bold text-slate-900 dark:text-white">{t('title')}</h1>
       </div>
 
       {/* Edit Form */}
       <div className="card">
         <form onSubmit={handleSubmit} className="space-y-6">
           {error && (
-            <div className="bg-red-50 border border-red-200 rounded-lg p-4">
-              <p className="text-sm text-red-700">{error}</p>
+            <div className="bg-red-50 border border-red-200 rounded-lg p-4 dark:bg-red-900/30 dark:border-red-700">
+              <p className="text-sm text-red-700 dark:text-red-400">{error}</p>
             </div>
           )}
 
@@ -186,7 +186,7 @@ export default function EditChildProfilePage({ params }: EditChildProfilePagePro
           </div>
 
           {/* Health & Medical Section (collapsible) */}
-          <div className="border-t border-slate-100 pt-4">
+          <div className="border-t border-slate-100 dark:border-slate-700 pt-4">
             <button
               type="button"
               onClick={() => setShowHealth(!showHealth)}
@@ -195,7 +195,7 @@ export default function EditChildProfilePage({ params }: EditChildProfilePagePro
             >
               <div className="flex items-center gap-2">
                 <svg
-                  className="h-4 w-4 text-slate-400"
+                  className="h-4 w-4 text-slate-400 dark:text-slate-500"
                   fill="none"
                   viewBox="0 0 24 24"
                   stroke="currentColor"
@@ -208,13 +208,13 @@ export default function EditChildProfilePage({ params }: EditChildProfilePagePro
                     d="M4.318 6.318a4.5 4.5 0 000 6.364L12 20.364l7.682-7.682a4.5 4.5 0 00-6.364-6.364L12 7.636l-1.318-1.318a4.5 4.5 0 00-6.364 0z"
                   />
                 </svg>
-                <span className="text-sm font-medium text-slate-700">
+                <span className="text-sm font-medium text-slate-700 dark:text-slate-300">
                   {t('healthMedical')}
                 </span>
-                <span className="text-xs text-slate-400">{t('optional')}</span>
+                <span className="text-xs text-slate-400 dark:text-slate-500">{t('optional')}</span>
               </div>
               <svg
-                className={`h-4 w-4 text-slate-400 transition-transform ${
+                className={`h-4 w-4 text-slate-400 dark:text-slate-500 transition-transform ${
                   showHealth ? 'rotate-180' : ''
                 }`}
                 fill="none"
@@ -262,7 +262,7 @@ export default function EditChildProfilePage({ params }: EditChildProfilePagePro
                     onChange={(e) => setAllergiesText(e.target.value)}
                     disabled={saving}
                   />
-                  <p className="mt-1 text-xs text-slate-400">
+                  <p className="mt-1 text-xs text-slate-400 dark:text-slate-500">
                     {t('allergiesHint')}
                   </p>
                 </div>

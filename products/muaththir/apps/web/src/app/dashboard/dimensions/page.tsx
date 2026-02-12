@@ -72,10 +72,10 @@ export default function DimensionsPage() {
   if (isLoading && !dashboardData) {
     return (
       <div className="space-y-8">
-        <div className="h-8 w-48 bg-slate-200 rounded animate-pulse" />
+        <div className="h-8 w-48 bg-slate-200 dark:bg-slate-700 rounded animate-pulse" />
         <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-3 gap-6">
           {[...Array(6)].map((_, i) => (
-            <div key={i} className="card h-40 animate-pulse bg-slate-100" />
+            <div key={i} className="card h-40 animate-pulse bg-slate-100 dark:bg-slate-800" />
           ))}
         </div>
       </div>
@@ -85,8 +85,8 @@ export default function DimensionsPage() {
   return (
     <div className="space-y-8">
       <div>
-        <h1 className="text-2xl font-bold text-slate-900">{t('title')}</h1>
-        <p className="text-sm text-slate-500 mt-1">
+        <h1 className="text-2xl font-bold text-slate-900 dark:text-white">{t('title')}</h1>
+        <p className="text-sm text-slate-500 dark:text-slate-400 mt-1">
           {t('subtitle')}
         </p>
       </div>
@@ -115,18 +115,18 @@ export default function DimensionsPage() {
 
       {/* Error Message */}
       {error && (
-        <div className="p-4 rounded-lg bg-red-50 border border-red-200">
-          <p className="text-sm text-red-800">{error}</p>
+        <div className="p-4 rounded-lg bg-red-50 dark:bg-red-900/30 border border-red-200 dark:border-slate-700">
+          <p className="text-sm text-red-800 dark:text-red-400">{error}</p>
         </div>
       )}
 
       {/* No child selected */}
       {!selectedChildId && (
         <div className="card text-center py-16">
-          <h2 className="text-sm font-medium text-slate-900 mb-1">
+          <h2 className="text-sm font-medium text-slate-900 dark:text-white mb-1">
             {t('noChildSelected')}
           </h2>
-          <p className="text-xs text-slate-500">
+          <p className="text-xs text-slate-500 dark:text-slate-400">
             {t('noChildSelectedDesc')}
           </p>
         </div>

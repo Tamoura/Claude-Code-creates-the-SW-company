@@ -71,9 +71,9 @@ export default function MilestonesPage() {
     return (
       <div className="flex items-center justify-center min-h-[60vh]">
         <div className="text-center max-w-md">
-          <div className="mx-auto h-16 w-16 rounded-full bg-emerald-100 flex items-center justify-center mb-4">
+          <div className="mx-auto h-16 w-16 rounded-full bg-emerald-100 dark:bg-emerald-900/30 flex items-center justify-center mb-4">
             <svg
-              className="h-8 w-8 text-emerald-600"
+              className="h-8 w-8 text-emerald-600 dark:text-emerald-400"
               fill="none"
               viewBox="0 0 24 24"
               stroke="currentColor"
@@ -87,10 +87,10 @@ export default function MilestonesPage() {
               />
             </svg>
           </div>
-          <h2 className="text-xl font-semibold text-slate-900 mb-2">
+          <h2 className="text-xl font-semibold text-slate-900 dark:text-white mb-2">
             {t('addFirstChild')}
           </h2>
-          <p className="text-sm text-slate-500 mb-6">
+          <p className="text-sm text-slate-500 dark:text-slate-400 mb-6">
             {t('addFirstChildDesc')}
           </p>
           <Link href="/onboarding/child" className="btn-primary">
@@ -105,8 +105,8 @@ export default function MilestonesPage() {
     <div className="space-y-8">
       <div className="flex items-center justify-between">
         <div>
-          <h1 className="text-2xl font-bold text-slate-900">{t('title')}</h1>
-          <p className="text-sm text-slate-500 mt-1">
+          <h1 className="text-2xl font-bold text-slate-900 dark:text-white">{t('title')}</h1>
+          <p className="text-sm text-slate-500 dark:text-slate-400 mt-1">
             {t('subtitle')}
           </p>
         </div>
@@ -116,7 +116,7 @@ export default function MilestonesPage() {
           <select
             value={selectedChildId || ''}
             onChange={(e) => setSelectedChildId(e.target.value)}
-            className="px-4 py-2 border border-slate-200 rounded-lg text-sm focus:outline-none focus:ring-2 focus:ring-emerald-500"
+            className="px-4 py-2 border border-slate-200 dark:border-slate-700 rounded-lg text-sm focus:outline-none focus:ring-2 focus:ring-emerald-500"
             aria-label={tc('selectChild')}
           >
             {children.map((child) => (
@@ -129,8 +129,8 @@ export default function MilestonesPage() {
       </div>
 
       {error && (
-        <div className="card bg-red-50 border-red-200">
-          <p className="text-sm text-red-700">{error}</p>
+        <div className="card bg-red-50 dark:bg-red-900/30 border-red-200 dark:border-red-800">
+          <p className="text-sm text-red-700 dark:text-red-400">{error}</p>
         </div>
       )}
 
@@ -151,13 +151,13 @@ export default function MilestonesPage() {
                 className="card group hover:shadow-md transition-shadow"
                 style={{ borderLeft: `4px solid ${dim.colour}` }}
               >
-                <h2 className="text-sm font-semibold text-slate-900 group-hover:text-emerald-700 transition-colors">
+                <h2 className="text-sm font-semibold text-slate-900 dark:text-white group-hover:text-emerald-700 dark:group-hover:text-emerald-400 transition-colors">
                   {td(dim.slug as any)}
                 </h2>
-                <p className="text-xs text-slate-500 mt-1">
+                <p className="text-xs text-slate-500 dark:text-slate-400 mt-1">
                   {t('viewMilestonesFor', { dimension: td(dim.slug as any).toLowerCase() })}
                 </p>
-                <div className="mt-4 flex items-center gap-1 text-xs text-slate-400">
+                <div className="mt-4 flex items-center gap-1 text-xs text-slate-400 dark:text-slate-500">
                   <span>{t('completed', { count: progress.achieved })}</span>
                   <span className="mx-1">|</span>
                   <span>{t('total', { count: progress.total })}</span>

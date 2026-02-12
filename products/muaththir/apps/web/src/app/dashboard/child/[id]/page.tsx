@@ -80,11 +80,11 @@ export default function ChildProfilePage({ params }: ChildProfilePageProps) {
 
   if (error || !child) {
     return (
-      <div className="card bg-red-50 border-red-200">
-        <p className="text-sm text-red-700">{error || t('childNotFound')}</p>
+      <div className="card bg-red-50 dark:bg-red-900/30 border-red-200 dark:border-slate-700">
+        <p className="text-sm text-red-700 dark:text-red-400">{error || t('childNotFound')}</p>
         <Link
           href="/dashboard"
-          className="text-sm text-emerald-600 hover:text-emerald-700 mt-4 inline-block"
+          className="text-sm text-emerald-600 dark:text-emerald-400 hover:text-emerald-700 dark:hover:text-emerald-300 mt-4 inline-block"
         >
           {t('backToDashboard')}
         </Link>
@@ -99,11 +99,11 @@ export default function ChildProfilePage({ params }: ChildProfilePageProps) {
         <div>
           <Link
             href="/dashboard"
-            className="text-sm text-slate-400 hover:text-slate-600 mb-2 inline-block"
+            className="text-sm text-slate-400 dark:text-slate-500 hover:text-slate-600 dark:hover:text-slate-400 mb-2 inline-block"
           >
             {t('backToDashboard')}
           </Link>
-          <h1 className="text-2xl font-bold text-slate-900">{child.name}</h1>
+          <h1 className="text-2xl font-bold text-slate-900 dark:text-white">{child.name}</h1>
         </div>
         <Link
           href={`/dashboard/child/${child.id}/edit`}
@@ -115,18 +115,18 @@ export default function ChildProfilePage({ params }: ChildProfilePageProps) {
 
       {/* Profile Card */}
       <div className="card">
-        <h2 className="text-lg font-semibold text-slate-900 mb-6">
+        <h2 className="text-lg font-semibold text-slate-900 dark:text-white mb-6">
           {t('profileInfo')}
         </h2>
         <div className="space-y-4">
           <div className="grid grid-cols-2 gap-4">
             <div>
               <label className="label">{t('name')}</label>
-              <p className="text-sm text-slate-900">{child.name}</p>
+              <p className="text-sm text-slate-900 dark:text-white">{child.name}</p>
             </div>
             <div>
               <label className="label">{t('gender')}</label>
-              <p className="text-sm text-slate-900 capitalize">
+              <p className="text-sm text-slate-900 dark:text-white capitalize">
                 {child.gender || t('notSpecified')}
               </p>
             </div>
@@ -135,13 +135,13 @@ export default function ChildProfilePage({ params }: ChildProfilePageProps) {
           <div className="grid grid-cols-2 gap-4">
             <div>
               <label className="label">{t('dateOfBirth')}</label>
-              <p className="text-sm text-slate-900">
+              <p className="text-sm text-slate-900 dark:text-white">
                 {new Date(child.dateOfBirth).toLocaleDateString()}
               </p>
             </div>
             <div>
               <label className="label">{t('age')}</label>
-              <p className="text-sm text-slate-900">
+              <p className="text-sm text-slate-900 dark:text-white">
                 {calculateAge(child.dateOfBirth)}
               </p>
             </div>
@@ -149,7 +149,7 @@ export default function ChildProfilePage({ params }: ChildProfilePageProps) {
 
           <div>
             <label className="label">{t('ageBand')}</label>
-            <p className="text-sm text-slate-900">
+            <p className="text-sm text-slate-900 dark:text-white">
               {child.ageBand || t('notDetermined')}
             </p>
           </div>
@@ -157,13 +157,13 @@ export default function ChildProfilePage({ params }: ChildProfilePageProps) {
           <div className="grid grid-cols-2 gap-4">
             <div>
               <label className="label">{t('totalObservations')}</label>
-              <p className="text-sm text-slate-900">
+              <p className="text-sm text-slate-900 dark:text-white">
                 {child.observationCount || 0}
               </p>
             </div>
             <div>
               <label className="label">{t('milestoneProgress')}</label>
-              <p className="text-sm text-slate-900">
+              <p className="text-sm text-slate-900 dark:text-white">
                 {child.milestoneProgress
                   ? `${child.milestoneProgress.achieved} / ${child.milestoneProgress.total}`
                   : t('noData')}
@@ -175,7 +175,7 @@ export default function ChildProfilePage({ params }: ChildProfilePageProps) {
 
       {/* Quick Actions */}
       <div className="card">
-        <h2 className="text-lg font-semibold text-slate-900 mb-4">
+        <h2 className="text-lg font-semibold text-slate-900 dark:text-white mb-4">
           {t('quickActions')}
         </h2>
         <div className="space-y-3">
@@ -195,20 +195,20 @@ export default function ChildProfilePage({ params }: ChildProfilePageProps) {
       </div>
 
       {/* Danger Zone */}
-      <div className="card border-red-200">
-        <h2 className="text-lg font-semibold text-red-700 mb-4">
+      <div className="card border-red-200 dark:border-red-900/50">
+        <h2 className="text-lg font-semibold text-red-700 dark:text-red-400 mb-4">
           {t('dangerZone')}
         </h2>
         {!showDeleteConfirm ? (
           <button
             onClick={() => setShowDeleteConfirm(true)}
-            className="btn-secondary border-red-300 text-red-700 hover:bg-red-50 w-full"
+            className="btn-secondary border-red-300 dark:border-red-900/50 text-red-700 dark:text-red-400 hover:bg-red-50 dark:hover:bg-red-900/30 w-full"
           >
             {t('deleteProfile')}
           </button>
         ) : (
           <div className="space-y-3">
-            <p className="text-sm text-red-700">
+            <p className="text-sm text-red-700 dark:text-red-400">
               {t('deleteConfirm', { name: child.name })}
             </p>
             <div className="flex gap-3">
