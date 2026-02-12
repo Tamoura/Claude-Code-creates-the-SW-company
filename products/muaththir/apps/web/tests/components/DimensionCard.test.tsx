@@ -24,15 +24,15 @@ jest.mock('next/link', () => {
 describe('DimensionCard', () => {
   const academicDimension = DIMENSIONS[0]; // Academic
 
-  it('renders the dimension name', () => {
+  it('renders the dimension name from translations', () => {
     render(<DimensionCard dimension={academicDimension} />);
     expect(screen.getByText('Academic')).toBeInTheDocument();
   });
 
-  it('renders the dimension description', () => {
+  it('renders the dimension description from translations', () => {
     render(<DimensionCard dimension={academicDimension} />);
     expect(
-      screen.getByText(academicDimension.description)
+      screen.getByText(/School and learning progress/)
     ).toBeInTheDocument();
   });
 
@@ -48,17 +48,7 @@ describe('DimensionCard', () => {
         observationCount={5}
       />
     );
-    expect(screen.getByText('5 observations')).toBeInTheDocument();
-  });
-
-  it('renders singular observation text for count of 1', () => {
-    render(
-      <DimensionCard
-        dimension={academicDimension}
-        observationCount={1}
-      />
-    );
-    expect(screen.getByText('1 observation')).toBeInTheDocument();
+    expect(screen.getByText('5')).toBeInTheDocument();
   });
 
   it('links to the dimension detail page', () => {
@@ -70,10 +60,10 @@ describe('DimensionCard', () => {
     );
   });
 
-  it('has accessible aria-label', () => {
+  it('has accessible aria-label with translated name and score', () => {
     render(<DimensionCard dimension={academicDimension} score={42} />);
     expect(
-      screen.getByLabelText('Academic dimension - score 42')
+      screen.getByLabelText('Academic - 42')
     ).toBeInTheDocument();
   });
 

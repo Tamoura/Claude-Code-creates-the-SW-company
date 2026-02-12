@@ -19,6 +19,9 @@ const createChildSchema = z.object({
     .datetime({ offset: true })
     .or(z.string().date()),
   gender: z.enum(['male', 'female']).optional(),
+  medicalNotes: z.string().max(1000, 'Medical notes must be 1000 characters or fewer').optional().nullable(),
+  allergies: z.array(z.string()).optional(),
+  specialNeeds: z.string().max(500, 'Special needs must be 500 characters or fewer').optional().nullable(),
 });
 
 const updateChildSchema = z.object({
@@ -29,6 +32,9 @@ const updateChildSchema = z.object({
     .or(z.string().date())
     .optional(),
   gender: z.enum(['male', 'female']).optional().nullable(),
+  medicalNotes: z.string().max(1000, 'Medical notes must be 1000 characters or fewer').optional().nullable(),
+  allergies: z.array(z.string()).optional(),
+  specialNeeds: z.string().max(500, 'Special needs must be 500 characters or fewer').optional().nullable(),
 });
 
 function validateBody<T>(schema: z.ZodType<T>, body: unknown): T {
@@ -58,6 +64,9 @@ function childToResponse(child: Child) {
     gender: child.gender,
     ageBand,
     photoUrl: child.photoUrl,
+    medicalNotes: child.medicalNotes,
+    allergies: child.allergies,
+    specialNeeds: child.specialNeeds,
     createdAt: child.createdAt.toISOString(),
     updatedAt: child.updatedAt.toISOString(),
   };
@@ -68,7 +77,7 @@ const childrenRoutes: FastifyPluginAsync = async (fastify) => {
   fastify.post('/', {
     preHandler: [fastify.authenticate],
   }, async (request, reply) => {
-    const { name, dateOfBirth: dobString, gender } = validateBody(
+    const { name, dateOfBirth: dobString, gender, medicalNotes, allergies, specialNeeds } = validateBody(
       createChildSchema,
       request.body
     );
@@ -96,6 +105,9 @@ const childrenRoutes: FastifyPluginAsync = async (fastify) => {
         name,
         dateOfBirth,
         gender: gender ?? null,
+        medicalNotes: medicalNotes ?? null,
+        allergies: allergies ?? [],
+        specialNeeds: specialNeeds ?? null,
       },
     });
 
@@ -187,6 +199,18 @@ const childrenRoutes: FastifyPluginAsync = async (fastify) => {
 
     if (updates.gender !== undefined) {
       data.gender = updates.gender;
+    }
+
+    if (updates.medicalNotes !== undefined) {
+      data.medicalNotes = updates.medicalNotes;
+    }
+
+    if (updates.allergies !== undefined) {
+      data.allergies = updates.allergies;
+    }
+
+    if (updates.specialNeeds !== undefined) {
+      data.specialNeeds = updates.specialNeeds;
     }
 
     const updated = await fastify.prisma.child.update({

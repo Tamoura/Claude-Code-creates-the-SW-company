@@ -4,6 +4,7 @@ import { verifyChildOwnership } from '../lib/ownership';
 import { getAgeBand } from '../utils/age-band';
 import { DIMENSIONS, DimensionType } from '../types';
 import { Dimension } from '@prisma/client';
+import { calculateDimensionScore, DimensionScore } from '../services/score-calculator';
 
 /**
  * Dashboard Scores API
@@ -22,97 +23,6 @@ import { Dimension } from '@prisma/client';
  * recalculates only stale dimensions on demand.
  */
 
-interface DimensionScore {
-  dimension: DimensionType;
-  score: number;
-  factors: {
-    observation: number;
-    milestone: number;
-    sentiment: number;
-  };
-  observationCount: number;
-  milestoneProgress: {
-    achieved: number;
-    total: number;
-  };
-}
-
-async function calculateDimensionScore(
-  prisma: any,
-  childId: string,
-  dimension: Dimension,
-  ageBand: string | null
-): Promise<DimensionScore> {
-  const thirtyDaysAgo = new Date();
-  thirtyDaysAgo.setDate(thirtyDaysAgo.getDate() - 30);
-
-  // Count observations in last 30 days for this dimension (exclude soft-deleted)
-  const recentObservations = await prisma.observation.findMany({
-    where: {
-      childId,
-      dimension,
-      deletedAt: null,
-      observedAt: { gte: thirtyDaysAgo },
-    },
-    select: { sentiment: true },
-  });
-
-  const observationCount = recentObservations.length;
-  const positiveCount = recentObservations.filter(
-    (o: { sentiment: string }) => o.sentiment === 'positive'
-  ).length;
-
-  // observation_factor: min(count, 10) / 10 * 100
-  const observationFactor = Math.min(observationCount, 10) / 10 * 100;
-
-  // sentiment_factor: positive / total * 100 (0 if no observations)
-  const sentimentFactor =
-    observationCount > 0 ? (positiveCount / observationCount) * 100 : 0;
-
-  // milestone_factor: achieved / total for age band * 100
-  let milestoneAchieved = 0;
-  let milestoneTotal = 0;
-
-  if (ageBand) {
-    milestoneTotal = await prisma.milestoneDefinition.count({
-      where: { dimension, ageBand },
-    });
-
-    if (milestoneTotal > 0) {
-      milestoneAchieved = await prisma.childMilestone.count({
-        where: {
-          childId,
-          achieved: true,
-          milestone: { dimension, ageBand },
-        },
-      });
-    }
-  }
-
-  const milestoneFactor =
-    milestoneTotal > 0 ? (milestoneAchieved / milestoneTotal) * 100 : 0;
-
-  // Final score
-  const score = Math.round(
-    observationFactor * 0.4 + milestoneFactor * 0.4 + sentimentFactor * 0.2
-  );
-
-  return {
-    dimension: dimension as DimensionType,
-    score,
-    factors: {
-      observation: Math.round(observationFactor),
-      milestone: Math.round(milestoneFactor),
-      sentiment: Math.round(sentimentFactor),
-    },
-    observationCount,
-    milestoneProgress: {
-      achieved: milestoneAchieved,
-      total: milestoneTotal,
-    },
-  };
-}
-
 const dashboardRoutes: FastifyPluginAsync = async (fastify) => {
   // GET /api/dashboard/:childId — Get radar chart scores
   fastify.get('/:childId', {
@@ -126,58 +36,77 @@ const dashboardRoutes: FastifyPluginAsync = async (fastify) => {
     const ageBand = getAgeBand(child.dateOfBirth);
     const ageBandForQuery = ageBand === 'out_of_range' ? null : ageBand;
 
-    // Check which dimensions have stale caches
-    const existingCaches = await fastify.prisma.scoreCache.findMany({
-      where: { childId },
-    });
+    // Batch-fetch all data upfront (4 queries instead of 12-18 sequential)
+    const [existingCaches, allObsCounts, allChildMilestones, allMilestoneDefs] = await Promise.all([
+      fastify.prisma.scoreCache.findMany({ where: { childId } }),
+      fastify.prisma.observation.groupBy({
+        by: ['dimension'],
+        where: { childId, deletedAt: null },
+        _count: true,
+      }),
+      fastify.prisma.childMilestone.findMany({
+        where: { childId },
+        select: { achieved: true, milestone: { select: { dimension: true, ageBand: true } } },
+      }),
+      ageBandForQuery
+        ? fastify.prisma.milestoneDefinition.groupBy({
+            by: ['dimension'],
+            where: { ageBand: ageBandForQuery as any },
+            _count: true,
+          })
+        : Promise.resolve([]),
+    ]);
 
-    const cacheMap = new Map(
-      existingCaches.map((c: any) => [c.dimension, c])
-    );
+    const cacheMap = new Map(existingCaches.map((c: any) => [c.dimension, c]));
+    const obsCountMap = new Map(allObsCounts.map((g: any) => [g.dimension, g._count]));
+    const milestoneDefMap = new Map((allMilestoneDefs as any[]).map((g: any) => [g.dimension, g._count]));
+
+    // Group child milestones by dimension for the target age band
+    const achievedByDim = new Map<string, number>();
+    for (const cm of allChildMilestones as any[]) {
+      if (ageBandForQuery && cm.milestone.ageBand === ageBandForQuery && cm.achieved) {
+        achievedByDim.set(cm.milestone.dimension, (achievedByDim.get(cm.milestone.dimension) || 0) + 1);
+      }
+    }
 
     const scores: DimensionScore[] = [];
 
+    // Calculate stale dimensions in parallel
+    const staleDimensions = DIMENSIONS.filter((d) => {
+      const cached = cacheMap.get(d);
+      return !cached || cached.stale;
+    });
+
+    const staleResults = await Promise.all(
+      staleDimensions.map((dimension) =>
+        calculateDimensionScore(fastify.prisma, childId, dimension as Dimension, ageBandForQuery)
+          .then(async (detail) => {
+            await fastify.prisma.scoreCache.upsert({
+              where: { childId_dimension: { childId, dimension: dimension as Dimension } },
+              create: { childId, dimension: dimension as Dimension, score: detail.score, calculatedAt: new Date(), stale: false },
+              update: { score: detail.score, calculatedAt: new Date(), stale: false },
+            });
+            return { dimension, detail };
+          })
+      )
+    );
+    const staleResultMap = new Map(staleResults.map((r) => [r.dimension, r.detail]));
+
     for (const dimension of DIMENSIONS) {
       const cached = cacheMap.get(dimension);
-
       if (cached && !cached.stale) {
-        // Use cached score — return score with zero-cost metadata
         scores.push({
           dimension: dimension as DimensionType,
           score: cached.score,
           factors: { observation: 0, milestone: 0, sentiment: 0 },
-          observationCount: 0,
-          milestoneProgress: { achieved: 0, total: 0 },
+          observationCount: obsCountMap.get(dimension) || 0,
+          milestoneProgress: {
+            achieved: achievedByDim.get(dimension) || 0,
+            total: milestoneDefMap.get(dimension) || 0,
+          },
         });
       } else {
-        // Calculate fresh score
-        const detail = await calculateDimensionScore(
-          fastify.prisma,
-          childId,
-          dimension as Dimension,
-          ageBandForQuery
-        );
-
-        // Upsert cache
-        await fastify.prisma.scoreCache.upsert({
-          where: {
-            childId_dimension: { childId, dimension: dimension as Dimension },
-          },
-          create: {
-            childId,
-            dimension: dimension as Dimension,
-            score: detail.score,
-            calculatedAt: new Date(),
-            stale: false,
-          },
-          update: {
-            score: detail.score,
-            calculatedAt: new Date(),
-            stale: false,
-          },
-        });
-
-        scores.push(detail);
+        scores.push(staleResultMap.get(dimension)!);
       }
     }
 
@@ -221,6 +150,107 @@ const dashboardRoutes: FastifyPluginAsync = async (fastify) => {
     });
 
     return reply.send({ data: observations });
+  });
+
+  // GET /api/dashboard/:childId/activity — Recent activity feed
+  fastify.get('/:childId/activity', {
+    preHandler: [fastify.authenticate],
+  }, async (request, reply) => {
+    const { childId } = request.params as { childId: string };
+    const parentId = request.currentUser!.id;
+    const { limit: limitStr } = request.query as { limit?: string };
+
+    await verifyChildOwnership(fastify, childId, parentId);
+
+    // Parse and clamp limit: default 10, max 50
+    let limit = 10;
+    if (limitStr !== undefined) {
+      const parsed = parseInt(limitStr, 10);
+      if (!isNaN(parsed) && parsed >= 1) {
+        limit = Math.min(parsed, 50);
+      }
+    }
+
+    // Query 3 sources in parallel
+    const [observations, milestones, goals] = await Promise.all([
+      fastify.prisma.observation.findMany({
+        where: { childId, deletedAt: null },
+        orderBy: { observedAt: 'desc' },
+        take: limit,
+        select: {
+          id: true,
+          dimension: true,
+          content: true,
+          sentiment: true,
+          observedAt: true,
+        },
+      }),
+      fastify.prisma.childMilestone.findMany({
+        where: { childId },
+        include: { milestone: true },
+        orderBy: { achievedAt: 'desc' },
+        take: limit,
+      }),
+      fastify.prisma.goal.findMany({
+        where: { childId },
+        orderBy: { updatedAt: 'desc' },
+        take: limit,
+      }),
+    ]);
+
+    // Map to unified activity format
+    type ActivityItem = {
+      type: string;
+      id: string;
+      timestamp: string;
+      [key: string]: unknown;
+    };
+
+    const items: ActivityItem[] = [];
+
+    for (const obs of observations) {
+      items.push({
+        type: 'observation',
+        id: obs.id,
+        dimension: obs.dimension,
+        content: obs.content,
+        sentiment: obs.sentiment,
+        timestamp: obs.observedAt.toISOString(),
+      });
+    }
+
+    for (const cm of milestones as any[]) {
+      const ts = cm.achievedAt
+        ? cm.achievedAt.toISOString()
+        : cm.createdAt.toISOString();
+      items.push({
+        type: 'milestone',
+        id: cm.id,
+        dimension: cm.milestone.dimension,
+        title: cm.milestone.title,
+        achievedAt: ts,
+        timestamp: ts,
+      });
+    }
+
+    for (const goal of goals) {
+      items.push({
+        type: 'goal_update',
+        id: goal.id,
+        title: goal.title,
+        status: goal.status,
+        updatedAt: goal.updatedAt.toISOString(),
+        timestamp: goal.updatedAt.toISOString(),
+      });
+    }
+
+    // Sort by timestamp descending, take first `limit`
+    items.sort(
+      (a, b) =>
+        new Date(b.timestamp).getTime() - new Date(a.timestamp).getTime()
+    );
+
+    return reply.send({ data: items.slice(0, limit) });
   });
 
   // GET /api/dashboard/:childId/milestones-due — Next 3 unchecked milestones

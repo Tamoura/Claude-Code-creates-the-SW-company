@@ -1,6 +1,7 @@
 'use client';
 
 import { useState, useEffect } from 'react';
+import { useTranslations } from 'next-intl';
 import Link from 'next/link';
 import { DIMENSIONS } from '../../../../lib/dimensions';
 import DimensionBadge from '../../../../components/common/DimensionBadge';
@@ -13,6 +14,11 @@ interface DimensionDetailPageProps {
 export default function DimensionDetailPage({
   params,
 }: DimensionDetailPageProps) {
+  const t = useTranslations('dimensionDetail');
+  const tc = useTranslations('common');
+  const td = useTranslations('dimensions');
+  const ttl = useTranslations('timeline');
+
   const dimension = DIMENSIONS.find((d) => d.slug === params.slug);
   const [children, setChildren] = useState<Child[]>([]);
   const [selectedChildId, setSelectedChildId] = useState<string>('');
@@ -87,13 +93,13 @@ export default function DimensionDetailPage({
     return (
       <div className="text-center py-16">
         <h1 className="text-2xl font-bold text-slate-900">
-          Dimension not found
+          {t('notFound')}
         </h1>
         <Link
           href="/dashboard/dimensions"
           className="text-sm text-emerald-600 hover:text-emerald-700 mt-4 inline-block"
         >
-          Back to Dimensions
+          {t('backToDimensions')}
         </Link>
       </div>
     );
@@ -123,10 +129,10 @@ export default function DimensionDetailPage({
           </div>
           <div>
             <h1 className="text-2xl font-bold text-slate-900">
-              {dimension.name}
+              {td(dimension.slug)}
             </h1>
             <p className="text-sm text-slate-500 mt-1">
-              {dimension.description}
+              {td(`${dimension.slug}Desc`)}
             </p>
           </div>
         </div>
@@ -137,7 +143,7 @@ export default function DimensionDetailPage({
       {children.length > 1 && (
         <div>
           <label htmlFor="child-select-dimension" className="label">
-            Select Child
+            {tc('selectChild')}
           </label>
           <select
             id="child-select-dimension"
@@ -145,7 +151,7 @@ export default function DimensionDetailPage({
             value={selectedChildId}
             onChange={(e) => setSelectedChildId(e.target.value)}
           >
-            <option value="">Choose a child...</option>
+            <option value="">{tc('chooseChild')}</option>
             {children.map((child) => (
               <option key={child.id} value={child.id}>
                 {child.name}
@@ -173,10 +179,10 @@ export default function DimensionDetailPage({
       {!selectedChildId && !isLoading && (
         <div className="card text-center py-16">
           <h2 className="text-sm font-medium text-slate-900 mb-1">
-            No child selected
+            {t('noChildSelected')}
           </h2>
           <p className="text-xs text-slate-500">
-            Please select a child to view dimension details.
+            {t('noChildSelectedDesc')}
           </p>
         </div>
       )}
@@ -191,7 +197,7 @@ export default function DimensionDetailPage({
             <div className="flex items-center justify-between">
               <div>
                 <h2 className="text-sm font-medium text-slate-500">
-                  Current Score
+                  {t('currentScore')}
                 </h2>
                 <p
                   className="text-4xl font-bold mt-1"
@@ -201,7 +207,7 @@ export default function DimensionDetailPage({
                 </p>
               </div>
               <div className="text-right">
-                <p className="text-sm text-slate-500">Observations</p>
+                <p className="text-sm text-slate-500">{t('observations')}</p>
                 <p className="text-2xl font-bold text-slate-900 mt-1">
                   {getObservationCount()}
                 </p>
@@ -212,21 +218,21 @@ export default function DimensionDetailPage({
           {/* Observations */}
           <section>
             <h2 className="text-lg font-semibold text-slate-900 mb-4">
-              Recent Observations
+              {t('recentObservations')}
             </h2>
             {observations.length === 0 ? (
               <div className="card text-center py-12">
                 <h3 className="text-sm font-medium text-slate-900 mb-1">
-                  No observations in {dimension.name}
+                  {t('noObservationsIn', { dimension: td(dimension.slug) })}
                 </h3>
                 <p className="text-xs text-slate-500 mb-4">
-                  Start logging observations for this dimension.
+                  {t('startLogging')}
                 </p>
                 <Link
                   href="/dashboard/observe"
                   className="btn-primary text-sm py-2 px-4"
                 >
-                  Log Observation
+                  {t('logObservation')}
                 </Link>
               </div>
             ) : (
@@ -256,10 +262,10 @@ export default function DimensionDetailPage({
                         }}
                       >
                         {obs.sentiment === 'positive'
-                          ? 'Positive'
+                          ? ttl('positive')
                           : obs.sentiment === 'neutral'
-                          ? 'Neutral'
-                          : 'Needs Attention'}
+                          ? ttl('neutral')
+                          : ttl('needsAttention')}
                       </span>
                       <span className="text-xs text-slate-500">
                         {new Date(obs.observedAt).toLocaleDateString('en-US', {
@@ -296,22 +302,21 @@ export default function DimensionDetailPage({
       <section>
         <div className="flex items-center justify-between mb-4">
           <h2 className="text-lg font-semibold text-slate-900">
-            Milestones
+            {t('milestones')}
           </h2>
           <Link
             href={`/dashboard/milestones/${dimension.slug}`}
             className="text-sm font-medium text-emerald-600 hover:text-emerald-700"
           >
-            View All
+            {tc('viewAll')}
           </Link>
         </div>
         <div className="card text-center py-12">
           <h3 className="text-sm font-medium text-slate-900 mb-1">
-            Milestones coming soon
+            {t('milestonesComingSoon')}
           </h3>
           <p className="text-xs text-slate-500">
-            Age-appropriate milestones will be loaded once a child profile is
-            created.
+            {t('milestonesComingSoonDesc')}
           </p>
         </div>
       </section>

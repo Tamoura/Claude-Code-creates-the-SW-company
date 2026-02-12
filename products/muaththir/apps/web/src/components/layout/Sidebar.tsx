@@ -2,24 +2,21 @@
 
 import Link from 'next/link';
 import { usePathname } from 'next/navigation';
+import { useTranslations } from 'next-intl';
 import { DIMENSIONS } from '../../lib/dimensions';
+import LanguageSwitcher from '../LanguageSwitcher';
+import ThemeToggle from '../common/ThemeToggle';
 
-interface NavItem {
-  label: string;
+interface NavItemDef {
+  key: string;
   href: string;
   icon: React.ReactNode;
-  children?: { label: string; href: string; colour?: string }[];
+  hasDimensionChildren?: boolean;
 }
 
-const dimensionSubItems = DIMENSIONS.map((d) => ({
-  label: d.name,
-  href: `/dashboard/dimensions/${d.slug}`,
-  colour: d.colour,
-}));
-
-const navItems: NavItem[] = [
+const navItemDefs: NavItemDef[] = [
   {
-    label: 'Dashboard',
+    key: 'dashboard',
     href: '/dashboard',
     icon: (
       <svg className="h-5 w-5" fill="none" viewBox="0 0 24 24" stroke="currentColor" aria-hidden="true">
@@ -28,7 +25,7 @@ const navItems: NavItem[] = [
     ),
   },
   {
-    label: 'Log Observation',
+    key: 'logObservation',
     href: '/dashboard/observe',
     icon: (
       <svg className="h-5 w-5" fill="none" viewBox="0 0 24 24" stroke="currentColor" aria-hidden="true">
@@ -37,7 +34,7 @@ const navItems: NavItem[] = [
     ),
   },
   {
-    label: 'Timeline',
+    key: 'timeline',
     href: '/dashboard/timeline',
     icon: (
       <svg className="h-5 w-5" fill="none" viewBox="0 0 24 24" stroke="currentColor" aria-hidden="true">
@@ -46,17 +43,17 @@ const navItems: NavItem[] = [
     ),
   },
   {
-    label: 'Dimensions',
+    key: 'dimensions',
     href: '/dashboard/dimensions',
     icon: (
       <svg className="h-5 w-5" fill="none" viewBox="0 0 24 24" stroke="currentColor" aria-hidden="true">
         <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M4 6a2 2 0 012-2h2a2 2 0 012 2v2a2 2 0 01-2 2H6a2 2 0 01-2-2V6zM14 6a2 2 0 012-2h2a2 2 0 012 2v2a2 2 0 01-2 2h-2a2 2 0 01-2-2V6zM4 16a2 2 0 012-2h2a2 2 0 012 2v2a2 2 0 01-2 2H6a2 2 0 01-2-2v-2zM14 16a2 2 0 012-2h2a2 2 0 012 2v2a2 2 0 01-2 2h-2a2 2 0 01-2-2v-2z" />
       </svg>
     ),
-    children: dimensionSubItems,
+    hasDimensionChildren: true,
   },
   {
-    label: 'Milestones',
+    key: 'milestones',
     href: '/dashboard/milestones',
     icon: (
       <svg className="h-5 w-5" fill="none" viewBox="0 0 24 24" stroke="currentColor" aria-hidden="true">
@@ -65,7 +62,43 @@ const navItems: NavItem[] = [
     ),
   },
   {
-    label: 'Settings',
+    key: 'goals',
+    href: '/dashboard/goals',
+    icon: (
+      <svg className="h-5 w-5" fill="none" viewBox="0 0 24 24" stroke="currentColor" aria-hidden="true">
+        <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M13 10V3L4 14h7v7l9-11h-7z" />
+      </svg>
+    ),
+  },
+  {
+    key: 'insights',
+    href: '/dashboard/insights',
+    icon: (
+      <svg className="h-5 w-5" fill="none" viewBox="0 0 24 24" stroke="currentColor" aria-hidden="true">
+        <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M9.663 17h4.673M12 3v1m6.364 1.636l-.707.707M21 12h-1M4 12H3m3.343-5.657l-.707-.707m2.828 9.9a5 5 0 117.072 0l-.548.547A3.374 3.374 0 0014 18.469V19a2 2 0 11-4 0v-.531c0-.895-.356-1.754-.988-2.386l-.548-.547z" />
+      </svg>
+    ),
+  },
+  {
+    key: 'family',
+    href: '/dashboard/family',
+    icon: (
+      <svg className="h-5 w-5" fill="none" viewBox="0 0 24 24" stroke="currentColor" aria-hidden="true">
+        <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M17 20h5v-2a3 3 0 00-5.356-1.857M17 20H7m10 0v-2c0-.656-.126-1.283-.356-1.857M7 20H2v-2a3 3 0 015.356-1.857M7 20v-2c0-.656.126-1.283.356-1.857m0 0a5.002 5.002 0 019.288 0M15 7a3 3 0 11-6 0 3 3 0 016 0zm6 3a2 2 0 11-4 0 2 2 0 014 0zM7 10a2 2 0 11-4 0 2 2 0 014 0z" />
+      </svg>
+    ),
+  },
+  {
+    key: 'reports',
+    href: '/dashboard/reports',
+    icon: (
+      <svg className="h-5 w-5" fill="none" viewBox="0 0 24 24" stroke="currentColor" aria-hidden="true">
+        <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M9 17v-2m3 2v-4m3 4v-6m2 10H7a2 2 0 01-2-2V5a2 2 0 012-2h5.586a1 1 0 01.707.293l5.414 5.414a1 1 0 01.293.707V19a2 2 0 01-2 2z" />
+      </svg>
+    ),
+  },
+  {
+    key: 'settings',
     href: '/dashboard/settings',
     icon: (
       <svg className="h-5 w-5" fill="none" viewBox="0 0 24 24" stroke="currentColor" aria-hidden="true">
@@ -78,6 +111,8 @@ const navItems: NavItem[] = [
 
 export default function Sidebar() {
   const pathname = usePathname();
+  const t = useTranslations('sidebar');
+  const td = useTranslations('dimensions');
 
   const isActive = (href: string) => {
     if (href === '/dashboard') return pathname === '/dashboard';
@@ -86,11 +121,11 @@ export default function Sidebar() {
 
   return (
     <aside
-      className="hidden lg:flex lg:flex-col lg:w-64 lg:fixed lg:inset-y-0 bg-white border-r border-slate-200"
-      aria-label="Dashboard sidebar"
+      className="hidden lg:flex lg:flex-col lg:w-64 lg:fixed lg:inset-y-0 bg-white border-e border-slate-200 dark:bg-slate-900 dark:border-slate-700"
+      aria-label={t('ariaLabel')}
     >
       {/* Logo */}
-      <div className="flex h-16 items-center px-6 border-b border-slate-200">
+      <div className="flex h-16 items-center px-6 border-b border-slate-200 dark:border-slate-700">
         <Link href="/dashboard" className="flex items-center gap-2">
           <div className="h-8 w-8 rounded-lg bg-emerald-600 flex items-center justify-center">
             <svg
@@ -108,48 +143,46 @@ export default function Sidebar() {
               />
             </svg>
           </div>
-          <span className="text-lg font-bold text-slate-900">
+          <span className="text-lg font-bold text-slate-900 dark:text-white">
             Mu&apos;aththir
           </span>
         </Link>
       </div>
 
       {/* Navigation */}
-      <nav className="flex-1 overflow-y-auto px-4 py-4 space-y-1" aria-label="Sidebar navigation">
-        {navItems.map((item) => (
+      <nav className="flex-1 overflow-y-auto px-4 py-4 space-y-1" aria-label={t('navAriaLabel')}>
+        {navItemDefs.map((item) => (
           <div key={item.href}>
             <Link
               href={item.href}
               className={`flex items-center gap-3 px-3 py-2.5 rounded-xl text-sm font-medium transition-colors ${
                 isActive(item.href)
-                  ? 'bg-emerald-50 text-emerald-700'
-                  : 'text-slate-600 hover:bg-slate-50 hover:text-slate-900'
+                  ? 'bg-emerald-50 text-emerald-700 dark:bg-emerald-900/30 dark:text-emerald-400'
+                  : 'text-slate-600 hover:bg-slate-50 hover:text-slate-900 dark:text-slate-400 dark:hover:bg-slate-800 dark:hover:text-white'
               }`}
             >
               {item.icon}
-              {item.label}
+              {t(item.key)}
             </Link>
             {/* Dimension sub-items */}
-            {item.children && isActive(item.href) && (
-              <div className="ml-8 mt-1 space-y-0.5">
-                {item.children.map((child) => (
+            {item.hasDimensionChildren && isActive(item.href) && (
+              <div className="ms-8 mt-1 space-y-0.5">
+                {DIMENSIONS.map((dim) => (
                   <Link
-                    key={child.href}
-                    href={child.href}
+                    key={dim.slug}
+                    href={`/dashboard/dimensions/${dim.slug}`}
                     className={`flex items-center gap-2 px-3 py-1.5 rounded-lg text-xs font-medium transition-colors ${
-                      pathname === child.href
-                        ? 'bg-slate-100 text-slate-900'
-                        : 'text-slate-500 hover:text-slate-700 hover:bg-slate-50'
+                      pathname === `/dashboard/dimensions/${dim.slug}`
+                        ? 'bg-slate-100 text-slate-900 dark:bg-slate-800 dark:text-white'
+                        : 'text-slate-500 hover:text-slate-700 hover:bg-slate-50 dark:text-slate-500 dark:hover:text-slate-300 dark:hover:bg-slate-800'
                     }`}
                   >
-                    {child.colour && (
-                      <span
-                        className="h-2 w-2 rounded-full flex-shrink-0"
-                        style={{ backgroundColor: child.colour }}
-                        aria-hidden="true"
-                      />
-                    )}
-                    {child.label}
+                    <span
+                      className="h-2 w-2 rounded-full flex-shrink-0"
+                      style={{ backgroundColor: dim.colour }}
+                      aria-hidden="true"
+                    />
+                    {td(dim.slug)}
                   </Link>
                 ))}
               </div>
@@ -157,6 +190,12 @@ export default function Sidebar() {
           </div>
         ))}
       </nav>
+
+      {/* Language & Theme */}
+      <div className="px-4 py-3 border-t border-slate-200 dark:border-slate-700 flex items-center justify-between">
+        <LanguageSwitcher />
+        <ThemeToggle />
+      </div>
     </aside>
   );
 }

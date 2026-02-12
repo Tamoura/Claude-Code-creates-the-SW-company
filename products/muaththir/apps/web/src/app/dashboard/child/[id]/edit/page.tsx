@@ -3,6 +3,7 @@
 import { useState, useEffect } from 'react';
 import Link from 'next/link';
 import { useRouter } from 'next/navigation';
+import { useTranslations } from 'next-intl';
 import { apiClient, type Child } from '../../../../../lib/api-client';
 
 interface EditChildProfilePageProps {
@@ -11,6 +12,8 @@ interface EditChildProfilePageProps {
 
 export default function EditChildProfilePage({ params }: EditChildProfilePageProps) {
   const router = useRouter();
+  const t = useTranslations('editChild');
+  const tc = useTranslations('common');
   const [child, setChild] = useState<Child | null>(null);
   const [loading, setLoading] = useState(true);
   const [saving, setSaving] = useState(false);
@@ -20,6 +23,12 @@ export default function EditChildProfilePage({ params }: EditChildProfilePagePro
   const [name, setName] = useState('');
   const [dateOfBirth, setDateOfBirth] = useState('');
   const [gender, setGender] = useState<'male' | 'female' | ''>('');
+
+  // Health fields
+  const [showHealth, setShowHealth] = useState(false);
+  const [medicalNotes, setMedicalNotes] = useState('');
+  const [allergiesText, setAllergiesText] = useState('');
+  const [specialNeeds, setSpecialNeeds] = useState('');
 
   useEffect(() => {
     const loadChild = async () => {
@@ -33,6 +42,16 @@ export default function EditChildProfilePage({ params }: EditChildProfilePagePro
         setName(data.name);
         setDateOfBirth(data.dateOfBirth.split('T')[0]); // Convert to YYYY-MM-DD
         setGender(data.gender || '');
+
+        // Pre-fill health fields
+        setMedicalNotes(data.medicalNotes || '');
+        setAllergiesText(data.allergies ? data.allergies.join(', ') : '');
+        setSpecialNeeds(data.specialNeeds || '');
+
+        // Auto-expand health section if any health data exists
+        if (data.medicalNotes || (data.allergies && data.allergies.length > 0) || data.specialNeeds) {
+          setShowHealth(true);
+        }
       } catch (err) {
         setError(err instanceof Error ? err.message : 'Failed to load child');
       } finally {
@@ -52,10 +71,18 @@ export default function EditChildProfilePage({ params }: EditChildProfilePagePro
       setSaving(true);
       setError(null);
 
+      const allergies = allergiesText
+        .split(',')
+        .map((a) => a.trim())
+        .filter(Boolean);
+
       await apiClient.updateChild(child.id, {
         name,
         dateOfBirth,
         gender: gender || null,
+        medicalNotes: medicalNotes || null,
+        allergies: allergies.length > 0 ? allergies : null,
+        specialNeeds: specialNeeds || null,
       });
 
       router.push(`/dashboard/child/${child.id}`);
@@ -81,7 +108,7 @@ export default function EditChildProfilePage({ params }: EditChildProfilePagePro
           href="/dashboard"
           className="text-sm text-emerald-600 hover:text-emerald-700 mt-4 inline-block"
         >
-          Back to Dashboard
+          {tc('backToDashboard')}
         </Link>
       </div>
     );
@@ -95,9 +122,9 @@ export default function EditChildProfilePage({ params }: EditChildProfilePagePro
           href={`/dashboard/child/${params.id}`}
           className="text-sm text-slate-400 hover:text-slate-600 mb-2 inline-block"
         >
-          Back to Profile
+          {t('backToProfile')}
         </Link>
-        <h1 className="text-2xl font-bold text-slate-900">Edit Child Profile</h1>
+        <h1 className="text-2xl font-bold text-slate-900">{t('title')}</h1>
       </div>
 
       {/* Edit Form */}
@@ -111,7 +138,7 @@ export default function EditChildProfilePage({ params }: EditChildProfilePagePro
 
           <div>
             <label htmlFor="name" className="label">
-              Name <span className="text-red-500">*</span>
+              {t('nameLabel')} <span className="text-red-500">*</span>
             </label>
             <input
               id="name"
@@ -119,7 +146,7 @@ export default function EditChildProfilePage({ params }: EditChildProfilePagePro
               value={name}
               onChange={(e) => setName(e.target.value)}
               className="input-field"
-              placeholder="Child's name"
+              placeholder={t('namePlaceholder')}
               required
               disabled={saving}
             />
@@ -127,7 +154,7 @@ export default function EditChildProfilePage({ params }: EditChildProfilePagePro
 
           <div>
             <label htmlFor="dateOfBirth" className="label">
-              Date of Birth <span className="text-red-500">*</span>
+              {t('dateOfBirth')} <span className="text-red-500">*</span>
             </label>
             <input
               id="dateOfBirth"
@@ -143,7 +170,7 @@ export default function EditChildProfilePage({ params }: EditChildProfilePagePro
 
           <div>
             <label htmlFor="gender" className="label">
-              Gender
+              {t('gender')}
             </label>
             <select
               id="gender"
@@ -152,10 +179,111 @@ export default function EditChildProfilePage({ params }: EditChildProfilePagePro
               className="input-field"
               disabled={saving}
             >
-              <option value="">Prefer not to say</option>
-              <option value="male">Male</option>
-              <option value="female">Female</option>
+              <option value="">{t('preferNotToSay')}</option>
+              <option value="male">{t('male')}</option>
+              <option value="female">{t('female')}</option>
             </select>
+          </div>
+
+          {/* Health & Medical Section (collapsible) */}
+          <div className="border-t border-slate-100 pt-4">
+            <button
+              type="button"
+              onClick={() => setShowHealth(!showHealth)}
+              className="flex items-center justify-between w-full text-left"
+              aria-expanded={showHealth}
+            >
+              <div className="flex items-center gap-2">
+                <svg
+                  className="h-4 w-4 text-slate-400"
+                  fill="none"
+                  viewBox="0 0 24 24"
+                  stroke="currentColor"
+                  aria-hidden="true"
+                >
+                  <path
+                    strokeLinecap="round"
+                    strokeLinejoin="round"
+                    strokeWidth={2}
+                    d="M4.318 6.318a4.5 4.5 0 000 6.364L12 20.364l7.682-7.682a4.5 4.5 0 00-6.364-6.364L12 7.636l-1.318-1.318a4.5 4.5 0 00-6.364 0z"
+                  />
+                </svg>
+                <span className="text-sm font-medium text-slate-700">
+                  {t('healthMedical')}
+                </span>
+                <span className="text-xs text-slate-400">{t('optional')}</span>
+              </div>
+              <svg
+                className={`h-4 w-4 text-slate-400 transition-transform ${
+                  showHealth ? 'rotate-180' : ''
+                }`}
+                fill="none"
+                viewBox="0 0 24 24"
+                stroke="currentColor"
+                aria-hidden="true"
+              >
+                <path
+                  strokeLinecap="round"
+                  strokeLinejoin="round"
+                  strokeWidth={2}
+                  d="M19 9l-7 7-7-7"
+                />
+              </svg>
+            </button>
+
+            {showHealth && (
+              <div className="mt-4 space-y-4">
+                <div>
+                  <label htmlFor="medical-notes" className="label">
+                    {t('medicalNotes')}
+                  </label>
+                  <textarea
+                    id="medical-notes"
+                    rows={2}
+                    className="input-field resize-none"
+                    placeholder={t('medicalPlaceholder')}
+                    value={medicalNotes}
+                    onChange={(e) => setMedicalNotes(e.target.value)}
+                    maxLength={1000}
+                    disabled={saving}
+                  />
+                </div>
+
+                <div>
+                  <label htmlFor="allergies" className="label">
+                    {t('allergies')}
+                  </label>
+                  <input
+                    id="allergies"
+                    type="text"
+                    className="input-field"
+                    placeholder={t('allergiesPlaceholder')}
+                    value={allergiesText}
+                    onChange={(e) => setAllergiesText(e.target.value)}
+                    disabled={saving}
+                  />
+                  <p className="mt-1 text-xs text-slate-400">
+                    {t('allergiesHint')}
+                  </p>
+                </div>
+
+                <div>
+                  <label htmlFor="special-needs" className="label">
+                    {t('specialNeeds')}
+                  </label>
+                  <textarea
+                    id="special-needs"
+                    rows={2}
+                    className="input-field resize-none"
+                    placeholder={t('specialNeedsPlaceholder')}
+                    value={specialNeeds}
+                    onChange={(e) => setSpecialNeeds(e.target.value)}
+                    maxLength={1000}
+                    disabled={saving}
+                  />
+                </div>
+              </div>
+            )}
           </div>
 
           <div className="flex gap-3">
@@ -164,13 +292,13 @@ export default function EditChildProfilePage({ params }: EditChildProfilePagePro
               disabled={saving || !name || !dateOfBirth}
               className="btn-primary flex-1"
             >
-              {saving ? 'Saving...' : 'Save Changes'}
+              {saving ? t('saving') : t('saveChanges')}
             </button>
             <Link
               href={`/dashboard/child/${params.id}`}
               className="btn-secondary flex-1 text-center"
             >
-              Cancel
+              {tc('cancel')}
             </Link>
           </div>
         </form>

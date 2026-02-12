@@ -1,0 +1,47 @@
+{
+  "name": "@connectsw/connectgrc-api",
+  "version": "0.1.0",
+  "description": "ConnectGRC Backend API - AI-first GRC Platform",
+  "private": true,
+  "scripts": {
+    "build": "tsc",
+    "dev": "tsx watch src/server.ts",
+    "start": "node dist/server.js",
+    "test": "NODE_ENV=test jest --forceExit --detectOpenHandles",
+    "test:watch": "NODE_ENV=test jest --watch --forceExit --detectOpenHandles",
+    "lint": "eslint src/",
+    "db:migrate": "prisma migrate dev",
+    "db:migrate:deploy": "prisma migrate deploy",
+    "db:generate": "prisma generate",
+    "db:studio": "prisma studio",
+    "db:seed": "tsx prisma/seed.ts"
+  },
+  "dependencies": {
+    "@fastify/cors": "^9.0.0",
+    "@fastify/jwt": "^7.2.0",
+    "@fastify/rate-limit": "^9.0.0",
+    "@prisma/client": "^5.0.0",
+    "bcrypt": "^5.1.1",
+    "dotenv": "^16.3.1",
+    "fastify": "^4.24.0",
+    "fastify-plugin": "^4.5.0",
+    "ioredis": "^5.3.0",
+    "zod": "^3.22.0"
+  },
+  "devDependencies": {
+    "@types/bcrypt": "^5.0.2",
+    "@types/jest": "^29.5.0",
+    "@types/node": "^20.0.0",
+    "jest": "^29.7.0",
+    "prisma": "^5.0.0",
+    "ts-jest": "^29.1.0",
+    "tsx": "^4.7.0",
+    "typescript": "^5.3.3"
+  },
+  "prisma": {
+    "seed": "tsx prisma/seed.ts"
+  },
+  "engines": {
+    "node": ">=20.0.0"
+  }
+}

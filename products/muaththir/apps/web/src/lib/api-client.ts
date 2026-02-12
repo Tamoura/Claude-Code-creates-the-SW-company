@@ -54,6 +54,9 @@ export interface Child {
   gender: 'male' | 'female' | null;
   ageBand: string | null;
   photoUrl: string | null;
+  medicalNotes: string | null;
+  allergies: string[] | null;
+  specialNeeds: string | null;
   createdAt: string;
   updatedAt: string;
   observationCount?: number;
@@ -105,6 +108,86 @@ export interface DashboardData {
   calculatedAt: string;
 }
 
+export interface Goal {
+  id: string;
+  childId: string;
+  dimension: string;
+  title: string;
+  description: string | null;
+  targetDate: string | null;
+  status: 'active' | 'completed' | 'paused';
+  createdAt: string;
+  updatedAt: string;
+}
+
+export interface GoalTemplate {
+  id: string;
+  dimension: string;
+  ageBand: string;
+  title: string;
+  description: string;
+}
+
+export interface InsightStrength {
+  dimension: string;
+  title: string;
+  detail: string;
+  score: number;
+}
+
+export interface InsightGrowthArea {
+  dimension: string;
+  title: string;
+  detail: string;
+  score: number;
+  suggestions: string[];
+}
+
+export interface InsightRecommendation {
+  type: string;
+  message: string;
+  priority: 'high' | 'medium' | 'low';
+}
+
+export interface InsightsData {
+  childId: string;
+  childName: string;
+  generatedAt: string;
+  summary: string;
+  strengths: InsightStrength[];
+  areasForGrowth: InsightGrowthArea[];
+  recommendations: InsightRecommendation[];
+  trends: {
+    overallDirection: string;
+    dimensionTrends: Record<string, string>;
+  };
+}
+
+export interface ReportSummaryData {
+  childId: string;
+  childName: string;
+  ageBand: string | null;
+  generatedAt: string;
+  dateRange: { from: string; to: string };
+  overallScore: number;
+  dimensions: DimensionScore[];
+  insights: {
+    summary: string;
+    strengths: InsightStrength[];
+    areasForGrowth: InsightGrowthArea[];
+    recommendations: InsightRecommendation[];
+    trends: { overallDirection: string; dimensionTrends: Record<string, string> };
+  };
+  recentObservations: Observation[];
+  milestoneProgress: {
+    totalAchieved: number;
+    totalAvailable: number;
+    byDimension: Record<string, { achieved: number; total: number }>;
+  };
+  goals: { active: number; completed: number; paused: number };
+  observationsByDimension: Record<string, number>;
+}
+
 export interface PaginatedResponse<T> {
   data: T[];
   pagination: {
@@ -127,36 +210,54 @@ class ApiClient {
 
   private async request<T>(
     path: string,
-    options: RequestInit = {}
+    options: RequestInit = {},
+    timeoutMs = 30000
   ): Promise<T> {
     const token = TokenManager.getToken();
     const headers: Record<string, string> = {
-      'Content-Type': 'application/json',
       ...(options.headers as Record<string, string>),
     };
+
+    // Only set Content-Type for requests that have a body
+    if (options.body) {
+      headers['Content-Type'] = 'application/json';
+    }
 
     if (token) {
       headers['Authorization'] = `Bearer ${token}`;
     }
 
-    const response = await fetch(`${this.baseUrl}${path}`, {
-      ...options,
-      headers,
-      credentials: 'include',
-    });
+    const controller = new AbortController();
+    const timeoutId = setTimeout(() => controller.abort(), timeoutMs);
 
-    if (!response.ok) {
-      const error = await response.json().catch(() => ({
-        detail: 'Request failed',
-      }));
-      throw new Error(error.detail || error.message || `HTTP ${response.status}`);
+    try {
+      const response = await fetch(`${this.baseUrl}${path}`, {
+        ...options,
+        headers,
+        credentials: 'include',
+        signal: controller.signal,
+      });
+
+      if (!response.ok) {
+        const error = await response.json().catch(() => ({
+          detail: 'Request failed',
+        }));
+        throw new Error(error.detail || error.message || `HTTP ${response.status}`);
+      }
+
+      if (response.status === 204) {
+        return undefined as T;
+      }
+
+      return response.json();
+    } catch (err) {
+      if (err instanceof DOMException && err.name === 'AbortError') {
+        throw new Error('Request timed out. Please try again.');
+      }
+      throw err;
+    } finally {
+      clearTimeout(timeoutId);
     }
-
-    if (response.status === 204) {
-      return undefined as T;
-    }
-
-    return response.json();
   }
 
   // ==================== Auth ====================
@@ -174,6 +275,15 @@ class ApiClient {
     const result = await this.request<LoginResponse>('/api/auth/login', {
       method: 'POST',
       body: JSON.stringify({ email, password }),
+    });
+    TokenManager.setToken(result.accessToken);
+    return result;
+  }
+
+  async demoLogin(): Promise<LoginResponse> {
+    const result = await this.request<LoginResponse>('/api/auth/demo-login', {
+      method: 'POST',
+      body: JSON.stringify({}),
     });
     TokenManager.setToken(result.accessToken);
     return result;
@@ -218,6 +328,9 @@ class ApiClient {
     name: string;
     dateOfBirth: string;
     gender?: 'male' | 'female';
+    medicalNotes?: string;
+    allergies?: string[];
+    specialNeeds?: string;
   }): Promise<Child> {
     return this.request('/api/children', {
       method: 'POST',
@@ -227,7 +340,14 @@ class ApiClient {
 
   async updateChild(
     id: string,
-    data: { name?: string; dateOfBirth?: string; gender?: 'male' | 'female' | null }
+    data: {
+      name?: string;
+      dateOfBirth?: string;
+      gender?: 'male' | 'female' | null;
+      medicalNotes?: string | null;
+      allergies?: string[] | null;
+      specialNeeds?: string | null;
+    }
   ): Promise<Child> {
     return this.request(`/api/children/${id}`, {
       method: 'PATCH',
@@ -366,6 +486,98 @@ class ApiClient {
     childId: string
   ): Promise<{ data: MilestoneDefinition[] }> {
     return this.request(`/api/dashboard/${childId}/milestones-due`);
+  }
+
+  // ==================== Goals ====================
+
+  async getGoals(
+    childId: string,
+    params?: { dimension?: string; status?: string; page?: number; limit?: number }
+  ): Promise<PaginatedResponse<Goal>> {
+    const query = new URLSearchParams();
+    if (params?.dimension) query.set('dimension', params.dimension);
+    if (params?.status) query.set('status', params.status);
+    if (params?.page) query.set('page', String(params.page));
+    if (params?.limit) query.set('limit', String(params.limit));
+    const qs = query.toString();
+    return this.request(
+      `/api/children/${childId}/goals${qs ? `?${qs}` : ''}`
+    );
+  }
+
+  async getGoal(childId: string, goalId: string): Promise<Goal> {
+    return this.request(`/api/children/${childId}/goals/${goalId}`);
+  }
+
+  async createGoal(
+    childId: string,
+    data: {
+      title: string;
+      dimension: string;
+      description?: string;
+      targetDate?: string;
+    }
+  ): Promise<Goal> {
+    return this.request(`/api/children/${childId}/goals`, {
+      method: 'POST',
+      body: JSON.stringify(data),
+    });
+  }
+
+  async updateGoal(
+    childId: string,
+    goalId: string,
+    data: {
+      title?: string;
+      dimension?: string;
+      description?: string;
+      targetDate?: string;
+      status?: 'active' | 'completed' | 'paused';
+    }
+  ): Promise<Goal> {
+    return this.request(`/api/children/${childId}/goals/${goalId}`, {
+      method: 'PATCH',
+      body: JSON.stringify(data),
+    });
+  }
+
+  async deleteGoal(childId: string, goalId: string): Promise<void> {
+    return this.request(`/api/children/${childId}/goals/${goalId}`, {
+      method: 'DELETE',
+    });
+  }
+
+  // ==================== Goal Templates ====================
+
+  async getGoalTemplates(params?: {
+    dimension?: string;
+    ageBand?: string;
+  }): Promise<GoalTemplate[]> {
+    const query = new URLSearchParams();
+    if (params?.dimension) query.set('dimension', params.dimension);
+    if (params?.ageBand) query.set('ageBand', params.ageBand);
+    const qs = query.toString();
+    return this.request(`/api/goal-templates${qs ? `?${qs}` : ''}`);
+  }
+
+  // ==================== Insights ====================
+
+  async getInsights(childId: string): Promise<InsightsData> {
+    return this.request(`/api/dashboard/${childId}/insights`);
+  }
+
+  // ==================== Reports ====================
+
+  async getReportSummary(
+    childId: string,
+    params?: { from?: string; to?: string; observations?: number }
+  ): Promise<ReportSummaryData> {
+    const query = new URLSearchParams();
+    if (params?.from) query.set('from', params.from);
+    if (params?.to) query.set('to', params.to);
+    if (params?.observations) query.set('observations', String(params.observations));
+    const qs = query.toString();
+    return this.request(`/api/children/${childId}/reports/summary${qs ? `?${qs}` : ''}`);
   }
 
   // ==================== Profile ====================

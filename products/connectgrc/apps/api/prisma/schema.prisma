@@ -1,0 +1,416 @@
+generator client {
+  provider = "prisma-client-js"
+}
+
+datasource db {
+  provider = "postgresql"
+  url      = env("DATABASE_URL")
+}
+
+enum Role {
+  TALENT
+  EMPLOYER
+  ADMIN
+}
+
+enum GrcDomain {
+  GOVERNANCE_STRATEGY
+  RISK_MANAGEMENT
+  COMPLIANCE_REGULATORY
+  INFORMATION_SECURITY
+  AUDIT_ASSURANCE
+  BUSINESS_CONTINUITY
+}
+
+enum ExperienceLevel {
+  ENTRY
+  MID
+  SENIOR
+  PRINCIPAL
+}
+
+enum ProfessionalTier {
+  FOUNDATION
+  DEVELOPING
+  PROFICIENT
+  EXPERT
+}
+
+enum AssessmentStatus {
+  NOT_STARTED
+  IN_PROGRESS
+  COMPLETED
+  EXPIRED
+}
+
+enum QuestionType {
+  MULTIPLE_CHOICE
+  SCENARIO_BASED
+  TRUE_FALSE
+}
+
+enum QuestionDifficulty {
+  BEGINNER
+  INTERMEDIATE
+  ADVANCED
+  EXPERT
+}
+
+enum JobStatus {
+  DRAFT
+  ACTIVE
+  CLOSED
+  EXPIRED
+}
+
+enum ApplicationStatus {
+  PENDING
+  REVIEWED
+  SHORTLISTED
+  REJECTED
+  HIRED
+}
+
+enum NotificationType {
+  ASSESSMENT_COMPLETE
+  TIER_CHANGE
+  JOB_MATCH
+  APPLICATION_UPDATE
+  SYSTEM
+}
+
+enum ResourceType {
+  ARTICLE
+  VIDEO
+  COURSE
+  WHITEPAPER
+  TOOL
+}
+
+model User {
+  id            String   @id @default(cuid())
+  email         String   @unique
+  passwordHash  String   @map("password_hash")
+  name          String?
+  role          Role     @default(TALENT)
+  emailVerified Boolean  @default(false) @map("email_verified")
+  avatarUrl     String?  @map("avatar_url")
+  createdAt     DateTime @default(now()) @map("created_at")
+  updatedAt     DateTime @updatedAt @map("updated_at")
+
+  apiKeys          ApiKey[]
+  sessions         Session[]
+  profile          Profile?
+  assessments      Assessment[]
+  careerSimulations CareerSimulation[]
+  jobApplications  JobApplication[]
+  bookmarks        Bookmark[]
+  notifications    Notification[]
+
+  @@map("users")
+}
+
+model ApiKey {
+  id          String    @id @default(cuid())
+  userId      String    @map("user_id")
+  name        String
+  keyHash     String    @unique @map("key_hash")
+  keyPrefix   String    @map("key_prefix")
+  permissions Json      @default("{\"read\":true,\"write\":true}")
+  lastUsedAt  DateTime? @map("last_used_at")
+  createdAt   DateTime  @default(now()) @map("created_at")
+  user        User      @relation(fields: [userId], references: [id], onDelete: Cascade)
+
+  @@index([userId])
+  @@index([keyHash])
+  @@map("api_keys")
+}
+
+model Session {
+  id           String   @id @default(cuid())
+  userId       String   @map("user_id")
+  token        String   @unique
+  refreshToken String?  @unique @map("refresh_token")
+  expiresAt    DateTime @map("expires_at")
+  createdAt    DateTime @default(now()) @map("created_at")
+  user         User     @relation(fields: [userId], references: [id], onDelete: Cascade)
+
+  @@index([userId])
+  @@index([token])
+  @@map("sessions")
+}
+
+model AuditLog {
+  id           String   @id @default(cuid())
+  actor        String
+  action       String
+  resourceType String   @map("resource_type")
+  resourceId   String   @map("resource_id")
+  details      Json?
+  ip           String?
+  userAgent    String?  @map("user_agent")
+  timestamp    DateTime @default(now())
+
+  @@index([actor])
+  @@index([action])
+  @@index([resourceType])
+  @@index([timestamp])
+  @@map("audit_logs")
+}
+
+model EmailVerification {
+  id        String   @id @default(cuid())
+  email     String
+  token     String   @unique
+  expiresAt DateTime @map("expires_at")
+  createdAt DateTime @default(now()) @map("created_at")
+
+  @@index([email])
+  @@index([token])
+  @@map("email_verifications")
+}
+
+model PasswordReset {
+  id        String   @id @default(cuid())
+  email     String
+  token     String   @unique
+  expiresAt DateTime @map("expires_at")
+  used      Boolean  @default(false)
+  createdAt DateTime @default(now()) @map("created_at")
+
+  @@index([email])
+  @@index([token])
+  @@map("password_resets")
+}
+
+model Profile {
+  id              String          @id @default(cuid())
+  userId          String          @unique @map("user_id")
+  headline        String?
+  bio             String?
+  phone           String?
+  location        String?
+  linkedinUrl     String?         @map("linkedin_url")
+  experienceLevel ExperienceLevel @default(ENTRY) @map("experience_level")
+  currentTier     ProfessionalTier @default(FOUNDATION) @map("current_tier")
+  overallScore    Float?          @map("overall_score")
+  cvUrl           String?         @map("cv_url")
+  skills          String[]        @default([])
+  certifications  String[]        @default([])
+  completeness    Int             @default(0)
+  createdAt       DateTime        @default(now()) @map("created_at")
+  updatedAt       DateTime        @updatedAt @map("updated_at")
+
+  user         User          @relation(fields: [userId], references: [id], onDelete: Cascade)
+  domainScores DomainScore[]
+
+  @@map("profiles")
+}
+
+model DomainScore {
+  id        String          @id @default(cuid())
+  profileId String          @map("profile_id")
+  domain    GrcDomain
+  score     Float
+  tier      ProfessionalTier
+  updatedAt DateTime        @updatedAt @map("updated_at")
+
+  profile Profile @relation(fields: [profileId], references: [id], onDelete: Cascade)
+
+  @@unique([profileId, domain])
+  @@map("domain_scores")
+}
+
+model Question {
+  id            String             @id @default(cuid())
+  domain        GrcDomain
+  type          QuestionType       @default(MULTIPLE_CHOICE)
+  difficulty    QuestionDifficulty @default(INTERMEDIATE)
+  text          String
+  options       Json?
+  correctAnswer String?            @map("correct_answer")
+  explanation   String?
+  framework     String?
+  tags          String[]           @default([])
+  active        Boolean            @default(true)
+  createdAt     DateTime           @default(now()) @map("created_at")
+  updatedAt     DateTime           @updatedAt @map("updated_at")
+
+  answers AssessmentAnswer[]
+
+  @@index([domain])
+  @@index([difficulty])
+  @@index([active])
+  @@map("questions")
+}
+
+model Assessment {
+  id          String           @id @default(cuid())
+  userId      String           @map("user_id")
+  domain      GrcDomain
+  status      AssessmentStatus @default(NOT_STARTED)
+  score       Float?
+  tier        ProfessionalTier?
+  startedAt   DateTime?        @map("started_at")
+  completedAt DateTime?        @map("completed_at")
+  expiresAt   DateTime?        @map("expires_at")
+  timeSpent   Int?             @map("time_spent")
+  createdAt   DateTime         @default(now()) @map("created_at")
+
+  user    User               @relation(fields: [userId], references: [id], onDelete: Cascade)
+  answers AssessmentAnswer[]
+
+  @@index([userId])
+  @@index([domain])
+  @@index([status])
+  @@map("assessments")
+}
+
+model AssessmentAnswer {
+  id           String   @id @default(cuid())
+  assessmentId String   @map("assessment_id")
+  questionId   String   @map("question_id")
+  answer       String
+  isCorrect    Boolean?  @map("is_correct")
+  score        Float?
+  createdAt    DateTime @default(now()) @map("created_at")
+
+  assessment Assessment @relation(fields: [assessmentId], references: [id], onDelete: Cascade)
+  question   Question   @relation(fields: [questionId], references: [id], onDelete: Restrict)
+
+  @@unique([assessmentId, questionId])
+  @@map("assessment_answers")
+}
+
+model CareerSimulation {
+  id              String          @id @default(cuid())
+  userId          String          @map("user_id")
+  targetRole      String          @map("target_role")
+  currentLevel    ExperienceLevel @map("current_level")
+  targetLevel     ExperienceLevel @map("target_level")
+  skillGaps       Json            @map("skill_gaps")
+  recommendations Json
+  estimatedMonths Int?            @map("estimated_months")
+  createdAt       DateTime        @default(now()) @map("created_at")
+
+  user User @relation(fields: [userId], references: [id], onDelete: Cascade)
+
+  @@index([userId])
+  @@map("career_simulations")
+}
+
+model LearningPath {
+  id          String          @id @default(cuid())
+  title       String
+  description String?
+  domain      GrcDomain
+  level       ExperienceLevel
+  steps       Json
+  duration    String?
+  active      Boolean         @default(true)
+  createdAt   DateTime        @default(now()) @map("created_at")
+  updatedAt   DateTime        @updatedAt @map("updated_at")
+
+  @@index([domain])
+  @@index([level])
+  @@map("learning_paths")
+}
+
+model Job {
+  id           String          @id @default(cuid())
+  title        String
+  company      String
+  description  String
+  location     String
+  remote       Boolean         @default(false)
+  salaryMin    Int?            @map("salary_min")
+  salaryMax    Int?            @map("salary_max")
+  currency     String          @default("QAR")
+  domains      GrcDomain[]
+  level        ExperienceLevel
+  requiredTier ProfessionalTier? @map("required_tier")
+  skills       String[]        @default([])
+  status       JobStatus       @default(DRAFT)
+  postedBy     String?         @map("posted_by")
+  expiresAt    DateTime?       @map("expires_at")
+  createdAt    DateTime        @default(now()) @map("created_at")
+  updatedAt    DateTime        @updatedAt @map("updated_at")
+
+  applications JobApplication[]
+
+  @@index([status])
+  @@index([level])
+  @@map("jobs")
+}
+
+model JobApplication {
+  id          String            @id @default(cuid())
+  jobId       String            @map("job_id")
+  userId      String            @map("user_id")
+  coverLetter String?           @map("cover_letter")
+  status      ApplicationStatus @default(PENDING)
+  matchScore  Float?            @map("match_score")
+  appliedAt   DateTime          @default(now()) @map("applied_at")
+  updatedAt   DateTime          @updatedAt @map("updated_at")
+
+  job  Job  @relation(fields: [jobId], references: [id], onDelete: Cascade)
+  user User @relation(fields: [userId], references: [id], onDelete: Cascade)
+
+  @@unique([jobId, userId])
+  @@index([userId])
+  @@index([status])
+  @@map("job_applications")
+}
+
+model Resource {
+  id          String          @id @default(cuid())
+  title       String
+  description String?
+  type        ResourceType
+  url         String
+  domain      GrcDomain?
+  level       ExperienceLevel?
+  tags        String[]        @default([])
+  featured    Boolean         @default(false)
+  active      Boolean         @default(true)
+  createdAt   DateTime        @default(now()) @map("created_at")
+  updatedAt   DateTime        @updatedAt @map("updated_at")
+
+  bookmarks Bookmark[]
+
+  @@index([type])
+  @@index([domain])
+  @@index([featured])
+  @@map("resources")
+}
+
+model Bookmark {
+  id         String   @id @default(cuid())
+  userId     String   @map("user_id")
+  resourceId String   @map("resource_id")
+  createdAt  DateTime @default(now()) @map("created_at")
+
+  user     User     @relation(fields: [userId], references: [id], onDelete: Cascade)
+  resource Resource @relation(fields: [resourceId], references: [id], onDelete: Cascade)
+
+  @@unique([userId, resourceId])
+  @@map("bookmarks")
+}
+
+model Notification {
+  id        String           @id @default(cuid())
+  userId    String           @map("user_id")
+  type      NotificationType
+  title     String
+  message   String
+  read      Boolean          @default(false)
+  data      Json?
+  createdAt DateTime         @default(now()) @map("created_at")
+
+  user User @relation(fields: [userId], references: [id], onDelete: Cascade)
+
+  @@index([userId])
+  @@index([read])
+  @@index([createdAt])
+  @@map("notifications")
+}

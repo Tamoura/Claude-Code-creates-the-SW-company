@@ -1,6 +1,7 @@
 import { FastifyInstance, FastifyPluginAsync, FastifyReply } from 'fastify';
 import { z } from 'zod';
 import * as crypto from 'crypto';
+import { Dimension, Sentiment } from '@prisma/client';
 import { hashPassword, verifyPassword, generateRefreshToken } from '../utils/crypto';
 import { BadRequestError, ConflictError, UnauthorizedError, ValidationError } from '../lib/errors';
 import { logger } from '../utils/logger';
@@ -147,6 +148,8 @@ const authRoutes: FastifyPluginAsync = async (fastify) => {
     });
 
     if (!parent) {
+      // Constant-time: run a dummy hash to prevent timing-based email enumeration
+      await verifyPassword(password, '$2b$10$N9qo8uLOickgx2ZMRZoMyeIjZAgcfl7p92ldGxad68LJZdL17lhWy');
       throw new UnauthorizedError('Invalid email or password');
     }
 
@@ -178,12 +181,24 @@ const authRoutes: FastifyPluginAsync = async (fastify) => {
       });
     }
 
-    reply.clearCookie('refreshToken', { path: '/api/auth' });
+    reply.clearCookie('refreshToken', {
+      path: '/api/auth',
+      httpOnly: true,
+      secure: process.env.NODE_ENV === 'production',
+      sameSite: 'strict',
+    });
 
     return reply.code(200).send({ message: 'Logged out successfully' });
   });
 
-  fastify.post('/refresh', async (request, reply) => {
+  fastify.post('/refresh', {
+    config: {
+      rateLimit: {
+        max: 10,
+        timeWindow: '1 hour',
+      },
+    },
+  }, async (request, reply) => {
     const refreshToken = request.cookies.refreshToken;
 
     if (!refreshToken) {
@@ -247,7 +262,14 @@ const authRoutes: FastifyPluginAsync = async (fastify) => {
     });
   });
 
-  fastify.post('/reset-password', async (request, reply) => {
+  fastify.post('/reset-password', {
+    config: {
+      rateLimit: {
+        max: 5,
+        timeWindow: '15 minutes',
+      },
+    },
+  }, async (request, reply) => {
     const { token, password } = validateBody(
       resetPasswordSchema,
       request.body
@@ -278,6 +300,235 @@ const authRoutes: FastifyPluginAsync = async (fastify) => {
 
     return reply.code(200).send({
       message: 'Password has been reset',
+    });
+  });
+
+  // --- Demo Login ---
+
+  const DEMO_EMAIL = 'demo@muaththir.app';
+  const DEMO_PARENT_NAME = 'Demo Parent';
+  const DEMO_CHILD_NAME = 'Yusuf';
+
+  const demoObservations: Array<{
+    dimension: Dimension;
+    content: string;
+    sentiment: Sentiment;
+    tags: string[];
+  }> = [
+    // Academic (3)
+    {
+      dimension: 'academic',
+      content: 'Yusuf wrote his name independently for the first time today, forming each letter carefully.',
+      sentiment: 'positive',
+      tags: ['writing', 'milestone'],
+    },
+    {
+      dimension: 'academic',
+      content: 'Counted to 15 while stacking blocks but skipped number 13. Getting close to counting to 20.',
+      sentiment: 'neutral',
+      tags: ['numeracy', 'counting'],
+    },
+    {
+      dimension: 'academic',
+      content: 'Recognised all the letters in his name on a shop sign and got very excited.',
+      sentiment: 'positive',
+      tags: ['literacy', 'letter-recognition'],
+    },
+    // Social-Emotional (3)
+    {
+      dimension: 'social_emotional',
+      content: 'Shared his favourite toy with a younger child at the park without being asked.',
+      sentiment: 'positive',
+      tags: ['sharing', 'empathy'],
+    },
+    {
+      dimension: 'social_emotional',
+      content: 'Had difficulty separating at nursery drop-off today. Needed extra reassurance.',
+      sentiment: 'needs_attention',
+      tags: ['separation-anxiety', 'transition'],
+    },
+    {
+      dimension: 'social_emotional',
+      content: 'Used words to express frustration instead of crying when his tower fell down.',
+      sentiment: 'positive',
+      tags: ['emotional-regulation', 'communication'],
+    },
+    // Behavioural (3)
+    {
+      dimension: 'behavioural',
+      content: 'Followed the bedtime routine without reminders tonight — brushed teeth, chose a book, and settled quickly.',
+      sentiment: 'positive',
+      tags: ['routine', 'independence'],
+    },
+    {
+      dimension: 'behavioural',
+      content: 'Sat at the table for the full duration of dinner for the first time this week.',
+      sentiment: 'positive',
+      tags: ['mealtime', 'focus'],
+    },
+    {
+      dimension: 'behavioural',
+      content: 'Struggled with taking turns during a board game and needed gentle reminders.',
+      sentiment: 'neutral',
+      tags: ['turn-taking', 'patience'],
+    },
+    // Aspirational (3)
+    {
+      dimension: 'aspirational',
+      content: 'Told us he wants to be a doctor when he grows up so he can help people feel better.',
+      sentiment: 'positive',
+      tags: ['career-interest', 'empathy'],
+    },
+    {
+      dimension: 'aspirational',
+      content: 'Showed interest in how buildings are made while we walked past a construction site.',
+      sentiment: 'positive',
+      tags: ['curiosity', 'engineering'],
+    },
+    {
+      dimension: 'aspirational',
+      content: 'Asked if he could learn to swim like the children he saw on television.',
+      sentiment: 'neutral',
+      tags: ['goal-setting', 'sport'],
+    },
+    // Islamic (3)
+    {
+      dimension: 'islamic',
+      content: 'Said bismillah before eating without prompting and reminded his sister to do the same.',
+      sentiment: 'positive',
+      tags: ['dua', 'daily-practice'],
+    },
+    {
+      dimension: 'islamic',
+      content: 'Stood beside his father during Maghrib prayer and tried to follow the movements.',
+      sentiment: 'positive',
+      tags: ['salah', 'role-model'],
+    },
+    {
+      dimension: 'islamic',
+      content: 'Asked why we fast in Ramadan and listened attentively to the explanation.',
+      sentiment: 'positive',
+      tags: ['ramadan', 'curiosity'],
+    },
+    // Physical (3)
+    {
+      dimension: 'physical',
+      content: 'Rode his balance bike confidently down a gentle slope at the park today.',
+      sentiment: 'positive',
+      tags: ['gross-motor', 'balance'],
+    },
+    {
+      dimension: 'physical',
+      content: 'Struggled to cut along a curved line with scissors. Fine motor skills need more practice.',
+      sentiment: 'needs_attention',
+      tags: ['fine-motor', 'scissors'],
+    },
+    {
+      dimension: 'physical',
+      content: 'Caught a large ball with both hands three times in a row during garden play.',
+      sentiment: 'positive',
+      tags: ['coordination', 'gross-motor'],
+    },
+  ];
+
+  fastify.post('/demo-login', {
+    config: {
+      rateLimit: {
+        max: 10,
+        timeWindow: '1 minute',
+      },
+    },
+  }, async (request, reply) => {
+    // 1. Find or create demo parent
+    const randomPassword = crypto.randomBytes(32).toString('hex');
+    const passwordHash = await hashPassword(randomPassword);
+
+    const parent = await fastify.prisma.parent.upsert({
+      where: { email: DEMO_EMAIL },
+      update: {},
+      create: {
+        email: DEMO_EMAIL,
+        name: DEMO_PARENT_NAME,
+        passwordHash,
+      },
+    });
+
+    // 2. Find or create demo child
+    let child = await fastify.prisma.child.findFirst({
+      where: { parentId: parent.id, isDemo: true },
+    });
+
+    if (!child) {
+      const fourYearsAgo = new Date();
+      fourYearsAgo.setFullYear(fourYearsAgo.getFullYear() - 4);
+
+      child = await fastify.prisma.child.create({
+        data: {
+          parentId: parent.id,
+          name: DEMO_CHILD_NAME,
+          dateOfBirth: fourYearsAgo,
+          gender: 'male',
+          isDemo: true,
+        },
+      });
+    }
+
+    // 3. Seed observations if none exist
+    const observationCount = await fastify.prisma.observation.count({
+      where: { childId: child.id },
+    });
+
+    if (observationCount === 0) {
+      const now = Date.now();
+      const dayMs = 24 * 60 * 60 * 1000;
+
+      const observationData = demoObservations.map((obs, index) => {
+        // Spread observations over the last 30 days
+        const daysAgo = Math.floor((index / demoObservations.length) * 30);
+        const observedAt = new Date(now - daysAgo * dayMs);
+
+        return {
+          childId: child!.id,
+          dimension: obs.dimension,
+          content: obs.content,
+          sentiment: obs.sentiment,
+          observedAt,
+          tags: obs.tags,
+        };
+      });
+
+      await fastify.prisma.observation.createMany({ data: observationData });
+    }
+
+    // 4. Seed milestones if none exist
+    const milestoneCount = await fastify.prisma.childMilestone.count({
+      where: { childId: child.id },
+    });
+
+    if (milestoneCount === 0) {
+      const definitions = await fastify.prisma.milestoneDefinition.findMany({
+        where: { ageBand: 'early_years' },
+        take: 15,
+      });
+
+      if (definitions.length > 0) {
+        const milestoneData = definitions.map((def) => ({
+          childId: child!.id,
+          milestoneId: def.id,
+          achieved: true,
+          achievedAt: new Date(),
+        }));
+
+        await fastify.prisma.childMilestone.createMany({ data: milestoneData });
+      }
+    }
+
+    // 5. Issue tokens and return
+    const accessToken = await issueTokens(fastify, reply, parent);
+
+    return reply.code(200).send({
+      user: parentToResponse(parent),
+      accessToken,
     });
   });
 };

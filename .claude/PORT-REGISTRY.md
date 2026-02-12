@@ -2,7 +2,7 @@
 
 **Purpose**: Centralized port allocation to prevent conflicts when running multiple products simultaneously.
 
-**Last Updated**: 2026-02-07
+**Last Updated**: 2026-02-11
 
 ## Port Allocation Rules
 
@@ -23,6 +23,7 @@
 | 3108 | muaththir | Active | http://localhost:3108 |
 | 3109 | invoiceforge | Active | http://localhost:3109 |
 | 3110 | taskflow | Active | http://localhost:3110 |
+| 3110 | connectgrc | Active | http://localhost:3110 |
 | 3111-3199 | *Available* | Free | - |
 
 ### Backend APIs (5000-5099)
@@ -36,6 +37,8 @@
 | 5005 | muaththir | Active | http://localhost:5005 |
 | 5007 | taskflow | Active | http://localhost:5007 |
 | 5008-5099 | *Available* | Free | - |
+| 5006 | connectgrc | Active | http://localhost:5006 |
+| 5007-5099 | *Available* | Free | - |
 
 ### Mobile Development (8081-8099)
 
