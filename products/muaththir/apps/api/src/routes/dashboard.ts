@@ -242,6 +242,107 @@ const dashboardRoutes: FastifyPluginAsync = async (fastify) => {
     return reply.send({ data: observations });
   });
 
+  // GET /api/dashboard/:childId/activity — Recent activity feed
+  fastify.get('/:childId/activity', {
+    preHandler: [fastify.authenticate],
+  }, async (request, reply) => {
+    const { childId } = request.params as { childId: string };
+    const parentId = request.currentUser!.id;
+    const { limit: limitStr } = request.query as { limit?: string };
+
+    await verifyChildOwnership(fastify, childId, parentId);
+
+    // Parse and clamp limit: default 10, max 50
+    let limit = 10;
+    if (limitStr !== undefined) {
+      const parsed = parseInt(limitStr, 10);
+      if (!isNaN(parsed) && parsed >= 1) {
+        limit = Math.min(parsed, 50);
+      }
+    }
+
+    // Query 3 sources in parallel
+    const [observations, milestones, goals] = await Promise.all([
+      fastify.prisma.observation.findMany({
+        where: { childId, deletedAt: null },
+        orderBy: { observedAt: 'desc' },
+        take: limit,
+        select: {
+          id: true,
+          dimension: true,
+          content: true,
+          sentiment: true,
+          observedAt: true,
+        },
+      }),
+      fastify.prisma.childMilestone.findMany({
+        where: { childId },
+        include: { milestone: true },
+        orderBy: { achievedAt: 'desc' },
+        take: limit,
+      }),
+      fastify.prisma.goal.findMany({
+        where: { childId },
+        orderBy: { updatedAt: 'desc' },
+        take: limit,
+      }),
+    ]);
+
+    // Map to unified activity format
+    type ActivityItem = {
+      type: string;
+      id: string;
+      timestamp: string;
+      [key: string]: unknown;
+    };
+
+    const items: ActivityItem[] = [];
+
+    for (const obs of observations) {
+      items.push({
+        type: 'observation',
+        id: obs.id,
+        dimension: obs.dimension,
+        content: obs.content,
+        sentiment: obs.sentiment,
+        timestamp: obs.observedAt.toISOString(),
+      });
+    }
+
+    for (const cm of milestones as any[]) {
+      const ts = cm.achievedAt
+        ? cm.achievedAt.toISOString()
+        : cm.createdAt.toISOString();
+      items.push({
+        type: 'milestone',
+        id: cm.id,
+        dimension: cm.milestone.dimension,
+        title: cm.milestone.title,
+        achievedAt: ts,
+        timestamp: ts,
+      });
+    }
+
+    for (const goal of goals) {
+      items.push({
+        type: 'goal_update',
+        id: goal.id,
+        title: goal.title,
+        status: goal.status,
+        updatedAt: goal.updatedAt.toISOString(),
+        timestamp: goal.updatedAt.toISOString(),
+      });
+    }
+
+    // Sort by timestamp descending, take first `limit`
+    items.sort(
+      (a, b) =>
+        new Date(b.timestamp).getTime() - new Date(a.timestamp).getTime()
+    );
+
+    return reply.send({ data: items.slice(0, limit) });
+  });
+
   // GET /api/dashboard/:childId/milestones-due — Next 3 unchecked milestones
   fastify.get('/:childId/milestones-due', {
     preHandler: [fastify.authenticate],
