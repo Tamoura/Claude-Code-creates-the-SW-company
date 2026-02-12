@@ -4,6 +4,7 @@ import { verifyChildOwnership } from '../lib/ownership';
 import { getAgeBand } from '../utils/age-band';
 import { DIMENSIONS, DimensionType } from '../types';
 import { Dimension } from '@prisma/client';
+import { calculateDimensionScore, DimensionScore } from '../services/score-calculator';
 
 /**
  * Dashboard Scores API
@@ -21,97 +22,6 @@ import { Dimension } from '@prisma/client';
  * Uses ScoreCache with staleness: returns cached scores when fresh,
  * recalculates only stale dimensions on demand.
  */
-
-interface DimensionScore {
-  dimension: DimensionType;
-  score: number;
-  factors: {
-    observation: number;
-    milestone: number;
-    sentiment: number;
-  };
-  observationCount: number;
-  milestoneProgress: {
-    achieved: number;
-    total: number;
-  };
-}
-
-async function calculateDimensionScore(
-  prisma: any,
-  childId: string,
-  dimension: Dimension,
-  ageBand: string | null
-): Promise<DimensionScore> {
-  const thirtyDaysAgo = new Date();
-  thirtyDaysAgo.setDate(thirtyDaysAgo.getDate() - 30);
-
-  // Count observations in last 30 days for this dimension (exclude soft-deleted)
-  const recentObservations = await prisma.observation.findMany({
-    where: {
-      childId,
-      dimension,
-      deletedAt: null,
-      observedAt: { gte: thirtyDaysAgo },
-    },
-    select: { sentiment: true },
-  });
-
-  const observationCount = recentObservations.length;
-  const positiveCount = recentObservations.filter(
-    (o: { sentiment: string }) => o.sentiment === 'positive'
-  ).length;
-
-  // observation_factor: min(count, 10) / 10 * 100
-  const observationFactor = Math.min(observationCount, 10) / 10 * 100;
-
-  // sentiment_factor: positive / total * 100 (0 if no observations)
-  const sentimentFactor =
-    observationCount > 0 ? (positiveCount / observationCount) * 100 : 0;
-
-  // milestone_factor: achieved / total for age band * 100
-  let milestoneAchieved = 0;
-  let milestoneTotal = 0;
-
-  if (ageBand) {
-    milestoneTotal = await prisma.milestoneDefinition.count({
-      where: { dimension, ageBand },
-    });
-
-    if (milestoneTotal > 0) {
-      milestoneAchieved = await prisma.childMilestone.count({
-        where: {
-          childId,
-          achieved: true,
-          milestone: { dimension, ageBand },
-        },
-      });
-    }
-  }
-
-  const milestoneFactor =
-    milestoneTotal > 0 ? (milestoneAchieved / milestoneTotal) * 100 : 0;
-
-  // Final score
-  const score = Math.round(
-    observationFactor * 0.4 + milestoneFactor * 0.4 + sentimentFactor * 0.2
-  );
-
-  return {
-    dimension: dimension as DimensionType,
-    score,
-    factors: {
-      observation: Math.round(observationFactor),
-      milestone: Math.round(milestoneFactor),
-      sentiment: Math.round(sentimentFactor),
-    },
-    observationCount,
-    milestoneProgress: {
-      achieved: milestoneAchieved,
-      total: milestoneTotal,
-    },
-  };
-}
 
 const dashboardRoutes: FastifyPluginAsync = async (fastify) => {
   // GET /api/dashboard/:childId — Get radar chart scores

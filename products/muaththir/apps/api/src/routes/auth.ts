@@ -149,7 +149,7 @@ const authRoutes: FastifyPluginAsync = async (fastify) => {
 
     if (!parent) {
       // Constant-time: run a dummy hash to prevent timing-based email enumeration
-      await verifyPassword(password, '$2b$10$abcdefghijklmnopqrstuuABCDEFGHIJKLMNOPQRSTUVWXYZ012');
+      await verifyPassword(password, '$2b$10$N9qo8uLOickgx2ZMRZoMyeIjZAgcfl7p92ldGxad68LJZdL17lhWy');
       throw new UnauthorizedError('Invalid email or password');
     }
 
@@ -191,7 +191,14 @@ const authRoutes: FastifyPluginAsync = async (fastify) => {
     return reply.code(200).send({ message: 'Logged out successfully' });
   });
 
-  fastify.post('/refresh', async (request, reply) => {
+  fastify.post('/refresh', {
+    config: {
+      rateLimit: {
+        max: 10,
+        timeWindow: '1 hour',
+      },
+    },
+  }, async (request, reply) => {
     const refreshToken = request.cookies.refreshToken;
 
     if (!refreshToken) {

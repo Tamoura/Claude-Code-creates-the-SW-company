@@ -185,6 +185,7 @@ model Goal {
 
   @@index([childId, dimension])
   @@index([childId, status])
+  @@index([childId, status, updatedAt])
   @@index([templateId])
   @@map("goals")
 }
@@ -217,5 +218,6 @@ model Session {
   @@index([token])
   @@index([parentId])
   @@index([expiresAt])
+  @@index([parentId, expiresAt])
   @@map("sessions")
 }
