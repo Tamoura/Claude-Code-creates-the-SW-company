@@ -1,0 +1,279 @@
+generator client {
+  provider = "prisma-client-js"
+}
+
+datasource db {
+  provider = "postgresql"
+  url      = env("DATABASE_URL")
+}
+
+// ============================================================
+// Enums
+// ============================================================
+
+enum AdminRole {
+  admin
+  super_admin
+
+  @@map("admin_role")
+}
+
+enum TenantStatus {
+  active
+  suspended
+  deleted
+
+  @@map("tenant_status")
+}
+
+enum ApiKeyPermission {
+  read
+  read_write
+
+  @@map("api_key_permission")
+}
+
+enum EventType {
+  product_viewed
+  product_clicked
+  add_to_cart
+  remove_from_cart
+  purchase
+  recommendation_clicked
+  recommendation_impressed
+
+  @@map("event_type")
+}
+
+enum ExperimentStatus {
+  draft
+  running
+  paused
+  completed
+
+  @@map("experiment_status")
+}
+
+enum ExperimentMetric {
+  ctr
+  conversion_rate
+  revenue_per_visitor
+
+  @@map("experiment_metric")
+}
+
+enum RecommendationStrategy {
+  collaborative
+  content_based
+  trending
+  frequently_bought_together
+
+  @@map("recommendation_strategy")
+}
+
+enum WidgetLayout {
+  grid
+  carousel
+  list
+
+  @@map("widget_layout")
+}
+
+// ============================================================
+// Models
+// ============================================================
+
+model Admin {
+  id           String    @id @default(cuid())
+  email        String    @unique
+  passwordHash String    @map("password_hash")
+  role         AdminRole @default(admin)
+  createdAt    DateTime  @default(now()) @map("created_at")
+  updatedAt    DateTime  @updatedAt @map("updated_at")
+  tenants      Tenant[]
+
+  @@map("admins")
+}
+
+model Tenant {
+  id        String       @id @default(cuid())
+  name      String
+  status    TenantStatus @default(active)
+  config    Json         @default("{\"defaultStrategy\":\"trending\",\"excludePurchased\":true,\"maxApiKeys\":10,\"corsOrigins\":[]}")
+  ownerId   String       @map("owner_id")
+  createdAt DateTime     @default(now()) @map("created_at")
+  updatedAt DateTime     @updatedAt @map("updated_at")
+
+  owner         Admin              @relation(fields: [ownerId], references: [id], onDelete: Restrict)
+  apiKeys       ApiKey[]
+  catalogItems  CatalogItem[]
+  events        Event[]
+  experiments   Experiment[]
+  analyticsDaily AnalyticsDaily[]
+  widgetConfigs WidgetConfig[]
+  revenueAttributions RevenueAttribution[]
+
+  @@index([ownerId])
+  @@index([status])
+  @@map("tenants")
+}
+
+model ApiKey {
+  id          String           @id @default(cuid())
+  tenantId    String           @map("tenant_id")
+  name        String
+  keyHash     String           @unique @map("key_hash")
+  keyPrefix   String           @map("key_prefix")
+  permissions ApiKeyPermission @default(read)
+  lastUsedAt  DateTime?        @map("last_used_at")
+  createdAt   DateTime         @default(now()) @map("created_at")
+  revokedAt   DateTime?        @map("revoked_at")
+
+  tenant Tenant @relation(fields: [tenantId], references: [id], onDelete: Cascade)
+
+  @@index([tenantId])
+  @@index([keyHash])
+  @@map("api_keys")
+}
+
+model CatalogItem {
+  id          String   @id @default(cuid())
+  tenantId    String   @map("tenant_id")
+  productId   String   @map("product_id")
+  name        String
+  description String?
+  category    String?
+  price       Decimal? @db.Decimal(12, 2)
+  imageUrl    String?  @map("image_url")
+  attributes  Json     @default("{}")
+  available   Boolean  @default(true)
+  createdAt   DateTime @default(now()) @map("created_at")
+  updatedAt   DateTime @updatedAt @map("updated_at")
+
+  tenant Tenant @relation(fields: [tenantId], references: [id], onDelete: Cascade)
+
+  @@unique([tenantId, productId])
+  @@index([tenantId])
+  @@index([tenantId, category])
+  @@index([tenantId, productId])
+  @@map("catalog_items")
+}
+
+model Event {
+  id        String    @id @default(cuid())
+  tenantId  String    @map("tenant_id")
+  eventType EventType @map("event_type")
+  userId    String    @map("user_id")
+  productId String    @map("product_id")
+  sessionId String?   @map("session_id")
+  metadata  Json?     @default("{}")
+  timestamp DateTime  @default(now())
+  createdAt DateTime  @default(now()) @map("created_at")
+
+  tenant Tenant @relation(fields: [tenantId], references: [id], onDelete: Cascade)
+
+  @@index([tenantId, timestamp])
+  @@index([tenantId, userId, eventType])
+  @@index([tenantId, productId])
+  @@index([tenantId, userId, eventType, productId, timestamp])
+  @@map("events")
+}
+
+model Experiment {
+  id              String                 @id @default(cuid())
+  tenantId        String                 @map("tenant_id")
+  name            String
+  controlStrategy RecommendationStrategy @map("control_strategy")
+  variantStrategy RecommendationStrategy @map("variant_strategy")
+  trafficSplit    Int                    @map("traffic_split")
+  metric          ExperimentMetric       @default(ctr)
+  status          ExperimentStatus       @default(draft)
+  placementId     String?                @map("placement_id")
+  startedAt       DateTime?              @map("started_at")
+  completedAt     DateTime?              @map("completed_at")
+  createdAt       DateTime               @default(now()) @map("created_at")
+  updatedAt       DateTime               @updatedAt @map("updated_at")
+
+  tenant  Tenant             @relation(fields: [tenantId], references: [id], onDelete: Cascade)
+  results ExperimentResult[]
+
+  @@index([tenantId])
+  @@index([tenantId, status])
+  @@map("experiments")
+}
+
+model ExperimentResult {
+  id           String   @id @default(cuid())
+  experimentId String   @map("experiment_id")
+  variant      String
+  impressions  Int      @default(0)
+  clicks       Int      @default(0)
+  conversions  Int      @default(0)
+  revenue      Decimal  @default(0) @db.Decimal(12, 2)
+  sampleSize   Int      @default(0) @map("sample_size")
+  computedAt   DateTime @default(now()) @map("computed_at")
+
+  experiment Experiment @relation(fields: [experimentId], references: [id], onDelete: Cascade)
+
+  @@unique([experimentId, variant])
+  @@index([experimentId])
+  @@map("experiment_results")
+}
+
+model AnalyticsDaily {
+  id          String  @id @default(cuid())
+  tenantId    String  @map("tenant_id")
+  date        DateTime @db.Date
+  impressions Int     @default(0)
+  clicks      Int     @default(0)
+  conversions Int     @default(0)
+  revenue     Decimal @default(0) @db.Decimal(12, 2)
+  placementId String? @map("placement_id")
+  strategy    String?
+
+  tenant Tenant @relation(fields: [tenantId], references: [id], onDelete: Cascade)
+
+  @@unique([tenantId, date, placementId, strategy])
+  @@index([tenantId, date])
+  @@map("analytics_daily")
+}
+
+model WidgetConfig {
+  id          String       @id @default(cuid())
+  tenantId    String       @map("tenant_id")
+  placementId String       @map("placement_id")
+  layout      WidgetLayout @default(grid)
+  columns     Int          @default(4)
+  theme       Json         @default("{\"primaryColor\":\"#2563EB\",\"fontFamily\":\"inherit\"}")
+  maxItems    Int          @default(8) @map("max_items")
+  showPrice   Boolean      @default(true) @map("show_price")
+  ctaText     String       @default("View Product") @map("cta_text")
+  createdAt   DateTime     @default(now()) @map("created_at")
+  updatedAt   DateTime     @updatedAt @map("updated_at")
+
+  tenant Tenant @relation(fields: [tenantId], references: [id], onDelete: Cascade)
+
+  @@unique([tenantId, placementId])
+  @@index([tenantId])
+  @@map("widget_configs")
+}
+
+model RevenueAttribution {
+  id                  String   @id @default(cuid())
+  tenantId            String   @map("tenant_id")
+  userId              String   @map("user_id")
+  productId           String   @map("product_id")
+  clickEventId        String   @map("click_event_id")
+  purchaseEventId     String   @map("purchase_event_id")
+  revenue             Decimal  @db.Decimal(12, 2)
+  clickTimestamp      DateTime @map("click_timestamp")
+  purchaseTimestamp   DateTime @map("purchase_timestamp")
+  attributionWindowMs Int      @default(1800000) @map("attribution_window_ms")
+  createdAt           DateTime @default(now()) @map("created_at")
+
+  tenant Tenant @relation(fields: [tenantId], references: [id], onDelete: Cascade)
+
+  @@index([tenantId])
+  @@index([tenantId, createdAt])
+  @@map("revenue_attributions")
+}

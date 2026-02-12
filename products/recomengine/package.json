@@ -1,0 +1,17 @@
+{
+  "name": "recomengine",
+  "version": "1.0.0",
+  "private": true,
+  "description": "B2B SaaS Product Recommendation Orchestrator for E-Commerce",
+  "workspaces": [
+    "apps/api",
+    "apps/web",
+    "apps/sdk"
+  ],
+  "scripts": {
+    "dev": "npm run dev --workspaces --if-present",
+    "build": "npm run build --workspaces --if-present",
+    "test": "npm run test --workspaces --if-present",
+    "lint": "npm run lint --workspaces --if-present"
+  }
+}
