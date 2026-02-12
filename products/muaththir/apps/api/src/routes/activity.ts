@@ -1,4 +1,5 @@
 import { FastifyPluginAsync } from 'fastify';
+import { Observation, Goal, ChildMilestone, MilestoneDefinition } from '@prisma/client';
 import { verifyChildOwnership } from '../lib/ownership';
 
 interface ActivityItem {
@@ -9,7 +10,49 @@ interface ActivityItem {
   details: Record<string, unknown>;
 }
 
+type ChildMilestoneWithDef = ChildMilestone & { milestone: MilestoneDefinition };
+
 const ACTIVITY_LIMIT = 20;
+
+function mapObservation(obs: Observation): ActivityItem {
+  return {
+    type: 'observation',
+    title: obs.content,
+    date: obs.observedAt.toISOString(),
+    dimension: obs.dimension,
+    details: { sentiment: obs.sentiment, tags: obs.tags },
+  };
+}
+
+function mapMilestone(cm: ChildMilestoneWithDef): ActivityItem {
+  return {
+    type: 'milestone',
+    title: cm.milestone.title,
+    date: (cm.achievedAt ?? cm.createdAt).toISOString(),
+    dimension: cm.milestone.dimension,
+    details: { achieved: cm.achieved, description: cm.milestone.description },
+  };
+}
+
+function mapGoal(goal: Goal): ActivityItem {
+  return {
+    type: 'goal',
+    title: goal.title,
+    date: goal.createdAt.toISOString(),
+    dimension: goal.dimension,
+    details: {
+      status: goal.status,
+      description: goal.description,
+      targetDate: goal.targetDate
+        ? goal.targetDate.toISOString().split('T')[0]
+        : null,
+    },
+  };
+}
+
+function sortByDateDesc(a: ActivityItem, b: ActivityItem): number {
+  return new Date(b.date).getTime() - new Date(a.date).getTime();
+}
 
 const activityRoutes: FastifyPluginAsync = async (fastify) => {
   // GET /api/activity/:childId — Unified activity feed
@@ -21,7 +64,6 @@ const activityRoutes: FastifyPluginAsync = async (fastify) => {
 
     await verifyChildOwnership(fastify, childId, parentId);
 
-    // Fetch observations, achieved milestones, and goals in parallel
     const [observations, childMilestones, goals] = await Promise.all([
       fastify.prisma.observation.findMany({
         where: { childId, deletedAt: null },
@@ -41,59 +83,15 @@ const activityRoutes: FastifyPluginAsync = async (fastify) => {
       }),
     ]);
 
-    // Map to unified activity items
-    const activities: ActivityItem[] = [];
+    const activities: ActivityItem[] = [
+      ...observations.map(mapObservation),
+      ...childMilestones.map(mapMilestone),
+      ...goals.map(mapGoal),
+    ];
 
-    for (const obs of observations) {
-      activities.push({
-        type: 'observation',
-        title: obs.content,
-        date: obs.observedAt.toISOString(),
-        dimension: obs.dimension,
-        details: {
-          sentiment: obs.sentiment,
-          tags: obs.tags,
-        },
-      });
-    }
+    activities.sort(sortByDateDesc);
 
-    for (const cm of childMilestones) {
-      activities.push({
-        type: 'milestone',
-        title: cm.milestone.title,
-        date: (cm.achievedAt ?? cm.createdAt).toISOString(),
-        dimension: cm.milestone.dimension,
-        details: {
-          achieved: cm.achieved,
-          description: cm.milestone.description,
-        },
-      });
-    }
-
-    for (const goal of goals) {
-      activities.push({
-        type: 'goal',
-        title: goal.title,
-        date: goal.createdAt.toISOString(),
-        dimension: goal.dimension,
-        details: {
-          status: goal.status,
-          description: goal.description,
-          targetDate: goal.targetDate
-            ? goal.targetDate.toISOString().split('T')[0]
-            : null,
-        },
-      });
-    }
-
-    // Sort by date descending and limit to 20
-    activities.sort(
-      (a, b) => new Date(b.date).getTime() - new Date(a.date).getTime()
-    );
-
-    const limited = activities.slice(0, ACTIVITY_LIMIT);
-
-    return reply.code(200).send({ data: limited });
+    return reply.code(200).send({ data: activities.slice(0, ACTIVITY_LIMIT) });
   });
 };
 
