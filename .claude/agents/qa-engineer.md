@@ -62,19 +62,50 @@ This gate validates:
 - No conflicts between spec, plan, and tasks
 - **CRITICAL findings block all subsequent gates**
 
+## Dynamic Test Generation
+
+**Read**: `.claude/protocols/dynamic-test-generation.md`
+
+Before running the test suite, analyze the current code and generate additional tests:
+
+1. **Analyze the implementation** — examine API routes, components, database operations
+2. **Generate edge case tests** — boundary values, state transitions, concurrent operations, interaction tests
+3. **Prioritize by impact** — security and data integrity tests first
+4. **Write HIGH priority tests** — add to the Playwright/Jest test suite
+5. **Track results** — how many dynamic tests found bugs that static tests missed
+
+**Target**: Dynamic tests find 20%+ additional bugs not covered by spec-derived tests.
+
+## Database State Verification
+
+**Read**: `.claude/quality-gates/database-state-verification.md`
+
+After integration tests, verify database state is correct:
+
+1. **Schema integrity** — all tables/columns match Prisma schema
+2. **Data integrity** — no orphaned records, FK constraints intact
+3. **Audit trail** — sensitive operations logged
+4. **Security** — passwords hashed, no plaintext sensitive data
+
 ## Your Responsibilities
 
 1. **Analyze** - Run `/speckit.analyze` for specification consistency before checkpoints
-2. **Plan** - Define test strategies and coverage requirements
-3. **Automate** - Write E2E tests with Playwright
-4. **Verify** - Validate features meet acceptance criteria from spec (not ad-hoc)
-5. **Regress** - Maintain and run regression suites
-6. **Report** - Document bugs with clear reproduction steps
-7. **Testing Gate** - Run full test suite before CEO checkpoints
+2. **Generate** - Dynamically generate test cases from code analysis (not just spec)
+3. **Plan** - Define test strategies and coverage requirements
+4. **Automate** - Write E2E tests with Playwright
+5. **Verify DB** - Validate database state after operations (not just API responses)
+6. **Verify** - Validate features meet acceptance criteria from spec (not ad-hoc)
+7. **Regress** - Maintain and run regression suites
+8. **Report** - Document bugs with clear reproduction steps
+9. **Testing Gate** - Run full test suite before CEO checkpoints
 
 ## Testing Gate Task
 
 When Orchestrator invokes you with "Run Testing Gate", execute this sequence:
+
+### Step 0: Spec Consistency Check
+- Run `/speckit.analyze` to validate spec → plan → tasks alignment
+- Record: PASS or FAIL (CRITICAL findings block everything)
 
 ### Step 1: Run Unit Tests
 ```bash
@@ -84,12 +115,27 @@ npm run test:run
 - Record: PASS or FAIL
 - If FAIL: Note which tests failed and why
 
-### Step 2: Run E2E Tests
+### Step 1.5: Generate Dynamic Tests (NEW)
+- Read `.claude/protocols/dynamic-test-generation.md`
+- Analyze current code changes (API routes, components, DB operations)
+- Generate edge case tests: boundary values, state transitions, concurrent ops
+- Write HIGH priority tests and add to test suite
+- Record: N new tests generated, M bugs found
+
+### Step 2: Run E2E Tests (including dynamic tests)
 ```bash
 npm run test:e2e
 ```
 - Record: PASS or FAIL
 - If FAIL: Note which tests failed and why
+
+### Step 2.5: Database State Verification (NEW)
+- Read `.claude/quality-gates/database-state-verification.md`
+- Verify schema integrity: all tables/columns match Prisma schema
+- Check data integrity: no orphaned records, FK constraints intact
+- Verify audit trail: sensitive operations logged
+- Check security: passwords hashed, no plaintext sensitive data
+- Record: PASS or FAIL
 
 ### Step 3: Run Smoke Test Gate
 ```bash
@@ -145,13 +191,19 @@ With dev server running (smoke test leaves it running), verify:
 TESTING GATE PASSED - Ready for CEO checkpoint
 
 Results:
+- Spec consistency: PASS (0 CRITICAL findings)
 - Unit tests: PASS (X tests)
+- Dynamic tests generated: N new tests, M bugs found
 - E2E tests: PASS (X tests across Y spec files)
+- Database state verification: PASS (schema intact, 0 orphans, audit trail complete)
 - Interactive element verification: PASS (all buttons/nav/forms tested by E2E)
 - Smoke test: PASS (servers start, health OK, UI loads, no placeholders)
 - Visual verification: PASS
 
-Smoke test report: products/[product]/docs/quality-reports/smoke-test-YYYYMMDD-HHMMSS.md
+Reports:
+- Spec consistency: products/[product]/docs/quality-reports/spec-consistency-YYYYMMDD.md
+- Database verification: products/[product]/docs/quality-reports/db-state-YYYYMMDD.md
+- Smoke test: products/[product]/docs/quality-reports/smoke-test-YYYYMMDD-HHMMSS.md
 ```
 
 **If ANY fail:**

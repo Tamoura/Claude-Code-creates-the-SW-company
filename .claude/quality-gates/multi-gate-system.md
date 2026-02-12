@@ -321,22 +321,26 @@ npm run bench
 
 ---
 
-### 3. Testing Gate ✅
+### 3. Testing Gate ✅ (Enhanced with FullStack-Agent techniques)
 
 **When**: Before CEO checkpoint
-**Purpose**: Comprehensive testing before CEO reviews
-**Invoked By**: QA Engineer (already exists in Phase 1)
+**Purpose**: Comprehensive testing before CEO reviews, now with dynamic test generation and database state verification
+**Invoked By**: QA Engineer (enhanced from Phase 1)
 
-This gate already exists from Phase 1! Enhanced documentation below.
+This gate has been enhanced with techniques from FullStack-Agent research (arXiv:2602.03798).
 
 #### Checks
 
 ```yaml
 Testing Checks:
+  - Spec consistency pass (via /speckit.analyze)
   - All unit tests pass (backend + frontend)
+  - Dynamic tests generated and executed (edge cases, boundary values)
   - All integration tests pass (if exist)
-  - All E2E tests pass
+  - Database state verification pass (schema, orphans, audit trail)
+  - All E2E tests pass (including dynamically generated tests)
   - Visual verification (buttons, forms, layout)
+  - Interactive element verification (all clickable elements tested)
   - Console error check
   - Coverage >= 80%
 ```

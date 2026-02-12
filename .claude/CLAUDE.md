@@ -96,6 +96,9 @@ release/[product]/v[X.Y.Z]       # Releases
 - Integration: Jest + real DB
 - E2E: Playwright
 - All tests must pass before PR merge
+- **Development-Oriented Testing**: Engineers dev-test during coding (not just at QA gate)
+- **Dynamic Test Generation**: QA generates edge case tests from code analysis
+- **Database State Verification**: Verify DB integrity, not just API responses
 
 ### Component Reuse (MANDATORY)
 

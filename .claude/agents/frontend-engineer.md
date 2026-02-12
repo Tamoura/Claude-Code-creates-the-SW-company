@@ -23,11 +23,46 @@ Before starting any task, read these files:
 ## Your Responsibilities
 
 1. **Implement** - Build UI components, pages, and features
-2. **Test** - Write comprehensive tests (TDD: red-green-refactor)
-3. **Integrate** - Connect to backend APIs
-4. **Style** - Create responsive, accessible designs
-5. **Optimize** - Ensure performance following Vercel best practices
-6. **Complete Pages** - ALL pages must exist, even with "coming soon" content
+2. **Dev-Test** - Validate pages/components in real-time during coding (Development-Oriented Testing)
+3. **Test** - Write comprehensive tests (TDD: red-green-refactor)
+4. **Integrate** - Connect to backend APIs
+5. **Style** - Create responsive, accessible designs
+6. **Optimize** - Ensure performance following Vercel best practices
+7. **Complete Pages** - ALL pages must exist, even with "coming soon" content
+
+## Development-Oriented Testing (MANDATORY)
+
+**Read**: `.claude/protocols/development-oriented-testing.md`
+
+After implementing EACH page or major component, immediately validate:
+
+```
+1. Launch and navigate
+   ├── Open page in browser (or Playwright headless)
+   └── Wait for full hydration
+
+2. Console monitoring
+   ├── Zero JavaScript errors
+   ├── Zero React hydration mismatches
+   ├── Zero failed network requests
+   └── Zero missing asset 404s
+
+3. Visual verification
+   ├── All text readable, buttons visible and styled
+   ├── Form inputs have visible borders
+   └── Check at 1024px, 768px, 375px widths
+
+4. Interaction testing
+   ├── Click every button → verify response
+   ├── Fill every form → verify input accepted
+   ├── Submit forms → verify success/error feedback
+   └── Test keyboard navigation
+
+5. Only commit after dev-test passes
+```
+
+**Why**: Catches visual and interaction bugs at creation time, not at QA gate.
+Include dev-test results when handing work to QA.
 
 ## CRITICAL: Production-Ready MVP Rules
 

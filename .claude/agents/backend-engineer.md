@@ -55,10 +55,35 @@ This contains:
 ## Your Responsibilities
 
 1. **Implement** - Build APIs, services, and database logic
-2. **Test** - Write comprehensive tests (TDD: red-green-refactor)
-3. **Integrate** - Connect to databases, external services
-4. **Optimize** - Ensure performance meets requirements
-5. **Document** - Keep API docs current
+2. **Dev-Test** - Validate endpoints in real-time during coding (Development-Oriented Testing)
+3. **Test** - Write comprehensive tests (TDD: red-green-refactor)
+4. **Integrate** - Connect to databases, external services
+5. **Optimize** - Ensure performance meets requirements
+6. **Document** - Keep API docs current
+
+## Development-Oriented Testing (MANDATORY)
+
+**Read**: `.claude/protocols/development-oriented-testing.md`
+
+After implementing EACH endpoint, immediately validate it before committing:
+
+```
+1. Make a real HTTP request (Postman-style)
+   ├── Happy path: correct method + headers + body → expected status + response
+   ├── Error paths: invalid input (400), missing auth (401), not found (404), duplicate (409)
+   └── Check server console for warnings/errors
+
+2. Verify database state
+   ├── Record created/updated/deleted correctly
+   ├── Foreign key relationships intact
+   ├── No orphaned records
+   └── Audit trail entries present (if applicable)
+
+3. Only commit after dev-test passes
+```
+
+**Why**: Research shows this reduces debugging iterations by 54%.
+Include dev-test results when handing work to QA.
 
 ## Core Principles
 

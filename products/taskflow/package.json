@@ -1,0 +1,23 @@
+{
+  "name": "taskflow",
+  "version": "0.1.0",
+  "private": true,
+  "description": "TaskFlow — Task management app demonstrating ConnectSW's enhanced pipeline",
+  "scripts": {
+    "dev:api": "cd apps/api && npm run dev",
+    "dev:web": "cd apps/web && npm run dev",
+    "dev": "concurrently \"npm run dev:api\" \"npm run dev:web\"",
+    "build:api": "cd apps/api && npm run build",
+    "build:web": "cd apps/web && npm run build",
+    "build": "npm run build:api && npm run build:web",
+    "test:api": "cd apps/api && npm test",
+    "test:e2e": "cd e2e && npx playwright test",
+    "test": "npm run test:api",
+    "db:migrate": "cd apps/api && npm run db:migrate",
+    "db:push": "cd apps/api && npm run db:push",
+    "db:generate": "cd apps/api && npm run db:generate"
+  },
+  "devDependencies": {
+    "concurrently": "^8.2.2"
+  }
+}

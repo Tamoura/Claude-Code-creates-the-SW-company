@@ -130,6 +130,10 @@ Step 3.2: Scaffold Backend (can be parallel with 3.3)
 │   ├── Database schema (Prisma)
 │   ├── Basic health endpoint
 │   └── Test infrastructure
+├── Development-Oriented Testing (MANDATORY):
+│   ├── Dev-test each endpoint immediately after implementation
+│   ├── Verify database state after each operation
+│   └── Include dev-test results in handoff to QA
 └── Commit to worktree branch
 
 Step 3.3: Scaffold Frontend (can be parallel with 3.2)
@@ -140,6 +144,10 @@ Step 3.3: Scaffold Frontend (can be parallel with 3.2)
 │   ├── Basic layout and routing
 │   ├── API client setup
 │   └── Test infrastructure
+├── Development-Oriented Testing (MANDATORY):
+│   ├── Dev-test each page immediately after implementation
+│   ├── Verify console errors, visual rendering, interactions
+│   └── Include dev-test results in handoff to QA
 └── Commit to worktree branch
 
 Step 3.4: Merge Foundation
