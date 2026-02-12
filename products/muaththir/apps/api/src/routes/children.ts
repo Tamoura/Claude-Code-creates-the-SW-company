@@ -122,7 +122,11 @@ const childrenRoutes: FastifyPluginAsync = async (fastify) => {
         orderBy: { createdAt: 'desc' },
         include: {
           _count: {
-            select: { observations: true },
+            select: {
+              observations: {
+                where: { deletedAt: null },
+              },
+            },
           },
           milestones: {
             select: { achieved: true },
