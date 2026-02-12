@@ -5,6 +5,7 @@ import { usePathname } from 'next/navigation';
 import { useTranslations } from 'next-intl';
 import { DIMENSIONS } from '../../lib/dimensions';
 import LanguageSwitcher from '../LanguageSwitcher';
+import ThemeToggle from '../common/ThemeToggle';
 
 interface NavItemDef {
   key: string;
@@ -120,11 +121,11 @@ export default function Sidebar() {
 
   return (
     <aside
-      className="hidden lg:flex lg:flex-col lg:w-64 lg:fixed lg:inset-y-0 bg-white border-e border-slate-200"
+      className="hidden lg:flex lg:flex-col lg:w-64 lg:fixed lg:inset-y-0 bg-white border-e border-slate-200 dark:bg-slate-900 dark:border-slate-700"
       aria-label={t('ariaLabel')}
     >
       {/* Logo */}
-      <div className="flex h-16 items-center px-6 border-b border-slate-200">
+      <div className="flex h-16 items-center px-6 border-b border-slate-200 dark:border-slate-700">
         <Link href="/dashboard" className="flex items-center gap-2">
           <div className="h-8 w-8 rounded-lg bg-emerald-600 flex items-center justify-center">
             <svg
@@ -142,7 +143,7 @@ export default function Sidebar() {
               />
             </svg>
           </div>
-          <span className="text-lg font-bold text-slate-900">
+          <span className="text-lg font-bold text-slate-900 dark:text-white">
             Mu&apos;aththir
           </span>
         </Link>
@@ -156,8 +157,8 @@ export default function Sidebar() {
               href={item.href}
               className={`flex items-center gap-3 px-3 py-2.5 rounded-xl text-sm font-medium transition-colors ${
                 isActive(item.href)
-                  ? 'bg-emerald-50 text-emerald-700'
-                  : 'text-slate-600 hover:bg-slate-50 hover:text-slate-900'
+                  ? 'bg-emerald-50 text-emerald-700 dark:bg-emerald-900/30 dark:text-emerald-400'
+                  : 'text-slate-600 hover:bg-slate-50 hover:text-slate-900 dark:text-slate-400 dark:hover:bg-slate-800 dark:hover:text-white'
               }`}
             >
               {item.icon}
@@ -172,8 +173,8 @@ export default function Sidebar() {
                     href={`/dashboard/dimensions/${dim.slug}`}
                     className={`flex items-center gap-2 px-3 py-1.5 rounded-lg text-xs font-medium transition-colors ${
                       pathname === `/dashboard/dimensions/${dim.slug}`
-                        ? 'bg-slate-100 text-slate-900'
-                        : 'text-slate-500 hover:text-slate-700 hover:bg-slate-50'
+                        ? 'bg-slate-100 text-slate-900 dark:bg-slate-800 dark:text-white'
+                        : 'text-slate-500 hover:text-slate-700 hover:bg-slate-50 dark:text-slate-500 dark:hover:text-slate-300 dark:hover:bg-slate-800'
                     }`}
                   >
                     <span
@@ -190,9 +191,10 @@ export default function Sidebar() {
         ))}
       </nav>
 
-      {/* Language Switcher */}
-      <div className="px-4 py-3 border-t border-slate-200">
+      {/* Language & Theme */}
+      <div className="px-4 py-3 border-t border-slate-200 dark:border-slate-700 flex items-center justify-between">
         <LanguageSwitcher />
+        <ThemeToggle />
       </div>
     </aside>
   );

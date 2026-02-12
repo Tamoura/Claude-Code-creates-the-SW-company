@@ -16,7 +16,9 @@
     "addChildProfile": "Add Child Profile",
     "noChildrenYet": "No Children Yet",
     "viewDetails": "View Details",
-    "viewAll": "View All"
+    "viewAll": "View All",
+    "darkMode": "Dark Mode",
+    "lightMode": "Light Mode"
   },
   "header": {
     "homeAriaLabel": "Mu'aththir home",
@@ -568,7 +570,18 @@
   },
   "sharing": {
     "title": "Family Sharing",
-    "description": "Share access with co-parents, grandparents, and tutors. Coming in Phase 2."
+    "description": "Invite family members to view or contribute to your children's development tracking.",
+    "inviteEmail": "Email address",
+    "invitePlaceholder": "Enter family member's email",
+    "invite": "Send Invite",
+    "roleViewer": "Viewer",
+    "roleContributor": "Contributor",
+    "noShares": "No family members invited yet",
+    "noSharesDesc": "Invite a spouse, grandparent, or caregiver to participate.",
+    "pending": "Pending",
+    "accepted": "Accepted",
+    "remove": "Remove",
+    "inviteSent": "Invitation sent!"
   },
   "generateReport": {
     "title": "Generate Development Report",
