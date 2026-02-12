@@ -722,6 +722,66 @@ describe('GET /api/dashboard/:childId', () => {
     expect(behavioural.score).toBe(16);
   });
 
+  it('should return Cache-Control: private, max-age=30 header', async () => {
+    const res = await app.inject({
+      method: 'GET',
+      url: `/api/dashboard/${childId}`,
+      headers: { authorization: `Bearer ${authToken}` },
+    });
+
+    expect(res.statusCode).toBe(200);
+    expect(res.headers['cache-control']).toBe('private, max-age=30');
+  });
+
+  it('should return an ETag header derived from calculatedAt', async () => {
+    const res = await app.inject({
+      method: 'GET',
+      url: `/api/dashboard/${childId}`,
+      headers: { authorization: `Bearer ${authToken}` },
+    });
+
+    expect(res.statusCode).toBe(200);
+    expect(res.headers['etag']).toBeDefined();
+    expect(typeof res.headers['etag']).toBe('string');
+    expect((res.headers['etag'] as string).length).toBeGreaterThan(0);
+  });
+
+  it('should return 304 Not Modified when If-None-Match matches ETag', async () => {
+    const res1 = await app.inject({
+      method: 'GET',
+      url: `/api/dashboard/${childId}`,
+      headers: { authorization: `Bearer ${authToken}` },
+    });
+
+    const etag = res1.headers['etag'] as string;
+    expect(etag).toBeDefined();
+
+    const res2 = await app.inject({
+      method: 'GET',
+      url: `/api/dashboard/${childId}`,
+      headers: {
+        authorization: `Bearer ${authToken}`,
+        'if-none-match': etag,
+      },
+    });
+
+    expect(res2.statusCode).toBe(304);
+  });
+
+  it('should return 200 when If-None-Match does not match ETag', async () => {
+    const res = await app.inject({
+      method: 'GET',
+      url: `/api/dashboard/${childId}`,
+      headers: {
+        authorization: `Bearer ${authToken}`,
+        'if-none-match': '"stale-etag-value"',
+      },
+    });
+
+    expect(res.statusCode).toBe(200);
+    expect(res.headers['etag']).toBeDefined();
+  });
+
   it('should score dimensions independently', async () => {
     for (let i = 0; i < 5; i++) {
       await createObservation(authToken, childId, 'academic', 'positive');

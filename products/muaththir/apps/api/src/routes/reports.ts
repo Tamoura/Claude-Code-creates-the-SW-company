@@ -4,13 +4,18 @@ import { verifyChildOwnership } from '../lib/ownership';
 import { getAgeBand } from '../utils/age-band';
 import { ValidationError } from '../lib/errors';
 import { DIMENSIONS, DimensionType } from '../types';
-import { Dimension } from '@prisma/client';
+import { AgeBand, Dimension, PrismaClient } from '@prisma/client';
 import {
   calculateDimensionScore,
   gatherDimensionData,
   DimensionScore,
   DimensionData,
 } from '../services/score-calculator';
+import {
+  GroupByDimension,
+  ChildMilestoneWithDimension,
+  ObservationForReport,
+} from '../types/prisma-results';
 
 /**
  * Report Generation API
@@ -134,7 +139,7 @@ function buildAreasForGrowth(
 }
 
 async function buildRecommendations(
-  prisma: any,
+  prisma: PrismaClient,
   childId: string,
   childName: string,
   data: DimensionData[],
@@ -202,7 +207,7 @@ async function buildRecommendations(
 
     const dueCount = await prisma.milestoneDefinition.count({
       where: {
-        ageBand: ageBand as any,
+        ageBand: ageBand as AgeBand,
         id: { notIn: achieved },
       },
     });
@@ -477,7 +482,7 @@ const reportRoutes: FastifyPluginAsync = async (fastify) => {
           ageBandForQuery
             ? fastify.prisma.milestoneDefinition.groupBy({
                 by: ['dimension'],
-                where: { ageBand: ageBandForQuery as any },
+                where: { ageBand: ageBandForQuery as AgeBand },
                 _count: true,
               })
             : Promise.resolve([]),
@@ -487,7 +492,7 @@ const reportRoutes: FastifyPluginAsync = async (fastify) => {
                   childId,
                   achieved: true,
                   milestone: {
-                    ageBand: ageBandForQuery as any,
+                    ageBand: ageBandForQuery as AgeBand,
                   },
                 },
                 select: {
@@ -531,13 +536,12 @@ const reportRoutes: FastifyPluginAsync = async (fastify) => {
       const [milestoneDefs, achievedMilestones] =
         milestoneAggregation;
       const milestoneDefByDim = new Map(
-        (milestoneDefs as any[]).map((g: any) => [
-          g.dimension,
-          g._count,
-        ])
+        (milestoneDefs as GroupByDimension[]).map(
+          (g) => [g.dimension, g._count] as const
+        )
       );
       const achievedByDim = new Map<string, number>();
-      for (const cm of achievedMilestones as any[]) {
+      for (const cm of achievedMilestones as ChildMilestoneWithDimension[]) {
         const dim = cm.milestone.dimension;
         achievedByDim.set(
           dim,
@@ -564,7 +568,7 @@ const reportRoutes: FastifyPluginAsync = async (fastify) => {
 
       // Build observations by dimension
       const observationsByDimension: Record<string, number> = {};
-      for (const group of obsByDimension as any[]) {
+      for (const group of obsByDimension as GroupByDimension[]) {
         observationsByDimension[group.dimension] = group._count;
       }
 
@@ -574,8 +578,8 @@ const reportRoutes: FastifyPluginAsync = async (fastify) => {
 
       // Format observations for response
       const formattedObservations = (
-        recentObservations as any[]
-      ).map((obs: any) => ({
+        recentObservations as ObservationForReport[]
+      ).map((obs) => ({
         id: obs.id,
         dimension: obs.dimension,
         content: obs.content,

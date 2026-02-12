@@ -1,5 +1,12 @@
-import { Dimension } from '@prisma/client';
+import { AgeBand, Dimension, PrismaClient } from '@prisma/client';
 import { DIMENSIONS, DimensionType } from '../types';
+import {
+  GroupByDimension,
+  ChildMilestoneForScoring,
+  ChildMilestoneWithDimension,
+  ObservationDimensionSentiment,
+  ObservationDimension,
+} from '../types/prisma-results';
 
 /**
  * Shared score calculation utilities.
@@ -39,7 +46,7 @@ export interface DimensionData {
 }
 
 export async function calculateDimensionScore(
-  prisma: any,
+  prisma: PrismaClient,
   childId: string,
   dimension: Dimension,
   ageBand: string | null
@@ -73,8 +80,9 @@ export async function calculateDimensionScore(
   let milestoneTotal = 0;
 
   if (ageBand) {
+    const ageBandEnum = ageBand as AgeBand;
     milestoneTotal = await prisma.milestoneDefinition.count({
-      where: { dimension, ageBand },
+      where: { dimension, ageBand: ageBandEnum },
     });
 
     if (milestoneTotal > 0) {
@@ -82,7 +90,7 @@ export async function calculateDimensionScore(
         where: {
           childId,
           achieved: true,
-          milestone: { dimension, ageBand },
+          milestone: { dimension, ageBand: ageBandEnum },
         },
       });
     }
@@ -127,7 +135,7 @@ export interface ChildSummary {
  * Used by the compare endpoint to avoid duplicating scoring logic.
  */
 export async function calculateChildSummary(
-  prisma: any,
+  prisma: PrismaClient,
   childId: string,
   childName: string,
   ageBand: string | null
@@ -157,21 +165,23 @@ export async function calculateChildSummary(
       ageBandForQuery
         ? prisma.milestoneDefinition.groupBy({
             by: ['dimension'],
-            where: { ageBand: ageBandForQuery },
+            where: { ageBand: ageBandForQuery as AgeBand },
             _count: true,
           })
         : Promise.resolve([]),
     ]);
 
   const milestoneDefMap = new Map(
-    (allMilestoneDefs as any[]).map((g: any) => [g.dimension, g._count])
+    (allMilestoneDefs as GroupByDimension[]).map(
+      (g) => [g.dimension, g._count] as const
+    )
   );
 
   const obsByDim = new Map<
     string,
     { count: number; positiveCount: number }
   >();
-  for (const obs of recentObservations as any[]) {
+  for (const obs of recentObservations as ObservationDimensionSentiment[]) {
     const entry = obsByDim.get(obs.dimension) || {
       count: 0,
       positiveCount: 0,
@@ -184,7 +194,7 @@ export async function calculateChildSummary(
   }
 
   const achievedByDim = new Map<string, number>();
-  for (const cm of allChildMilestones as any[]) {
+  for (const cm of allChildMilestones as ChildMilestoneForScoring[]) {
     if (
       ageBandForQuery &&
       cm.milestone.ageBand === ageBandForQuery &&
@@ -240,7 +250,7 @@ export async function calculateChildSummary(
 }
 
 export async function gatherDimensionData(
-  prisma: any,
+  prisma: PrismaClient,
   childId: string,
   ageBand: string | null
 ): Promise<DimensionData[]> {
@@ -276,7 +286,7 @@ export async function gatherDimensionData(
       ageBand
         ? prisma.milestoneDefinition.groupBy({
             by: ['dimension'],
-            where: { ageBand },
+            where: { ageBand: ageBand as AgeBand },
             _count: true,
           })
         : Promise.resolve([]),
@@ -285,7 +295,7 @@ export async function gatherDimensionData(
             where: {
               childId,
               achieved: true,
-              milestone: { ageBand },
+              milestone: { ageBand: ageBand as AgeBand },
             },
             select: {
               milestone: { select: { dimension: true } },
@@ -295,14 +305,14 @@ export async function gatherDimensionData(
     ]);
 
   const recentByDim = new Map<string, Array<{ sentiment: string }>>();
-  for (const obs of recentObs as any[]) {
+  for (const obs of recentObs as ObservationDimensionSentiment[]) {
     const arr = recentByDim.get(obs.dimension) || [];
     arr.push(obs);
     recentByDim.set(obs.dimension, arr);
   }
 
   const previousCountByDim = new Map<string, number>();
-  for (const obs of previousObs as any[]) {
+  for (const obs of previousObs as ObservationDimension[]) {
     previousCountByDim.set(
       obs.dimension,
       (previousCountByDim.get(obs.dimension) || 0) + 1
@@ -310,14 +320,18 @@ export async function gatherDimensionData(
   }
 
   const totalCountByDim = new Map(
-    (allTimeCounts as any[]).map((g: any) => [g.dimension, g._count])
+    (allTimeCounts as GroupByDimension[]).map(
+      (g) => [g.dimension, g._count] as const
+    )
   );
   const milestoneDefByDim = new Map(
-    (milestoneDefs as any[]).map((g: any) => [g.dimension, g._count])
+    (milestoneDefs as GroupByDimension[]).map(
+      (g) => [g.dimension, g._count] as const
+    )
   );
 
   const achievedByDim = new Map<string, number>();
-  for (const cm of childMilestones as any[]) {
+  for (const cm of childMilestones as ChildMilestoneWithDimension[]) {
     const dim = cm.milestone.dimension;
     achievedByDim.set(dim, (achievedByDim.get(dim) || 0) + 1);
   }

@@ -160,6 +160,7 @@ const childMilestoneRoutes: FastifyPluginAsync = async (fastify) => {
       };
     });
 
+    reply.header('Cache-Control', 'private, max-age=60');
     return reply.code(200).send(paginatedResult(data, total, { page, limit }));
   });
 
