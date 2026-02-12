@@ -15,41 +15,53 @@ Final production polish on the frontend covering:
 
 ### Accessibility
 - Dashboard page: Well structured (h1/h2/h3, aria-live, role=alert, sr-only)
-- Observe page: Missing role="alert" on error, role="status" on success
-- Child profile: Missing role="alert" on error state
-- DimensionCard: h3 missing dark:text-white class
-- QuickLog: Missing aria-label on text input
+- Observe page: Missing role="alert" on error, role="status" on success -- FIXED
+- Child profile: Missing role="alert" on error state -- FIXED
+- DimensionCard: h3 missing dark:text-white class -- FIXED
+- QuickLog: Missing aria-label on text input -- FIXED
 
 ### Error Boundary
 - `app/error.tsx` exists with good UI but hardcoded English
-- No `dashboard/error.tsx` - need one for dashboard-specific errors
-- Task also requests `components/common/ErrorBoundary.tsx` as a reusable component
+- No `dashboard/error.tsx` -- CREATED
+- Reusable `components/common/ErrorBoundary.tsx` -- CREATED
+- Wired into DashboardLayout to catch child rendering errors
 
-### PWA Meta Tags (Missing)
-- viewport meta tag
-- theme-color meta tag
-- apple-mobile-web-app-capable
-- Open Graph tags (og:title, og:description, og:type)
+### PWA Meta Tags
+- viewport meta tag -- ADDED
+- theme-color meta tag (light/dark) -- ADDED
+- apple-mobile-web-app-capable -- ADDED
+- Open Graph tags (title, description, type, siteName) -- ADDED
+- Twitter Card tags -- ADDED
 
 ### Performance
 - RadarChart already uses dynamic import (good)
-- Only one `<img>` tag in child profile (user photo, external URL)
+- ProgressComparison already uses dynamic import (good)
+- Only `<img>` tags are for user-uploaded profile photos (external URLs) -- appropriate
 - No other heavy imports identified
+- Bundle sizes are reasonable (87.7kB shared JS)
 
-## Backend Polish Tasks
-1. Run full test suite - DONE (432/432 passing)
-2. API Documentation - update docs/API.md with all endpoints
-3. Health check enhancement - add /api/health/ready for K8s readiness
-4. Graceful shutdown - SIGTERM/SIGINT handling in server.ts
-5. Environment validation - startup validation for required env vars
-
-### Backend Findings
-- Existing API.md covers: Health, Auth, Children, Observations, Milestones, Dashboard, Profile
-- Missing from API.md: Goals, Goal Templates, Insights, Reports, Sharing, Export, Demo Login, Activity Feed, Notifications, Photo Upload
-- health.ts already checks DB connectivity on /api/health, but no separate /ready endpoint
-- server.ts has no graceful shutdown handling
-- env.ts validates DATABASE_URL and JWT_SECRET (in production), but no warnings for optional vars
-- app.ts validates JWT_SECRET length >= 32 at startup
+### Build Verification
+- Build passes with zero errors
+- Only pre-existing warnings (typescript `any` casts, font loading)
 
 ## Changes Made
-- (tracked as work progresses)
+
+### New Files
+- `src/components/common/ErrorBoundary.tsx` - Reusable class-based error boundary
+- `src/app/dashboard/error.tsx` - Next.js route-level error handling
+- `tests/components/ErrorBoundary.test.tsx` - 6 tests
+- `tests/components/DashboardErrorBoundary.test.tsx` - 2 tests
+- `tests/components/accessibility.test.tsx` - 3 tests
+- `tests/pages/layout-meta.test.tsx` - 7 tests
+
+### Modified Files
+- `src/components/layout/DashboardLayout.tsx` - ErrorBoundary wrapping
+- `src/app/layout.tsx` - PWA/OG/Twitter meta tags
+- `src/components/dashboard/DimensionCard.tsx` - dark mode text
+- `src/components/dashboard/QuickLog.tsx` - aria-label
+- `src/app/dashboard/observe/page.tsx` - role attributes
+- `src/app/dashboard/child/[id]/page.tsx` - role="alert"
+
+### Test Results
+- 18 new tests added, all passing
+- No pre-existing tests broken by changes
