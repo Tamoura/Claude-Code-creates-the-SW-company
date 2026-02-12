@@ -3,8 +3,8 @@ import { z } from 'zod';
 import { verifyChildOwnership } from '../lib/ownership';
 import { getAgeBand } from '../utils/age-band';
 import { validateQuery } from '../utils/validation';
-import { DIMENSIONS, DimensionType } from '../types';
-import { Dimension } from '@prisma/client';
+import { ValidationError } from '../lib/errors';
+import { calculateChildSummary } from '../services/score-calculator';
 
 const compareQuerySchema = z.object({
   childIds: z.string().min(1, 'childIds is required'),
@@ -34,7 +34,6 @@ const compareRoutes: FastifyPluginAsync = async (fastify) => {
       .filter((id) => id.length > 0);
 
     if (childIds.length === 0) {
-      const { ValidationError } = await import('../lib/errors');
       throw new ValidationError('At least one childId is required', {
         childIds: ['At least one childId is required'],
       });
@@ -47,130 +46,18 @@ const compareRoutes: FastifyPluginAsync = async (fastify) => {
       children.push(child);
     }
 
-    // Build dashboard summary for each child
-    const results = [];
-
-    for (const child of children) {
-      const ageBand = getAgeBand(child.dateOfBirth);
-      const ageBandForQuery = ageBand === 'out_of_range' ? null : ageBand;
-
-      const thirtyDaysAgo = new Date();
-      thirtyDaysAgo.setDate(thirtyDaysAgo.getDate() - 30);
-
-      const [
-        recentObservations,
-        allChildMilestones,
-        allMilestoneDefs,
-      ] = await Promise.all([
-        fastify.prisma.observation.findMany({
-          where: {
-            childId: child.id,
-            deletedAt: null,
-            observedAt: { gte: thirtyDaysAgo },
-          },
-          select: { dimension: true, sentiment: true },
-        }),
-        fastify.prisma.childMilestone.findMany({
-          where: { childId: child.id },
-          select: {
-            achieved: true,
-            milestone: { select: { dimension: true, ageBand: true } },
-          },
-        }),
-        ageBandForQuery
-          ? fastify.prisma.milestoneDefinition.groupBy({
-              by: ['dimension'],
-              where: { ageBand: ageBandForQuery as any },
-              _count: true,
-            })
-          : Promise.resolve([]),
-      ]);
-
-      const milestoneDefMap = new Map(
-        (allMilestoneDefs as any[]).map((g: any) => [g.dimension, g._count])
-      );
-
-      const obsByDim = new Map<
-        string,
-        { count: number; positiveCount: number }
-      >();
-      for (const obs of recentObservations) {
-        const entry = obsByDim.get(obs.dimension) || {
-          count: 0,
-          positiveCount: 0,
-        };
-        entry.count++;
-        if (obs.sentiment === 'positive') {
-          entry.positiveCount++;
-        }
-        obsByDim.set(obs.dimension, entry);
-      }
-
-      const achievedByDim = new Map<string, number>();
-      for (const cm of allChildMilestones as any[]) {
-        if (
-          ageBandForQuery &&
-          cm.milestone.ageBand === ageBandForQuery &&
-          cm.achieved
-        ) {
-          achievedByDim.set(
-            cm.milestone.dimension,
-            (achievedByDim.get(cm.milestone.dimension) || 0) + 1
-          );
-        }
-      }
-
-      const dimensions: Array<{
-        dimension: DimensionType;
-        score: number;
-      }> = [];
-
-      for (const dimension of DIMENSIONS) {
-        const dimObs = obsByDim.get(dimension) || {
-          count: 0,
-          positiveCount: 0,
-        };
-        const observationFactor =
-          (Math.min(dimObs.count, 10) / 10) * 100;
-        const sentimentFactor =
-          dimObs.count > 0
-            ? (dimObs.positiveCount / dimObs.count) * 100
-            : 0;
-
-        const milestoneTotal = milestoneDefMap.get(dimension) || 0;
-        const milestoneAchieved = achievedByDim.get(dimension) || 0;
-        const milestoneFactor =
-          milestoneTotal > 0
-            ? (milestoneAchieved / milestoneTotal) * 100
-            : 0;
-
-        const score = Math.round(
-          observationFactor * 0.4 +
-            milestoneFactor * 0.4 +
-            sentimentFactor * 0.2
+    // Build dashboard summary for each child using shared calculator
+    const results = await Promise.all(
+      children.map((child) => {
+        const ageBand = getAgeBand(child.dateOfBirth);
+        return calculateChildSummary(
+          fastify.prisma,
+          child.id,
+          child.name,
+          ageBand
         );
-
-        dimensions.push({
-          dimension: dimension as DimensionType,
-          score,
-        });
-      }
-
-      const overallScore =
-        dimensions.length > 0
-          ? Math.round(
-              dimensions.reduce((sum, d) => sum + d.score, 0) /
-                dimensions.length
-            )
-          : 0;
-
-      results.push({
-        childId: child.id,
-        childName: child.name,
-        overallScore,
-        dimensions,
-      });
-    }
+      })
+    );
 
     return reply.send({ children: results });
   });
