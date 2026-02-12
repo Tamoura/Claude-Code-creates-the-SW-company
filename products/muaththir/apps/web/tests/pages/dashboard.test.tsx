@@ -316,6 +316,35 @@ describe('DashboardPage', () => {
     });
   });
 
+  it('shows retry button when dashboard data fails to load', async () => {
+    mockGetChildren.mockResolvedValue({
+      data: [
+        {
+          id: 'child-1',
+          name: 'Test Child',
+          dateOfBirth: '2020-01-01',
+          gender: 'female' as const,
+          ageBand: '3-4',
+          photoUrl: null,
+          createdAt: '2024-01-01T00:00:00Z',
+          updatedAt: '2024-01-01T00:00:00Z',
+        },
+      ],
+      pagination: { page: 1, limit: 50, total: 1, totalPages: 1, hasMore: false },
+    });
+    // All three data calls fail
+    mockGetDashboard.mockRejectedValue(new Error('Server error'));
+    mockGetRecentObservations.mockRejectedValue(new Error('Server error'));
+    mockGetMilestonesDue.mockRejectedValue(new Error('Server error'));
+
+    render(<DashboardPage />);
+
+    await waitFor(() => {
+      expect(screen.getByText(/Server error/i)).toBeInTheDocument();
+      expect(screen.getByRole('button', { name: /retry/i })).toBeInTheDocument();
+    });
+  });
+
   it('shows child selector when multiple children exist', async () => {
     mockGetChildren.mockResolvedValue({
       data: [

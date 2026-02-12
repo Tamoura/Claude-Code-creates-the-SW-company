@@ -18,7 +18,9 @@
     "viewDetails": "View Details",
     "viewAll": "View All",
     "darkMode": "Dark Mode",
-    "lightMode": "Light Mode"
+    "lightMode": "Light Mode",
+    "retry": "Retry",
+    "retryLoading": "Retry loading"
   },
   "header": {
     "homeAriaLabel": "Mu'aththir home",

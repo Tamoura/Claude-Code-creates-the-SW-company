@@ -28,6 +28,7 @@ export default function DashboardPage() {
   const [loading, setLoading] = useState(true);
   const [error, setError] = useState<string | null>(null);
   const [partialFailures, setPartialFailures] = useState<string[]>([]);
+  const [retryCount, setRetryCount] = useState(0);
 
   // Load children on mount
   useEffect(() => {
@@ -120,7 +121,7 @@ export default function DashboardPage() {
     return () => {
       cancelled = true;
     };
-  }, [selectedChildId]);
+  }, [selectedChildId, retryCount]);
 
   // Transform dashboard data to radar chart format
   const radarScores = dashboardData
@@ -256,9 +257,16 @@ export default function DashboardPage() {
                 d="M12 8v4m0 4h.01M21 12a9 9 0 11-18 0 9 9 0 0118 0z"
               />
             </svg>
-            <div>
+            <div className="flex-1">
               <h3 className="text-sm font-medium text-red-800 dark:text-red-300">{t('errorLoading')}</h3>
               <p className="text-xs text-red-600 dark:text-red-400 mt-1">{error}</p>
+              <button
+                onClick={() => setRetryCount((c) => c + 1)}
+                className="mt-2 text-xs font-medium text-red-700 dark:text-red-300 hover:text-red-900 dark:hover:text-red-100 underline"
+                aria-label={tc('retry')}
+              >
+                {tc('retry')}
+              </button>
             </div>
           </div>
         </div>
