@@ -65,3 +65,27 @@ Final production polish on the frontend covering:
 ### Test Results
 - 18 new tests added, all passing
 - No pre-existing tests broken by changes
+
+## Backend Polish Tasks
+1. Run full test suite - DONE (432/432 passing, now 444/444)
+2. API Documentation - DONE (complete reference for all 40+ endpoints)
+3. Health check enhancement - DONE (/api/health/ready readiness probe)
+4. Graceful shutdown - DONE (SIGTERM/SIGINT in shutdown.ts)
+5. Environment validation - DONE (warnings for SMTP_HOST, ALLOWED_ORIGINS)
+
+### Backend New Files
+- `src/lib/shutdown.ts` - Graceful shutdown handler
+- `tests/integration/graceful-shutdown.test.ts` - 3 tests
+- `tests/integration/env-validation.test.ts` - 6 tests
+
+### Backend Modified Files
+- `src/routes/health.ts` - Added /health/ready endpoint
+- `src/server.ts` - Wired graceful shutdown
+- `src/lib/env.ts` - Added startup warnings, resetValidatedEnv()
+- `tests/integration/health.test.ts` - 3 new readiness tests
+- `docs/API.md` - Full rewrite with all endpoints
+
+### Backend Test Results
+- 444 tests passing (up from 432)
+- 12 new tests added across 3 new test files + 1 existing
+- Zero regressions
