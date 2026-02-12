@@ -19,7 +19,9 @@
     "viewAll": "عرض الكل",
     "darkMode": "الوضع الداكن",
     "lightMode": "الوضع الفاتح",
-    "keyboardShortcutNewObservation": "اضغط Ctrl+N لتسجيل ملاحظة جديدة"
+    "keyboardShortcutNewObservation": "اضغط Ctrl+N لتسجيل ملاحظة جديدة",
+    "retry": "إعادة المحاولة",
+    "retryLoading": "إعادة التحميل"
   },
   "header": {
     "homeAriaLabel": "الصفحة الرئيسية لمؤثّر",
