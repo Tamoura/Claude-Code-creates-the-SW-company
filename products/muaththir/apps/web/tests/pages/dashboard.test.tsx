@@ -47,6 +47,7 @@ jest.mock('../../src/lib/api-client', () => ({
     getDashboard: jest.fn(),
     getRecentObservations: jest.fn(),
     getMilestonesDue: jest.fn(),
+    createObservation: jest.fn(),
   },
 }));
 
@@ -174,13 +175,13 @@ describe('DashboardPage', () => {
 
     await waitFor(() => {
       expect(screen.getByText('Dimensions')).toBeInTheDocument();
-      // All 6 dimensions should be present (from translations)
-      expect(screen.getByText('Academic')).toBeInTheDocument();
-      expect(screen.getByText('Social-Emotional')).toBeInTheDocument();
-      expect(screen.getByText('Behavioural')).toBeInTheDocument();
-      expect(screen.getByText('Aspirational')).toBeInTheDocument();
-      expect(screen.getByText('Islamic')).toBeInTheDocument();
-      expect(screen.getByText('Physical')).toBeInTheDocument();
+      // All 6 dimensions should be present (in DimensionCards and QuickLog select)
+      expect(screen.getAllByText('Academic').length).toBeGreaterThanOrEqual(1);
+      expect(screen.getAllByText('Social-Emotional').length).toBeGreaterThanOrEqual(1);
+      expect(screen.getAllByText('Behavioural').length).toBeGreaterThanOrEqual(1);
+      expect(screen.getAllByText('Aspirational').length).toBeGreaterThanOrEqual(1);
+      expect(screen.getAllByText('Islamic').length).toBeGreaterThanOrEqual(1);
+      expect(screen.getAllByText('Physical').length).toBeGreaterThanOrEqual(1);
     });
   });
 

@@ -48,7 +48,7 @@ describe('DimensionCard', () => {
         observationCount={5}
       />
     );
-    expect(screen.getByText('5')).toBeInTheDocument();
+    expect(screen.getByText(/5 observations/)).toBeInTheDocument();
   });
 
   it('links to the dimension detail page', () => {
@@ -63,7 +63,7 @@ describe('DimensionCard', () => {
   it('has accessible aria-label with translated name and score', () => {
     render(<DimensionCard dimension={academicDimension} score={42} />);
     expect(
-      screen.getByLabelText('Academic - 42')
+      screen.getByLabelText('Academic - score 42 out of 100, 0 observations')
     ).toBeInTheDocument();
   });
 
