@@ -46,7 +46,7 @@ describe('Settings Page', () => {
 
   it('renders navigation links to sub-settings', () => {
     render(<SettingsPage />);
-    const notifLink = screen.getByRole('link', { name: /notifications/i });
+    const notifLink = screen.getByRole('link', { name: /notification/i });
     expect(notifLink).toHaveAttribute('href', '/dashboard/settings/notifications');
   });
 

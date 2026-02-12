@@ -1,3 +1,4 @@
+import { jest } from '@jest/globals';
 import { RiskFactor } from '../../src/modules/risk/schemas.js';
 
 // Will be exported from service.ts after implementation

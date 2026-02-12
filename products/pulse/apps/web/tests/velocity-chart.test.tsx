@@ -19,7 +19,7 @@ jest.mock('recharts', () => ({
 describe('VelocityChart', () => {
   it('renders the chart title', () => {
     render(<VelocityChart />);
-    expect(screen.getByText('PRs Merged Per Week')).toBeInTheDocument();
+    expect(screen.getByRole('heading', { name: 'PRs Merged Per Week' })).toBeInTheDocument();
   });
 
   it('renders the bar chart', () => {

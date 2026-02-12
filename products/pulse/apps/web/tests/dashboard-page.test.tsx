@@ -51,11 +51,11 @@ describe('Dashboard Page', () => {
 
   it('renders the velocity chart', () => {
     render(<DashboardPage />);
-    expect(screen.getByText('PRs Merged Per Week')).toBeInTheDocument();
+    expect(screen.getByRole('heading', { name: 'PRs Merged Per Week' })).toBeInTheDocument();
   });
 
   it('renders the coverage chart', () => {
     render(<DashboardPage />);
-    expect(screen.getByText('Test Coverage Trend')).toBeInTheDocument();
+    expect(screen.getByRole('heading', { name: 'Test Coverage Trend' })).toBeInTheDocument();
   });
 });
