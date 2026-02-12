@@ -36,17 +36,3 @@ declare module '@fastify/static' {
   const fastifyStatic: FastifyPluginCallback<StaticOptions>;
   export default fastifyStatic;
 }
-
-// Augment Fastify request with multipart file method
-declare module 'fastify' {
-  interface FastifyRequest {
-    file(): Promise<{
-      toBuffer(): Promise<Buffer>;
-      file: NodeJS.ReadableStream;
-      fieldname: string;
-      filename: string;
-      encoding: string;
-      mimetype: string;
-    } | undefined>;
-  }
-}

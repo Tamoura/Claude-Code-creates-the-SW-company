@@ -3,7 +3,7 @@
 import { useState, useEffect } from 'react';
 import Link from 'next/link';
 import { useTranslations, useLocale } from 'next-intl';
-import { DIMENSIONS, getDimensionBySlug } from '../../../../lib/dimensions';
+import { DIMENSIONS } from '../../../../lib/dimensions';
 import DimensionBadge from '../../../../components/common/DimensionBadge';
 import MilestoneCelebration from '../../../../components/dashboard/MilestoneCelebration';
 import { apiClient, type Child, type ChildMilestone } from '../../../../lib/api-client';

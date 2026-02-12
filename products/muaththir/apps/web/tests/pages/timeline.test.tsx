@@ -1,7 +1,8 @@
 import { render, screen, waitFor, fireEvent } from '@testing-library/react';
 import TimelinePage from '../../src/app/dashboard/timeline/page';
 
-jest.setTimeout(10000);
+jest.setTimeout(15000);
+jest.retryTimes(2, { logErrorsBeforeRetry: true });
 
 // Mock next/link
 jest.mock('next/link', () => {

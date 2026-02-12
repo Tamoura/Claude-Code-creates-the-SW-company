@@ -236,8 +236,8 @@ describe('ComparePage', () => {
     render(<ComparePage />);
 
     await waitFor(() => {
-      // Falls back to no-children state when API fails
-      expect(screen.getByText(/No children found/i)).toBeInTheDocument();
+      // Shows error message when API fails
+      expect(screen.getByText('errorLoading')).toBeInTheDocument();
     });
   });
 });

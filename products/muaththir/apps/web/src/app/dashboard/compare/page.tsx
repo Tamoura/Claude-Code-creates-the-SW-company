@@ -52,6 +52,7 @@ export default function ComparePage() {
         }
       } catch {
         if (cancelled) return;
+        setError(tc('errorLoading'));
         setChildren([]);
       } finally {
         if (!cancelled) setLoading(false);
@@ -109,6 +110,15 @@ export default function ComparePage() {
     const dim = dash.dimensions.find((d) => d.dimension === dimSlug);
     return dim ? Math.round(dim.score) : 0;
   };
+
+  // Error state
+  if (error) {
+    return (
+      <div className="flex items-center justify-center min-h-[60vh]">
+        <p className="text-red-500 dark:text-red-400">{error}</p>
+      </div>
+    );
+  }
 
   // No children state
   if (!loading && children.length === 0) {
