@@ -127,6 +127,7 @@ model Observation {
   @@index([childId, observedAt])
   @@index([childId, deletedAt])
   @@index([childId, deletedAt, dimension])
+  @@index([childId, deletedAt, observedAt])
   @@index([childId, dimension, observedAt])
   @@index([tags], type: Gin)
   @@map("observations")
@@ -164,6 +165,7 @@ model ChildMilestone {
   @@unique([childId, milestoneId])
   @@index([childId])
   @@index([childId, achieved])
+  @@index([childId, achieved, achievedAt])
   @@index([milestoneId])
   @@map("child_milestones")
 }

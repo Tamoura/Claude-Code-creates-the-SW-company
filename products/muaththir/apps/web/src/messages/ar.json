@@ -38,6 +38,7 @@
     "milestones": "المراحل المهمة",
     "goals": "الأهداف",
     "insights": "الرؤى",
+    "digest": "الملخص الأسبوعي",
     "family": "العائلة",
     "reports": "التقارير",
     "settings": "الإعدادات",
@@ -764,6 +765,23 @@
     "title": "نشاط العائلة",
     "description": "النشاط الأخير عبر جميع الأطفال.",
     "noActivity": "لا يوجد نشاط عائلي حديث"
+  },
+  "digest": {
+    "title": "الملخص الأسبوعي",
+    "subtitle": "ملخص تقدم أطفالك هذا الأسبوع.",
+    "period": "الفترة",
+    "periodRange": "{from} - {to}",
+    "noChildren": "لا يوجد أطفال",
+    "noActivity": "لا يوجد نشاط هذا الأسبوع",
+    "noActivityDesc": "لم يتم تسجيل أي ملاحظات أو مراحل هذا الأسبوع. ابدأ بالتسجيل لرؤية ملخصك.",
+    "observations": "الملاحظات",
+    "milestones": "المراحل المهمة",
+    "topDimension": "البُعد الأبرز",
+    "areasNeedingAttention": "يحتاج اهتمام",
+    "overallSummary": "الملخص الإجمالي",
+    "totalObservations": "إجمالي الملاحظات",
+    "totalMilestones": "إجمالي المراحل",
+    "logObservation": "تسجيل ملاحظة"
   },
   "dashboardLayout": {
     "loading": "جارٍ التحميل...",

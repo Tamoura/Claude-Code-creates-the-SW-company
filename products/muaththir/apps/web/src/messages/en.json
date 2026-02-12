@@ -40,6 +40,7 @@
     "milestones": "Milestones",
     "goals": "Goals",
     "insights": "Insights",
+    "digest": "Weekly Digest",
     "family": "Family",
     "reports": "Reports",
     "settings": "Settings",
@@ -766,6 +767,23 @@
     "title": "Family Activity",
     "description": "Recent activity across all children.",
     "noActivity": "No recent family activity"
+  },
+  "digest": {
+    "title": "Weekly Digest",
+    "subtitle": "A summary of your children's progress this week.",
+    "period": "Period",
+    "periodRange": "{from} - {to}",
+    "noChildren": "No children found",
+    "noActivity": "No activity this week",
+    "noActivityDesc": "No observations or milestones were recorded this week. Start logging to see your digest.",
+    "observations": "Observations",
+    "milestones": "Milestones",
+    "topDimension": "Top Dimension",
+    "areasNeedingAttention": "Needs Attention",
+    "overallSummary": "Overall Summary",
+    "totalObservations": "Total Observations",
+    "totalMilestones": "Total Milestones",
+    "logObservation": "Log Observation"
   },
   "dashboardLayout": {
     "loading": "Loading...",
