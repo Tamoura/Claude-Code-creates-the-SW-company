@@ -212,4 +212,105 @@ describe('TimelinePage', () => {
       expect(screen.getByText('Academic')).toBeInTheDocument();
     });
   });
+
+  describe('Observation Search', () => {
+    const mockObservations = [
+      {
+        id: 'obs-1', childId: 'child-1', dimension: 'academic',
+        content: 'Read a whole chapter by herself',
+        sentiment: 'positive', observedAt: '2026-02-10T10:00:00Z',
+        tags: ['reading'], createdAt: '2026-02-10T10:00:00Z', updatedAt: '2026-02-10T10:00:00Z',
+      },
+      {
+        id: 'obs-2', childId: 'child-1', dimension: 'islamic',
+        content: 'Memorized Surah Al-Fatiha completely',
+        sentiment: 'positive', observedAt: '2026-02-09T10:00:00Z',
+        tags: ['quran'], createdAt: '2026-02-09T10:00:00Z', updatedAt: '2026-02-09T10:00:00Z',
+      },
+      {
+        id: 'obs-3', childId: 'child-1', dimension: 'behavioural',
+        content: 'Shared toys with younger sibling without being asked',
+        sentiment: 'positive', observedAt: '2026-02-08T10:00:00Z',
+        tags: ['sharing'], createdAt: '2026-02-08T10:00:00Z', updatedAt: '2026-02-08T10:00:00Z',
+      },
+    ];
+
+    beforeEach(() => {
+      mockGetChildren.mockResolvedValue({
+        data: [
+          { id: 'child-1', name: 'Sarah', dateOfBirth: '2020-01-01', gender: 'female', ageBand: '3-4', photoUrl: null, createdAt: '2024-01-01T00:00:00Z', updatedAt: '2024-01-01T00:00:00Z' },
+        ],
+        pagination: { page: 1, limit: 50, total: 1, totalPages: 1, hasMore: false },
+      });
+      mockGetObservations.mockResolvedValue({
+        data: mockObservations,
+        pagination: { page: 1, limit: 20, total: 3, totalPages: 1, hasMore: false },
+      });
+    });
+
+    it('renders a search input', async () => {
+      render(<TimelinePage />);
+
+      await waitFor(() => {
+        const searchInput = screen.getByPlaceholderText(/search observations/i);
+        expect(searchInput).toBeInTheDocument();
+      });
+    });
+
+    it('filters observations by keyword', async () => {
+      render(<TimelinePage />);
+
+      await waitFor(() => {
+        expect(screen.getByText('Read a whole chapter by herself')).toBeInTheDocument();
+      });
+
+      const searchInput = screen.getByPlaceholderText(/search observations/i);
+      fireEvent.change(searchInput, { target: { value: 'Surah' } });
+
+      await waitFor(() => {
+        expect(screen.getByText('Memorized Surah Al-Fatiha completely')).toBeInTheDocument();
+        expect(screen.queryByText('Read a whole chapter by herself')).not.toBeInTheDocument();
+        expect(screen.queryByText('Shared toys with younger sibling without being asked')).not.toBeInTheDocument();
+      });
+    });
+
+    it('shows all observations when search is cleared', async () => {
+      render(<TimelinePage />);
+
+      await waitFor(() => {
+        expect(screen.getByText('Read a whole chapter by herself')).toBeInTheDocument();
+      });
+
+      const searchInput = screen.getByPlaceholderText(/search observations/i);
+      fireEvent.change(searchInput, { target: { value: 'Surah' } });
+
+      await waitFor(() => {
+        expect(screen.queryByText('Read a whole chapter by herself')).not.toBeInTheDocument();
+      });
+
+      fireEvent.change(searchInput, { target: { value: '' } });
+
+      await waitFor(() => {
+        expect(screen.getByText('Read a whole chapter by herself')).toBeInTheDocument();
+        expect(screen.getByText('Memorized Surah Al-Fatiha completely')).toBeInTheDocument();
+        expect(screen.getByText('Shared toys with younger sibling without being asked')).toBeInTheDocument();
+      });
+    });
+
+    it('search is case-insensitive', async () => {
+      render(<TimelinePage />);
+
+      await waitFor(() => {
+        expect(screen.getByText('Read a whole chapter by herself')).toBeInTheDocument();
+      });
+
+      const searchInput = screen.getByPlaceholderText(/search observations/i);
+      fireEvent.change(searchInput, { target: { value: 'shared toys' } });
+
+      await waitFor(() => {
+        expect(screen.getByText('Shared toys with younger sibling without being asked')).toBeInTheDocument();
+        expect(screen.queryByText('Read a whole chapter by herself')).not.toBeInTheDocument();
+      });
+    });
+  });
 });
