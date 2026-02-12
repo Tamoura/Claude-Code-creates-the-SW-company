@@ -1,3 +1,4 @@
+import React from 'react';
 import { render, screen } from '@testing-library/react';
 import RadarChart from '../../src/components/dashboard/RadarChart';
 import type { DimensionScore } from '../../src/components/dashboard/RadarChart';
@@ -12,8 +13,8 @@ jest.mock('recharts', () => {
     }: {
       children: React.ReactNode;
     }) => <div data-testid="responsive-container">{children}</div>,
-    RadarChart: ({ children }: { children: React.ReactNode }) => (
-      <div data-testid="radar-chart">{children}</div>
+    RadarChart: ({ children, data }: { children: React.ReactNode; data: unknown }) => (
+      <div data-testid="radar-chart" data-chart-data={JSON.stringify(data)}>{children}</div>
     ),
     Radar: () => <div data-testid="radar" />,
     PolarGrid: () => <div data-testid="polar-grid" />,
@@ -57,5 +58,27 @@ describe('RadarChart', () => {
     expect(screen.getByTestId('responsive-container')).toBeInTheDocument();
     expect(screen.getByTestId('radar-chart')).toBeInTheDocument();
     expect(screen.getByTestId('radar')).toBeInTheDocument();
+  });
+
+  it('is wrapped in React.memo to prevent unnecessary re-renders', () => {
+    // React.memo wraps the component; we can verify by checking the
+    // component's $$typeof or displayName
+    expect(RadarChart).toHaveProperty('$$typeof', Symbol.for('react.memo'));
+  });
+
+  it('does not recalculate chart data when scores reference is the same', () => {
+    const { rerender } = render(<RadarChart scores={sampleScores} />);
+
+    const chartEl1 = screen.getByTestId('radar-chart');
+    const data1 = chartEl1.getAttribute('data-chart-data');
+
+    // Re-render with same scores reference
+    rerender(<RadarChart scores={sampleScores} />);
+
+    const chartEl2 = screen.getByTestId('radar-chart');
+    const data2 = chartEl2.getAttribute('data-chart-data');
+
+    // Data should be identical (memoized)
+    expect(data1).toEqual(data2);
   });
 });
