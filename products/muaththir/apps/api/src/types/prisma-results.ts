@@ -59,14 +59,6 @@ export interface ObservationDimension {
   dimension: Dimension;
 }
 
-/** Result from scoreCache.findMany */
-export interface ScoreCacheEntry {
-  dimension: Dimension;
-  score: number;
-  stale: boolean;
-  calculatedAt: Date;
-}
-
 /** Observation record for reports (with all display fields) */
 export interface ObservationForReport {
   id: string;
