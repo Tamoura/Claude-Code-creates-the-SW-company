@@ -310,6 +310,32 @@ async function authenticateAndSetupMocks(
     })
   );
 
+  // Mock single child endpoint (for goal detail page)
+  await page.route('**/api/children/child-1', (route) => {
+    const url = route.request().url();
+    // Only handle exact single-child fetch, not /children/child-1/goals etc.
+    if (url.match(/\/api\/children\/child-1$/)) {
+      return route.fulfill({
+        status: 200,
+        contentType: 'application/json',
+        body: JSON.stringify(MOCK_CHILD),
+      });
+    }
+    return route.fallback();
+  });
+
+  await page.route('**/api/children/child-2', (route) => {
+    const url = route.request().url();
+    if (url.match(/\/api\/children\/child-2$/)) {
+      return route.fulfill({
+        status: 200,
+        contentType: 'application/json',
+        body: JSON.stringify(MOCK_CHILD_2),
+      });
+    }
+    return route.fallback();
+  });
+
   // Mock goals endpoint (GET and PATCH/DELETE for status changes)
   await page.route('**/api/children/*/goals**', (route) => {
     const method = route.request().method();
@@ -338,7 +364,19 @@ async function authenticateAndSetupMocks(
       });
     }
 
-    // GET - return goals list, respecting status filter if present
+    // GET - check if this is a single goal fetch (/goals/goal-id)
+    const singleGoalMatch = url.match(/\/goals\/([^/?]+)$/);
+    if (singleGoalMatch) {
+      const goalId = singleGoalMatch[1];
+      const matchingGoal = goalsData.find((g) => g.id === goalId);
+      return route.fulfill({
+        status: matchingGoal ? 200 : 404,
+        contentType: 'application/json',
+        body: JSON.stringify(matchingGoal || { error: 'Not found' }),
+      });
+    }
+
+    // GET list - return goals list, respecting status filter if present
     const urlParams = new URL(url).searchParams;
     const statusFilter = urlParams.get('status');
     const filtered = statusFilter
@@ -657,6 +695,161 @@ test.describe('Goals Flow', () => {
       // Should have both children as options
       const options = childSelector.first().locator('option');
       await expect(options).toHaveCount(2);
+    });
+  });
+
+  test.describe('Goal Detail Page', () => {
+    test('clicking goal title navigates to detail page', async ({ page }) => {
+      await authenticateAndSetupMocks(page);
+      await navigateToGoals(page);
+
+      // Wait for goals to render
+      await expect(
+        page.getByText('Read 10 books this month')
+      ).toBeVisible({ timeout: 15000 });
+
+      // Click the first goal title link
+      const goalLink = page.locator(
+        'a[href*="/dashboard/goals/goal-1"]'
+      );
+      await expect(goalLink).toBeVisible({ timeout: 10000 });
+      await goalLink.click();
+
+      // Should navigate to the goal detail page
+      await page.waitForURL('**/dashboard/goals/goal-1**', {
+        timeout: 15000,
+      });
+
+      // Detail page should show the goal title as h1
+      await expect(
+        page.locator('h1:has-text("Read 10 books this month")')
+      ).toBeVisible({ timeout: 15000 });
+    });
+
+    test('goal detail page shows goal information', async ({ page }) => {
+      await authenticateAndSetupMocks(page);
+      await navigateToGoals(page);
+
+      // Wait for goals to render then navigate to detail
+      await expect(
+        page.getByText('Read 10 books this month')
+      ).toBeVisible({ timeout: 15000 });
+
+      const goalLink = page.locator(
+        'a[href*="/dashboard/goals/goal-1"]'
+      );
+      await goalLink.click();
+      await page.waitForURL('**/dashboard/goals/goal-1**', {
+        timeout: 15000,
+      });
+
+      // Goal title
+      await expect(
+        page.locator('h1:has-text("Read 10 books this month")')
+      ).toBeVisible({ timeout: 15000 });
+
+      // Dimension label (Academic) shown in header metadata
+      await expect(
+        page.getByText('Academic').first()
+      ).toBeVisible({ timeout: 10000 });
+
+      // Description text
+      await expect(
+        page.getByText('Track reading progress')
+      ).toBeVisible({ timeout: 10000 });
+
+      // Status badge (Active)
+      await expect(
+        page.getByText('Active').first()
+      ).toBeVisible({ timeout: 10000 });
+
+      // Target Date section header
+      await expect(
+        page.getByText('Target Date')
+      ).toBeVisible({ timeout: 10000 });
+
+      // Child name should be visible in the header metadata
+      await expect(
+        page.getByText('Ahmad').first()
+      ).toBeVisible({ timeout: 10000 });
+    });
+
+    test('goal detail page shows action buttons', async ({ page }) => {
+      await authenticateAndSetupMocks(page);
+      await navigateToGoals(page);
+
+      // Wait for goals to render then navigate to detail
+      await expect(
+        page.getByText('Read 10 books this month')
+      ).toBeVisible({ timeout: 15000 });
+
+      const goalLink = page.locator(
+        'a[href*="/dashboard/goals/goal-1"]'
+      );
+      await goalLink.click();
+      await page.waitForURL('**/dashboard/goals/goal-1**', {
+        timeout: 15000,
+      });
+
+      // Wait for detail page to load
+      await expect(
+        page.locator('h1:has-text("Read 10 books this month")')
+      ).toBeVisible({ timeout: 15000 });
+
+      // Actions section heading
+      await expect(
+        page.getByText('Actions')
+      ).toBeVisible({ timeout: 10000 });
+
+      // Edit Goal button (goal-1 is active, so Edit, Mark Complete, Pause should show)
+      await expect(
+        page.getByText('Edit Goal')
+      ).toBeVisible({ timeout: 10000 });
+
+      // Mark Complete button
+      await expect(
+        page.getByText('Mark Complete')
+      ).toBeVisible({ timeout: 10000 });
+
+      // Pause button
+      await expect(
+        page.getByText('Pause')
+      ).toBeVisible({ timeout: 10000 });
+    });
+
+    test('goal detail page shows danger zone with delete', async ({
+      page,
+    }) => {
+      await authenticateAndSetupMocks(page);
+      await navigateToGoals(page);
+
+      // Wait for goals to render then navigate to detail
+      await expect(
+        page.getByText('Read 10 books this month')
+      ).toBeVisible({ timeout: 15000 });
+
+      const goalLink = page.locator(
+        'a[href*="/dashboard/goals/goal-1"]'
+      );
+      await goalLink.click();
+      await page.waitForURL('**/dashboard/goals/goal-1**', {
+        timeout: 15000,
+      });
+
+      // Wait for detail page to load
+      await expect(
+        page.locator('h1:has-text("Read 10 books this month")')
+      ).toBeVisible({ timeout: 15000 });
+
+      // Danger Zone heading
+      await expect(
+        page.getByText('Danger Zone')
+      ).toBeVisible({ timeout: 10000 });
+
+      // Delete button
+      await expect(
+        page.getByText('Delete this goal')
+      ).toBeVisible({ timeout: 10000 });
     });
   });
 });
