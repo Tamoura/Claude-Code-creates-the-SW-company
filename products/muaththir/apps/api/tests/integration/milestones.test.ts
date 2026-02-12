@@ -45,7 +45,7 @@ async function createChildViaDb(
   return child.id;
 }
 
-async function seedTestMilestones(count = 10): Promise<string[]> {
+async function seedTestMilestones(count = 10, withArabic = false): Promise<string[]> {
   const ids: string[] = [];
   for (let i = 1; i <= count; i++) {
     const m = await prisma.milestoneDefinition.create({
@@ -55,6 +55,11 @@ async function seedTestMilestones(count = 10): Promise<string[]> {
         title: `Test milestone ${i}`,
         description: `Description for test milestone ${i}`,
         guidance: `Guidance for test milestone ${i}`,
+        ...(withArabic ? {
+          titleAr: `اختبار معلم ${i}`,
+          descriptionAr: `وصف اختبار معلم ${i}`,
+          guidanceAr: `إرشادات اختبار معلم ${i}`,
+        } : {}),
         sortOrder: i,
       },
     });
@@ -689,5 +694,120 @@ describe('PATCH /api/children/:childId/milestones/:milestoneId', () => {
     expect(body).toHaveProperty('achieved');
     expect(body).toHaveProperty('achievedAt');
     expect(body).toHaveProperty('achievedHistory');
+  });
+});
+
+// =============================================
+// Arabic locale support
+// =============================================
+
+describe('Milestone Arabic locale support', () => {
+  describe('GET /api/milestones with Accept-Language', () => {
+    it('should return English fields by default', async () => {
+      await seedTestMilestones(1, true);
+
+      const res = await app.inject({
+        method: 'GET',
+        url: '/api/milestones',
+      });
+
+      const body = res.json();
+      expect(body.data[0].title).toBe('Test milestone 1');
+      expect(body.data[0].description).toBe('Description for test milestone 1');
+      expect(body.data[0].guidance).toBe('Guidance for test milestone 1');
+    });
+
+    it('should return Arabic fields when Accept-Language is ar', async () => {
+      await seedTestMilestones(1, true);
+
+      const res = await app.inject({
+        method: 'GET',
+        url: '/api/milestones',
+        headers: { 'accept-language': 'ar' },
+      });
+
+      const body = res.json();
+      expect(body.data[0].title).toBe('اختبار معلم 1');
+      expect(body.data[0].description).toBe('وصف اختبار معلم 1');
+      expect(body.data[0].guidance).toBe('إرشادات اختبار معلم 1');
+    });
+
+    it('should fall back to English when Arabic fields are null', async () => {
+      await seedTestMilestones(1, false);
+
+      const res = await app.inject({
+        method: 'GET',
+        url: '/api/milestones',
+        headers: { 'accept-language': 'ar' },
+      });
+
+      const body = res.json();
+      expect(body.data[0].title).toBe('Test milestone 1');
+      expect(body.data[0].description).toBe('Description for test milestone 1');
+      expect(body.data[0].guidance).toBe('Guidance for test milestone 1');
+    });
+  });
+
+  describe('GET /api/children/:childId/milestones with Accept-Language', () => {
+    it('should return Arabic fields when Accept-Language is ar', async () => {
+      const token = await registerAndGetToken();
+      const childId = await createChildViaDb(parentId);
+      await seedTestMilestones(2, true);
+
+      const res = await app.inject({
+        method: 'GET',
+        url: `/api/children/${childId}/milestones`,
+        headers: {
+          authorization: `Bearer ${token}`,
+          'accept-language': 'ar',
+        },
+      });
+
+      const body = res.json();
+      expect(body.data[0].title).toBe('اختبار معلم 1');
+      expect(body.data[0].description).toBe('وصف اختبار معلم 1');
+      expect(body.data[0].guidance).toBe('إرشادات اختبار معلم 1');
+    });
+
+    it('should include Vary: Accept-Language header', async () => {
+      const token = await registerAndGetToken();
+      const childId = await createChildViaDb(parentId);
+      await seedTestMilestones(1, true);
+
+      const res = await app.inject({
+        method: 'GET',
+        url: `/api/children/${childId}/milestones`,
+        headers: {
+          authorization: `Bearer ${token}`,
+          'accept-language': 'ar',
+        },
+      });
+
+      expect(res.headers['vary']).toContain('Accept-Language');
+    });
+  });
+
+  describe('PATCH toggle with Accept-Language', () => {
+    it('should return Arabic fields in toggle response when ar', async () => {
+      const token = await registerAndGetToken();
+      const childId = await createChildViaDb(parentId);
+      const milestoneIds = await seedTestMilestones(1, true);
+
+      const res = await app.inject({
+        method: 'PATCH',
+        url: `/api/children/${childId}/milestones/${milestoneIds[0]}`,
+        headers: {
+          authorization: `Bearer ${token}`,
+          'accept-language': 'ar',
+        },
+        payload: { achieved: true },
+      });
+
+      const body = res.json();
+      expect(body.title).toBe('اختبار معلم 1');
+      expect(body.description).toBe('وصف اختبار معلم 1');
+      expect(body.guidance).toBe('إرشادات اختبار معلم 1');
+      expect(body.achieved).toBe(true);
+    });
   });
 });

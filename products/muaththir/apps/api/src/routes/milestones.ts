@@ -11,6 +11,7 @@ import { validateBody } from '../utils/validation';
 import { DIMENSIONS, AGE_BANDS } from '../types';
 import { logger } from '../utils/logger';
 import { buildMilestoneEmailHtml } from '../templates/milestone-email';
+import { getLocale } from '../lib/locale';
 
 const dimensionEnum = z.enum(DIMENSIONS as unknown as [string, ...string[]]);
 const ageBandEnum = z.enum(AGE_BANDS as unknown as [string, ...string[]]);
@@ -55,6 +56,8 @@ const milestoneDefinitionRoutes: FastifyPluginAsync = async (fastify) => {
       where.ageBand = parsed.data;
     }
 
+    const locale = getLocale(request);
+
     const [milestones, total] = await Promise.all([
       fastify.prisma.milestoneDefinition.findMany({
         where,
@@ -69,16 +72,18 @@ const milestoneDefinitionRoutes: FastifyPluginAsync = async (fastify) => {
       fastify.prisma.milestoneDefinition.count({ where }),
     ]);
 
+    const isAr = locale === 'ar';
     const data = milestones.map((m) => ({
       id: m.id,
       dimension: m.dimension,
       ageBand: m.ageBand,
-      title: m.title,
-      description: m.description,
-      guidance: m.guidance,
+      title: (isAr && m.titleAr) || m.title,
+      description: (isAr && m.descriptionAr) || m.description,
+      guidance: (isAr && m.guidanceAr) || m.guidance,
       sortOrder: m.sortOrder,
     }));
 
+    reply.header('Vary', 'Accept-Language');
     return reply.code(200).send(paginatedResult(data, total, { page, limit }));
   });
 };
@@ -126,6 +131,8 @@ const childMilestoneRoutes: FastifyPluginAsync = async (fastify) => {
       where.ageBand = parsed.data;
     }
 
+    const locale = getLocale(request);
+
     const [milestones, total] = await Promise.all([
       fastify.prisma.milestoneDefinition.findMany({
         where,
@@ -145,15 +152,16 @@ const childMilestoneRoutes: FastifyPluginAsync = async (fastify) => {
       fastify.prisma.milestoneDefinition.count({ where }),
     ]);
 
+    const isAr = locale === 'ar';
     const data = milestones.map((m) => {
       const childMilestone = m.childMilestones[0] ?? null;
       return {
         id: m.id,
         dimension: m.dimension,
         ageBand: m.ageBand,
-        title: m.title,
-        description: m.description,
-        guidance: m.guidance,
+        title: (isAr && m.titleAr) || m.title,
+        description: (isAr && m.descriptionAr) || m.description,
+        guidance: (isAr && m.guidanceAr) || m.guidance,
         sortOrder: m.sortOrder,
         achieved: childMilestone?.achieved ?? false,
         achievedAt: childMilestone?.achievedAt?.toISOString() ?? null,
@@ -161,6 +169,7 @@ const childMilestoneRoutes: FastifyPluginAsync = async (fastify) => {
     });
 
     reply.header('Cache-Control', 'private, max-age=60');
+    reply.header('Vary', 'Accept-Language');
     return reply.code(200).send(paginatedResult(data, total, { page, limit }));
   });
 
@@ -271,14 +280,18 @@ const childMilestoneRoutes: FastifyPluginAsync = async (fastify) => {
         });
     }
 
+    const locale = getLocale(request);
+    const isAr = locale === 'ar';
+    const ms = childMilestone.milestone;
+
     return reply.code(200).send({
-      id: childMilestone.milestone.id,
-      dimension: childMilestone.milestone.dimension,
-      ageBand: childMilestone.milestone.ageBand,
-      title: childMilestone.milestone.title,
-      description: childMilestone.milestone.description,
-      guidance: childMilestone.milestone.guidance,
-      sortOrder: childMilestone.milestone.sortOrder,
+      id: ms.id,
+      dimension: ms.dimension,
+      ageBand: ms.ageBand,
+      title: (isAr && ms.titleAr) || ms.title,
+      description: (isAr && ms.descriptionAr) || ms.description,
+      guidance: (isAr && ms.guidanceAr) || ms.guidance,
+      sortOrder: ms.sortOrder,
       achieved: childMilestone.achieved,
       achievedAt: childMilestone.achievedAt?.toISOString() ?? null,
       achievedHistory: childMilestone.achievedHistory,

@@ -249,3 +249,92 @@ describe('GET /api/goal-templates', () => {
     expect(body.pagination.limit).toBe(100);
   });
 });
+
+// =============================================
+// Arabic locale support for goal templates
+// =============================================
+
+async function seedTemplatesWithArabic() {
+  const templates = [
+    {
+      dimension: 'academic' as const,
+      ageBand: 'early_years' as const,
+      title: 'Learn to count to 20',
+      description: 'Count independently',
+      titleAr: 'تعلم العد حتى ٢٠',
+      descriptionAr: 'العد بشكل مستقل',
+      category: 'numeracy',
+      sortOrder: 1,
+    },
+    {
+      dimension: 'academic' as const,
+      ageBand: 'early_years' as const,
+      title: 'Recognise letters',
+      description: 'Identify letters',
+      category: 'literacy',
+      sortOrder: 2,
+    },
+  ];
+
+  for (const t of templates) {
+    await prisma.goalTemplate.create({ data: t });
+  }
+
+  return templates;
+}
+
+describe('Goal template Arabic locale support', () => {
+  it('should return English fields by default', async () => {
+    await seedTemplatesWithArabic();
+
+    const res = await app.inject({
+      method: 'GET',
+      url: '/api/goal-templates',
+    });
+
+    const body = res.json();
+    expect(body.data[0].title).toBe('Learn to count to 20');
+    expect(body.data[0].description).toBe('Count independently');
+  });
+
+  it('should return Arabic fields when Accept-Language is ar', async () => {
+    await seedTemplatesWithArabic();
+
+    const res = await app.inject({
+      method: 'GET',
+      url: '/api/goal-templates',
+      headers: { 'accept-language': 'ar' },
+    });
+
+    const body = res.json();
+    expect(body.data[0].title).toBe('تعلم العد حتى ٢٠');
+    expect(body.data[0].description).toBe('العد بشكل مستقل');
+  });
+
+  it('should fall back to English when Arabic fields are null', async () => {
+    await seedTemplatesWithArabic();
+
+    const res = await app.inject({
+      method: 'GET',
+      url: '/api/goal-templates',
+      headers: { 'accept-language': 'ar' },
+    });
+
+    const body = res.json();
+    // Second template has no Arabic
+    expect(body.data[1].title).toBe('Recognise letters');
+    expect(body.data[1].description).toBe('Identify letters');
+  });
+
+  it('should include Vary: Accept-Language header', async () => {
+    await seedTemplatesWithArabic();
+
+    const res = await app.inject({
+      method: 'GET',
+      url: '/api/goal-templates',
+      headers: { 'accept-language': 'ar' },
+    });
+
+    expect(res.headers['vary']).toContain('Accept-Language');
+  });
+});

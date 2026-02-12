@@ -830,3 +830,110 @@ describe('DELETE /api/children/:childId/observations/:id', () => {
     expect(listRes.json().pagination.total).toBe(0);
   });
 });
+
+// =============================================
+// Arabic locale support for observations
+// =============================================
+
+describe('Observation Arabic locale support', () => {
+  // Uses accessToken and childId from the global beforeEach
+
+  it('should return English content by default', async () => {
+    await prisma.observation.create({
+      data: {
+        childId,
+        dimension: 'academic',
+        content: 'Completed reading assignment',
+        contentAr: 'أكملت مهمة القراءة',
+        sentiment: 'positive',
+        observedAt: new Date(),
+        tags: ['reading'],
+      },
+    });
+
+    const res = await app.inject({
+      method: 'GET',
+      url: `/api/children/${childId}/observations`,
+      headers: { authorization: `Bearer ${accessToken}` },
+    });
+
+    const body = res.json();
+    expect(body.data[0].content).toBe('Completed reading assignment');
+  });
+
+  it('should return Arabic content when Accept-Language is ar', async () => {
+    await prisma.observation.create({
+      data: {
+        childId,
+        dimension: 'academic',
+        content: 'Completed reading assignment',
+        contentAr: 'أكملت مهمة القراءة',
+        sentiment: 'positive',
+        observedAt: new Date(),
+        tags: ['reading'],
+      },
+    });
+
+    const res = await app.inject({
+      method: 'GET',
+      url: `/api/children/${childId}/observations`,
+      headers: {
+        authorization: `Bearer ${accessToken}`,
+        'accept-language': 'ar',
+      },
+    });
+
+    const body = res.json();
+    expect(body.data[0].content).toBe('أكملت مهمة القراءة');
+  });
+
+  it('should fall back to English when contentAr is null', async () => {
+    await prisma.observation.create({
+      data: {
+        childId,
+        dimension: 'academic',
+        content: 'English only observation',
+        sentiment: 'positive',
+        observedAt: new Date(),
+        tags: [],
+      },
+    });
+
+    const res = await app.inject({
+      method: 'GET',
+      url: `/api/children/${childId}/observations`,
+      headers: {
+        authorization: `Bearer ${accessToken}`,
+        'accept-language': 'ar',
+      },
+    });
+
+    const body = res.json();
+    expect(body.data[0].content).toBe('English only observation');
+  });
+
+  it('should return Arabic content for single observation GET', async () => {
+    const obs = await prisma.observation.create({
+      data: {
+        childId,
+        dimension: 'academic',
+        content: 'English content',
+        contentAr: 'محتوى عربي',
+        sentiment: 'positive',
+        observedAt: new Date(),
+        tags: [],
+      },
+    });
+
+    const res = await app.inject({
+      method: 'GET',
+      url: `/api/children/${childId}/observations/${obs.id}`,
+      headers: {
+        authorization: `Bearer ${accessToken}`,
+        'accept-language': 'ar',
+      },
+    });
+
+    expect(res.json().content).toBe('محتوى عربي');
+  });
+});
