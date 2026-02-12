@@ -3,7 +3,6 @@
 **Purpose**: Centralized port allocation to prevent conflicts when running multiple products simultaneously.
 
 **Last Updated**: 2026-02-12
-**Last Updated**: 2026-02-11
 
 ## Port Allocation Rules
 
@@ -20,9 +19,7 @@
 |------|---------|--------|-----|
 | 3104 | stablecoin-gateway | Active | http://localhost:3104 |
 | 3105 | quantum-computing-usecases | Active | http://localhost:3105 |
-| 3106 | pulse | Reserved | http://localhost:3106 |
 | 3108 | muaththir | Active | http://localhost:3108 |
-| 3109 | invoiceforge | Active | http://localhost:3109 |
 | 3110 | connectgrc | Active | http://localhost:3110 |
 | 3111 | taskflow | Active | http://localhost:3111 |
 | 3112 | recomengine | Active | http://localhost:3112 |
@@ -33,9 +30,6 @@
 | Port | Product | Status | URL |
 |------|---------|--------|-----|
 | 5001 | stablecoin-gateway | Active | http://localhost:5001 |
-| 5003 | pulse | Active | http://localhost:5003 |
-| 5003 | pulse | Reserved | http://localhost:5003 |
-| 5004 | invoiceforge | Active | http://localhost:5004 |
 | 5005 | muaththir | Active | http://localhost:5005 |
 | 5006 | connectgrc | Active | http://localhost:5006 |
 | 5007 | taskflow | Active | http://localhost:5007 |
@@ -46,8 +40,7 @@
 
 | Port | Product | Status | URL |
 |------|---------|--------|-----|
-| 8081 | pulse (mobile) | Active | http://localhost:8081 |
-| 8082-8099 | *Available* | Free | - |
+| 8081-8099 | *Available* | Free | - |
 
 ### Databases
 
@@ -106,12 +99,13 @@ When initiating new product workflows:
 ```bash
 # Frontend apps
 cd products/stablecoin-gateway/apps/web && npm run dev &        # :3104
-cd products/quantum-computing-usecases/apps/web && npm run dev &# :3105
-cd products/invoiceforge/apps/web && npm run dev &              # :3109
+cd products/muaththir/apps/web && npm run dev &                 # :3108
+cd products/connectgrc/apps/web && npm run dev &                # :3110
 
 # Backend APIs
 cd products/stablecoin-gateway/apps/api && npm run dev &        # :5001
-cd products/invoiceforge/apps/api && npm run dev &              # :5004
+cd products/muaththir/apps/api && npm run dev &                 # :5005
+cd products/connectgrc/apps/api && npm run dev &                # :5006
 ```
 
 ### Check Port Availability
@@ -134,7 +128,7 @@ pkill -f "next dev"
 pkill -f "fastify"
 
 # Or kill by port
-lsof -ti:3104,3105,3109,5001,5004 | xargs kill -9
+lsof -ti:3104,3108,3110,5001,5005,5006 | xargs kill -9
 ```
 
 ## Port Conflict Resolution

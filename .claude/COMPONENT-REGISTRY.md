@@ -37,13 +37,13 @@ See `packages/shared/README.md` for usage examples.
 | API keys                   | Crypto Utils (hashApiKey, generateApiKey) + API Key routes + useApiKeys hook  |
 | Webhooks                   | Webhook Delivery Service + Circuit Breaker + Crypto Utils (signWebhookPayload)|
 | A data table               | TransactionsTable component (paginated, sortable)                             |
-| Billing / Stripe           | Stripe Plugin (invoiceforge)                                                  |
+| Billing / Stripe           | Stripe Plugin (see stablecoin-gateway patterns)                              |
 | Real-time updates (SSE)    | SSE pattern (api-client.createEventSource) + TokenManager                     |
 | Rate limiting              | Redis Rate Limit Store + Redis Plugin                                         |
 | Encryption at rest         | Encryption Utils (AES-256-GCM)                                               |
 | Structured logging         | Logger + Observability Plugin                                                 |
-| Error handling             | Error Classes (invoiceforge) + AppError (stablecoin) + validation helpers     |
-| Pagination                 | Pagination Helper (invoiceforge) + listQuerySchemas (stablecoin)              |
+| Error handling             | AppError (stablecoin-gateway) + validation helpers                            |
+| Pagination                 | listQuerySchemas (stablecoin-gateway)                                         |
 | Audit trail                | Audit Log Service (DB-backed + in-memory fallback)                            |
 | Email notifications        | Email Service (HTML templates, XSS-safe)                                      |
 | Dark/light theme           | useTheme hook + ThemeToggle component                                         |
@@ -530,9 +530,9 @@ Components in this registry are sourced from these products:
 | Product              | Status     | Backend | Frontend | Has Docker | Has CI |
 |----------------------|------------|---------|----------|------------|--------|
 | stablecoin-gateway   | Production | Yes     | Yes      | Yes        | Yes    |
-| invoiceforge         | Production | Yes     | Yes      | Yes        | Yes    |
-| recomengine          | Active     | Yes     | Yes      | Yes        | --     |
-| motqen               | Active     | --      | --       | --         | --     |
+| muaththir            | Production | Yes     | Yes      | Yes        | Yes    |
+| connectgrc           | MVP        | Yes     | Yes      | Yes        | Yes    |
+| recomengine          | Foundation | Yes     | Yes      | Yes        | --     |
 
 ---
 
