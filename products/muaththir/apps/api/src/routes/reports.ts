@@ -177,11 +177,24 @@ async function buildRecommendations(
     }
   }
 
+  // Batch: fetch milestone + streak data in parallel
+  const [achievedIds, recentWeekCount] = await Promise.all([
+    ageBand
+      ? prisma.childMilestone.findMany({
+          where: { childId, achieved: true },
+          select: { milestoneId: true },
+        })
+      : Promise.resolve([]),
+    prisma.observation.count({
+      where: {
+        childId,
+        deletedAt: null,
+        observedAt: { gte: sevenDaysAgo },
+      },
+    }),
+  ]);
+
   if (ageBand) {
-    const achievedIds = await prisma.childMilestone.findMany({
-      where: { childId, achieved: true },
-      select: { milestoneId: true },
-    });
     const achieved = achievedIds.map(
       (m: { milestoneId: string }) => m.milestoneId
     );
@@ -216,14 +229,6 @@ async function buildRecommendations(
       priority: 'low',
     });
   }
-
-  const recentWeekCount = await prisma.observation.count({
-    where: {
-      childId,
-      deletedAt: null,
-      observedAt: { gte: sevenDaysAgo },
-    },
-  });
 
   if (recentWeekCount > 5) {
     recs.push({

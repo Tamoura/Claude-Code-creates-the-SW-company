@@ -2,14 +2,16 @@
 
 import { useState, useEffect } from 'react';
 import Link from 'next/link';
-import { useTranslations } from 'next-intl';
+import { useTranslations, useLocale } from 'next-intl';
 import { getDimensionBySlug } from '../../../lib/dimensions';
 import { apiClient, type Child, type InsightsData } from '../../../lib/api-client';
+import { formatDateTime } from '../../../lib/date-format';
 
 export default function InsightsPage() {
   const t = useTranslations('insights');
   const tc = useTranslations('common');
   const td = useTranslations('dimensions');
+  const locale = useLocale();
   const [children, setChildren] = useState<Child[]>([]);
   const [selectedChildId, setSelectedChildId] = useState<string | null>(null);
   const [insights, setInsights] = useState<InsightsData | null>(null);
@@ -55,11 +57,11 @@ export default function InsightsPage() {
   }, [selectedChildId]);
 
   const trendIcon = (trend: string) => {
-    if (trend === 'improving') return <span className="text-emerald-500" title={t('improving')}>&#9650;</span>;
-    if (trend === 'declining') return <span className="text-red-500" title={t('declining')}>&#9660;</span>;
-    if (trend === 'needs_attention') return <span className="text-amber-500" title={t('needsAttention')}>&#9888;</span>;
-    if (trend === 'no_data') return <span className="text-slate-300" title={t('noData')}>&mdash;</span>;
-    return <span className="text-slate-400" title={t('stable')}>&#9644;</span>;
+    if (trend === 'improving') return <span className="text-emerald-500" role="img" aria-label={t('improving')}>&#9650; <span className="sr-only">{t('improving')}</span></span>;
+    if (trend === 'declining') return <span className="text-red-500" role="img" aria-label={t('declining')}>&#9660; <span className="sr-only">{t('declining')}</span></span>;
+    if (trend === 'needs_attention') return <span className="text-amber-500" role="img" aria-label={t('needsAttention')}>&#9888; <span className="sr-only">{t('needsAttention')}</span></span>;
+    if (trend === 'no_data') return <span className="text-slate-300 dark:text-slate-600" role="img" aria-label={t('noData')}>&mdash; <span className="sr-only">{t('noData')}</span></span>;
+    return <span className="text-slate-400 dark:text-slate-500" role="img" aria-label={t('stable')}>&#9644; <span className="sr-only">{t('stable')}</span></span>;
   };
 
   const priorityBadge = (priority: string) => {
@@ -239,7 +241,7 @@ export default function InsightsPage() {
           </section>
 
           <p className="text-xs text-slate-400 dark:text-slate-500 text-center">
-            {t('generatedAt', { time: new Date(insights.generatedAt).toLocaleString() })}
+            {t('generatedAt', { time: formatDateTime(insights.generatedAt, locale) })}
           </p>
         </>
       ) : (

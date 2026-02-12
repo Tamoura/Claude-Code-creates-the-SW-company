@@ -2,15 +2,17 @@
 
 import { useState, useEffect } from 'react';
 import Link from 'next/link';
-import { useTranslations } from 'next-intl';
+import { useTranslations, useLocale } from 'next-intl';
 import { getDimensionBySlug } from '../../../lib/dimensions';
 import { apiClient, type Child, type DashboardData } from '../../../lib/api-client';
 import ExportCSV from '../../../components/reports/ExportCSV';
+import { formatDateLong } from '../../../lib/date-format';
 
 export default function ReportsPage() {
   const t = useTranslations('reports');
   const tc = useTranslations('common');
   const td = useTranslations('dimensions');
+  const locale = useLocale();
   const [children, setChildren] = useState<Child[]>([]);
   const [selectedChildId, setSelectedChildId] = useState<string | null>(null);
   const [dashboard, setDashboard] = useState<DashboardData | null>(null);
@@ -130,7 +132,7 @@ export default function ReportsPage() {
               </div>
             </div>
             <p className="text-xs text-slate-400 dark:text-slate-500 mt-3">
-              {t('reportGenerated', { date: new Date().toLocaleDateString('en-GB', { day: 'numeric', month: 'long', year: 'numeric' }) })}
+              {t('reportGenerated', { date: formatDateLong(new Date(), locale) })}
             </p>
           </div>
 
@@ -145,12 +147,19 @@ export default function ReportsPage() {
                   <div key={dimScore.dimension}>
                     <div className="flex items-center justify-between mb-1">
                       <div className="flex items-center gap-2">
-                        <span className="h-3 w-3 rounded-full" style={{ backgroundColor: dim?.colour || '#94a3b8' }} />
+                        <span className="h-3 w-3 rounded-full" style={{ backgroundColor: dim?.colour || '#94a3b8' }} aria-hidden="true" />
                         <span className="text-sm font-medium text-slate-700 dark:text-slate-300">{td(dimScore.dimension as any)}</span>
                       </div>
                       <span className="text-sm font-bold text-slate-900 dark:text-white">{score}/100</span>
                     </div>
-                    <div className="w-full bg-slate-100 dark:bg-slate-700 rounded-full h-2.5">
+                    <div
+                      className="w-full bg-slate-100 dark:bg-slate-700 rounded-full h-2.5"
+                      role="progressbar"
+                      aria-valuenow={score}
+                      aria-valuemin={0}
+                      aria-valuemax={100}
+                      aria-label={`${td(dimScore.dimension as any)} score: ${score} out of 100`}
+                    >
                       <div
                         className="h-2.5 rounded-full transition-all duration-500"
                         style={{ width: `${score}%`, backgroundColor: dim?.colour || '#94a3b8' }}

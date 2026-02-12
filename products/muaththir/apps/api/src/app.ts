@@ -67,14 +67,16 @@ export async function buildApp(
     });
   }
 
-  // JWT
+  // JWT — fail fast if secret is missing or too short
   const jwtSecret = process.env.JWT_SECRET;
-  if (!jwtSecret && process.env.NODE_ENV === 'production') {
-    throw new Error('JWT_SECRET environment variable is required in production');
+  if (!jwtSecret || jwtSecret.length < 32) {
+    throw new Error(
+      'JWT_SECRET environment variable is required and must be at least 32 characters'
+    );
   }
 
   await app.register(jwt, {
-    secret: jwtSecret || 'test-secret-do-not-use-in-production',
+    secret: jwtSecret,
     sign: { algorithm: 'HS256' },
     verify: { algorithms: ['HS256'] },
   });

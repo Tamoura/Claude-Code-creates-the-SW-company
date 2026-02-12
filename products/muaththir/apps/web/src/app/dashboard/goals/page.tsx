@@ -2,14 +2,16 @@
 
 import { useState, useEffect } from 'react';
 import Link from 'next/link';
-import { useTranslations } from 'next-intl';
+import { useTranslations, useLocale } from 'next-intl';
 import { getDimensionBySlug } from '../../../lib/dimensions';
 import { apiClient, type Child, type Goal } from '../../../lib/api-client';
+import { formatDate } from '../../../lib/date-format';
 
 export default function GoalsPage() {
   const t = useTranslations('goals');
   const tc = useTranslations('common');
   const td = useTranslations('dimensions');
+  const locale = useLocale();
   const [children, setChildren] = useState<Child[]>([]);
   const [selectedChildId, setSelectedChildId] = useState<string | null>(null);
   const [goals, setGoals] = useState<Goal[]>([]);
@@ -85,7 +87,7 @@ export default function GoalsPage() {
     };
     return (
       <span className={`text-xs font-medium px-2 py-0.5 rounded-full ${styles[status] || styles.active}`}>
-        {status}
+        {t(status as 'active' | 'completed' | 'paused')}
       </span>
     );
   };
@@ -204,7 +206,7 @@ export default function GoalsPage() {
                     <div className="flex items-center gap-4 text-xs text-slate-400 dark:text-slate-500">
                       <span>{td(goal.dimension as any)}</span>
                       {goal.targetDate && (
-                        <span>{t('target', { date: new Date(goal.targetDate).toLocaleDateString() })}</span>
+                        <span>{t('target', { date: formatDate(goal.targetDate, locale) })}</span>
                       )}
                     </div>
                   </div>
@@ -212,10 +214,10 @@ export default function GoalsPage() {
                     {goal.status === 'active' && (
                       <button
                         onClick={() => handleStatusChange(goal, 'completed')}
-                        className="p-1.5 rounded-lg text-emerald-500 hover:bg-emerald-50 transition-colors"
-                        title={t('markComplete')}
+                        className="p-1.5 rounded-lg text-emerald-500 hover:bg-emerald-50 dark:hover:bg-emerald-900/30 transition-colors"
+                        aria-label={t('markComplete')}
                       >
-                        <svg className="h-4 w-4" fill="none" viewBox="0 0 24 24" stroke="currentColor">
+                        <svg className="h-4 w-4" fill="none" viewBox="0 0 24 24" stroke="currentColor" aria-hidden="true">
                           <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M5 13l4 4L19 7" />
                         </svg>
                       </button>
@@ -224,9 +226,9 @@ export default function GoalsPage() {
                       <button
                         onClick={() => handleStatusChange(goal, 'paused')}
                         className="p-1.5 rounded-lg text-slate-400 dark:text-slate-500 hover:bg-slate-100 dark:hover:bg-slate-700 transition-colors"
-                        title={t('pause')}
+                        aria-label={t('pause')}
                       >
-                        <svg className="h-4 w-4" fill="none" viewBox="0 0 24 24" stroke="currentColor">
+                        <svg className="h-4 w-4" fill="none" viewBox="0 0 24 24" stroke="currentColor" aria-hidden="true">
                           <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M10 9v6m4-6v6m7-3a9 9 0 11-18 0 9 9 0 0118 0z" />
                         </svg>
                       </button>
@@ -234,20 +236,20 @@ export default function GoalsPage() {
                     {goal.status !== 'active' && (
                       <button
                         onClick={() => handleStatusChange(goal, 'active')}
-                        className="p-1.5 rounded-lg text-blue-500 hover:bg-blue-50 transition-colors"
-                        title={t('reactivate')}
+                        className="p-1.5 rounded-lg text-blue-500 hover:bg-blue-50 dark:hover:bg-blue-900/30 transition-colors"
+                        aria-label={t('reactivate')}
                       >
-                        <svg className="h-4 w-4" fill="none" viewBox="0 0 24 24" stroke="currentColor">
+                        <svg className="h-4 w-4" fill="none" viewBox="0 0 24 24" stroke="currentColor" aria-hidden="true">
                           <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M4 4v5h.582m15.356 2A8.001 8.001 0 004.582 9m0 0H9m11 11v-5h-.581m0 0a8.003 8.003 0 01-15.357-2m15.357 2H15" />
                         </svg>
                       </button>
                     )}
                     <button
                       onClick={() => handleDelete(goal.id)}
-                      className="p-1.5 rounded-lg text-red-400 hover:bg-red-50 transition-colors"
-                      title={tc('delete')}
+                      className="p-1.5 rounded-lg text-red-400 hover:bg-red-50 dark:hover:bg-red-900/30 transition-colors"
+                      aria-label={tc('delete')}
                     >
-                      <svg className="h-4 w-4" fill="none" viewBox="0 0 24 24" stroke="currentColor">
+                      <svg className="h-4 w-4" fill="none" viewBox="0 0 24 24" stroke="currentColor" aria-hidden="true">
                         <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M19 7l-.867 12.142A2 2 0 0116.138 21H7.862a2 2 0 01-1.995-1.858L5 7m5 4v6m4-6v6m1-10V4a1 1 0 00-1-1h-4a1 1 0 00-1 1v3M4 7h16" />
                       </svg>
                     </button>

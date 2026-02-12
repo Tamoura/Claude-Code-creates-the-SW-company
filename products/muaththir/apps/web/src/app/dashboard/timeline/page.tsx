@@ -1,14 +1,16 @@
 'use client';
 
 import { useState, useEffect } from 'react';
-import { useTranslations } from 'next-intl';
+import { useTranslations, useLocale } from 'next-intl';
 import { DIMENSIONS } from '../../../lib/dimensions';
 import { apiClient, type Child, type Observation } from '../../../lib/api-client';
+import { formatDate } from '../../../lib/date-format';
 
 export default function TimelinePage() {
   const t = useTranslations('timeline');
   const tc = useTranslations('common');
   const td = useTranslations('dimensions');
+  const locale = useLocale();
   const [selectedDimension, setSelectedDimension] = useState<string>('all');
   const [selectedSentiment, setSelectedSentiment] = useState<string>('');
   const [children, setChildren] = useState<Child[]>([]);
@@ -264,6 +266,7 @@ export default function TimelinePage() {
             className="input-field text-xs py-1.5 px-3"
             value={selectedSentiment}
             onChange={(e) => setSelectedSentiment(e.target.value)}
+            aria-label={t('allSentiments')}
           >
             <option value="">{t('allSentiments')}</option>
             <option value="positive">{t('positive')}</option>
@@ -274,7 +277,7 @@ export default function TimelinePage() {
           <input
             type="date"
             className="input-field text-xs py-1.5 px-3"
-            placeholder="From"
+            aria-label={t('filterDateFrom')}
             value={dateFrom}
             onChange={(e) => setDateFrom(e.target.value)}
           />
@@ -282,7 +285,7 @@ export default function TimelinePage() {
           <input
             type="date"
             className="input-field text-xs py-1.5 px-3"
-            placeholder="To"
+            aria-label={t('filterDateTo')}
             value={dateTo}
             onChange={(e) => setDateTo(e.target.value)}
           />
@@ -367,7 +370,7 @@ export default function TimelinePage() {
                   className="text-slate-400 dark:text-slate-500 hover:text-red-600 dark:hover:text-red-400 transition-colors"
                   aria-label={t('deleteObservation')}
                 >
-                  <svg className="h-4 w-4" fill="none" viewBox="0 0 24 24" stroke="currentColor">
+                  <svg className="h-4 w-4" fill="none" viewBox="0 0 24 24" stroke="currentColor" aria-hidden="true">
                     <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M19 7l-.867 12.142A2 2 0 0116.138 21H7.862a2 2 0 01-1.995-1.858L5 7m5 4v6m4-6v6m1-10V4a1 1 0 00-1-1h-4a1 1 0 00-1 1v3M4 7h16" />
                   </svg>
                 </button>
@@ -376,13 +379,9 @@ export default function TimelinePage() {
               <p className="text-sm text-slate-700 dark:text-slate-300 mb-3">{obs.content}</p>
 
               <div className="flex items-center justify-between text-xs text-slate-500 dark:text-slate-400">
-                <span>
-                  {new Date(obs.observedAt).toLocaleDateString('en-US', {
-                    year: 'numeric',
-                    month: 'short',
-                    day: 'numeric',
-                  })}
-                </span>
+                <time dateTime={obs.observedAt}>
+                  {formatDate(obs.observedAt, locale)}
+                </time>
                 {obs.tags.length > 0 && (
                   <div className="flex gap-1">
                     {obs.tags.map((tag) => (

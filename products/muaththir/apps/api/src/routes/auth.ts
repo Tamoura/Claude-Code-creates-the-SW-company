@@ -235,7 +235,7 @@ const authRoutes: FastifyPluginAsync = async (fastify) => {
     config: {
       rateLimit: {
         max: 3,
-        timeWindow: '1 hour',
+        timeWindow: '15 minutes',
       },
     },
   }, async (request, reply) => {
@@ -269,7 +269,7 @@ const authRoutes: FastifyPluginAsync = async (fastify) => {
     config: {
       rateLimit: {
         max: 5,
-        timeWindow: '15 minutes',
+        timeWindow: '1 hour',
       },
     },
   }, async (request, reply) => {
@@ -478,7 +478,7 @@ const authRoutes: FastifyPluginAsync = async (fastify) => {
 
     // 3. Seed observations if none exist
     const observationCount = await fastify.prisma.observation.count({
-      where: { childId: child.id },
+      where: { childId: child.id, deletedAt: null },
     });
 
     if (observationCount === 0) {

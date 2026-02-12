@@ -19,20 +19,20 @@ interface ObservationCardProps {
 const sentimentConfig = {
   positive: {
     label: 'Positive',
-    bgClass: 'bg-emerald-50',
-    textClass: 'text-emerald-700',
+    bgClass: 'bg-emerald-50 dark:bg-emerald-900/30',
+    textClass: 'text-emerald-700 dark:text-emerald-400',
     dotClass: 'bg-emerald-500',
   },
   neutral: {
     label: 'Neutral',
-    bgClass: 'bg-slate-50',
-    textClass: 'text-slate-600',
+    bgClass: 'bg-slate-50 dark:bg-slate-800',
+    textClass: 'text-slate-600 dark:text-slate-400',
     dotClass: 'bg-slate-400',
   },
   needs_attention: {
     label: 'Needs Attention',
-    bgClass: 'bg-amber-50',
-    textClass: 'text-amber-700',
+    bgClass: 'bg-amber-50 dark:bg-amber-900/30',
+    textClass: 'text-amber-700 dark:text-amber-400',
     dotClass: 'bg-amber-500',
   },
 };
@@ -60,7 +60,7 @@ export default function ObservationCard({
           {formattedDate}
         </time>
       </div>
-      <p className="text-sm text-slate-700 mb-3 leading-relaxed">
+      <p className="text-sm text-slate-700 dark:text-slate-300 mb-3 leading-relaxed">
         {observation.text}
       </p>
       <div className="flex items-center justify-between">
@@ -78,7 +78,7 @@ export default function ObservationCard({
             {observation.tags.map((tag) => (
               <span
                 key={tag}
-                className="text-xs text-slate-400 bg-slate-100 px-2 py-0.5 rounded-full"
+                className="text-xs text-slate-400 dark:text-slate-500 bg-slate-100 dark:bg-slate-800 px-2 py-0.5 rounded-full"
               >
                 {tag}
               </span>
