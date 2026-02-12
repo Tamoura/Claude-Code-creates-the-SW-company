@@ -252,10 +252,11 @@ async function navigateToMilestones(page: Page) {
   await sidebarLink.click({ force: true });
   await page.waitForURL('**/dashboard/milestones', { timeout: 15000 });
   // Wait for skeleton loading to complete - the page fetches children then
-  // dashboard data before rendering dimension toggles
+  // dashboard data before rendering dimension toggles. Use 30s on CI where
+  // the dev server cold-starts and resources are constrained.
   await expect(
     page.locator('[data-testid^="dimension-toggle-"]').first()
-  ).toBeVisible({ timeout: 20000 });
+  ).toBeVisible({ timeout: 30000 });
 }
 
 /**
