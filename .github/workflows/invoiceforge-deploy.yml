@@ -87,8 +87,13 @@ jobs:
     steps:
       - name: Trigger Render Deploy
         run: |
-          curl -s -o /dev/null -w "%{http_code}" -X POST "${{ secrets.RENDER_DEPLOY_HOOK_INVOICEFORGE }}" | grep -q "200" || exit 1
-          echo "Render deploy triggered successfully"
+          HTTP_CODE=$(curl -s -o /dev/null -w "%{http_code}" -X POST "${{ secrets.RENDER_DEPLOY_HOOK_INVOICEFORGE }}")
+          if [ "$HTTP_CODE" -ge 200 ] && [ "$HTTP_CODE" -lt 300 ]; then
+            echo "Render deploy triggered successfully (HTTP $HTTP_CODE)"
+          else
+            echo "::error::Render deploy hook returned HTTP $HTTP_CODE"
+            exit 1
+          fi
 
   deploy-web:
     name: Deploy Web to Vercel

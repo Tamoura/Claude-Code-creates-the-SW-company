@@ -1,0 +1,139 @@
+name: TaskFlow CI
+
+on:
+  push:
+    branches: [main]
+    paths:
+      - 'products/taskflow/**'
+      - '.github/workflows/taskflow-ci.yml'
+  pull_request:
+    paths:
+      - 'products/taskflow/**'
+      - '.github/workflows/taskflow-ci.yml'
+
+env:
+  NODE_VERSION: '20'
+
+jobs:
+  api-lint-and-typecheck:
+    name: API - Lint & Type Check
+    runs-on: ubuntu-latest
+    defaults:
+      run:
+        working-directory: products/taskflow/apps/api
+    steps:
+      - uses: actions/checkout@v4
+      - uses: actions/setup-node@v4
+        with:
+          node-version: ${{ env.NODE_VERSION }}
+          cache: npm
+          cache-dependency-path: products/taskflow/apps/api/package-lock.json
+      - run: npm ci
+      - run: npx prisma generate
+      - run: npx tsc --noEmit
+
+  api-test:
+    name: API - Tests
+    runs-on: ubuntu-latest
+    defaults:
+      run:
+        working-directory: products/taskflow/apps/api
+    services:
+      postgres:
+        image: postgres:15-alpine
+        env:
+          POSTGRES_USER: test
+          POSTGRES_PASSWORD: test
+          POSTGRES_DB: taskflow_test
+        ports:
+          - 5432:5432
+        options: >-
+          --health-cmd pg_isready
+          --health-interval 10s
+          --health-timeout 5s
+          --health-retries 5
+    env:
+      DATABASE_URL: postgresql://test:test@localhost:5432/taskflow_test
+      JWT_SECRET: ci-test-secret-not-for-production
+      NODE_ENV: test
+    steps:
+      - uses: actions/checkout@v4
+      - uses: actions/setup-node@v4
+        with:
+          node-version: ${{ env.NODE_VERSION }}
+          cache: npm
+          cache-dependency-path: products/taskflow/apps/api/package-lock.json
+      - run: npm ci
+      - run: npx prisma generate
+      - run: npx prisma migrate deploy
+      - run: npm test
+
+  web-build:
+    name: Web - Build & Lint
+    runs-on: ubuntu-latest
+    defaults:
+      run:
+        working-directory: products/taskflow/apps/web
+    steps:
+      - uses: actions/checkout@v4
+      - uses: actions/setup-node@v4
+        with:
+          node-version: ${{ env.NODE_VERSION }}
+          cache: npm
+          cache-dependency-path: products/taskflow/apps/web/package-lock.json
+      - run: npm ci
+      - name: Run lint
+        run: npm run lint --if-present
+      - name: Build
+        run: npm run build
+        env:
+          NEXT_PUBLIC_API_URL: http://localhost:5010
+
+  security:
+    name: Security Audit
+    runs-on: ubuntu-latest
+    continue-on-error: true
+    strategy:
+      matrix:
+        app:
+          - products/taskflow/apps/api
+          - products/taskflow/apps/web
+    defaults:
+      run:
+        working-directory: ${{ matrix.app }}
+    steps:
+      - uses: actions/checkout@v4
+      - name: Install dependencies
+        run: |
+          if [ -f "package-lock.json" ]; then
+            npm ci
+          else
+            npm install
+          fi
+      - name: Run security audit
+        run: npm audit --audit-level=critical --omit=dev || echo "::warning::Security vulnerabilities found - review npm audit output"
+
+  quality-gate:
+    name: Quality Gate
+    needs: [api-lint-and-typecheck, api-test, web-build, security]
+    runs-on: ubuntu-latest
+    if: always()
+    steps:
+      - name: Verify all jobs succeeded
+        run: |
+          echo "Job results:"
+          echo "  api-lint-and-typecheck: ${{ needs.api-lint-and-typecheck.result }}"
+          echo "  api-test:              ${{ needs.api-test.result }}"
+          echo "  web-build:             ${{ needs.web-build.result }}"
+          echo "  security:              ${{ needs.security.result }}"
+          # Core jobs must pass; security audit is advisory
+          if [ "${{ needs.api-lint-and-typecheck.result }}" != "success" ] || \
+             [ "${{ needs.api-test.result }}" != "success" ] || \
+             [ "${{ needs.web-build.result }}" != "success" ]; then
+            echo "Quality gate FAILED: one or more core jobs did not succeed"
+            exit 1
+          fi
+          if [ "${{ needs.security.result }}" != "success" ]; then
+            echo "::warning::Security audit reported issues - review recommended"
+          fi
+          echo "All quality gates passed for TaskFlow"
