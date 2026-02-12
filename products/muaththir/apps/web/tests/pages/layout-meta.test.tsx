@@ -9,6 +9,7 @@
 describe('Root layout metadata', () => {
   // Dynamic import so jest module mocks are not needed for next-intl/server
   let metadata: Record<string, unknown>;
+  let viewportExport: Record<string, unknown>;
 
   beforeAll(async () => {
     // We need to isolate the metadata export; mock only what the module
@@ -19,6 +20,7 @@ describe('Root layout metadata', () => {
     }));
     const mod = await import('../../src/app/layout');
     metadata = (mod as any).metadata;
+    viewportExport = (mod as any).viewport;
   });
 
   it('has a title', () => {
@@ -36,12 +38,13 @@ describe('Root layout metadata', () => {
     expect(Array.isArray(metadata.keywords)).toBe(true);
   });
 
-  it('has themeColor', () => {
-    expect(metadata.themeColor).toBeDefined();
+  it('has themeColor in viewport export', () => {
+    expect(viewportExport.themeColor).toBeDefined();
   });
 
   it('has viewport configuration', () => {
-    expect(metadata.viewport).toBeDefined();
+    expect(viewportExport).toBeDefined();
+    expect(viewportExport.width).toBe('device-width');
   });
 
   it('has Open Graph metadata', () => {
