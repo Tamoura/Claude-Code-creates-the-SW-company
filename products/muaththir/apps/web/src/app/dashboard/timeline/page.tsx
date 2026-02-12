@@ -24,6 +24,8 @@ export default function TimelinePage() {
   const [hasMore, setHasMore] = useState(false);
   const [dateFrom, setDateFrom] = useState('');
   const [dateTo, setDateTo] = useState('');
+  const [isExporting, setIsExporting] = useState(false);
+  const [exportError, setExportError] = useState('');
 
   // Fetch children on mount
   useEffect(() => {
@@ -147,6 +149,26 @@ export default function TimelinePage() {
     }
   };
 
+  const handleExportCSV = async () => {
+    setIsExporting(true);
+    setExportError('');
+    try {
+      const blob = await apiClient.exportData('csv');
+      const url = URL.createObjectURL(blob);
+      const link = document.createElement('a');
+      link.href = url;
+      link.download = 'observations-export.csv';
+      document.body.appendChild(link);
+      link.click();
+      document.body.removeChild(link);
+      URL.revokeObjectURL(url);
+    } catch (err) {
+      setExportError(err instanceof Error ? err.message : t('exportError'));
+    } finally {
+      setIsExporting(false);
+    }
+  };
+
   const getDimensionColor = (dimensionSlug: string): string => {
     const dim = DIMENSIONS.find((d) => d.slug === dimensionSlug);
     return dim?.colour || '#94A3B8';
@@ -179,12 +201,33 @@ export default function TimelinePage() {
 
   return (
     <div className="space-y-8">
-      <div>
-        <h1 className="text-2xl font-bold text-slate-900 dark:text-white">{t('title')}</h1>
-        <p className="text-sm text-slate-500 dark:text-slate-400 mt-1">
-          {t('subtitle')}
-        </p>
+      <div className="flex items-start justify-between">
+        <div>
+          <h1 className="text-2xl font-bold text-slate-900 dark:text-white">{t('title')}</h1>
+          <p className="text-sm text-slate-500 dark:text-slate-400 mt-1">
+            {t('subtitle')}
+          </p>
+        </div>
+        {selectedChildId && (
+          <button
+            type="button"
+            onClick={handleExportCSV}
+            disabled={isExporting}
+            className="btn-secondary text-sm py-2 px-4 flex items-center gap-2"
+            aria-label={t('exportCSV')}
+          >
+            <svg className="h-4 w-4" fill="none" viewBox="0 0 24 24" stroke="currentColor" aria-hidden="true">
+              <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M12 10v6m0 0l-3-3m3 3l3-3m2 8H7a2 2 0 01-2-2V5a2 2 0 012-2h5.586a1 1 0 01.707.293l5.414 5.414a1 1 0 01.293.707V19a2 2 0 01-2 2z" />
+            </svg>
+            {isExporting ? t('exporting') : t('exportCSV')}
+          </button>
+        )}
       </div>
+      {exportError && (
+        <div className="p-3 rounded-lg bg-red-50 dark:bg-red-900/30 border border-red-200 dark:border-red-800">
+          <p className="text-sm text-red-800 dark:text-red-400">{exportError}</p>
+        </div>
+      )}
 
       {/* Child Selector (if multiple children) */}
       {children.length > 1 && (
