@@ -215,6 +215,21 @@ export interface NotificationPrefs {
   milestoneAlerts: boolean;
 }
 
+export interface WeeklyDigestChild {
+  childId: string;
+  childName: string;
+  observationCount: number;
+  milestonesAchieved: number;
+  topDimension: string;
+  areasNeedingAttention: string[];
+}
+
+export interface WeeklyDigestData {
+  period: { from: string; to: string };
+  children: WeeklyDigestChild[];
+  overall: { totalObservations: number; totalMilestones: number };
+}
+
 export interface PaginatedResponse<T> {
   data: T[];
   pagination: {
@@ -680,6 +695,12 @@ class ApiClient {
     if (params?.observations) query.set('observations', String(params.observations));
     const qs = query.toString();
     return this.request(`/api/children/${childId}/reports/summary${qs ? `?${qs}` : ''}`);
+  }
+
+  // ==================== Weekly Digest ====================
+
+  async getWeeklyDigest(): Promise<WeeklyDigestData> {
+    return this.request('/api/digest/weekly');
   }
 
   // ==================== Profile ====================
