@@ -2,29 +2,60 @@
 
 Branch: `feature/muaththir/production-polish`
 
-## Tasks
+## Frontend Polish Tasks (Current Session)
 
-### 1. Composite Database Indexes (P1)
-- **Status**: In progress
-- `Observation` model: `@@index([childId, deletedAt, dimension])` already exists. Need to add `@@index([childId, deletedAt, observedAt])`.
-- `ChildMilestone` model: `@@index([childId, achieved])` exists. Need to add `@@index([childId, achieved, achievedAt])`.
-- Create Prisma migration after schema changes.
+### 1. Notification Preferences Page
+- Modify existing page to use localStorage instead of apiClient
+- Page exists at src/app/dashboard/settings/notifications/page.tsx
+- Translations already in en.json/ar.json (notifications section)
+- Settings page already has a link to notifications
+- Sidebar already shows notifications sub-item
 
-### 2. Photo Upload Directory (P0)
-- **Status**: In progress
-- `children-photo.ts` already creates dir at request time (line 71).
-- Need to ensure uploads/photos directory is created at backend startup.
-- Dockerfile has `mkdir -p /app/uploads` but needs `/app/uploads/photos`.
+### 2. Keyboard Shortcuts Hook
+- Create src/hooks/useKeyboardShortcuts.ts
+- Ctrl+K / Cmd+K: navigate to observe page
+- Escape: close any open modal/drawer
+- Integrate into DashboardLayout (already has Ctrl+N)
 
-### 3. Rate Limiting (P1)
-- **Status**: Complete - all endpoints already have rate limiting.
-- `/register` - 5/1min
-- `/login` - 5/1min
-- `/forgot-password` - 3/15min
-- `/reset-password` - 5/1hour
-- `/refresh` - 10/1hour
-- `/demo-login` - 10/1min
-- `/logout` - no rate limit but requires authentication (acceptable)
+### 3. Polish Loading/Error States
+- Dashboard loading.tsx already uses SkeletonDashboard (looks good)
+- Improve error.tsx with better UX and translations
 
-### 4. Run Tests
-- After all changes, run tests to verify nothing breaks.
+### 4. Tests
+- Notification preferences page tests
+- Keyboard shortcuts hook tests
+- Baseline: 30 suites, 234 tests passing
+
+## Backend Type Safety & Caching (Current Session)
+
+### Task 1: Fix `as any` casts in Prisma groupBy results
+- Create `src/types/prisma-results.ts` with proper interfaces
+- Fix dashboard.ts, reports.ts, score-calculator.ts
+
+### Task 2: Add HTTP Cache-Control headers
+- GET /api/health: `Cache-Control: no-cache`
+- GET /api/children/:id/milestones: `Cache-Control: private, max-age=60`
+- GET /api/dashboard/:childId: `Cache-Control: private, max-age=30`
+
+### Task 3: Add ETag support for dashboard
+- Generate ETag from calculatedAt timestamp
+- Return 304 Not Modified on If-None-Match match
+
+### Baseline: 488 backend tests passing
+
+## PWA Icons & useEffect Fixes (Current Session)
+
+### Task 1: PWA Icons
+- Created `apps/web/public/icons/` with three SVG icons using Arabic "م"
+- Updated `manifest.json` to reference `.svg` with `image/svg+xml` MIME type
+- Design matches existing `favicon.svg` gradient (#10b981 to #059669)
+
+### Task 2: useEffect Dependency Fixes
+- `compare/page.tsx`: Added `tc` to first useEffect deps (used on line 55)
+- `dashboard/page.tsx`: Added `t` to second useEffect deps (used on lines 93, 98, 103)
+- next-intl provides stable references, so no infinite re-render risk
+
+## Previous Tasks (Completed)
+- Composite database indexes
+- Photo upload directory
+- Rate limiting (already complete)

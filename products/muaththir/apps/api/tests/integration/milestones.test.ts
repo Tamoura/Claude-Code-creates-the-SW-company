@@ -386,6 +386,21 @@ describe('GET /api/children/:childId/milestones', () => {
     expect(body.pagination.hasMore).toBe(true);
   });
 
+  it('should return Cache-Control: private, max-age=60 header on GET', async () => {
+    const token = await registerAndGetToken();
+    const childId = await createChildViaDb(parentId);
+    await seedTestMilestones(3);
+
+    const res = await app.inject({
+      method: 'GET',
+      url: `/api/children/${childId}/milestones`,
+      headers: { authorization: `Bearer ${token}` },
+    });
+
+    expect(res.statusCode).toBe(200);
+    expect(res.headers['cache-control']).toBe('private, max-age=60');
+  });
+
   it('should not create ChildMilestone rows for untracked milestones (lazy row creation)', async () => {
     const token = await registerAndGetToken();
     const childId = await createChildViaDb(parentId);

@@ -2,7 +2,7 @@ import { FastifyPluginAsync } from 'fastify';
 import { verifyChildOwnership } from '../lib/ownership';
 import { getAgeBand } from '../utils/age-band';
 import { DIMENSIONS, DimensionType } from '../types';
-import { Dimension } from '@prisma/client';
+import { AgeBand, Dimension } from '@prisma/client';
 import { gatherDimensionData, DimensionData } from '../services/score-calculator';
 
 /**
@@ -191,7 +191,7 @@ async function buildRecommendations(
 
     const dueCount = await prisma.milestoneDefinition.count({
       where: {
-        ageBand: ageBand as any,
+        ageBand: ageBand as AgeBand,
         id: { notIn: achieved },
       },
     });

@@ -247,16 +247,26 @@ test.describe('Notification Settings Flow', () => {
   });
 
   test('toggles reflect pre-existing preferences', async ({ page }) => {
-    await authenticateAndSetupMocks(page, {
-      prefs: { dailyReminder: true, weeklyDigest: false, milestoneAlerts: true },
+    await authenticateAndSetupMocks(page);
+
+    // The notifications page reads from localStorage, not API.
+    // Pre-seed localStorage before navigating.
+    await page.evaluate(() => {
+      localStorage.setItem(
+        'muaththir-notification-prefs',
+        JSON.stringify({ dailyReminder: true, weeklyDigest: false, milestoneAlerts: true })
+      );
     });
+
     await navigateToNotifications(page);
 
     const switches = page.locator('button[role="switch"]');
     await expect(switches).toHaveCount(3);
 
+    await expect(page.getByText('Daily Observation Reminder')).toBeVisible();
     await expect(switches.nth(0)).toHaveAttribute('aria-checked', 'true');
     await expect(switches.nth(1)).toHaveAttribute('aria-checked', 'false');
+    await expect(page.getByText('Milestone Alerts')).toBeVisible();
     await expect(switches.nth(2)).toHaveAttribute('aria-checked', 'true');
   });
 

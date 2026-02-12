@@ -7,6 +7,7 @@ import Link from 'next/link';
 import Sidebar from './Sidebar';
 import ErrorBoundary from '../common/ErrorBoundary';
 import { TokenManager } from '../../lib/token-manager';
+import { useKeyboardShortcuts } from '../../hooks/useKeyboardShortcuts';
 
 export default function DashboardLayout({
   children,
@@ -19,6 +20,11 @@ export default function DashboardLayout({
   const [isAuthenticated, setIsAuthenticated] = useState(false);
   const [isChecking, setIsChecking] = useState(true);
   const [mobileMenuOpen, setMobileMenuOpen] = useState(false);
+
+  // Keyboard shortcuts: Ctrl+K -> observe, Escape -> close mobile menu
+  useKeyboardShortcuts({
+    onEscape: useCallback(() => setMobileMenuOpen(false), []),
+  });
 
   useEffect(() => {
     const hasToken = TokenManager.hasToken();

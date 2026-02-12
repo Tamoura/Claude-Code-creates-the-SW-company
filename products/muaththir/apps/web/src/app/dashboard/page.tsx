@@ -123,7 +123,7 @@ export default function DashboardPage() {
     return () => {
       cancelled = true;
     };
-  }, [selectedChildId, retryCount]);
+  }, [selectedChildId, retryCount, t]);
 
   // Compute stats from dashboard data and observations
   const totalObservations = dashboardData
