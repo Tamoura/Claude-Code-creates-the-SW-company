@@ -114,6 +114,7 @@ model Observation {
   childId    String    @map("child_id")
   dimension  Dimension
   content    String    @db.VarChar(1000)
+  contentAr  String?   @map("content_ar") @db.VarChar(2000)
   sentiment  Sentiment
   observedAt DateTime  @map("observed_at") @db.Date
   tags       String[]  @default([])
@@ -134,13 +135,16 @@ model Observation {
 }
 
 model MilestoneDefinition {
-  id          String    @id @default(cuid())
-  dimension   Dimension
-  ageBand     AgeBand   @map("age_band")
-  title       String    @db.VarChar(100)
-  description String    @db.VarChar(300)
-  guidance    String?   @db.VarChar(500)
-  sortOrder   Int       @map("sort_order")
+  id            String    @id @default(cuid())
+  dimension     Dimension
+  ageBand       AgeBand   @map("age_band")
+  title         String    @db.VarChar(100)
+  description   String    @db.VarChar(300)
+  guidance      String?   @db.VarChar(500)
+  titleAr       String?   @map("title_ar") @db.VarChar(200)
+  descriptionAr String?   @map("description_ar") @db.VarChar(600)
+  guidanceAr    String?   @map("guidance_ar") @db.VarChar(1000)
+  sortOrder     Int       @map("sort_order")
 
   childMilestones ChildMilestone[]
 
@@ -209,13 +213,15 @@ model Goal {
 }
 
 model GoalTemplate {
-  id          String    @id @default(cuid())
-  dimension   Dimension
-  ageBand     AgeBand   @map("age_band")
-  title       String    @db.VarChar(200)
-  description String?   @db.VarChar(500)
-  category    String?   @db.VarChar(50)
-  sortOrder   Int       @map("sort_order") @default(0)
+  id            String    @id @default(cuid())
+  dimension     Dimension
+  ageBand       AgeBand   @map("age_band")
+  title         String    @db.VarChar(200)
+  description   String?   @db.VarChar(500)
+  titleAr       String?   @map("title_ar") @db.VarChar(400)
+  descriptionAr String?   @map("description_ar") @db.VarChar(1000)
+  category      String?   @db.VarChar(50)
+  sortOrder     Int       @map("sort_order") @default(0)
 
   goals Goal[]
 
