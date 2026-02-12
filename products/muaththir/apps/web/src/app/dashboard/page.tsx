@@ -9,6 +9,7 @@ import DimensionCard from '../../components/dashboard/DimensionCard';
 import ObservationCard from '../../components/dashboard/ObservationCard';
 import QuickLog from '../../components/dashboard/QuickLog';
 import { apiClient, type DashboardData, type Child, type Observation, type MilestoneDefinition } from '../../lib/api-client';
+import { calculateCurrentStreak, calculateBestStreak, getStreakMessage } from '../../lib/streak';
 
 const RadarChart = dynamic(
   () => import('../../components/dashboard/RadarChart'),
@@ -19,6 +20,7 @@ export default function DashboardPage() {
   const t = useTranslations('dashboard');
   const tc = useTranslations('common');
   const td = useTranslations('dimensions');
+  const ts = useTranslations('streak');
 
   const [children, setChildren] = useState<Child[]>([]);
   const [selectedChildId, setSelectedChildId] = useState<string | null>(null);
@@ -135,28 +137,10 @@ export default function DashboardPage() {
     return Math.max(1, Math.floor((Date.now() - earliest) / (1000 * 60 * 60 * 24)));
   })();
 
-  const currentStreak = (() => {
-    if (observations.length === 0) return 0;
-    const uniqueDays = new Set(
-      observations.map((o) => new Date(o.observedAt).toISOString().slice(0, 10))
-    );
-    const sortedDays = Array.from(uniqueDays).sort().reverse();
-    let streak = 0;
-    const today = new Date();
-    // Start checking from today backwards
-    for (let i = 0; i <= sortedDays.length; i++) {
-      const checkDate = new Date(today);
-      checkDate.setDate(checkDate.getDate() - i);
-      const dateStr = checkDate.toISOString().slice(0, 10);
-      if (uniqueDays.has(dateStr)) {
-        streak++;
-      } else if (i > 0) {
-        // Allow today to not have an observation (streak from yesterday)
-        break;
-      }
-    }
-    return streak;
-  })();
+  const observedAtDates = observations.map((o) => o.observedAt);
+  const currentStreak = calculateCurrentStreak(observedAtDates);
+  const bestStreak = calculateBestStreak(observedAtDates);
+  const streakMessageKey = getStreakMessage(currentStreak);
 
   // Transform dashboard data to radar chart format
   const radarScores = dashboardData
@@ -246,24 +230,48 @@ export default function DashboardPage() {
 
       {/* Stats Summary Row */}
       {!loading && dashboardData && (
-        <div className="grid grid-cols-3 gap-4">
-          <div className="card text-center py-3">
-            <p className="text-xs text-slate-500 dark:text-slate-400">{t('statsTotalObservations')}</p>
-            <p className="text-2xl font-bold text-emerald-600 dark:text-emerald-400" data-testid="stats-total-observations">
-              {totalObservations}
-            </p>
+        <div className="space-y-4">
+          <div className="grid grid-cols-2 sm:grid-cols-4 gap-4">
+            <div className="card text-center py-3">
+              <p className="text-xs text-slate-500 dark:text-slate-400">{t('statsTotalObservations')}</p>
+              <p className="text-2xl font-bold text-emerald-600 dark:text-emerald-400" data-testid="stats-total-observations">
+                {totalObservations}
+              </p>
+            </div>
+            <div className="card text-center py-3">
+              <p className="text-xs text-slate-500 dark:text-slate-400">{t('statsDaysTracking')}</p>
+              <p className="text-2xl font-bold text-blue-600 dark:text-blue-400" data-testid="stats-days-tracking">
+                {daysSinceFirst}
+              </p>
+            </div>
+            <div className="card text-center py-3">
+              <p className="text-xs text-slate-500 dark:text-slate-400">{ts('currentStreak')}</p>
+              <div className="flex items-center justify-center gap-1">
+                {currentStreak > 0 && (
+                  <span data-testid="streak-fire-icon" className="text-xl" role="img" aria-label={ts('activeStreak')}>
+                    <svg className="h-6 w-6 text-orange-500" fill="currentColor" viewBox="0 0 24 24" aria-hidden="true">
+                      <path d="M12 23c-3.866 0-7-3.134-7-7 0-2.812 1.882-5.556 3.51-7.477A23.996 23.996 0 0012 4.5a23.996 23.996 0 003.49 4.023C17.118 10.444 19 13.188 19 16c0 3.866-3.134 7-7 7zm0-2a5 5 0 005-5c0-1.97-1.354-4.098-2.799-5.838A20.9 20.9 0 0012 7.5a20.9 20.9 0 00-2.201 2.662C8.354 11.902 7 14.03 7 16a5 5 0 005 5z" />
+                    </svg>
+                  </span>
+                )}
+                <p className="text-2xl font-bold text-amber-600 dark:text-amber-400" data-testid="stats-current-streak">
+                  {currentStreak}
+                </p>
+              </div>
+            </div>
+            <div className="card text-center py-3">
+              <p className="text-xs text-slate-500 dark:text-slate-400">{ts('bestStreak')}</p>
+              <p className="text-2xl font-bold text-purple-600 dark:text-purple-400" data-testid="stats-best-streak">
+                {bestStreak}
+              </p>
+            </div>
           </div>
-          <div className="card text-center py-3">
-            <p className="text-xs text-slate-500 dark:text-slate-400">{t('statsDaysTracking')}</p>
-            <p className="text-2xl font-bold text-blue-600 dark:text-blue-400" data-testid="stats-days-tracking">
-              {daysSinceFirst}
-            </p>
-          </div>
-          <div className="card text-center py-3">
-            <p className="text-xs text-slate-500 dark:text-slate-400">{t('statsCurrentStreak')}</p>
-            <p className="text-2xl font-bold text-amber-600 dark:text-amber-400" data-testid="stats-current-streak">
-              {currentStreak}
-            </p>
+          {/* Streak motivational message */}
+          <div
+            className="text-center text-sm text-slate-600 dark:text-slate-400"
+            data-testid="streak-message"
+          >
+            {ts(streakMessageKey)}
           </div>
         </div>
       )}

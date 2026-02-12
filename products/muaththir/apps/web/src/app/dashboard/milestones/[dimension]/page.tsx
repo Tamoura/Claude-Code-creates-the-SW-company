@@ -5,6 +5,7 @@ import Link from 'next/link';
 import { useTranslations, useLocale } from 'next-intl';
 import { DIMENSIONS } from '../../../../lib/dimensions';
 import DimensionBadge from '../../../../components/common/DimensionBadge';
+import MilestoneCelebration from '../../../../components/dashboard/MilestoneCelebration';
 import { apiClient, type Child, type ChildMilestone } from '../../../../lib/api-client';
 import { formatDate } from '../../../../lib/date-format';
 
@@ -26,6 +27,10 @@ export default function MilestonesByDimensionPage({
   const [loading, setLoading] = useState(true);
   const [error, setError] = useState<string | null>(null);
   const [retryCount, setRetryCount] = useState(0);
+  const [celebrationMilestone, setCelebrationMilestone] = useState<{
+    name: string;
+    dimension: string;
+  } | null>(null);
 
   // Load children on mount
   useEffect(() => {
@@ -79,6 +84,7 @@ export default function MilestonesByDimensionPage({
 
     // Optimistic update
     const newAchieved = !currentAchieved;
+    const milestone = milestones.find((m) => m.id === milestoneId);
     setMilestones((prev) =>
       prev.map((m) =>
         m.id === milestoneId
@@ -86,6 +92,14 @@ export default function MilestonesByDimensionPage({
           : m
       )
     );
+
+    // Show celebration when marking as achieved
+    if (newAchieved && milestone && dimension) {
+      setCelebrationMilestone({
+        name: milestone.title,
+        dimension: td(dimension.slug as any),
+      });
+    }
 
     try {
       await apiClient.toggleMilestone(selectedChildId, milestoneId, newAchieved);
@@ -96,6 +110,7 @@ export default function MilestonesByDimensionPage({
           m.id === milestoneId ? { ...m, achieved: currentAchieved } : m
         )
       );
+      setCelebrationMilestone(null);
       setError(err instanceof Error ? err.message : 'Failed to update milestone');
     }
   };
@@ -257,6 +272,14 @@ export default function MilestonesByDimensionPage({
           ))}
         </div>
       )}
+
+      {/* Celebration overlay */}
+      <MilestoneCelebration
+        visible={celebrationMilestone !== null}
+        milestoneName={celebrationMilestone?.name || ''}
+        dimensionName={celebrationMilestone?.dimension || ''}
+        onClose={() => setCelebrationMilestone(null)}
+      />
     </div>
   );
 }

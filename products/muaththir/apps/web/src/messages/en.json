@@ -47,7 +47,9 @@
     "settings": "Settings",
     "settingsSharing": "Family Sharing",
     "settingsNotifications": "Notifications",
-    "settingsSubscription": "Subscription"
+    "settingsSubscription": "Subscription",
+    "analytics": "Analytics",
+    "compare": "Compare Children"
   },
   "landing": {
     "heroTitle1": "Nurture every dimension",
@@ -216,7 +218,14 @@
     "observationSaved": "Observation saved successfully!",
     "noChildrenFound": "No children found",
     "noChildrenDesc": "Please create a child profile first to log observations.",
-    "pleaseSelectChild": "Please select a child"
+    "pleaseSelectChild": "Please select a child",
+    "photoLabel": "Photo (optional)",
+    "attachPhoto": "Attach Photo",
+    "removePhoto": "Remove photo",
+    "photoPreviewAlt": "Observation photo preview",
+    "photoHint": "JPEG, PNG, or WebP. Max 5MB.",
+    "photoTooLarge": "Photo must be under 5MB.",
+    "photoInvalidType": "Please select a JPEG, PNG, or WebP image."
   },
   "timeline": {
     "title": "Timeline",
@@ -369,7 +378,8 @@
     "addFirstChildDesc": "Create a child profile to start tracking their development milestones.",
     "viewMilestonesFor": "View milestones for {dimension}",
     "completed": "{count} completed",
-    "total": "{count} total"
+    "total": "{count} total",
+    "viewAll": "View All Milestones"
   },
   "milestoneDetail": {
     "notFound": "Dimension not found",
@@ -800,5 +810,63 @@
   "dashboardLayout": {
     "loading": "Loading...",
     "menuToggle": "Toggle menu"
+  },
+  "analytics": {
+    "title": "Observation Analytics",
+    "subtitle": "Visualise observation patterns across dimensions.",
+    "addFirstChild": "Add Your First Child",
+    "addFirstChildDesc": "Create a child profile to start viewing analytics.",
+    "totalObservations": "Total Observations",
+    "mostActiveDimension": "Most Active Dimension",
+    "dimensionsCovered": "Dimensions Covered",
+    "outOf6": "out of 6",
+    "observationsByDimension": "Observations by Dimension",
+    "sentimentDistribution": "Sentiment Distribution",
+    "positive": "Positive",
+    "neutral": "Neutral",
+    "needsAttention": "Needs Attention",
+    "noObservations": "No observations yet",
+    "noObservationsDesc": "Start logging observations to see analytics.",
+    "logObservation": "Log Observation",
+    "observationsLabel": "observations"
+  },
+  "compare": {
+    "title": "Compare Children",
+    "subtitle": "Side-by-side development comparison across all dimensions.",
+    "noChildren": "No children found",
+    "noChildrenDesc": "Add child profiles to compare their development.",
+    "needTwoChildren": "Two or more children needed",
+    "needTwoChildrenDesc": "Add another child profile to compare development across dimensions.",
+    "addChild": "Add Child",
+    "selectChildren": "Select children to compare",
+    "selectAll": "Select All",
+    "deselectAll": "Deselect All",
+    "comparing": "Comparing {count} children",
+    "overallScore": "Overall Score",
+    "dimensionBreakdown": "Dimension Breakdown",
+    "dimensionColumn": "Dimension",
+    "noScoresYet": "No scores yet. Log observations to see development data."
+  },
+  "streak": {
+    "currentStreak": "Current Streak",
+    "bestStreak": "Best Streak",
+    "days": "{count} days",
+    "day": "1 day",
+    "streakStart": "Start your streak! Log an observation today.",
+    "streakGoing": "Nice start! Keep the momentum going.",
+    "streakStrong": "Strong streak! Your consistency is paying off.",
+    "streakAmazing": "Amazing! A whole week of observations!",
+    "streakLegendary": "Legendary! You are a dedicated parent.",
+    "activeStreak": "Active streak",
+    "noStreak": "No active streak"
+  },
+  "celebration": {
+    "milestoneAchieved": "Milestone Achieved!",
+    "congratulations": "Congratulations!",
+    "achievedMilestone": "{name} has been achieved!",
+    "dimension": "Dimension: {dimension}",
+    "shareAchievement": "Share Achievement",
+    "copied": "Copied to clipboard!",
+    "close": "Close"
   }
 }

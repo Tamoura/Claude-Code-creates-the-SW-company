@@ -1,6 +1,6 @@
 'use client';
 
-import { useState, useEffect } from 'react';
+import { useState, useEffect, useRef } from 'react';
 import { useTranslations } from 'next-intl';
 import { useRouter } from 'next/navigation';
 import { DIMENSIONS } from '../../../lib/dimensions';
@@ -25,6 +25,10 @@ export default function ObservePage() {
   );
   const [tags, setTags] = useState<string[]>([]);
   const [tagInput, setTagInput] = useState('');
+  const [photo, setPhoto] = useState<File | null>(null);
+  const [photoPreview, setPhotoPreview] = useState<string | null>(null);
+  const [photoError, setPhotoError] = useState<string>('');
+  const photoInputRef = useRef<HTMLInputElement>(null);
 
   const [children, setChildren] = useState<Child[]>([]);
   const [selectedChildId, setSelectedChildId] = useState<string>('');
@@ -75,6 +79,42 @@ export default function ObservePage() {
     if (e.key === 'Enter') {
       e.preventDefault();
       handleAddTag();
+    }
+  };
+
+  const handlePhotoSelect = (e: React.ChangeEvent<HTMLInputElement>) => {
+    const file = e.target.files?.[0];
+    if (!file) return;
+
+    setPhotoError('');
+
+    // Validate file size (max 5MB)
+    if (file.size > 5 * 1024 * 1024) {
+      setPhotoError(t('photoTooLarge'));
+      return;
+    }
+
+    // Validate file type
+    const validTypes = ['image/jpeg', 'image/png', 'image/webp'];
+    if (!validTypes.includes(file.type)) {
+      setPhotoError(t('photoInvalidType'));
+      return;
+    }
+
+    setPhoto(file);
+    const previewUrl = URL.createObjectURL(file);
+    setPhotoPreview(previewUrl);
+  };
+
+  const handlePhotoRemove = () => {
+    if (photoPreview) {
+      URL.revokeObjectURL(photoPreview);
+    }
+    setPhoto(null);
+    setPhotoPreview(null);
+    setPhotoError('');
+    if (photoInputRef.current) {
+      photoInputRef.current.value = '';
     }
   };
 
@@ -349,6 +389,56 @@ export default function ObservePage() {
             </div>
           )}
         </div>
+
+          {/* Photo Attachment */}
+          <div>
+            <span className="label">{t('photoLabel')}</span>
+            <input
+              ref={photoInputRef}
+              type="file"
+              accept="image/jpeg,image/png,image/webp"
+              onChange={handlePhotoSelect}
+              className="hidden"
+              data-testid="photo-input"
+            />
+            {!photoPreview ? (
+              <button
+                type="button"
+                onClick={() => photoInputRef.current?.click()}
+                className="flex items-center gap-2 px-4 py-2.5 rounded-xl border-2 border-dashed border-slate-300 dark:border-slate-600 text-sm text-slate-600 dark:text-slate-400 hover:border-emerald-400 hover:text-emerald-600 dark:hover:border-emerald-500 dark:hover:text-emerald-400 transition-colors"
+              >
+                <svg className="h-5 w-5" fill="none" viewBox="0 0 24 24" stroke="currentColor" aria-hidden="true">
+                  <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M3 9a2 2 0 012-2h.93a2 2 0 001.664-.89l.812-1.22A2 2 0 0110.07 4h3.86a2 2 0 011.664.89l.812 1.22A2 2 0 0018.07 7H19a2 2 0 012 2v9a2 2 0 01-2 2H5a2 2 0 01-2-2V9z" />
+                  <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M15 13a3 3 0 11-6 0 3 3 0 016 0z" />
+                </svg>
+                {t('attachPhoto')}
+              </button>
+            ) : (
+              <div className="space-y-2">
+                <div className="relative inline-block" data-testid="photo-preview">
+                  {/* eslint-disable-next-line @next/next/no-img-element */}
+                  <img
+                    src={photoPreview}
+                    alt={photo?.name || t('photoPreviewAlt')}
+                    className="h-32 w-32 object-cover rounded-xl border border-slate-200 dark:border-slate-700"
+                  />
+                </div>
+                <div>
+                  <button
+                    type="button"
+                    onClick={handlePhotoRemove}
+                    className="text-xs text-red-600 dark:text-red-400 hover:text-red-800 dark:hover:text-red-300 font-medium"
+                  >
+                    {t('removePhoto')}
+                  </button>
+                </div>
+              </div>
+            )}
+            {photoError && (
+              <p className="mt-1 text-xs text-red-600 dark:text-red-400">{photoError}</p>
+            )}
+            <p className="mt-1 text-xs text-slate-400 dark:text-slate-500">{t('photoHint')}</p>
+          </div>
 
           {/* Submit */}
           <button
