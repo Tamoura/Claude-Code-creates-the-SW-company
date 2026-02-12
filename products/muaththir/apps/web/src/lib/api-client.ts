@@ -250,6 +250,12 @@ class ApiClient {
     this.baseUrl = baseUrl;
   }
 
+  private getLocale(): string {
+    if (typeof document === 'undefined') return 'en';
+    const match = document.cookie.match(/(?:^|;\s*)locale=([^;]*)/);
+    return match?.[1] || 'en';
+  }
+
   private async request<T>(
     path: string,
     options: RequestInit = {},
@@ -268,6 +274,8 @@ class ApiClient {
     if (token) {
       headers['Authorization'] = `Bearer ${token}`;
     }
+
+    headers['Accept-Language'] = this.getLocale();
 
     const controller = new AbortController();
     const timeoutId = setTimeout(() => controller.abort(), timeoutMs);
