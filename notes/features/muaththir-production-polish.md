@@ -43,6 +43,18 @@ Branch: `feature/muaththir/production-polish`
 
 ### Baseline: 488 backend tests passing
 
+## PWA Icons & useEffect Fixes (Current Session)
+
+### Task 1: PWA Icons
+- Created `apps/web/public/icons/` with three SVG icons using Arabic "م"
+- Updated `manifest.json` to reference `.svg` with `image/svg+xml` MIME type
+- Design matches existing `favicon.svg` gradient (#10b981 to #059669)
+
+### Task 2: useEffect Dependency Fixes
+- `compare/page.tsx`: Added `tc` to first useEffect deps (used on line 55)
+- `dashboard/page.tsx`: Added `t` to second useEffect deps (used on lines 93, 98, 103)
+- next-intl provides stable references, so no infinite re-render risk
+
 ## Previous Tasks (Completed)
 - Composite database indexes
 - Photo upload directory

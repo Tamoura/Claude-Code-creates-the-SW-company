@@ -63,7 +63,7 @@ export default function ComparePage() {
     return () => {
       cancelled = true;
     };
-  }, []);
+  }, [tc]);
 
   // Load dashboard data for selected children
   useEffect(() => {
