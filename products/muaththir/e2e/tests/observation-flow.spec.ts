@@ -282,11 +282,18 @@ test.describe('Observation Flow', () => {
       page,
     }) => {
       await authenticateForObservation(page, { childCount: 'none' });
-      await navigateToObserve(page);
+
+      // Navigate directly — the dashboard shows h2 (not h1) when no children exist,
+      // so we can't use navigateToObserve() which waits for h1.
+      await expect(page.locator('h2').first()).toBeVisible({ timeout: 15000 });
+      const sidebarLink = page.locator('aside a[href="/dashboard/observe"]');
+      await expect(sidebarLink).toBeVisible({ timeout: 10000 });
+      await sidebarLink.click({ force: true });
+      await page.waitForURL('**/dashboard/observe', { timeout: 10000 });
 
       // Should show "no children found" message, not the form
-      const heading = page.locator('h1').first();
-      await expect(heading).toBeVisible({ timeout: 15000 });
+      const noChildrenHeading = page.getByText('No children found');
+      await expect(noChildrenHeading).toBeVisible({ timeout: 15000 });
 
       // Form should NOT be present
       const textarea = page.locator('#observation-text');
