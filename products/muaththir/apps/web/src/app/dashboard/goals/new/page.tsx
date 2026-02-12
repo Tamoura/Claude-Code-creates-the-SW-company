@@ -105,7 +105,7 @@ export default function NewGoalPage() {
   if (!childId) {
     return (
       <div className="text-center py-20">
-        <p className="text-sm text-slate-500">{t('noChildSelected')}</p>
+        <p className="text-sm text-slate-500 dark:text-slate-400">{t('noChildSelected')}</p>
       </div>
     );
   }
@@ -122,8 +122,8 @@ export default function NewGoalPage() {
   return (
     <div className="max-w-3xl mx-auto space-y-8">
       <div>
-        <h1 className="text-2xl font-bold text-slate-900">{t('title')}</h1>
-        <p className="text-sm text-slate-500 mt-1">
+        <h1 className="text-2xl font-bold text-slate-900 dark:text-white">{t('title')}</h1>
+        <p className="text-sm text-slate-500 dark:text-slate-400 mt-1">
           {t('subtitle')}
         </p>
       </div>
@@ -131,11 +131,11 @@ export default function NewGoalPage() {
       {/* ==================== Template Section ==================== */}
       <section aria-labelledby="templates-heading">
         <div className="flex items-center justify-between mb-4">
-          <h2 id="templates-heading" className="text-lg font-semibold text-slate-900">
+          <h2 id="templates-heading" className="text-lg font-semibold text-slate-900 dark:text-white">
             {t('chooseFromTemplates')}
           </h2>
           {child?.ageBand && (
-            <span className="text-xs text-slate-400">
+            <span className="text-xs text-slate-400 dark:text-slate-500">
               {t('showingForAge', { ageBand: child.ageBand.replace(/_/g, ' ') })}
             </span>
           )}
@@ -147,8 +147,8 @@ export default function NewGoalPage() {
             onClick={() => setTemplateDimFilter('')}
             className={`text-xs font-medium px-3 py-1.5 rounded-full transition-colors ${
               templateDimFilter === ''
-                ? 'bg-emerald-100 text-emerald-700'
-                : 'bg-slate-100 text-slate-600 hover:bg-slate-200'
+                ? 'bg-emerald-100 text-emerald-700 dark:bg-emerald-900/30 dark:text-emerald-400'
+                : 'bg-slate-100 text-slate-600 hover:bg-slate-200 dark:bg-slate-800 dark:text-slate-400 dark:hover:bg-slate-700'
             }`}
           >
             {t('allTemplates')}
@@ -160,7 +160,7 @@ export default function NewGoalPage() {
               className={`text-xs font-medium px-3 py-1.5 rounded-full transition-colors ${
                 templateDimFilter === dim.slug
                   ? 'text-white'
-                  : 'bg-slate-100 text-slate-600 hover:bg-slate-200'
+                  : 'bg-slate-100 text-slate-600 hover:bg-slate-200 dark:bg-slate-800 dark:text-slate-400 dark:hover:bg-slate-700'
               }`}
               style={
                 templateDimFilter === dim.slug
@@ -179,13 +179,13 @@ export default function NewGoalPage() {
             {[1, 2, 3, 4].map((i) => (
               <div
                 key={i}
-                className="h-28 bg-slate-100 rounded-2xl animate-pulse"
+                className="h-28 bg-slate-100 dark:bg-slate-800 rounded-2xl animate-pulse"
               />
             ))}
           </div>
         ) : templates.length === 0 ? (
           <div className="card text-center py-8">
-            <p className="text-sm text-slate-500">
+            <p className="text-sm text-slate-500 dark:text-slate-400">
               {templateDimFilter ? t('noTemplatesForDimension') : t('noTemplates')} {t('createCustomBelow')}
             </p>
           </div>
@@ -201,7 +201,7 @@ export default function NewGoalPage() {
                       style={{ backgroundColor: dim?.colour || '#94a3b8' }}
                       aria-hidden="true"
                     />
-                    <h3 className="text-sm font-semibold text-slate-700">
+                    <h3 className="text-sm font-semibold text-slate-700 dark:text-slate-300">
                       {td(dimSlug as any)}
                     </h3>
                   </div>
@@ -212,7 +212,7 @@ export default function NewGoalPage() {
                         className={`rounded-2xl p-4 border-2 transition-all cursor-pointer hover:shadow-md ${
                           selectedTemplateId === template.id
                             ? 'shadow-sm'
-                            : 'border-slate-100 bg-white'
+                            : 'border-slate-100 bg-white dark:border-slate-700 dark:bg-slate-900'
                         }`}
                         style={
                           selectedTemplateId === template.id
@@ -232,10 +232,10 @@ export default function NewGoalPage() {
                           }
                         }}
                       >
-                        <h4 className="text-sm font-semibold text-slate-900 mb-1">
+                        <h4 className="text-sm font-semibold text-slate-900 dark:text-white mb-1">
                           {template.title}
                         </h4>
-                        <p className="text-xs text-slate-500 line-clamp-2 mb-3">
+                        <p className="text-xs text-slate-500 dark:text-slate-400 line-clamp-2 mb-3">
                           {template.description}
                         </p>
                         <span
@@ -273,10 +273,10 @@ export default function NewGoalPage() {
       {/* ==================== Divider ==================== */}
       <div className="relative">
         <div className="absolute inset-0 flex items-center" aria-hidden="true">
-          <div className="w-full border-t border-slate-200" />
+          <div className="w-full border-t border-slate-200 dark:border-slate-700" />
         </div>
         <div className="relative flex justify-center">
-          <span className="bg-slate-50 px-4 text-sm text-slate-400">
+          <span className="bg-slate-50 dark:bg-slate-900 px-4 text-sm text-slate-400 dark:text-slate-500">
             {t('orCreateCustom')}
           </span>
         </div>
@@ -290,7 +290,7 @@ export default function NewGoalPage() {
       >
         {error && (
           <div
-            className="rounded-xl bg-red-50 p-3 text-sm text-red-700"
+            className="rounded-xl bg-red-50 p-3 text-sm text-red-700 dark:bg-red-900/30 dark:text-red-400"
             role="alert"
           >
             {error}
@@ -327,7 +327,7 @@ export default function NewGoalPage() {
                 className={`p-3 rounded-xl border-2 text-left transition-all ${
                   dimension === dim.slug
                     ? 'shadow-sm'
-                    : 'border-slate-200 hover:border-slate-300'
+                    : 'border-slate-200 hover:border-slate-300 dark:border-slate-700 dark:hover:border-slate-600'
                 }`}
                 style={
                   dimension === dim.slug
@@ -344,7 +344,7 @@ export default function NewGoalPage() {
                   style={{ backgroundColor: dim.colour }}
                   aria-hidden="true"
                 />
-                <span className="text-sm font-medium text-slate-900">
+                <span className="text-sm font-medium text-slate-900 dark:text-white">
                   {td(dim.slug as any)}
                 </span>
               </button>

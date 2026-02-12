@@ -115,9 +115,9 @@ export default function ObservePage() {
   if (isLoading) {
     return (
       <div className="max-w-2xl mx-auto space-y-8">
-        <div className="h-8 w-48 bg-slate-200 rounded animate-pulse" />
+        <div className="h-8 w-48 bg-slate-200 dark:bg-slate-700 rounded animate-pulse" />
         <div className="card py-12 text-center">
-          <div className="h-6 w-32 bg-slate-200 rounded mx-auto animate-pulse" />
+          <div className="h-6 w-32 bg-slate-200 dark:bg-slate-700 rounded mx-auto animate-pulse" />
         </div>
       </div>
     );
@@ -126,35 +126,35 @@ export default function ObservePage() {
   return (
     <div className="max-w-2xl mx-auto space-y-8">
       <div>
-        <h1 className="text-2xl font-bold text-slate-900">
+        <h1 className="text-2xl font-bold text-slate-900 dark:text-white">
           {t('title')}
         </h1>
-        <p className="text-sm text-slate-500 mt-1">
+        <p className="text-sm text-slate-500 dark:text-slate-400 mt-1">
           {t('subtitle')}
         </p>
       </div>
 
       {/* Success Message */}
       {successMessage && (
-        <div className="p-4 rounded-lg bg-emerald-50 border border-emerald-200">
-          <p className="text-sm text-emerald-800">{successMessage}</p>
+        <div className="p-4 rounded-lg bg-emerald-50 dark:bg-emerald-900/30 border border-emerald-200 dark:border-emerald-800">
+          <p className="text-sm text-emerald-800 dark:text-emerald-400">{successMessage}</p>
         </div>
       )}
 
       {/* Error Message */}
       {error && (
-        <div className="p-4 rounded-lg bg-red-50 border border-red-200">
-          <p className="text-sm text-red-800">{error}</p>
+        <div className="p-4 rounded-lg bg-red-50 dark:bg-red-900/30 border border-red-200 dark:border-red-800">
+          <p className="text-sm text-red-800 dark:text-red-400">{error}</p>
         </div>
       )}
 
       {/* No children state */}
       {children.length === 0 && (
         <div className="card text-center py-12">
-          <h3 className="text-sm font-medium text-slate-900 mb-1">
+          <h3 className="text-sm font-medium text-slate-900 dark:text-white mb-1">
             {t('noChildrenFound')}
           </h3>
-          <p className="text-xs text-slate-500">
+          <p className="text-xs text-slate-500 dark:text-slate-400">
             {t('noChildrenDesc')}
           </p>
         </div>
@@ -198,7 +198,7 @@ export default function ObservePage() {
                 className={`p-3 rounded-xl border-2 text-left transition-all ${
                   selectedDimension === dim.slug
                     ? 'shadow-sm'
-                    : 'border-slate-200 hover:border-slate-300'
+                    : 'border-slate-200 dark:border-slate-700 hover:border-slate-300 dark:hover:border-slate-600'
                 }`}
                 style={
                   selectedDimension === dim.slug
@@ -215,7 +215,7 @@ export default function ObservePage() {
                   style={{ backgroundColor: dim.colour }}
                   aria-hidden="true"
                 />
-                <span className="text-sm font-medium text-slate-900">
+                <span className="text-sm font-medium text-slate-900 dark:text-white">
                   {td(dim.slug)}
                 </span>
               </button>
@@ -238,8 +238,8 @@ export default function ObservePage() {
             maxLength={charLimit}
             required
           />
-          <p className="mt-1 text-xs text-slate-400 text-right">
-            <span className={charCount > 900 ? 'text-amber-500' : ''}>
+          <p className="mt-1 text-xs text-slate-400 dark:text-slate-500 text-right">
+            <span className={charCount > 900 ? 'text-amber-500 dark:text-amber-400' : ''}>
               {charCount}
             </span>
             /{charLimit}
@@ -260,7 +260,7 @@ export default function ObservePage() {
                 className={`flex-1 p-3 rounded-xl border-2 text-center text-sm font-medium transition-all ${
                   sentiment === s.value
                     ? 'shadow-sm'
-                    : 'border-slate-200 text-slate-600 hover:border-slate-300'
+                    : 'border-slate-200 dark:border-slate-700 text-slate-600 dark:text-slate-300 hover:border-slate-300 dark:hover:border-slate-600'
                 }`}
                 style={
                   sentiment === s.value
@@ -324,13 +324,13 @@ export default function ObservePage() {
               {tags.map((tag) => (
                 <span
                   key={tag}
-                  className="inline-flex items-center gap-1 text-xs font-medium bg-slate-100 text-slate-700 px-2.5 py-1 rounded-full"
+                  className="inline-flex items-center gap-1 text-xs font-medium bg-slate-100 dark:bg-slate-800 text-slate-700 dark:text-slate-300 px-2.5 py-1 rounded-full"
                 >
                   {tag}
                   <button
                     type="button"
                     onClick={() => handleRemoveTag(tag)}
-                    className="text-slate-400 hover:text-slate-600"
+                    className="text-slate-400 dark:text-slate-500 hover:text-slate-600 dark:hover:text-slate-300"
                     aria-label={t('removeTag', { tag })}
                   >
                     <svg className="h-3 w-3" fill="none" viewBox="0 0 24 24" stroke="currentColor" aria-hidden="true">

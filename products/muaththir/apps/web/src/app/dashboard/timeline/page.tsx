@@ -166,9 +166,9 @@ export default function TimelinePage() {
   if (isLoading && observations.length === 0) {
     return (
       <div className="space-y-8">
-        <div className="h-8 w-48 bg-slate-200 rounded animate-pulse" />
+        <div className="h-8 w-48 bg-slate-200 dark:bg-slate-700 rounded animate-pulse" />
         <div className="card py-12 text-center">
-          <div className="h-6 w-32 bg-slate-200 rounded mx-auto animate-pulse" />
+          <div className="h-6 w-32 bg-slate-200 dark:bg-slate-700 rounded mx-auto animate-pulse" />
         </div>
       </div>
     );
@@ -177,8 +177,8 @@ export default function TimelinePage() {
   return (
     <div className="space-y-8">
       <div>
-        <h1 className="text-2xl font-bold text-slate-900">{t('title')}</h1>
-        <p className="text-sm text-slate-500 mt-1">
+        <h1 className="text-2xl font-bold text-slate-900 dark:text-white">{t('title')}</h1>
+        <p className="text-sm text-slate-500 dark:text-slate-400 mt-1">
           {t('subtitle')}
         </p>
       </div>
@@ -207,8 +207,8 @@ export default function TimelinePage() {
 
       {/* Error Message */}
       {error && (
-        <div className="p-4 rounded-lg bg-red-50 border border-red-200">
-          <p className="text-sm text-red-800">{error}</p>
+        <div className="p-4 rounded-lg bg-red-50 dark:bg-red-900/30 border border-red-200 dark:border-red-800">
+          <p className="text-sm text-red-800 dark:text-red-400">{error}</p>
         </div>
       )}
 
@@ -220,8 +220,8 @@ export default function TimelinePage() {
             onClick={() => setSelectedDimension('all')}
             className={`px-3 py-1.5 rounded-full text-xs font-medium transition-colors ${
               selectedDimension === 'all'
-                ? 'bg-slate-900 text-white'
-                : 'bg-slate-100 text-slate-600 hover:bg-slate-200'
+                ? 'bg-slate-900 dark:bg-slate-700 text-white'
+                : 'bg-slate-100 dark:bg-slate-800 text-slate-600 dark:text-slate-300 hover:bg-slate-200 dark:hover:bg-slate-600'
             }`}
           >
             {t('allDimensions')}
@@ -234,7 +234,7 @@ export default function TimelinePage() {
               className={`inline-flex items-center gap-1.5 px-3 py-1.5 rounded-full text-xs font-medium transition-colors ${
                 selectedDimension === dim.slug
                   ? 'text-white'
-                  : 'text-slate-600 hover:bg-slate-200'
+                  : 'text-slate-600 dark:text-slate-300 hover:bg-slate-200 dark:hover:bg-slate-600'
               }`}
               style={
                 selectedDimension === dim.slug
@@ -295,7 +295,7 @@ export default function TimelinePage() {
                 setDateFrom('');
                 setDateTo('');
               }}
-              className="text-xs text-slate-600 hover:text-slate-900 underline"
+              className="text-xs text-slate-600 dark:text-slate-400 hover:text-slate-900 dark:hover:text-white underline"
             >
               {t('clearFilters')}
             </button>
@@ -306,10 +306,10 @@ export default function TimelinePage() {
       {/* No child selected */}
       {!selectedChildId && (
         <div className="card text-center py-16">
-          <h2 className="text-sm font-medium text-slate-900 mb-1">
+          <h2 className="text-sm font-medium text-slate-900 dark:text-white mb-1">
             {t('noChildSelected')}
           </h2>
-          <p className="text-xs text-slate-500">
+          <p className="text-xs text-slate-500 dark:text-slate-400">
             {t('noChildSelectedDesc')}
           </p>
         </div>
@@ -318,15 +318,15 @@ export default function TimelinePage() {
       {/* Observations List */}
       {selectedChildId && observations.length === 0 && !isLoading && (
         <div className="card text-center py-16">
-          <div className="mx-auto h-12 w-12 rounded-full bg-slate-100 flex items-center justify-center mb-4">
-            <svg className="h-6 w-6 text-slate-400" fill="none" viewBox="0 0 24 24" stroke="currentColor" aria-hidden="true">
+          <div className="mx-auto h-12 w-12 rounded-full bg-slate-100 dark:bg-slate-800 flex items-center justify-center mb-4">
+            <svg className="h-6 w-6 text-slate-400 dark:text-slate-500" fill="none" viewBox="0 0 24 24" stroke="currentColor" aria-hidden="true">
               <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M12 8v4l3 3m6-3a9 9 0 11-18 0 9 9 0 0118 0z" />
             </svg>
           </div>
-          <h2 className="text-sm font-medium text-slate-900 mb-1">
+          <h2 className="text-sm font-medium text-slate-900 dark:text-white mb-1">
             {t('noObservationsTitle')}
           </h2>
-          <p className="text-xs text-slate-500">
+          <p className="text-xs text-slate-500 dark:text-slate-400">
             {t('noObservationsDesc')}
           </p>
         </div>
@@ -364,7 +364,7 @@ export default function TimelinePage() {
                 <button
                   type="button"
                   onClick={() => handleDelete(obs.id)}
-                  className="text-slate-400 hover:text-red-600 transition-colors"
+                  className="text-slate-400 dark:text-slate-500 hover:text-red-600 dark:hover:text-red-400 transition-colors"
                   aria-label={t('deleteObservation')}
                 >
                   <svg className="h-4 w-4" fill="none" viewBox="0 0 24 24" stroke="currentColor">
@@ -373,9 +373,9 @@ export default function TimelinePage() {
                 </button>
               </div>
 
-              <p className="text-sm text-slate-700 mb-3">{obs.content}</p>
+              <p className="text-sm text-slate-700 dark:text-slate-300 mb-3">{obs.content}</p>
 
-              <div className="flex items-center justify-between text-xs text-slate-500">
+              <div className="flex items-center justify-between text-xs text-slate-500 dark:text-slate-400">
                 <span>
                   {new Date(obs.observedAt).toLocaleDateString('en-US', {
                     year: 'numeric',
@@ -388,7 +388,7 @@ export default function TimelinePage() {
                     {obs.tags.map((tag) => (
                       <span
                         key={tag}
-                        className="px-2 py-0.5 rounded-full bg-slate-100 text-slate-600"
+                        className="px-2 py-0.5 rounded-full bg-slate-100 dark:bg-slate-800 text-slate-600 dark:text-slate-300"
                       >
                         #{tag}
                       </span>

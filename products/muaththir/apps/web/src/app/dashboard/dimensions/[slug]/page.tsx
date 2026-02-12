@@ -92,12 +92,12 @@ export default function DimensionDetailPage({
   if (!dimension) {
     return (
       <div className="text-center py-16">
-        <h1 className="text-2xl font-bold text-slate-900">
+        <h1 className="text-2xl font-bold text-slate-900 dark:text-white">
           {t('notFound')}
         </h1>
         <Link
           href="/dashboard/dimensions"
-          className="text-sm text-emerald-600 hover:text-emerald-700 mt-4 inline-block"
+          className="text-sm text-emerald-600 dark:text-emerald-400 hover:text-emerald-700 dark:hover:text-emerald-300 mt-4 inline-block"
         >
           {t('backToDimensions')}
         </Link>
@@ -128,10 +128,10 @@ export default function DimensionDetailPage({
             </svg>
           </div>
           <div>
-            <h1 className="text-2xl font-bold text-slate-900">
+            <h1 className="text-2xl font-bold text-slate-900 dark:text-white">
               {td(dimension.slug)}
             </h1>
-            <p className="text-sm text-slate-500 mt-1">
+            <p className="text-sm text-slate-500 dark:text-slate-400 mt-1">
               {td(`${dimension.slug}Desc`)}
             </p>
           </div>
@@ -163,25 +163,25 @@ export default function DimensionDetailPage({
 
       {/* Error Message */}
       {error && (
-        <div className="p-4 rounded-lg bg-red-50 border border-red-200">
-          <p className="text-sm text-red-800">{error}</p>
+        <div className="p-4 rounded-lg bg-red-50 dark:bg-red-900/30 border border-red-200 dark:border-slate-700">
+          <p className="text-sm text-red-800 dark:text-red-400">{error}</p>
         </div>
       )}
 
       {/* Loading State */}
       {isLoading && !dashboardData && (
         <div className="card py-12 text-center">
-          <div className="h-6 w-32 bg-slate-200 rounded mx-auto animate-pulse" />
+          <div className="h-6 w-32 bg-slate-200 dark:bg-slate-700 rounded mx-auto animate-pulse" />
         </div>
       )}
 
       {/* No child selected */}
       {!selectedChildId && !isLoading && (
         <div className="card text-center py-16">
-          <h2 className="text-sm font-medium text-slate-900 mb-1">
+          <h2 className="text-sm font-medium text-slate-900 dark:text-white mb-1">
             {t('noChildSelected')}
           </h2>
-          <p className="text-xs text-slate-500">
+          <p className="text-xs text-slate-500 dark:text-slate-400">
             {t('noChildSelectedDesc')}
           </p>
         </div>
@@ -196,7 +196,7 @@ export default function DimensionDetailPage({
           >
             <div className="flex items-center justify-between">
               <div>
-                <h2 className="text-sm font-medium text-slate-500">
+                <h2 className="text-sm font-medium text-slate-500 dark:text-slate-400">
                   {t('currentScore')}
                 </h2>
                 <p
@@ -207,8 +207,8 @@ export default function DimensionDetailPage({
                 </p>
               </div>
               <div className="text-right">
-                <p className="text-sm text-slate-500">{t('observations')}</p>
-                <p className="text-2xl font-bold text-slate-900 mt-1">
+                <p className="text-sm text-slate-500 dark:text-slate-400">{t('observations')}</p>
+                <p className="text-2xl font-bold text-slate-900 dark:text-white mt-1">
                   {getObservationCount()}
                 </p>
               </div>
@@ -217,15 +217,15 @@ export default function DimensionDetailPage({
 
           {/* Observations */}
           <section>
-            <h2 className="text-lg font-semibold text-slate-900 mb-4">
+            <h2 className="text-lg font-semibold text-slate-900 dark:text-white mb-4">
               {t('recentObservations')}
             </h2>
             {observations.length === 0 ? (
               <div className="card text-center py-12">
-                <h3 className="text-sm font-medium text-slate-900 mb-1">
+                <h3 className="text-sm font-medium text-slate-900 dark:text-white mb-1">
                   {t('noObservationsIn', { dimension: td(dimension.slug) })}
                 </h3>
-                <p className="text-xs text-slate-500 mb-4">
+                <p className="text-xs text-slate-500 dark:text-slate-400 mb-4">
                   {t('startLogging')}
                 </p>
                 <Link
@@ -267,7 +267,7 @@ export default function DimensionDetailPage({
                           ? ttl('neutral')
                           : ttl('needsAttention')}
                       </span>
-                      <span className="text-xs text-slate-500">
+                      <span className="text-xs text-slate-500 dark:text-slate-400">
                         {new Date(obs.observedAt).toLocaleDateString('en-US', {
                           year: 'numeric',
                           month: 'short',
@@ -276,14 +276,14 @@ export default function DimensionDetailPage({
                       </span>
                     </div>
 
-                    <p className="text-sm text-slate-700 mb-2">{obs.content}</p>
+                    <p className="text-sm text-slate-700 dark:text-slate-300 mb-2">{obs.content}</p>
 
                     {obs.tags.length > 0 && (
                       <div className="flex gap-1 flex-wrap">
                         {obs.tags.map((tag) => (
                           <span
                             key={tag}
-                            className="text-xs px-2 py-0.5 rounded-full bg-slate-100 text-slate-600"
+                            className="text-xs px-2 py-0.5 rounded-full bg-slate-100 dark:bg-slate-800 text-slate-600 dark:text-slate-400"
                           >
                             #{tag}
                           </span>
@@ -301,21 +301,21 @@ export default function DimensionDetailPage({
       {/* Milestones Preview */}
       <section>
         <div className="flex items-center justify-between mb-4">
-          <h2 className="text-lg font-semibold text-slate-900">
+          <h2 className="text-lg font-semibold text-slate-900 dark:text-white">
             {t('milestones')}
           </h2>
           <Link
             href={`/dashboard/milestones/${dimension.slug}`}
-            className="text-sm font-medium text-emerald-600 hover:text-emerald-700"
+            className="text-sm font-medium text-emerald-600 dark:text-emerald-400 hover:text-emerald-700 dark:hover:text-emerald-300"
           >
             {tc('viewAll')}
           </Link>
         </div>
         <div className="card text-center py-12">
-          <h3 className="text-sm font-medium text-slate-900 mb-1">
+          <h3 className="text-sm font-medium text-slate-900 dark:text-white mb-1">
             {t('milestonesComingSoon')}
           </h3>
-          <p className="text-xs text-slate-500">
+          <p className="text-xs text-slate-500 dark:text-slate-400">
             {t('milestonesComingSoonDesc')}
           </p>
         </div>

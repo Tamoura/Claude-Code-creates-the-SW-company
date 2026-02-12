@@ -15,9 +15,9 @@ export default function ComingSoon({
 }: ComingSoonProps) {
   return (
     <div className="flex flex-col items-center justify-center py-20">
-      <div className="mx-auto h-16 w-16 rounded-2xl bg-slate-100 flex items-center justify-center mb-6">
+      <div className="mx-auto h-16 w-16 rounded-2xl bg-slate-100 dark:bg-slate-800 flex items-center justify-center mb-6">
         <svg
-          className="h-8 w-8 text-slate-400"
+          className="h-8 w-8 text-slate-400 dark:text-slate-500"
           fill="none"
           viewBox="0 0 24 24"
           stroke="currentColor"
@@ -31,8 +31,8 @@ export default function ComingSoon({
           />
         </svg>
       </div>
-      <h1 className="text-2xl font-bold text-slate-900 mb-2">{title}</h1>
-      <p className="text-sm text-slate-500 text-center max-w-md mb-6">
+      <h1 className="text-2xl font-bold text-slate-900 dark:text-white mb-2">{title}</h1>
+      <p className="text-sm text-slate-500 dark:text-slate-400 text-center max-w-md mb-6">
         {description}
       </p>
       <Link href={backHref} className="btn-secondary text-sm">

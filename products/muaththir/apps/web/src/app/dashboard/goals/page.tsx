@@ -79,9 +79,9 @@ export default function GoalsPage() {
 
   const statusBadge = (status: string) => {
     const styles: Record<string, string> = {
-      active: 'bg-emerald-50 text-emerald-700',
-      completed: 'bg-blue-50 text-blue-700',
-      paused: 'bg-slate-100 text-slate-600',
+      active: 'bg-emerald-50 text-emerald-700 dark:bg-emerald-900/30 dark:text-emerald-400',
+      completed: 'bg-blue-50 text-blue-700 dark:bg-blue-900/30 dark:text-blue-400',
+      paused: 'bg-slate-100 text-slate-600 dark:bg-slate-800 dark:text-slate-400',
     };
     return (
       <span className={`text-xs font-medium px-2 py-0.5 rounded-full ${styles[status] || styles.active}`}>
@@ -94,8 +94,8 @@ export default function GoalsPage() {
     return (
       <div className="flex items-center justify-center min-h-[60vh]">
         <div className="text-center max-w-md">
-          <h2 className="text-xl font-semibold text-slate-900 mb-2">{tc('noChildrenYet')}</h2>
-          <p className="text-sm text-slate-500 mb-6">{t('noChildrenDesc')}</p>
+          <h2 className="text-xl font-semibold text-slate-900 dark:text-white mb-2">{tc('noChildrenYet')}</h2>
+          <p className="text-sm text-slate-500 dark:text-slate-400 mb-6">{t('noChildrenDesc')}</p>
           <Link href="/onboarding/child" className="btn-primary">{tc('addChildProfile')}</Link>
         </div>
       </div>
@@ -106,15 +106,15 @@ export default function GoalsPage() {
     <div className="space-y-6">
       <div className="flex items-center justify-between">
         <div>
-          <h1 className="text-2xl font-bold text-slate-900">{t('title')}</h1>
-          <p className="text-sm text-slate-500 mt-1">{t('subtitle')}</p>
+          <h1 className="text-2xl font-bold text-slate-900 dark:text-white">{t('title')}</h1>
+          <p className="text-sm text-slate-500 dark:text-slate-400 mt-1">{t('subtitle')}</p>
         </div>
         <div className="flex items-center gap-3">
           {children.length > 1 && (
             <select
               value={selectedChildId || ''}
               onChange={(e) => setSelectedChildId(e.target.value)}
-              className="px-3 py-2 border border-slate-200 rounded-lg text-sm"
+              className="px-3 py-2 border border-slate-200 dark:border-slate-700 rounded-lg text-sm"
               aria-label={tc('selectChild')}
             >
               {children.map(c => <option key={c.id} value={c.id}>{c.name}</option>)}
@@ -139,8 +139,8 @@ export default function GoalsPage() {
             onClick={() => setFilterStatus(s)}
             className={`text-xs font-medium px-3 py-1.5 rounded-full transition-colors ${
               filterStatus === s
-                ? 'bg-emerald-100 text-emerald-700'
-                : 'bg-slate-100 text-slate-600 hover:bg-slate-200'
+                ? 'bg-emerald-100 text-emerald-700 dark:bg-emerald-900/30 dark:text-emerald-400'
+                : 'bg-slate-100 text-slate-600 hover:bg-slate-200 dark:bg-slate-800 dark:text-slate-400 dark:hover:bg-slate-700'
             }`}
           >
             {s ? t(s as 'active' | 'completed' | 'paused') : t('all')}
@@ -149,26 +149,26 @@ export default function GoalsPage() {
       </div>
 
       {error && (
-        <div className="card bg-red-50 border border-red-200" role="alert">
-          <p className="text-sm text-red-700">{error}</p>
+        <div className="card bg-red-50 border border-red-200 dark:bg-red-900/30 dark:border-red-700" role="alert">
+          <p className="text-sm text-red-700 dark:text-red-400">{error}</p>
         </div>
       )}
 
       {loading ? (
         <div className="space-y-3">
           {[1, 2, 3].map(i => (
-            <div key={i} className="h-24 bg-slate-100 rounded-2xl animate-pulse" />
+            <div key={i} className="h-24 bg-slate-100 dark:bg-slate-800 rounded-2xl animate-pulse" />
           ))}
         </div>
       ) : goals.length === 0 ? (
         <div className="card text-center py-12">
-          <div className="mx-auto h-12 w-12 rounded-full bg-emerald-50 flex items-center justify-center mb-4">
-            <svg className="h-6 w-6 text-emerald-500" fill="none" viewBox="0 0 24 24" stroke="currentColor" aria-hidden="true">
+          <div className="mx-auto h-12 w-12 rounded-full bg-emerald-50 dark:bg-emerald-900/30 flex items-center justify-center mb-4">
+            <svg className="h-6 w-6 text-emerald-500 dark:text-emerald-400" fill="none" viewBox="0 0 24 24" stroke="currentColor" aria-hidden="true">
               <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M13 10V3L4 14h7v7l9-11h-7z" />
             </svg>
           </div>
-          <h3 className="text-sm font-medium text-slate-900 mb-1">{t('noGoalsTitle')}</h3>
-          <p className="text-xs text-slate-500 mb-4">{t('noGoalsDesc')}</p>
+          <h3 className="text-sm font-medium text-slate-900 dark:text-white mb-1">{t('noGoalsTitle')}</h3>
+          <p className="text-xs text-slate-500 dark:text-slate-400 mb-4">{t('noGoalsDesc')}</p>
           {selectedChildId && (
             <Link href={`/dashboard/goals/new?childId=${selectedChildId}`} className="btn-primary text-sm py-2 px-4">
               {t('createFirstGoal')}
@@ -190,13 +190,13 @@ export default function GoalsPage() {
                   </div>
                   <div className="flex-1 min-w-0">
                     <div className="flex items-center gap-2 mb-1">
-                      <h3 className="text-sm font-semibold text-slate-900">{goal.title}</h3>
+                      <h3 className="text-sm font-semibold text-slate-900 dark:text-white">{goal.title}</h3>
                       {statusBadge(goal.status)}
                     </div>
                     {goal.description && (
-                      <p className="text-xs text-slate-500 mb-2 line-clamp-2">{goal.description}</p>
+                      <p className="text-xs text-slate-500 dark:text-slate-400 mb-2 line-clamp-2">{goal.description}</p>
                     )}
-                    <div className="flex items-center gap-4 text-xs text-slate-400">
+                    <div className="flex items-center gap-4 text-xs text-slate-400 dark:text-slate-500">
                       <span>{td(goal.dimension as any)}</span>
                       {goal.targetDate && (
                         <span>{t('target', { date: new Date(goal.targetDate).toLocaleDateString() })}</span>
@@ -218,7 +218,7 @@ export default function GoalsPage() {
                     {goal.status === 'active' && (
                       <button
                         onClick={() => handleStatusChange(goal, 'paused')}
-                        className="p-1.5 rounded-lg text-slate-400 hover:bg-slate-100 transition-colors"
+                        className="p-1.5 rounded-lg text-slate-400 dark:text-slate-500 hover:bg-slate-100 dark:hover:bg-slate-700 transition-colors"
                         title={t('pause')}
                       >
                         <svg className="h-4 w-4" fill="none" viewBox="0 0 24 24" stroke="currentColor">

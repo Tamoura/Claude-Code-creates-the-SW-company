@@ -64,9 +64,9 @@ export default function InsightsPage() {
 
   const priorityBadge = (priority: string) => {
     const styles: Record<string, string> = {
-      high: 'bg-red-50 text-red-700',
-      medium: 'bg-amber-50 text-amber-700',
-      low: 'bg-blue-50 text-blue-700',
+      high: 'bg-red-50 dark:bg-red-900/30 text-red-700 dark:text-red-400',
+      medium: 'bg-amber-50 dark:bg-amber-900/30 text-amber-700 dark:text-amber-400',
+      low: 'bg-blue-50 dark:bg-blue-900/30 text-blue-700 dark:text-blue-400',
     };
     return (
       <span className={`text-xs font-medium px-2 py-0.5 rounded-full ${styles[priority] || styles.low}`}>
@@ -79,8 +79,8 @@ export default function InsightsPage() {
     return (
       <div className="flex items-center justify-center min-h-[60vh]">
         <div className="text-center max-w-md">
-          <h2 className="text-xl font-semibold text-slate-900 mb-2">{tc('noChildrenYet')}</h2>
-          <p className="text-sm text-slate-500 mb-6">{t('noChildrenDesc')}</p>
+          <h2 className="text-xl font-semibold text-slate-900 dark:text-white mb-2">{tc('noChildrenYet')}</h2>
+          <p className="text-sm text-slate-500 dark:text-slate-400 mb-6">{t('noChildrenDesc')}</p>
           <Link href="/onboarding/child" className="btn-primary">{tc('addChildProfile')}</Link>
         </div>
       </div>
@@ -91,8 +91,8 @@ export default function InsightsPage() {
     <div className="space-y-6">
       <div className="flex items-center justify-between">
         <div>
-          <h1 className="text-2xl font-bold text-slate-900">{t('title')}</h1>
-          <p className="text-sm text-slate-500 mt-1">
+          <h1 className="text-2xl font-bold text-slate-900 dark:text-white">{t('title')}</h1>
+          <p className="text-sm text-slate-500 dark:text-slate-400 mt-1">
             {t('subtitle')}
           </p>
         </div>
@@ -100,7 +100,7 @@ export default function InsightsPage() {
           <select
             value={selectedChildId || ''}
             onChange={(e) => setSelectedChildId(e.target.value)}
-            className="px-3 py-2 border border-slate-200 rounded-lg text-sm"
+            className="px-3 py-2 border border-slate-200 dark:border-slate-700 rounded-lg text-sm dark:bg-slate-800 dark:text-white"
             aria-label={tc('selectChild')}
           >
             {children.map(c => <option key={c.id} value={c.id}>{c.name}</option>)}
@@ -109,29 +109,29 @@ export default function InsightsPage() {
       </div>
 
       {error && (
-        <div className="card bg-red-50 border border-red-200" role="alert">
-          <p className="text-sm text-red-700">{error}</p>
+        <div className="card bg-red-50 dark:bg-red-900/30 border border-red-200 dark:border-slate-700" role="alert">
+          <p className="text-sm text-red-700 dark:text-red-400">{error}</p>
         </div>
       )}
 
       {loading ? (
         <div className="space-y-4">
           {[1, 2, 3, 4].map(i => (
-            <div key={i} className="h-32 bg-slate-100 rounded-2xl animate-pulse" />
+            <div key={i} className="h-32 bg-slate-100 dark:bg-slate-800 rounded-2xl animate-pulse" />
           ))}
         </div>
       ) : insights ? (
         <>
           {/* Summary */}
           <div className="card border-l-4 border-l-emerald-500">
-            <h2 className="text-lg font-semibold text-slate-900 mb-2">{t('summary')}</h2>
-            <p className="text-sm text-slate-600">{insights.summary}</p>
+            <h2 className="text-lg font-semibold text-slate-900 dark:text-white mb-2">{t('summary')}</h2>
+            <p className="text-sm text-slate-600 dark:text-slate-300">{insights.summary}</p>
           </div>
 
           {/* Strengths */}
           {insights.strengths.length > 0 && (
             <section>
-              <h2 className="text-lg font-semibold text-slate-900 mb-3">{t('strengths')}</h2>
+              <h2 className="text-lg font-semibold text-slate-900 dark:text-white mb-3">{t('strengths')}</h2>
               <div className="grid gap-3 sm:grid-cols-2 lg:grid-cols-3">
                 {insights.strengths.map((s, i) => {
                   const dim = getDimensionBySlug(s.dimension);
@@ -141,10 +141,10 @@ export default function InsightsPage() {
                         <span className="text-2xl font-bold" style={{ color: dim?.colour || '#10B981' }}>
                           {s.score}
                         </span>
-                        <span className="text-xs text-slate-400">/100</span>
+                        <span className="text-xs text-slate-400 dark:text-slate-500">/100</span>
                       </div>
-                      <h3 className="text-sm font-semibold text-slate-900 mb-1">{s.title}</h3>
-                      <p className="text-xs text-slate-500">{s.detail}</p>
+                      <h3 className="text-sm font-semibold text-slate-900 dark:text-white mb-1">{s.title}</h3>
+                      <p className="text-xs text-slate-500 dark:text-slate-400">{s.detail}</p>
                     </div>
                   );
                 })}
@@ -155,7 +155,7 @@ export default function InsightsPage() {
           {/* Areas for Growth */}
           {insights.areasForGrowth.length > 0 && (
             <section>
-              <h2 className="text-lg font-semibold text-slate-900 mb-3">{t('areasForGrowth')}</h2>
+              <h2 className="text-lg font-semibold text-slate-900 dark:text-white mb-3">{t('areasForGrowth')}</h2>
               <div className="space-y-3">
                 {insights.areasForGrowth.map((a, i) => {
                   const dim = getDimensionBySlug(a.dimension);
@@ -169,12 +169,12 @@ export default function InsightsPage() {
                           {a.score}
                         </div>
                         <div>
-                          <h3 className="text-sm font-semibold text-slate-900 mb-1">{a.title}</h3>
-                          <p className="text-xs text-slate-500 mb-2">{a.detail}</p>
+                          <h3 className="text-sm font-semibold text-slate-900 dark:text-white mb-1">{a.title}</h3>
+                          <p className="text-xs text-slate-500 dark:text-slate-400 mb-2">{a.detail}</p>
                           {a.suggestions.length > 0 && (
                             <ul className="space-y-1">
                               {a.suggestions.map((suggestion, j) => (
-                                <li key={j} className="text-xs text-slate-600 flex items-start gap-1.5">
+                                <li key={j} className="text-xs text-slate-600 dark:text-slate-300 flex items-start gap-1.5">
                                   <svg className="h-3 w-3 text-emerald-500 flex-shrink-0 mt-0.5" fill="none" viewBox="0 0 24 24" stroke="currentColor">
                                     <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={3} d="M9 5l7 7-7 7" />
                                   </svg>
@@ -195,14 +195,14 @@ export default function InsightsPage() {
           {/* Recommendations */}
           {insights.recommendations.length > 0 && (
             <section>
-              <h2 className="text-lg font-semibold text-slate-900 mb-3">{t('recommendations')}</h2>
+              <h2 className="text-lg font-semibold text-slate-900 dark:text-white mb-3">{t('recommendations')}</h2>
               <div className="space-y-2">
                 {insights.recommendations.map((r, i) => (
                   <div key={i} className="card flex items-start gap-3">
                     <div className="flex-shrink-0 mt-0.5">
                       {priorityBadge(r.priority)}
                     </div>
-                    <p className="text-sm text-slate-700">{r.message}</p>
+                    <p className="text-sm text-slate-700 dark:text-slate-300">{r.message}</p>
                   </div>
                 ))}
               </div>
@@ -211,11 +211,11 @@ export default function InsightsPage() {
 
           {/* Dimension Trends */}
           <section>
-            <h2 className="text-lg font-semibold text-slate-900 mb-3">{t('dimensionTrends')}</h2>
+            <h2 className="text-lg font-semibold text-slate-900 dark:text-white mb-3">{t('dimensionTrends')}</h2>
             <div className="card">
               <div className="flex items-center gap-2 mb-4">
-                <span className="text-sm text-slate-600">{t('overall')}</span>
-                <span className="text-sm font-medium text-slate-900 capitalize">
+                <span className="text-sm text-slate-600 dark:text-slate-300">{t('overall')}</span>
+                <span className="text-sm font-medium text-slate-900 dark:text-white capitalize">
                   {insights.trends.overallDirection.replace('_', ' ')}
                 </span>
                 {trendIcon(insights.trends.overallDirection)}
@@ -224,12 +224,12 @@ export default function InsightsPage() {
                 {Object.entries(insights.trends.dimensionTrends).map(([dim, trend]) => {
                   const dimInfo = getDimensionBySlug(dim);
                   return (
-                    <div key={dim} className="flex items-center gap-2 p-2 rounded-lg bg-slate-50">
+                    <div key={dim} className="flex items-center gap-2 p-2 rounded-lg bg-slate-50 dark:bg-slate-900">
                       <span
                         className="h-2 w-2 rounded-full flex-shrink-0"
                         style={{ backgroundColor: dimInfo?.colour || '#94a3b8' }}
                       />
-                      <span className="text-xs text-slate-600 flex-1">{td(dim as any)}</span>
+                      <span className="text-xs text-slate-600 dark:text-slate-300 flex-1">{td(dim as any)}</span>
                       {trendIcon(trend)}
                     </div>
                   );
@@ -238,14 +238,14 @@ export default function InsightsPage() {
             </div>
           </section>
 
-          <p className="text-xs text-slate-400 text-center">
+          <p className="text-xs text-slate-400 dark:text-slate-500 text-center">
             {t('generatedAt', { time: new Date(insights.generatedAt).toLocaleString() })}
           </p>
         </>
       ) : (
         <div className="card text-center py-12">
-          <h3 className="text-sm font-medium text-slate-900 mb-1">{t('noInsightsTitle')}</h3>
-          <p className="text-xs text-slate-500 mb-4">
+          <h3 className="text-sm font-medium text-slate-900 dark:text-white mb-1">{t('noInsightsTitle')}</h3>
+          <p className="text-xs text-slate-500 dark:text-slate-400 mb-4">
             {t('noInsightsDesc')}
           </p>
           <Link href="/dashboard/observe" className="btn-primary text-sm py-2 px-4">
