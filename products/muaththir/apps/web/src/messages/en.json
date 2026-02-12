@@ -406,7 +406,11 @@
     "exportDesc": "Download all your children's data as a JSON file.",
     "exportButton": "Download All Data",
     "exporting": "Exporting...",
-    "exportError": "Failed to export data. Please try again."
+    "exportError": "Failed to export data. Please try again.",
+    "quickLinks": "Quick Links",
+    "familySharing": "Family Sharing",
+    "notifications": "Notifications",
+    "subscriptionLink": "Subscription"
   },
   "onboarding": {
     "welcomeTitle": "Welcome to Mu'aththir",
@@ -590,7 +594,13 @@
     "pending": "Pending",
     "accepted": "Accepted",
     "remove": "Remove",
-    "inviteSent": "Invitation sent!"
+    "inviteSent": "Invitation sent!",
+    "declined": "Declined",
+    "errorInvite": "Failed to send invitation. Please try again.",
+    "errorLoad": "Failed to load shares.",
+    "errorRemove": "Failed to remove share.",
+    "sending": "Sending...",
+    "removing": "Removing..."
   },
   "generateReport": {
     "title": "Generate Development Report",
@@ -672,6 +682,14 @@
     "demoLoading": "Setting up your demo experience...",
     "demoError": "Could not start demo. Please try again.",
     "tryDemo": "Try Demo Account"
+  },
+  "milestonePreview": {
+    "title": "Milestones",
+    "viewAll": "View All Milestones",
+    "achieved": "Achieved",
+    "notAchieved": "Not yet achieved",
+    "noMilestones": "No milestones available for this dimension.",
+    "loading": "Loading milestones..."
   },
   "dashboardLayout": {
     "loading": "Loading...",

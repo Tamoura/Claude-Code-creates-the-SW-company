@@ -406,7 +406,11 @@
     "exportDesc": "تحميل جميع بيانات أطفالك كملف JSON.",
     "exportButton": "تحميل جميع البيانات",
     "exporting": "جارٍ التصدير...",
-    "exportError": "فشل تصدير البيانات. حاول مرة أخرى."
+    "exportError": "فشل تصدير البيانات. حاول مرة أخرى.",
+    "quickLinks": "روابط سريعة",
+    "familySharing": "مشاركة العائلة",
+    "notifications": "الإشعارات",
+    "subscriptionLink": "الاشتراك"
   },
   "onboarding": {
     "welcomeTitle": "مرحباً بك في مؤثّر",
@@ -590,7 +594,13 @@
     "pending": "قيد الانتظار",
     "accepted": "مقبول",
     "remove": "إزالة",
-    "inviteSent": "تم إرسال الدعوة!"
+    "inviteSent": "تم إرسال الدعوة!",
+    "declined": "مرفوض",
+    "errorInvite": "فشل إرسال الدعوة. حاول مرة أخرى.",
+    "errorLoad": "فشل تحميل المشاركات.",
+    "errorRemove": "فشل إزالة المشاركة.",
+    "sending": "جارٍ الإرسال...",
+    "removing": "جارٍ الإزالة..."
   },
   "generateReport": {
     "title": "إنشاء تقرير التطور",
@@ -672,6 +682,14 @@
     "demoLoading": "جارٍ إعداد تجربتك التجريبية...",
     "demoError": "تعذّر بدء التجربة. حاول مرة أخرى.",
     "tryDemo": "جرّب حسابًا تجريبيًا"
+  },
+  "milestonePreview": {
+    "title": "المعالم",
+    "viewAll": "عرض جميع المعالم",
+    "achieved": "تم تحقيقه",
+    "notAchieved": "لم يتحقق بعد",
+    "noMilestones": "لا توجد معالم متاحة لهذا البُعد.",
+    "loading": "جارٍ تحميل المعالم..."
   },
   "dashboardLayout": {
     "loading": "جارٍ التحميل...",

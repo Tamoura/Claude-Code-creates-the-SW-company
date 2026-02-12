@@ -1,50 +1,83 @@
 'use client';
 
-import { useState } from 'react';
+import { useState, useEffect, useCallback } from 'react';
 import Link from 'next/link';
 import { useTranslations } from 'next-intl';
-
-interface FamilyShare {
-  id: string;
-  email: string;
-  role: 'viewer' | 'contributor';
-  status: 'pending' | 'accepted';
-  invitedAt: string;
-}
+import { apiClient, type FamilyShare } from '../../../../lib/api-client';
 
 export default function SharingSettingsPage() {
   const t = useTranslations('sharing');
   const tc = useTranslations('common');
 
   const [shares, setShares] = useState<FamilyShare[]>([]);
+  const [loading, setLoading] = useState(true);
   const [email, setEmail] = useState('');
   const [role, setRole] = useState<'viewer' | 'contributor'>('viewer');
   const [successMessage, setSuccessMessage] = useState('');
+  const [errorMessage, setErrorMessage] = useState('');
+  const [submitting, setSubmitting] = useState(false);
+  const [removingId, setRemovingId] = useState<string | null>(null);
 
-  const handleInvite = (e: React.FormEvent) => {
+  const loadShares = useCallback(async () => {
+    try {
+      const data = await apiClient.getShares();
+      setShares(data);
+    } catch {
+      setErrorMessage(t('errorLoad'));
+    } finally {
+      setLoading(false);
+    }
+  }, [t]);
+
+  useEffect(() => {
+    loadShares();
+  }, [loadShares]);
+
+  const handleInvite = async (e: React.FormEvent) => {
     e.preventDefault();
+    setErrorMessage('');
+    setSuccessMessage('');
 
     const trimmed = email.trim();
     if (!trimmed) return;
 
-    const newShare: FamilyShare = {
-      id: `share-${Date.now()}-${Math.random().toString(36).slice(2, 9)}`,
-      email: trimmed,
-      role,
-      status: 'pending',
-      invitedAt: new Date().toISOString(),
-    };
-
-    setShares((prev) => [...prev, newShare]);
-    setEmail('');
-    setSuccessMessage(t('inviteSent'));
-
-    // Auto-dismiss success message after 3 seconds
-    setTimeout(() => setSuccessMessage(''), 3000);
+    setSubmitting(true);
+    try {
+      const newShare = await apiClient.inviteShare({ email: trimmed, role });
+      setShares((prev) => [newShare, ...prev]);
+      setEmail('');
+      setSuccessMessage(t('inviteSent'));
+      setTimeout(() => setSuccessMessage(''), 3000);
+    } catch (err) {
+      setErrorMessage(err instanceof Error ? err.message : t('errorInvite'));
+    } finally {
+      setSubmitting(false);
+    }
   };
 
-  const handleRemove = (id: string) => {
-    setShares((prev) => prev.filter((s) => s.id !== id));
+  const handleRemove = async (id: string) => {
+    setRemovingId(id);
+    try {
+      await apiClient.revokeShare(id);
+      setShares((prev) => prev.filter((s) => s.id !== id));
+    } catch {
+      setErrorMessage(t('errorRemove'));
+    } finally {
+      setRemovingId(null);
+    }
+  };
+
+  const getStatusLabel = (status: string) => {
+    if (status === 'pending') return t('pending');
+    if (status === 'accepted') return t('accepted');
+    if (status === 'declined') return t('declined');
+    return status;
+  };
+
+  const getStatusClasses = (status: string) => {
+    if (status === 'accepted') return 'bg-emerald-50 dark:bg-emerald-900/30 text-emerald-700 dark:text-emerald-400';
+    if (status === 'declined') return 'bg-red-50 dark:bg-red-900/30 text-red-700 dark:text-red-400';
+    return 'bg-amber-50 dark:bg-amber-900/30 text-amber-700 dark:text-amber-400';
   };
 
   return (
@@ -53,28 +86,37 @@ export default function SharingSettingsPage() {
       <div>
         <Link
           href="/dashboard/settings"
-          className="text-sm text-emerald-600 hover:text-emerald-700 font-medium"
+          className="text-sm text-emerald-600 dark:text-emerald-400 hover:text-emerald-700 dark:hover:text-emerald-300 font-medium"
         >
           {tc('back')}
         </Link>
-        <h1 className="text-2xl font-bold text-slate-900 mt-2">
+        <h1 className="text-2xl font-bold text-slate-900 dark:text-white mt-2">
           {t('title')}
         </h1>
-        <p className="text-sm text-slate-500 mt-1">{t('description')}</p>
+        <p className="text-sm text-slate-500 dark:text-slate-400 mt-1">{t('description')}</p>
       </div>
 
       {/* Invite Form */}
       <form onSubmit={handleInvite} className="card space-y-4">
-        <h2 className="text-lg font-semibold text-slate-900">
+        <h2 className="text-lg font-semibold text-slate-900 dark:text-white">
           {t('invite')}
         </h2>
 
         {successMessage && (
           <div
-            className="rounded-xl bg-emerald-50 p-3 text-sm text-emerald-700"
+            className="rounded-xl bg-emerald-50 dark:bg-emerald-900/30 p-3 text-sm text-emerald-700 dark:text-emerald-400"
             role="status"
           >
             {successMessage}
+          </div>
+        )}
+
+        {errorMessage && (
+          <div
+            className="rounded-xl bg-red-50 dark:bg-red-900/30 p-3 text-sm text-red-700 dark:text-red-400"
+            role="alert"
+          >
+            {errorMessage}
           </div>
         )}
 
@@ -89,6 +131,7 @@ export default function SharingSettingsPage() {
             placeholder={t('invitePlaceholder')}
             value={email}
             onChange={(e) => setEmail(e.target.value)}
+            disabled={submitting}
           />
         </div>
 
@@ -103,28 +146,34 @@ export default function SharingSettingsPage() {
             onChange={(e) =>
               setRole(e.target.value as 'viewer' | 'contributor')
             }
+            disabled={submitting}
           >
             <option value="viewer">{t('roleViewer')}</option>
             <option value="contributor">{t('roleContributor')}</option>
           </select>
         </div>
 
-        <button type="submit" className="btn-primary w-full">
-          {t('invite')}
+        <button type="submit" className="btn-primary w-full" disabled={submitting}>
+          {submitting ? t('sending') : t('invite')}
         </button>
       </form>
 
       {/* Active Shares List */}
       <div className="card space-y-4">
-        <h2 className="text-lg font-semibold text-slate-900">
+        <h2 className="text-lg font-semibold text-slate-900 dark:text-white">
           {t('title')}
         </h2>
 
-        {shares.length === 0 ? (
+        {loading ? (
           <div className="text-center py-8">
-            <div className="mx-auto h-12 w-12 rounded-2xl bg-slate-100 flex items-center justify-center mb-4">
+            <div className="inline-block h-6 w-6 animate-spin rounded-full border-2 border-solid border-emerald-600 border-r-transparent" />
+            <p className="text-sm text-slate-500 dark:text-slate-400 mt-2">{tc('loading')}</p>
+          </div>
+        ) : shares.length === 0 ? (
+          <div className="text-center py-8">
+            <div className="mx-auto h-12 w-12 rounded-2xl bg-slate-100 dark:bg-slate-700 flex items-center justify-center mb-4">
               <svg
-                className="h-6 w-6 text-slate-400"
+                className="h-6 w-6 text-slate-400 dark:text-slate-500"
                 fill="none"
                 viewBox="0 0 24 24"
                 stroke="currentColor"
@@ -138,10 +187,10 @@ export default function SharingSettingsPage() {
                 />
               </svg>
             </div>
-            <p className="text-sm font-medium text-slate-700">
+            <p className="text-sm font-medium text-slate-700 dark:text-slate-300">
               {t('noShares')}
             </p>
-            <p className="text-xs text-slate-500 mt-1">
+            <p className="text-xs text-slate-500 dark:text-slate-400 mt-1">
               {t('noSharesDesc')}
             </p>
           </div>
@@ -150,18 +199,18 @@ export default function SharingSettingsPage() {
             {shares.map((share) => (
               <div
                 key={share.id}
-                className="flex items-center justify-between border border-slate-100 rounded-xl p-4"
+                className="flex items-center justify-between border border-slate-100 dark:border-slate-700 rounded-xl p-4"
               >
                 <div className="flex-1 min-w-0">
-                  <p className="text-sm font-medium text-slate-900 truncate">
-                    {share.email}
+                  <p className="text-sm font-medium text-slate-900 dark:text-white truncate">
+                    {share.inviteeEmail}
                   </p>
                   <div className="flex items-center gap-2 mt-1">
                     <span
                       className={`text-xs px-2 py-0.5 rounded-full font-medium ${
                         share.role === 'viewer'
-                          ? 'bg-blue-50 text-blue-700'
-                          : 'bg-purple-50 text-purple-700'
+                          ? 'bg-blue-50 dark:bg-blue-900/30 text-blue-700 dark:text-blue-400'
+                          : 'bg-purple-50 dark:bg-purple-900/30 text-purple-700 dark:text-purple-400'
                       }`}
                     >
                       {share.role === 'viewer'
@@ -169,24 +218,19 @@ export default function SharingSettingsPage() {
                         : t('roleContributor')}
                     </span>
                     <span
-                      className={`text-xs px-2 py-0.5 rounded-full font-medium ${
-                        share.status === 'pending'
-                          ? 'bg-amber-50 text-amber-700'
-                          : 'bg-emerald-50 text-emerald-700'
-                      }`}
+                      className={`text-xs px-2 py-0.5 rounded-full font-medium ${getStatusClasses(share.status)}`}
                     >
-                      {share.status === 'pending'
-                        ? t('pending')
-                        : t('accepted')}
+                      {getStatusLabel(share.status)}
                     </span>
                   </div>
                 </div>
                 <button
                   type="button"
                   onClick={() => handleRemove(share.id)}
-                  className="text-xs text-red-600 hover:text-red-700 font-medium ml-4"
+                  disabled={removingId === share.id}
+                  className="text-xs text-red-600 dark:text-red-400 hover:text-red-700 dark:hover:text-red-300 font-medium ms-4 disabled:opacity-50"
                 >
-                  {t('remove')}
+                  {removingId === share.id ? t('removing') : t('remove')}
                 </button>
               </div>
             ))}
