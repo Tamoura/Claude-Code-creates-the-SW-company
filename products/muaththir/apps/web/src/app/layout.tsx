@@ -18,6 +18,9 @@ export const metadata: Metadata = {
     'holistic development',
     'milestone tracking',
   ],
+  icons: {
+    icon: '/favicon.svg',
+  },
 };
 
 export default async function RootLayout({

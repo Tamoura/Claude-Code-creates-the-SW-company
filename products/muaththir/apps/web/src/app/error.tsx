@@ -8,11 +8,11 @@ export default function GlobalError({
   reset: () => void;
 }) {
   return (
-    <div className="min-h-screen flex items-center justify-center bg-slate-50 px-4">
+    <div className="min-h-screen flex items-center justify-center bg-slate-50 dark:bg-slate-900 px-4">
       <div className="card max-w-md w-full text-center">
-        <div className="mx-auto mb-4 flex h-12 w-12 items-center justify-center rounded-full bg-red-100">
+        <div className="mx-auto mb-4 flex h-12 w-12 items-center justify-center rounded-full bg-red-100 dark:bg-red-900/30">
           <svg
-            className="h-6 w-6 text-red-600"
+            className="h-6 w-6 text-red-600 dark:text-red-400"
             fill="none"
             viewBox="0 0 24 24"
             stroke="currentColor"
@@ -26,10 +26,10 @@ export default function GlobalError({
             />
           </svg>
         </div>
-        <h2 className="text-lg font-semibold text-slate-900 mb-2">
+        <h2 className="text-lg font-semibold text-slate-900 dark:text-white mb-2">
           Something went wrong
         </h2>
-        <p className="text-sm text-slate-500 mb-6">
+        <p className="text-sm text-slate-500 dark:text-slate-400 mb-6">
           An unexpected error occurred. Please try again or return to the
           home page.
         </p>
