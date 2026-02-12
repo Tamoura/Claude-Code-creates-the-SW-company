@@ -21,6 +21,7 @@ import dashboardRoutes from './routes/dashboard';
 import insightsRoutes from './routes/insights';
 import profileRoutes from './routes/profile';
 import goalTemplateRoutes from './routes/goal-templates';
+import reportRoutes from './routes/reports';
 
 import { logger } from './utils/logger';
 import { AppError, ValidationError } from './lib/errors';
@@ -162,6 +163,7 @@ export async function buildApp(
   await app.register(insightsRoutes, { prefix: '/api/dashboard' });
   await app.register(profileRoutes, { prefix: '/api/profile' });
   await app.register(goalTemplateRoutes, { prefix: '/api/goal-templates' });
+  await app.register(reportRoutes, { prefix: '/api/children' });
 
   return app;
 }
