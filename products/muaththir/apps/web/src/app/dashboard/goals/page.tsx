@@ -190,7 +190,12 @@ export default function GoalsPage() {
                   </div>
                   <div className="flex-1 min-w-0">
                     <div className="flex items-center gap-2 mb-1">
-                      <h3 className="text-sm font-semibold text-slate-900 dark:text-white">{goal.title}</h3>
+                      <Link
+                        href={`/dashboard/goals/${goal.id}?childId=${selectedChildId}`}
+                        className="text-sm font-semibold text-slate-900 dark:text-white hover:text-emerald-600 dark:hover:text-emerald-400 transition-colors"
+                      >
+                        {goal.title}
+                      </Link>
                       {statusBadge(goal.status)}
                     </div>
                     {goal.description && (
