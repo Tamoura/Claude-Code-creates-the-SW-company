@@ -26,6 +26,20 @@ export async function setupTestDb(): Promise<void> {
 }
 
 export async function cleanDb(): Promise<void> {
+  await prisma.bookmark.deleteMany();
+  await prisma.notification.deleteMany();
+  await prisma.jobApplication.deleteMany();
+  await prisma.job.deleteMany();
+  await prisma.careerSimulation.deleteMany();
+  await prisma.learningPath.deleteMany();
+  await prisma.assessmentAnswer.deleteMany();
+  await prisma.assessment.deleteMany();
+  await prisma.question.deleteMany();
+  await prisma.domainScore.deleteMany();
+  await prisma.profile.deleteMany();
+  await prisma.resource.deleteMany();
+  await prisma.emailVerification.deleteMany();
+  await prisma.passwordReset.deleteMany();
   await prisma.apiKey.deleteMany();
   await prisma.session.deleteMany();
   await prisma.auditLog.deleteMany();

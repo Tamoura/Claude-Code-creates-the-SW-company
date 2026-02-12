@@ -9,28 +9,35 @@ Set up backend API foundation for ConnectGRC (AI-first GRC platform).
 Scaffolding layer that all features build on.
 
 ## Key Decisions
-- Reuse @connectsw/shared for logger, crypto, prisma, redis plugins
-- Adapt auth plugin from stablecoin-gateway (roles: talent, employer, admin)
-- Adapt observability plugin from stablecoin-gateway
-- Copy error classes from invoiceforge
-- Copy pagination helper from invoiceforge
+- Adapted plugins from component registry (not @connectsw/shared)
+- Auth plugin adapted from stablecoin-gateway (roles: TALENT, EMPLOYER, ADMIN)
+- Observability plugin adapted from stablecoin-gateway
+- Error classes copied from invoiceforge
+- Pagination helper copied from invoiceforge
+- Logger adapted from shared package (suppresses in test mode)
 - Database: postgresql://postgres@localhost:5432/connectgrc_dev
 - Test DB: postgresql://postgres@localhost:5432/connectgrc_test
 
 ## Acceptance Criteria
-- [ ] Fastify server starts on port 5006
-- [ ] GET /health returns 200 with status, version, uptime, database status
-- [ ] Prisma client generated and connects to database
-- [ ] At least 5 integration tests passing
-- [ ] All plugins loaded in correct order
-- [ ] Error handling returns consistent format
-- [ ] Environment variables validated at startup
+- [x] Fastify server starts on port 5006
+- [x] GET /health returns 200 with status, version, uptime, database status
+- [x] Prisma client generated and connects to database
+- [x] At least 5 integration tests passing (36 passing)
+- [x] All plugins loaded in correct order (CORS > Rate Limit > Prisma > Redis > JWT > Auth > Observability > Routes)
+- [x] Error handling returns consistent format
+- [x] Environment variables validated at startup (Zod schema)
 
 ## Progress
-- [ ] package.json + tsconfig.json + .env.example + .gitignore
-- [ ] Prisma schema + migration + seed
-- [ ] App core (app.ts, server.ts, config.ts)
-- [ ] Plugins (prisma, auth, redis, observability)
-- [ ] Utilities (logger, crypto, errors, pagination)
-- [ ] Routes (health, index)
-- [ ] Test setup + integration tests
+- [x] package.json + tsconfig.json + .env.example + .gitignore
+- [x] Prisma schema + migration + seed
+- [x] App core (app.ts, server.ts, config.ts)
+- [x] Plugins (prisma, auth, redis, observability)
+- [x] Utilities (logger, crypto, errors, pagination)
+- [x] Routes (health, index)
+- [x] Test setup + 36 integration tests across 4 suites
+- [x] Port registry updated
+
+## Test Users (after seeding)
+- admin@connectgrc.com (password: Test123!@#) - ADMIN role
+- talent@connectgrc.com (password: Test123!@#) - TALENT role
+- employer@connectgrc.com (password: Test123!@#) - EMPLOYER role

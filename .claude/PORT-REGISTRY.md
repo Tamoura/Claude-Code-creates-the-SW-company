@@ -2,7 +2,7 @@
 
 **Purpose**: Centralized port allocation to prevent conflicts when running multiple products simultaneously.
 
-**Last Updated**: 2026-02-07
+**Last Updated**: 2026-02-11
 
 ## Port Allocation Rules
 
