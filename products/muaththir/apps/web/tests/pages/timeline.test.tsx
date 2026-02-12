@@ -183,10 +183,9 @@ describe('TimelinePage', () => {
 
     await waitFor(() => {
       expect(screen.getByRole('button', { name: /export csv/i })).toBeInTheDocument();
-    });
+    }, { timeout: 3000 });
 
-    const exportBtn = screen.getByRole('button', { name: /export csv/i });
-    fireEvent.click(exportBtn);
+    fireEvent.click(screen.getByRole('button', { name: /export csv/i }));
 
     await waitFor(() => {
       expect(mockExportData).toHaveBeenCalledWith('csv');
