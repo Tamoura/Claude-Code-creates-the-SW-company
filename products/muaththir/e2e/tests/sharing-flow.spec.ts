@@ -249,12 +249,12 @@ test.describe('Sharing Settings Flow', () => {
     await expect(page.locator('h1').first()).toBeVisible({ timeout: 15000 });
 
     // Navigate to sharing sub-page via the sharing link
-    const sharingLink = page.locator('a[href="/dashboard/settings/sharing"]');
+    const sharingLink = page.getByRole('main').locator('a[href="/dashboard/settings/sharing"]');
     await expect(sharingLink).toBeVisible({ timeout: 10000 });
     await sharingLink.click({ force: true });
 
     // Verify the sharing page loaded
-    await expect(page.getByText('Family Sharing')).toBeVisible({ timeout: 15000 });
+    await expect(page.getByRole('main').getByText('Family Sharing')).toBeVisible({ timeout: 15000 });
 
     // Empty state should be visible
     await expect(page.getByText('No family members invited yet')).toBeVisible({ timeout: 10000 });
@@ -265,11 +265,11 @@ test.describe('Sharing Settings Flow', () => {
     await navigateToSettings(page);
     await expect(page.locator('h1').first()).toBeVisible({ timeout: 15000 });
 
-    const sharingLink = page.locator('a[href="/dashboard/settings/sharing"]');
+    const sharingLink = page.getByRole('main').locator('a[href="/dashboard/settings/sharing"]');
     await expect(sharingLink).toBeVisible({ timeout: 10000 });
     await sharingLink.click({ force: true });
 
-    await expect(page.getByText('Family Sharing')).toBeVisible({ timeout: 15000 });
+    await expect(page.getByRole('main').getByText('Family Sharing')).toBeVisible({ timeout: 15000 });
 
     // Email input should exist
     const emailInput = page.locator('#invite-email');
@@ -288,11 +288,11 @@ test.describe('Sharing Settings Flow', () => {
     await navigateToSettings(page);
     await expect(page.locator('h1').first()).toBeVisible({ timeout: 15000 });
 
-    const sharingLink = page.locator('a[href="/dashboard/settings/sharing"]');
+    const sharingLink = page.getByRole('main').locator('a[href="/dashboard/settings/sharing"]');
     await expect(sharingLink).toBeVisible({ timeout: 10000 });
     await sharingLink.click({ force: true });
 
-    await expect(page.getByText('Family Sharing')).toBeVisible({ timeout: 15000 });
+    await expect(page.getByRole('main').getByText('Family Sharing')).toBeVisible({ timeout: 15000 });
 
     // Should show the two shares from mock data
     await expect(page.getByText('grandma@example.com')).toBeVisible({ timeout: 10000 });
@@ -312,11 +312,11 @@ test.describe('Sharing Settings Flow', () => {
     await navigateToSettings(page);
     await expect(page.locator('h1').first()).toBeVisible({ timeout: 15000 });
 
-    const sharingLink = page.locator('a[href="/dashboard/settings/sharing"]');
+    const sharingLink = page.getByRole('main').locator('a[href="/dashboard/settings/sharing"]');
     await expect(sharingLink).toBeVisible({ timeout: 10000 });
     await sharingLink.click({ force: true });
 
-    await expect(page.getByText('Family Sharing')).toBeVisible({ timeout: 15000 });
+    await expect(page.getByRole('main').getByText('Family Sharing')).toBeVisible({ timeout: 15000 });
     await expect(page.getByText('grandma@example.com')).toBeVisible({ timeout: 10000 });
 
     // Each share should have a Remove button
@@ -329,11 +329,11 @@ test.describe('Sharing Settings Flow', () => {
     await navigateToSettings(page);
     await expect(page.locator('h1').first()).toBeVisible({ timeout: 15000 });
 
-    const sharingLink = page.locator('a[href="/dashboard/settings/sharing"]');
+    const sharingLink = page.getByRole('main').locator('a[href="/dashboard/settings/sharing"]');
     await expect(sharingLink).toBeVisible({ timeout: 10000 });
     await sharingLink.click({ force: true });
 
-    await expect(page.getByText('Family Sharing')).toBeVisible({ timeout: 15000 });
+    await expect(page.getByRole('main').getByText('Family Sharing')).toBeVisible({ timeout: 15000 });
 
     // Back link should exist within the main content area (not sidebar)
     const backLink = page.locator('main a[href="/dashboard/settings"]');

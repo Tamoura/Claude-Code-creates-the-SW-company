@@ -1,10 +1,12 @@
 import { Parent } from '@prisma/client';
+import type { EmailService } from '../plugins/email';
 
 // Extend Fastify types
 declare module 'fastify' {
   interface FastifyInstance {
     prisma: import('@prisma/client').PrismaClient;
     authenticate: (request: FastifyRequest) => Promise<void>;
+    email: EmailService;
   }
 
   interface FastifyRequest {

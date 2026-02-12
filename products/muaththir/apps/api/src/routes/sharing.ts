@@ -5,8 +5,8 @@ import {
   ConflictError,
   ForbiddenError,
   NotFoundError,
-  ValidationError,
 } from '../lib/errors';
+import { validateBody } from '../utils/validation';
 
 const SHARE_ROLES = ['viewer', 'contributor'] as const;
 
@@ -24,17 +24,6 @@ const updateShareSchema = z.object({
 const respondSchema = z.object({
   action: z.enum(['accept', 'decline']),
 });
-
-function validateBody<T>(schema: z.ZodType<T>, body: unknown): T {
-  const parsed = schema.safeParse(body);
-  if (!parsed.success) {
-    throw new ValidationError(
-      parsed.error.errors[0]?.message || 'Validation failed',
-      parsed.error.flatten().fieldErrors as Record<string, string[]>
-    );
-  }
-  return parsed.data;
-}
 
 function formatShare(share: {
   id: string;

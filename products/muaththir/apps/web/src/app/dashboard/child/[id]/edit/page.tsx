@@ -1,10 +1,13 @@
 'use client';
 
-import { useState, useEffect } from 'react';
+import { useState, useEffect, useRef } from 'react';
 import Link from 'next/link';
 import { useRouter } from 'next/navigation';
 import { useTranslations } from 'next-intl';
 import { apiClient, type Child } from '../../../../../lib/api-client';
+
+const ACCEPTED_TYPES = ['image/jpeg', 'image/png', 'image/webp'];
+const MAX_FILE_SIZE = 5 * 1024 * 1024; // 5MB
 
 interface EditChildProfilePageProps {
   params: { id: string };
@@ -14,6 +17,7 @@ export default function EditChildProfilePage({ params }: EditChildProfilePagePro
   const router = useRouter();
   const t = useTranslations('editChild');
   const tc = useTranslations('common');
+  const fileInputRef = useRef<HTMLInputElement>(null);
   const [child, setChild] = useState<Child | null>(null);
   const [loading, setLoading] = useState(true);
   const [saving, setSaving] = useState(false);
@@ -30,6 +34,12 @@ export default function EditChildProfilePage({ params }: EditChildProfilePagePro
   const [allergiesText, setAllergiesText] = useState('');
   const [specialNeeds, setSpecialNeeds] = useState('');
 
+  // Photo state
+  const [photoPreview, setPhotoPreview] = useState<string | null>(null);
+  const [photoFile, setPhotoFile] = useState<File | null>(null);
+  const [photoUploading, setPhotoUploading] = useState(false);
+  const [photoError, setPhotoError] = useState<string | null>(null);
+
   useEffect(() => {
     const loadChild = async () => {
       try {
@@ -40,13 +50,18 @@ export default function EditChildProfilePage({ params }: EditChildProfilePagePro
 
         // Pre-fill form
         setName(data.name);
-        setDateOfBirth(data.dateOfBirth.split('T')[0]); // Convert to YYYY-MM-DD
+        setDateOfBirth(data.dateOfBirth.split('T')[0]);
         setGender(data.gender || '');
 
         // Pre-fill health fields
         setMedicalNotes(data.medicalNotes || '');
         setAllergiesText(data.allergies ? data.allergies.join(', ') : '');
         setSpecialNeeds(data.specialNeeds || '');
+
+        // Set existing photo
+        if (data.photoUrl) {
+          setPhotoPreview(data.photoUrl);
+        }
 
         // Auto-expand health section if any health data exists
         if (data.medicalNotes || (data.allergies && data.allergies.length > 0) || data.specialNeeds) {
@@ -61,6 +76,52 @@ export default function EditChildProfilePage({ params }: EditChildProfilePagePro
 
     loadChild();
   }, [params.id]);
+
+  const handlePhotoSelect = (e: React.ChangeEvent<HTMLInputElement>) => {
+    const file = e.target.files?.[0];
+    if (!file) return;
+
+    setPhotoError(null);
+
+    if (!ACCEPTED_TYPES.includes(file.type)) {
+      setPhotoError(t('photoInvalidType'));
+      return;
+    }
+
+    if (file.size > MAX_FILE_SIZE) {
+      setPhotoError(t('photoTooLarge'));
+      return;
+    }
+
+    setPhotoFile(file);
+
+    // Create preview
+    const reader = new FileReader();
+    reader.onload = (ev) => {
+      setPhotoPreview(ev.target?.result as string);
+    };
+    reader.readAsDataURL(file);
+  };
+
+  const handlePhotoUpload = async () => {
+    if (!photoFile || !child) return;
+
+    setPhotoUploading(true);
+    setPhotoError(null);
+
+    try {
+      const updated = await apiClient.uploadChildPhoto(child.id, photoFile);
+      setChild(updated);
+      setPhotoFile(null);
+      if (updated.photoUrl) {
+        setPhotoPreview(updated.photoUrl);
+      }
+    } catch (err) {
+      setPhotoError(err instanceof Error ? err.message : t('photoError'));
+    } finally {
+      setPhotoUploading(false);
+    }
+  };
 
   const handleSubmit = async (e: React.FormEvent) => {
     e.preventDefault();
@@ -84,6 +145,11 @@ export default function EditChildProfilePage({ params }: EditChildProfilePagePro
         allergies: allergies.length > 0 ? allergies : null,
         specialNeeds: specialNeeds || null,
       });
+
+      // Upload photo if a new one was selected but not yet uploaded
+      if (photoFile) {
+        await handlePhotoUpload();
+      }
 
       router.push(`/dashboard/child/${child.id}`);
     } catch (err) {
@@ -125,6 +191,89 @@ export default function EditChildProfilePage({ params }: EditChildProfilePagePro
           {t('backToProfile')}
         </Link>
         <h1 className="text-2xl font-bold text-slate-900 dark:text-white">{t('title')}</h1>
+      </div>
+
+      {/* Photo Upload Section */}
+      <div className="card">
+        <h2 className="text-lg font-semibold text-slate-900 dark:text-white mb-4">
+          {t('photoSection')}
+        </h2>
+        <div className="flex items-center gap-6">
+          {/* Photo Preview */}
+          <div className="relative flex-shrink-0">
+            {photoPreview ? (
+              <div className="h-24 w-24 rounded-full overflow-hidden ring-2 ring-slate-200 dark:ring-slate-600">
+                {/* eslint-disable-next-line @next/next/no-img-element */}
+                <img
+                  src={photoPreview}
+                  alt={child?.name || ''}
+                  className="h-full w-full object-cover"
+                />
+              </div>
+            ) : (
+              <div className="h-24 w-24 rounded-full bg-slate-100 dark:bg-slate-700 flex items-center justify-center ring-2 ring-slate-200 dark:ring-slate-600">
+                <svg
+                  className="h-10 w-10 text-slate-400 dark:text-slate-500"
+                  fill="none"
+                  viewBox="0 0 24 24"
+                  stroke="currentColor"
+                  aria-hidden="true"
+                >
+                  <path
+                    strokeLinecap="round"
+                    strokeLinejoin="round"
+                    strokeWidth={1.5}
+                    d="M16 7a4 4 0 11-8 0 4 4 0 018 0zM12 14a7 7 0 00-7 7h14a7 7 0 00-7-7z"
+                  />
+                </svg>
+              </div>
+            )}
+          </div>
+
+          {/* Upload Controls */}
+          <div className="flex-1">
+            <input
+              ref={fileInputRef}
+              type="file"
+              accept="image/jpeg,image/png,image/webp"
+              onChange={handlePhotoSelect}
+              className="hidden"
+              aria-label={t('uploadPhoto')}
+            />
+            <div className="flex items-center gap-3">
+              <button
+                type="button"
+                onClick={() => fileInputRef.current?.click()}
+                disabled={photoUploading || saving}
+                className="btn-secondary text-sm py-2 px-4"
+              >
+                {photoPreview ? t('changePhoto') : t('uploadPhoto')}
+              </button>
+              {photoFile && !photoUploading && (
+                <button
+                  type="button"
+                  onClick={handlePhotoUpload}
+                  className="btn-primary text-sm py-2 px-4"
+                >
+                  {t('uploadPhoto')}
+                </button>
+              )}
+              {photoUploading && (
+                <span className="text-xs text-slate-500 dark:text-slate-400">
+                  {t('photoUploading')}
+                </span>
+              )}
+            </div>
+            <p className="mt-2 text-xs text-slate-400 dark:text-slate-500">
+              {t('photoHint')}
+            </p>
+            {photoError && (
+              <p className="mt-1 text-xs text-red-600 dark:text-red-400" role="alert">
+                {photoError}
+              </p>
+            )}
+          </div>
+        </div>
       </div>
 
       {/* Edit Form */}

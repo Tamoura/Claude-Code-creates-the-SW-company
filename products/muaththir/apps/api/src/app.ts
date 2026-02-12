@@ -10,6 +10,7 @@ import requestIdPlugin from './plugins/request-id';
 import prismaPlugin from './plugins/prisma';
 import observabilityPlugin from './plugins/observability';
 import authPlugin from './plugins/auth';
+import emailPlugin from './plugins/email';
 
 import healthRoutes from './routes/health';
 import authRoutes from './routes/auth';
@@ -83,6 +84,30 @@ export async function buildApp(
 
   // Cookie (for refresh tokens)
   await app.register(cookie);
+
+  // Multipart (for file uploads) — optional, requires @fastify/multipart
+  try {
+    const multipart = (await import('@fastify/multipart')).default;
+    await app.register(multipart, {
+      limits: { fileSize: 5 * 1024 * 1024, files: 1 },
+    });
+  } catch {
+    logger.info('Photo upload disabled: @fastify/multipart not installed');
+  }
+
+  // Static file serving (uploads directory) — optional, requires @fastify/static
+  try {
+    const path = await import('path');
+    const fastifyStatic = (await import('@fastify/static')).default;
+    const uploadsDir = path.resolve(process.cwd(), 'uploads');
+    await app.register(fastifyStatic, {
+      root: uploadsDir,
+      prefix: '/uploads/',
+      decorateReply: false,
+    });
+  } catch {
+    logger.info('Static file serving disabled: @fastify/static not installed');
+  }
 
   // Explicit security headers (supplement Helmet defaults)
   app.addHook('onSend', async (_request, reply) => {
@@ -163,11 +188,12 @@ export async function buildApp(
     });
   });
 
-  // Plugins (order: request-id -> observability -> prisma -> auth)
+  // Plugins (order: request-id -> observability -> prisma -> auth -> email)
   await app.register(requestIdPlugin);
   await app.register(observabilityPlugin);
   await app.register(prismaPlugin);
   await app.register(authPlugin);
+  await app.register(emailPlugin);
 
   // Routes
   await app.register(healthRoutes, { prefix: '/api' });
@@ -184,6 +210,14 @@ export async function buildApp(
   await app.register(reportRoutes, { prefix: '/api/children' });
   await app.register(sharingRoutes, { prefix: '/api/sharing' });
   await app.register(exportRoutes, { prefix: '/api/export' });
+
+  // Photo upload routes — optional, requires @fastify/multipart
+  try {
+    const childPhotoRoutes = (await import('./routes/children-photo')).default;
+    await app.register(childPhotoRoutes, { prefix: '/api/children' });
+  } catch {
+    logger.info('Photo upload routes disabled');
+  }
 
   return app;
 }
