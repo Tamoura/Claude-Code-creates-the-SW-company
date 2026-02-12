@@ -21,6 +21,34 @@ export const metadata: Metadata = {
   icons: {
     icon: '/favicon.svg',
   },
+  viewport: {
+    width: 'device-width',
+    initialScale: 1,
+    maximumScale: 5,
+  },
+  themeColor: [
+    { media: '(prefers-color-scheme: light)', color: '#ffffff' },
+    { media: '(prefers-color-scheme: dark)', color: '#0f172a' },
+  ],
+  appleWebApp: {
+    capable: true,
+    statusBarStyle: 'default',
+    title: "Mu'aththir",
+  },
+  openGraph: {
+    title: "Mu'aththir - Holistic Child Development",
+    description:
+      'Track and nurture your child across six dimensions: Academic, Social-Emotional, Behavioural, Aspirational, Islamic, and Physical.',
+    type: 'website',
+    siteName: "Mu'aththir",
+    locale: 'en_US',
+  },
+  twitter: {
+    card: 'summary_large_image',
+    title: "Mu'aththir - Holistic Child Development",
+    description:
+      'Track and nurture your child across six dimensions.',
+  },
 };
 
 export default async function RootLayout({
