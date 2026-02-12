@@ -1,3 +1,6 @@
+'use client';
+
+import { useLocale } from 'next-intl';
 import DimensionBadge from '../common/DimensionBadge';
 
 export interface Observation {
@@ -38,12 +41,16 @@ export default function ObservationCard({
   observation,
 }: ObservationCardProps) {
   const sentiment = sentimentConfig[observation.sentiment];
+  const locale = useLocale();
   const date = new Date(observation.observedAt);
-  const formattedDate = date.toLocaleDateString('en-GB', {
-    day: 'numeric',
-    month: 'short',
-    year: 'numeric',
-  });
+  const formattedDate = date.toLocaleDateString(
+    locale === 'ar' ? 'ar-SA' : 'en-GB',
+    {
+      day: 'numeric',
+      month: 'short',
+      year: 'numeric',
+    }
+  );
 
   return (
     <article className="card" aria-label={`Observation from ${formattedDate}`}>

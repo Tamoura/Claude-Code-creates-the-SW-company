@@ -1,10 +1,15 @@
+'use client';
+
 import Link from 'next/link';
+import { useTranslations } from 'next-intl';
 
 export default function OnboardingLayout({
   children,
 }: {
   children: React.ReactNode;
 }) {
+  const t = useTranslations('common');
+
   return (
     <div className="min-h-screen bg-gradient-to-br from-emerald-50 via-white to-blue-50">
       {/* Top navigation bar */}
@@ -57,7 +62,7 @@ export default function OnboardingLayout({
                   d="M10 19l-7-7m0 0l7-7m-7 7h18"
                 />
               </svg>
-              Back to Dashboard
+              {t('backToDashboard')}
             </Link>
           </div>
         </div>

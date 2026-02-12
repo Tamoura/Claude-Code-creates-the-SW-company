@@ -1,8 +1,15 @@
 import { FastifyPluginAsync } from 'fastify';
+import { z } from 'zod';
 import { verifyChildOwnership } from '../lib/ownership';
 import { getAgeBand } from '../utils/age-band';
 import { DIMENSIONS, DimensionType } from '../types';
 import { Dimension } from '@prisma/client';
+import {
+  calculateDimensionScore,
+  gatherDimensionData,
+  DimensionScore,
+  DimensionData,
+} from '../services/score-calculator';
 
 /**
  * Report Generation API
@@ -10,21 +17,6 @@ import { Dimension } from '@prisma/client';
  * Aggregates dashboard scores, AI insights, observations,
  * milestones, and goals into a single comprehensive report.
  */
-
-interface DimensionScore {
-  dimension: DimensionType;
-  score: number;
-  factors: {
-    observation: number;
-    milestone: number;
-    sentiment: number;
-  };
-  observationCount: number;
-  milestoneProgress: {
-    achieved: number;
-    total: number;
-  };
-}
 
 interface Strength {
   dimension: string;
@@ -53,18 +45,6 @@ type TrendDirection =
   | 'stable'
   | 'no_data'
   | 'needs_attention';
-
-interface DimensionData {
-  dimension: DimensionType;
-  score: number;
-  recentObsCount: number;
-  previousObsCount: number;
-  totalObsCount: number;
-  positiveCount: number;
-  needsAttentionCount: number;
-  recentPositiveCount: number;
-  recentNeedsAttentionCount: number;
-}
 
 const DIMENSION_LABELS: Record<string, string> = {
   academic: 'Academic',
@@ -101,219 +81,6 @@ const DIMENSION_SUGGESTIONS: Record<string, string[]> = {
     'Track sports milestones and outdoor play',
   ],
 };
-
-// --- Dashboard score calculation (duplicated to avoid
-//     circular dependency with dashboard.ts) ---
-
-async function calculateDimensionScore(
-  prisma: any,
-  childId: string,
-  dimension: Dimension,
-  ageBand: string | null
-): Promise<DimensionScore> {
-  const thirtyDaysAgo = new Date();
-  thirtyDaysAgo.setDate(thirtyDaysAgo.getDate() - 30);
-
-  const recentObservations = await prisma.observation.findMany({
-    where: {
-      childId,
-      dimension,
-      deletedAt: null,
-      observedAt: { gte: thirtyDaysAgo },
-    },
-    select: { sentiment: true },
-  });
-
-  const observationCount = recentObservations.length;
-  const positiveCount = recentObservations.filter(
-    (o: { sentiment: string }) => o.sentiment === 'positive'
-  ).length;
-
-  const observationFactor =
-    (Math.min(observationCount, 10) / 10) * 100;
-  const sentimentFactor =
-    observationCount > 0
-      ? (positiveCount / observationCount) * 100
-      : 0;
-
-  let milestoneAchieved = 0;
-  let milestoneTotal = 0;
-
-  if (ageBand) {
-    milestoneTotal = await prisma.milestoneDefinition.count({
-      where: { dimension, ageBand },
-    });
-
-    if (milestoneTotal > 0) {
-      milestoneAchieved = await prisma.childMilestone.count({
-        where: {
-          childId,
-          achieved: true,
-          milestone: { dimension, ageBand },
-        },
-      });
-    }
-  }
-
-  const milestoneFactor =
-    milestoneTotal > 0
-      ? (milestoneAchieved / milestoneTotal) * 100
-      : 0;
-
-  const score = Math.round(
-    observationFactor * 0.4 +
-      milestoneFactor * 0.4 +
-      sentimentFactor * 0.2
-  );
-
-  return {
-    dimension: dimension as DimensionType,
-    score,
-    factors: {
-      observation: Math.round(observationFactor),
-      milestone: Math.round(milestoneFactor),
-      sentiment: Math.round(sentimentFactor),
-    },
-    observationCount,
-    milestoneProgress: {
-      achieved: milestoneAchieved,
-      total: milestoneTotal,
-    },
-  };
-}
-
-// --- Insights calculation (duplicated from insights.ts) ---
-
-async function gatherDimensionData(
-  prisma: any,
-  childId: string,
-  ageBand: string | null
-): Promise<DimensionData[]> {
-  const now = new Date();
-  const thirtyDaysAgo = new Date();
-  thirtyDaysAgo.setDate(now.getDate() - 30);
-  const sixtyDaysAgo = new Date();
-  sixtyDaysAgo.setDate(now.getDate() - 60);
-
-  const [recentObs, previousObs, allTimeCounts, milestoneDefs, childMilestones] =
-    await Promise.all([
-      prisma.observation.findMany({
-        where: {
-          childId,
-          deletedAt: null,
-          observedAt: { gte: thirtyDaysAgo },
-        },
-        select: { dimension: true, sentiment: true },
-      }),
-      prisma.observation.findMany({
-        where: {
-          childId,
-          deletedAt: null,
-          observedAt: { gte: sixtyDaysAgo, lt: thirtyDaysAgo },
-        },
-        select: { dimension: true },
-      }),
-      prisma.observation.groupBy({
-        by: ['dimension'],
-        where: { childId, deletedAt: null },
-        _count: true,
-      }),
-      ageBand
-        ? prisma.milestoneDefinition.groupBy({
-            by: ['dimension'],
-            where: { ageBand },
-            _count: true,
-          })
-        : Promise.resolve([]),
-      ageBand
-        ? prisma.childMilestone.findMany({
-            where: {
-              childId,
-              achieved: true,
-              milestone: { ageBand },
-            },
-            select: {
-              milestone: { select: { dimension: true } },
-            },
-          })
-        : Promise.resolve([]),
-    ]);
-
-  const recentByDim = new Map<string, Array<{ sentiment: string }>>();
-  for (const obs of recentObs as any[]) {
-    const arr = recentByDim.get(obs.dimension) || [];
-    arr.push(obs);
-    recentByDim.set(obs.dimension, arr);
-  }
-
-  const previousCountByDim = new Map<string, number>();
-  for (const obs of previousObs as any[]) {
-    previousCountByDim.set(
-      obs.dimension,
-      (previousCountByDim.get(obs.dimension) || 0) + 1
-    );
-  }
-
-  const totalCountByDim = new Map(
-    (allTimeCounts as any[]).map((g: any) => [g.dimension, g._count])
-  );
-  const milestoneDefByDim = new Map(
-    (milestoneDefs as any[]).map((g: any) => [g.dimension, g._count])
-  );
-
-  const achievedByDim = new Map<string, number>();
-  for (const cm of childMilestones as any[]) {
-    const dim = cm.milestone.dimension;
-    achievedByDim.set(dim, (achievedByDim.get(dim) || 0) + 1);
-  }
-
-  const results: DimensionData[] = [];
-
-  for (const dimension of DIMENSIONS) {
-    const dimObs = recentByDim.get(dimension) || [];
-    const recentCount = dimObs.length;
-    const positiveCount = dimObs.filter(
-      (o) => o.sentiment === 'positive'
-    ).length;
-    const needsAttentionCount = dimObs.filter(
-      (o) => o.sentiment === 'needs_attention'
-    ).length;
-    const previousCount = previousCountByDim.get(dimension) || 0;
-    const totalObs = totalCountByDim.get(dimension) || 0;
-
-    const observationFactor =
-      (Math.min(recentCount, 10) / 10) * 100;
-    const sentimentFactor =
-      recentCount > 0 ? (positiveCount / recentCount) * 100 : 0;
-
-    const milestoneTotal = milestoneDefByDim.get(dimension) || 0;
-    const milestoneAchieved = achievedByDim.get(dimension) || 0;
-    const milestoneFactor =
-      milestoneTotal > 0
-        ? (milestoneAchieved / milestoneTotal) * 100
-        : 0;
-
-    const score = Math.round(
-      observationFactor * 0.4 +
-        milestoneFactor * 0.4 +
-        sentimentFactor * 0.2
-    );
-
-    results.push({
-      dimension: dimension as DimensionType,
-      score,
-      recentObsCount: recentCount,
-      previousObsCount: previousCount,
-      totalObsCount: totalObs,
-      positiveCount,
-      needsAttentionCount,
-      recentPositiveCount: positiveCount,
-      recentNeedsAttentionCount: needsAttentionCount,
-    });
-  }
-
-  return results;
-}
 
 function buildStrengths(data: DimensionData[]): Strength[] {
   return data
@@ -564,6 +331,32 @@ function buildSummary(
     : `${childName}'s development is being tracked across all dimensions.`;
 }
 
+// --- Validation ---
+
+const reportQuerySchema = z.object({
+  from: z
+    .string()
+    .regex(/^\d{4}-\d{2}-\d{2}$/, 'from must be a valid date (YYYY-MM-DD)')
+    .refine((val) => !isNaN(Date.parse(val)), 'from must be a valid date')
+    .optional(),
+  to: z
+    .string()
+    .regex(/^\d{4}-\d{2}-\d{2}$/, 'to must be a valid date (YYYY-MM-DD)')
+    .refine((val) => !isNaN(Date.parse(val)), 'to must be a valid date')
+    .optional(),
+  observations: z
+    .string()
+    .optional()
+    .transform((val) => {
+      if (val === undefined) return 10;
+      const parsed = parseInt(val, 10);
+      if (isNaN(parsed)) return undefined;
+      return Math.min(Math.max(parsed, 1), 100);
+    })
+    .refine((val) => val !== undefined, 'observations must be a valid number')
+    .default('10'),
+});
+
 // --- Route ---
 
 const reportRoutes: FastifyPluginAsync = async (fastify) => {
@@ -573,12 +366,17 @@ const reportRoutes: FastifyPluginAsync = async (fastify) => {
     { preHandler: [fastify.authenticate] },
     async (request, reply) => {
       const { childId } = request.params as { childId: string };
-      const query = request.query as {
-        from?: string;
-        to?: string;
-        observations?: string;
-      };
       const parentId = request.currentUser!.id;
+
+      // Validate query parameters
+      const parsed = reportQuerySchema.safeParse(request.query);
+      if (!parsed.success) {
+        return reply.code(400).send({
+          error: 'Validation error',
+          message: parsed.error.errors[0]?.message || 'Invalid query parameters',
+        });
+      }
+      const validatedQuery = parsed.data;
 
       const child = await verifyChildOwnership(
         fastify,
@@ -595,16 +393,12 @@ const reportRoutes: FastifyPluginAsync = async (fastify) => {
       const thirtyDaysAgo = new Date();
       thirtyDaysAgo.setDate(now.getDate() - 30);
 
-      const fromDate = query.from
-        ? query.from
-        : thirtyDaysAgo.toISOString().split('T')[0];
-      const toDate = query.to
-        ? query.to
-        : now.toISOString().split('T')[0];
+      const fromDate = validatedQuery.from
+        ?? thirtyDaysAgo.toISOString().split('T')[0];
+      const toDate = validatedQuery.to
+        ?? now.toISOString().split('T')[0];
 
-      const observationsLimit = query.observations
-        ? parseInt(query.observations, 10)
-        : 10;
+      const observationsLimit = validatedQuery.observations;
 
       // Batch all independent queries with Promise.all
       const [
