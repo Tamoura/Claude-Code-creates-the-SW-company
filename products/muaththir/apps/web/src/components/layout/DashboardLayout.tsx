@@ -5,6 +5,7 @@ import { useTranslations } from 'next-intl';
 import { useRouter, usePathname } from 'next/navigation';
 import Link from 'next/link';
 import Sidebar from './Sidebar';
+import ErrorBoundary from '../common/ErrorBoundary';
 import { TokenManager } from '../../lib/token-manager';
 
 export default function DashboardLayout({
@@ -87,7 +88,9 @@ export default function DashboardLayout({
       <Sidebar mobileOpen={mobileMenuOpen} onMobileClose={() => setMobileMenuOpen(false)} />
 
       <main className="lg:ps-64">
-        <div className="px-4 sm:px-6 lg:px-8 py-6">{children}</div>
+        <div className="px-4 sm:px-6 lg:px-8 py-6">
+          <ErrorBoundary>{children}</ErrorBoundary>
+        </div>
       </main>
     </div>
   );

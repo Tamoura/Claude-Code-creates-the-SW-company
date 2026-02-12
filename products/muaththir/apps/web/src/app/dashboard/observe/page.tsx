@@ -137,14 +137,14 @@ export default function ObservePage() {
 
       {/* Success Message */}
       {successMessage && (
-        <div className="p-4 rounded-lg bg-emerald-50 dark:bg-emerald-900/30 border border-emerald-200 dark:border-emerald-800">
+        <div className="p-4 rounded-lg bg-emerald-50 dark:bg-emerald-900/30 border border-emerald-200 dark:border-emerald-800" role="status">
           <p className="text-sm text-emerald-800 dark:text-emerald-400">{successMessage}</p>
         </div>
       )}
 
       {/* Error Message */}
       {error && (
-        <div className="p-4 rounded-lg bg-red-50 dark:bg-red-900/30 border border-red-200 dark:border-red-800">
+        <div className="p-4 rounded-lg bg-red-50 dark:bg-red-900/30 border border-red-200 dark:border-red-800" role="alert">
           <p className="text-sm text-red-800 dark:text-red-400">{error}</p>
           <button
             onClick={() => setRetryCount((c) => c + 1)}

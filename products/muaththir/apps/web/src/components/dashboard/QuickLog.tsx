@@ -92,6 +92,7 @@ export default function QuickLog({ childId, onSuccess }: QuickLogProps) {
             disabled={isSubmitting}
             className="input-field flex-1 text-sm dark:bg-slate-700 dark:text-white dark:placeholder-slate-400"
             maxLength={200}
+            aria-label={t('quickLogPlaceholder')}
           />
 
           <button
