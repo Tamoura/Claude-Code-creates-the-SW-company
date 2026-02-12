@@ -62,12 +62,12 @@ export default function LoginPage() {
 
   if (isDemoLoading) {
     return (
-      <div className="min-h-screen bg-slate-50">
+      <div className="min-h-screen bg-slate-50 dark:bg-slate-900">
         <Header />
         <main className="flex items-center justify-center px-4 py-16 sm:py-24">
           <div className="w-full max-w-md text-center">
             <div className="card space-y-4">
-              <div className="mx-auto h-12 w-12 rounded-full bg-blue-100 flex items-center justify-center">
+              <div className="mx-auto h-12 w-12 rounded-full bg-blue-100 dark:bg-blue-900/30 flex items-center justify-center">
                 <svg
                   className="h-6 w-6 text-blue-600 animate-spin"
                   fill="none"
@@ -89,7 +89,7 @@ export default function LoginPage() {
                   />
                 </svg>
               </div>
-              <p className="text-slate-700 font-medium">
+              <p className="text-slate-700 dark:text-slate-300 font-medium">
                 {tAuth('demoLoading')}
               </p>
             </div>
@@ -100,13 +100,13 @@ export default function LoginPage() {
   }
 
   return (
-    <div className="min-h-screen bg-slate-50">
+    <div className="min-h-screen bg-slate-50 dark:bg-slate-900">
       <Header />
       <main className="flex items-center justify-center px-4 py-16 sm:py-24">
         <div className="w-full max-w-md">
           <div className="text-center mb-8">
-            <h1 className="text-2xl font-bold text-slate-900">{t('title')}</h1>
-            <p className="mt-2 text-sm text-slate-600">
+            <h1 className="text-2xl font-bold text-slate-900 dark:text-white">{t('title')}</h1>
+            <p className="mt-2 text-sm text-slate-600 dark:text-slate-400">
               {t('subtitle')}
             </p>
           </div>
@@ -114,7 +114,7 @@ export default function LoginPage() {
           <form onSubmit={handleSubmit} className="card space-y-5">
             {error && (
               <div
-                className="rounded-xl bg-red-50 p-3 text-sm text-red-700"
+                className="rounded-xl bg-red-50 dark:bg-red-900/20 p-3 text-sm text-red-700 dark:text-red-400"
                 role="alert"
               >
                 {error}
@@ -173,7 +173,7 @@ export default function LoginPage() {
               {isLoading ? t('loggingIn') : t('logIn')}
             </button>
 
-            <p className="text-center text-sm text-slate-500">
+            <p className="text-center text-sm text-slate-500 dark:text-slate-400">
               {t('noAccount')}{' '}
               <Link
                 href="/signup"

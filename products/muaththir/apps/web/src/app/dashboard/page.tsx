@@ -142,10 +142,10 @@ export default function DashboardPage() {
               />
             </svg>
           </div>
-          <h2 className="text-xl font-semibold text-slate-900 mb-2">
+          <h2 className="text-xl font-semibold text-slate-900 dark:text-white mb-2">
             {t('addFirstChild')}
           </h2>
-          <p className="text-sm text-slate-500 mb-6">
+          <p className="text-sm text-slate-500 dark:text-slate-400 mb-6">
             {t('addFirstChildDesc')}
           </p>
           <Link href="/onboarding/child" className="btn-primary">
@@ -161,8 +161,8 @@ export default function DashboardPage() {
       {/* Page Header */}
       <div className="flex items-center justify-between">
         <div>
-          <h1 className="text-2xl font-bold text-slate-900">{t('title')}</h1>
-          <p className="text-sm text-slate-500 mt-1">
+          <h1 className="text-2xl font-bold text-slate-900 dark:text-white">{t('title')}</h1>
+          <p className="text-sm text-slate-500 dark:text-slate-400 mt-1">
             {dashboardData
               ? t('subtitleWithName', { name: dashboardData.childName })
               : t('subtitleDefault')}
@@ -174,7 +174,7 @@ export default function DashboardPage() {
           <select
             value={selectedChildId || ''}
             onChange={(e) => setSelectedChildId(e.target.value)}
-            className="px-4 py-2 border border-slate-200 rounded-lg text-sm focus:outline-none focus:ring-2 focus:ring-emerald-500"
+            className="px-4 py-2 border border-slate-200 dark:border-slate-700 rounded-lg text-sm focus:outline-none focus:ring-2 focus:ring-emerald-500 dark:bg-slate-800 dark:text-white"
             aria-label={tc('selectChild')}
           >
             {children.map((child) => (
@@ -222,22 +222,22 @@ export default function DashboardPage() {
 
       {/* Radar Chart */}
       <div className="card">
-        <h2 className="text-lg font-semibold text-slate-900 mb-4">
+        <h2 className="text-lg font-semibold text-slate-900 dark:text-white mb-4">
           {t('developmentOverview')}
         </h2>
         {loading ? (
-          <div className="w-full h-80 bg-slate-100 rounded-2xl animate-pulse" aria-live="polite" aria-busy="true">
+          <div className="w-full h-80 bg-slate-100 dark:bg-slate-800 rounded-2xl animate-pulse" aria-live="polite" aria-busy="true">
             <span className="sr-only">{t('loadingChart')}</span>
           </div>
         ) : (
           <>
             <RadarChart scores={radarScores} />
             {dashboardData && dashboardData.overallScore === 0 ? (
-              <p className="text-center text-xs text-slate-400 mt-2">
+              <p className="text-center text-xs text-slate-400 dark:text-slate-500 mt-2">
                 {t('startLogging')}
               </p>
             ) : (
-              <p className="text-center text-xs text-slate-500 mt-2">
+              <p className="text-center text-xs text-slate-500 dark:text-slate-400 mt-2">
                 {t('overallScore', { score: dashboardData?.overallScore.toFixed(1) || 0 })}
               </p>
             )}
@@ -247,7 +247,7 @@ export default function DashboardPage() {
 
       {/* Dimension Cards Grid */}
       <section aria-labelledby="dimensions-heading">
-        <h2 id="dimensions-heading" className="text-lg font-semibold text-slate-900 mb-4">
+        <h2 id="dimensions-heading" className="text-lg font-semibold text-slate-900 dark:text-white mb-4">
           {t('dimensions')}
         </h2>
         {loading ? (
@@ -255,7 +255,7 @@ export default function DashboardPage() {
             {DIMENSIONS.map((dimension) => (
               <div
                 key={dimension.slug}
-                className="h-40 bg-slate-100 rounded-2xl animate-pulse"
+                className="h-40 bg-slate-100 dark:bg-slate-800 rounded-2xl animate-pulse"
               >
                 <span className="sr-only">{t('loadingDimension', { name: td(dimension.slug) })}</span>
               </div>
@@ -282,7 +282,7 @@ export default function DashboardPage() {
 
       {/* Recent Observations */}
       <section aria-labelledby="observations-heading">
-        <h2 id="observations-heading" className="text-lg font-semibold text-slate-900 mb-4">
+        <h2 id="observations-heading" className="text-lg font-semibold text-slate-900 dark:text-white mb-4">
           {t('recentObservations')}
         </h2>
         {loading ? (
@@ -290,7 +290,7 @@ export default function DashboardPage() {
             {[1, 2, 3].map((i) => (
               <div
                 key={i}
-                className="h-32 bg-slate-100 rounded-2xl animate-pulse"
+                className="h-32 bg-slate-100 dark:bg-slate-800 rounded-2xl animate-pulse"
               >
                 <span className="sr-only">{t('loadingObservation', { number: i })}</span>
               </div>
@@ -314,9 +314,9 @@ export default function DashboardPage() {
           </div>
         ) : (
           <div className="card text-center py-12">
-            <div className="mx-auto h-12 w-12 rounded-full bg-slate-100 flex items-center justify-center mb-4">
+            <div className="mx-auto h-12 w-12 rounded-full bg-slate-100 dark:bg-slate-800 flex items-center justify-center mb-4">
               <svg
-                className="h-6 w-6 text-slate-400"
+                className="h-6 w-6 text-slate-400 dark:text-slate-500"
                 fill="none"
                 viewBox="0 0 24 24"
                 stroke="currentColor"
@@ -336,10 +336,10 @@ export default function DashboardPage() {
                 />
               </svg>
             </div>
-            <h3 className="text-sm font-medium text-slate-900 mb-1">
+            <h3 className="text-sm font-medium text-slate-900 dark:text-white mb-1">
               {t('noObservationsTitle')}
             </h3>
-            <p className="text-xs text-slate-500 mb-4">
+            <p className="text-xs text-slate-500 dark:text-slate-400 mb-4">
               {t('noObservationsDesc')}
             </p>
             <Link
@@ -354,13 +354,13 @@ export default function DashboardPage() {
 
       {/* Milestones Due */}
       <section aria-labelledby="milestones-heading">
-        <h2 id="milestones-heading" className="text-lg font-semibold text-slate-900 mb-4">
+        <h2 id="milestones-heading" className="text-lg font-semibold text-slate-900 dark:text-white mb-4">
           {t('milestonesDue')}
         </h2>
         {loading ? (
           <div className="space-y-3" aria-live="polite" aria-busy="true">
             {[1, 2, 3].map((i) => (
-              <div key={i} className="h-20 bg-slate-100 rounded-2xl animate-pulse">
+              <div key={i} className="h-20 bg-slate-100 dark:bg-slate-800 rounded-2xl animate-pulse">
                 <span className="sr-only">{t('loadingMilestone', { number: i })}</span>
               </div>
             ))}
@@ -383,13 +383,13 @@ export default function DashboardPage() {
                       {dim?.icon || '?'}
                     </div>
                     <div className="min-w-0">
-                      <h3 className="text-sm font-medium text-slate-900">
+                      <h3 className="text-sm font-medium text-slate-900 dark:text-white">
                         {milestone.title}
                       </h3>
-                      <p className="text-xs text-slate-500 mt-0.5 line-clamp-2">
+                      <p className="text-xs text-slate-500 dark:text-slate-400 mt-0.5 line-clamp-2">
                         {milestone.description}
                       </p>
-                      <span className="inline-block mt-1 text-xs text-slate-400">
+                      <span className="inline-block mt-1 text-xs text-slate-400 dark:text-slate-500">
                         {td(milestone.dimension)}
                       </span>
                     </div>
@@ -406,15 +406,15 @@ export default function DashboardPage() {
           </div>
         ) : (
           <div className="card text-center py-12">
-            <div className="mx-auto h-12 w-12 rounded-full bg-emerald-50 flex items-center justify-center mb-4">
-              <svg className="h-6 w-6 text-emerald-500" fill="none" viewBox="0 0 24 24" stroke="currentColor" aria-hidden="true">
+            <div className="mx-auto h-12 w-12 rounded-full bg-emerald-50 dark:bg-emerald-900/20 flex items-center justify-center mb-4">
+              <svg className="h-6 w-6 text-emerald-500 dark:text-emerald-400" fill="none" viewBox="0 0 24 24" stroke="currentColor" aria-hidden="true">
                 <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M9 12l2 2 4-4M7.835 4.697a3.42 3.42 0 001.946-.806 3.42 3.42 0 014.438 0 3.42 3.42 0 001.946.806 3.42 3.42 0 013.138 3.138 3.42 3.42 0 00.806 1.946 3.42 3.42 0 010 4.438 3.42 3.42 0 00-.806 1.946 3.42 3.42 0 01-3.138 3.138 3.42 3.42 0 00-1.946.806 3.42 3.42 0 01-4.438 0 3.42 3.42 0 00-1.946-.806 3.42 3.42 0 01-3.138-3.138 3.42 3.42 0 00-.806-1.946 3.42 3.42 0 010-4.438 3.42 3.42 0 00.806-1.946 3.42 3.42 0 013.138-3.138z" />
               </svg>
             </div>
-            <h3 className="text-sm font-medium text-slate-900 mb-1">
+            <h3 className="text-sm font-medium text-slate-900 dark:text-white mb-1">
               {t('allMilestonesAchieved')}
             </h3>
-            <p className="text-xs text-slate-500 mb-4">
+            <p className="text-xs text-slate-500 dark:text-slate-400 mb-4">
               {t('allMilestonesDesc')}
             </p>
             <Link

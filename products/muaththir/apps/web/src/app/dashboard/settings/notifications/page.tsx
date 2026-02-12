@@ -56,17 +56,17 @@ export default function NotificationsSettingsPage() {
   return (
     <div className="max-w-2xl mx-auto space-y-8">
       <div>
-        <h1 className="text-2xl font-bold text-slate-900">
+        <h1 className="text-2xl font-bold text-slate-900 dark:text-white">
           {t('title')}
         </h1>
-        <p className="text-sm text-slate-500 mt-1">
+        <p className="text-sm text-slate-500 dark:text-slate-400 mt-1">
           {t('subtitle')}
         </p>
       </div>
 
       {savedMessage && (
         <div
-          className="rounded-xl bg-emerald-50 p-3 text-sm text-emerald-700 transition-opacity"
+          className="rounded-xl bg-emerald-50 dark:bg-emerald-900/30 p-3 text-sm text-emerald-700 dark:text-emerald-400 transition-opacity"
           role="status"
         >
           {t('saved')}
@@ -76,10 +76,10 @@ export default function NotificationsSettingsPage() {
       <div className="card space-y-6">
         <div className="flex items-center justify-between">
           <div>
-            <h2 className="text-sm font-medium text-slate-900">
+            <h2 className="text-sm font-medium text-slate-900 dark:text-white">
               {t('dailyReminder')}
             </h2>
-            <p className="text-xs text-slate-500 mt-0.5">
+            <p className="text-xs text-slate-500 dark:text-slate-400 mt-0.5">
               {t('dailyReminderDesc')}
             </p>
           </div>
@@ -89,7 +89,7 @@ export default function NotificationsSettingsPage() {
             aria-checked={prefs.dailyReminder}
             onClick={() => toggle('dailyReminder')}
             className={`relative inline-flex h-6 w-11 flex-shrink-0 cursor-pointer rounded-full border-2 border-transparent transition-colors ${
-              prefs.dailyReminder ? 'bg-emerald-500' : 'bg-slate-200'
+              prefs.dailyReminder ? 'bg-emerald-500' : 'bg-slate-200 dark:bg-slate-600'
             }`}
             aria-label="Toggle daily reminder"
           >
@@ -103,10 +103,10 @@ export default function NotificationsSettingsPage() {
 
         <div className="flex items-center justify-between">
           <div>
-            <h2 className="text-sm font-medium text-slate-900">
+            <h2 className="text-sm font-medium text-slate-900 dark:text-white">
               {t('weeklyDigest')}
             </h2>
-            <p className="text-xs text-slate-500 mt-0.5">
+            <p className="text-xs text-slate-500 dark:text-slate-400 mt-0.5">
               {t('weeklyDigestDesc')}
             </p>
           </div>
@@ -116,7 +116,7 @@ export default function NotificationsSettingsPage() {
             aria-checked={prefs.weeklyDigest}
             onClick={() => toggle('weeklyDigest')}
             className={`relative inline-flex h-6 w-11 flex-shrink-0 cursor-pointer rounded-full border-2 border-transparent transition-colors ${
-              prefs.weeklyDigest ? 'bg-emerald-500' : 'bg-slate-200'
+              prefs.weeklyDigest ? 'bg-emerald-500' : 'bg-slate-200 dark:bg-slate-600'
             }`}
             aria-label="Toggle weekly digest"
           >
@@ -130,10 +130,10 @@ export default function NotificationsSettingsPage() {
 
         <div className="flex items-center justify-between">
           <div>
-            <h2 className="text-sm font-medium text-slate-900">
+            <h2 className="text-sm font-medium text-slate-900 dark:text-white">
               {t('milestoneAlerts')}
             </h2>
-            <p className="text-xs text-slate-500 mt-0.5">
+            <p className="text-xs text-slate-500 dark:text-slate-400 mt-0.5">
               {t('milestoneAlertsDesc')}
             </p>
           </div>
@@ -143,7 +143,7 @@ export default function NotificationsSettingsPage() {
             aria-checked={prefs.milestoneAlerts}
             onClick={() => toggle('milestoneAlerts')}
             className={`relative inline-flex h-6 w-11 flex-shrink-0 cursor-pointer rounded-full border-2 border-transparent transition-colors ${
-              prefs.milestoneAlerts ? 'bg-emerald-500' : 'bg-slate-200'
+              prefs.milestoneAlerts ? 'bg-emerald-500' : 'bg-slate-200 dark:bg-slate-600'
             }`}
             aria-label="Toggle milestone alerts"
           >

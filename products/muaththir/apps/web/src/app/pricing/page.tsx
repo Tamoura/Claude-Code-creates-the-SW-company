@@ -45,15 +45,15 @@ export default function PricingPage() {
     },
   ];
   return (
-    <div className="min-h-screen bg-slate-50">
+    <div className="min-h-screen bg-slate-50 dark:bg-slate-900">
       <Header />
       <main className="py-16 sm:py-24">
         <div className="mx-auto max-w-7xl px-4 sm:px-6 lg:px-8">
           <div className="text-center mb-16">
-            <h1 className="text-3xl sm:text-4xl font-bold text-slate-900">
+            <h1 className="text-3xl sm:text-4xl font-bold text-slate-900 dark:text-white">
               {t('title')}
             </h1>
-            <p className="mt-4 text-lg text-slate-600 max-w-2xl mx-auto">
+            <p className="mt-4 text-lg text-slate-600 dark:text-slate-300 max-w-2xl mx-auto">
               {t('subtitle')}
             </p>
           </div>
@@ -73,17 +73,17 @@ export default function PricingPage() {
                     {t('mostPopular')}
                   </span>
                 )}
-                <h2 className="text-xl font-bold text-slate-900">
+                <h2 className="text-xl font-bold text-slate-900 dark:text-white">
                   {plan.name}
                 </h2>
-                <p className="mt-2 text-sm text-slate-600">
+                <p className="mt-2 text-sm text-slate-600 dark:text-slate-400">
                   {plan.description}
                 </p>
                 <div className="mt-6 flex items-baseline gap-1">
-                  <span className="text-4xl font-bold text-slate-900">
+                  <span className="text-4xl font-bold text-slate-900 dark:text-white">
                     {plan.price}
                   </span>
-                  <span className="text-sm text-slate-500">{plan.period}</span>
+                  <span className="text-sm text-slate-500 dark:text-slate-400">{plan.period}</span>
                 </div>
                 {plan.annualPrice && (
                   <p className="mt-1 text-xs text-emerald-600 font-medium">
@@ -94,7 +94,7 @@ export default function PricingPage() {
                   {plan.features.map((feature) => (
                     <li
                       key={feature}
-                      className="flex items-center gap-2 text-sm text-slate-700"
+                      className="flex items-center gap-2 text-sm text-slate-700 dark:text-slate-300"
                     >
                       <svg
                         className="h-4 w-4 text-emerald-500 flex-shrink-0"
@@ -119,7 +119,7 @@ export default function PricingPage() {
                   className={`mt-8 block text-center rounded-xl px-6 py-3 text-sm font-semibold transition-colors ${
                     plan.featured
                       ? 'bg-emerald-600 text-white hover:bg-emerald-700'
-                      : 'bg-slate-100 text-slate-900 hover:bg-slate-200'
+                      : 'bg-slate-100 dark:bg-slate-800 text-slate-900 dark:text-white hover:bg-slate-200 dark:hover:bg-slate-700'
                   }`}
                 >
                   {plan.cta}

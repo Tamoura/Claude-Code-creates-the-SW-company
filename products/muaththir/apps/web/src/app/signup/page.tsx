@@ -33,15 +33,15 @@ export default function SignupPage() {
   };
 
   return (
-    <div className="min-h-screen bg-slate-50">
+    <div className="min-h-screen bg-slate-50 dark:bg-slate-900">
       <Header />
       <main className="flex items-center justify-center px-4 py-16 sm:py-24">
         <div className="w-full max-w-md">
           <div className="text-center mb-8">
-            <h1 className="text-2xl font-bold text-slate-900">
+            <h1 className="text-2xl font-bold text-slate-900 dark:text-white">
               {t('title')}
             </h1>
-            <p className="mt-2 text-sm text-slate-600">
+            <p className="mt-2 text-sm text-slate-600 dark:text-slate-400">
               {t('subtitle')}
             </p>
           </div>
@@ -49,7 +49,7 @@ export default function SignupPage() {
           <form onSubmit={handleSubmit} className="card space-y-5">
             {error && (
               <div
-                className="rounded-xl bg-red-50 p-3 text-sm text-red-700"
+                className="rounded-xl bg-red-50 dark:bg-red-900/20 p-3 text-sm text-red-700 dark:text-red-400"
                 role="alert"
               >
                 {error}
@@ -117,7 +117,7 @@ export default function SignupPage() {
               {isLoading ? t('creatingAccount') : t('createAccount')}
             </button>
 
-            <p className="text-center text-sm text-slate-500">
+            <p className="text-center text-sm text-slate-500 dark:text-slate-400">
               {t('hasAccount')}{' '}
               <Link
                 href="/login"

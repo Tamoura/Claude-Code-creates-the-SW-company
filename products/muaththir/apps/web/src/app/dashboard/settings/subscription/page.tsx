@@ -9,10 +9,10 @@ export default function SubscriptionSettingsPage() {
   return (
     <div className="max-w-2xl mx-auto space-y-8">
       <div>
-        <h1 className="text-2xl font-bold text-slate-900">
+        <h1 className="text-2xl font-bold text-slate-900 dark:text-white">
           {t('title')}
         </h1>
-        <p className="text-sm text-slate-500 mt-1">
+        <p className="text-sm text-slate-500 dark:text-slate-400 mt-1">
           {t('subtitle')}
         </p>
       </div>
@@ -20,14 +20,14 @@ export default function SubscriptionSettingsPage() {
       {/* Current Plan */}
       <div className="card">
         <div className="flex items-center justify-between mb-4">
-          <h2 className="text-lg font-semibold text-slate-900">
+          <h2 className="text-lg font-semibold text-slate-900 dark:text-white">
             {t('currentPlan')}
           </h2>
-          <span className="text-xs font-medium bg-slate-100 text-slate-600 px-2.5 py-1 rounded-full">
+          <span className="text-xs font-medium bg-slate-100 dark:bg-slate-700 text-slate-600 dark:text-slate-300 px-2.5 py-1 rounded-full">
             {t('free')}
           </span>
         </div>
-        <p className="text-sm text-slate-600 mb-4">
+        <p className="text-sm text-slate-600 dark:text-slate-400 mb-4">
           {t('freeDesc')}
         </p>
         <Link
@@ -39,8 +39,8 @@ export default function SubscriptionSettingsPage() {
       </div>
 
       {/* Premium Benefits */}
-      <div className="card border-l-4 border-l-emerald-500">
-        <h2 className="text-lg font-semibold text-slate-900 mb-3">
+      <div className="card border-l-4 border-l-emerald-500 dark:border-l-emerald-600">
+        <h2 className="text-lg font-semibold text-slate-900 dark:text-white mb-3">
           {t('premiumTitle')}
         </h2>
         <ul className="space-y-2">
@@ -53,7 +53,7 @@ export default function SubscriptionSettingsPage() {
           ].map((benefit) => (
             <li
               key={benefit}
-              className="flex items-center gap-2 text-sm text-slate-600"
+              className="flex items-center gap-2 text-sm text-slate-600 dark:text-slate-400"
             >
               <svg
                 className="h-4 w-4 text-emerald-500 flex-shrink-0"
