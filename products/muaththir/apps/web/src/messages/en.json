@@ -47,7 +47,8 @@
     "settings": "Settings",
     "settingsSharing": "Family Sharing",
     "settingsNotifications": "Notifications",
-    "settingsSubscription": "Subscription"
+    "settingsSubscription": "Subscription",
+    "analytics": "Analytics"
   },
   "landing": {
     "heroTitle1": "Nurture every dimension",
@@ -216,7 +217,14 @@
     "observationSaved": "Observation saved successfully!",
     "noChildrenFound": "No children found",
     "noChildrenDesc": "Please create a child profile first to log observations.",
-    "pleaseSelectChild": "Please select a child"
+    "pleaseSelectChild": "Please select a child",
+    "photoLabel": "Photo (optional)",
+    "attachPhoto": "Attach Photo",
+    "removePhoto": "Remove photo",
+    "photoPreviewAlt": "Observation photo preview",
+    "photoHint": "JPEG, PNG, or WebP. Max 5MB.",
+    "photoTooLarge": "Photo must be under 5MB.",
+    "photoInvalidType": "Please select a JPEG, PNG, or WebP image."
   },
   "timeline": {
     "title": "Timeline",
@@ -369,7 +377,8 @@
     "addFirstChildDesc": "Create a child profile to start tracking their development milestones.",
     "viewMilestonesFor": "View milestones for {dimension}",
     "completed": "{count} completed",
-    "total": "{count} total"
+    "total": "{count} total",
+    "viewAll": "View All Milestones"
   },
   "milestoneDetail": {
     "notFound": "Dimension not found",
@@ -800,5 +809,24 @@
   "dashboardLayout": {
     "loading": "Loading...",
     "menuToggle": "Toggle menu"
+  },
+  "analytics": {
+    "title": "Observation Analytics",
+    "subtitle": "Visualise observation patterns across dimensions.",
+    "addFirstChild": "Add Your First Child",
+    "addFirstChildDesc": "Create a child profile to start viewing analytics.",
+    "totalObservations": "Total Observations",
+    "mostActiveDimension": "Most Active Dimension",
+    "dimensionsCovered": "Dimensions Covered",
+    "outOf6": "out of 6",
+    "observationsByDimension": "Observations by Dimension",
+    "sentimentDistribution": "Sentiment Distribution",
+    "positive": "Positive",
+    "neutral": "Neutral",
+    "needsAttention": "Needs Attention",
+    "noObservations": "No observations yet",
+    "noObservationsDesc": "Start logging observations to see analytics.",
+    "logObservation": "Log Observation",
+    "observationsLabel": "observations"
   }
 }

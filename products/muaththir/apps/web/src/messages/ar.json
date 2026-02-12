@@ -45,7 +45,8 @@
     "settings": "الإعدادات",
     "settingsSharing": "مشاركة العائلة",
     "settingsNotifications": "الإشعارات",
-    "settingsSubscription": "الاشتراك"
+    "settingsSubscription": "الاشتراك",
+    "analytics": "التحليلات"
   },
   "landing": {
     "heroTitle1": "رعاية كل بُعد",
@@ -214,7 +215,14 @@
     "observationSaved": "تم حفظ الملاحظة بنجاح!",
     "noChildrenFound": "لا يوجد أطفال",
     "noChildrenDesc": "يرجى إنشاء ملف طفل أولاً لتسجيل الملاحظات.",
-    "pleaseSelectChild": "يرجى اختيار طفل"
+    "pleaseSelectChild": "يرجى اختيار طفل",
+    "photoLabel": "صورة (اختياري)",
+    "attachPhoto": "إرفاق صورة",
+    "removePhoto": "إزالة الصورة",
+    "photoPreviewAlt": "معاينة صورة الملاحظة",
+    "photoHint": "JPEG أو PNG أو WebP. الحد الأقصى ٥ ميغابايت.",
+    "photoTooLarge": "يجب أن تكون الصورة أقل من ٥ ميغابايت.",
+    "photoInvalidType": "يرجى اختيار صورة JPEG أو PNG أو WebP."
   },
   "timeline": {
     "title": "الخط الزمني",
@@ -367,7 +375,8 @@
     "addFirstChildDesc": "أنشئ ملف طفل لبدء تتبع مراحل تطوره.",
     "viewMilestonesFor": "عرض مراحل {dimension}",
     "completed": "{count} مكتملة",
-    "total": "{count} إجمالي"
+    "total": "{count} إجمالي",
+    "viewAll": "عرض جميع المراحل"
   },
   "milestoneDetail": {
     "notFound": "البُعد غير موجود",
@@ -798,5 +807,24 @@
   "dashboardLayout": {
     "loading": "جارٍ التحميل...",
     "menuToggle": "القائمة"
+  },
+  "analytics": {
+    "title": "تحليلات الملاحظات",
+    "subtitle": "تصوّر أنماط الملاحظات عبر الأبعاد.",
+    "addFirstChild": "أضف طفلك الأول",
+    "addFirstChildDesc": "أنشئ ملف طفل لبدء عرض التحليلات.",
+    "totalObservations": "إجمالي الملاحظات",
+    "mostActiveDimension": "البُعد الأكثر نشاطاً",
+    "dimensionsCovered": "الأبعاد المغطاة",
+    "outOf6": "من 6",
+    "observationsByDimension": "الملاحظات حسب البُعد",
+    "sentimentDistribution": "توزيع المشاعر",
+    "positive": "إيجابي",
+    "neutral": "محايد",
+    "needsAttention": "يحتاج اهتمام",
+    "noObservations": "لا توجد ملاحظات بعد",
+    "noObservationsDesc": "ابدأ بتسجيل الملاحظات لرؤية التحليلات.",
+    "logObservation": "تسجيل ملاحظة",
+    "observationsLabel": "ملاحظات"
   }
 }
