@@ -9,6 +9,8 @@ import { parsePagination, paginatedResult } from '../lib/pagination';
 import { verifyChildOwnership } from '../lib/ownership';
 import { validateBody } from '../utils/validation';
 import { DIMENSIONS, AGE_BANDS } from '../types';
+import { logger } from '../utils/logger';
+import { buildMilestoneEmailHtml } from '../templates/milestone-email';
 
 const dimensionEnum = z.enum(DIMENSIONS as unknown as [string, ...string[]]);
 const ageBandEnum = z.enum(AGE_BANDS as unknown as [string, ...string[]]);
@@ -240,6 +242,33 @@ const childMilestoneRoutes: FastifyPluginAsync = async (fastify) => {
         },
       }),
     ]);
+
+    // Fire-and-forget email notification for milestone achievement
+    if (achieved && parent.milestoneAlerts) {
+      const child = await fastify.prisma.child.findUnique({
+        where: { id: childId },
+        select: { name: true },
+      });
+
+      fastify.email
+        .send({
+          to: parent.email,
+          subject: `Milestone Achieved: ${milestone.title}`,
+          html: buildMilestoneEmailHtml({
+            parentName: parent.name,
+            childName: child?.name ?? 'Your child',
+            milestoneTitle: milestone.title,
+            milestoneDescription: milestone.description,
+            dimension: milestone.dimension,
+          }),
+        })
+        .catch((err: Error) => {
+          logger.error('Failed to send milestone email', err, {
+            parentId: parent.id,
+            milestoneId,
+          });
+        });
+    }
 
     return reply.code(200).send({
       id: childMilestone.milestone.id,
