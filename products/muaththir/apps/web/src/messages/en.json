@@ -48,7 +48,8 @@
     "settingsSharing": "Family Sharing",
     "settingsNotifications": "Notifications",
     "settingsSubscription": "Subscription",
-    "analytics": "Analytics"
+    "analytics": "Analytics",
+    "compare": "Compare Children"
   },
   "landing": {
     "heroTitle1": "Nurture every dimension",
@@ -828,5 +829,44 @@
     "noObservationsDesc": "Start logging observations to see analytics.",
     "logObservation": "Log Observation",
     "observationsLabel": "observations"
+  },
+  "compare": {
+    "title": "Compare Children",
+    "subtitle": "Side-by-side development comparison across all dimensions.",
+    "noChildren": "No children found",
+    "noChildrenDesc": "Add child profiles to compare their development.",
+    "needTwoChildren": "Two or more children needed",
+    "needTwoChildrenDesc": "Add another child profile to compare development across dimensions.",
+    "addChild": "Add Child",
+    "selectChildren": "Select children to compare",
+    "selectAll": "Select All",
+    "deselectAll": "Deselect All",
+    "comparing": "Comparing {count} children",
+    "overallScore": "Overall Score",
+    "dimensionBreakdown": "Dimension Breakdown",
+    "dimensionColumn": "Dimension",
+    "noScoresYet": "No scores yet. Log observations to see development data."
+  },
+  "streak": {
+    "currentStreak": "Current Streak",
+    "bestStreak": "Best Streak",
+    "days": "{count} days",
+    "day": "1 day",
+    "streakStart": "Start your streak! Log an observation today.",
+    "streakGoing": "Nice start! Keep the momentum going.",
+    "streakStrong": "Strong streak! Your consistency is paying off.",
+    "streakAmazing": "Amazing! A whole week of observations!",
+    "streakLegendary": "Legendary! You are a dedicated parent.",
+    "activeStreak": "Active streak",
+    "noStreak": "No active streak"
+  },
+  "celebration": {
+    "milestoneAchieved": "Milestone Achieved!",
+    "congratulations": "Congratulations!",
+    "achievedMilestone": "{name} has been achieved!",
+    "dimension": "Dimension: {dimension}",
+    "shareAchievement": "Share Achievement",
+    "copied": "Copied to clipboard!",
+    "close": "Close"
   }
 }
