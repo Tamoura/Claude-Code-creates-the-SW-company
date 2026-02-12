@@ -211,7 +211,7 @@ async function navigateToNotifications(page: Page) {
 
   await expect(page.locator('h1').first()).toBeVisible({ timeout: 15000 });
 
-  const notifLink = page.locator('a[href="/dashboard/settings/notifications"]');
+  const notifLink = page.getByRole('main').locator('a[href="/dashboard/settings/notifications"]');
   await expect(notifLink).toBeVisible({ timeout: 10000 });
   await notifLink.click({ force: true });
 

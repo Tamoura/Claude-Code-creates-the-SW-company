@@ -4,8 +4,8 @@ import { hashPassword, verifyPassword } from '../utils/crypto';
 import {
   ConflictError,
   UnauthorizedError,
-  ValidationError,
 } from '../lib/errors';
+import { validateBody } from '../utils/validation';
 
 const passwordSchema = z
   .string()
@@ -35,17 +35,6 @@ const notificationPrefsSchema = z.object({
   weeklyDigest: z.boolean().optional(),
   milestoneAlerts: z.boolean().optional(),
 });
-
-function validateBody<T>(schema: z.ZodType<T>, body: unknown): T {
-  const parsed = schema.safeParse(body);
-  if (!parsed.success) {
-    throw new ValidationError(
-      parsed.error.errors[0]?.message || 'Validation failed',
-      parsed.error.flatten().fieldErrors as Record<string, string[]>
-    );
-  }
-  return parsed.data;
-}
 
 const profileRoutes: FastifyPluginAsync = async (fastify) => {
   // GET /api/profile - Get current parent's profile

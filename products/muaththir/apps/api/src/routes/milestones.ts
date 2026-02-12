@@ -4,10 +4,10 @@ import {
   BadRequestError,
   ForbiddenError,
   NotFoundError,
-  ValidationError,
 } from '../lib/errors';
 import { parsePagination, paginatedResult } from '../lib/pagination';
 import { verifyChildOwnership } from '../lib/ownership';
+import { validateBody } from '../utils/validation';
 import { DIMENSIONS, AGE_BANDS } from '../types';
 
 const dimensionEnum = z.enum(DIMENSIONS as unknown as [string, ...string[]]);
@@ -16,17 +16,6 @@ const ageBandEnum = z.enum(AGE_BANDS as unknown as [string, ...string[]]);
 const toggleSchema = z.object({
   achieved: z.boolean(),
 });
-
-function validateBody<T>(schema: z.ZodType<T>, body: unknown): T {
-  const parsed = schema.safeParse(body);
-  if (!parsed.success) {
-    throw new ValidationError(
-      parsed.error.errors[0]?.message || 'Validation failed',
-      parsed.error.flatten().fieldErrors as Record<string, string[]>
-    );
-  }
-  return parsed.data;
-}
 
 // --- Public milestone definitions route ---
 

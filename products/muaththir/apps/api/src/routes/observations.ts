@@ -3,28 +3,7 @@ import { z } from 'zod';
 import { NotFoundError, ValidationError } from '../lib/errors';
 import { parsePagination, paginatedResult } from '../lib/pagination';
 import { verifyChildOwnership } from '../lib/ownership';
-
-function validateBody<T>(schema: z.ZodType<T>, body: unknown): T {
-  const parsed = schema.safeParse(body);
-  if (!parsed.success) {
-    throw new ValidationError(
-      parsed.error.errors[0]?.message || 'Validation failed',
-      parsed.error.flatten().fieldErrors as Record<string, string[]>
-    );
-  }
-  return parsed.data;
-}
-
-function validateQuery<T>(schema: z.ZodType<T>, query: unknown): T {
-  const parsed = schema.safeParse(query);
-  if (!parsed.success) {
-    throw new ValidationError(
-      parsed.error.errors[0]?.message || 'Validation failed',
-      parsed.error.flatten().fieldErrors as Record<string, string[]>
-    );
-  }
-  return parsed.data;
-}
+import { validateBody, validateQuery } from '../utils/validation';
 
 const DIMENSIONS = [
   'academic',

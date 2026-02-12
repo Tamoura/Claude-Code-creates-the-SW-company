@@ -3,7 +3,8 @@ import { z } from 'zod';
 import * as crypto from 'crypto';
 import { Dimension, Sentiment } from '@prisma/client';
 import { hashPassword, verifyPassword, generateRefreshToken } from '../utils/crypto';
-import { BadRequestError, ConflictError, UnauthorizedError, ValidationError } from '../lib/errors';
+import { BadRequestError, ConflictError, UnauthorizedError } from '../lib/errors';
+import { validateBody } from '../utils/validation';
 import { logger } from '../utils/logger';
 
 const passwordSchema = z
@@ -53,17 +54,6 @@ function parentToResponse(parent: ParentLike) {
     subscriptionTier: parent.subscriptionTier,
     createdAt: parent.createdAt.toISOString(),
   };
-}
-
-function validateBody<T>(schema: z.ZodType<T>, body: unknown): T {
-  const parsed = schema.safeParse(body);
-  if (!parsed.success) {
-    throw new ValidationError(
-      parsed.error.errors[0]?.message || 'Validation failed',
-      parsed.error.flatten().fieldErrors as Record<string, string[]>
-    );
-  }
-  return parsed.data;
 }
 
 async function issueTokens(
@@ -252,6 +242,24 @@ const authRoutes: FastifyPluginAsync = async (fastify) => {
       await fastify.prisma.parent.update({
         where: { id: parent.id },
         data: { resetToken, resetTokenExp },
+      });
+
+      const frontendUrl = process.env.FRONTEND_URL || 'http://localhost:3108';
+      const resetUrl = `${frontendUrl}/reset-password?token=${resetToken}`;
+
+      await fastify.email.send({
+        to: email,
+        subject: 'Reset your Muaththir password',
+        html: `
+          <div style="font-family: Arial, sans-serif; max-width: 600px; margin: 0 auto;">
+            <h2>Password Reset</h2>
+            <p>You requested a password reset for your Muaththir account.</p>
+            <p>Click the link below to reset your password. This link expires in 1 hour.</p>
+            <p><a href="${resetUrl}" style="display: inline-block; padding: 12px 24px; background-color: #4F46E5; color: #ffffff; text-decoration: none; border-radius: 6px;">Reset Password</a></p>
+            <p style="color: #666; font-size: 14px;">If you didn't request this, you can safely ignore this email.</p>
+            <p style="color: #666; font-size: 12px;">Or copy this link: ${resetUrl}</p>
+          </div>
+        `,
       });
 
       logger.info('Password reset token generated', { email });

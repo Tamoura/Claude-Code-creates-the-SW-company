@@ -119,6 +119,43 @@ export default function ChildProfilePage({ params }: ChildProfilePageProps) {
           {t('profileInfo')}
         </h2>
         <div className="space-y-4">
+          {/* Photo + Name row */}
+          <div className="flex items-center gap-4 mb-4">
+            {child.photoUrl ? (
+              <div className="h-16 w-16 rounded-full overflow-hidden ring-2 ring-slate-200 dark:ring-slate-600 flex-shrink-0">
+                {/* eslint-disable-next-line @next/next/no-img-element */}
+                <img
+                  src={child.photoUrl}
+                  alt={child.name}
+                  className="h-full w-full object-cover"
+                />
+              </div>
+            ) : (
+              <div className="h-16 w-16 rounded-full bg-slate-100 dark:bg-slate-700 flex items-center justify-center ring-2 ring-slate-200 dark:ring-slate-600 flex-shrink-0">
+                <svg
+                  className="h-8 w-8 text-slate-400 dark:text-slate-500"
+                  fill="none"
+                  viewBox="0 0 24 24"
+                  stroke="currentColor"
+                  aria-hidden="true"
+                >
+                  <path
+                    strokeLinecap="round"
+                    strokeLinejoin="round"
+                    strokeWidth={1.5}
+                    d="M16 7a4 4 0 11-8 0 4 4 0 018 0zM12 14a7 7 0 00-7 7h14a7 7 0 00-7-7z"
+                  />
+                </svg>
+              </div>
+            )}
+            <div>
+              <p className="text-lg font-semibold text-slate-900 dark:text-white">{child.name}</p>
+              <p className="text-sm text-slate-500 dark:text-slate-400 capitalize">
+                {child.gender || t('notSpecified')}
+              </p>
+            </div>
+          </div>
+
           <div className="grid grid-cols-2 gap-4">
             <div>
               <label className="label">{t('name')}</label>

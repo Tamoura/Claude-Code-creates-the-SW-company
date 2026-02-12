@@ -5,10 +5,10 @@ import {
   BadRequestError,
   ForbiddenError,
   NotFoundError,
-  ValidationError,
 } from '../lib/errors';
 import { parsePagination, paginatedResult } from '../lib/pagination';
 import { verifyChildOwnership } from '../lib/ownership';
+import { validateBody } from '../utils/validation';
 import { getAgeBand } from '../utils/age-band';
 import { Child } from '@prisma/client';
 
@@ -36,17 +36,6 @@ const updateChildSchema = z.object({
   allergies: z.array(z.string()).optional(),
   specialNeeds: z.string().max(500, 'Special needs must be 500 characters or fewer').optional().nullable(),
 });
-
-function validateBody<T>(schema: z.ZodType<T>, body: unknown): T {
-  const parsed = schema.safeParse(body);
-  if (!parsed.success) {
-    throw new ValidationError(
-      parsed.error.errors[0]?.message || 'Validation failed',
-      parsed.error.flatten().fieldErrors as Record<string, string[]>
-    );
-  }
-  return parsed.data;
-}
 
 function validateAge(dateOfBirth: Date): void {
   const ageInYears = differenceInYears(new Date(), dateOfBirth);

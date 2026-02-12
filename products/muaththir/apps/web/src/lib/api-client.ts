@@ -379,6 +379,47 @@ class ApiClient {
     return this.request(`/api/children/${id}`, { method: 'DELETE' });
   }
 
+  async uploadChildPhoto(childId: string, file: File): Promise<Child> {
+    const token = TokenManager.getToken();
+    const headers: Record<string, string> = {};
+    if (token) headers['Authorization'] = `Bearer ${token}`;
+
+    const formData = new FormData();
+    formData.append('photo', file);
+
+    const controller = new AbortController();
+    const timeoutId = setTimeout(() => controller.abort(), 30000);
+
+    try {
+      const response = await fetch(
+        `${this.baseUrl}/api/children/${childId}/photo`,
+        {
+          method: 'POST',
+          headers,
+          body: formData,
+          credentials: 'include',
+          signal: controller.signal,
+        }
+      );
+
+      if (!response.ok) {
+        const error = await response.json().catch(() => ({
+          detail: 'Upload failed',
+        }));
+        throw new Error(error.detail || error.message || `HTTP ${response.status}`);
+      }
+
+      return response.json();
+    } catch (err) {
+      if (err instanceof DOMException && err.name === 'AbortError') {
+        throw new Error('Upload timed out. Please try again.');
+      }
+      throw err;
+    } finally {
+      clearTimeout(timeoutId);
+    }
+  }
+
   // ==================== Observations ====================
 
   async getObservations(

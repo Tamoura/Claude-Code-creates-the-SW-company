@@ -12,6 +12,7 @@ interface NavItemDef {
   href: string;
   icon: React.ReactNode;
   hasDimensionChildren?: boolean;
+  hasSettingsChildren?: boolean;
 }
 
 const navItemDefs: NavItemDef[] = [
@@ -106,6 +107,7 @@ const navItemDefs: NavItemDef[] = [
         <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M15 12a3 3 0 11-6 0 3 3 0 016 0z" />
       </svg>
     ),
+    hasSettingsChildren: true,
   },
 ];
 
@@ -192,6 +194,28 @@ export default function Sidebar({ mobileOpen = false, onMobileClose: _onMobileCl
                       aria-hidden="true"
                     />
                     {td(dim.slug)}
+                  </Link>
+                ))}
+              </div>
+            )}
+            {/* Settings sub-items */}
+            {item.hasSettingsChildren && isActive(item.href) && (
+              <div className="ms-8 mt-1 space-y-0.5">
+                {[
+                  { key: 'settingsSharing', href: '/dashboard/settings/sharing' },
+                  { key: 'settingsNotifications', href: '/dashboard/settings/notifications' },
+                  { key: 'settingsSubscription', href: '/dashboard/settings/subscription' },
+                ].map((sub) => (
+                  <Link
+                    key={sub.href}
+                    href={sub.href}
+                    className={`flex items-center gap-2 px-3 py-1.5 rounded-lg text-xs font-medium transition-colors ${
+                      pathname === sub.href
+                        ? 'bg-slate-100 text-slate-900 dark:bg-slate-800 dark:text-white'
+                        : 'text-slate-500 hover:text-slate-700 hover:bg-slate-50 dark:text-slate-500 dark:hover:text-slate-300 dark:hover:bg-slate-800'
+                    }`}
+                  >
+                    {t(sub.key)}
                   </Link>
                 ))}
               </div>
