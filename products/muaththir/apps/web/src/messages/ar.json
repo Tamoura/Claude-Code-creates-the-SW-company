@@ -228,7 +228,10 @@
     "loadMore": "تحميل المزيد",
     "loadingMore": "جارٍ التحميل...",
     "filterDateFrom": "تصفية من تاريخ",
-    "filterDateTo": "تصفية إلى تاريخ"
+    "filterDateTo": "تصفية إلى تاريخ",
+    "exportCSV": "تصدير CSV",
+    "exporting": "جارٍ التصدير...",
+    "exportError": "فشل التصدير. حاول مرة أخرى."
   },
   "dimensionsPage": {
     "title": "الأبعاد",

@@ -230,7 +230,10 @@
     "loadMore": "Load More",
     "loadingMore": "Loading...",
     "filterDateFrom": "Filter from date",
-    "filterDateTo": "Filter to date"
+    "filterDateTo": "Filter to date",
+    "exportCSV": "Export CSV",
+    "exporting": "Exporting...",
+    "exportError": "Export failed. Please try again."
   },
   "dimensionsPage": {
     "title": "Dimensions",
