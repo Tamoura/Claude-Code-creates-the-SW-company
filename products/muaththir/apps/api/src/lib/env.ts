@@ -1,4 +1,5 @@
 import { z } from 'zod';
+import { logger } from '../utils/logger';
 
 const envSchema = z.object({
   NODE_ENV: z.enum(['development', 'test', 'production']).default('development'),
@@ -13,6 +14,14 @@ const envSchema = z.object({
 export type Env = z.infer<typeof envSchema>;
 
 let validatedEnv: Env | null = null;
+
+/**
+ * Reset cached validation result. Used in tests to
+ * re-run validation with modified environment variables.
+ */
+export function resetValidatedEnv(): void {
+  validatedEnv = null;
+}
 
 export function validateEnv(): Env {
   if (validatedEnv) return validatedEnv;
@@ -29,6 +38,19 @@ export function validateEnv(): Env {
   // Production requires JWT_SECRET
   if (parsed.data.NODE_ENV === 'production' && !parsed.data.JWT_SECRET) {
     throw new Error('JWT_SECRET is required in production');
+  }
+
+  // Warn about optional but recommended variables
+  if (!process.env.SMTP_HOST) {
+    logger.warn(
+      'SMTP_HOST is not set. Email delivery will be disabled.'
+    );
+  }
+
+  if (!process.env.ALLOWED_ORIGINS) {
+    logger.warn(
+      'ALLOWED_ORIGINS is not set. Defaulting to http://localhost:3108.'
+    );
   }
 
   validatedEnv = parsed.data;
