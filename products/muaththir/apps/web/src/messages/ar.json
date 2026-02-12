@@ -18,7 +18,8 @@
     "viewDetails": "عرض التفاصيل",
     "viewAll": "عرض الكل",
     "darkMode": "الوضع الداكن",
-    "lightMode": "الوضع الفاتح"
+    "lightMode": "الوضع الفاتح",
+    "keyboardShortcutNewObservation": "اضغط Ctrl+N لتسجيل ملاحظة جديدة"
   },
   "header": {
     "homeAriaLabel": "الصفحة الرئيسية لمؤثّر",
@@ -186,7 +187,12 @@
     "failedDashboard": "تعذّر تحميل درجات لوحة التحكم",
     "failedObservations": "تعذّر تحميل الملاحظات الأخيرة",
     "failedMilestones": "تعذّر تحميل المراحل المستحقة",
-    "saving": "جارٍ الحفظ..."
+    "saving": "جارٍ الحفظ...",
+    "statsTotalObservations": "إجمالي الملاحظات",
+    "statsDaysTracking": "أيام التتبع",
+    "statsCurrentStreak": "السلسلة الحالية",
+    "statsDays": "{count} أيام",
+    "statsDay": "يوم واحد"
   },
   "observe": {
     "title": "تسجيل ملاحظة",
@@ -213,6 +219,8 @@
   "timeline": {
     "title": "الخط الزمني",
     "subtitle": "عرض زمني لجميع الملاحظات.",
+    "searchPlaceholder": "البحث في الملاحظات...",
+    "searchAriaLabel": "البحث في الملاحظات بكلمة مفتاحية",
     "allDimensions": "جميع الأبعاد",
     "allSentiments": "جميع المشاعر",
     "positive": "إيجابي",
@@ -223,6 +231,7 @@
     "noChildSelectedDesc": "يرجى اختيار طفل لعرض خطه الزمني.",
     "noObservationsTitle": "لا توجد ملاحظات بعد",
     "noObservationsDesc": "سيظهر الخط الزمني لطفلك هنا عند تسجيل الملاحظات.",
+    "noSearchResults": "لا توجد ملاحظات تطابق بحثك.",
     "deleteObservation": "حذف الملاحظة",
     "confirmDelete": "هل أنت متأكد من حذف هذه الملاحظة؟",
     "loadMore": "تحميل المزيد",

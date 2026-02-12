@@ -123,6 +123,41 @@ export default function DashboardPage() {
     };
   }, [selectedChildId, retryCount]);
 
+  // Compute stats from dashboard data and observations
+  const totalObservations = dashboardData
+    ? dashboardData.dimensions.reduce((sum, d) => sum + d.observationCount, 0)
+    : 0;
+
+  const daysSinceFirst = (() => {
+    if (observations.length === 0) return 0;
+    const dates = observations.map((o) => new Date(o.observedAt).getTime());
+    const earliest = Math.min(...dates);
+    return Math.max(1, Math.floor((Date.now() - earliest) / (1000 * 60 * 60 * 24)));
+  })();
+
+  const currentStreak = (() => {
+    if (observations.length === 0) return 0;
+    const uniqueDays = new Set(
+      observations.map((o) => new Date(o.observedAt).toISOString().slice(0, 10))
+    );
+    const sortedDays = Array.from(uniqueDays).sort().reverse();
+    let streak = 0;
+    const today = new Date();
+    // Start checking from today backwards
+    for (let i = 0; i <= sortedDays.length; i++) {
+      const checkDate = new Date(today);
+      checkDate.setDate(checkDate.getDate() - i);
+      const dateStr = checkDate.toISOString().slice(0, 10);
+      if (uniqueDays.has(dateStr)) {
+        streak++;
+      } else if (i > 0) {
+        // Allow today to not have an observation (streak from yesterday)
+        break;
+      }
+    }
+    return streak;
+  })();
+
   // Transform dashboard data to radar chart format
   const radarScores = dashboardData
     ? dashboardData.dimensions.map((d) => ({
@@ -207,6 +242,30 @@ export default function DashboardPage() {
           childId={selectedChildId}
           onSuccess={() => setSelectedChildId((prev) => prev)}
         />
+      )}
+
+      {/* Stats Summary Row */}
+      {!loading && dashboardData && (
+        <div className="grid grid-cols-3 gap-4">
+          <div className="card text-center py-3">
+            <p className="text-xs text-slate-500 dark:text-slate-400">{t('statsTotalObservations')}</p>
+            <p className="text-2xl font-bold text-emerald-600 dark:text-emerald-400" data-testid="stats-total-observations">
+              {totalObservations}
+            </p>
+          </div>
+          <div className="card text-center py-3">
+            <p className="text-xs text-slate-500 dark:text-slate-400">{t('statsDaysTracking')}</p>
+            <p className="text-2xl font-bold text-blue-600 dark:text-blue-400" data-testid="stats-days-tracking">
+              {daysSinceFirst}
+            </p>
+          </div>
+          <div className="card text-center py-3">
+            <p className="text-xs text-slate-500 dark:text-slate-400">{t('statsCurrentStreak')}</p>
+            <p className="text-2xl font-bold text-amber-600 dark:text-amber-400" data-testid="stats-current-streak">
+              {currentStreak}
+            </p>
+          </div>
+        </div>
       )}
 
       {/* Partial Failure Warning */}

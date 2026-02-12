@@ -81,6 +81,16 @@ export function SkeletonDashboard() {
         </div>
       </div>
 
+      {/* Stats Summary Row */}
+      <div className="grid grid-cols-3 gap-4">
+        {[1, 2, 3].map((i) => (
+          <div key={i} className="card text-center py-3 space-y-2">
+            <Skeleton variant="text" className="h-3 w-24 mx-auto" />
+            <Skeleton variant="text" className="h-8 w-12 mx-auto" />
+          </div>
+        ))}
+      </div>
+
       {/* Radar Chart area */}
       <div className="card">
         <Skeleton variant="text" className="h-6 w-48 mb-4" />
@@ -92,7 +102,17 @@ export function SkeletonDashboard() {
         <Skeleton variant="text" className="h-6 w-32 mb-4" />
         <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-3 gap-4">
           {[1, 2, 3, 4, 5, 6].map((i) => (
-            <Skeleton key={i} variant="rounded" className="h-40 w-full" />
+            <div key={i} className="card space-y-3">
+              <div className="flex items-center gap-2">
+                <Skeleton variant="circular" className="h-8 w-8" />
+                <Skeleton variant="text" className="h-5 w-24" />
+              </div>
+              <Skeleton variant="text" className="h-4 w-full" />
+              <div className="flex items-center justify-between">
+                <Skeleton variant="text" className="h-8 w-12" />
+                <Skeleton variant="text" className="h-3 w-20" />
+              </div>
+            </div>
           ))}
         </div>
       </div>
@@ -102,7 +122,15 @@ export function SkeletonDashboard() {
         <Skeleton variant="text" className="h-6 w-48 mb-4" />
         <div className="space-y-3">
           {[1, 2, 3].map((i) => (
-            <Skeleton key={i} variant="rounded" className="h-32 w-full" />
+            <div key={i} className="card space-y-3" style={{ borderLeft: '4px solid #e2e8f0' }}>
+              <div className="flex items-center gap-2">
+                <Skeleton variant="rounded" className="h-5 w-16" />
+                <Skeleton variant="rounded" className="h-5 w-14" />
+              </div>
+              <Skeleton variant="text" className="h-4 w-full" />
+              <Skeleton variant="text" className="h-4 w-3/4" />
+              <Skeleton variant="text" className="h-3 w-24" />
+            </div>
           ))}
         </div>
       </div>
@@ -112,10 +140,90 @@ export function SkeletonDashboard() {
         <Skeleton variant="text" className="h-6 w-36 mb-4" />
         <div className="space-y-3">
           {[1, 2, 3].map((i) => (
-            <Skeleton key={i} variant="rounded" className="h-20 w-full" />
+            <div key={i} className="card">
+              <div className="flex items-start gap-3">
+                <Skeleton variant="circular" className="h-8 w-8" />
+                <div className="flex-1 space-y-2">
+                  <Skeleton variant="text" className="h-4 w-2/3" />
+                  <Skeleton variant="text" className="h-3 w-full" />
+                  <Skeleton variant="text" className="h-3 w-20" />
+                </div>
+              </div>
+            </div>
           ))}
         </div>
       </div>
+    </div>
+  );
+}
+
+export function SkeletonTimeline() {
+  return (
+    <div className="space-y-8" aria-hidden="true" aria-label="Loading timeline">
+      {/* Header */}
+      <div className="flex items-start justify-between">
+        <div className="space-y-2">
+          <Skeleton variant="text" className="h-8 w-32" />
+          <Skeleton variant="text" className="h-4 w-56" />
+        </div>
+        <Skeleton variant="rounded" className="h-9 w-28" />
+      </div>
+
+      {/* Search Input */}
+      <Skeleton variant="rounded" className="h-10 w-full" />
+
+      {/* Filter Bar */}
+      <div className="space-y-4">
+        <div className="flex flex-wrap gap-2">
+          {[1, 2, 3, 4, 5, 6, 7].map((i) => (
+            <Skeleton key={i} variant="rounded" className="h-8 w-20" />
+          ))}
+        </div>
+        <div className="flex gap-3">
+          <Skeleton variant="rounded" className="h-8 w-32" />
+          <Skeleton variant="rounded" className="h-8 w-32" />
+          <Skeleton variant="rounded" className="h-8 w-32" />
+        </div>
+      </div>
+
+      {/* Observation Cards */}
+      <div className="space-y-4">
+        {[1, 2, 3, 4].map((i) => (
+          <div key={i} className="card space-y-3" style={{ borderLeft: '4px solid #e2e8f0' }}>
+            <div className="flex items-center gap-2">
+              <Skeleton variant="rounded" className="h-5 w-16" />
+              <Skeleton variant="rounded" className="h-5 w-14" />
+            </div>
+            <Skeleton variant="text" className="h-4 w-full" />
+            <Skeleton variant="text" className="h-4 w-3/4" />
+            <div className="flex items-center justify-between">
+              <Skeleton variant="text" className="h-3 w-24" />
+              <div className="flex gap-1">
+                <Skeleton variant="rounded" className="h-5 w-12" />
+                <Skeleton variant="rounded" className="h-5 w-12" />
+              </div>
+            </div>
+          </div>
+        ))}
+      </div>
+    </div>
+  );
+}
+
+export function SkeletonMilestones() {
+  return (
+    <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-3 gap-4" aria-hidden="true" aria-label="Loading milestones">
+      {[1, 2, 3, 4, 5, 6].map((i) => (
+        <div key={i} className="card space-y-3" style={{ borderLeft: '4px solid #e2e8f0' }}>
+          <Skeleton variant="text" className="h-5 w-28" />
+          <Skeleton variant="text" className="h-4 w-full" />
+          <div className="flex items-center gap-1">
+            <Skeleton variant="text" className="h-3 w-20" />
+            <Skeleton variant="text" className="h-3 w-4" />
+            <Skeleton variant="text" className="h-3 w-16" />
+          </div>
+        </div>
+      ))}
     </div>
   );
 }
