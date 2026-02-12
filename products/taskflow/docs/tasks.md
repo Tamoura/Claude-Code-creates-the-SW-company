@@ -12,7 +12,7 @@
 - [x] T002 Configure TypeScript → products/taskflow/tsconfig.json
 - [x] T003 [P] Configure backend project → apps/api/package.json
 - [x] T004 [P] Configure frontend project → apps/web/package.json
-- [x] T005 Register ports (3110/5007) → .claude/PORT-REGISTRY.md
+- [x] T005 Register ports (3111/5007) → .claude/PORT-REGISTRY.md
 
 ## Phase 2: Foundation
 

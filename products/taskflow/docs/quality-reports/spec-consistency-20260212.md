@@ -38,7 +38,7 @@ All spec requirements are fully covered by tasks and tests.
 | IV. TypeScript | TypeScript 5+ configured | PASS |
 | V. Default Stack | Fastify + Next.js + PostgreSQL + Prisma | PASS |
 | VI. Traceability | All 7 FR requirements mapped to tasks and tests | PASS |
-| VII. Port Registry | 3110 (web), 5007 (api) registered | PASS |
+| VII. Port Registry | 3111 (web), 5007 (api) registered | PASS |
 | VIII. Git Safety | Branch naming follows convention | PASS |
 | IX. Quality Gates | All gates planned in Phase 8 | PASS |
 

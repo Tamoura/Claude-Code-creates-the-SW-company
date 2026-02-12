@@ -15,7 +15,7 @@ Build a task management app with user auth (JWT), CRUD tasks, and dashboard stat
 - **Backend**: Fastify + Prisma + PostgreSQL 15
 - **Frontend**: Next.js 14+ / React 18+ / Tailwind CSS
 - **Testing**: Jest + Playwright
-- **Assigned Ports**: Frontend 3110 / Backend 5007
+- **Assigned Ports**: Frontend 3111 / Backend 5007
 
 ## Constitution Check
 
@@ -26,7 +26,7 @@ Build a task management app with user auth (JWT), CRUD tasks, and dashboard stat
 | III. TDD | Test plan defined (tests before implementation) | PASS |
 | IV. TypeScript | TypeScript configured (strict mode) | PASS |
 | V. Default Stack | Fastify + Next.js + PostgreSQL + Prisma | PASS |
-| VII. Port Registry | Ports assigned: 3110 (web), 5007 (api) | PASS |
+| VII. Port Registry | Ports assigned: 3111 (web), 5007 (api) | PASS |
 
 ## Component Reuse Plan
 

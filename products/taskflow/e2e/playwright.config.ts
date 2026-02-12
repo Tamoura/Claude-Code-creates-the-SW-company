@@ -8,7 +8,7 @@ export default defineConfig({
   workers: 1,
   reporter: 'html',
   use: {
-    baseURL: 'http://localhost:3110',
+    baseURL: 'http://localhost:3111',
     trace: 'on-first-retry',
     screenshot: 'only-on-failure',
   },
@@ -20,7 +20,7 @@ export default defineConfig({
   ],
   webServer: {
     command: 'cd ../apps/web && npm run dev',
-    url: 'http://localhost:3110',
+    url: 'http://localhost:3111',
     reuseExistingServer: !process.env.CI,
     timeout: 30000,
   },
