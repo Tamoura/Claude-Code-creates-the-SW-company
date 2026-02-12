@@ -80,6 +80,20 @@ export async function buildApp(
   // Cookie (for refresh tokens)
   await app.register(cookie);
 
+  // Explicit security headers (supplement Helmet defaults)
+  app.addHook('onSend', async (_request, reply) => {
+    reply.header('X-Content-Type-Options', 'nosniff');
+    reply.header('X-Frame-Options', 'DENY');
+    reply.header('X-XSS-Protection', '0');
+    reply.header('Referrer-Policy', 'strict-origin-when-cross-origin');
+    if (process.env.NODE_ENV === 'production') {
+      reply.header(
+        'Strict-Transport-Security',
+        'max-age=31536000; includeSubDomains'
+      );
+    }
+  });
+
   // Global error handler (RFC 7807) -- set BEFORE routes for encapsulation
   app.setErrorHandler((error, request, reply) => {
     if (error instanceof AppError) {

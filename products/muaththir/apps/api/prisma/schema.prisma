@@ -111,6 +111,7 @@ model Observation {
   @@index([childId, dimension])
   @@index([childId, observedAt])
   @@index([childId, deletedAt])
+  @@index([childId, deletedAt, dimension])
   @@index([childId, dimension, observedAt])
   @@index([tags], type: Gin)
   @@map("observations")

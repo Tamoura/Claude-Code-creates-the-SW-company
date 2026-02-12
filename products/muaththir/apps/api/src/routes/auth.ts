@@ -255,6 +255,9 @@ const authRoutes: FastifyPluginAsync = async (fastify) => {
       });
 
       logger.info('Password reset token generated', { email });
+    } else {
+      // Constant-time: burn CPU to prevent timing-based email enumeration
+      await hashPassword(crypto.randomBytes(16).toString('hex'));
     }
 
     return reply.code(200).send({
