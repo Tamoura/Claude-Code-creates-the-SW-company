@@ -67,10 +67,10 @@ export default function DimensionCard({
           </div>
         )}
       </div>
-      <h3 className="text-sm font-semibold text-slate-900 mb-1 group-hover:text-emerald-700 transition-colors">
+      <h3 className="text-sm font-semibold text-slate-900 dark:text-white mb-1 group-hover:text-emerald-700 dark:group-hover:text-emerald-400 transition-colors">
         {td(dimension.slug as any)}
       </h3>
-      <p className="text-xs text-slate-500 line-clamp-2 mb-3">
+      <p className="text-xs text-slate-500 dark:text-slate-400 line-clamp-2 mb-3">
         {td(`${dimension.slug}Desc` as any)}
       </p>
       <div className="flex items-center gap-1 text-xs text-slate-400 dark:text-slate-500">

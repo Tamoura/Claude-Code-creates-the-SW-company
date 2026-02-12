@@ -81,7 +81,7 @@ export default function ChildProfilePage({ params }: ChildProfilePageProps) {
 
   if (error || !child) {
     return (
-      <div className="card bg-red-50 dark:bg-red-900/30 border-red-200 dark:border-slate-700">
+      <div className="card bg-red-50 dark:bg-red-900/30 border-red-200 dark:border-slate-700" role="alert">
         <p className="text-sm text-red-700 dark:text-red-400">{error || t('childNotFound')}</p>
         <div className="flex items-center gap-4 mt-4">
           <button
