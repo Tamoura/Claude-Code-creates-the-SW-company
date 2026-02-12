@@ -613,6 +613,11 @@
     "physical": "Physical",
     "physicalDesc": "Health metrics, fitness activities, motor skills, nutrition, and sleep."
   },
+  "auth": {
+    "demoLoading": "Setting up your demo experience...",
+    "demoError": "Could not start demo. Please try again.",
+    "tryDemo": "Try Demo Account"
+  },
   "dashboardLayout": {
     "loading": "Loading..."
   }

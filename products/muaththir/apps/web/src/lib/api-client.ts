@@ -266,6 +266,15 @@ class ApiClient {
     return result;
   }
 
+  async demoLogin(): Promise<LoginResponse> {
+    const result = await this.request<LoginResponse>('/api/auth/demo-login', {
+      method: 'POST',
+      body: JSON.stringify({}),
+    });
+    TokenManager.setToken(result.accessToken);
+    return result;
+  }
+
   async logout(): Promise<void> {
     try {
       await this.request('/api/auth/logout', { method: 'POST' });
