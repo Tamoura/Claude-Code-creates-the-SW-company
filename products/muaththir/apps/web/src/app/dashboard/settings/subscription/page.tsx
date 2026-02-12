@@ -5,11 +5,18 @@ import { useTranslations } from 'next-intl';
 
 export default function SubscriptionSettingsPage() {
   const t = useTranslations('subscription');
+  const tc = useTranslations('common');
 
   return (
     <div className="max-w-2xl mx-auto space-y-8">
       <div>
-        <h1 className="text-2xl font-bold text-slate-900 dark:text-white">
+        <Link
+          href="/dashboard/settings"
+          className="text-sm text-emerald-600 dark:text-emerald-400 hover:text-emerald-700 dark:hover:text-emerald-300 font-medium"
+        >
+          {tc('back')}
+        </Link>
+        <h1 className="text-2xl font-bold text-slate-900 dark:text-white mt-2">
           {t('title')}
         </h1>
         <p className="text-sm text-slate-500 dark:text-slate-400 mt-1">
