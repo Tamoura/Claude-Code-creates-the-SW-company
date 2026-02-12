@@ -19,7 +19,7 @@ jest.mock('recharts', () => ({
 describe('CoverageChart', () => {
   it('renders the chart title', () => {
     render(<CoverageChart />);
-    expect(screen.getByText('Test Coverage Trend')).toBeInTheDocument();
+    expect(screen.getByRole('heading', { name: 'Test Coverage Trend' })).toBeInTheDocument();
   });
 
   it('renders the area chart', () => {
