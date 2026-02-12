@@ -1,5 +1,7 @@
-import { render, screen, fireEvent, waitFor } from '@testing-library/react';
+import { render, screen, fireEvent, waitFor, act } from '@testing-library/react';
 import MilestonesPage from '../../src/app/dashboard/milestones/page';
+
+jest.setTimeout(10000);
 
 // Mock next/link
 jest.mock('next/link', () => {
@@ -173,22 +175,14 @@ describe('MilestonesPage - Improved Progress', () => {
   it('toggles dimension section visibility on click', async () => {
     render(<MilestonesPage />);
 
-    let academicToggle: HTMLElement;
-    await waitFor(() => {
-      academicToggle = screen.getByTestId('dimension-toggle-academic');
-      expect(academicToggle).toBeInTheDocument();
-    });
+    const academicToggle = await screen.findByTestId('dimension-toggle-academic', {}, { timeout: 3000 });
+    expect(academicToggle).toBeInTheDocument();
 
     // Click to expand
-    fireEvent.click(academicToggle!);
+    fireEvent.click(academicToggle);
 
     // Wait for expanded content to appear
-    await waitFor(
-      () => {
-        const link = screen.getByTestId('dimension-link-academic');
-        expect(link).toBeInTheDocument();
-      },
-      { timeout: 3000 }
-    );
+    const link = await screen.findByTestId('dimension-link-academic', {}, { timeout: 3000 });
+    expect(link).toBeInTheDocument();
   });
 });

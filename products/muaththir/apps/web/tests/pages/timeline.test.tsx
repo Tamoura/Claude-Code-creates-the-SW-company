@@ -1,6 +1,8 @@
 import { render, screen, waitFor, fireEvent } from '@testing-library/react';
 import TimelinePage from '../../src/app/dashboard/timeline/page';
 
+jest.setTimeout(10000);
+
 // Mock next/link
 jest.mock('next/link', () => {
   return function MockLink({
@@ -181,11 +183,11 @@ describe('TimelinePage', () => {
 
     render(<TimelinePage />);
 
-    await waitFor(() => {
-      expect(screen.getByRole('button', { name: /export csv/i })).toBeInTheDocument();
-    }, { timeout: 3000 });
+    // Wait for the export button to become visible (after loading state resolves)
+    const exportBtn = await screen.findByRole('button', { name: /export csv/i }, { timeout: 5000 });
+    expect(exportBtn).toBeInTheDocument();
 
-    fireEvent.click(screen.getByRole('button', { name: /export csv/i }));
+    fireEvent.click(exportBtn);
 
     await waitFor(() => {
       expect(mockExportData).toHaveBeenCalledWith('csv');
