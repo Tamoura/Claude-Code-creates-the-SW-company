@@ -25,6 +25,7 @@ import goalTemplateRoutes from './routes/goal-templates';
 import reportRoutes from './routes/reports';
 import sharingRoutes from './routes/sharing';
 import exportRoutes from './routes/export';
+import digestRoutes from './routes/digest';
 
 import { logger } from './utils/logger';
 import { AppError, ValidationError } from './lib/errors';
@@ -223,6 +224,7 @@ export async function buildApp(
   await app.register(reportRoutes, { prefix: '/api/children' });
   await app.register(sharingRoutes, { prefix: '/api/sharing' });
   await app.register(exportRoutes, { prefix: '/api/export' });
+  await app.register(digestRoutes, { prefix: '/api/digest' });
 
   // Photo upload routes — optional, requires @fastify/multipart
   try {
