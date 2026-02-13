@@ -83,9 +83,75 @@ import { DashboardLayout, Sidebar } from '@connectsw/ui/layout';
 import { useTheme } from '@connectsw/ui/hooks';
 ```
 
+### `@connectsw/webhooks` — Webhook Delivery System (NEW)
+Location: `packages/webhooks/`
+
+**Backend** (`@connectsw/webhooks/backend`):
+- **WebhookDeliveryService** — Queue webhooks for delivery, process queue with SELECT FOR UPDATE SKIP LOCKED, idempotent via composite unique key
+- **WebhookDeliveryExecutorService** — Individual delivery with HMAC signing, SSRF-safe URL validation, AES-256-GCM secret decryption, TTL secret cache, exponential backoff retries with jitter
+- **WebhookCircuitBreakerService** — Redis-based circuit breaker with atomic Lua scripts, configurable threshold/cooldown
+- **WebhookSignatureService** — HMAC-SHA256 signing/verification with timing-safe comparison, replay attack prevention
+- **Webhook Routes** — Full CRUD + secret rotation, HTTPS enforcement, paginated listing
+- **Webhook Worker Route** — Internal cron endpoint with timing-safe API key auth
+- **Encryption Utils** — AES-256-GCM encrypt/decrypt for secrets at rest, production enforcement
+- **URL Validator** — SSRF protection with DNS resolution, private IP blocking
+
+**Frontend** (`@connectsw/webhooks/frontend`):
+- **useWebhooks hook** — CRUD operations, secret rotation, loading/error state
+
+**Prisma** (`@connectsw/webhooks/prisma`):
+- WebhookEndpoint, WebhookDelivery models with idempotency constraint, WebhookStatus enum
+
+**Usage example (backend):**
+```typescript
+import { webhookRoutes, webhookWorkerRoutes, WebhookDeliveryService, initializeEncryption } from '@connectsw/webhooks/backend';
+
+initializeEncryption(); // reads WEBHOOK_ENCRYPTION_KEY
+app.register(webhookRoutes, { prefix: '/v1/webhooks', validEvents: ['payment.completed', 'refund.created'] });
+app.register(webhookWorkerRoutes, { prefix: '/internal' });
+
+// Queue a webhook
+const delivery = new WebhookDeliveryService(prisma, redis);
+await delivery.queueWebhook(userId, 'payment.completed', paymentData);
+```
+
+### `@connectsw/notifications` — Email & In-App Notifications (NEW)
+Location: `packages/notifications/`
+
+**Backend** (`@connectsw/notifications/backend`):
+- **EmailService** — Pluggable email with SMTP or console fallback, notification preferences CRUD
+- **NotificationService** — In-app notification CRUD, read tracking, unread counts
+- **Email Plugin** — Fastify plugin decorating `fastify.email` with send()
+- **Notification Routes** — List, mark read, mark all read, delete, unread count
+- **Preferences Routes** — GET/PATCH with auto-created defaults, configurable Zod schema
+- **Email Templates** — HTML wrapper, detail rows, escaping utilities
+
+**Frontend** (`@connectsw/notifications/frontend`):
+- **useNotifications hook** — Load, mark read, mark all read, delete, unread count
+- **useNotificationPreferences hook** — Load, toggle, bulk update with optimistic UI
+- **NotificationBell** — Bell icon with unread badge (99+ overflow)
+- **Toggle** — Switch component for notification preference settings
+
+**Prisma** (`@connectsw/notifications/prisma`):
+- Notification model (type enum, read tracking), NotificationPreference model
+
+**Usage example:**
+```typescript
+// Backend
+import { emailPlugin, notificationRoutes, preferencesRoutes, NotificationService } from '@connectsw/notifications/backend';
+
+app.register(emailPlugin, { smtp: { host, port, user, pass } });
+app.register(notificationRoutes, { prefix: '/v1/notifications' });
+app.register(preferencesRoutes, { prefix: '/v1/notifications' });
+
+const notifService = new NotificationService(prisma);
+await notifService.create({ userId, type: 'SUCCESS', title: 'Payment received', message: '...' });
+
+// Frontend
+import { useNotifications, NotificationBell, Toggle } from '@connectsw/notifications/frontend';
+```
+
 ### Future Packages (Planned)
-- `@connectsw/webhooks` — Webhook delivery, circuit breaker, management UI
-- `@connectsw/notifications` — Email service, notification preferences
 - `@connectsw/audit` — Audit logging with DB + in-memory fallback
 - `@connectsw/billing` — Subscriptions, payments, tier enforcement
 - `@connectsw/saas-kit` — Product scaffold generator
