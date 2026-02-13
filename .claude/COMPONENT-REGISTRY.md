@@ -2,21 +2,93 @@
 
 > Before building anything, check this registry first. Reuse > rebuild.
 
-Last updated: 2026-02-12
+Last updated: 2026-02-13
 
-## Shared Package (NEW)
+## Shared Packages
 
-The most-reused components have been extracted to `packages/shared/` (`@connectsw/shared`).
+All reusable SaaS components are extracted to shared packages in `packages/`. **Always import from these packages instead of copying from another product.**
 
-**Extracted components:**
+### `@connectsw/shared` — Core Utilities
+Location: `packages/shared/`
+
 - Logger (`@connectsw/shared/utils/logger`) — Structured logging with PII redaction
 - Crypto Utils (`@connectsw/shared/utils/crypto`) — Password hashing, API key HMAC, webhook signatures
 - Prisma Plugin (`@connectsw/shared/plugins/prisma`) — PrismaClient lifecycle with pool sizing
 - Redis Plugin (`@connectsw/shared/plugins/redis`) — Redis connection with TLS, retry, graceful degradation
 
-**For new products**: Import from `@connectsw/shared` instead of copying from another product.
+### `@connectsw/auth` — Authentication & Authorization (NEW)
+Location: `packages/auth/`
 
-See `packages/shared/README.md` for usage examples.
+**Backend** (`@connectsw/auth/backend`):
+- **Auth Plugin** — JWT + API key dual authentication, JTI blacklist circuit breaker, configurable permissions, admin guard
+- **Auth Routes** — Signup, login, refresh token rotation, logout (with JTI revocation), change password, forgot/reset password, session management
+- **API Key Routes** — CRUD for API keys with configurable default permissions
+- **Validation** — Zod schemas for all auth endpoints
+- **AppError** — Typed error class with RFC 7807 JSON serialization
+
+**Frontend** (`@connectsw/auth/frontend`):
+- **useAuth hook** — Auth state management with login/logout/signup callbacks
+- **ProtectedRoute** — Route guard with configurable login redirect
+- **TokenManager** — XSS-safe in-memory JWT storage (never uses localStorage)
+- **createAuthApiClient** — Pre-built auth API client (login, signup, logout, refresh, password reset, sessions)
+
+**Prisma** (`@connectsw/auth/prisma`):
+- Partial schema: User, RefreshToken, ApiKey, AuditLog models — copy into your product's schema.prisma
+
+**Usage example (backend):**
+```typescript
+import { authPlugin, authRoutes, apiKeyRoutes } from '@connectsw/auth/backend';
+
+app.register(authPlugin, { permissions: ['read', 'write', 'admin'] });
+app.register(authRoutes, { prefix: '/v1/auth' });
+app.register(apiKeyRoutes, { prefix: '/v1/api-keys', defaultPermissions: { read: true, write: true } });
+```
+
+**Usage example (frontend):**
+```typescript
+import { useAuth, ProtectedRoute, createAuthApiClient, TokenManager } from '@connectsw/auth/frontend';
+
+const apiClient = createAuthApiClient({ baseUrl: 'http://localhost:5001' });
+const { user, login, logout } = useAuth({
+  loginFn: async (email, pw) => { const r = await apiClient.login(email, pw); return r; },
+  logoutFn: () => apiClient.logout(),
+});
+```
+
+### `@connectsw/ui` — Shared UI Component Library (NEW)
+Location: `packages/ui/`
+
+**Components** (`@connectsw/ui/components`):
+- **Button** — Variants: primary, secondary, outline, ghost, danger. Sizes: sm, md, lg
+- **Card** — Dark mode support. Padding: none, sm, md, lg
+- **Input** — Label, error, helper text. Accessible with aria attributes
+- **Badge** — Variants: default, success, warning, info, danger
+- **Skeleton** — Variants: text, circular, rectangular, rounded. Multi-line support. SkeletonCard preset
+- **StatCard** — KPI display with title, value, change indicator, icon
+- **DataTable** — Generic typed table with columns config, row click, loading/empty states
+- **ErrorBoundary** — React class component with customizable fallback and error callback
+- **ThemeToggle** — Dark/light mode toggle with sun/moon icons
+
+**Layout** (`@connectsw/ui/layout`):
+- **Sidebar** — Configurable nav sections, brand slot, footer slot, mobile responsive with backdrop
+- **DashboardLayout** — Full dashboard shell with sidebar, header, skip-to-content link, mobile hamburger
+
+**Hooks** (`@connectsw/ui/hooks`):
+- **useTheme** — Dark/light mode with localStorage persistence, system preference fallback, configurable storage key
+
+**Usage example:**
+```typescript
+import { Button, Card, Input, Badge, StatCard, DataTable, ErrorBoundary } from '@connectsw/ui/components';
+import { DashboardLayout, Sidebar } from '@connectsw/ui/layout';
+import { useTheme } from '@connectsw/ui/hooks';
+```
+
+### Future Packages (Planned)
+- `@connectsw/webhooks` — Webhook delivery, circuit breaker, management UI
+- `@connectsw/notifications` — Email service, notification preferences
+- `@connectsw/audit` — Audit logging with DB + in-memory fallback
+- `@connectsw/billing` — Subscriptions, payments, tier enforcement
+- `@connectsw/saas-kit` — Product scaffold generator
 
 ---
 
