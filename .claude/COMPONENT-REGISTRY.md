@@ -151,9 +151,52 @@ await notifService.create({ userId, type: 'SUCCESS', title: 'Payment received', 
 import { useNotifications, NotificationBell, Toggle } from '@connectsw/notifications/frontend';
 ```
 
+### `@connectsw/audit` — Audit Logging (NEW)
+Location: `packages/audit/`
+
+**Backend** (`@connectsw/audit/backend`):
+- **AuditLogService** — DB persistence with in-memory ring buffer fallback (10k entries), sensitive field redaction, fire-and-forget, queryable with filters + pagination
+- **createAuditHook** — Fastify onResponse hook with configurable actor/action/resource extractors, auto-captures IP and User-Agent
+- **Audit Routes** — Admin-only query endpoint with date range/actor/action filters, stats endpoint
+
+**Prisma** (`@connectsw/audit/prisma`):
+- AuditLog model (standalone, no relations) with indexes on actor, action, resourceType, timestamp
+
+**Usage example:**
+```typescript
+import { AuditLogService, createAuditHook, auditRoutes } from '@connectsw/audit/backend';
+
+const audit = new AuditLogService(prisma);
+app.addHook('onResponse', createAuditHook({ auditService: audit }));
+app.register(auditRoutes, { prefix: '/v1/audit-logs', auditService: audit });
+```
+
+### `@connectsw/billing` — Subscriptions & Tier Enforcement (NEW)
+Location: `packages/billing/`
+
+**Backend** (`@connectsw/billing/backend`):
+- **SubscriptionService** — Plan management, feature access checks (boolean + numeric), plan changes, cancellation
+- **UsageService** — Redis-backed counters with DB sync, per-feature per-period metering, limit checking
+- **requireFeature()** — Fastify preHandler: 403 if plan doesn't include feature
+- **requireUsageLimit()** — Fastify preHandler: 429 if usage exceeds limit, auto-increments counter
+- **Subscription Routes** — Get current plan, list plans, change plan, cancel, usage dashboard
+
+**Frontend** (`@connectsw/billing/frontend`):
+- **useSubscription hook** — Load subscription + plans + usage, change plan, cancel
+- **PricingCard** — Pricing card with feature list, monthly/annual toggle, "Most Popular" badge
+- **UsageBar** — Progress bar with warning (80%) and danger (95%) thresholds
+
+**Prisma** (`@connectsw/billing/prisma`):
+- Subscription model (tier enum, status enum, external payment ID, billing period)
+- UsageRecord model (per-feature per-period counters)
+
+**Usage example:**
+```typescript
+import { SubscriptionService, requireFeature, subscriptionRoutes } from '@connectsw/billing/backend';
+import { useSubscription, PricingCard, UsageBar } from '@connectsw/billing/frontend';
+```
+
 ### Future Packages (Planned)
-- `@connectsw/audit` — Audit logging with DB + in-memory fallback
-- `@connectsw/billing` — Subscriptions, payments, tier enforcement
 - `@connectsw/saas-kit` — Product scaffold generator
 
 ---
