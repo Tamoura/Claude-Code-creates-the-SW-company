@@ -35,7 +35,17 @@ function generateWebhookSecret(): string {
   return `whsec_${crypto.randomBytes(32).toString('hex')}`;
 }
 
-function formatResponse(wh: any, secret?: string) {
+interface WebhookEndpointRecord {
+  id: string;
+  url: string;
+  events: string[];
+  enabled: boolean;
+  description: string | null;
+  createdAt: Date;
+  updatedAt: Date;
+}
+
+function formatResponse(wh: WebhookEndpointRecord, secret?: string) {
   const res: Record<string, unknown> = {
     id: wh.id,
     url: wh.url,
@@ -105,7 +115,7 @@ const webhookRoutes: FastifyPluginAsync<WebhookRoutesOptions> = async (fastify, 
     ]);
 
     return reply.send({
-      data: webhooks.map((w: any) => formatResponse(w)),
+      data: webhooks.map((w: WebhookEndpointRecord) => formatResponse(w)),
       pagination: { limit: q.limit, offset: q.offset, total, has_more: q.offset + q.limit < total },
     });
   });

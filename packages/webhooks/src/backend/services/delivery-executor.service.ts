@@ -11,6 +11,13 @@ import { validateWebhookUrl } from '../utils/url-validator.js';
 import { decryptSecret } from '../utils/encryption.js';
 import { WebhookCircuitBreakerService } from './circuit-breaker.service.js';
 
+/** Minimal Prisma client for delivery updates */
+interface PrismaDeliveryClient {
+  webhookDelivery: {
+    update(args: { where: { id: string }; data: Record<string, unknown> }): Promise<Record<string, unknown>>;
+  };
+}
+
 // TTL-based secret cache to avoid repeated AES decryption
 const secretCache = new Map<string, { value: string; expiresAt: number }>();
 const SECRET_CACHE_TTL_MS = 5 * 60 * 1000;
@@ -80,7 +87,7 @@ export class WebhookDeliveryExecutorService {
   private timeoutMs: number;
 
   constructor(
-    private prisma: any,
+    private prisma: PrismaDeliveryClient,
     private circuitBreaker: WebhookCircuitBreakerService,
     opts?: WebhookDeliveryExecutorOptions,
   ) {

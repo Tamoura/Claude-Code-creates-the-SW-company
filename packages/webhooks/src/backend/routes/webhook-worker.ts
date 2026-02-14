@@ -12,9 +12,9 @@ import { WebhookDeliveryService } from '../services/delivery.service.js';
 
 export interface WebhookWorkerOptions {
   /** Prisma client instance */
-  prisma?: any;
+  prisma?: Record<string, unknown>;
   /** Redis client instance */
-  redis?: any;
+  redis?: { get(key: string): Promise<string | null>; set(key: string, value: string, ...args: (string | number)[]): Promise<string>; incr(key: string): Promise<number>; del(key: string): Promise<number>; expire(key: string, seconds: number): Promise<number>; eval(script: string, numkeys: number, ...args: (string | number)[]): Promise<unknown> } | null;
   /** Concurrency limit for queue processing. Default: 20 */
   concurrencyLimit?: number;
 }

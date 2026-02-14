@@ -8,11 +8,11 @@
 
 export interface RedisLike {
   get(key: string): Promise<string | null>;
-  set(key: string, value: string, ...args: any[]): Promise<string>;
+  set(key: string, value: string, ...args: (string | number)[]): Promise<string>;
   incr(key: string): Promise<number>;
   del(key: string): Promise<number>;
   expire(key: string, seconds: number): Promise<number>;
-  eval(script: string, numkeys: number, ...args: (string | number)[]): Promise<any>;
+  eval(script: string, numkeys: number, ...args: (string | number)[]): Promise<unknown>;
 }
 
 export interface CircuitBreakerOptions {

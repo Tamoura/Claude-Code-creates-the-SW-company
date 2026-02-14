@@ -9,17 +9,33 @@ import { logger } from '@connectsw/shared';
 
 export interface UsageServiceOptions {
   /** Redis client for high-frequency counters. Optional — falls back to DB-only. */
-  redis?: any;
+  redis?: RedisUsageClient;
   /** Reset period in ms. Default: 30 days (billing cycle) */
   resetPeriodMs?: number;
 }
 
+/** Minimal Redis interface for usage counters */
+interface RedisUsageClient {
+  incrby(key: string, amount: number): Promise<number>;
+  expire(key: string, seconds: number): Promise<number>;
+  get(key: string): Promise<string | null>;
+}
+
+/** Minimal Prisma client interface for usage tracking */
+interface PrismaUsageClient {
+  usageRecord: {
+    upsert(args: { where: Record<string, unknown>; create: Record<string, unknown>; update: Record<string, unknown> }): Promise<{ count: number }>;
+    findUnique(args: { where: Record<string, unknown> }): Promise<{ count: number } | null>;
+    findMany(args: { where: Record<string, unknown> }): Promise<Array<{ feature: string; count: number }>>;
+  };
+}
+
 export class UsageService {
-  private prisma: any;
-  private redis: any;
+  private prisma: PrismaUsageClient;
+  private redis: RedisUsageClient | null;
   private resetPeriodMs: number;
 
-  constructor(prisma: any, opts?: UsageServiceOptions) {
+  constructor(prisma: PrismaUsageClient, opts?: UsageServiceOptions) {
     this.prisma = prisma;
     this.redis = opts?.redis ?? null;
     this.resetPeriodMs = opts?.resetPeriodMs ?? 30 * 24 * 60 * 60 * 1000;

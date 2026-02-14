@@ -21,6 +21,15 @@ export interface ApiKeyRoutesOptions {
   keyPrefix?: 'sk_live' | 'sk_test';
 }
 
+interface ApiKeySelectResult {
+  id: string;
+  name: string;
+  keyPrefix: string;
+  permissions: Record<string, boolean>;
+  lastUsedAt: Date | null;
+  createdAt: Date;
+}
+
 const apiKeyRoutes: FastifyPluginAsync<ApiKeyRoutesOptions> = async (fastify, opts) => {
   const {
     defaultPermissions = { read: true, write: true },
@@ -55,7 +64,7 @@ const apiKeyRoutes: FastifyPluginAsync<ApiKeyRoutesOptions> = async (fastify, op
     ]);
 
     return reply.send({
-      data: keys.map((k: any) => ({
+      data: keys.map((k: ApiKeySelectResult) => ({
         id: k.id,
         name: k.name,
         key_prefix: k.keyPrefix,

@@ -32,13 +32,27 @@ export interface EmailServiceOptions {
   productName?: string;
 }
 
+/** Minimal Prisma client interface for notification preferences */
+interface PrismaEmailClient {
+  notificationPreference: {
+    findUnique(args: { where: { userId: string } }): Promise<Record<string, unknown> | null>;
+    create(args: { data: Record<string, unknown> }): Promise<Record<string, unknown>>;
+    upsert(args: { where: { userId: string }; update: Record<string, boolean>; create: Record<string, unknown> }): Promise<Record<string, unknown>>;
+  };
+}
+
+/** Minimal nodemailer transporter interface */
+interface MailTransporter {
+  sendMail(opts: { from: string; to: string; subject: string; html: string }): Promise<unknown>;
+}
+
 export class EmailService {
-  private prisma: any;
-  private transporter: any = null;
+  private prisma: PrismaEmailClient;
+  private transporter: MailTransporter | null = null;
   private smtpFrom: string;
   private productName: string;
 
-  constructor(prisma: any, opts?: EmailServiceOptions) {
+  constructor(prisma: PrismaEmailClient, opts?: EmailServiceOptions) {
     this.prisma = prisma;
     this.productName = opts?.productName ?? 'ConnectSW';
     this.smtpFrom = opts?.smtp?.from ?? 'noreply@connectsw.io';

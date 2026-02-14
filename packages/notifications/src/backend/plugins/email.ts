@@ -37,7 +37,7 @@ declare module 'fastify' {
 
 const emailPlugin: FastifyPluginAsync<EmailPluginOptions> = async (fastify, opts) => {
   const smtpFrom = opts.smtp?.from ?? 'noreply@connectsw.io';
-  let transporter: any = null;
+  let transporter: { sendMail(opts: { from: string; to: string; subject: string; html: string }): Promise<unknown> } | null = null;
 
   if (opts.smtp) {
     try {

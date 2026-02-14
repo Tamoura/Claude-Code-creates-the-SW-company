@@ -53,8 +53,8 @@ declare module 'fastify' {
     optionalAuth: (request: FastifyRequest) => Promise<void>;
     requirePermission: (permission: string) => (request: FastifyRequest) => Promise<void>;
     requireAdmin: (request: FastifyRequest) => Promise<void>;
-    prisma: any;
-    redis: any;
+    prisma: Record<string, any>;
+    redis: { get(key: string): Promise<string | null>; set(key: string, value: string, ...args: (string | number)[]): Promise<string>; del(...keys: string[]): Promise<number> } | null;
   }
 
   interface FastifyRequest {

@@ -1,4 +1,4 @@
-import { AuditLogService, AuditRecordInput } from './audit-log.service';
+import { AuditLogService, AuditRecordInput, AuditEntry } from './audit-log.service';
 
 describe('AuditLogService', () => {
   let service: AuditLogService;
@@ -22,7 +22,7 @@ describe('AuditLogService', () => {
 
       const entries = service.query() as ReturnType<typeof service.query>;
       expect(Array.isArray(entries)).toBe(true);
-      const result = entries as any[];
+      const result = entries as AuditEntry[];
       expect(result).toHaveLength(1);
       expect(result[0].actor).toBe('user-1');
       expect(result[0].action).toBe('create');
@@ -48,7 +48,7 @@ describe('AuditLogService', () => {
 
       service.record(input);
 
-      const entries = service.query() as any[];
+      const entries = service.query() as AuditEntry[];
       expect(entries[0].details.password).toBe('[REDACTED]');
       expect(entries[0].details.secret).toBe('[REDACTED]');
       expect(entries[0].details.token).toBe('[REDACTED]');
@@ -76,7 +76,7 @@ describe('AuditLogService', () => {
 
       service.record(input);
 
-      const entries = service.query() as any[];
+      const entries = service.query() as AuditEntry[];
       const settings = entries[0].details.settings as Record<string, unknown>;
       expect(settings.apiKey).toBe('[REDACTED]');
       expect(settings.displayName).toBe('My App');
@@ -126,32 +126,32 @@ describe('AuditLogService', () => {
     it('returns all entries when no filters', () => {
       seedEntries();
 
-      const entries = service.query() as any[];
+      const entries = service.query() as AuditEntry[];
       expect(entries).toHaveLength(5);
     });
 
     it('filters by actor', () => {
       seedEntries();
 
-      const entries = service.query({ actor: 'alice' }) as any[];
+      const entries = service.query({ actor: 'alice' }) as AuditEntry[];
       expect(entries).toHaveLength(2);
-      entries.forEach((e: any) => expect(e.actor).toBe('alice'));
+      entries.forEach((e) => expect(e.actor).toBe('alice'));
     });
 
     it('filters by action', () => {
       seedEntries();
 
-      const entries = service.query({ action: 'create' }) as any[];
+      const entries = service.query({ action: 'create' }) as AuditEntry[];
       expect(entries).toHaveLength(3);
-      entries.forEach((e: any) => expect(e.action).toBe('create'));
+      entries.forEach((e) => expect(e.action).toBe('create'));
     });
 
     it('filters by resourceType', () => {
       seedEntries();
 
-      const entries = service.query({ resourceType: 'document' }) as any[];
+      const entries = service.query({ resourceType: 'document' }) as AuditEntry[];
       expect(entries).toHaveLength(3);
-      entries.forEach((e: any) => expect(e.resourceType).toBe('document'));
+      entries.forEach((e) => expect(e.resourceType).toBe('document'));
     });
 
     it('filters by date range (from/to)', () => {
@@ -176,14 +176,14 @@ describe('AuditLogService', () => {
       const afterAll = new Date();
 
       // Filter from midpoint should exclude the first entry
-      const fromMid = service.query({ from: midpoint }) as any[];
+      const fromMid = service.query({ from: midpoint }) as AuditEntry[];
       expect(fromMid.length).toBeGreaterThanOrEqual(1);
-      fromMid.forEach((e: any) => expect(e.timestamp.getTime()).toBeGreaterThanOrEqual(midpoint.getTime()));
+      fromMid.forEach((e) => expect(e.timestamp.getTime()).toBeGreaterThanOrEqual(midpoint.getTime()));
 
       // Filter to beforeAll should return nothing (entries were created after beforeAll)
       // but because Date precision may overlap, we test with a past date
       const pastDate = new Date(beforeAll.getTime() - 10000);
-      const toBeforeAll = service.query({ from: afterAll }) as any[];
+      const toBeforeAll = service.query({ from: afterAll }) as AuditEntry[];
       // Entries were created before afterAll, so filtering from afterAll should return 0
       expect(toBeforeAll).toHaveLength(0);
     });
@@ -191,20 +191,20 @@ describe('AuditLogService', () => {
     it('supports limit and offset', () => {
       seedEntries();
 
-      const limited = service.query({ limit: 2 }) as any[];
+      const limited = service.query({ limit: 2 }) as AuditEntry[];
       expect(limited).toHaveLength(2);
 
-      const offset = service.query({ offset: 3 }) as any[];
+      const offset = service.query({ offset: 3 }) as AuditEntry[];
       expect(offset).toHaveLength(2);
 
-      const limitAndOffset = service.query({ limit: 2, offset: 1 }) as any[];
+      const limitAndOffset = service.query({ limit: 2, offset: 1 }) as AuditEntry[];
       expect(limitAndOffset).toHaveLength(2);
     });
 
     it('returns newest first', () => {
       seedEntries();
 
-      const entries = service.query() as any[];
+      const entries = service.query() as AuditEntry[];
       for (let i = 0; i < entries.length - 1; i++) {
         expect(entries[i].timestamp.getTime()).toBeGreaterThanOrEqual(entries[i + 1].timestamp.getTime());
       }
@@ -242,7 +242,7 @@ describe('AuditLogService', () => {
       expect(service.bufferSize).toBe(10_000);
 
       // The oldest entries (0..4) should have been shifted out
-      const entries = service.query() as any[];
+      const entries = service.query() as AuditEntry[];
       // Newest first, so the last entry is the oldest remaining
       const oldestRemaining = entries[entries.length - 1];
       expect(oldestRemaining.actor).toBe(`actor-${overflowCount}`);

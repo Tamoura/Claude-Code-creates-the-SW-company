@@ -30,7 +30,10 @@ const DEFAULT_METHODS = ['POST', 'PUT', 'PATCH', 'DELETE'];
 export function createAuditHook(opts: AuditHookOptions) {
   const {
     auditService,
-    getActor = (req: FastifyRequest) => (req as any).currentUser?.id ?? 'anonymous',
+    getActor = (req: FastifyRequest) => {
+      const user = (req as FastifyRequest & { currentUser?: { id: string } }).currentUser;
+      return user?.id ?? 'anonymous';
+    },
     getAction = (req: FastifyRequest) => `${req.method} ${req.url}`,
     getResourceType = (req: FastifyRequest) => {
       const parts = req.url.split('/').filter(Boolean);

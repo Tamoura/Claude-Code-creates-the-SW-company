@@ -10,6 +10,19 @@ import { logger } from '@connectsw/shared';
 import { WebhookCircuitBreakerService, type RedisLike } from './circuit-breaker.service.js';
 import { WebhookDeliveryExecutorService, type WebhookDeliveryExecutorOptions } from './delivery-executor.service.js';
 
+/** Minimal Prisma client interface for webhook delivery */
+interface PrismaWebhookClient {
+  webhookEndpoint: {
+    findMany(args: Record<string, unknown>): Promise<Array<{ id: string; url: string; secret: string; userId: string; events: string[]; enabled: boolean }>>;
+  };
+  webhookDelivery: {
+    create(args: Record<string, unknown>): Promise<Record<string, unknown>>;
+    findUnique(args: Record<string, unknown>): Promise<Record<string, unknown> | null>;
+    findMany(args: Record<string, unknown>): Promise<Record<string, unknown>[]>;
+  };
+  $queryRaw(strings: TemplateStringsArray, ...values: unknown[]): Promise<Record<string, unknown>[]>;
+}
+
 export interface WebhookDeliveryServiceOptions extends WebhookDeliveryExecutorOptions {
   /** Circuit breaker options */
   circuitBreaker?: {
@@ -19,11 +32,11 @@ export interface WebhookDeliveryServiceOptions extends WebhookDeliveryExecutorOp
 }
 
 export class WebhookDeliveryService {
-  private prisma: any;
+  private prisma: PrismaWebhookClient;
   private executor: WebhookDeliveryExecutorService;
   private maxRetries: number;
 
-  constructor(prisma: any, redis?: RedisLike | null, opts?: WebhookDeliveryServiceOptions) {
+  constructor(prisma: PrismaWebhookClient, redis?: RedisLike | null, opts?: WebhookDeliveryServiceOptions) {
     this.prisma = prisma;
     this.maxRetries = opts?.maxRetries ?? 5;
     const cb = new WebhookCircuitBreakerService(redis ?? null, opts?.circuitBreaker);
@@ -37,7 +50,7 @@ export class WebhookDeliveryService {
   async queueWebhook(
     userId: string,
     eventType: string,
-    data: Record<string, any>,
+    data: Record<string, unknown>,
     resourceId?: string,
   ): Promise<number> {
     const resolvedResourceId = resourceId || data.id || data.resource_id;
@@ -70,16 +83,16 @@ export class WebhookDeliveryService {
             endpointId: endpoint.id,
             eventType,
             resourceId: resolvedResourceId,
-            payload: payload as any,
+            payload: payload as Record<string, unknown>,
             status: 'PENDING',
             attempts: 0,
             nextAttemptAt: new Date(),
           },
         });
         created++;
-      } catch (error: any) {
+      } catch (error: unknown) {
         // Idempotency: skip duplicates (P2002 = unique constraint violation)
-        if (error.code === 'P2002') {
+        if (error instanceof Error && 'code' in error && (error as { code: string }).code === 'P2002') {
           logger.debug('Webhook delivery already exists (idempotent)', { eventType, resourceId: resolvedResourceId, endpointId: endpoint.id });
           continue;
         }
@@ -100,7 +113,7 @@ export class WebhookDeliveryService {
   async processQueue(concurrencyLimit = 10): Promise<void> {
     const now = new Date();
 
-    const deliveries: any[] = await this.prisma.$queryRaw`
+    const deliveries: Record<string, unknown>[] = await this.prisma.$queryRaw`
       SELECT
         wd.id,
         wd.endpoint_id as "endpointId",

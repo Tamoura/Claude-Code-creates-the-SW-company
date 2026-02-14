@@ -20,7 +20,7 @@ export interface TierGateOptions {
  */
 export function requireFeature(feature: string, opts: TierGateOptions) {
   return async (request: FastifyRequest, reply: FastifyReply) => {
-    const userId = (request as any).currentUser?.id;
+    const userId = (request as FastifyRequest & { currentUser?: { id: string } }).currentUser?.id;
     if (!userId) {
       return reply.code(401).send({ status: 401, detail: 'Authentication required' });
     }
@@ -45,7 +45,7 @@ export function requireFeature(feature: string, opts: TierGateOptions) {
  */
 export function requireUsageLimit(feature: string, opts: TierGateOptions) {
   return async (request: FastifyRequest, reply: FastifyReply) => {
-    const userId = (request as any).currentUser?.id;
+    const userId = (request as FastifyRequest & { currentUser?: { id: string } }).currentUser?.id;
     if (!userId) {
       return reply.code(401).send({ status: 401, detail: 'Authentication required' });
     }

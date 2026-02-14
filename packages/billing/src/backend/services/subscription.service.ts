@@ -23,11 +23,20 @@ export interface SubscriptionServiceOptions {
   defaultTier?: string;
 }
 
+/** Minimal Prisma client interface for subscription management */
+interface PrismaSubscriptionClient {
+  subscription: {
+    findUnique(args: { where: { userId: string } }): Promise<{ userId: string; planId: string; tier: string; status: string } | null>;
+    create(args: { data: Record<string, unknown> }): Promise<{ userId: string; planId: string; tier: string; status: string }>;
+    update(args: { where: { userId: string }; data: Record<string, unknown> }): Promise<{ userId: string; planId: string; tier: string; status: string }>;
+  };
+}
+
 export class SubscriptionService {
   private plans: Map<string, Plan>;
   private defaultTier: string;
 
-  constructor(private prisma: any, opts: SubscriptionServiceOptions) {
+  constructor(private prisma: PrismaSubscriptionClient, opts: SubscriptionServiceOptions) {
     this.plans = new Map(opts.plans.map((p) => [p.id, p]));
     this.defaultTier = opts.defaultTier ?? opts.plans[0].tier;
   }

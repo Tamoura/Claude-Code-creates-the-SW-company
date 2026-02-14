@@ -13,6 +13,19 @@
 
 import { logger } from '@connectsw/shared';
 
+/** Minimal Prisma client interface for audit logging */
+export interface PrismaAuditClient {
+  auditLog: {
+    create(args: { data: Record<string, unknown> }): Promise<Record<string, unknown>>;
+    findMany(args: {
+      where?: Record<string, unknown>;
+      orderBy?: Record<string, string>;
+      take?: number;
+      skip?: number;
+    }): Promise<Record<string, unknown>[]>;
+  };
+}
+
 export interface AuditEntry {
   actor: string;
   action: string;
@@ -66,9 +79,9 @@ const MAX_BUFFER_SIZE = 10_000;
 
 export class AuditLogService {
   private entries: AuditEntry[] = [];
-  private prisma: any;
+  private prisma: PrismaAuditClient | null;
 
-  constructor(prisma?: any) {
+  constructor(prisma?: PrismaAuditClient) {
     this.prisma = prisma ?? null;
   }
 
@@ -94,7 +107,7 @@ export class AuditLogService {
               action: entry.action,
               resourceType: entry.resourceType,
               resourceId: entry.resourceId,
-              details: redactedDetails as any,
+              details: redactedDetails,
               ip: entry.ip,
               userAgent: entry.userAgent,
               timestamp: entry.timestamp,
@@ -128,7 +141,7 @@ export class AuditLogService {
    */
   query(filters: AuditQueryFilters = {}): AuditEntry[] | Promise<AuditEntry[]> {
     if (this.prisma) {
-      const where: any = {};
+      const where: Record<string, unknown> = {};
       if (filters.actor) where.actor = filters.actor;
       if (filters.action) where.action = filters.action;
       if (filters.resourceType) where.resourceType = filters.resourceType;
@@ -145,7 +158,7 @@ export class AuditLogService {
           take: filters.limit ?? 100,
           skip: filters.offset ?? 0,
         })
-        .then((rows: any[]) =>
+        .then((rows: Record<string, unknown>[]) =>
           rows.map((row) => ({
             actor: row.actor,
             action: row.action,

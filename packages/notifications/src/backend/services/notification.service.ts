@@ -21,8 +21,21 @@ export interface NotificationListOptions {
   unreadOnly?: boolean;
 }
 
+/** Minimal Prisma client interface for notifications */
+interface PrismaNotificationClient {
+  notification: {
+    create(args: { data: Record<string, unknown> }): Promise<Record<string, unknown> & { id: string }>;
+    findMany(args: Record<string, unknown>): Promise<Record<string, unknown>[]>;
+    findUnique(args: { where: { id: string } }): Promise<{ id: string; userId: string; read: boolean } | null>;
+    update(args: { where: { id: string }; data: Record<string, unknown> }): Promise<Record<string, unknown>>;
+    updateMany(args: { where: Record<string, unknown>; data: Record<string, unknown> }): Promise<{ count: number }>;
+    count(args: { where: Record<string, unknown> }): Promise<number>;
+    delete(args: { where: { id: string } }): Promise<Record<string, unknown>>;
+  };
+}
+
 export class NotificationService {
-  constructor(private prisma: any) {}
+  constructor(private prisma: PrismaNotificationClient) {}
 
   async create(input: CreateNotificationInput) {
     const notification = await this.prisma.notification.create({
