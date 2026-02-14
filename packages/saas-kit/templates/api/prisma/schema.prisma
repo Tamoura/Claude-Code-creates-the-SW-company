@@ -1,0 +1,233 @@
+generator client {
+  provider = "prisma-client-js"
+}
+
+datasource db {
+  provider = "postgresql"
+  url      = env("DATABASE_URL")
+}
+
+// =============================================================
+// {{displayName}} — Database Schema
+//
+// Copy models from @connectsw packages as needed:
+//   @connectsw/auth    → User, RefreshToken, ApiKey
+//   @connectsw/billing → Subscription, UsageRecord
+//   @connectsw/webhooks → WebhookEndpoint, WebhookDelivery
+//   @connectsw/notifications → Notification, NotificationPreference
+//   @connectsw/audit   → AuditLog
+// =============================================================
+
+model User {
+  id        String   @id @default(cuid())
+  email     String   @unique
+  name      String?
+  password  String
+  role      String   @default("user")
+
+  isActive        Boolean   @default(true)
+  emailVerified   Boolean   @default(false) @map("email_verified")
+  failedAttempts  Int       @default(0)     @map("failed_attempts")
+  lockedUntil     DateTime?                 @map("locked_until")
+
+  createdAt DateTime @default(now()) @map("created_at")
+  updatedAt DateTime @updatedAt      @map("updated_at")
+
+{{#if feature.auth}}  refreshTokens RefreshToken[]
+  apiKeys       ApiKey[]
+{{/if feature.auth}}{{#if feature.billing}}  subscription  Subscription?
+{{/if feature.billing}}{{#if feature.notifications}}  notifications            Notification[]
+  notificationPreferences  NotificationPreference[]
+{{/if feature.notifications}}
+  @@map("users")
+}
+
+{{#if feature.auth}}model RefreshToken {
+  id        String   @id @default(cuid())
+  userId    String   @map("user_id")
+  jti       String   @unique
+  family    String
+  expiresAt DateTime @map("expires_at")
+  revokedAt DateTime? @map("revoked_at")
+  createdAt DateTime @default(now()) @map("created_at")
+  userAgent String?  @map("user_agent")
+  ipAddress String?  @map("ip_address")
+
+  user User @relation(fields: [userId], references: [id], onDelete: Cascade)
+
+  @@index([userId])
+  @@index([family])
+  @@map("refresh_tokens")
+}
+
+model ApiKey {
+  id          String    @id @default(cuid())
+  userId      String    @map("user_id")
+  name        String
+  keyHash     String    @unique @map("key_hash")
+  keyPrefix   String    @map("key_prefix")
+  permissions String[]  @default([])
+  lastUsedAt  DateTime? @map("last_used_at")
+  expiresAt   DateTime? @map("expires_at")
+  createdAt   DateTime  @default(now()) @map("created_at")
+
+  user User @relation(fields: [userId], references: [id], onDelete: Cascade)
+
+  @@index([userId])
+  @@map("api_keys")
+}
+{{/if feature.auth}}
+{{#if feature.billing}}enum SubscriptionTier {
+  FREE
+  STARTER
+  PROFESSIONAL
+  ENTERPRISE
+}
+
+enum SubscriptionStatus {
+  ACTIVE
+  CANCELLED
+  PAST_DUE
+  TRIALING
+}
+
+model Subscription {
+  id     String @id @default(cuid())
+  userId String @unique @map("user_id")
+
+  planId         String             @map("plan_id")
+  tier           SubscriptionTier   @default(FREE)
+  status         SubscriptionStatus @default(ACTIVE)
+  previousPlanId String?            @map("previous_plan_id")
+
+  externalId         String?   @unique @map("external_id")
+  currentPeriodStart DateTime? @map("current_period_start")
+  currentPeriodEnd   DateTime? @map("current_period_end")
+
+  changedAt   DateTime? @map("changed_at")
+  cancelledAt DateTime? @map("cancelled_at")
+  createdAt   DateTime  @default(now()) @map("created_at")
+  updatedAt   DateTime  @updatedAt @map("updated_at")
+
+  user User @relation(fields: [userId], references: [id], onDelete: Cascade)
+
+  @@index([tier])
+  @@index([status])
+  @@map("subscriptions")
+}
+
+model UsageRecord {
+  id     String @id @default(cuid())
+  userId String @map("user_id")
+
+  feature     String
+  count       Int      @default(0)
+  periodStart DateTime @map("period_start")
+
+  createdAt DateTime @default(now()) @map("created_at")
+  updatedAt DateTime @updatedAt @map("updated_at")
+
+  @@unique([userId, feature, periodStart], name: "userId_feature_periodStart")
+  @@index([userId])
+  @@index([periodStart])
+  @@map("usage_records")
+}
+{{/if feature.billing}}
+{{#if feature.webhooks}}enum WebhookStatus {
+  PENDING
+  SUCCESS
+  FAILED
+  RETRYING
+}
+
+model WebhookEndpoint {
+  id     String @id @default(cuid())
+  userId String @map("user_id")
+
+  url           String
+  secretHash    String   @map("secret_hash")
+  events        String[]
+  isActive      Boolean  @default(true) @map("is_active")
+  failureCount  Int      @default(0) @map("failure_count")
+
+  createdAt DateTime @default(now()) @map("created_at")
+  updatedAt DateTime @updatedAt @map("updated_at")
+
+  deliveries WebhookDelivery[]
+
+  @@index([userId])
+  @@map("webhook_endpoints")
+}
+
+model WebhookDelivery {
+  id         String @id @default(cuid())
+  endpointId String @map("endpoint_id")
+
+  event          String
+  payload        Json
+  idempotencyKey String        @unique @map("idempotency_key")
+  status         WebhookStatus @default(PENDING)
+  attempts       Int           @default(0)
+  nextRetryAt    DateTime?     @map("next_retry_at")
+  lastError      String?       @map("last_error")
+  statusCode     Int?          @map("status_code")
+
+  createdAt DateTime @default(now()) @map("created_at")
+  updatedAt DateTime @updatedAt @map("updated_at")
+
+  endpoint WebhookEndpoint @relation(fields: [endpointId], references: [id], onDelete: Cascade)
+
+  @@index([status, nextRetryAt])
+  @@index([endpointId])
+  @@map("webhook_deliveries")
+}
+{{/if feature.webhooks}}
+{{#if feature.notifications}}model Notification {
+  id     String @id @default(cuid())
+  userId String @map("user_id")
+
+  type    String
+  title   String
+  message String
+  data    Json?
+  readAt  DateTime? @map("read_at")
+
+  createdAt DateTime @default(now()) @map("created_at")
+
+  user User @relation(fields: [userId], references: [id], onDelete: Cascade)
+
+  @@index([userId, readAt])
+  @@map("notifications")
+}
+
+model NotificationPreference {
+  id     String @id @default(cuid())
+  userId String @map("user_id")
+
+  type    String
+  email   Boolean @default(true)
+  inApp   Boolean @default(true) @map("in_app")
+  push    Boolean @default(false)
+
+  user User @relation(fields: [userId], references: [id], onDelete: Cascade)
+
+  @@unique([userId, type])
+  @@map("notification_preferences")
+}
+{{/if feature.notifications}}
+{{#if feature.audit}}model AuditLog {
+  id        String   @id @default(cuid())
+  actor     String
+  action    String
+  resource  String
+  details   Json?
+  ip        String?
+  userAgent String?  @map("user_agent")
+  createdAt DateTime @default(now()) @map("created_at")
+
+  @@index([actor])
+  @@index([action])
+  @@index([createdAt])
+  @@map("audit_logs")
+}
+{{/if feature.audit}}

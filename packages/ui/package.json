@@ -1,0 +1,20 @@
+{
+  "name": "@connectsw/ui",
+  "version": "1.0.0",
+  "description": "Shared UI component library for ConnectSW SaaS products",
+  "type": "module",
+  "exports": {
+    ".": "./src/index.ts",
+    "./components": "./src/components/index.ts",
+    "./layout": "./src/layout/index.ts",
+    "./hooks": "./src/hooks/index.ts"
+  },
+  "files": [
+    "src"
+  ],
+  "peerDependencies": {
+    "react": ">=18.0.0",
+    "react-dom": ">=18.0.0",
+    "react-router-dom": ">=6.0.0"
+  }
+}

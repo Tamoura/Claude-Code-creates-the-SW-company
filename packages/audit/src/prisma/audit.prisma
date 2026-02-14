@@ -1,0 +1,24 @@
+// =============================================================
+// @connectsw/audit — Prisma partial schema
+//
+// Copy this model into your product's schema.prisma.
+// The AuditLog model is standalone (no relations required).
+// =============================================================
+
+model AuditLog {
+  id           String   @id @default(cuid())
+  actor        String
+  action       String
+  resourceType String   @map("resource_type")
+  resourceId   String   @map("resource_id")
+  details      Json?
+  ip           String?
+  userAgent    String?  @map("user_agent")
+  timestamp    DateTime @default(now())
+
+  @@index([actor])
+  @@index([action])
+  @@index([resourceType])
+  @@index([timestamp])
+  @@map("audit_logs")
+}

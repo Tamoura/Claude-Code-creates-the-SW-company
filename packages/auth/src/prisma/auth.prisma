@@ -1,0 +1,87 @@
+// =============================================================
+// @connectsw/auth — Prisma partial schema
+//
+// Copy these models into your product's schema.prisma.
+// Adjust the Role enum and User relations to match your domain.
+// =============================================================
+
+enum Role {
+  USER
+  ADMIN
+}
+
+model User {
+  id           String   @id @default(cuid())
+  email        String   @unique
+  passwordHash String   @map("password_hash")
+  role         Role     @default(USER)
+
+  createdAt DateTime @default(now()) @map("created_at")
+  updatedAt DateTime @updatedAt @map("updated_at")
+
+  apiKeys       ApiKey[]
+  refreshTokens RefreshToken[]
+
+  // Add your product-specific relations below:
+  // e.g. orders Order[]
+
+  @@map("users")
+}
+
+model RefreshToken {
+  id     String @id @default(cuid())
+  userId String @map("user_id")
+
+  tokenHash String   @unique @map("token_hash")
+  expiresAt DateTime @map("expires_at")
+
+  revokedAt DateTime? @map("revoked_at")
+  revoked   Boolean   @default(false)
+
+  createdAt DateTime @default(now()) @map("created_at")
+
+  user User @relation(fields: [userId], references: [id], onDelete: Cascade)
+
+  @@index([userId])
+  @@index([tokenHash])
+  @@index([revokedAt])
+  @@map("refresh_tokens")
+}
+
+model ApiKey {
+  id     String @id @default(cuid())
+  userId String @map("user_id")
+
+  name        String
+  keyHash     String @unique @map("key_hash")
+  keyPrefix   String @map("key_prefix")
+  permissions Json   @default("{\"read\":true,\"write\":true}")
+
+  lastUsedAt DateTime? @map("last_used_at")
+
+  createdAt DateTime @default(now()) @map("created_at")
+
+  user User @relation(fields: [userId], references: [id], onDelete: Cascade)
+
+  @@index([userId])
+  @@index([keyHash])
+  @@map("api_keys")
+}
+
+model AuditLog {
+  id           String   @id @default(cuid())
+  actor        String
+  action       String
+  resourceType String   @map("resource_type")
+  resourceId   String   @map("resource_id")
+  details      Json?
+  ip           String?
+  userAgent    String?  @map("user_agent")
+  timestamp    DateTime @default(now())
+
+  @@index([actor])
+  @@index([action])
+  @@index([resourceType])
+  @@index([timestamp])
+  @@map("audit_logs")
+}

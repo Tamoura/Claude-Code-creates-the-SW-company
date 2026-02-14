@@ -1,0 +1,37 @@
+{
+  "name": "@connectsw/auth",
+  "version": "1.0.0",
+  "description": "Reusable authentication & authorization for ConnectSW SaaS products",
+  "type": "module",
+  "exports": {
+    "./backend": "./src/backend/index.ts",
+    "./frontend": "./src/frontend/index.ts",
+    "./prisma": "./src/prisma/auth.prisma"
+  },
+  "files": [
+    "src"
+  ],
+  "dependencies": {
+    "@connectsw/shared": "workspace:*"
+  },
+  "peerDependencies": {
+    "@fastify/jwt": ">=8.0.0",
+    "@prisma/client": ">=5.0.0",
+    "fastify": ">=4.0.0",
+    "fastify-plugin": ">=4.0.0",
+    "ioredis": ">=5.0.0",
+    "react": ">=18.0.0",
+    "react-dom": ">=18.0.0",
+    "react-router-dom": ">=6.0.0",
+    "zod": ">=3.0.0"
+  },
+  "peerDependenciesMeta": {
+    "react": { "optional": true },
+    "react-dom": { "optional": true },
+    "react-router-dom": { "optional": true },
+    "fastify": { "optional": true },
+    "fastify-plugin": { "optional": true },
+    "@fastify/jwt": { "optional": true },
+    "ioredis": { "optional": true }
+  }
+}

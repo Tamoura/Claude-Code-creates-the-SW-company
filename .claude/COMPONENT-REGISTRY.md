@@ -2,21 +2,244 @@
 
 > Before building anything, check this registry first. Reuse > rebuild.
 
-Last updated: 2026-02-12
+Last updated: 2026-02-14
 
-## Shared Package (NEW)
+## Shared Packages
 
-The most-reused components have been extracted to `packages/shared/` (`@connectsw/shared`).
+All reusable SaaS components are extracted to shared packages in `packages/`. **Always import from these packages instead of copying from another product.**
 
-**Extracted components:**
+### `@connectsw/shared` — Core Utilities
+Location: `packages/shared/`
+
 - Logger (`@connectsw/shared/utils/logger`) — Structured logging with PII redaction
 - Crypto Utils (`@connectsw/shared/utils/crypto`) — Password hashing, API key HMAC, webhook signatures
 - Prisma Plugin (`@connectsw/shared/plugins/prisma`) — PrismaClient lifecycle with pool sizing
 - Redis Plugin (`@connectsw/shared/plugins/redis`) — Redis connection with TLS, retry, graceful degradation
 
-**For new products**: Import from `@connectsw/shared` instead of copying from another product.
+### `@connectsw/auth` — Authentication & Authorization (NEW)
+Location: `packages/auth/`
 
-See `packages/shared/README.md` for usage examples.
+**Backend** (`@connectsw/auth/backend`):
+- **Auth Plugin** — JWT + API key dual authentication, JTI blacklist circuit breaker, configurable permissions, admin guard
+- **Auth Routes** — Signup, login, refresh token rotation, logout (with JTI revocation), change password, forgot/reset password, session management
+- **API Key Routes** — CRUD for API keys with configurable default permissions
+- **Validation** — Zod schemas for all auth endpoints
+- **AppError** — Typed error class with RFC 7807 JSON serialization
+
+**Frontend** (`@connectsw/auth/frontend`):
+- **useAuth hook** — Auth state management with login/logout/signup callbacks
+- **ProtectedRoute** — Route guard with configurable login redirect
+- **TokenManager** — XSS-safe in-memory JWT storage (never uses localStorage)
+- **createAuthApiClient** — Pre-built auth API client (login, signup, logout, refresh, password reset, sessions)
+
+**Prisma** (`@connectsw/auth/prisma`):
+- Partial schema: User, RefreshToken, ApiKey, AuditLog models — copy into your product's schema.prisma
+
+**Usage example (backend):**
+```typescript
+import { authPlugin, authRoutes, apiKeyRoutes } from '@connectsw/auth/backend';
+
+app.register(authPlugin, { permissions: ['read', 'write', 'admin'] });
+app.register(authRoutes, { prefix: '/v1/auth' });
+app.register(apiKeyRoutes, { prefix: '/v1/api-keys', defaultPermissions: { read: true, write: true } });
+```
+
+**Usage example (frontend):**
+```typescript
+import { useAuth, ProtectedRoute, createAuthApiClient, TokenManager } from '@connectsw/auth/frontend';
+
+const apiClient = createAuthApiClient({ baseUrl: 'http://localhost:5001' });
+const { user, login, logout } = useAuth({
+  loginFn: async (email, pw) => { const r = await apiClient.login(email, pw); return r; },
+  logoutFn: () => apiClient.logout(),
+});
+```
+
+### `@connectsw/ui` — Shared UI Component Library (NEW)
+Location: `packages/ui/`
+
+**Components** (`@connectsw/ui/components`):
+- **Button** — Variants: primary, secondary, outline, ghost, danger. Sizes: sm, md, lg
+- **Card** — Dark mode support. Padding: none, sm, md, lg
+- **Input** — Label, error, helper text. Accessible with aria attributes
+- **Badge** — Variants: default, success, warning, info, danger
+- **Skeleton** — Variants: text, circular, rectangular, rounded. Multi-line support. SkeletonCard preset
+- **StatCard** — KPI display with title, value, change indicator, icon
+- **DataTable** — Generic typed table with columns config, row click, loading/empty states
+- **ErrorBoundary** — React class component with customizable fallback and error callback
+- **ThemeToggle** — Dark/light mode toggle with sun/moon icons
+
+**Layout** (`@connectsw/ui/layout`):
+- **Sidebar** — Configurable nav sections, brand slot, footer slot, mobile responsive with backdrop
+- **DashboardLayout** — Full dashboard shell with sidebar, header, skip-to-content link, mobile hamburger
+
+**Hooks** (`@connectsw/ui/hooks`):
+- **useTheme** — Dark/light mode with localStorage persistence, system preference fallback, configurable storage key
+
+**Usage example:**
+```typescript
+import { Button, Card, Input, Badge, StatCard, DataTable, ErrorBoundary } from '@connectsw/ui/components';
+import { DashboardLayout, Sidebar } from '@connectsw/ui/layout';
+import { useTheme } from '@connectsw/ui/hooks';
+```
+
+### `@connectsw/webhooks` — Webhook Delivery System (NEW)
+Location: `packages/webhooks/`
+
+**Backend** (`@connectsw/webhooks/backend`):
+- **WebhookDeliveryService** — Queue webhooks for delivery, process queue with SELECT FOR UPDATE SKIP LOCKED, idempotent via composite unique key
+- **WebhookDeliveryExecutorService** — Individual delivery with HMAC signing, SSRF-safe URL validation, AES-256-GCM secret decryption, TTL secret cache, exponential backoff retries with jitter
+- **WebhookCircuitBreakerService** — Redis-based circuit breaker with atomic Lua scripts, configurable threshold/cooldown
+- **WebhookSignatureService** — HMAC-SHA256 signing/verification with timing-safe comparison, replay attack prevention
+- **Webhook Routes** — Full CRUD + secret rotation, HTTPS enforcement, paginated listing
+- **Webhook Worker Route** — Internal cron endpoint with timing-safe API key auth
+- **Encryption Utils** — AES-256-GCM encrypt/decrypt for secrets at rest, production enforcement
+- **URL Validator** — SSRF protection with DNS resolution, private IP blocking
+
+**Frontend** (`@connectsw/webhooks/frontend`):
+- **useWebhooks hook** — CRUD operations, secret rotation, loading/error state
+
+**Prisma** (`@connectsw/webhooks/prisma`):
+- WebhookEndpoint, WebhookDelivery models with idempotency constraint, WebhookStatus enum
+
+**Usage example (backend):**
+```typescript
+import { webhookRoutes, webhookWorkerRoutes, WebhookDeliveryService, initializeEncryption } from '@connectsw/webhooks/backend';
+
+initializeEncryption(); // reads WEBHOOK_ENCRYPTION_KEY
+app.register(webhookRoutes, { prefix: '/v1/webhooks', validEvents: ['payment.completed', 'refund.created'] });
+app.register(webhookWorkerRoutes, { prefix: '/internal' });
+
+// Queue a webhook
+const delivery = new WebhookDeliveryService(prisma, redis);
+await delivery.queueWebhook(userId, 'payment.completed', paymentData);
+```
+
+### `@connectsw/notifications` — Email & In-App Notifications (NEW)
+Location: `packages/notifications/`
+
+**Backend** (`@connectsw/notifications/backend`):
+- **EmailService** — Pluggable email with SMTP or console fallback, notification preferences CRUD
+- **NotificationService** — In-app notification CRUD, read tracking, unread counts
+- **Email Plugin** — Fastify plugin decorating `fastify.email` with send()
+- **Notification Routes** — List, mark read, mark all read, delete, unread count
+- **Preferences Routes** — GET/PATCH with auto-created defaults, configurable Zod schema
+- **Email Templates** — HTML wrapper, detail rows, escaping utilities
+
+**Frontend** (`@connectsw/notifications/frontend`):
+- **useNotifications hook** — Load, mark read, mark all read, delete, unread count
+- **useNotificationPreferences hook** — Load, toggle, bulk update with optimistic UI
+- **NotificationBell** — Bell icon with unread badge (99+ overflow)
+- **Toggle** — Switch component for notification preference settings
+
+**Prisma** (`@connectsw/notifications/prisma`):
+- Notification model (type enum, read tracking), NotificationPreference model
+
+**Usage example:**
+```typescript
+// Backend
+import { emailPlugin, notificationRoutes, preferencesRoutes, NotificationService } from '@connectsw/notifications/backend';
+
+app.register(emailPlugin, { smtp: { host, port, user, pass } });
+app.register(notificationRoutes, { prefix: '/v1/notifications' });
+app.register(preferencesRoutes, { prefix: '/v1/notifications' });
+
+const notifService = new NotificationService(prisma);
+await notifService.create({ userId, type: 'SUCCESS', title: 'Payment received', message: '...' });
+
+// Frontend
+import { useNotifications, NotificationBell, Toggle } from '@connectsw/notifications/frontend';
+```
+
+### `@connectsw/audit` — Audit Logging (NEW)
+Location: `packages/audit/`
+
+**Backend** (`@connectsw/audit/backend`):
+- **AuditLogService** — DB persistence with in-memory ring buffer fallback (10k entries), sensitive field redaction, fire-and-forget, queryable with filters + pagination
+- **createAuditHook** — Fastify onResponse hook with configurable actor/action/resource extractors, auto-captures IP and User-Agent
+- **Audit Routes** — Admin-only query endpoint with date range/actor/action filters, stats endpoint
+
+**Prisma** (`@connectsw/audit/prisma`):
+- AuditLog model (standalone, no relations) with indexes on actor, action, resourceType, timestamp
+
+**Usage example:**
+```typescript
+import { AuditLogService, createAuditHook, auditRoutes } from '@connectsw/audit/backend';
+
+const audit = new AuditLogService(prisma);
+app.addHook('onResponse', createAuditHook({ auditService: audit }));
+app.register(auditRoutes, { prefix: '/v1/audit-logs', auditService: audit });
+```
+
+### `@connectsw/billing` — Subscriptions & Tier Enforcement (NEW)
+Location: `packages/billing/`
+
+**Backend** (`@connectsw/billing/backend`):
+- **SubscriptionService** — Plan management, feature access checks (boolean + numeric), plan changes, cancellation
+- **UsageService** — Redis-backed counters with DB sync, per-feature per-period metering, limit checking
+- **requireFeature()** — Fastify preHandler: 403 if plan doesn't include feature
+- **requireUsageLimit()** — Fastify preHandler: 429 if usage exceeds limit, auto-increments counter
+- **Subscription Routes** — Get current plan, list plans, change plan, cancel, usage dashboard
+
+**Frontend** (`@connectsw/billing/frontend`):
+- **useSubscription hook** — Load subscription + plans + usage, change plan, cancel
+- **PricingCard** — Pricing card with feature list, monthly/annual toggle, "Most Popular" badge
+- **UsageBar** — Progress bar with warning (80%) and danger (95%) thresholds
+
+**Prisma** (`@connectsw/billing/prisma`):
+- Subscription model (tier enum, status enum, external payment ID, billing period)
+- UsageRecord model (per-feature per-period counters)
+
+**Usage example:**
+```typescript
+import { SubscriptionService, requireFeature, subscriptionRoutes } from '@connectsw/billing/backend';
+import { useSubscription, PricingCard, UsageBar } from '@connectsw/billing/frontend';
+```
+
+### `@connectsw/saas-kit` — Product Scaffold Generator (NEW)
+Location: `packages/saas-kit/`
+
+**CLI** (`connectsw-create`):
+- Full SaaS product scaffold from a single command
+- Configurable features: auth, billing, webhooks, notifications, audit
+- Auto-generates Fastify backend + React/Vite frontend + Prisma schema + Docker Compose
+- Kebab-case product names with automatic PascalCase/camelCase/UPPER_SNAKE derivatives
+- Port configuration for API (5000-5099) and Web (3100-3199) ranges
+- Template interpolation with `{{key}}` values and `{{#if feature.X}}` conditionals
+
+**Generator API** (`@connectsw/saas-kit`):
+- `generateProduct(config, outDir)` — Programmatic scaffold generation
+- `buildContext(config)` — Build template context from ProductConfig
+- `interpolate(template, ctx)` — Template interpolation engine
+- Utility converters: `toPascalCase`, `toCamelCase`, `toUpperSnake`
+
+**Templates generated:**
+- **API**: Fastify app (app.ts, index.ts), Prisma/Redis plugins, health route, Prisma schema (with conditional models per feature), Jest config, ESLint config
+- **Web**: React app (App.tsx, main.tsx), Vite config with API proxy, Tailwind CSS setup, Dashboard layout, Login page (when auth enabled), useApi hook
+- **Root**: package.json (dev scripts), docker-compose.yml (Postgres + Redis), .env.example, README.md, docs/ scaffolding
+
+**Usage (CLI):**
+```bash
+connectsw-create my-product \
+  --api-port 5010 --web-port 3110 \
+  --all-features \
+  --description "My awesome SaaS product"
+```
+
+**Usage (programmatic):**
+```typescript
+import { generateProduct } from '@connectsw/saas-kit';
+
+const files = generateProduct({
+  name: 'my-product',
+  displayName: 'My Product',
+  description: 'A new SaaS product',
+  apiPort: 5010,
+  webPort: 3110,
+  dbName: 'my_product_db',
+  features: { auth: true, billing: true, webhooks: false, notifications: true, audit: true },
+}, '/path/to/products/my-product');
+```
 
 ---
 
@@ -60,6 +283,7 @@ See `packages/shared/README.md` for usage examples.
 | A/B testing                | Experiment Assignment (deterministic hash) + Statistics (z-test, Wilson CI)   |
 | Real-time counters         | Redis Counters (pipeline-based daily counters with TTL)                       |
 | Embeddable JS SDK          | SDK pattern (IIFE bundle via esbuild, auto-init from script attributes)       |
+| New SaaS product scaffold  | `@connectsw/saas-kit` (CLI: `connectsw-create`, API: `generateProduct()`)    |
 
 ---
 
@@ -536,67 +760,22 @@ Components in this registry are sourced from these products:
 
 ---
 
-## Shared Package Extraction Roadmap
+## Shared Package Extraction — COMPLETED
 
-Plan for extracting reusable components into `@connectsw/*` packages in the monorepo root `packages/` directory.
+All reusable SaaS components have been extracted into `@connectsw/*` packages:
 
-### Phase 1: `packages/backend-core/`
-**Priority**: High -- most components are already production-tested.
+| Package | Contents | Status |
+|---------|----------|--------|
+| `@connectsw/shared` | Logger, crypto, Prisma/Redis plugins | Production |
+| `@connectsw/auth` | JWT + API key auth, sessions, token management | Production |
+| `@connectsw/ui` | Button, Card, Input, Badge, Skeleton, StatCard, DataTable, ErrorBoundary, ThemeToggle, Sidebar, DashboardLayout, useTheme | Production |
+| `@connectsw/webhooks` | Webhook delivery, circuit breaker, HMAC signing, SSRF protection, encryption | Production |
+| `@connectsw/notifications` | Email + in-app notifications, preferences, templates | Production |
+| `@connectsw/audit` | Audit logging with DB + ring buffer fallback, sensitive field redaction | Production |
+| `@connectsw/billing` | Subscription tiers, usage metering, tier gates, pricing UI | Production |
+| `@connectsw/saas-kit` | Full product scaffold generator (CLI + programmatic API) | Production |
 
-Contents:
-- `plugins/auth.ts` -- Auth Plugin (parameterize permission model)
-- `plugins/redis.ts` -- Redis Plugin (copy as-is)
-- `plugins/prisma.ts` -- Prisma Plugin (copy as-is)
-- `plugins/observability.ts` -- Observability Plugin (copy as-is)
-- `utils/crypto.ts` -- Crypto Utils (copy as-is)
-- `utils/encryption.ts` -- Encryption Utils (generalize env var name)
-- `utils/logger.ts` -- Logger (copy as-is)
-- `utils/redis-rate-limit-store.ts` -- Rate Limit Store (copy as-is)
-- `utils/validation.ts` -- Generic schemas only (auth, pagination, idempotency, metadata)
-- `lib/errors.ts` -- Error Classes from invoiceforge
-- `lib/pagination.ts` -- Pagination Helper from invoiceforge
-- `services/audit-log.service.ts` -- Audit Log Service (copy as-is)
-- `services/webhook-circuit-breaker.service.ts` -- Circuit Breaker (copy as-is)
-
-**Migration path**: Publish as `@connectsw/backend-core`. Update imports in stablecoin-gateway and invoiceforge. New products import from the package.
-
-### Phase 2: `packages/frontend-core/`
-**Priority**: High -- needed by every web product.
-
-Contents:
-- `lib/token-manager.ts` -- Token Manager (copy as-is)
-- `lib/api-client-base.ts` -- Extract the base request method, auth, error handling from stablecoin-gateway's API client
-- `hooks/useAuth.tsx` -- useAuth hook (parameterize API client)
-- `hooks/useTheme.ts` -- useTheme hook (parameterize storage key)
-
-**Migration path**: Publish as `@connectsw/frontend-core`. Products extend the base API client with their domain-specific methods.
-
-### Phase 3: `packages/ui/`
-**Priority**: Medium -- needed as product count grows.
-
-Contents:
-- `ErrorBoundary.tsx` -- Error Boundary (copy as-is)
-- `ProtectedRoute.tsx` -- Protected Route (copy as-is)
-- `StatCard.tsx` -- KPI Card (copy as-is)
-- `ThemeToggle.tsx` -- Theme Toggle (copy as-is)
-- `Sidebar.tsx` -- Base Sidebar (extract NavItem + section pattern)
-- `DataTable.tsx` -- Extract from TransactionsTable (generalize columns)
-- Badge, Button, Card, Input from invoiceforge (when created as shared components)
-
-**Migration path**: Publish as `@connectsw/ui`. Styled with Tailwind CSS semantic tokens. Products import and compose.
-
-### Phase 4: `packages/infrastructure/`
-**Priority**: Low -- templates are infrequently created.
-
-Contents:
-- `docker/Dockerfile.api.template` -- Multi-stage API Dockerfile template
-- `docker/docker-compose.base.yml` -- Base compose with Postgres + Redis
-- `ci/quality-gate.yml` -- GitHub Actions quality gate template
-- `prisma/base-models.prisma` -- User, ApiKey, WebhookEndpoint, AuditLog base models
-- `playwright/auth-fixture.ts` -- E2E auth fixture template
-- `playwright/playwright.config.template.ts` -- Base Playwright config
-
-**Migration path**: Keep as templates that are copied and customized per product. Not published as an npm package.
+**New products**: Run `connectsw-create <name> --all-features` to scaffold a complete product using all packages.
 
 ---
 
