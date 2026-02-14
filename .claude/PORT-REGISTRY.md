@@ -2,7 +2,7 @@
 
 **Purpose**: Centralized port allocation to prevent conflicts when running multiple products simultaneously.
 
-**Last Updated**: 2026-02-12
+**Last Updated**: 2026-02-14
 
 ## Port Allocation Rules
 
@@ -23,7 +23,8 @@
 | 3110 | connectgrc | Active | http://localhost:3110 |
 | 3111 | taskflow | Active | http://localhost:3111 |
 | 3112 | recomengine | Active | http://localhost:3112 |
-| 3113-3199 | *Available* | Free | - |
+| 3113 | command-center | Active | http://localhost:3113 |
+| 3114-3199 | *Available* | Free | - |
 
 ### Backend APIs (5000-5099)
 
@@ -34,7 +35,8 @@
 | 5006 | connectgrc | Active | http://localhost:5006 |
 | 5007 | taskflow | Active | http://localhost:5007 |
 | 5008 | recomengine | Active | http://localhost:5008 |
-| 5009-5099 | *Available* | Free | - |
+| 5009 | command-center | Active | http://localhost:5009 |
+| 5010-5099 | *Available* | Free | - |
 
 ### Mobile Development (8081-8099)
 
