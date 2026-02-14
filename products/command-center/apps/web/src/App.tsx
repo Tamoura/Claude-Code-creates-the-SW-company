@@ -1,0 +1,24 @@
+import { Routes, Route, Navigate } from 'react-router-dom';
+import Layout from './components/Layout.js';
+import Overview from './pages/Overview.js';
+import Products from './pages/Products.js';
+import Agents from './pages/Agents.js';
+import Activity from './pages/Activity.js';
+import Components from './pages/Components.js';
+import Infrastructure from './pages/Infrastructure.js';
+
+export default function App() {
+  return (
+    <Routes>
+      <Route path="/" element={<Layout />}>
+        <Route index element={<Navigate to="/overview" replace />} />
+        <Route path="overview" element={<Overview />} />
+        <Route path="products" element={<Products />} />
+        <Route path="agents" element={<Agents />} />
+        <Route path="activity" element={<Activity />} />
+        <Route path="components" element={<Components />} />
+        <Route path="infrastructure" element={<Infrastructure />} />
+      </Route>
+    </Routes>
+  );
+}
