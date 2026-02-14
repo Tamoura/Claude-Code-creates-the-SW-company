@@ -2,7 +2,7 @@
 
 > Before building anything, check this registry first. Reuse > rebuild.
 
-Last updated: 2026-02-13
+Last updated: 2026-02-14
 
 ## Shared Packages
 
@@ -196,8 +196,50 @@ import { SubscriptionService, requireFeature, subscriptionRoutes } from '@connec
 import { useSubscription, PricingCard, UsageBar } from '@connectsw/billing/frontend';
 ```
 
-### Future Packages (Planned)
-- `@connectsw/saas-kit` — Product scaffold generator
+### `@connectsw/saas-kit` — Product Scaffold Generator (NEW)
+Location: `packages/saas-kit/`
+
+**CLI** (`connectsw-create`):
+- Full SaaS product scaffold from a single command
+- Configurable features: auth, billing, webhooks, notifications, audit
+- Auto-generates Fastify backend + React/Vite frontend + Prisma schema + Docker Compose
+- Kebab-case product names with automatic PascalCase/camelCase/UPPER_SNAKE derivatives
+- Port configuration for API (5000-5099) and Web (3100-3199) ranges
+- Template interpolation with `{{key}}` values and `{{#if feature.X}}` conditionals
+
+**Generator API** (`@connectsw/saas-kit`):
+- `generateProduct(config, outDir)` — Programmatic scaffold generation
+- `buildContext(config)` — Build template context from ProductConfig
+- `interpolate(template, ctx)` — Template interpolation engine
+- Utility converters: `toPascalCase`, `toCamelCase`, `toUpperSnake`
+
+**Templates generated:**
+- **API**: Fastify app (app.ts, index.ts), Prisma/Redis plugins, health route, Prisma schema (with conditional models per feature), Jest config, ESLint config
+- **Web**: React app (App.tsx, main.tsx), Vite config with API proxy, Tailwind CSS setup, Dashboard layout, Login page (when auth enabled), useApi hook
+- **Root**: package.json (dev scripts), docker-compose.yml (Postgres + Redis), .env.example, README.md, docs/ scaffolding
+
+**Usage (CLI):**
+```bash
+connectsw-create my-product \
+  --api-port 5010 --web-port 3110 \
+  --all-features \
+  --description "My awesome SaaS product"
+```
+
+**Usage (programmatic):**
+```typescript
+import { generateProduct } from '@connectsw/saas-kit';
+
+const files = generateProduct({
+  name: 'my-product',
+  displayName: 'My Product',
+  description: 'A new SaaS product',
+  apiPort: 5010,
+  webPort: 3110,
+  dbName: 'my_product_db',
+  features: { auth: true, billing: true, webhooks: false, notifications: true, audit: true },
+}, '/path/to/products/my-product');
+```
 
 ---
 
@@ -241,6 +283,7 @@ import { useSubscription, PricingCard, UsageBar } from '@connectsw/billing/front
 | A/B testing                | Experiment Assignment (deterministic hash) + Statistics (z-test, Wilson CI)   |
 | Real-time counters         | Redis Counters (pipeline-based daily counters with TTL)                       |
 | Embeddable JS SDK          | SDK pattern (IIFE bundle via esbuild, auto-init from script attributes)       |
+| New SaaS product scaffold  | `@connectsw/saas-kit` (CLI: `connectsw-create`, API: `generateProduct()`)    |
 
 ---
 
@@ -717,67 +760,22 @@ Components in this registry are sourced from these products:
 
 ---
 
-## Shared Package Extraction Roadmap
+## Shared Package Extraction — COMPLETED
 
-Plan for extracting reusable components into `@connectsw/*` packages in the monorepo root `packages/` directory.
+All reusable SaaS components have been extracted into `@connectsw/*` packages:
 
-### Phase 1: `packages/backend-core/`
-**Priority**: High -- most components are already production-tested.
+| Package | Contents | Status |
+|---------|----------|--------|
+| `@connectsw/shared` | Logger, crypto, Prisma/Redis plugins | Production |
+| `@connectsw/auth` | JWT + API key auth, sessions, token management | Production |
+| `@connectsw/ui` | Button, Card, Input, Badge, Skeleton, StatCard, DataTable, ErrorBoundary, ThemeToggle, Sidebar, DashboardLayout, useTheme | Production |
+| `@connectsw/webhooks` | Webhook delivery, circuit breaker, HMAC signing, SSRF protection, encryption | Production |
+| `@connectsw/notifications` | Email + in-app notifications, preferences, templates | Production |
+| `@connectsw/audit` | Audit logging with DB + ring buffer fallback, sensitive field redaction | Production |
+| `@connectsw/billing` | Subscription tiers, usage metering, tier gates, pricing UI | Production |
+| `@connectsw/saas-kit` | Full product scaffold generator (CLI + programmatic API) | Production |
 
-Contents:
-- `plugins/auth.ts` -- Auth Plugin (parameterize permission model)
-- `plugins/redis.ts` -- Redis Plugin (copy as-is)
-- `plugins/prisma.ts` -- Prisma Plugin (copy as-is)
-- `plugins/observability.ts` -- Observability Plugin (copy as-is)
-- `utils/crypto.ts` -- Crypto Utils (copy as-is)
-- `utils/encryption.ts` -- Encryption Utils (generalize env var name)
-- `utils/logger.ts` -- Logger (copy as-is)
-- `utils/redis-rate-limit-store.ts` -- Rate Limit Store (copy as-is)
-- `utils/validation.ts` -- Generic schemas only (auth, pagination, idempotency, metadata)
-- `lib/errors.ts` -- Error Classes from invoiceforge
-- `lib/pagination.ts` -- Pagination Helper from invoiceforge
-- `services/audit-log.service.ts` -- Audit Log Service (copy as-is)
-- `services/webhook-circuit-breaker.service.ts` -- Circuit Breaker (copy as-is)
-
-**Migration path**: Publish as `@connectsw/backend-core`. Update imports in stablecoin-gateway and invoiceforge. New products import from the package.
-
-### Phase 2: `packages/frontend-core/`
-**Priority**: High -- needed by every web product.
-
-Contents:
-- `lib/token-manager.ts` -- Token Manager (copy as-is)
-- `lib/api-client-base.ts` -- Extract the base request method, auth, error handling from stablecoin-gateway's API client
-- `hooks/useAuth.tsx` -- useAuth hook (parameterize API client)
-- `hooks/useTheme.ts` -- useTheme hook (parameterize storage key)
-
-**Migration path**: Publish as `@connectsw/frontend-core`. Products extend the base API client with their domain-specific methods.
-
-### Phase 3: `packages/ui/`
-**Priority**: Medium -- needed as product count grows.
-
-Contents:
-- `ErrorBoundary.tsx` -- Error Boundary (copy as-is)
-- `ProtectedRoute.tsx` -- Protected Route (copy as-is)
-- `StatCard.tsx` -- KPI Card (copy as-is)
-- `ThemeToggle.tsx` -- Theme Toggle (copy as-is)
-- `Sidebar.tsx` -- Base Sidebar (extract NavItem + section pattern)
-- `DataTable.tsx` -- Extract from TransactionsTable (generalize columns)
-- Badge, Button, Card, Input from invoiceforge (when created as shared components)
-
-**Migration path**: Publish as `@connectsw/ui`. Styled with Tailwind CSS semantic tokens. Products import and compose.
-
-### Phase 4: `packages/infrastructure/`
-**Priority**: Low -- templates are infrequently created.
-
-Contents:
-- `docker/Dockerfile.api.template` -- Multi-stage API Dockerfile template
-- `docker/docker-compose.base.yml` -- Base compose with Postgres + Redis
-- `ci/quality-gate.yml` -- GitHub Actions quality gate template
-- `prisma/base-models.prisma` -- User, ApiKey, WebhookEndpoint, AuditLog base models
-- `playwright/auth-fixture.ts` -- E2E auth fixture template
-- `playwright/playwright.config.template.ts` -- Base Playwright config
-
-**Migration path**: Keep as templates that are copied and customized per product. Not published as an npm package.
+**New products**: Run `connectsw-create <name> --all-features` to scaffold a complete product using all packages.
 
 ---
 
