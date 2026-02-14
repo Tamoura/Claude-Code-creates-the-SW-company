@@ -6,6 +6,7 @@ import Agents from './pages/Agents.js';
 import Activity from './pages/Activity.js';
 import Components from './pages/Components.js';
 import Infrastructure from './pages/Infrastructure.js';
+import Invoke from './pages/Invoke.js';
 
 export default function App() {
   return (
@@ -18,6 +19,7 @@ export default function App() {
         <Route path="activity" element={<Activity />} />
         <Route path="components" element={<Components />} />
         <Route path="infrastructure" element={<Infrastructure />} />
+        <Route path="invoke" element={<Invoke />} />
       </Route>
     </Routes>
   );
