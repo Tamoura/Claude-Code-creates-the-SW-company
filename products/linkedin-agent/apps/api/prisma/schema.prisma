@@ -1,0 +1,125 @@
+generator client {
+  provider = "prisma-client-js"
+}
+
+datasource db {
+  provider = "postgresql"
+  url      = env("DATABASE_URL")
+}
+
+enum Platform {
+  linkedin
+  twitter
+  hackernews
+  other
+}
+
+enum PostFormat {
+  text
+  carousel
+  infographic
+  link
+  poll
+  video
+}
+
+enum PostStatus {
+  draft
+  review
+  approved
+  published
+  archived
+}
+
+enum TaskType {
+  writing
+  analysis
+  image
+  translation
+}
+
+model TrendSource {
+  id         String   @id @default(cuid())
+  url        String?
+  title      String
+  content    String   @db.Text
+  platform   Platform @default(other)
+  analyzedAt DateTime @default(now()) @map("analyzed_at")
+  tags       String[] @default([])
+  createdAt  DateTime @default(now()) @map("created_at")
+
+  postDrafts PostDraft[]
+
+  @@index([platform])
+  @@index([analyzedAt])
+  @@index([tags], type: Gin)
+  @@map("trend_sources")
+}
+
+model PostDraft {
+  id                 String     @id @default(cuid())
+  title              String
+  content            String     @db.Text
+  contentAr          String?    @map("content_ar") @db.Text
+  contentEn          String?    @map("content_en") @db.Text
+  format             PostFormat @default(text)
+  formatReason       String?    @map("format_reason") @db.Text
+  status             PostStatus @default(draft)
+  tags               String[]   @default([])
+  tone               String?
+  targetAudience     String?    @map("target_audience")
+  supportingMaterial Json?      @map("supporting_material")
+  createdAt          DateTime   @default(now()) @map("created_at")
+  updatedAt          DateTime   @updatedAt @map("updated_at")
+  publishedAt        DateTime?  @map("published_at")
+  trendSourceId      String?    @map("trend_source_id")
+
+  trendSource    TrendSource?    @relation(fields: [trendSourceId], references: [id], onDelete: SetNull)
+  carouselSlides CarouselSlide[]
+  generationLogs GenerationLog[]
+
+  @@index([status])
+  @@index([format])
+  @@index([trendSourceId])
+  @@index([createdAt])
+  @@index([tags], type: Gin)
+  @@map("post_drafts")
+}
+
+model CarouselSlide {
+  id          String  @id @default(cuid())
+  postDraftId String  @map("post_draft_id")
+  slideNumber Int     @map("slide_number")
+  headline    String
+  body        String  @db.Text
+  imagePrompt String  @map("image_prompt") @db.Text
+  imageUrl    String? @map("image_url")
+  createdAt   DateTime @default(now()) @map("created_at")
+
+  postDraft PostDraft @relation(fields: [postDraftId], references: [id], onDelete: Cascade)
+
+  @@unique([postDraftId, slideNumber])
+  @@index([postDraftId])
+  @@map("carousel_slides")
+}
+
+model GenerationLog {
+  id               String   @id @default(cuid())
+  postDraftId      String?  @map("post_draft_id")
+  model            String
+  provider         String
+  promptTokens     Int      @map("prompt_tokens")
+  completionTokens Int      @map("completion_tokens")
+  costUsd          Float    @map("cost_usd")
+  durationMs       Int      @map("duration_ms")
+  taskType         TaskType @map("task_type")
+  createdAt        DateTime @default(now()) @map("created_at")
+
+  postDraft PostDraft? @relation(fields: [postDraftId], references: [id], onDelete: SetNull)
+
+  @@index([postDraftId])
+  @@index([taskType])
+  @@index([model])
+  @@index([createdAt])
+  @@map("generation_logs")
+}
