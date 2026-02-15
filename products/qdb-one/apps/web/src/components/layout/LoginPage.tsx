@@ -1,6 +1,7 @@
 'use client';
 
 import { useState } from 'react';
+import { useRouter } from 'next/navigation';
 import { useAuth } from '@/contexts/AuthContext';
 import { useLanguage } from '@/contexts/LanguageContext';
 import { mockUsers } from '@/data/mock-users';
@@ -8,6 +9,7 @@ import { mockUsers } from '@/data/mock-users';
 export default function LoginPage() {
   const { login } = useAuth();
   const { lang, setLang, t } = useLanguage();
+  const router = useRouter();
   const [selectedUser, setSelectedUser] = useState<string>('fatima');
   const [loading, setLoading] = useState(false);
 
@@ -18,6 +20,7 @@ export default function LoginPage() {
     const user = mockUsers[selectedUser];
     if (user) {
       login(user);
+      router.push('/dashboard');
     }
     setLoading(false);
   };

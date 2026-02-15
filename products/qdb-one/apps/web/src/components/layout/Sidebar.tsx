@@ -5,7 +5,7 @@ import { usePathname } from 'next/navigation';
 import { useLanguage } from '@/contexts/LanguageContext';
 
 const navItems = [
-  { href: '/', labelEn: 'Dashboard', labelAr: 'لوحة التحكم', icon: '⊞' },
+  { href: '/dashboard', labelEn: 'Dashboard', labelAr: 'لوحة التحكم', icon: '⊞' },
   { href: '/financing', labelEn: 'Financing', labelAr: 'التمويل', icon: '◈' },
   { href: '/guarantees', labelEn: 'Guarantees', labelAr: 'الضمانات', icon: '◉' },
   { href: '/advisory', labelEn: 'Advisory', labelAr: 'الاستشارات', icon: '◎' },
@@ -23,7 +23,7 @@ export default function Sidebar({ isOpen, onClose }: SidebarProps) {
   const { t } = useLanguage();
 
   const isActive = (href: string) => {
-    if (href === '/') return pathname === '/';
+    if (href === '/dashboard') return pathname === '/dashboard';
     return pathname.startsWith(href);
   };
 
