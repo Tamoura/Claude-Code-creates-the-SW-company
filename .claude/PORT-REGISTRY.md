@@ -24,7 +24,8 @@
 | 3111 | taskflow | Active | http://localhost:3111 |
 | 3112 | recomengine | Active | http://localhost:3112 |
 | 3113 | command-center | Active | http://localhost:3113 |
-| 3114-3199 | *Available* | Free | - |
+| 3114 | linkedin-agent | Active | http://localhost:3114 |
+| 3115-3199 | *Available* | Free | - |
 
 ### Backend APIs (5000-5099)
 
@@ -36,7 +37,8 @@
 | 5007 | taskflow | Active | http://localhost:5007 |
 | 5008 | recomengine | Active | http://localhost:5008 |
 | 5009 | command-center | Active | http://localhost:5009 |
-| 5010-5099 | *Available* | Free | - |
+| 5010 | linkedin-agent | Active | http://localhost:5010 |
+| 5011-5099 | *Available* | Free | - |
 
 ### Mobile Development (8081-8099)
 
@@ -103,11 +105,13 @@ When initiating new product workflows:
 cd products/stablecoin-gateway/apps/web && npm run dev &        # :3104
 cd products/muaththir/apps/web && npm run dev &                 # :3108
 cd products/connectgrc/apps/web && npm run dev &                # :3110
+cd products/linkedin-agent/apps/web && npm run dev &            # :3114
 
 # Backend APIs
 cd products/stablecoin-gateway/apps/api && npm run dev &        # :5001
 cd products/muaththir/apps/api && npm run dev &                 # :5005
 cd products/connectgrc/apps/api && npm run dev &                # :5006
+cd products/linkedin-agent/apps/api && npm run dev &            # :5010
 ```
 
 ### Check Port Availability
