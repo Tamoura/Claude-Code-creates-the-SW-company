@@ -1,6 +1,21 @@
 import { callLLM, selectModel, LLMResponse } from './openrouter';
 import { logger } from '../utils/logger';
 
+/** Strip markdown code fences and parse JSON from LLM output */
+function parseJSONResponse<T>(raw: string): T {
+  let cleaned = raw.trim();
+  // Remove ```json ... ``` or ``` ... ``` wrappers (anywhere in the string)
+  const fenceMatch = cleaned.match(/```(?:json)?\s*\n([\s\S]*?)\n\s*```/);
+  if (fenceMatch) {
+    cleaned = fenceMatch[1].trim();
+  }
+  // Also try removing leading/trailing backticks without newlines
+  if (cleaned.startsWith('```')) {
+    cleaned = cleaned.replace(/^```(?:json)?/, '').replace(/```$/, '').trim();
+  }
+  return JSON.parse(cleaned);
+}
+
 export interface TrendAnalysis {
   topics: Array<{
     title: string;
@@ -85,7 +100,7 @@ Provide 2-5 topics with relevance scores (0-100).`,
 
   let analysis: TrendAnalysis;
   try {
-    analysis = JSON.parse(llmResponse.content);
+    analysis = parseJSONResponse(llmResponse.content);
   } catch {
     logger.warn('Failed to parse trend analysis JSON, using fallback');
     analysis = {
@@ -168,7 +183,7 @@ Guidelines:
   };
 
   try {
-    parsed = JSON.parse(llmResponse.content);
+    parsed = parseJSONResponse(llmResponse.content);
   } catch {
     logger.warn('Failed to parse post generation JSON, using raw content');
     parsed = {
@@ -240,7 +255,7 @@ Consider:
   let recommendation: Omit<FormatRecommendation, 'llmResponse'>;
 
   try {
-    recommendation = JSON.parse(llmResponse.content);
+    recommendation = parseJSONResponse(llmResponse.content);
   } catch {
     logger.warn('Failed to parse format recommendation JSON');
     recommendation = {
@@ -310,7 +325,7 @@ Guidelines:
   let parsed: { slides: CarouselSlideResult[] };
 
   try {
-    parsed = JSON.parse(llmResponse.content);
+    parsed = parseJSONResponse(llmResponse.content);
   } catch {
     logger.warn('Failed to parse carousel slides JSON');
     parsed = {

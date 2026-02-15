@@ -54,11 +54,11 @@ interface OpenRouterModel {
 
 // Cost per token in USD (approximate, from OpenRouter pricing)
 const MODEL_COSTS: Record<string, { prompt: number; completion: number }> = {
-  'anthropic/claude-sonnet-4-5-20250929': { prompt: 0.000003, completion: 0.000015 },
+  'anthropic/claude-sonnet-4.5': { prompt: 0.000003, completion: 0.000015 },
   'google/gemini-2.0-flash-001': { prompt: 0.0000001, completion: 0.0000004 },
   'openai/dall-e-3': { prompt: 0.00004, completion: 0.00012 },
   'openai/gpt-4o': { prompt: 0.0000025, completion: 0.00001 },
-  'anthropic/claude-3-haiku': { prompt: 0.00000025, completion: 0.00000125 },
+  'anthropic/claude-3.5-haiku': { prompt: 0.0000008, completion: 0.000004 },
 };
 
 /**
