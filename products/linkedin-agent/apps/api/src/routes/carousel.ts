@@ -33,54 +33,59 @@ const carouselRoutes: FastifyPluginAsync = async (fastify) => {
       });
     }
 
-    // Delete existing carousel slides for this post
-    await fastify.prisma.carouselSlide.deleteMany({
-      where: { postDraftId: id },
-    });
-
-    // Generate new slides
+    // Generate new slides (external call, keep outside transaction)
     const { slides, llmResponse } = await generateCarouselSlides(
       post.title,
       post.content,
       body.slideCount
     );
 
-    // Save slides to database
-    const createdSlides = await Promise.all(
-      slides.map((slide) =>
-        fastify.prisma.carouselSlide.create({
-          data: {
-            postDraftId: id,
-            slideNumber: slide.slideNumber,
-            headline: slide.headline,
-            body: slide.body,
-            imagePrompt: slide.imagePrompt,
-          },
-        })
-      )
-    );
+    // Atomic database operations
+    const createdSlides = await fastify.prisma.$transaction(async (tx) => {
+      // Delete existing slides
+      await tx.carouselSlide.deleteMany({
+        where: { postDraftId: id },
+      });
 
-    // Update post format to carousel
-    await fastify.prisma.postDraft.update({
-      where: { id },
-      data: {
-        format: 'carousel',
-        formatReason: `Generated ${slides.length}-slide carousel`,
-      },
-    });
+      // Create new slides
+      const newSlides = await Promise.all(
+        slides.map((slide) =>
+          tx.carouselSlide.create({
+            data: {
+              postDraftId: id,
+              slideNumber: slide.slideNumber,
+              headline: slide.headline,
+              body: slide.body,
+              imagePrompt: slide.imagePrompt,
+            },
+          })
+        )
+      );
 
-    // Log the generation
-    await fastify.prisma.generationLog.create({
-      data: {
-        postDraftId: id,
-        model: llmResponse.model,
-        provider: llmResponse.provider,
-        promptTokens: llmResponse.promptTokens,
-        completionTokens: llmResponse.completionTokens,
-        costUsd: llmResponse.costUsd,
-        durationMs: llmResponse.durationMs,
-        taskType: 'writing',
-      },
+      // Update post format
+      await tx.postDraft.update({
+        where: { id },
+        data: {
+          format: 'carousel',
+          formatReason: `Generated ${slides.length}-slide carousel`,
+        },
+      });
+
+      // Log the generation
+      await tx.generationLog.create({
+        data: {
+          postDraftId: id,
+          model: llmResponse.model,
+          provider: llmResponse.provider,
+          promptTokens: llmResponse.promptTokens,
+          completionTokens: llmResponse.completionTokens,
+          costUsd: llmResponse.costUsd,
+          durationMs: llmResponse.durationMs,
+          taskType: 'writing',
+        },
+      });
+
+      return newSlides;
     });
 
     logger.info('Carousel slides generated', {
