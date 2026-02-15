@@ -5,33 +5,17 @@ import { useLanguage } from '@/contexts/LanguageContext';
 import { getApplicationById } from '@/data/financing';
 import { getDocumentsByRecord } from '@/data/documents';
 import Link from 'next/link';
+import { useParams } from 'next/navigation';
 import { ArrowLeft, FileText, AlertCircle } from 'lucide-react';
 
-/**
- * Financing Application Detail Page
- *
- * Displays full details of a loan application including:
- * - Application metadata (ID, type, amount, status)
- * - Status timeline with visual progression
- * - Related documents
- * - Cross-portal links to related guarantees
- *
- * Usage: /financing/applications/LA-2025-042
- */
-
-interface PageProps {
-  params: {
-    id: string;
-  };
-}
-
-export default function ApplicationDetailPage({ params }: PageProps) {
+export default function ApplicationDetailPage() {
   const { user } = useAuth();
   const { t } = useLanguage();
+  const params = useParams();
 
   if (!user) return null;
 
-  const application = getApplicationById(params.id);
+  const application = getApplicationById(params.id as string);
 
   if (!application) {
     return (

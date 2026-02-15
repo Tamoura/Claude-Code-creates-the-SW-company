@@ -4,15 +4,17 @@ import { useAuth } from '@/contexts/AuthContext';
 import { useLanguage } from '@/contexts/LanguageContext';
 import { getProgramById, getSessionsByProgram, getAssessmentsByProgram } from '@/data/advisory';
 import Link from 'next/link';
+import { useParams } from 'next/navigation';
 import { CheckCircle, Circle, Clock } from 'lucide-react';
 
-export default function ProgramDetailPage({ params }: { params: { id: string } }) {
+export default function ProgramDetailPage() {
   const { user } = useAuth();
   const { t } = useLanguage();
+  const params = useParams();
 
   if (!user) return null;
 
-  const program = getProgramById(params.id);
+  const program = getProgramById(params.id as string);
   if (!program) {
     return (
       <div className="p-8">

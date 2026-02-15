@@ -4,11 +4,13 @@ import { useAuth } from '@/contexts/AuthContext';
 import { useLanguage } from '@/contexts/LanguageContext';
 import { assessments, getProgramById } from '@/data/advisory';
 import Link from 'next/link';
+import { useParams } from 'next/navigation';
 import { FileText, TrendingUp } from 'lucide-react';
 
-export default function AssessmentDetailPage({ params }: { params: { id: string } }) {
+export default function AssessmentDetailPage() {
   const { user } = useAuth();
   const { t } = useLanguage();
+  const params = useParams();
 
   if (!user) return null;
 

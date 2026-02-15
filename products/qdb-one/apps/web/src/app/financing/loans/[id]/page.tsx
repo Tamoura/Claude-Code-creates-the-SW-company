@@ -5,35 +5,17 @@ import { useLanguage } from '@/contexts/LanguageContext';
 import { getLoanById } from '@/data/financing';
 import { getDocumentsByRecord } from '@/data/documents';
 import Link from 'next/link';
+import { useParams } from 'next/navigation';
 import { ArrowLeft, FileText, AlertCircle, Calendar, TrendingUp } from 'lucide-react';
 
-/**
- * Financing Loan Detail Page
- *
- * Displays comprehensive loan details including:
- * - Loan metadata (ID, type, amounts, rates, dates)
- * - Balance summary with progress visualization
- * - Payment schedule table
- * - Next payment highlight
- * - Related documents
- * - Cross-portal links to guarantees and advisory sessions
- *
- * Usage: /financing/loans/LN-2024-001
- */
-
-interface PageProps {
-  params: {
-    id: string;
-  };
-}
-
-export default function LoanDetailPage({ params }: PageProps) {
+export default function LoanDetailPage() {
   const { user } = useAuth();
   const { t } = useLanguage();
+  const params = useParams();
 
   if (!user) return null;
 
-  const loan = getLoanById(params.id);
+  const loan = getLoanById(params.id as string);
 
   if (!loan) {
     return (

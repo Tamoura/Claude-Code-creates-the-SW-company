@@ -5,11 +5,13 @@ import { useAuth } from '@/contexts/AuthContext';
 import { useLanguage } from '@/contexts/LanguageContext';
 import { advisorySessions, getProgramById } from '@/data/advisory';
 import Link from 'next/link';
+import { useParams } from 'next/navigation';
 import { Calendar, Clock, User, FileText, AlertCircle } from 'lucide-react';
 
-export default function SessionDetailPage({ params }: { params: { id: string } }) {
+export default function SessionDetailPage() {
   const { user } = useAuth();
   const { t } = useLanguage();
+  const params = useParams();
   const [isCancelled, setIsCancelled] = useState(false);
 
   if (!user) return null;
