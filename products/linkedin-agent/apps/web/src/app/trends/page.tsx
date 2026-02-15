@@ -4,24 +4,35 @@ import { useState } from 'react';
 import { apiFetch } from '@/lib/api';
 import { TrendCard } from '@/components/TrendCard';
 
-interface AnalyzedTrend {
-  topic: string;
+interface AnalysisTopic {
+  title: string;
   description: string;
-  relevanceScore: number;
-  suggestedAngles: string[];
-  category: string;
+  relevance: number;
+  suggestedAngle: string;
 }
 
-interface AnalysisResult {
-  trends: AnalyzedTrend[];
-  keyThemes: string[];
-  summary: string;
+interface ApiAnalysisResponse {
+  trendSource: {
+    id: string;
+    title: string;
+    tags: string[];
+  };
+  analysis: {
+    topics: AnalysisTopic[];
+    overallTheme: string;
+    recommendedTags: string[];
+  };
+  usage: {
+    model: string;
+    costUsd: number;
+    durationMs: number;
+  };
 }
 
 export default function TrendsPage() {
   const [content, setContent] = useState('');
   const [loading, setLoading] = useState(false);
-  const [result, setResult] = useState<AnalysisResult | null>(null);
+  const [result, setResult] = useState<ApiAnalysisResponse | null>(null);
   const [error, setError] = useState<string | null>(null);
 
   async function handleAnalyze() {
@@ -31,7 +42,7 @@ export default function TrendsPage() {
     setError(null);
 
     try {
-      const data = await apiFetch<AnalysisResult>('/api/trends/analyze', {
+      const data = await apiFetch<ApiAnalysisResponse>('/api/trends/analyze', {
         method: 'POST',
         body: JSON.stringify({ content: content.trim() }),
       });
@@ -62,17 +73,17 @@ export default function TrendsPage() {
           id="trend-content"
           value={content}
           onChange={(e) => setContent(e.target.value)}
-          placeholder="Paste LinkedIn posts, articles, URLs, or describe the topics you want to explore...&#10;&#10;Examples:&#10;- https://linkedin.com/posts/example&#10;- AI trends in GRC and compliance&#10;- Latest developments in cybersecurity frameworks"
+          placeholder="Paste LinkedIn posts, articles, URLs, or describe the topics you want to explore...&#10;&#10;Examples:&#10;- AI trends in GRC and compliance&#10;- Latest developments in cybersecurity frameworks&#10;- Saudi Arabia $100B AI fund announcement"
           className="textarea h-48 mb-4"
         />
 
         <div className="flex items-center justify-between">
           <span className="text-xs text-gray-500">
-            {content.length > 0 ? `${content.length} characters` : 'Enter content to analyze'}
+            {content.length > 0 ? `${content.length} characters` : 'Enter content to analyze (min 10 chars)'}
           </span>
           <button
             onClick={handleAnalyze}
-            disabled={!content.trim() || loading}
+            disabled={!content.trim() || content.trim().length < 10 || loading}
             className="btn-primary inline-flex items-center gap-2"
           >
             {loading ? (
@@ -112,19 +123,24 @@ export default function TrendsPage() {
         <div className="space-y-6">
           {/* Summary */}
           <div className="card">
-            <h2 className="text-lg font-semibold text-gray-200 mb-3">Analysis Summary</h2>
-            <p className="text-gray-300 leading-relaxed">{result.summary}</p>
+            <div className="flex items-center justify-between mb-3">
+              <h2 className="text-lg font-semibold text-gray-200">Analysis Summary</h2>
+              <span className="text-xs text-gray-500">
+                {result.usage.model} &middot; ${result.usage.costUsd.toFixed(4)} &middot; {(result.usage.durationMs / 1000).toFixed(1)}s
+              </span>
+            </div>
+            <p className="text-gray-300 leading-relaxed">{result.analysis.overallTheme}</p>
 
-            {result.keyThemes.length > 0 && (
+            {result.analysis.recommendedTags.length > 0 && (
               <div className="mt-4">
-                <h3 className="text-sm font-medium text-gray-400 mb-2">Key Themes</h3>
+                <h3 className="text-sm font-medium text-gray-400 mb-2">Recommended Tags</h3>
                 <div className="flex flex-wrap gap-2">
-                  {result.keyThemes.map((theme, index) => (
+                  {result.analysis.recommendedTags.map((tag, index) => (
                     <span
                       key={index}
                       className="inline-flex items-center px-3 py-1 rounded-full text-sm bg-blue-900/30 text-blue-300 border border-blue-700/50"
                     >
-                      {theme}
+                      {tag}
                     </span>
                   ))}
                 </div>
@@ -135,17 +151,17 @@ export default function TrendsPage() {
           {/* Trending topics */}
           <div>
             <h2 className="text-lg font-semibold text-gray-200 mb-4">
-              Trending Topics ({result.trends.length})
+              Trending Topics ({result.analysis.topics.length})
             </h2>
             <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
-              {result.trends.map((trend, index) => (
+              {result.analysis.topics.map((topic, index) => (
                 <TrendCard
                   key={index}
-                  topic={trend.topic}
-                  description={trend.description}
-                  relevanceScore={trend.relevanceScore}
-                  suggestedAngles={trend.suggestedAngles}
-                  category={trend.category}
+                  topic={topic.title}
+                  description={topic.description}
+                  relevanceScore={topic.relevance}
+                  suggestedAngles={[topic.suggestedAngle]}
+                  category={result.analysis.overallTheme}
                 />
               ))}
             </div>

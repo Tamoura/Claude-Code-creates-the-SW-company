@@ -5,25 +5,34 @@ import Link from 'next/link';
 import { apiFetch } from '@/lib/api';
 import { PostCard } from '@/components/PostCard';
 
-interface Post {
+interface PostDraft {
   id: string;
   title: string;
-  preview: string;
-  status: 'draft' | 'review' | 'approved' | 'published';
-  format: 'text' | 'carousel' | 'infographic' | 'video-script' | 'poll';
-  language: 'ar' | 'en' | 'both';
+  content: string;
+  contentAr: string | null;
+  contentEn: string | null;
+  status: string;
+  format: string;
   createdAt: string;
 }
 
-type StatusFilter = 'all' | 'draft' | 'review' | 'approved' | 'published';
-type LanguageFilter = 'all' | 'ar' | 'en' | 'both';
-type FormatFilter = 'all' | 'text' | 'carousel' | 'infographic' | 'video-script' | 'poll';
+interface PostsResponse {
+  data: PostDraft[];
+  pagination: {
+    page: number;
+    limit: number;
+    total: number;
+    totalPages: number;
+  };
+}
+
+type StatusFilter = 'all' | 'draft' | 'review' | 'approved' | 'published' | 'archived';
+type FormatFilter = 'all' | 'text' | 'carousel' | 'infographic' | 'link' | 'poll' | 'video';
 
 export default function PostsPage() {
-  const [posts, setPosts] = useState<Post[]>([]);
+  const [posts, setPosts] = useState<PostDraft[]>([]);
   const [loading, setLoading] = useState(true);
   const [statusFilter, setStatusFilter] = useState<StatusFilter>('all');
-  const [languageFilter, setLanguageFilter] = useState<LanguageFilter>('all');
   const [formatFilter, setFormatFilter] = useState<FormatFilter>('all');
 
   useEffect(() => {
@@ -31,11 +40,10 @@ export default function PostsPage() {
       try {
         const params = new URLSearchParams();
         if (statusFilter !== 'all') params.set('status', statusFilter);
-        if (languageFilter !== 'all') params.set('language', languageFilter);
         if (formatFilter !== 'all') params.set('format', formatFilter);
 
-        const data = await apiFetch<{ posts: Post[] }>(`/api/posts?${params.toString()}`);
-        setPosts(data.posts || []);
+        const data = await apiFetch<PostsResponse>(`/api/posts?${params.toString()}`);
+        setPosts(data.data || []);
       } catch {
         // API not available
       } finally {
@@ -44,7 +52,7 @@ export default function PostsPage() {
     }
 
     loadPosts();
-  }, [statusFilter, languageFilter, formatFilter]);
+  }, [statusFilter, formatFilter]);
 
   return (
     <div className="max-w-7xl mx-auto space-y-6">
@@ -80,21 +88,7 @@ export default function PostsPage() {
               <option value="review">In Review</option>
               <option value="approved">Approved</option>
               <option value="published">Published</option>
-            </select>
-          </div>
-
-          {/* Language filter */}
-          <div>
-            <label className="block text-xs font-medium text-gray-500 mb-1">Language</label>
-            <select
-              value={languageFilter}
-              onChange={(e) => setLanguageFilter(e.target.value as LanguageFilter)}
-              className="select text-sm py-1.5"
-            >
-              <option value="all">All Languages</option>
-              <option value="ar">Arabic</option>
-              <option value="en">English</option>
-              <option value="both">Bilingual</option>
+              <option value="archived">Archived</option>
             </select>
           </div>
 
@@ -110,8 +104,9 @@ export default function PostsPage() {
               <option value="text">Text Post</option>
               <option value="carousel">Carousel</option>
               <option value="infographic">Infographic</option>
-              <option value="video-script">Video Script</option>
+              <option value="link">Link</option>
               <option value="poll">Poll</option>
+              <option value="video">Video</option>
             </select>
           </div>
         </div>
@@ -143,10 +138,11 @@ export default function PostsPage() {
               key={post.id}
               id={post.id}
               title={post.title}
-              preview={post.preview}
+              content={post.content}
+              contentAr={post.contentAr}
+              contentEn={post.contentEn}
               status={post.status}
               format={post.format}
-              language={post.language}
               createdAt={post.createdAt}
             />
           ))}
@@ -160,7 +156,7 @@ export default function PostsPage() {
           </div>
           <h3 className="text-lg font-medium text-gray-300 mb-2">No posts found</h3>
           <p className="text-sm text-gray-500 mb-6">
-            {statusFilter !== 'all' || languageFilter !== 'all' || formatFilter !== 'all'
+            {statusFilter !== 'all' || formatFilter !== 'all'
               ? 'Try adjusting your filters or create a new post.'
               : 'Get started by generating your first LinkedIn post with AI.'}
           </p>

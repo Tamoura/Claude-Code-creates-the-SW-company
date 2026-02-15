@@ -6,47 +6,56 @@ import { apiFetch } from '@/lib/api';
 import { StatusBadge } from '@/components/StatusBadge';
 import { FormatBadge } from '@/components/FormatBadge';
 
-interface DraftSummary {
+interface PostDraft {
   id: string;
   title: string;
-  status: 'draft' | 'review' | 'approved' | 'published';
-  format: 'text' | 'carousel' | 'infographic' | 'video-script' | 'poll';
-  language: 'ar' | 'en' | 'both';
+  content: string;
+  contentAr: string | null;
+  contentEn: string | null;
+  status: string;
+  format: string;
   createdAt: string;
 }
 
-interface DashboardStats {
-  totalDrafts: number;
-  published: number;
-  trendingTopics: number;
-  aiCreditsUsed: number;
+interface PostsResponse {
+  data: PostDraft[];
+  pagination: {
+    page: number;
+    limit: number;
+    total: number;
+    totalPages: number;
+  };
 }
 
-const defaultStats: DashboardStats = {
-  totalDrafts: 0,
-  published: 0,
-  trendingTopics: 0,
-  aiCreditsUsed: 0,
-};
+interface UsageResponse {
+  totals: {
+    calls: number;
+    totalCostUsd: number;
+  };
+}
 
 export default function DashboardPage() {
-  const [stats, setStats] = useState<DashboardStats>(defaultStats);
-  const [recentDrafts, setRecentDrafts] = useState<DraftSummary[]>([]);
+  const [recentDrafts, setRecentDrafts] = useState<PostDraft[]>([]);
+  const [totalDrafts, setTotalDrafts] = useState(0);
+  const [totalCalls, setTotalCalls] = useState(0);
+  const [totalCost, setTotalCost] = useState(0);
   const [loading, setLoading] = useState(true);
 
   useEffect(() => {
     async function loadDashboard() {
       try {
-        const [statsData, draftsData] = await Promise.allSettled([
-          apiFetch<DashboardStats>('/api/dashboard/stats'),
-          apiFetch<{ posts: DraftSummary[] }>('/api/posts?limit=5&sort=createdAt:desc'),
+        const [postsResult, usageResult] = await Promise.allSettled([
+          apiFetch<PostsResponse>('/api/posts?limit=5'),
+          apiFetch<UsageResponse>('/api/models/usage'),
         ]);
 
-        if (statsData.status === 'fulfilled') {
-          setStats(statsData.value);
+        if (postsResult.status === 'fulfilled') {
+          setRecentDrafts(postsResult.value.data || []);
+          setTotalDrafts(postsResult.value.pagination?.total || 0);
         }
-        if (draftsData.status === 'fulfilled') {
-          setRecentDrafts(draftsData.value.posts || []);
+        if (usageResult.status === 'fulfilled') {
+          setTotalCalls(usageResult.value.totals?.calls || 0);
+          setTotalCost(usageResult.value.totals?.totalCostUsd || 0);
         }
       } catch {
         // API not available yet - show empty state
@@ -58,11 +67,13 @@ export default function DashboardPage() {
     loadDashboard();
   }, []);
 
+  const publishedCount = recentDrafts.filter(d => d.status === 'published').length;
+
   const statCards = [
     {
       label: 'Total Drafts',
       labelAr: 'إجمالي المسودات',
-      value: stats.totalDrafts,
+      value: totalDrafts,
       icon: (
         <svg className="w-6 h-6" fill="none" stroke="currentColor" viewBox="0 0 24 24">
           <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M9 12h6m-6 4h6m2 5H7a2 2 0 01-2-2V5a2 2 0 012-2h5.586a1 1 0 01.707.293l5.414 5.414a1 1 0 01.293.707V19a2 2 0 01-2 2z" />
@@ -73,7 +84,7 @@ export default function DashboardPage() {
     {
       label: 'Published',
       labelAr: 'منشورة',
-      value: stats.published,
+      value: publishedCount,
       icon: (
         <svg className="w-6 h-6" fill="none" stroke="currentColor" viewBox="0 0 24 24">
           <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M9 12l2 2 4-4m6 2a9 9 0 11-18 0 9 9 0 0118 0z" />
@@ -82,23 +93,23 @@ export default function DashboardPage() {
       color: 'green',
     },
     {
-      label: 'Trending Topics',
-      labelAr: 'المواضيع الرائجة',
-      value: stats.trendingTopics,
+      label: 'AI API Calls',
+      labelAr: 'استدعاءات الذكاء',
+      value: totalCalls,
       icon: (
         <svg className="w-6 h-6" fill="none" stroke="currentColor" viewBox="0 0 24 24">
-          <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M13 7h8m0 0v8m0-8l-8 8-4-4-6 6" />
+          <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M13 10V3L4 14h7v7l9-11h-7z" />
         </svg>
       ),
       color: 'orange',
     },
     {
-      label: 'AI Credits Used',
-      labelAr: 'رصيد الذكاء المستخدم',
-      value: stats.aiCreditsUsed,
+      label: 'Total Cost',
+      labelAr: 'التكلفة الإجمالية',
+      value: `$${totalCost.toFixed(4)}`,
       icon: (
         <svg className="w-6 h-6" fill="none" stroke="currentColor" viewBox="0 0 24 24">
-          <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M13 10V3L4 14h7v7l9-11h-7z" />
+          <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M12 8c-1.657 0-3 .895-3 2s1.343 2 3 2 3 .895 3 2-1.343 2-3 2m0-8c1.11 0 2.08.402 2.599 1M12 8V7m0 1v8m0 0v1m0-1c-1.11 0-2.08-.402-2.599-1M21 12a9 9 0 11-18 0 9 9 0 0118 0z" />
         </svg>
       ),
       color: 'purple',
@@ -135,7 +146,7 @@ export default function DashboardPage() {
               {loading ? (
                 <span className="inline-block w-12 h-7 bg-gray-800 rounded animate-pulse" />
               ) : (
-                stat.value.toLocaleString()
+                typeof stat.value === 'number' ? stat.value.toLocaleString() : stat.value
               )}
             </p>
             <p className="text-sm text-gray-400 mt-1">{stat.label}</p>
