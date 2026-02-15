@@ -44,3 +44,13 @@ body {
   direction: rtl;
   text-align: right;
 }
+
+/* Mobile safe area utilities */
+.mobile-safe-bottom { padding-bottom: env(safe-area-inset-bottom); }
+.mobile-safe-top { padding-top: env(safe-area-inset-top); }
+
+@keyframes slide-up {
+  from { transform: translateY(100%); }
+  to { transform: translateY(0); }
+}
+.animate-slide-up { animation: slide-up 0.3s ease-out; }

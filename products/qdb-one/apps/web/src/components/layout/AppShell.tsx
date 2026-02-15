@@ -18,6 +18,11 @@ export default function AppShell({ children }: AppShellProps) {
   const pathname = usePathname();
   const [sidebarOpen, setSidebarOpen] = useState(false);
 
+  // Mobile routes have their own layout shell — pass through directly
+  if (pathname.startsWith('/m')) {
+    return <>{children}</>;
+  }
+
   // Public routes render children directly (no sidebar, no header, no auth gate)
   if (PUBLIC_ROUTES.includes(pathname)) {
     return <>{children}</>;
