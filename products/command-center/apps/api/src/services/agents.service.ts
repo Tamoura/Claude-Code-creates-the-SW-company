@@ -18,6 +18,18 @@ export interface AgentExperience {
   learnedPatterns: string[];
 }
 
+export interface AgentSection {
+  title: string;
+  level: number;
+  content: string;
+}
+
+export interface AgentDetail extends Agent {
+  fullContent: string;
+  brief: string | null;
+  sections: AgentSection[];
+}
+
 /** List all agent definitions */
 export function listAgents(): Agent[] {
   const agentsDir = repoPath('.claude', 'agents');
@@ -85,4 +97,60 @@ function parseAgentFile(filename: string): Agent {
   }
 
   return { id, name, description, responsibilities: responsibilities.slice(0, 10), hasExperience, experienceSummary };
+}
+
+/** Get full agent detail including raw content, brief, and parsed sections */
+export function getAgentDetail(id: string): AgentDetail | null {
+  const agent = getAgent(id);
+  if (!agent) return null;
+
+  const filePath = repoPath('.claude', 'agents', `${id}.md`);
+  const fullContent = readFileSync(filePath, 'utf-8');
+
+  // Read brief if it exists
+  const briefPath = repoPath('.claude', 'agents', 'briefs', `${id}.md`);
+  const brief = existsSync(briefPath) ? readFileSync(briefPath, 'utf-8') : null;
+
+  // Parse sections from markdown headings
+  const sections = parseSections(fullContent);
+
+  return { ...agent, fullContent, brief, sections };
+}
+
+function parseSections(content: string): AgentSection[] {
+  const sections: AgentSection[] = [];
+  const lines = content.split('\n');
+  let currentTitle = '';
+  let currentLevel = 0;
+  let currentLines: string[] = [];
+
+  for (const line of lines) {
+    const headingMatch = line.match(/^(#{2,3})\s+(.+)/);
+    if (headingMatch) {
+      // Save previous section
+      if (currentTitle) {
+        sections.push({
+          title: currentTitle,
+          level: currentLevel,
+          content: currentLines.join('\n').trim(),
+        });
+      }
+      currentTitle = headingMatch[2].trim();
+      currentLevel = headingMatch[1].length;
+      currentLines = [];
+    } else if (currentTitle) {
+      currentLines.push(line);
+    }
+  }
+
+  // Push final section
+  if (currentTitle) {
+    sections.push({
+      title: currentTitle,
+      level: currentLevel,
+      content: currentLines.join('\n').trim(),
+    });
+  }
+
+  return sections;
 }

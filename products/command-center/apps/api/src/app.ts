@@ -7,6 +7,9 @@ import { activityRoutes } from './routes/v1/activity.js';
 import { componentRoutes } from './routes/v1/components.js';
 import { infrastructureRoutes } from './routes/v1/infrastructure.js';
 import { invokeRoutes } from './routes/v1/invoke.js';
+import { workflowRoutes } from './routes/v1/workflows.js';
+import { auditReportRoutes } from './routes/v1/audit-reports.js';
+import { operationsRoutes } from './routes/v1/operations.js';
 
 export async function buildApp() {
   const app = Fastify({
@@ -39,6 +42,9 @@ export async function buildApp() {
   await app.register(componentRoutes, { prefix: '/api/v1' });
   await app.register(infrastructureRoutes, { prefix: '/api/v1' });
   await app.register(invokeRoutes, { prefix: '/api/v1' });
+  await app.register(workflowRoutes, { prefix: '/api/v1' });
+  await app.register(auditReportRoutes, { prefix: '/api/v1' });
+  await app.register(operationsRoutes, { prefix: '/api/v1' });
 
   return app;
 }
