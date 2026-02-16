@@ -17,8 +17,9 @@
 
 | Port | Product | Status | URL |
 |------|---------|--------|-----|
+| 3100 | quantum-computing-usecases | Active | http://localhost:3100 |
+| 3102 | qdb-one | Active | http://localhost:3102 |
 | 3104 | stablecoin-gateway | Active | http://localhost:3104 |
-| 3105 | quantum-computing-usecases | Active | http://localhost:3105 |
 | 3108 | muaththir | Active | http://localhost:3108 |
 | 3110 | connectgrc | Active | http://localhost:3110 |
 | 3111 | taskflow | Active | http://localhost:3111 |
