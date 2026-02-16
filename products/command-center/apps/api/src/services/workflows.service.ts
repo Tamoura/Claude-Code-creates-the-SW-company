@@ -177,20 +177,36 @@ function finalizeTask(partial: Partial<WorkflowTask>): WorkflowTask {
   };
 }
 
+/** Strip template placeholders like {HOTFIX_ID} from Mermaid node IDs */
+function sanitizeId(raw: string): string {
+  return raw.replace(/\{[^}]+\}/g, (match) => match.slice(1, -1));
+}
+
+/** Clean label text: replace {VAR} with readable placeholder */
+function sanitizeLabel(raw: string): string {
+  return raw.replace(/\{([^}]+)\}/g, '[$1]');
+}
+
 function generateMermaid(tasks: WorkflowTask[]): string {
   const lines: string[] = ['graph TD'];
+  const idSet = new Set(tasks.map((t) => sanitizeId(t.id)));
 
   for (const task of tasks) {
+    const nodeId = sanitizeId(task.id);
     const cls = AGENT_CLASS_MAP[task.agent] ?? 'docs';
     const icon = AGENT_ICON_MAP[task.agent] ?? '\ud83d\udccc';
-    const label = `${icon} ${task.name}<br/><i>${task.agent}</i>`;
-    lines.push(`    ${task.id}["${label}"]:::${cls}`);
+    const label = `${icon} ${sanitizeLabel(task.name)}<br/><i>${task.agent}</i>`;
+    lines.push(`    ${nodeId}["${label}"]:::${cls}`);
   }
 
-  // Add edges
+  // Add edges — only emit if both source and target exist
   for (const task of tasks) {
+    const targetId = sanitizeId(task.id);
     for (const dep of task.dependsOn) {
-      lines.push(`    ${dep} --> ${task.id}`);
+      const sourceId = sanitizeId(dep);
+      if (idSet.has(sourceId)) {
+        lines.push(`    ${sourceId} --> ${targetId}`);
+      }
     }
   }
 

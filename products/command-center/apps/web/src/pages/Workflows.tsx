@@ -1,4 +1,4 @@
-import { useState } from 'react';
+import { useState, useEffect, useCallback } from 'react';
 import { useApi } from '../hooks/useApi.js';
 import StatCard from '../components/StatCard.js';
 import Badge from '../components/Badge.js';
@@ -66,6 +66,17 @@ function formatTime(minutes: number): string {
 export default function Workflows() {
   const { data, loading } = useApi<WorkflowsResponse>('/workflows');
   const [expandedId, setExpandedId] = useState<string | null>(null);
+  const [fullscreenWorkflow, setFullscreenWorkflow] = useState<Workflow | null>(null);
+
+  const closeFullscreen = useCallback(() => setFullscreenWorkflow(null), []);
+
+  useEffect(() => {
+    const handler = (e: KeyboardEvent) => {
+      if (e.key === 'Escape' && fullscreenWorkflow) closeFullscreen();
+    };
+    document.addEventListener('keydown', handler);
+    return () => document.removeEventListener('keydown', handler);
+  }, [fullscreenWorkflow, closeFullscreen]);
 
   if (loading) return <LoadingSkeleton />;
   if (!data) return <p className="text-red-400">Failed to load workflows</p>;
@@ -75,6 +86,38 @@ export default function Workflows() {
   const totalTasks = workflows.reduce((sum, w) => sum + w.taskCount, 0);
   const avgDuration = Math.round(workflows.reduce((sum, w) => sum + w.estimatedMinutes, 0) / workflows.length);
   const uniqueAgents = new Set(workflows.flatMap(w => w.agents));
+
+  // Fullscreen overlay
+  if (fullscreenWorkflow) {
+    return (
+      <div className="fixed inset-0 z-50 bg-gray-950 flex flex-col">
+        {/* Toolbar */}
+        <div className="flex items-center justify-between px-6 py-4 border-b border-gray-800 bg-gray-900">
+          <div className="flex items-center gap-3">
+            <h2 className="text-lg font-semibold text-white">{fullscreenWorkflow.name}</h2>
+            <Badge variant="info">{fullscreenWorkflow.workflowType}</Badge>
+            <span className="text-sm text-gray-500">{fullscreenWorkflow.taskCount} tasks &middot; {formatTime(fullscreenWorkflow.estimatedMinutes)}</span>
+          </div>
+          <button
+            onClick={closeFullscreen}
+            className="text-gray-400 hover:text-white transition-colors flex items-center gap-2 px-3 py-1.5 rounded-lg hover:bg-gray-800"
+            title="Exit fullscreen (Esc)"
+          >
+            <svg className="w-5 h-5" fill="none" stroke="currentColor" viewBox="0 0 24 24" strokeWidth={1.5}>
+              <path strokeLinecap="round" strokeLinejoin="round" d="M9 9V4.5M9 9H4.5M9 9L3.75 3.75M9 15v4.5M9 15H4.5M9 15l-5.25 5.25M15 9h4.5M15 9V4.5M15 9l5.25-5.25M15 15h4.5M15 15v4.5m0-4.5l5.25 5.25" />
+            </svg>
+            <span className="text-sm">Exit</span>
+          </button>
+        </div>
+        {/* Diagram */}
+        <div className="flex-1 overflow-auto p-8">
+          <div className="max-w-6xl mx-auto">
+            <MarkdownRenderer content={`\`\`\`mermaid\n${fullscreenWorkflow.mermaid}\n\`\`\``} />
+          </div>
+        </div>
+      </div>
+    );
+  }
 
   return (
     <div>
@@ -97,6 +140,7 @@ export default function Workflows() {
             workflow={workflow}
             expanded={expandedId === workflow.id}
             onToggle={() => setExpandedId(expandedId === workflow.id ? null : workflow.id)}
+            onFullscreen={() => setFullscreenWorkflow(workflow)}
           />
         ))}
       </div>
@@ -108,9 +152,10 @@ interface WorkflowCardProps {
   workflow: Workflow;
   expanded: boolean;
   onToggle: () => void;
+  onFullscreen: () => void;
 }
 
-function WorkflowCard({ workflow, expanded, onToggle }: WorkflowCardProps) {
+function WorkflowCard({ workflow, expanded, onToggle, onFullscreen }: WorkflowCardProps) {
   return (
     <div className="bg-gray-900 border border-gray-800 rounded-xl p-6">
       {/* Collapsed Header */}
@@ -158,7 +203,19 @@ function WorkflowCard({ workflow, expanded, onToggle }: WorkflowCardProps) {
         <div className="mt-6 space-y-6">
           {/* Mermaid Diagram */}
           <div className="border-t border-gray-800 pt-6">
-            <h4 className="text-sm font-semibold text-white mb-3">Execution Flow</h4>
+            <div className="flex items-center justify-between mb-3">
+              <h4 className="text-sm font-semibold text-white">Execution Flow</h4>
+              <button
+                onClick={onFullscreen}
+                className="text-gray-400 hover:text-white transition-colors flex items-center gap-1.5 px-2 py-1 rounded hover:bg-gray-800 text-xs"
+                title="View fullscreen"
+              >
+                <svg className="w-4 h-4" fill="none" stroke="currentColor" viewBox="0 0 24 24" strokeWidth={1.5}>
+                  <path strokeLinecap="round" strokeLinejoin="round" d="M3.75 3.75v4.5m0-4.5h4.5m-4.5 0L9 9M3.75 20.25v-4.5m0 4.5h4.5m-4.5 0L9 15M20.25 3.75h-4.5m4.5 0v4.5m0-4.5L15 9m5.25 11.25h-4.5m4.5 0v-4.5m0 4.5L15 15" />
+                </svg>
+                Fullscreen
+              </button>
+            </div>
             <MarkdownRenderer content={`\`\`\`mermaid\n${workflow.mermaid}\n\`\`\``} />
           </div>
 
