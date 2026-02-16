@@ -1,6 +1,14 @@
 import { readdirSync, existsSync, readFileSync, statSync } from 'node:fs';
-import { join } from 'node:path';
+import { join, relative, resolve, normalize } from 'node:path';
 import { repoPath } from './repo.service.js';
+
+export interface DocInfo {
+  filename: string;
+  title: string;
+  category: 'prd' | 'api' | 'architecture' | 'adr' | 'audit' | 'other';
+  sizeBytes: number;
+  lastModified: string;
+}
 
 export interface Product {
   name: string;
@@ -34,6 +42,111 @@ export function getProduct(name: string): Product | null {
   const dir = repoPath('products', name);
   if (!existsSync(dir)) return null;
   return buildProductInfo(name);
+}
+
+/** List all docs for a product with metadata */
+export function listProductDocs(productName: string): DocInfo[] {
+  const productDir = repoPath('products', productName);
+  if (!existsSync(productDir)) return [];
+
+  const docs: DocInfo[] = [];
+  const docsDir = join(productDir, 'docs');
+
+  // Recursively scan docs/ directory
+  if (existsSync(docsDir)) {
+    collectDocs(docsDir, docsDir, docs);
+  }
+
+  // Include README.md from product root if it exists
+  const readmePath = join(productDir, 'README.md');
+  if (existsSync(readmePath)) {
+    docs.push(buildDocInfo(readmePath, 'README.md'));
+  }
+
+  return docs.sort((a, b) => a.filename.localeCompare(b.filename));
+}
+
+/** Read raw markdown content of a specific doc */
+export function getProductDoc(productName: string, filename: string): (DocInfo & { content: string }) | null {
+  // Security: reject path traversal attempts
+  if (filename.includes('..') || filename.startsWith('/')) return null;
+
+  const productDir = repoPath('products', productName);
+  if (!existsSync(productDir)) return null;
+
+  // Determine the full path
+  let fullPath: string;
+  if (filename === 'README.md') {
+    fullPath = join(productDir, 'README.md');
+  } else {
+    fullPath = join(productDir, 'docs', filename);
+  }
+
+  // Normalize and verify the resolved path stays within the product directory
+  const resolved = resolve(fullPath);
+  const allowedBase = resolve(productDir);
+  if (!resolved.startsWith(allowedBase)) return null;
+
+  if (!existsSync(resolved) || statSync(resolved).isDirectory()) return null;
+
+  try {
+    const content = readFileSync(resolved, 'utf-8');
+    const info = buildDocInfo(resolved, filename);
+    return { ...info, content };
+  } catch {
+    return null;
+  }
+}
+
+function collectDocs(baseDir: string, currentDir: string, docs: DocInfo[]): void {
+  try {
+    const entries = readdirSync(currentDir, { withFileTypes: true });
+    for (const entry of entries) {
+      const fullPath = join(currentDir, entry.name);
+      if (entry.isDirectory()) {
+        collectDocs(baseDir, fullPath, docs);
+      } else if (entry.name.endsWith('.md') || entry.name.endsWith('.yml') || entry.name.endsWith('.yaml')) {
+        const relativeName = relative(baseDir, fullPath);
+        docs.push(buildDocInfo(fullPath, relativeName));
+      }
+    }
+  } catch { /* ignore unreadable directories */ }
+}
+
+function buildDocInfo(fullPath: string, filename: string): DocInfo {
+  const stat = statSync(fullPath);
+  const title = extractTitle(fullPath, filename);
+  const category = categorizeDoc(filename);
+
+  return {
+    filename,
+    title,
+    category,
+    sizeBytes: stat.size,
+    lastModified: stat.mtime.toISOString(),
+  };
+}
+
+function extractTitle(fullPath: string, filename: string): string {
+  try {
+    const content = readFileSync(fullPath, 'utf-8');
+    const match = content.match(/^#\s+(.+)$/m);
+    if (match) return match[1].trim();
+  } catch { /* ignore */ }
+  // Fallback to filename without extension
+  return filename.replace(/\.[^.]+$/, '');
+}
+
+function categorizeDoc(filename: string): DocInfo['category'] {
+  const normalized = normalize(filename).toLowerCase();
+  const basename = normalized.split('/').pop() ?? '';
+
+  if (normalized.includes('adrs/') || normalized.includes('adr/')) return 'adr';
+  if (basename === 'prd.md') return 'prd';
+  if (basename === 'api.md') return 'api';
+  if (basename === 'architecture.md') return 'architecture';
+  if (basename.includes('audit')) return 'audit';
+  return 'other';
 }
 
 function buildProductInfo(name: string): Product {
