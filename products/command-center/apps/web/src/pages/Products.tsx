@@ -1,3 +1,4 @@
+import { Link } from 'react-router-dom';
 import { useApi } from '../hooks/useApi.js';
 import Badge from '../components/Badge.js';
 
@@ -37,10 +38,23 @@ export default function Products() {
 
       <div className="grid grid-cols-1 lg:grid-cols-2 gap-4">
         {data.products.map((product) => (
-          <div key={product.name} className="bg-gray-900 border border-gray-800 rounded-xl p-6 hover:border-gray-700 transition-colors">
+          <Link
+            key={product.name}
+            to={`/products/${product.name}`}
+            className="bg-gray-900 border border-gray-800 rounded-xl p-6 hover:border-gray-700 hover:shadow-lg hover:shadow-blue-500/10 transition-all group"
+          >
             <div className="flex items-start justify-between mb-3">
-              <div>
-                <h3 className="text-lg font-semibold text-white">{product.displayName}</h3>
+              <div className="flex-1">
+                <div className="flex items-center gap-2">
+                  <h3 className="text-lg font-semibold text-white group-hover:text-blue-400 transition-colors">
+                    {product.displayName}
+                  </h3>
+                  {product.docs.length > 0 && (
+                    <span className="text-xs text-gray-500 bg-gray-800 px-2 py-0.5 rounded">
+                      {product.docs.length} {product.docs.length === 1 ? 'doc' : 'docs'}
+                    </span>
+                  )}
+                </div>
                 <p className="text-sm text-gray-500 mt-0.5">{product.description}</p>
               </div>
               <Badge variant={phaseVariant(product.phase)}>{product.phase}</Badge>
@@ -61,9 +75,8 @@ export default function Products() {
               {product.apiPort && <span>API :{product.apiPort}</span>}
               {product.webPort && <span>Web :{product.webPort}</span>}
               <span>{product.fileCount} files</span>
-              {product.docs.length > 0 && <span>{product.docs.length} docs</span>}
             </div>
-          </div>
+          </Link>
         ))}
       </div>
     </div>
