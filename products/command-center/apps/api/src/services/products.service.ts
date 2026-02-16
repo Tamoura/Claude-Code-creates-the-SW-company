@@ -44,6 +44,11 @@ export function getProduct(name: string): Product | null {
   return buildProductInfo(name);
 }
 
+/** Lightweight check — just verifies the product directory exists */
+export function productExists(name: string): boolean {
+  return existsSync(repoPath('products', name));
+}
+
 /** List all docs for a product with metadata */
 export function listProductDocs(productName: string): DocInfo[] {
   const productDir = repoPath('products', productName);

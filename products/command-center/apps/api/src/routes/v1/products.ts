@@ -1,5 +1,5 @@
 import type { FastifyInstance } from 'fastify';
-import { listProducts, getProduct, listProductDocs, getProductDoc } from '../../services/products.service.js';
+import { listProducts, getProduct, productExists, listProductDocs, getProductDoc } from '../../services/products.service.js';
 
 export async function productRoutes(fastify: FastifyInstance) {
   fastify.get('/products', async () => {
@@ -17,8 +17,7 @@ export async function productRoutes(fastify: FastifyInstance) {
   // GET /products/:name/docs - list all docs for a product
   fastify.get<{ Params: { name: string } }>('/products/:name/docs', async (request, reply) => {
     const { name } = request.params;
-    const product = getProduct(name);
-    if (!product) {
+    if (!productExists(name)) {
       return reply.status(404).send({ error: 'Product not found' });
     }
 
@@ -41,8 +40,7 @@ export async function productRoutes(fastify: FastifyInstance) {
       return reply.status(400).send({ error: 'Invalid filename' });
     }
 
-    const product = getProduct(name);
-    if (!product) {
+    if (!productExists(name)) {
       return reply.status(404).send({ error: 'Product not found' });
     }
 
