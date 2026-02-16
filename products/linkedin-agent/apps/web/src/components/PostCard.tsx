@@ -5,25 +5,23 @@ import { FormatBadge } from './FormatBadge';
 interface PostCardProps {
   id: string;
   title: string;
-  preview: string;
-  status: 'draft' | 'review' | 'approved' | 'published';
-  format: 'text' | 'carousel' | 'infographic' | 'video-script' | 'poll';
-  language: 'ar' | 'en' | 'both';
+  content: string;
+  contentAr: string | null;
+  contentEn: string | null;
+  status: string;
+  format: string;
   createdAt: string;
 }
 
-const languageLabels = {
-  ar: 'العربية',
-  en: 'English',
-  both: 'AR / EN',
-};
-
-export function PostCard({ id, title, preview, status, format, language, createdAt }: PostCardProps) {
+export function PostCard({ id, title, content, contentAr, contentEn, status, format, createdAt }: PostCardProps) {
   const formattedDate = new Date(createdAt).toLocaleDateString('en-US', {
     month: 'short',
     day: 'numeric',
     year: 'numeric',
   });
+
+  const preview = (contentEn || content || '').substring(0, 150);
+  const languageLabel = contentAr && contentEn ? 'AR / EN' : contentAr ? 'العربية' : 'English';
 
   return (
     <Link href={`/posts/${id}`}>
@@ -42,7 +40,7 @@ export function PostCard({ id, title, preview, status, format, language, created
         </p>
 
         <div className="flex items-center justify-between text-xs text-gray-500 mt-auto pt-3 border-t border-gray-800">
-          <span>{languageLabels[language]}</span>
+          <span>{languageLabel}</span>
           <span>{formattedDate}</span>
         </div>
       </div>

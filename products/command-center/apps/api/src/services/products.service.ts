@@ -1,6 +1,14 @@
 import { readdirSync, existsSync, readFileSync, statSync } from 'node:fs';
-import { join } from 'node:path';
+import { join, relative, resolve, normalize } from 'node:path';
 import { repoPath } from './repo.service.js';
+
+export interface DocInfo {
+  filename: string;
+  title: string;
+  category: 'prd' | 'api' | 'architecture' | 'adr' | 'audit' | 'other';
+  sizeBytes: number;
+  lastModified: string;
+}
 
 export interface Product {
   name: string;
@@ -18,22 +26,143 @@ export interface Product {
   docs: string[];
 }
 
+/** Cache for listProducts — expires after 30 seconds */
+let productsCache: { data: Product[]; ts: number } | null = null;
+const CACHE_TTL = 30_000;
+
 /** Scan products/ directory and build metadata for each product */
 export function listProducts(): Product[] {
+  if (productsCache && Date.now() - productsCache.ts < CACHE_TTL) {
+    return productsCache.data;
+  }
+
   const productsDir = repoPath('products');
   if (!existsSync(productsDir)) return [];
 
   const entries = readdirSync(productsDir, { withFileTypes: true });
-  return entries
+  const data = entries
     .filter((e) => e.isDirectory())
     .map((e) => buildProductInfo(e.name))
     .sort((a, b) => a.name.localeCompare(b.name));
+
+  productsCache = { data, ts: Date.now() };
+  return data;
 }
 
 export function getProduct(name: string): Product | null {
   const dir = repoPath('products', name);
   if (!existsSync(dir)) return null;
   return buildProductInfo(name);
+}
+
+/** Lightweight check — just verifies the product directory exists */
+export function productExists(name: string): boolean {
+  return existsSync(repoPath('products', name));
+}
+
+/** List all docs for a product with metadata */
+export function listProductDocs(productName: string): DocInfo[] {
+  const productDir = repoPath('products', productName);
+  if (!existsSync(productDir)) return [];
+
+  const docs: DocInfo[] = [];
+  const docsDir = join(productDir, 'docs');
+
+  // Recursively scan docs/ directory
+  if (existsSync(docsDir)) {
+    collectDocs(docsDir, docsDir, docs);
+  }
+
+  // Include README.md from product root if it exists
+  const readmePath = join(productDir, 'README.md');
+  if (existsSync(readmePath)) {
+    docs.push(buildDocInfo(readmePath, 'README.md'));
+  }
+
+  return docs.sort((a, b) => a.filename.localeCompare(b.filename));
+}
+
+/** Read raw markdown content of a specific doc */
+export function getProductDoc(productName: string, filename: string): (DocInfo & { content: string }) | null {
+  // Security: reject path traversal attempts
+  if (filename.includes('..') || filename.startsWith('/')) return null;
+
+  const productDir = repoPath('products', productName);
+  if (!existsSync(productDir)) return null;
+
+  // Determine the full path
+  let fullPath: string;
+  if (filename === 'README.md') {
+    fullPath = join(productDir, 'README.md');
+  } else {
+    fullPath = join(productDir, 'docs', filename);
+  }
+
+  // Normalize and verify the resolved path stays within the product directory
+  const resolved = resolve(fullPath);
+  const allowedBase = resolve(productDir);
+  if (!resolved.startsWith(allowedBase)) return null;
+
+  if (!existsSync(resolved) || statSync(resolved).isDirectory()) return null;
+
+  try {
+    const content = readFileSync(resolved, 'utf-8');
+    const info = buildDocInfo(resolved, filename);
+    return { ...info, content };
+  } catch {
+    return null;
+  }
+}
+
+function collectDocs(baseDir: string, currentDir: string, docs: DocInfo[]): void {
+  try {
+    const entries = readdirSync(currentDir, { withFileTypes: true });
+    for (const entry of entries) {
+      const fullPath = join(currentDir, entry.name);
+      if (entry.isDirectory()) {
+        collectDocs(baseDir, fullPath, docs);
+      } else if (entry.name.endsWith('.md') || entry.name.endsWith('.yml') || entry.name.endsWith('.yaml')) {
+        const relativeName = relative(baseDir, fullPath);
+        docs.push(buildDocInfo(fullPath, relativeName));
+      }
+    }
+  } catch { /* ignore unreadable directories */ }
+}
+
+function buildDocInfo(fullPath: string, filename: string): DocInfo {
+  const stat = statSync(fullPath);
+  const title = extractTitle(fullPath, filename);
+  const category = categorizeDoc(filename);
+
+  return {
+    filename,
+    title,
+    category,
+    sizeBytes: stat.size,
+    lastModified: stat.mtime.toISOString(),
+  };
+}
+
+function extractTitle(fullPath: string, filename: string): string {
+  try {
+    const content = readFileSync(fullPath, 'utf-8');
+    const match = content.match(/^#\s+(.+)$/m);
+    if (match) return match[1].trim();
+  } catch { /* ignore */ }
+  // Fallback to filename without extension
+  return filename.replace(/\.[^.]+$/, '');
+}
+
+function categorizeDoc(filename: string): DocInfo['category'] {
+  const normalized = normalize(filename).toLowerCase();
+  const basename = normalized.split('/').pop() ?? '';
+
+  if (normalized.includes('adrs/') || normalized.includes('adr/')) return 'adr';
+  if (basename === 'prd.md') return 'prd';
+  if (basename === 'api.md') return 'api';
+  if (basename === 'architecture.md') return 'architecture';
+  if (basename.includes('audit')) return 'audit';
+  return 'other';
 }
 
 function buildProductInfo(name: string): Product {
@@ -61,8 +190,8 @@ function buildProductInfo(name: string): Product {
   // Docs listing
   const docs = listDocs(dir);
 
-  // File count (approximate via top-level scan)
-  const fileCount = countFiles(dir);
+  // Doc count (only meaningful documentation files)
+  const fileCount = docs.length;
 
   // Last modified
   const lastModified = getLastModified(dir);
@@ -168,21 +297,6 @@ function listDocs(dir: string): string[] {
   }
 }
 
-function countFiles(dir: string): number {
-  let count = 0;
-  try {
-    const walk = (d: string) => {
-      for (const entry of readdirSync(d, { withFileTypes: true })) {
-        if (entry.name === 'node_modules' || entry.name === 'dist' || entry.name === '.git') continue;
-        const full = join(d, entry.name);
-        if (entry.isDirectory()) walk(full);
-        else count++;
-      }
-    };
-    walk(dir);
-  } catch { /* ignore */ }
-  return count;
-}
 
 function getLastModified(dir: string): string {
   try {

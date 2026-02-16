@@ -1,5 +1,5 @@
 interface FormatBadgeProps {
-  format: 'text' | 'carousel' | 'infographic' | 'video-script' | 'poll';
+  format: string;
 }
 
 const formatConfig = {
@@ -50,13 +50,23 @@ const formatConfig = {
   },
 };
 
+const fallback = {
+  label: 'Other',
+  className: 'bg-gray-900/30 text-gray-400 border-gray-700/50',
+  icon: (
+    <svg className="w-3.5 h-3.5" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+      <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M7 8h10M7 12h4m1 8l-4-4H5a2 2 0 01-2-2V6a2 2 0 012-2h14a2 2 0 012 2v8a2 2 0 01-2 2h-3l-4 4z" />
+    </svg>
+  ),
+};
+
 export function FormatBadge({ format }: FormatBadgeProps) {
-  const config = formatConfig[format];
+  const config = formatConfig[format as keyof typeof formatConfig] || fallback;
 
   return (
     <span className={`inline-flex items-center gap-1.5 px-2.5 py-0.5 rounded-full text-xs font-medium border ${config.className}`}>
       {config.icon}
-      {config.label}
+      {config.label || format}
     </span>
   );
 }

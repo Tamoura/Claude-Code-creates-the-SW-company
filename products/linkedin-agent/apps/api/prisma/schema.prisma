@@ -82,6 +82,8 @@ model PostDraft {
   @@index([format])
   @@index([trendSourceId])
   @@index([createdAt])
+  @@index([status, createdAt])
+  @@index([publishedAt])
   @@index([tags], type: Gin)
   @@map("post_drafts")
 }

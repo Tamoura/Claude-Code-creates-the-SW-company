@@ -1,5 +1,6 @@
 import Fastify, { FastifyInstance } from 'fastify';
 import cors from '@fastify/cors';
+import rateLimit from '@fastify/rate-limit';
 import cookie from '@fastify/cookie';
 import { ZodError } from 'zod';
 
@@ -21,7 +22,9 @@ export async function buildApp(
   opts: BuildAppOptions = {}
 ): Promise<FastifyInstance> {
   const app = Fastify({
-    logger: opts.logger ?? false,
+    logger: opts.logger ?? (process.env.NODE_ENV === 'test' ? false : {
+      level: process.env.LOG_LEVEL || 'info',
+    }),
     bodyLimit: 2097152, // 2MB for large content pastes
     requestTimeout: 120000, // 2 minutes for LLM calls
   });
@@ -39,6 +42,18 @@ export async function buildApp(
     methods: ['GET', 'HEAD', 'POST', 'PUT', 'PATCH', 'DELETE', 'OPTIONS'],
   });
 
+  // Rate limiting
+  await app.register(rateLimit, {
+    max: 100,
+    timeWindow: '15 minutes',
+    errorResponseBuilder: (_request: any, context: any) => ({
+      type: 'https://linkedin-agent.app/errors/rate-limit',
+      title: 'Too Many Requests',
+      status: 429,
+      detail: `Rate limit exceeded. Try again in ${Math.ceil(context.ttl / 1000)} seconds.`,
+    }),
+  });
+
   // Cookie
   await app.register(cookie);
 
@@ -48,6 +63,9 @@ export async function buildApp(
     reply.header('X-Frame-Options', 'DENY');
     reply.header('X-XSS-Protection', '0');
     reply.header('Referrer-Policy', 'strict-origin-when-cross-origin');
+    reply.header('Content-Security-Policy', "default-src 'none'; frame-ancestors 'none'");
+    reply.header('Permissions-Policy', 'geolocation=(), microphone=(), camera=()');
+    reply.header('X-Permitted-Cross-Domain-Policies', 'none');
     if (process.env.NODE_ENV === 'production') {
       reply.header(
         'Strict-Transport-Security',

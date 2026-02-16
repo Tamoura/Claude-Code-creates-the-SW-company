@@ -8,29 +8,53 @@ import { FormatBadge } from '@/components/FormatBadge';
 import { LanguageToggle } from '@/components/LanguageToggle';
 import { CarouselPreview } from '@/components/CarouselPreview';
 
+interface CarouselSlide {
+  id: string;
+  slideNumber: number;
+  headline: string;
+  body: string;
+  imagePrompt: string;
+}
+
+interface GenerationLog {
+  id: string;
+  model: string;
+  taskType: string;
+  costUsd: number;
+  durationMs: number;
+  createdAt: string;
+}
+
 interface PostDetail {
   id: string;
   title: string;
-  contentEnglish: string;
-  contentArabic: string;
-  status: 'draft' | 'review' | 'approved' | 'published';
-  format: 'text' | 'carousel' | 'infographic' | 'video-script' | 'poll';
-  formatReasoning: string;
-  language: 'ar' | 'en' | 'both';
+  content: string;
+  contentAr: string | null;
+  contentEn: string | null;
+  status: string;
+  format: string;
+  formatReason: string | null;
+  tags: string[];
   tone: string;
   targetAudience: string;
-  hashtags: string[];
-  carousel?: {
-    slides: Array<{
-      slideNumber: number;
-      title: string;
-      content: string;
-      speakerNotes?: string;
-    }>;
-  };
-  supportingMaterials?: string[];
+  supportingMaterial: unknown;
+  carouselSlides: CarouselSlide[];
+  generationLogs: GenerationLog[];
   createdAt: string;
   updatedAt: string;
+}
+
+interface PostResponse {
+  data: PostDetail;
+}
+
+interface CarouselResponse {
+  data: CarouselSlide[];
+  usage: {
+    model: string;
+    costUsd: number;
+    durationMs: number;
+  };
 }
 
 export default function PostDetailPage() {
@@ -46,8 +70,8 @@ export default function PostDetailPage() {
   useEffect(() => {
     async function loadPost() {
       try {
-        const data = await apiFetch<PostDetail>(`/api/posts/${params.id}`);
-        setPost(data);
+        const data = await apiFetch<PostResponse>(`/api/posts/${params.id}`);
+        setPost(data.data);
       } catch (err) {
         setError(err instanceof Error ? err.message : 'Failed to load post');
       } finally {
@@ -62,7 +86,9 @@ export default function PostDetailPage() {
 
   async function handleCopyToClipboard() {
     if (!post) return;
-    const content = activeLanguage === 'en' ? post.contentEnglish : post.contentArabic;
+    const content = activeLanguage === 'en'
+      ? (post.contentEn || post.content)
+      : (post.contentAr || post.content);
     await navigator.clipboard.writeText(content);
     setCopied(true);
     setTimeout(() => setCopied(false), 2000);
@@ -71,7 +97,7 @@ export default function PostDetailPage() {
   async function handleMarkPublished() {
     if (!post) return;
     try {
-      await apiFetch(`/api/posts/${post.id}/status`, {
+      await apiFetch(`/api/posts/${post.id}`, {
         method: 'PATCH',
         body: JSON.stringify({ status: 'published' }),
       });
@@ -85,10 +111,10 @@ export default function PostDetailPage() {
     if (!post) return;
     setGeneratingCarousel(true);
     try {
-      const data = await apiFetch<PostDetail>(`/api/posts/${post.id}/carousel`, {
+      const data = await apiFetch<CarouselResponse>(`/api/posts/${post.id}/carousel`, {
         method: 'POST',
       });
-      setPost(data);
+      setPost({ ...post, carouselSlides: data.data, format: 'carousel' });
     } catch (err) {
       setError(err instanceof Error ? err.message : 'Failed to generate carousel');
     } finally {
@@ -128,6 +154,8 @@ export default function PostDetailPage() {
     );
   }
 
+  const totalCost = post.generationLogs?.reduce((sum, log) => sum + log.costUsd, 0) || 0;
+
   return (
     <div className="max-w-5xl mx-auto space-y-6">
       {/* Header */}
@@ -144,6 +172,7 @@ export default function PostDetailPage() {
               day: 'numeric',
               year: 'numeric',
             })}
+            {totalCost > 0 && ` · Cost: $${totalCost.toFixed(4)}`}
           </p>
         </div>
 
@@ -155,62 +184,80 @@ export default function PostDetailPage() {
       {/* Content - Side by side */}
       <div className="grid grid-cols-1 lg:grid-cols-2 gap-6">
         {/* English */}
-        <div className="card">
-          <h3 className="text-sm font-medium text-gray-400 mb-3">English</h3>
-          <div className="text-sm text-gray-200 whitespace-pre-wrap leading-relaxed">
-            {post.contentEnglish}
+        {(post.contentEn || post.content) && (
+          <div className="card">
+            <h3 className="text-sm font-medium text-gray-400 mb-3">English</h3>
+            <div className="text-sm text-gray-200 whitespace-pre-wrap leading-relaxed">
+              {post.contentEn || post.content}
+            </div>
           </div>
-        </div>
+        )}
 
         {/* Arabic */}
-        <div className="card">
-          <h3 className="text-sm font-medium text-gray-400 mb-3" dir="rtl">العربية</h3>
-          <div className="text-sm text-gray-200 whitespace-pre-wrap leading-relaxed" dir="rtl">
-            {post.contentArabic}
+        {post.contentAr && (
+          <div className="card">
+            <h3 className="text-sm font-medium text-gray-400 mb-3" dir="rtl">العربية</h3>
+            <div className="text-sm text-gray-200 whitespace-pre-wrap leading-relaxed" dir="rtl">
+              {post.contentAr}
+            </div>
           </div>
-        </div>
+        )}
       </div>
 
       {/* Format recommendation */}
-      <div className="card">
-        <h3 className="text-sm font-medium text-gray-400 mb-2">Format Recommendation</h3>
-        <div className="flex items-center gap-2 mb-2">
-          <FormatBadge format={post.format} />
+      {post.formatReason && (
+        <div className="card">
+          <h3 className="text-sm font-medium text-gray-400 mb-2">Format Recommendation</h3>
+          <div className="flex items-center gap-2 mb-2">
+            <FormatBadge format={post.format} />
+          </div>
+          <p className="text-sm text-gray-300 leading-relaxed">{post.formatReason}</p>
         </div>
-        <p className="text-sm text-gray-300 leading-relaxed">{post.formatReasoning}</p>
-      </div>
+      )}
 
       {/* Carousel preview */}
-      {post.carousel && post.carousel.slides.length > 0 && (
-        <CarouselPreview slides={post.carousel.slides} title="Carousel Slides" />
+      {post.carouselSlides && post.carouselSlides.length > 0 && (
+        <CarouselPreview
+          slides={post.carouselSlides.map(s => ({
+            slideNumber: s.slideNumber,
+            title: s.headline,
+            content: s.body,
+            speakerNotes: s.imagePrompt,
+          }))}
+          title="Carousel Slides"
+        />
       )}
 
-      {/* Supporting materials */}
-      {post.supportingMaterials && post.supportingMaterials.length > 0 && (
-        <div className="card">
-          <h3 className="text-sm font-medium text-gray-400 mb-3">Supporting Material Suggestions</h3>
-          <ul className="space-y-2">
-            {post.supportingMaterials.map((material, i) => (
-              <li key={i} className="flex items-start gap-2 text-sm text-gray-300">
-                <svg className="w-4 h-4 text-blue-500 mt-0.5 flex-shrink-0" fill="none" stroke="currentColor" viewBox="0 0 24 24">
-                  <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M9 5l7 7-7 7" />
-                </svg>
-                {material}
-              </li>
-            ))}
-          </ul>
-        </div>
-      )}
-
-      {/* Hashtags */}
-      {post.hashtags && post.hashtags.length > 0 && (
+      {/* Tags */}
+      {post.tags && post.tags.length > 0 && (
         <div className="card">
           <h3 className="text-sm font-medium text-gray-400 mb-2">Hashtags</h3>
           <div className="flex flex-wrap gap-2">
-            {post.hashtags.map((tag, i) => (
+            {post.tags.map((tag, i) => (
               <span key={i} className="text-sm text-blue-400 bg-blue-900/20 px-3 py-1 rounded-lg">
-                #{tag}
+                {tag}
               </span>
+            ))}
+          </div>
+        </div>
+      )}
+
+      {/* Generation Logs */}
+      {post.generationLogs && post.generationLogs.length > 0 && (
+        <div className="card">
+          <h3 className="text-sm font-medium text-gray-400 mb-3">Generation History</h3>
+          <div className="space-y-2">
+            {post.generationLogs.map((log) => (
+              <div key={log.id} className="flex items-center justify-between text-xs bg-gray-800/50 rounded-lg p-2.5">
+                <div className="flex items-center gap-3">
+                  <span className="text-gray-300 capitalize">{log.taskType}</span>
+                  <span className="text-gray-500 font-mono">{log.model}</span>
+                </div>
+                <div className="flex items-center gap-3 text-gray-500">
+                  <span>${log.costUsd.toFixed(4)}</span>
+                  <span>{(log.durationMs / 1000).toFixed(1)}s</span>
+                </div>
+              </div>
             ))}
           </div>
         </div>
@@ -251,7 +298,7 @@ export default function PostDetailPage() {
             )}
           </button>
 
-          {!post.carousel && (
+          {(!post.carouselSlides || post.carouselSlides.length === 0) && (
             <button
               onClick={handleGenerateCarousel}
               disabled={generatingCarousel}

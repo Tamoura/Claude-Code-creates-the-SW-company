@@ -80,47 +80,51 @@ const postsRoutes: FastifyPluginAsync = async (fastify) => {
       result.content
     );
 
-    // Save to database
-    const postDraft = await fastify.prisma.postDraft.create({
-      data: {
-        title: result.title,
-        content: result.content,
-        contentAr: result.contentAr,
-        contentEn: result.contentEn,
-        format: formatRec.recommendedFormat,
-        formatReason: formatRec.reason,
-        tags: result.tags,
-        tone: result.tone,
-        targetAudience: result.targetAudience,
-        trendSourceId: body.trendSourceId || null,
-        supportingMaterial: formatRec.alternativeFormats,
-      },
-    });
+    // Save to database (atomic: post + generation logs)
+    const postDraft = await fastify.prisma.$transaction(async (tx) => {
+      const post = await tx.postDraft.create({
+        data: {
+          title: result.title,
+          content: result.content,
+          contentAr: result.contentAr,
+          contentEn: result.contentEn,
+          format: formatRec.recommendedFormat,
+          formatReason: formatRec.reason,
+          tags: result.tags,
+          tone: result.tone,
+          targetAudience: result.targetAudience,
+          trendSourceId: body.trendSourceId || null,
+          supportingMaterial: formatRec.alternativeFormats,
+        },
+      });
 
-    // Log both generation calls
-    await fastify.prisma.generationLog.createMany({
-      data: [
-        {
-          postDraftId: postDraft.id,
-          model: result.llmResponse.model,
-          provider: result.llmResponse.provider,
-          promptTokens: result.llmResponse.promptTokens,
-          completionTokens: result.llmResponse.completionTokens,
-          costUsd: result.llmResponse.costUsd,
-          durationMs: result.llmResponse.durationMs,
-          taskType: 'writing',
-        },
-        {
-          postDraftId: postDraft.id,
-          model: formatRec.llmResponse.model,
-          provider: formatRec.llmResponse.provider,
-          promptTokens: formatRec.llmResponse.promptTokens,
-          completionTokens: formatRec.llmResponse.completionTokens,
-          costUsd: formatRec.llmResponse.costUsd,
-          durationMs: formatRec.llmResponse.durationMs,
-          taskType: 'analysis',
-        },
-      ],
+      // Log both generation calls
+      await tx.generationLog.createMany({
+        data: [
+          {
+            postDraftId: post.id,
+            model: result.llmResponse.model,
+            provider: result.llmResponse.provider,
+            promptTokens: result.llmResponse.promptTokens,
+            completionTokens: result.llmResponse.completionTokens,
+            costUsd: result.llmResponse.costUsd,
+            durationMs: result.llmResponse.durationMs,
+            taskType: 'writing',
+          },
+          {
+            postDraftId: post.id,
+            model: formatRec.llmResponse.model,
+            provider: formatRec.llmResponse.provider,
+            promptTokens: formatRec.llmResponse.promptTokens,
+            completionTokens: formatRec.llmResponse.completionTokens,
+            costUsd: formatRec.llmResponse.costUsd,
+            durationMs: formatRec.llmResponse.durationMs,
+            taskType: 'analysis',
+          },
+        ],
+      });
+
+      return post;
     });
 
     logger.info('Post draft generated', { postDraftId: postDraft.id });

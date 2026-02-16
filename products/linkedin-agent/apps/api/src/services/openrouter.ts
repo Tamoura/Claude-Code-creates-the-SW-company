@@ -1,3 +1,4 @@
+import { z } from 'zod';
 import { getEnv } from '../lib/env';
 import { logger } from '../utils/logger';
 
@@ -61,6 +62,23 @@ const MODEL_COSTS: Record<string, { prompt: number; completion: number }> = {
   'anthropic/claude-3.5-haiku': { prompt: 0.0000008, completion: 0.000004 },
 };
 
+const openRouterResponseSchema = z.object({
+  id: z.string().optional(),
+  model: z.string().optional(),
+  choices: z.array(z.object({
+    message: z.object({
+      role: z.string(),
+      content: z.string(),
+    }),
+    finish_reason: z.string().optional(),
+  })).min(1, 'Response must have at least one choice'),
+  usage: z.object({
+    prompt_tokens: z.number(),
+    completion_tokens: z.number(),
+    total_tokens: z.number().optional(),
+  }).optional(),
+});
+
 /**
  * Select the best model for a given task type.
  */
@@ -115,21 +133,35 @@ export async function callLLM(params: {
 
   const startTime = Date.now();
 
-  const response = await fetch(`${env.OPENROUTER_BASE_URL}/chat/completions`, {
-    method: 'POST',
-    headers: {
-      'Content-Type': 'application/json',
-      'Authorization': `Bearer ${env.OPENROUTER_API_KEY}`,
-      'HTTP-Referer': env.FRONTEND_URL,
-      'X-Title': 'LinkedIn AI Agent',
-    },
-    body: JSON.stringify({
-      model,
-      messages,
-      temperature,
-      max_tokens: maxTokens,
-    }),
-  });
+  const controller = new AbortController();
+  const timeout = setTimeout(() => controller.abort(), 60000);
+
+  let response: Response;
+  try {
+    response = await fetch(`${env.OPENROUTER_BASE_URL}/chat/completions`, {
+      method: 'POST',
+      headers: {
+        'Content-Type': 'application/json',
+        'Authorization': `Bearer ${env.OPENROUTER_API_KEY}`,
+        'HTTP-Referer': env.FRONTEND_URL,
+        'X-Title': 'LinkedIn AI Agent',
+      },
+      body: JSON.stringify({
+        model,
+        messages,
+        temperature,
+        max_tokens: maxTokens,
+      }),
+      signal: controller.signal,
+    });
+    clearTimeout(timeout);
+  } catch (error) {
+    clearTimeout(timeout);
+    if (error instanceof Error && error.name === 'AbortError') {
+      throw new Error(`OpenRouter API call timed out after 60 seconds (model: ${model})`);
+    }
+    throw error;
+  }
 
   const durationMs = Date.now() - startTime;
 
@@ -144,7 +176,13 @@ export async function callLLM(params: {
     );
   }
 
-  const data = (await response.json()) as OpenRouterResponse;
+  const rawData = await response.json();
+  const parseResult = openRouterResponseSchema.safeParse(rawData);
+  if (!parseResult.success) {
+    logger.error('Invalid OpenRouter response structure', new Error(parseResult.error.message), { model });
+    throw new Error(`OpenRouter returned invalid response: ${parseResult.error.message}`);
+  }
+  const data = parseResult.data;
 
   const promptTokens = data.usage?.prompt_tokens ?? 0;
   const completionTokens = data.usage?.completion_tokens ?? 0;

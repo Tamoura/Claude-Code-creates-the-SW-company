@@ -1,8 +1,8 @@
 interface StatusBadgeProps {
-  status: 'draft' | 'review' | 'approved' | 'published';
+  status: string;
 }
 
-const statusConfig = {
+const statusConfig: Record<string, { label: string; className: string }> = {
   draft: {
     label: 'Draft',
     className: 'bg-gray-700/50 text-gray-300 border-gray-600',
@@ -19,10 +19,19 @@ const statusConfig = {
     label: 'Published',
     className: 'bg-blue-900/30 text-blue-400 border-blue-700/50',
   },
+  archived: {
+    label: 'Archived',
+    className: 'bg-red-900/30 text-red-400 border-red-700/50',
+  },
+};
+
+const fallback = {
+  label: 'Unknown',
+  className: 'bg-gray-700/50 text-gray-300 border-gray-600',
 };
 
 export function StatusBadge({ status }: StatusBadgeProps) {
-  const config = statusConfig[status];
+  const config = statusConfig[status] || fallback;
 
   return (
     <span className={`inline-flex items-center px-2.5 py-0.5 rounded-full text-xs font-medium border ${config.className}`}>

@@ -6,20 +6,43 @@ import { apiFetch } from '@/lib/api';
 import { CarouselPreview } from '@/components/CarouselPreview';
 import { FormatBadge } from '@/components/FormatBadge';
 
-interface GeneratedPost {
+interface PostDraft {
   id: string;
-  contentEnglish: string;
-  contentArabic: string;
-  format: 'text' | 'carousel' | 'infographic' | 'video-script' | 'poll';
-  formatReasoning: string;
-  hashtags: string[];
-  carousel?: {
-    slides: Array<{
-      slideNumber: number;
-      title: string;
-      content: string;
-      speakerNotes?: string;
-    }>;
+  title: string;
+  content: string;
+  contentAr: string | null;
+  contentEn: string | null;
+  format: string;
+  formatReason: string;
+  tags: string[];
+  tone: string;
+  targetAudience: string;
+}
+
+interface ApiGenerateResponse {
+  postDraft: PostDraft;
+  formatRecommendation: {
+    format: string;
+    reason: string;
+    alternatives: Array<{ format: string; reason: string }>;
+  };
+  usage: {
+    totalCostUsd: number;
+    totalDurationMs: number;
+  };
+}
+
+interface CarouselSlide {
+  slideNumber: number;
+  headline: string;
+  body: string;
+  imagePrompt: string;
+}
+
+interface ApiCarouselResponse {
+  data: {
+    id: string;
+    slides: CarouselSlide[];
   };
 }
 
@@ -42,11 +65,12 @@ function NewPostContent() {
   const searchParams = useSearchParams();
   const [topic, setTopic] = useState(searchParams.get('topic') || '');
   const [language, setLanguage] = useState<'ar' | 'en' | 'both'>('both');
-  const [tone, setTone] = useState<'professional' | 'casual' | 'thought-leader' | 'educational'>('professional');
+  const [tone, setTone] = useState('professional');
   const [audience, setAudience] = useState('');
   const [loading, setLoading] = useState(false);
   const [generatingCarousel, setGeneratingCarousel] = useState(false);
-  const [result, setResult] = useState<GeneratedPost | null>(null);
+  const [result, setResult] = useState<ApiGenerateResponse | null>(null);
+  const [carouselSlides, setCarouselSlides] = useState<CarouselSlide[] | null>(null);
   const [error, setError] = useState<string | null>(null);
   const [editMode, setEditMode] = useState(false);
   const [editedEnglish, setEditedEnglish] = useState('');
@@ -54,8 +78,8 @@ function NewPostContent() {
 
   useEffect(() => {
     if (result) {
-      setEditedEnglish(result.contentEnglish);
-      setEditedArabic(result.contentArabic);
+      setEditedEnglish(result.postDraft.contentEn || result.postDraft.content || '');
+      setEditedArabic(result.postDraft.contentAr || '');
     }
   }, [result]);
 
@@ -65,15 +89,16 @@ function NewPostContent() {
     setLoading(true);
     setError(null);
     setResult(null);
+    setCarouselSlides(null);
 
     try {
-      const data = await apiFetch<GeneratedPost>('/api/posts/generate', {
+      const data = await apiFetch<ApiGenerateResponse>('/api/posts/generate', {
         method: 'POST',
         body: JSON.stringify({
           topic: topic.trim(),
           language,
           tone,
-          targetAudience: audience.trim() || undefined,
+          audience: audience.trim() || undefined,
         }),
       });
       setResult(data);
@@ -89,10 +114,10 @@ function NewPostContent() {
 
     setGeneratingCarousel(true);
     try {
-      const data = await apiFetch<GeneratedPost>(`/api/posts/${result.id}/carousel`, {
+      const data = await apiFetch<ApiCarouselResponse>(`/api/posts/${result.postDraft.id}/carousel`, {
         method: 'POST',
       });
-      setResult(data);
+      setCarouselSlides(data.data?.slides || []);
     } catch (err) {
       setError(err instanceof Error ? err.message : 'Failed to generate carousel');
     } finally {
@@ -104,19 +129,25 @@ function NewPostContent() {
     if (!result) return;
 
     try {
-      await apiFetch(`/api/posts/${result.id}`, {
+      await apiFetch(`/api/posts/${result.postDraft.id}`, {
         method: 'PATCH',
         body: JSON.stringify({
-          contentEnglish: editedEnglish,
-          contentArabic: editedArabic,
+          contentEn: editedEnglish,
+          contentAr: editedArabic,
         }),
       });
-      setResult({ ...result, contentEnglish: editedEnglish, contentArabic: editedArabic });
+      setResult({
+        ...result,
+        postDraft: { ...result.postDraft, contentEn: editedEnglish, contentAr: editedArabic },
+      });
       setEditMode(false);
     } catch (err) {
       setError(err instanceof Error ? err.message : 'Failed to save edits');
     }
   }
+
+  const draft = result?.postDraft;
+  const fmt = result?.formatRecommendation;
 
   return (
     <div className="max-w-7xl mx-auto space-y-8">
@@ -150,9 +181,7 @@ function NewPostContent() {
 
             {/* Language */}
             <div>
-              <label className="block text-sm font-medium text-gray-300 mb-1.5">
-                Language
-              </label>
+              <label className="block text-sm font-medium text-gray-300 mb-1.5">Language</label>
               <div className="grid grid-cols-3 gap-2">
                 {(['en', 'ar', 'both'] as const).map((lang) => (
                   <button
@@ -172,16 +201,14 @@ function NewPostContent() {
 
             {/* Tone */}
             <div>
-              <label className="block text-sm font-medium text-gray-300 mb-1.5">
-                Tone
-              </label>
+              <label className="block text-sm font-medium text-gray-300 mb-1.5">Tone</label>
               <div className="grid grid-cols-2 gap-2">
-                {([
+                {[
                   { value: 'professional', label: 'Professional' },
                   { value: 'casual', label: 'Casual' },
                   { value: 'thought-leader', label: 'Thought Leader' },
                   { value: 'educational', label: 'Educational' },
-                ] as const).map((t) => (
+                ].map((t) => (
                   <button
                     key={t.value}
                     onClick={() => setTone(t.value)}
@@ -238,15 +265,15 @@ function NewPostContent() {
           </div>
 
           {/* Format recommendation */}
-          {result && (
+          {draft && fmt && (
             <div className="card">
               <div className="flex items-center gap-2 mb-3">
                 <h3 className="text-sm font-medium text-gray-300">Format Recommendation</h3>
-                <FormatBadge format={result.format} />
+                <FormatBadge format={fmt.format} />
               </div>
-              <p className="text-sm text-gray-400 leading-relaxed">{result.formatReasoning}</p>
+              <p className="text-sm text-gray-400 leading-relaxed">{fmt.reason}</p>
 
-              {result.format === 'carousel' && !result.carousel && (
+              {(fmt.format === 'carousel' || draft.format === 'carousel') && !carouselSlides && (
                 <button
                   onClick={handleGenerateCarousel}
                   disabled={generatingCarousel}
@@ -261,27 +288,29 @@ function NewPostContent() {
                       Generating Carousel...
                     </>
                   ) : (
-                    <>
-                      <svg className="w-4 h-4" fill="none" stroke="currentColor" viewBox="0 0 24 24">
-                        <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M4 16l4.586-4.586a2 2 0 012.828 0L16 16m-2-2l1.586-1.586a2 2 0 012.828 0L20 14m-6-6h.01M6 20h12a2 2 0 002-2V6a2 2 0 00-2-2H6a2 2 0 00-2 2v12a2 2 0 002 2z" />
-                      </svg>
-                      Generate Carousel
-                    </>
+                    'Generate Carousel Slides'
                   )}
                 </button>
               )}
 
-              {/* Hashtags */}
-              {result.hashtags && result.hashtags.length > 0 && (
+              {/* Tags */}
+              {draft.tags && draft.tags.length > 0 && (
                 <div className="mt-4 pt-4 border-t border-gray-800">
-                  <h4 className="text-xs font-medium text-gray-500 mb-2">Suggested Hashtags</h4>
+                  <h4 className="text-xs font-medium text-gray-500 mb-2">Hashtags</h4>
                   <div className="flex flex-wrap gap-1.5">
-                    {result.hashtags.map((tag, i) => (
+                    {draft.tags.map((tag, i) => (
                       <span key={i} className="text-xs text-blue-400 bg-blue-900/20 px-2 py-0.5 rounded">
-                        #{tag}
+                        {tag}
                       </span>
                     ))}
                   </div>
+                </div>
+              )}
+
+              {/* Cost */}
+              {result?.usage && (
+                <div className="mt-3 text-xs text-gray-500">
+                  Cost: ${result.usage.totalCostUsd.toFixed(4)} &middot; {(result.usage.totalDurationMs / 1000).toFixed(1)}s
                 </div>
               )}
             </div>
@@ -301,48 +330,52 @@ function NewPostContent() {
             </div>
           )}
 
-          {result ? (
+          {draft ? (
             <>
               {/* English content */}
-              <div className="card">
-                <div className="flex items-center justify-between mb-3">
-                  <h3 className="text-sm font-medium text-gray-300">English Content</h3>
-                  <button
-                    onClick={() => setEditMode(!editMode)}
-                    className="text-xs text-blue-400 hover:text-blue-300"
-                  >
-                    {editMode ? 'Cancel Edit' : 'Edit'}
-                  </button>
-                </div>
-                {editMode ? (
-                  <textarea
-                    value={editedEnglish}
-                    onChange={(e) => setEditedEnglish(e.target.value)}
-                    className="textarea h-48"
-                  />
-                ) : (
-                  <div className="text-sm text-gray-300 whitespace-pre-wrap leading-relaxed">
-                    {result.contentEnglish}
+              {(draft.contentEn || draft.content) && (
+                <div className="card">
+                  <div className="flex items-center justify-between mb-3">
+                    <h3 className="text-sm font-medium text-gray-300">English Content</h3>
+                    <button
+                      onClick={() => setEditMode(!editMode)}
+                      className="text-xs text-blue-400 hover:text-blue-300"
+                    >
+                      {editMode ? 'Cancel Edit' : 'Edit'}
+                    </button>
                   </div>
-                )}
-              </div>
+                  {editMode ? (
+                    <textarea
+                      value={editedEnglish}
+                      onChange={(e) => setEditedEnglish(e.target.value)}
+                      className="textarea h-48"
+                    />
+                  ) : (
+                    <div className="text-sm text-gray-300 whitespace-pre-wrap leading-relaxed">
+                      {draft.contentEn || draft.content}
+                    </div>
+                  )}
+                </div>
+              )}
 
               {/* Arabic content */}
-              <div className="card">
-                <h3 className="text-sm font-medium text-gray-300 mb-3">Arabic Content</h3>
-                {editMode ? (
-                  <textarea
-                    value={editedArabic}
-                    onChange={(e) => setEditedArabic(e.target.value)}
-                    className="textarea h-48"
-                    dir="rtl"
-                  />
-                ) : (
-                  <div className="text-sm text-gray-300 whitespace-pre-wrap leading-relaxed" dir="rtl">
-                    {result.contentArabic}
-                  </div>
-                )}
-              </div>
+              {draft.contentAr && (
+                <div className="card">
+                  <h3 className="text-sm font-medium text-gray-300 mb-3">Arabic Content</h3>
+                  {editMode ? (
+                    <textarea
+                      value={editedArabic}
+                      onChange={(e) => setEditedArabic(e.target.value)}
+                      className="textarea h-48"
+                      dir="rtl"
+                    />
+                  ) : (
+                    <div className="text-sm text-gray-300 whitespace-pre-wrap leading-relaxed" dir="rtl">
+                      {draft.contentAr}
+                    </div>
+                  )}
+                </div>
+              )}
 
               {editMode && (
                 <button onClick={handleSaveEdits} className="btn-primary w-full">
@@ -351,8 +384,16 @@ function NewPostContent() {
               )}
 
               {/* Carousel preview */}
-              {result.carousel && (
-                <CarouselPreview slides={result.carousel.slides} title="Carousel Preview" />
+              {carouselSlides && carouselSlides.length > 0 && (
+                <CarouselPreview
+                  slides={carouselSlides.map(s => ({
+                    slideNumber: s.slideNumber,
+                    title: s.headline,
+                    content: s.body,
+                    speakerNotes: s.imagePrompt,
+                  }))}
+                  title="Carousel Preview"
+                />
               )}
             </>
           ) : (
