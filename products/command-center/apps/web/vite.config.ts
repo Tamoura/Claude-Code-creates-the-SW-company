@@ -12,4 +12,12 @@ export default defineConfig({
       },
     },
   },
+  optimizeDeps: {
+    include: [
+      'react-markdown',
+      'remark-gfm',
+      'rehype-raw',
+      'mermaid',
+    ],
+  },
 });

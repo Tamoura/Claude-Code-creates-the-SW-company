@@ -26,16 +26,27 @@ export interface Product {
   docs: string[];
 }
 
+/** Cache for listProducts — expires after 30 seconds */
+let productsCache: { data: Product[]; ts: number } | null = null;
+const CACHE_TTL = 30_000;
+
 /** Scan products/ directory and build metadata for each product */
 export function listProducts(): Product[] {
+  if (productsCache && Date.now() - productsCache.ts < CACHE_TTL) {
+    return productsCache.data;
+  }
+
   const productsDir = repoPath('products');
   if (!existsSync(productsDir)) return [];
 
   const entries = readdirSync(productsDir, { withFileTypes: true });
-  return entries
+  const data = entries
     .filter((e) => e.isDirectory())
     .map((e) => buildProductInfo(e.name))
     .sort((a, b) => a.name.localeCompare(b.name));
+
+  productsCache = { data, ts: Date.now() };
+  return data;
 }
 
 export function getProduct(name: string): Product | null {
@@ -179,8 +190,8 @@ function buildProductInfo(name: string): Product {
   // Docs listing
   const docs = listDocs(dir);
 
-  // File count (approximate via top-level scan)
-  const fileCount = countFiles(dir);
+  // Doc count (only meaningful documentation files)
+  const fileCount = docs.length;
 
   // Last modified
   const lastModified = getLastModified(dir);
@@ -286,21 +297,6 @@ function listDocs(dir: string): string[] {
   }
 }
 
-function countFiles(dir: string): number {
-  let count = 0;
-  try {
-    const walk = (d: string) => {
-      for (const entry of readdirSync(d, { withFileTypes: true })) {
-        if (entry.name === 'node_modules' || entry.name === 'dist' || entry.name === '.git') continue;
-        const full = join(d, entry.name);
-        if (entry.isDirectory()) walk(full);
-        else count++;
-      }
-    };
-    walk(dir);
-  } catch { /* ignore */ }
-  return count;
-}
 
 function getLastModified(dir: string): string {
   try {
