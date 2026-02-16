@@ -52,9 +52,9 @@ export default function MobileDashboard() {
           </Link>
 
           <div className="mt-8 flex items-center gap-4 text-white/50 text-xs">
-            <span>\u25C8 {t('Financing', '\u0627\u0644\u062A\u0645\u0648\u064A\u0644')}</span>
-            <span>\u25C9 {t('Guarantees', '\u0627\u0644\u0636\u0645\u0627\u0646\u0627\u062A')}</span>
-            <span>\u25CE {t('Advisory', '\u0627\u0644\u0627\u0633\u062A\u0634\u0627\u0631\u0627\u062A')}</span>
+            <span>◈ {t('Financing', '\u0627\u0644\u062A\u0645\u0648\u064A\u0644')}</span>
+            <span>◉ {t('Guarantees', '\u0627\u0644\u0636\u0645\u0627\u0646\u0627\u062A')}</span>
+            <span>◎ {t('Advisory', '\u0627\u0644\u0627\u0633\u062A\u0634\u0627\u0631\u0627\u062A')}</span>
           </div>
         </div>
 
@@ -121,13 +121,13 @@ export default function MobileDashboard() {
       {pendingSignatures.length > 0 && (
         <div className="bg-[var(--warning)]/10 border border-[var(--warning)]/30 rounded-xl p-3">
           <div className="flex items-center gap-2 mb-1">
-            <span className="text-[var(--warning)]">\u26A0</span>
+            <span className="text-[var(--warning)]">⚠</span>
             <span className="font-semibold text-xs">{t('Action Required', '\u0625\u062C\u0631\u0627\u0621 \u0645\u0637\u0644\u0648\u0628')}</span>
           </div>
           {pendingSignatures.map(g => (
             <Link key={g.id} href={`/m/guarantees/${g.id}`} className="block text-xs text-[var(--foreground)] mt-1">
               {t(`${g.id} (QAR ${formatAmount(g.amount)}) needs signature`, `${g.id} (\u0631.\u0642 ${formatAmount(g.amount)}) \u064A\u062A\u0637\u0644\u0628 \u062A\u0648\u0642\u064A\u0639\u0643`)}
-              <span className="text-[var(--primary)] ml-1">\u2192</span>
+              <span className="text-[var(--primary)] ml-1">→</span>
             </Link>
           ))}
         </div>
@@ -136,7 +136,7 @@ export default function MobileDashboard() {
       {/* KPI Cards */}
       <MobileCard href="/m/financing">
         <div className="flex items-center justify-between mb-2">
-          <span className="text-lg">\u25C8</span>
+          <span className="text-lg">◈</span>
           <span className="text-[10px] font-medium px-2 py-0.5 rounded-full bg-[var(--primary)]/10 text-[var(--primary)]">
             {t('Financing', '\u0627\u0644\u062A\u0645\u0648\u064A\u0644')}
           </span>
@@ -149,7 +149,7 @@ export default function MobileDashboard() {
 
       <div className="grid grid-cols-2 gap-3">
         <MobileCard href="/m/guarantees">
-          <span className="text-lg">\u25C9</span>
+          <span className="text-lg">◉</span>
           <div className="text-lg font-bold mt-1">QAR {formatAmount(totalGuaranteeValue)}</div>
           <div className="text-[10px] text-[var(--muted)]">
             {t(`${activeGuarantees.length} guarantees`, `${activeGuarantees.length} \u0636\u0645\u0627\u0646\u0627\u062A`)}
@@ -157,7 +157,7 @@ export default function MobileDashboard() {
         </MobileCard>
 
         <MobileCard href="/m/advisory">
-          <span className="text-lg">\u25CE</span>
+          <span className="text-lg">◎</span>
           <div className="text-lg font-bold mt-1">{programs.length}</div>
           <div className="text-[10px] text-[var(--muted)]">
             {t('Programs', '\u0628\u0631\u0627\u0645\u062C')}
@@ -194,7 +194,7 @@ export default function MobileDashboard() {
           {upcomingSessions.map(session => (
             <MobileCard key={session.id} href={`/m/advisory/sessions/${session.id}`} className="mb-2">
               <div className="text-sm font-medium">{session.topic}</div>
-              <div className="text-[10px] text-[var(--muted)] mt-0.5">{session.advisorName} \u00B7 {session.date} {session.time}</div>
+              <div className="text-[10px] text-[var(--muted)] mt-0.5">{session.advisorName} · {session.date} {session.time}</div>
             </MobileCard>
           ))}
         </div>

@@ -62,7 +62,7 @@ export default function MobileAdvisoryPage() {
                 <MobileStatusBadge status={session.status} />
               </div>
               <div className="text-xs text-[var(--muted)]">
-                {session.advisorName} \u00B7 {session.date} {session.time}
+                {session.advisorName} · {session.date} {session.time}
               </div>
             </MobileCard>
           ))
