@@ -189,7 +189,7 @@ export default function MobileGuaranteeSignPage() {
             ) : (
               <>
                 <div className="w-16 h-16 mx-auto rounded-full bg-[var(--success)] flex items-center justify-center mb-4">
-                  <span className="text-2xl text-white">\u2713</span>
+                  <span className="text-2xl text-white">✓</span>
                 </div>
                 <h2 className="text-base font-bold text-[var(--success)] mb-1">{t('Signed Successfully', '\u062A\u0645 \u0627\u0644\u062A\u0648\u0642\u064A\u0639 \u0628\u0646\u062C\u0627\u062D')}</h2>
                 <p className="text-xs text-[var(--muted)] mb-6">{t('Your signature has been applied.', '\u062A\u0645 \u062A\u0637\u0628\u064A\u0642 \u062A\u0648\u0642\u064A\u0639\u0643.')}</p>

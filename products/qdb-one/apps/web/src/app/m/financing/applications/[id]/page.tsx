@@ -108,7 +108,7 @@ export default function MobileApplicationDetailPage() {
                 <div className="text-[10px] text-[var(--muted)]">{t('Related Guarantee', '\u0627\u0644\u0636\u0645\u0627\u0646 \u0627\u0644\u0645\u0631\u062A\u0628\u0637')}</div>
                 <div className="text-sm font-medium text-[var(--primary)]">{application.relatedGuaranteeId}</div>
               </div>
-              <span className="text-[var(--muted)]">\u203A</span>
+              <span className="text-[var(--muted)]">›</span>
             </div>
           </MobileCard>
         )}
@@ -120,7 +120,7 @@ export default function MobileApplicationDetailPage() {
             {documents.map(doc => (
               <MobileCard key={doc.id} className="mb-2">
                 <div className="text-sm font-medium">{doc.name}</div>
-                <div className="text-[10px] text-[var(--muted)] mt-0.5">{doc.type} \u00B7 {doc.size}</div>
+                <div className="text-[10px] text-[var(--muted)] mt-0.5">{doc.type} · {doc.size}</div>
               </MobileCard>
             ))}
           </div>

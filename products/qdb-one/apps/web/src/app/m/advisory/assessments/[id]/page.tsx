@@ -52,7 +52,7 @@ export default function MobileAssessmentDetailPage() {
           <div className="text-xs text-[var(--muted)]">
             {new Date(assessment.date).toLocaleDateString('en-US', { year: 'numeric', month: 'long', day: 'numeric' })}
             {program && (
-              <> \u00B7 <Link href={`/m/advisory/programs/${program.id}`} className="text-[var(--primary)]">{t(program.nameEn, program.nameAr)}</Link></>
+              <> · <Link href={`/m/advisory/programs/${program.id}`} className="text-[var(--primary)]">{t(program.nameEn, program.nameAr)}</Link></>
             )}
           </div>
         </MobileCard>

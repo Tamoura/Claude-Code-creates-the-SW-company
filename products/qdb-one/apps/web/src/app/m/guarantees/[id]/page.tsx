@@ -62,7 +62,7 @@ export default function MobileGuaranteeDetailPage() {
         {currentUserPendingSignature && (
           <div className="bg-[var(--warning)]/10 border border-[var(--warning)] rounded-xl p-4">
             <div className="flex items-center gap-2 mb-2">
-              <span className="text-[var(--warning)]">\u26A0</span>
+              <span className="text-[var(--warning)]">⚠</span>
               <span className="text-sm font-semibold">{t('Signature Required', '\u0627\u0644\u062A\u0648\u0642\u064A\u0639 \u0645\u0637\u0644\u0648\u0628')}</span>
             </div>
             <p className="text-xs text-[var(--muted)] mb-3">
@@ -190,7 +190,7 @@ export default function MobileGuaranteeDetailPage() {
             {documents.map(doc => (
               <MobileCard key={doc.id} className="mb-2">
                 <div className="text-sm font-medium">{doc.name}</div>
-                <div className="text-[10px] text-[var(--muted)] mt-0.5">{doc.type} \u00B7 {doc.size}</div>
+                <div className="text-[10px] text-[var(--muted)] mt-0.5">{doc.type} · {doc.size}</div>
               </MobileCard>
             ))}
           </div>

@@ -56,7 +56,7 @@ export default function MobileDocumentsPage() {
               <div className="flex items-start justify-between">
                 <div className="flex-1 min-w-0">
                   <div className="text-sm font-medium text-[var(--foreground)] truncate">{t(doc.name, doc.nameAr)}</div>
-                  <div className="text-[10px] text-[var(--muted)] mt-0.5">{doc.type} \u00B7 {doc.size} \u00B7 {formatDate(doc.uploadedAt)}</div>
+                  <div className="text-[10px] text-[var(--muted)] mt-0.5">{doc.type} · {doc.size} · {formatDate(doc.uploadedAt)}</div>
                 </div>
                 <span
                   className="inline-flex items-center px-2 py-0.5 rounded-full text-[10px] font-medium ml-2 flex-shrink-0"

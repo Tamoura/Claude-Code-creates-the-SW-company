@@ -52,7 +52,7 @@ export default function MobileProfilePage() {
               <div className="text-sm font-medium">{t(activeOrg.orgNameEn, activeOrg.orgNameAr)}</div>
               <div className="text-[10px] text-[var(--muted)]">CR: {activeOrg.crNumber}</div>
             </div>
-            <span className="text-[var(--muted)] text-lg">\u21C5</span>
+            <span className="text-[var(--muted)] text-lg">⇅</span>
           </div>
         </MobileCard>
 
@@ -63,7 +63,7 @@ export default function MobileProfilePage() {
             {activeOrg.roles.map((role, i) => (
               <div key={i} className="flex items-center gap-2">
                 <span className="text-xs font-medium text-[var(--foreground)]">{role.portal}</span>
-                <span className="text-[10px] text-[var(--muted)]">\u00B7</span>
+                <span className="text-[10px] text-[var(--muted)]">·</span>
                 <span className="text-xs text-[var(--muted)]">{role.role}</span>
               </div>
             ))}
