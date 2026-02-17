@@ -48,7 +48,13 @@ export default function KnowledgeBase() {
   if (loading) return <LoadingSkeleton />;
   if (!data) return <p className="text-red-400">Failed to load knowledge base</p>;
 
-  const display = searchResults ?? data;
+  const raw = searchResults ?? data;
+  const display: KBData = {
+    patterns: raw.patterns ?? [],
+    antiPatterns: raw.antiPatterns ?? [],
+    gotchas: raw.gotchas ?? [],
+    agentExperiences: raw.agentExperiences ?? [],
+  };
 
   return (
     <div>
