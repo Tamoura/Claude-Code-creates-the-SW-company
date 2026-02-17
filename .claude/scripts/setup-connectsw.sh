@@ -132,6 +132,20 @@ echo "  ✓ .github/PULL_REQUEST_TEMPLATE.md"
 copy_file "$SOURCE/.github/dependabot.yml" "$TARGET/.github/dependabot.yml"
 echo "  ✓ .github/dependabot.yml"
 
+# Command Center — core company dashboard (not a product, part of infrastructure)
+if [[ -d "$SOURCE/products/command-center" ]]; then
+  mkdir -p "$TARGET/products/command-center"
+  rsync $RSYNC_FLAGS \
+    --exclude="node_modules" \
+    --exclude="dist" \
+    --exclude=".vite" \
+    --exclude="*.timestamp-*" \
+    --exclude="test-results" \
+    --exclude="playwright-report" \
+    "$SOURCE/products/command-center/" "$TARGET/products/command-center/"
+  echo "  ✓ products/command-center/ (company dashboard)"
+fi
+
 # .githooks/ (git safety hooks)
 copy_dir "$SOURCE/.githooks" "$TARGET/.githooks"
 if [[ -d "$TARGET/.githooks" ]]; then
@@ -215,11 +229,13 @@ When creating a new product, assign the next available port in each range.
 
 | Port | Product | Status | URL |
 |------|---------|--------|-----|
+| 3113 | command-center | Active | http://localhost:3113 |
 
 ### Backend APIs (5000-5099)
 
 | Port | Product | Status | URL |
 |------|---------|--------|-----|
+| 5009 | command-center | Active | http://localhost:5009 |
 
 ### Mobile Development (8081-8099)
 
@@ -265,13 +281,14 @@ sed_inplace() {
 }
 
 # Find all text files in copied directories and replace ConnectSW (both cases)
-SEARCH_DIRS=("$TARGET/.claude" "$TARGET/.specify" "$TARGET/.githooks" "$TARGET/.github")
+SEARCH_DIRS=("$TARGET/.claude" "$TARGET/.specify" "$TARGET/.githooks" "$TARGET/.github" "$TARGET/products/command-center")
 
 for search_dir in "${SEARCH_DIRS[@]}"; do
   if [[ -d "$search_dir" ]]; then
     find "$search_dir" -type f \( \
       -name "*.md" -o -name "*.yml" -o -name "*.yaml" \
       -o -name "*.json" -o -name "*.sh" -o -name "*.ts" \
+      -o -name "*.tsx" -o -name "*.js" -o -name "*.jsx" \
     \) 2>/dev/null | while read -r file; do
       # Replace PascalCase: ConnectSW → CompanyName
       if grep -q "ConnectSW" "$file" 2>/dev/null; then
@@ -302,6 +319,8 @@ GITIGNORE_ENTRIES=(
   ".claude/settings.local.json"
   ".claude/audit-trail.jsonl"
   ".DS_Store"
+  "node_modules/"
+  "dist/"
 )
 for entry in "${GITIGNORE_ENTRIES[@]}"; do
   if ! grep -qF "$entry" "$TARGET/.gitignore" 2>/dev/null; then
@@ -330,7 +349,8 @@ echo "╚═══════════════════════�
 echo ""
 echo "Installed:"
 echo "  • $((DIR_COUNT + 1)) agent system directories in .claude/"
-echo "  • Orchestrator with fresh state (no products)"
+echo "  • Command Center dashboard (products/command-center/)"
+echo "  • Orchestrator with fresh state"
 echo "  • Memory system with accumulated knowledge & decisions"
 echo "  • Shared component registry (carried over)"
 echo "  • Git safety hooks (pre-commit, post-commit)"
@@ -339,8 +359,13 @@ echo "  • GitHub templates (issues, PRs, dependabot)"
 echo ""
 echo "Next steps:"
 echo "  1. Review .claude/CLAUDE.md and customize for your project"
-echo "  2. Commit the setup: git add .claude .specify .githooks .github"
-echo "  3. Run /orchestrator to start using the agent system"
-echo "  4. Create your first product:"
+echo "  2. Install Command Center deps:"
+echo "     cd products/command-center && npm install"
+echo "  3. Start the dashboard:"
+echo "     cd products/command-center && npm run dev"
+echo "     → Web: http://localhost:3113  API: http://localhost:5009"
+echo "  4. Commit the setup: git add .claude .specify .githooks .github products/command-center"
+echo "  5. Run /orchestrator to start using the agent system"
+echo "  6. Create your first product:"
 echo "     /orchestrator New product: [your idea]"
 echo ""
