@@ -67,8 +67,8 @@ interface RawCommit {
 function parseCommitLog(): RawCommit[] {
   try {
     const output = execSync(
-      'git log --format="%H|%aI|%an|%s" --since="30 days ago"',
-      { cwd: repoRoot(), encoding: 'utf-8', timeout: 10000 },
+      'git log --format="%H|%aI|%an|%s" --since="30 days ago" -200',
+      { cwd: repoRoot(), encoding: 'utf-8', timeout: 10000, maxBuffer: 2 * 1024 * 1024 },
     );
     return output
       .trim()
@@ -85,20 +85,20 @@ function parseCommitLog(): RawCommit[] {
 
 function parseNumstat(): LinesChanged {
   try {
+    // Use --shortstat on only the 10 most recent commits to avoid
+    // hanging on massive diffs (e.g. 136K-line deletions) in repo history
     const output = execSync(
-      'git log --format="" --numstat --since="30 days ago"',
-      { cwd: repoRoot(), encoding: 'utf-8', timeout: 15000 },
+      'git log --format="" --shortstat -10',
+      { cwd: repoRoot(), encoding: 'utf-8', timeout: 5000, maxBuffer: 1024 * 1024 },
     );
     let added = 0;
     let removed = 0;
     for (const line of output.trim().split('\n')) {
       if (!line.trim()) continue;
-      const parts = line.split('\t');
-      if (parts.length < 3) continue;
-      const a = parseInt(parts[0], 10);
-      const r = parseInt(parts[1], 10);
-      if (!isNaN(a)) added += a;
-      if (!isNaN(r)) removed += r;
+      const insertMatch = line.match(/(\d+) insertion/);
+      const deleteMatch = line.match(/(\d+) deletion/);
+      if (insertMatch) added += parseInt(insertMatch[1], 10);
+      if (deleteMatch) removed += parseInt(deleteMatch[1], 10);
     }
     return { added, removed };
   } catch {
