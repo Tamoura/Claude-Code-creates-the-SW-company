@@ -9,18 +9,12 @@ export interface ProductHealth {
   phase: string;
   buildStatus: 'configured' | 'missing';
   testCount: number;
-  lastCommit: LastCommit | null;
+  lastCommit: string;
+  lastCommitDate: string;
   auditScore: number | null;
   fileCount: number;
   hasApi: boolean;
   hasWeb: boolean;
-}
-
-export interface LastCommit {
-  hash: string;
-  date: string;
-  author: string;
-  message: string;
 }
 
 /** Cache with 30s TTL */
@@ -50,6 +44,8 @@ function buildHealth(name: string): ProductHealth {
   const hasApi = existsSync(join(dir, 'apps', 'api'));
   const hasWeb = existsSync(join(dir, 'apps', 'web'));
 
+  const commit = getLastCommitForProduct(name);
+
   return {
     name,
     displayName: name
@@ -59,7 +55,8 @@ function buildHealth(name: string): ProductHealth {
     phase: detectPhase(dir),
     buildStatus: detectBuildStatus(dir),
     testCount: detectTestCount(dir),
-    lastCommit: getLastCommitForProduct(name),
+    lastCommit: commit?.message ?? '',
+    lastCommitDate: commit?.date ?? '',
     auditScore: parseAuditScore(dir),
     fileCount: countSourceFiles(dir),
     hasApi,
@@ -118,6 +115,8 @@ function countTestFiles(dir: string): number {
   } catch { /* ignore */ }
   return count;
 }
+
+interface LastCommit { hash: string; date: string; author: string; message: string }
 
 function getLastCommitForProduct(name: string): LastCommit | null {
   try {
