@@ -31,7 +31,18 @@ export function getAuditTrail(limit = 50): AuditEntry[] {
     return lines
       .map((line) => {
         try {
-          return JSON.parse(line) as AuditEntry;
+          const raw = JSON.parse(line) as Record<string, unknown>;
+          const entry: AuditEntry = {
+            timestamp: (raw.timestamp as string) ?? '',
+            type: (raw.type as string) ?? '',
+          };
+          if (raw.agent) entry.agent = raw.agent as string;
+          if (raw.product) entry.product = raw.product as string;
+          if (raw.status) entry.status = raw.status as string;
+          if (raw.summary) entry.summary = raw.summary as string;
+          const mins = raw.time_minutes ?? raw.timeMinutes;
+          if (mins !== undefined) entry.timeMinutes = mins as number;
+          return entry;
         } catch {
           return null;
         }

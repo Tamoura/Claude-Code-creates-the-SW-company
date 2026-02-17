@@ -2,24 +2,12 @@ import { readdirSync, existsSync, readFileSync, statSync } from 'node:fs';
 import { join } from 'node:path';
 import { repoPath } from './repo.service.js';
 
-export interface DimensionScore {
-  dimension: string;
-  score: number;
-  maxScore: number;
-}
-
-export interface QualityReport {
-  filename: string;
-  title: string;
-  lastModified: string;
-}
-
 export interface ProductQuality {
-  product: string;
+  name: string;
   hasAudit: boolean;
-  overallScore: number | null;
-  dimensions: DimensionScore[];
-  qualityReports: QualityReport[];
+  overallScore: number;
+  scores: Record<string, number>;
+  recentReports: string[];
 }
 
 /** Cache with 60s TTL */
@@ -38,7 +26,7 @@ export function getQualityGates(): ProductQuality[] {
   const data = entries
     .filter((e) => e.isDirectory())
     .map((e) => buildProductQuality(e.name))
-    .sort((a, b) => a.product.localeCompare(b.product));
+    .sort((a, b) => a.name.localeCompare(b.name));
 
   cache = { data, ts: Date.now() };
   return data;
@@ -49,23 +37,23 @@ function buildProductQuality(product: string): ProductQuality {
   const auditPath = join(dir, 'docs', 'AUDIT-REPORT.md');
   const hasAudit = existsSync(auditPath);
 
-  let overallScore: number | null = null;
-  let dimensions: DimensionScore[] = [];
+  let overallScore = 0;
+  let scores: Record<string, number> = {};
 
   if (hasAudit) {
     const parsed = parseAuditReport(auditPath);
-    overallScore = parsed.overall;
-    dimensions = parsed.dimensions;
+    overallScore = parsed.overall ?? 0;
+    scores = parsed.scores;
   }
 
-  const qualityReports = loadQualityReports(dir);
+  const recentReports = loadRecentReportNames(dir);
 
-  return { product, hasAudit, overallScore, dimensions, qualityReports };
+  return { name: product, hasAudit, overallScore, scores, recentReports };
 }
 
 interface ParsedAudit {
   overall: number | null;
-  dimensions: DimensionScore[];
+  scores: Record<string, number>;
 }
 
 function parseAuditReport(auditPath: string): ParsedAudit {
@@ -83,47 +71,41 @@ function parseAuditReport(auditPath: string): ParsedAudit {
 
     // Parse dimension scores from the composite scores table
     // Format: | Category | Score | Weight | Weighted |
-    const dimensions: DimensionScore[] = [];
+    const scores: Record<string, number> = {};
     const dimensionRegex =
       /\|\s*(\w[\w\s]*?)\s*\|\s*(\d+)\/(\d+)\s*\|\s*\d+%\s*\|/g;
     let match: RegExpExecArray | null;
     while ((match = dimensionRegex.exec(content)) !== null) {
       const dimension = match[1].trim();
       const score = parseInt(match[2], 10);
-      const maxScore = parseInt(match[3], 10);
-      if (dimension && !isNaN(score) && !isNaN(maxScore)) {
-        dimensions.push({ dimension, score, maxScore });
+      if (dimension && !isNaN(score)) {
+        scores[dimension] = score;
       }
     }
 
-    return { overall, dimensions };
+    return { overall, scores };
   } catch {
-    return { overall: null, dimensions: [] };
+    return { overall: null, scores: {} };
   }
 }
 
-function loadQualityReports(dir: string): QualityReport[] {
+function loadRecentReportNames(dir: string): string[] {
   const reportsDir = join(dir, 'docs', 'quality-reports');
   if (!existsSync(reportsDir)) return [];
 
   try {
-    const files = readdirSync(reportsDir).filter((f) => f.endsWith('.md'));
-    return files.map((filename) => {
-      const fullPath = join(reportsDir, filename);
-      let title = filename.replace('.md', '');
-      try {
-        const content = readFileSync(fullPath, 'utf-8');
-        const titleMatch = content.match(/^#\s+(.+)$/m);
-        if (titleMatch) title = titleMatch[1].trim();
-      } catch { /* ignore */ }
-
-      let lastModified = new Date().toISOString();
-      try {
-        lastModified = statSync(fullPath).mtime.toISOString();
-      } catch { /* ignore */ }
-
-      return { filename, title, lastModified };
-    });
+    return readdirSync(reportsDir)
+      .filter((f) => f.endsWith('.md'))
+      .map((filename) => {
+        const fullPath = join(reportsDir, filename);
+        let title = filename.replace('.md', '');
+        try {
+          const content = readFileSync(fullPath, 'utf-8');
+          const titleMatch = content.match(/^#\s+(.+)$/m);
+          if (titleMatch) title = titleMatch[1].trim();
+        } catch { /* ignore */ }
+        return title;
+      });
   } catch {
     return [];
   }

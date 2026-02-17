@@ -8,25 +8,18 @@ export interface SprintTask {
   status: 'pending' | 'in-progress' | 'done';
   assignee: string;
   product: string;
-  sprint: string;
+  priority: string;
+  description?: string;
 }
 
-export interface OrchestratorState {
-  products: Record<string, OrchestratorProduct>;
-  lastUpdated: string;
-}
-
-export interface OrchestratorProduct {
-  path: string;
-  status: string;
-  phase: string;
-  apps: string[];
-  notes: string;
+export interface OrchestratorStateResponse {
+  currentTask?: string;
+  activeProduct?: string;
 }
 
 export interface SprintBoard {
   tasks: SprintTask[];
-  orchestratorState: OrchestratorState | null;
+  orchestratorState: OrchestratorStateResponse;
 }
 
 /** Cache with 30s TTL */
@@ -39,7 +32,7 @@ export function getSprintBoard(): SprintBoard {
   }
 
   const tasks = loadAllTasks();
-  const orchestratorState = loadOrchestratorState();
+  const orchestratorState = buildOrchestratorResponse();
 
   const data: SprintBoard = { tasks, orchestratorState };
   cache = { data, ts: Date.now() };
@@ -97,7 +90,7 @@ function parseTasksMarkdown(content: string, product: string): SprintTask[] {
         status: inferStatus(line),
         assignee,
         product,
-        sprint: currentSprint,
+        priority: inferPriority(line),
       });
     }
   }
@@ -116,70 +109,43 @@ function inferStatus(line: string): 'pending' | 'in-progress' | 'done' {
   return 'pending';
 }
 
-function loadOrchestratorState(): OrchestratorState | null {
+function inferPriority(line: string): string {
+  const lower = line.toLowerCase();
+  if (lower.includes('critical') || lower.includes('p0') || lower.includes('urgent')) return 'high';
+  if (lower.includes('high') || lower.includes('p1')) return 'high';
+  if (lower.includes('low') || lower.includes('p3')) return 'low';
+  return 'medium';
+}
+
+function buildOrchestratorResponse(): OrchestratorStateResponse {
   const statePath = repoPath('.claude', 'orchestrator', 'state.yml');
-  if (!existsSync(statePath)) return null;
+  if (!existsSync(statePath)) return {};
 
   try {
     const content = readFileSync(statePath, 'utf-8');
-    return parseSimpleYaml(content);
+
+    // Extract current_task / active_product from YAML
+    let currentTask: string | undefined;
+    let activeProduct: string | undefined;
+
+    const taskMatch = content.match(/current_task:\s*"?(.+?)"?\s*$/m);
+    if (taskMatch && taskMatch[1].trim() !== 'null' && taskMatch[1].trim() !== '~') {
+      currentTask = taskMatch[1].trim();
+    }
+
+    const productMatch = content.match(/active_product:\s*"?(.+?)"?\s*$/m);
+    if (productMatch && productMatch[1].trim() !== 'null' && productMatch[1].trim() !== '~') {
+      activeProduct = productMatch[1].trim();
+    }
+
+    // If no explicit fields, try to infer from products with "active" status
+    if (!activeProduct) {
+      const activeMatch = content.match(/(\w[\w-]*):\s*\n\s+.*status:\s*"?active"?/m);
+      if (activeMatch) activeProduct = activeMatch[1];
+    }
+
+    return { currentTask, activeProduct };
   } catch {
-    return null;
+    return {};
   }
-}
-
-function parseSimpleYaml(content: string): OrchestratorState {
-  const products: Record<string, OrchestratorProduct> = {};
-  let lastUpdated = '';
-
-  const lines = content.split('\n');
-  let currentProduct = '';
-  let inProducts = false;
-
-  for (const line of lines) {
-    if (line.startsWith('last_updated:')) {
-      const match = line.match(/last_updated:\s*"?([^"]+)"?/);
-      if (match) lastUpdated = match[1].trim();
-      continue;
-    }
-
-    if (line === 'products:') {
-      inProducts = true;
-      continue;
-    }
-
-    if (inProducts && /^\s{2}\w/.test(line) && line.includes(':')) {
-      const name = line.trim().replace(':', '');
-      currentProduct = name;
-      products[name] = { path: '', status: '', phase: '', apps: [], notes: '' };
-      continue;
-    }
-
-    if (inProducts && currentProduct && /^\s{4}\w/.test(line)) {
-      const kvMatch = line.match(/^\s{4}(\w+):\s*"?(.+?)"?\s*$/);
-      if (kvMatch) {
-        const key = kvMatch[1];
-        const val = kvMatch[2];
-        const prod = products[currentProduct];
-        if (key === 'path') prod.path = val;
-        else if (key === 'status') prod.status = val;
-        else if (key === 'phase') prod.phase = val;
-        else if (key === 'notes') prod.notes = val;
-        else if (key === 'apps') {
-          const appsMatch = val.match(/\[(.+)]/);
-          if (appsMatch) {
-            prod.apps = appsMatch[1].split(',').map((s) => s.trim());
-          }
-        }
-      }
-    }
-
-    // Stop parsing products when we hit a non-indented, non-empty line
-    if (inProducts && currentProduct && /^\w/.test(line) && line.trim() !== '') {
-      inProducts = false;
-      currentProduct = '';
-    }
-  }
-
-  return { products, lastUpdated };
 }

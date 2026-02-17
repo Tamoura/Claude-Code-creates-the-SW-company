@@ -91,7 +91,13 @@ function parseAgentFile(filename: string): Agent {
         tasksCompleted: data.tasks_completed ?? data.tasksCompleted ?? 0,
         successRate: data.success_rate ?? data.successRate ?? 0,
         avgDuration: data.avg_duration ?? data.avgDuration ?? 'N/A',
-        learnedPatterns: (data.learned_patterns ?? data.learnedPatterns ?? []).slice(0, 5),
+        learnedPatterns: ((data.learned_patterns ?? data.learnedPatterns ?? []) as unknown[])
+          .slice(0, 5)
+          .map((p): string => {
+            if (typeof p === 'string') return p;
+            const obj = p as Record<string, unknown>;
+            return String(obj?.description ?? obj?.name ?? obj?.pattern ?? obj?.pattern_id ?? p);
+          }),
       };
     } catch { /* ignore malformed JSON */ }
   }
