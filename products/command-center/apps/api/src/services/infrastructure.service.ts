@@ -47,17 +47,18 @@ export function getPortAssignments(): PortAssignment[] {
     // If table format doesn't match, try scanning for port numbers alongside product names
     if (assignments.length === 0) {
       const portRegex = /(\w[\w-]+)\s*.*?(\d{4})/g;
-      let m;
+      let m: RegExpExecArray | null;
       while ((m = portRegex.exec(content)) !== null) {
+        const name = m[1];
         const port = Number(m[2]);
         if (port >= 3100 && port <= 3199) {
-          const existing = assignments.find((a) => a.product === m[1]);
+          const existing = assignments.find((a) => a.product === name);
           if (existing) existing.frontendPort = port;
-          else assignments.push({ product: m[1], frontendPort: port, backendPort: null });
+          else assignments.push({ product: name, frontendPort: port, backendPort: null });
         } else if (port >= 5000 && port <= 5099) {
-          const existing = assignments.find((a) => a.product === m[1]);
+          const existing = assignments.find((a) => a.product === name);
           if (existing) existing.backendPort = port;
-          else assignments.push({ product: m[1], frontendPort: null, backendPort: port });
+          else assignments.push({ product: name, frontendPort: null, backendPort: port });
         }
       }
     }
