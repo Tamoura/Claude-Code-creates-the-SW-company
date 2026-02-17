@@ -17,6 +17,7 @@
     "lint:web": "cd apps/web && npm run lint"
   },
   "devDependencies": {
+    "@playwright/test": "^1.58.2",
     "concurrently": "^8.2.0"
   }
 }
