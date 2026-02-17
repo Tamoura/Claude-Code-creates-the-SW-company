@@ -167,34 +167,27 @@ last_updated: "$TODAY"
 YAML
 echo "  ✓ .claude/orchestrator/state.yml"
 
-# Memory directory structure
+# Memory system — carry over all accumulated knowledge
 mkdir -p "$TARGET/.claude/memory/agent-experiences"
 mkdir -p "$TARGET/.claude/memory/metrics"
 
-# Copy documentation files (these describe the system, not data)
+# Copy documentation files
 copy_file "$SOURCE/.claude/memory/memory-system.md" "$TARGET/.claude/memory/memory-system.md"
 copy_file "$SOURCE/.claude/memory/relevance-scoring.md" "$TARGET/.claude/memory/relevance-scoring.md"
 
-# Fresh knowledge files (empty — no carried-over patterns)
-cat > "$TARGET/.claude/memory/company-knowledge.json" <<JSON
-{
-  "version": "2.0.0",
-  "updated_at": "$TODAY",
-  "patterns": [],
-  "anti_patterns": [],
-  "tech_stack_decisions": [],
-  "common_gotchas": []
-}
-JSON
+# Copy accumulated knowledge (patterns, decisions, learnings)
+copy_file "$SOURCE/.claude/memory/company-knowledge.json" "$TARGET/.claude/memory/company-knowledge.json"
+copy_file "$SOURCE/.claude/memory/decision-log.json" "$TARGET/.claude/memory/decision-log.json"
+echo "  ✓ .claude/memory/company-knowledge.json (carried over)"
+echo "  ✓ .claude/memory/decision-log.json (carried over)"
 
-cat > "$TARGET/.claude/memory/decision-log.json" <<JSON
-{
-  "version": "1.0.0",
-  "updated_at": "$TODAY",
-  "decisions": []
-}
-JSON
-echo "  ✓ .claude/memory/ (fresh state)"
+# Copy agent experiences (accumulated learnings per agent)
+copy_dir "$SOURCE/.claude/memory/agent-experiences" "$TARGET/.claude/memory/agent-experiences"
+echo "  ✓ .claude/memory/agent-experiences/ (carried over)"
+
+# Copy performance metrics
+copy_dir "$SOURCE/.claude/memory/metrics" "$TARGET/.claude/memory/metrics"
+echo "  ✓ .claude/memory/metrics/ (carried over)"
 
 # Empty audit trail
 : > "$TARGET/.claude/audit-trail.jsonl"
@@ -249,38 +242,18 @@ kill -9 $(lsof -ti :PORT_NUMBER)
 MDEOF
 echo "  ✓ .claude/PORT-REGISTRY.md (clean)"
 
-# Clean COMPONENT-REGISTRY.md
-cat > "$TARGET/.claude/COMPONENT-REGISTRY.md" <<'MDEOF'
-# Component Registry
-
-## Quick Reference — "I Need To..."
-
-| I Need To... | Use This | Location |
-|---------------|----------|----------|
-
-## Shared Packages
-
-_No shared packages registered yet. As reusable components are built, add them here._
-
-## Backend Components
-
-_No backend components registered yet._
-
-## Frontend Components
-
-_No frontend components registered yet._
-
-## Infrastructure Components
-
-_No infrastructure components registered yet._
-MDEOF
-echo "  ✓ .claude/COMPONENT-REGISTRY.md (clean)"
+# COMPONENT-REGISTRY.md — carry over all shared components
+copy_file "$SOURCE/.claude/COMPONENT-REGISTRY.md" "$TARGET/.claude/COMPONENT-REGISTRY.md"
+echo "  ✓ .claude/COMPONENT-REGISTRY.md (carried over with shared components)"
 
 echo ""
 
 # ─── Phase 3: Replace company name ────────────────────────────────────
 
 echo "Phase 3: Replacing 'ConnectSW' with '$COMPANY_NAME'..."
+
+# Derive lowercase name for package scopes (@connectsw/ → @mycompany/)
+COMPANY_LOWER=$(echo "$COMPANY_NAME" | tr '[:upper:]' '[:lower:]')
 
 # Portable sed -i (macOS vs Linux)
 sed_inplace() {
@@ -291,7 +264,7 @@ sed_inplace() {
   fi
 }
 
-# Find all text files in copied directories and replace ConnectSW
+# Find all text files in copied directories and replace ConnectSW (both cases)
 SEARCH_DIRS=("$TARGET/.claude" "$TARGET/.specify" "$TARGET/.githooks" "$TARGET/.github")
 
 for search_dir in "${SEARCH_DIRS[@]}"; do
@@ -300,14 +273,20 @@ for search_dir in "${SEARCH_DIRS[@]}"; do
       -name "*.md" -o -name "*.yml" -o -name "*.yaml" \
       -o -name "*.json" -o -name "*.sh" -o -name "*.ts" \
     \) 2>/dev/null | while read -r file; do
+      # Replace PascalCase: ConnectSW → CompanyName
       if grep -q "ConnectSW" "$file" 2>/dev/null; then
         sed_inplace "s/ConnectSW/$COMPANY_NAME/g" "$file"
+      fi
+      # Replace lowercase: connectsw → companyname (package scopes, paths)
+      if grep -q "connectsw" "$file" 2>/dev/null; then
+        sed_inplace "s/connectsw/$COMPANY_LOWER/g" "$file"
       fi
     done
   fi
 done
 
-echo "  ✓ Replaced across all .md, .yml, .json, .sh, .ts files"
+echo "  ✓ ConnectSW → $COMPANY_NAME (PascalCase)"
+echo "  ✓ connectsw → $COMPANY_LOWER (lowercase — package scopes, paths)"
 echo ""
 
 # ─── Phase 4: Git setup ───────────────────────────────────────────────
@@ -351,8 +330,9 @@ echo "╚═══════════════════════�
 echo ""
 echo "Installed:"
 echo "  • $((DIR_COUNT + 1)) agent system directories in .claude/"
-echo "  • Orchestrator with fresh state"
-echo "  • Memory system (empty, ready to learn)"
+echo "  • Orchestrator with fresh state (no products)"
+echo "  • Memory system with accumulated knowledge & decisions"
+echo "  • Shared component registry (carried over)"
 echo "  • Git safety hooks (pre-commit, post-commit)"
 echo "  • spec-kit framework (.specify/)"
 echo "  • GitHub templates (issues, PRs, dependabot)"
