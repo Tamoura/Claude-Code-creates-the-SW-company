@@ -6,12 +6,13 @@ export interface GraphNode {
   id: string;
   label: string;
   type: 'product' | 'package' | 'agent';
+  group: string;
 }
 
 export interface GraphEdge {
   source: string;
   target: string;
-  relationship: 'depends-on' | 'works-on';
+  label: string;
 }
 
 export interface DependencyGraph {
@@ -40,7 +41,7 @@ export function getDependencyGraph(): DependencyGraph {
       .map((e) => e.name);
 
     for (const product of products) {
-      nodes.push({ id: `product:${product}`, label: product, type: 'product' });
+      nodes.push({ id: `product:${product}`, label: product, type: 'product', group: 'product' });
       collectDependencies(product, sharedDeps);
     }
   }
@@ -49,12 +50,12 @@ export function getDependencyGraph(): DependencyGraph {
   for (const [pkg, dependents] of sharedDeps.entries()) {
     if (dependents.length > 1) {
       const pkgId = `package:${pkg}`;
-      nodes.push({ id: pkgId, label: pkg, type: 'package' });
+      nodes.push({ id: pkgId, label: pkg, type: 'package', group: 'package' });
       for (const product of dependents) {
         edges.push({
           source: `product:${product}`,
           target: pkgId,
-          relationship: 'depends-on',
+          label: 'depends-on',
         });
       }
     }
@@ -69,7 +70,7 @@ export function getDependencyGraph(): DependencyGraph {
     for (const brief of briefs) {
       const agentId = brief.replace('.md', '');
       const agentNodeId = `agent:${agentId}`;
-      nodes.push({ id: agentNodeId, label: agentId, type: 'agent' });
+      nodes.push({ id: agentNodeId, label: agentId, type: 'agent', group: 'agent' });
 
       const associations = findAgentProductAssociations(
         join(briefsDir, brief),
@@ -79,7 +80,7 @@ export function getDependencyGraph(): DependencyGraph {
         edges.push({
           source: agentNodeId,
           target: `product:${product}`,
-          relationship: 'works-on',
+          label: 'works-on',
         });
       }
     }

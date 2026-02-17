@@ -21,19 +21,19 @@ export interface LinesChanged {
   removed: number;
 }
 
-export interface GitAnalytics {
+export interface GitAnalyticsResponse {
   commitsByDay: CommitsByDay[];
-  commitsByProduct: CommitsByProduct[];
-  commitsByAuthor: CommitsByAuthor[];
+  commitsByProduct: Record<string, number>;
+  commitsByAuthor: Record<string, number>;
   totalCommits: number;
-  linesChanged: LinesChanged;
+  stats: { additions: number; deletions: number };
 }
 
 /** Cache with 60s TTL (git operations are heavier) */
-let cache: { data: GitAnalytics; ts: number } | null = null;
+let cache: { data: GitAnalyticsResponse; ts: number } | null = null;
 const CACHE_TTL = 60_000;
 
-export function getGitAnalytics(): GitAnalytics {
+export function getGitAnalytics(): GitAnalyticsResponse {
   if (cache && Date.now() - cache.ts < CACHE_TTL) {
     return cache.data;
   }
@@ -45,12 +45,19 @@ export function getGitAnalytics(): GitAnalytics {
   const byProduct = groupByProduct(commits);
   const byAuthor = groupByAuthor(commits);
 
-  const data: GitAnalytics = {
+  // Convert arrays to Record<string, number> for frontend
+  const productRecord: Record<string, number> = {};
+  for (const { product, count } of byProduct) productRecord[product] = count;
+
+  const authorRecord: Record<string, number> = {};
+  for (const { author, count } of byAuthor) authorRecord[author] = count;
+
+  const data: GitAnalyticsResponse = {
     commitsByDay: byDay,
-    commitsByProduct: byProduct,
-    commitsByAuthor: byAuthor,
+    commitsByProduct: productRecord,
+    commitsByAuthor: authorRecord,
     totalCommits: commits.length,
-    linesChanged: numstat,
+    stats: { additions: numstat.added, deletions: numstat.removed },
   };
 
   cache = { data, ts: Date.now() };

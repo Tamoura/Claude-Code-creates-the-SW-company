@@ -19,6 +19,8 @@ export interface AgentExperienceEntry {
   tasksCompleted: number;
   successRate: number;
   avgTimeMinutes: number;
+  commonMistakes: string[];
+  preferredApproaches: string[];
   recentTasks: TaskHistoryEntry[];
 }
 
@@ -30,8 +32,24 @@ export interface TaskHistoryEntry {
   timestamp: string;
 }
 
+export interface AntiPattern {
+  id: string;
+  pattern: string;
+  consequence: string;
+  prevention: string;
+}
+
+export interface Gotcha {
+  id: string;
+  description: string;
+  agent?: string;
+  resolution: string;
+}
+
 export interface KnowledgeBase {
   patterns: Pattern[];
+  antiPatterns: AntiPattern[];
+  gotchas: Gotcha[];
   agentExperiences: AgentExperienceEntry[];
 }
 
@@ -53,9 +71,10 @@ export function getKnowledgeBase(): KnowledgeBase {
   }
 
   const patterns = loadPatterns();
+  const { antiPatterns, gotchas } = loadAntiPatternsAndGotchas();
   const agentExperiences = loadAgentExperiences();
 
-  const data: KnowledgeBase = { patterns, agentExperiences };
+  const data: KnowledgeBase = { patterns, antiPatterns, gotchas, agentExperiences };
   cache = { data, ts: Date.now() };
   return data;
 }
@@ -147,6 +166,8 @@ function loadAgentExperiences(): AgentExperienceEntry[] {
           tasksCompleted: (metrics.tasks_completed as number) ?? 0,
           successRate: (metrics.success_rate as number) ?? 0,
           avgTimeMinutes: (metrics.average_time_minutes as number) ?? 0,
+          commonMistakes: ((raw.common_mistakes ?? raw.commonMistakes ?? []) as string[]).slice(0, 5),
+          preferredApproaches: ((raw.preferred_approaches ?? raw.preferredApproaches ?? []) as string[]).slice(0, 5),
           recentTasks: history.slice(-10).map((t) => ({
             taskId: (t.task_id as string) ?? '',
             product: (t.product as string) ?? '',
@@ -160,4 +181,31 @@ function loadAgentExperiences(): AgentExperienceEntry[] {
   } catch { /* ignore */ }
 
   return results.sort((a, b) => a.agent.localeCompare(b.agent));
+}
+
+function loadAntiPatternsAndGotchas(): { antiPatterns: AntiPattern[]; gotchas: Gotcha[] } {
+  const knowledgePath = repoPath('.claude', 'memory', 'company-knowledge.json');
+  if (!existsSync(knowledgePath)) return { antiPatterns: [], gotchas: [] };
+
+  try {
+    const raw = JSON.parse(readFileSync(knowledgePath, 'utf-8'));
+
+    const antiPatterns: AntiPattern[] = ((raw.anti_patterns ?? raw.antiPatterns ?? []) as Record<string, unknown>[]).map((ap, i) => ({
+      id: (ap.id as string) ?? `ap-${i}`,
+      pattern: (ap.pattern as string) ?? (ap.name as string) ?? '',
+      consequence: (ap.consequence as string) ?? (ap.impact as string) ?? '',
+      prevention: (ap.prevention as string) ?? (ap.solution as string) ?? '',
+    }));
+
+    const gotchas: Gotcha[] = ((raw.gotchas ?? []) as Record<string, unknown>[]).map((g, i) => ({
+      id: (g.id as string) ?? `gotcha-${i}`,
+      description: (g.description as string) ?? (g.gotcha as string) ?? '',
+      agent: g.agent as string | undefined,
+      resolution: (g.resolution as string) ?? (g.fix as string) ?? '',
+    }));
+
+    return { antiPatterns, gotchas };
+  } catch {
+    return { antiPatterns: [], gotchas: [] };
+  }
 }
