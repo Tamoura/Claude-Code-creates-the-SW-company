@@ -1,8 +1,8 @@
 # ConnectSW Constitution
 
-**Version**: 1.0.0
+**Version**: 1.1.0
 **Ratified**: 2026-02-11
-**Last Amended**: 2026-02-11
+**Last Amended**: 2026-02-18
 
 ## Preamble
 
@@ -135,7 +135,40 @@ Git operations MUST follow strict safety rules to prevent data loss.
 
 ---
 
-## Article IX: Quality Gates
+## Article IX: Diagram-First Documentation
+
+All documentation MUST prioritize visual communication. If something can be explained with a diagram, it MUST include a diagram. Text supplements diagrams — not the other way around.
+
+**Rules:**
+- All diagrams MUST use Mermaid syntax (renders natively in GitHub and Command Center)
+- PRDs MUST include: C4 diagrams, ER diagrams, user journey flowcharts, and sequence diagrams for multi-step flows
+- Implementation plans MUST include: architecture diagrams, data flow diagrams, and ER diagrams for schema changes
+- READMEs MUST include: at minimum a C4 Container diagram showing the system architecture
+- ADRs MUST include: before/after diagrams showing the architectural change
+- State transitions (order status, user lifecycle, etc.) MUST use state diagrams
+- Decision logic MUST use flowcharts with diamond decision nodes
+- Timeline and phased work MUST use Gantt charts
+- A document that explains something complex without a diagram is considered incomplete and MUST be rejected
+
+**Diagram type quick reference:**
+
+| Situation | Use |
+|-----------|-----|
+| System boundaries | C4 Context (`graph TD`) |
+| Tech stack layout | C4 Container (`graph TD`) |
+| Internal modules | C4 Component (`graph TD`) |
+| Database schema | ER Diagram (`erDiagram`) |
+| Multi-step flows | Sequence (`sequenceDiagram`) |
+| User journeys | Flowchart (`flowchart TD`) |
+| State transitions | State Diagram (`stateDiagram-v2`) |
+| Phased timelines | Gantt (`gantt`) |
+| Class relationships | Class Diagram (`classDiagram`) |
+
+**Rationale:** The CEO mandates diagrams for readability. A wall of text where a diagram would suffice is a documentation defect. Diagrams communicate architecture and flows faster than prose.
+
+---
+
+## Article X: Quality Gates
 
 All products MUST pass quality gates before progressing through development stages.
 
