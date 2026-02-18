@@ -94,9 +94,35 @@ release/[product]/v[X.Y.Z]       # Releases
 
 Documentation must NEVER be thin or skeletal. Every product and feature must have rich, comprehensive documentation that includes ALL of the following:
 
+#### Diagram-First Principle (CEO MANDATE)
+
+**If something can be explained with a diagram, it MUST include a diagram.** Diagrams are the primary communication tool at ConnectSW — text is supplementary. A wall of text where a diagram would suffice is a documentation defect.
+
+All diagrams use **Mermaid syntax** (renders natively in GitHub, Command Center, and our tooling).
+
+**When to use which diagram type:**
+
+| Situation | Diagram Type | Mermaid Syntax |
+|-----------|-------------|----------------|
+| System boundaries, users, external services | C4 Context | `graph TD` (with C4 styling) |
+| Apps, databases, APIs, tech stack | C4 Container | `graph TD` (with container styling) |
+| Internal services, modules, plugins | C4 Component | `graph TD` (with component styling) |
+| Database tables and relationships | Entity-Relationship | `erDiagram` |
+| Multi-step flows (auth, payments, API calls) | Sequence Diagram | `sequenceDiagram` |
+| User journeys and workflows | Flowchart | `flowchart TD` |
+| Decision logic, branching paths | Flowchart | `flowchart TD` with decision nodes |
+| State transitions (order status, user lifecycle) | State Diagram | `stateDiagram-v2` |
+| Timeline, phases, parallel work | Gantt Chart | `gantt` |
+| Class/module relationships | Class Diagram | `classDiagram` |
+| Git branching strategy | Gitgraph | `gitgraph` |
+| Quick concept relationships | Mindmap | `mindmap` |
+
+**Minimum diagram requirements by document type:**
+
 **Required in every PRD / Feature Spec:**
 - **Business Context**: Why this product/feature exists, what problem it solves, who it serves, market positioning
 - **User Stories**: Full user stories with personas, motivations, and acceptance criteria (Given/When/Then)
+- **User Journey Flowchart**: Mermaid flowchart showing the user's path through the feature
 - **Acceptance Criteria**: Explicit, testable criteria for every user story — never implied
 - **C4 Diagrams**: Architecture documentation must include C4 model diagrams (Context, Container, Component, Code) using Mermaid syntax
   - **Level 1 (Context)**: System in its environment — users, external systems, boundaries
@@ -106,21 +132,27 @@ Documentation must NEVER be thin or skeletal. Every product and feature must hav
 - **Data Model Diagrams**: Entity-relationship diagrams for all database schemas
 - **API Contracts**: Full request/response examples, error codes, authentication requirements
 - **Sequence Diagrams**: For any multi-step flows (auth flows, payment flows, etc.)
+- **State Diagrams**: For any entity with lifecycle states (orders, users, subscriptions)
 
 **Required in every Implementation Plan:**
 - **Architecture section with C4 diagrams** (at minimum Level 1 and Level 2)
-- **Integration points**: How this feature connects to existing systems
-- **Data flow**: How data moves through the system end-to-end
+- **Integration points**: How this feature connects to existing systems — with a sequence diagram showing the integration flow
+- **Data flow**: How data moves through the system end-to-end — with a flowchart or sequence diagram
+- **ER diagram**: For any database schema changes
 - **Security considerations**: Auth, authorization, data protection specifics
-- **Error handling strategy**: What can go wrong and how the system recovers
+- **Error handling strategy**: What can go wrong and how the system recovers — with a flowchart showing error paths
 
 **Required in every README:**
 - **Business context**: What this product does and why it exists (not just tech setup)
 - **Architecture overview with diagrams**: At minimum a Container-level C4 diagram
 - **Getting started**: Complete setup instructions that actually work
-- **API overview**: Key endpoints with examples
+- **API overview**: Key endpoints with examples — with a sequence diagram for complex endpoints
 
-**Enforcement**: If a PR is submitted with thin documentation (missing user stories, no diagrams, no business context, no acceptance criteria), it MUST be rejected and sent back for documentation enrichment. Documentation is not optional — it is a first-class deliverable equal to code.
+**Required in every ADR (Architecture Decision Record):**
+- **Before/after diagrams**: Show the architecture before and after the decision
+- **Alternatives considered**: Each alternative should have a diagram if the difference is structural
+
+**Enforcement**: If a PR is submitted with thin documentation (missing user stories, no diagrams, no business context, no acceptance criteria), it MUST be rejected and sent back for documentation enrichment. Documentation is not optional — it is a first-class deliverable equal to code. A document that explains something complex without a diagram is incomplete.
 
 ### Testing
 
