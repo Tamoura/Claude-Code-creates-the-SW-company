@@ -2,7 +2,7 @@
 
 **Purpose**: Centralized port allocation to prevent conflicts when running multiple products simultaneously.
 
-**Last Updated**: 2026-02-14
+**Last Updated**: 2026-02-18
 
 ## Port Allocation Rules
 
@@ -26,7 +26,8 @@
 | 3112 | recomengine | Active | http://localhost:3112 |
 | 3113 | command-center | Active | http://localhost:3113 |
 | 3114 | linkedin-agent | Active | http://localhost:3114 |
-| 3115-3199 | *Available* | Free | - |
+| 3115 | codeguardian | Active | http://localhost:3115 |
+| 3116-3199 | *Available* | Free | - |
 
 ### Backend APIs (5000-5099)
 
@@ -39,7 +40,8 @@
 | 5008 | recomengine | Active | http://localhost:5008 |
 | 5009 | command-center | Active | http://localhost:5009 |
 | 5010 | linkedin-agent | Active | http://localhost:5010 |
-| 5011-5099 | *Available* | Free | - |
+| 5011 | codeguardian | Active | http://localhost:5011 |
+| 5012-5099 | *Available* | Free | - |
 
 ### Mobile Development (8081-8099)
 
