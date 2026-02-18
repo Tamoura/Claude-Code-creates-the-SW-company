@@ -31,14 +31,19 @@ You are creating a feature specification for a ConnectSW product. This command r
    - Read `products/[product]/.claude/addendum.md` (if exists) — product-specific context
    - Read `products/[product]/docs/PRD.md` (if exists) — existing requirements
 
-3. **Generate the specification**:
+3. **Generate the specification** (MUST be comprehensive — thin specs are rejected):
    - Focus on **WHAT** and **WHY**, not **HOW**
    - Do NOT include technology choices (those belong in `/speckit.plan`)
-   - Fill ALL sections from the spec template
+   - Fill ALL sections from the spec template — no empty sections allowed
+   - **Business Context is MANDATORY**: Problem statement, target personas, business value, strategic alignment
+   - **C4 Context Diagram (Level 1) is MANDATORY**: System in its environment using Mermaid C4 syntax
+   - **User Stories are MANDATORY**: Full "As a / I want / So that" with persona and motivation
+   - **Acceptance Criteria are MANDATORY**: Given/When/Then for every user story (min 2 per story, including error cases)
+   - **Data Model diagram is MANDATORY**: ER diagram for all entities using Mermaid
+   - **Edge Cases table is MANDATORY**: Minimum 5 edge cases with expected behavior
    - Use `[NEEDS CLARIFICATION]` for uncertain areas (max 3)
    - Check COMPONENT-REGISTRY.md and fill the Component Reuse Check table
-   - Write acceptance criteria in Given/When/Then format
-   - Include measurable success criteria
+   - Include measurable success criteria with specific numbers
 
 4. **ConnectSW-specific additions**:
    - Reference the product's existing PRD if extending an existing product

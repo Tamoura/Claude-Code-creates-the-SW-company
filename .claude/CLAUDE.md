@@ -90,6 +90,38 @@ release/[product]/v[X.Y.Z]       # Releases
 - Mobile dev servers: 8081-8099 (assigned per product)
 - Databases: default ports in Docker (shared via containers)
 
+### Documentation Standards (MANDATORY)
+
+Documentation must NEVER be thin or skeletal. Every product and feature must have rich, comprehensive documentation that includes ALL of the following:
+
+**Required in every PRD / Feature Spec:**
+- **Business Context**: Why this product/feature exists, what problem it solves, who it serves, market positioning
+- **User Stories**: Full user stories with personas, motivations, and acceptance criteria (Given/When/Then)
+- **Acceptance Criteria**: Explicit, testable criteria for every user story — never implied
+- **C4 Diagrams**: Architecture documentation must include C4 model diagrams (Context, Container, Component, Code) using Mermaid syntax
+  - **Level 1 (Context)**: System in its environment — users, external systems, boundaries
+  - **Level 2 (Container)**: High-level tech choices — apps, databases, message queues, APIs
+  - **Level 3 (Component)**: Internal structure of each container — services, plugins, modules
+  - **Level 4 (Code)**: Class/module level detail for complex components (when warranted)
+- **Data Model Diagrams**: Entity-relationship diagrams for all database schemas
+- **API Contracts**: Full request/response examples, error codes, authentication requirements
+- **Sequence Diagrams**: For any multi-step flows (auth flows, payment flows, etc.)
+
+**Required in every Implementation Plan:**
+- **Architecture section with C4 diagrams** (at minimum Level 1 and Level 2)
+- **Integration points**: How this feature connects to existing systems
+- **Data flow**: How data moves through the system end-to-end
+- **Security considerations**: Auth, authorization, data protection specifics
+- **Error handling strategy**: What can go wrong and how the system recovers
+
+**Required in every README:**
+- **Business context**: What this product does and why it exists (not just tech setup)
+- **Architecture overview with diagrams**: At minimum a Container-level C4 diagram
+- **Getting started**: Complete setup instructions that actually work
+- **API overview**: Key endpoints with examples
+
+**Enforcement**: If a PR is submitted with thin documentation (missing user stories, no diagrams, no business context, no acceptance criteria), it MUST be rejected and sent back for documentation enrichment. Documentation is not optional — it is a first-class deliverable equal to code.
+
 ### Testing
 
 - Unit: Jest

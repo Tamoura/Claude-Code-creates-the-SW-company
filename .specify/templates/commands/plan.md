@@ -53,9 +53,15 @@ You are creating an implementation plan that translates a feature specification 
    - Identify which existing ConnectSW components to reuse
    - Document new components that should be added to registry after implementation
 
-5. **Fill the plan template**:
+5. **Fill the plan template** (MUST be comprehensive — thin plans are rejected):
    - Write to `products/[product]/docs/plan.md`
    - Fill Technical Context with ConnectSW defaults
+   - **C4 Container Diagram (Level 2) is MANDATORY**: All apps, databases, queues, external services using Mermaid C4 syntax
+   - **C4 Component Diagram (Level 3) is MANDATORY**: Internal structure of key containers
+   - **Sequence Diagrams are MANDATORY**: For all multi-step flows (auth, data pipelines, etc.)
+   - **Integration Points table is MANDATORY**: Systems, protocols, data exchanged, auth methods
+   - **Security Considerations section is MANDATORY**: Auth, authorization, data protection, input validation
+   - **Error Handling Strategy table is MANDATORY**: Error categories, detection, recovery, user experience
    - Complete Constitution Check table
    - Fill Component Reuse Plan
    - Define project structure (following ConnectSW conventions)

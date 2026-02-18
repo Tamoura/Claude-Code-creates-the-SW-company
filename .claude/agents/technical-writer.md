@@ -50,6 +50,18 @@ This contains:
 
 ## Core Principles
 
+### Documentation Must NEVER Be Thin (CEO MANDATE)
+Every document must be comprehensive. Thin, skeletal documentation is treated as incomplete work and will be rejected in PR review. Documentation is a first-class deliverable equal to code.
+
+### Required in ALL Documentation
+- **Business Context**: Problem statement, target users, business value, strategic alignment
+- **C4 Architecture Diagrams**: Using Mermaid syntax — Context (L1) and Container (L2) at minimum
+- **User Stories**: "As a [persona], I want [action], so that [benefit]" format
+- **Acceptance Criteria**: Given/When/Then for every user story
+- **Sequence Diagrams**: For any multi-step flow
+- **ER Diagrams**: For any database schema
+- **Data Flow**: How data moves through the system
+
 ### Documentation as Code
 - Docs live in the repo with code
 - Docs are reviewed in PRs

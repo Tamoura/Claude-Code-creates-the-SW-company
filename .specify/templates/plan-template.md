@@ -7,7 +7,7 @@
 
 ## Summary
 
-[Extract primary requirement and technical approach from feature spec]
+[Extract primary requirement and technical approach from feature spec. Include the business context — why this feature matters, not just what it does technically.]
 
 ## Technical Context
 
@@ -18,6 +18,94 @@
 - **Primary Dependencies**: [List key libraries]
 - **Target Platform**: Web / Mobile / Both
 - **Assigned Ports**: Frontend [PORT] / Backend [PORT]
+
+## Architecture *(mandatory — C4 diagrams required)*
+
+### Container Diagram (C4 Level 2)
+
+```mermaid
+C4Container
+    title Container Diagram - [FEATURE NAME]
+
+    Person(user, "[User]", "[Description]")
+
+    System_Boundary(system, "[Product Name]") {
+        Container(web, "Web App", "Next.js, React", "[What it does]")
+        Container(api, "API Server", "Fastify, Node.js", "[What it does]")
+        ContainerDb(db, "Database", "PostgreSQL", "[What it stores]")
+        Container(queue, "Message Queue", "Redis/Bull", "[If applicable]")
+    }
+
+    System_Ext(ext, "[External Service]", "[What it provides]")
+
+    Rel(user, web, "Uses", "HTTPS")
+    Rel(web, api, "API calls", "JSON/HTTPS")
+    Rel(api, db, "Reads/Writes", "Prisma")
+    Rel(api, ext, "[Integration]", "[Protocol]")
+```
+
+### Component Diagram (C4 Level 3) — [Key Container]
+
+```mermaid
+C4Component
+    title Component Diagram - [Container Name]
+
+    Container_Boundary(api, "API Server") {
+        Component(routes, "Route Handlers", "Fastify Routes", "[Handles HTTP requests]")
+        Component(services, "Business Logic", "Service Layer", "[Core domain logic]")
+        Component(plugins, "Plugins", "Fastify Plugins", "[Auth, validation, etc.]")
+        Component(prisma, "Data Access", "Prisma Client", "[Database operations]")
+    }
+
+    ContainerDb(db, "Database", "PostgreSQL")
+
+    Rel(routes, services, "Calls")
+    Rel(services, prisma, "Uses")
+    Rel(prisma, db, "SQL queries")
+    Rel(routes, plugins, "Uses middleware")
+```
+
+### Data Flow *(mandatory)*
+
+```mermaid
+sequenceDiagram
+    participant U as User
+    participant W as Web App
+    participant A as API Server
+    participant D as Database
+    participant E as External Service
+
+    U->>W: [User action]
+    W->>A: [API request]
+    A->>D: [Database query]
+    D-->>A: [Response data]
+    A-->>W: [API response]
+    W-->>U: [UI update]
+```
+
+### Integration Points
+
+| System | Direction | Protocol | Data Exchanged | Auth Method |
+|--------|-----------|----------|---------------|-------------|
+| [System 1] | Inbound/Outbound | REST/gRPC/WebSocket | [What data] | [API key/OAuth/JWT] |
+| [System 2] | Inbound/Outbound | REST/gRPC/WebSocket | [What data] | [API key/OAuth/JWT] |
+
+### Security Considerations *(mandatory)*
+
+- **Authentication**: [How users authenticate — JWT, sessions, OAuth, etc.]
+- **Authorization**: [How permissions are enforced — RBAC, ABAC, per-resource]
+- **Data Protection**: [Encryption at rest/in transit, PII handling, data retention]
+- **Input Validation**: [Schema validation approach, sanitization]
+- **Rate Limiting**: [Limits per endpoint, per user, burst handling]
+
+### Error Handling Strategy *(mandatory)*
+
+| Error Category | Example | Detection | Recovery | User Experience |
+|---------------|---------|-----------|----------|----------------|
+| Validation | Invalid input | Schema check | Return 400 with details | Form field error messages |
+| Auth | Expired token | Middleware | Redirect to login | "Session expired" toast |
+| External service | API timeout | Try/catch + timeout | Retry with backoff | Loading state + retry button |
+| Database | Connection lost | Health check | Reconnect pool | 503 page with retry |
 
 ## Constitution Check
 
@@ -82,8 +170,8 @@ products/[product]/
 
 ## Phase 1: Design & Contracts
 
-- [ ] Create `docs/data-model.md` from spec entities
-- [ ] Create API contracts in `docs/contracts/`
+- [ ] Create `docs/data-model.md` from spec entities (with ER diagrams)
+- [ ] Create API contracts in `docs/contracts/` (with full request/response examples)
 - [ ] Verify contracts satisfy all functional requirements
 - [ ] Run constitution check (post-Phase 1 re-validation)
 
