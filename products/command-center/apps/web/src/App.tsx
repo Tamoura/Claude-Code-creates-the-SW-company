@@ -21,6 +21,7 @@ import KnowledgeBase from './pages/KnowledgeBase.js';
 import SprintBoard from './pages/SprintBoard.js';
 import AlertCenter from './pages/AlertCenter.js';
 import Settings from './pages/Settings.js';
+import Simulate from './pages/Simulate.js';
 
 export default function App() {
   return (
@@ -47,6 +48,7 @@ export default function App() {
         <Route path="knowledge" element={<KnowledgeBase />} />
         <Route path="sprint" element={<SprintBoard />} />
         <Route path="alerts" element={<AlertCenter />} />
+        <Route path="simulate" element={<Simulate />} />
         <Route path="settings" element={<Settings />} />
       </Route>
     </Routes>
