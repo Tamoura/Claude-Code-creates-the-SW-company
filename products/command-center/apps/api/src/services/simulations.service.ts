@@ -366,30 +366,47 @@ function generateGantt(
   timeline: TimelineEntry[],
   phases: SimulationPhase[],
 ): string {
+  const taskMap = new Map(
+    phases.flatMap((p) => p.tasks).map((t) => [t.id, t]),
+  );
+
   const lines: string[] = [
     'gantt',
-    '    dateFormat X',
+    '    dateFormat YYYY-MM-DDTHH:mm',
     '    axisFormat %H:%M',
     '    title New Product Creation Timeline',
     '',
   ];
 
+  // Convert minutes offset to ISO datetime from a base date
+  const base = '2024-01-01T';
+  function toTime(minutes: number): string {
+    const h = String(Math.floor(minutes / 60)).padStart(2, '0');
+    const m = String(minutes % 60).padStart(2, '0');
+    return `${base}${h}:${m}`;
+  }
+
   for (const phase of phases) {
-    lines.push(`    section Phase ${phase.number}: ${phase.name}`);
+    const sectionName = `Phase ${phase.number} - ${phase.name.replace(/&/g, 'and')}`;
+    lines.push(`    section ${sectionName}`);
     const phaseTasks = timeline.filter((t) => t.phase === phase.name);
     for (const entry of phaseTasks) {
       const ganttId = sanitizeGanttId(entry.taskId);
       const critMarker = entry.isCriticalPath ? 'crit, ' : '';
-      const deps = phases
-        .flatMap((p) => p.tasks)
-        .find((t) => t.id === entry.taskId)?.dependsOn;
-      const afterClause =
-        deps && deps.length > 0
-          ? `after ${deps.map(sanitizeGanttId).join(' ')}, `
-          : '';
-      lines.push(
-        `    ${entry.taskName} :${critMarker}${ganttId}, ${afterClause}${entry.startMinute}, ${entry.endMinute}`,
-      );
+      const task = taskMap.get(entry.taskId);
+      const deps = task?.dependsOn ?? [];
+      const duration = Math.max(entry.endMinute - entry.startMinute, 1);
+
+      if (deps.length > 0) {
+        const afterClause = `after ${deps.map(sanitizeGanttId).join(' ')}`;
+        lines.push(
+          `    ${entry.taskName} :${critMarker}${ganttId}, ${afterClause}, ${duration}m`,
+        );
+      } else {
+        lines.push(
+          `    ${entry.taskName} :${critMarker}${ganttId}, ${toTime(entry.startMinute)}, ${duration}m`,
+        );
+      }
     }
     lines.push('');
   }
