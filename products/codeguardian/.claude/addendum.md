@@ -399,3 +399,75 @@ NEXT_PUBLIC_GITHUB_CLIENT_ID=xxx
 - **Error responses**: Standard format: `{ "error": { "code": "REVIEW_NOT_FOUND", "message": "...", "statusCode": 404 } }`.
 - **Logging**: Pino (Fastify default). Structured JSON logs. Request ID tracing.
 - **Testing**: Jest for unit/integration. Playwright for E2E. No mocks -- real database, real Redis.
+
+---
+
+## Technical Architecture
+
+**Architecture Document**: `products/codeguardian/docs/architecture.md`
+**API Contract**: `products/codeguardian/docs/api-contract.yaml` (OpenAPI 3.0)
+**Database Schema**: `products/codeguardian/docs/db-schema.sql`
+**ADRs**: `products/codeguardian/docs/ADRs/`
+
+### System Architecture Summary
+
+CodeGuardian is an event-driven system with three main components:
+
+1. **API Server** (Fastify, port 5011): REST API for dashboard, auth, billing, and webhook endpoints
+2. **Review Workers** (BullMQ, embedded in API process): Async processors that dequeue review jobs from Redis, route diffs to AI models in parallel, aggregate findings, calculate scores, and post review comments to GitHub
+3. **Web App** (Next.js, port 3115): Dashboard UI for review history, analytics, settings, and billing
+
+Data flows: GitHub webhook -> validate -> enqueue in Redis -> worker processes -> AI models (parallel) -> aggregate -> score -> post to GitHub + store in PostgreSQL.
+
+### Key Technical Decisions
+
+| Decision | Choice | ADR |
+|----------|--------|-----|
+| Multi-model routing | Parallel fan-out with primary + fallback per check type (4 models) | ADR-001 |
+| Async processing | BullMQ workers embedded in Fastify process, Redis-backed queue | ADR-002 |
+| GitHub integration | Dual: GitHub App (webhooks, repo access) + OAuth (user identity) | ADR-003 |
+| Quality scoring | Weighted deduction model: Security 35%, Logic 30%, Performance 20%, Style 15% | ADR-004 |
+| MVP deployment | Single process (API + workers); extractable to separate processes later | ADR-002 |
+| Dashboard updates | REST polling (no WebSocket/SSE for MVP) | ADR-002 |
+
+### Technology Choices
+
+| Component | Technology | Rationale |
+|-----------|-----------|-----------|
+| Backend framework | Fastify 4.x | ConnectSW standard; high performance, plugin architecture |
+| Job queue | BullMQ 5.x | Redis-backed, TypeScript native, retry/backoff built-in, successor to Bull |
+| AI providers | Anthropic (Claude), OpenAI (GPT), Google (Gemini) | Multi-provider for specialization; no single-provider dependency |
+| Frontend framework | Next.js 14+ | ConnectSW standard; SSR for SEO on marketing pages, App Router |
+| UI components | shadcn/ui + Tailwind | Accessible, composable; ConnectSW standard |
+| Charts | Recharts 2.x | Lightweight, React-native charting for dashboard trends |
+| Database | PostgreSQL 15+ | ACID, JSON support, full-text search; ConnectSW standard |
+| Cache/Queue | Redis 7.x | BullMQ backend, session cache, rate limiting, usage counters |
+| Auth | GitHub OAuth 2.0 + PKCE | GitHub-native auth; no separate username/password |
+| Payments | Stripe | Checkout sessions, subscription management, webhooks |
+
+### Reusable ConnectSW Packages
+
+| Package | Usage |
+|---------|-------|
+| `@connectsw/shared` | Logger, Prisma plugin, Redis plugin, crypto utils |
+| `@connectsw/billing` | Subscription management, usage metering, tier enforcement |
+| `@connectsw/audit` | Audit log service for security events |
+| `@connectsw/notifications` | Email notifications (limit warnings, upgrade prompts) |
+| `@connectsw/ui` | Button, Card, StatCard, DataTable, DashboardLayout, Sidebar |
+
+### Database Tables
+
+| Table | Purpose |
+|-------|---------|
+| `users` | GitHub-authenticated users, encrypted tokens |
+| `organizations` | GitHub organizations with default settings |
+| `org_memberships` | User-to-org mapping with roles |
+| `installations` | GitHub App installations |
+| `repositories` | Monitored repos with per-repo routing config |
+| `reviews` | PR review records with scores and status |
+| `findings` | Individual issues found during review |
+| `subscriptions` | Billing subscriptions (Free/Pro/Enterprise) |
+| `billing_events` | Stripe event log |
+| `webhook_logs` | Incoming webhook audit trail |
+| `audit_logs` | Security event audit trail |
+| `oauth_states` | Temporary OAuth CSRF/PKCE storage |

@@ -1,0 +1,2197 @@
+openapi: 3.0.3
+info:
+  title: CodeGuardian API
+  description: |
+    Multi-model AI code review and security platform API.
+
+    CodeGuardian integrates with GitHub to automatically review pull requests
+    using specialized AI models for security, logic, performance, and style analysis.
+
+    ## Authentication
+
+    All endpoints (except `/health`, `/webhooks/*`, and `/auth/*`) require a valid JWT
+    in the `Authorization` header or as an `httpOnly` cookie named `cg_session`.
+
+    ```
+    Authorization: Bearer <jwt_token>
+    ```
+
+    ## Rate Limiting
+
+    - Per user: 100 requests/minute
+    - Per organization: 1,000 requests/minute
+
+    Rate limit headers are returned on every response:
+    ```
+    X-RateLimit-Limit: 100
+    X-RateLimit-Remaining: 87
+    X-RateLimit-Reset: 1708300800
+    ```
+
+    ## Error Format
+
+    All errors follow a consistent format:
+    ```json
+    {
+      "error": {
+        "code": "ERROR_CODE",
+        "message": "Human-readable message",
+        "statusCode": 400
+      }
+    }
+    ```
+  version: 1.0.0
+  contact:
+    name: ConnectSW
+    url: https://connectsw.com
+
+servers:
+  - url: http://localhost:5011
+    description: Local development
+  - url: https://api.codeguardian.dev
+    description: Production
+
+tags:
+  - name: Auth
+    description: GitHub OAuth authentication
+  - name: Webhooks
+    description: GitHub and Stripe webhook receivers
+  - name: Reviews
+    description: Code review management
+  - name: Repositories
+    description: Repository management and settings
+  - name: Dashboard
+    description: Analytics and statistics
+  - name: Billing
+    description: Subscription and billing management
+  - name: Health
+    description: System health checks
+
+paths:
+  # ─── Health ─────────────────────────────────────────────────────────
+  /health:
+    get:
+      tags: [Health]
+      summary: Health check
+      description: Returns service health status. No authentication required.
+      operationId: healthCheck
+      responses:
+        '200':
+          description: Service is healthy
+          content:
+            application/json:
+              schema:
+                type: object
+                properties:
+                  status:
+                    type: string
+                    example: ok
+                  timestamp:
+                    type: string
+                    format: date-time
+                    example: '2026-02-18T10:30:00Z'
+                  version:
+                    type: string
+                    example: '1.0.0'
+                  uptime:
+                    type: number
+                    description: Uptime in seconds
+                    example: 86400
+
+  # ─── Auth ───────────────────────────────────────────────────────────
+  /auth/github/redirect:
+    get:
+      tags: [Auth]
+      summary: Initiate GitHub OAuth flow
+      description: |
+        Generates a state parameter and PKCE challenge, then redirects to GitHub
+        OAuth authorization page. No authentication required.
+      operationId: githubOAuthRedirect
+      responses:
+        '302':
+          description: Redirect to GitHub OAuth authorization page
+          headers:
+            Location:
+              schema:
+                type: string
+              example: 'https://github.com/login/oauth/authorize?client_id=xxx&state=yyy&code_challenge=zzz&scope=read:user,user:email'
+
+  /auth/github/callback:
+    get:
+      tags: [Auth]
+      summary: Handle GitHub OAuth callback
+      description: |
+        Processes the OAuth callback from GitHub. Exchanges the authorization code
+        for access and refresh tokens, fetches the user profile, and creates/updates
+        the user record. Returns a JWT session token. No authentication required.
+      operationId: githubOAuthCallback
+      parameters:
+        - name: code
+          in: query
+          required: true
+          schema:
+            type: string
+          description: Authorization code from GitHub
+          example: abc123def456
+        - name: state
+          in: query
+          required: true
+          schema:
+            type: string
+          description: State parameter for CSRF protection
+          example: random-state-string
+      responses:
+        '200':
+          description: Authentication successful
+          headers:
+            Set-Cookie:
+              schema:
+                type: string
+              description: httpOnly session cookie
+              example: 'cg_session=eyJhbGciOiJIUzI1NiIs...; Path=/; HttpOnly; Secure; SameSite=Lax; Max-Age=604800'
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/AuthResponse'
+              example:
+                token: eyJhbGciOiJIUzI1NiIs...
+                user:
+                  id: 550e8400-e29b-41d4-a716-446655440000
+                  githubLogin: alexdev
+                  email: alex@example.com
+                  avatarUrl: https://avatars.githubusercontent.com/u/123
+        '400':
+          $ref: '#/components/responses/BadRequest'
+        '401':
+          description: Invalid or expired state parameter
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/Error'
+              example:
+                error:
+                  code: INVALID_STATE
+                  message: The state parameter is invalid or has expired. Please try signing in again.
+                  statusCode: 401
+
+  /auth/refresh:
+    post:
+      tags: [Auth]
+      summary: Refresh JWT token
+      description: |
+        Refreshes the JWT session token using the GitHub refresh token.
+        The GitHub access token is also refreshed if it has expired.
+      operationId: refreshToken
+      security:
+        - bearerAuth: []
+      responses:
+        '200':
+          description: Token refreshed
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/AuthResponse'
+        '401':
+          $ref: '#/components/responses/Unauthorized'
+
+  /auth/logout:
+    post:
+      tags: [Auth]
+      summary: Logout
+      description: Clears the session cookie and invalidates the JWT.
+      operationId: logout
+      security:
+        - bearerAuth: []
+      responses:
+        '200':
+          description: Logged out
+          content:
+            application/json:
+              schema:
+                type: object
+                properties:
+                  message:
+                    type: string
+                    example: Logged out successfully
+
+  /auth/me:
+    get:
+      tags: [Auth]
+      summary: Get current user
+      description: Returns the authenticated user's profile.
+      operationId: getCurrentUser
+      security:
+        - bearerAuth: []
+      responses:
+        '200':
+          description: Current user profile
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/User'
+        '401':
+          $ref: '#/components/responses/Unauthorized'
+
+  # ─── Webhooks ───────────────────────────────────────────────────────
+  /webhooks/github:
+    post:
+      tags: [Webhooks]
+      summary: Receive GitHub webhook events
+      description: |
+        Handles GitHub App webhook events including pull request events and
+        installation lifecycle events. Verifies the webhook signature using
+        HMAC-SHA256 before processing.
+
+        **Supported events:**
+        - `pull_request` (opened, synchronize, reopened)
+        - `installation` (created, deleted, suspend, unsuspend)
+        - `installation_repositories` (added, removed)
+
+        No authentication required (uses webhook signature verification).
+      operationId: githubWebhook
+      parameters:
+        - name: X-Hub-Signature-256
+          in: header
+          required: true
+          schema:
+            type: string
+          description: HMAC-SHA256 signature of the payload
+          example: sha256=abc123...
+        - name: X-GitHub-Event
+          in: header
+          required: true
+          schema:
+            type: string
+            enum: [pull_request, installation, installation_repositories]
+          description: The event type
+          example: pull_request
+        - name: X-GitHub-Delivery
+          in: header
+          required: true
+          schema:
+            type: string
+            format: uuid
+          description: Unique delivery ID
+          example: 72d3162e-cc78-11e3-81ab-4c9367dc0958
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              $ref: '#/components/schemas/GitHubWebhookPayload'
+            example:
+              action: opened
+              number: 42
+              pull_request:
+                title: Add user authentication
+                head:
+                  sha: abc123def456
+                  ref: feature/auth
+                base:
+                  ref: main
+              repository:
+                id: 123456
+                full_name: acme/webapp
+              installation:
+                id: 789
+      responses:
+        '200':
+          description: Webhook accepted and review enqueued
+          content:
+            application/json:
+              schema:
+                type: object
+                properties:
+                  status:
+                    type: string
+                    enum: [accepted, ignored, limit_reached]
+                    example: accepted
+                  reviewId:
+                    type: string
+                    format: uuid
+                    nullable: true
+                    description: ID of the created review (null if ignored or limit reached)
+                    example: 550e8400-e29b-41d4-a716-446655440000
+                  message:
+                    type: string
+                    nullable: true
+                    description: Human-readable status message
+                    example: Review enqueued for processing
+        '401':
+          description: Invalid webhook signature
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/Error'
+              example:
+                error:
+                  code: INVALID_SIGNATURE
+                  message: Webhook signature verification failed
+                  statusCode: 401
+        '429':
+          $ref: '#/components/responses/RateLimited'
+
+  /webhooks/stripe:
+    post:
+      tags: [Webhooks]
+      summary: Receive Stripe webhook events
+      description: |
+        Handles Stripe webhook events for subscription lifecycle management.
+        Verifies the webhook signature using the Stripe webhook secret.
+
+        **Supported events:**
+        - `checkout.session.completed`
+        - `invoice.paid`
+        - `invoice.payment_failed`
+        - `customer.subscription.updated`
+        - `customer.subscription.deleted`
+
+        No authentication required (uses Stripe signature verification).
+      operationId: stripeWebhook
+      parameters:
+        - name: Stripe-Signature
+          in: header
+          required: true
+          schema:
+            type: string
+          description: Stripe webhook signature
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              type: object
+      responses:
+        '200':
+          description: Webhook processed
+          content:
+            application/json:
+              schema:
+                type: object
+                properties:
+                  received:
+                    type: boolean
+                    example: true
+        '400':
+          $ref: '#/components/responses/BadRequest'
+
+  # ─── Reviews ────────────────────────────────────────────────────────
+  /api/reviews:
+    get:
+      tags: [Reviews]
+      summary: List reviews
+      description: |
+        Returns a paginated list of code reviews for repositories accessible
+        to the authenticated user. Supports filtering by repository, status,
+        and date range.
+      operationId: listReviews
+      security:
+        - bearerAuth: []
+      parameters:
+        - name: repo
+          in: query
+          schema:
+            type: string
+          description: Filter by repository full name (owner/repo)
+          example: acme/webapp
+        - name: status
+          in: query
+          schema:
+            type: string
+            enum: [pending, queued, analyzing, complete, failed]
+          description: Filter by review status
+        - name: from
+          in: query
+          schema:
+            type: string
+            format: date
+          description: Start date (inclusive)
+          example: '2026-01-01'
+        - name: to
+          in: query
+          schema:
+            type: string
+            format: date
+          description: End date (inclusive)
+          example: '2026-02-18'
+        - name: page
+          in: query
+          schema:
+            type: integer
+            minimum: 1
+            default: 1
+          description: Page number
+        - name: limit
+          in: query
+          schema:
+            type: integer
+            minimum: 1
+            maximum: 100
+            default: 20
+          description: Items per page
+        - name: sort
+          in: query
+          schema:
+            type: string
+            enum: [created_at, score, findings_count]
+            default: created_at
+          description: Sort field
+        - name: order
+          in: query
+          schema:
+            type: string
+            enum: [asc, desc]
+            default: desc
+          description: Sort order
+      responses:
+        '200':
+          description: Paginated list of reviews
+          content:
+            application/json:
+              schema:
+                type: object
+                properties:
+                  reviews:
+                    type: array
+                    items:
+                      $ref: '#/components/schemas/ReviewSummary'
+                  pagination:
+                    $ref: '#/components/schemas/Pagination'
+              example:
+                reviews:
+                  - id: 550e8400-e29b-41d4-a716-446655440000
+                    repository: acme/webapp
+                    prNumber: 42
+                    prTitle: Add user authentication
+                    status: complete
+                    score: 78
+                    scoreBreakdown:
+                      security: 90
+                      logic: 72
+                      performance: 80
+                      style: 65
+                    findingsCount: 7
+                    durationMs: 34200
+                    createdAt: '2026-02-18T10:30:00Z'
+                    completedAt: '2026-02-18T10:30:34Z'
+                pagination:
+                  page: 1
+                  limit: 20
+                  total: 156
+                  totalPages: 8
+                  hasMore: true
+        '401':
+          $ref: '#/components/responses/Unauthorized'
+
+  /api/reviews/{reviewId}:
+    get:
+      tags: [Reviews]
+      summary: Get review detail
+      description: Returns a single review with all findings and metadata.
+      operationId: getReview
+      security:
+        - bearerAuth: []
+      parameters:
+        - name: reviewId
+          in: path
+          required: true
+          schema:
+            type: string
+            format: uuid
+          description: Review ID
+      responses:
+        '200':
+          description: Review detail with findings
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/ReviewDetail'
+              example:
+                id: 550e8400-e29b-41d4-a716-446655440000
+                repository: acme/webapp
+                prNumber: 42
+                prTitle: Add user authentication
+                status: complete
+                score: 78
+                scoreBreakdown:
+                  security: 90
+                  logic: 72
+                  performance: 80
+                  style: 65
+                findings:
+                  - id: 660e8400-e29b-41d4-a716-446655440001
+                    category: security
+                    severity: high
+                    title: SQL Injection Vulnerability
+                    description: User input is concatenated directly into SQL query without parameterization.
+                    suggestion: "const result = await db.query('SELECT * FROM users WHERE id = $1', [userId]);"
+                    filePath: src/routes/users.ts
+                    lineStart: 42
+                    lineEnd: 42
+                    owaspId: 'A03:2021'
+                    cweId: CWE-89
+                    modelUsed: claude-sonnet
+                    dismissed: false
+                    dismissedReason: null
+                metadata:
+                  headSha: abc123def456
+                  baseBranch: main
+                  headBranch: feature/auth
+                  linesChanged: 347
+                  filesChanged: 12
+                  durationMs: 34200
+                  modelsUsed:
+                    - claude-sonnet
+                    - claude-opus
+                    - gpt-4o
+                    - claude-haiku
+                  chunksProcessed: 3
+                createdAt: '2026-02-18T10:30:00Z'
+                completedAt: '2026-02-18T10:30:34Z'
+        '401':
+          $ref: '#/components/responses/Unauthorized'
+        '404':
+          $ref: '#/components/responses/NotFound'
+
+  /api/reviews/{reviewId}/retry:
+    post:
+      tags: [Reviews]
+      summary: Retry a failed review
+      description: |
+        Re-enqueues a failed review for processing. Only reviews with status
+        `failed` can be retried. Counts against the user's tier limit.
+      operationId: retryReview
+      security:
+        - bearerAuth: []
+      parameters:
+        - name: reviewId
+          in: path
+          required: true
+          schema:
+            type: string
+            format: uuid
+      responses:
+        '200':
+          description: Review re-enqueued
+          content:
+            application/json:
+              schema:
+                type: object
+                properties:
+                  status:
+                    type: string
+                    example: queued
+                  message:
+                    type: string
+                    example: Review re-enqueued for processing
+        '400':
+          description: Review cannot be retried (not in failed state)
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/Error'
+        '401':
+          $ref: '#/components/responses/Unauthorized'
+        '404':
+          $ref: '#/components/responses/NotFound'
+        '429':
+          $ref: '#/components/responses/RateLimited'
+
+  /api/reviews/{reviewId}/findings/{findingId}/dismiss:
+    post:
+      tags: [Reviews]
+      summary: Dismiss a finding
+      description: |
+        Marks a finding as dismissed with a reason. Dismissed findings are
+        excluded from future score calculations but remain visible in the
+        review detail for audit purposes.
+      operationId: dismissFinding
+      security:
+        - bearerAuth: []
+      parameters:
+        - name: reviewId
+          in: path
+          required: true
+          schema:
+            type: string
+            format: uuid
+        - name: findingId
+          in: path
+          required: true
+          schema:
+            type: string
+            format: uuid
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              type: object
+              required: [reason]
+              properties:
+                reason:
+                  type: string
+                  enum: [false_positive, wont_fix, not_applicable, already_fixed]
+                  description: Reason for dismissing the finding
+            example:
+              reason: false_positive
+      responses:
+        '200':
+          description: Finding dismissed
+          content:
+            application/json:
+              schema:
+                type: object
+                properties:
+                  id:
+                    type: string
+                    format: uuid
+                  dismissed:
+                    type: boolean
+                    example: true
+                  dismissedReason:
+                    type: string
+                    example: false_positive
+        '401':
+          $ref: '#/components/responses/Unauthorized'
+        '404':
+          $ref: '#/components/responses/NotFound'
+
+  # ─── Repositories ───────────────────────────────────────────────────
+  /api/repositories:
+    get:
+      tags: [Repositories]
+      summary: List repositories
+      description: |
+        Returns all repositories the authenticated user has access to,
+        including monitoring status and review statistics.
+      operationId: listRepositories
+      security:
+        - bearerAuth: []
+      parameters:
+        - name: orgId
+          in: query
+          schema:
+            type: string
+            format: uuid
+          description: Filter by organization ID
+      responses:
+        '200':
+          description: Repository list
+          content:
+            application/json:
+              schema:
+                type: object
+                properties:
+                  repositories:
+                    type: array
+                    items:
+                      $ref: '#/components/schemas/RepositorySummary'
+              example:
+                repositories:
+                  - id: 550e8400-e29b-41d4-a716-446655440000
+                    fullName: acme/webapp
+                    defaultBranch: main
+                    monitoringEnabled: true
+                    lastReviewAt: '2026-02-18T10:30:00Z'
+                    reviewCount: 42
+                    averageScore: 81
+        '401':
+          $ref: '#/components/responses/Unauthorized'
+
+  /api/repositories/{repoId}:
+    get:
+      tags: [Repositories]
+      summary: Get repository detail
+      description: Returns repository details with review history summary.
+      operationId: getRepository
+      security:
+        - bearerAuth: []
+      parameters:
+        - name: repoId
+          in: path
+          required: true
+          schema:
+            type: string
+            format: uuid
+      responses:
+        '200':
+          description: Repository detail
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/RepositoryDetail'
+        '401':
+          $ref: '#/components/responses/Unauthorized'
+        '404':
+          $ref: '#/components/responses/NotFound'
+
+  /api/repositories/{repoId}/settings:
+    get:
+      tags: [Repositories]
+      summary: Get repository settings
+      description: Returns the monitoring and routing configuration for a repository.
+      operationId: getRepositorySettings
+      security:
+        - bearerAuth: []
+      parameters:
+        - name: repoId
+          in: path
+          required: true
+          schema:
+            type: string
+            format: uuid
+      responses:
+        '200':
+          description: Repository settings
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/RepositorySettings'
+        '401':
+          $ref: '#/components/responses/Unauthorized'
+        '404':
+          $ref: '#/components/responses/NotFound'
+
+    put:
+      tags: [Repositories]
+      summary: Update repository settings
+      description: |
+        Updates the monitoring configuration, routing rules, and score thresholds
+        for a repository. Requires owner or admin role in the organization.
+      operationId: updateRepositorySettings
+      security:
+        - bearerAuth: []
+      parameters:
+        - name: repoId
+          in: path
+          required: true
+          schema:
+            type: string
+            format: uuid
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              $ref: '#/components/schemas/RepositorySettingsUpdate'
+            example:
+              monitoringEnabled: true
+              routingConfig:
+                security:
+                  primaryModel: claude-sonnet
+                  fallbackModel: gpt-4o
+                  timeoutSeconds: 30
+                logic:
+                  primaryModel: claude-opus
+                  fallbackModel: claude-sonnet
+                  timeoutSeconds: 45
+                performance:
+                  primaryModel: gpt-4o
+                  fallbackModel: claude-sonnet
+                  timeoutSeconds: 30
+                style:
+                  primaryModel: claude-haiku
+                  fallbackModel: gpt-4o-mini
+                  timeoutSeconds: 15
+              scoreThreshold: 70
+              blockOnCritical: true
+      responses:
+        '200':
+          description: Settings updated
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/RepositorySettings'
+        '400':
+          $ref: '#/components/responses/BadRequest'
+        '401':
+          $ref: '#/components/responses/Unauthorized'
+        '403':
+          $ref: '#/components/responses/Forbidden'
+        '404':
+          $ref: '#/components/responses/NotFound'
+
+  # ─── Dashboard ──────────────────────────────────────────────────────
+  /api/dashboard/stats:
+    get:
+      tags: [Dashboard]
+      summary: Get dashboard statistics
+      description: |
+        Returns aggregated statistics for the authenticated user including
+        total reviews, average score, findings breakdown, score trends,
+        and top recurring issues.
+      operationId: getDashboardStats
+      security:
+        - bearerAuth: []
+      parameters:
+        - name: from
+          in: query
+          schema:
+            type: string
+            format: date
+          description: Start date
+          example: '2026-01-01'
+        - name: to
+          in: query
+          schema:
+            type: string
+            format: date
+          description: End date
+          example: '2026-02-18'
+        - name: orgId
+          in: query
+          schema:
+            type: string
+            format: uuid
+          description: Filter by organization (omit for personal stats)
+        - name: repoId
+          in: query
+          schema:
+            type: string
+            format: uuid
+          description: Filter by repository
+      responses:
+        '200':
+          description: Dashboard statistics
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/DashboardStats'
+              example:
+                period:
+                  from: '2026-01-01'
+                  to: '2026-02-18'
+                summary:
+                  totalReviews: 156
+                  averageScore: 82
+                  totalFindings: 423
+                  criticalFindings: 3
+                  highFindings: 28
+                  mediumFindings: 167
+                  lowFindings: 225
+                trends:
+                  scoreHistory:
+                    - date: '2026-01-01'
+                      averageScore: 74
+                    - date: '2026-01-08'
+                      averageScore: 77
+                    - date: '2026-01-15'
+                      averageScore: 80
+                    - date: '2026-01-22'
+                      averageScore: 82
+                  reviewsPerWeek:
+                    - week: '2026-W01'
+                      count: 32
+                    - week: '2026-W02'
+                      count: 38
+                topIssues:
+                  - title: Missing error handling
+                    category: logic
+                    count: 45
+                  - title: Unused variables
+                    category: style
+                    count: 38
+                  - title: N+1 query pattern
+                    category: performance
+                    count: 22
+        '401':
+          $ref: '#/components/responses/Unauthorized'
+
+  /api/dashboard/team:
+    get:
+      tags: [Dashboard]
+      summary: Get team analytics
+      description: |
+        Returns per-member review statistics for the authenticated user's
+        organization. Requires org membership.
+      operationId: getTeamStats
+      security:
+        - bearerAuth: []
+      parameters:
+        - name: orgId
+          in: query
+          required: true
+          schema:
+            type: string
+            format: uuid
+          description: Organization ID
+        - name: from
+          in: query
+          schema:
+            type: string
+            format: date
+        - name: to
+          in: query
+          schema:
+            type: string
+            format: date
+      responses:
+        '200':
+          description: Team analytics
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/TeamStats'
+              example:
+                orgId: 550e8400-e29b-41d4-a716-446655440000
+                orgName: Acme Corp
+                period:
+                  from: '2026-01-01'
+                  to: '2026-02-18'
+                members:
+                  - userId: 660e8400-e29b-41d4-a716-446655440001
+                    githubLogin: alexdev
+                    avatarUrl: https://avatars.githubusercontent.com/u/123
+                    reviewCount: 42
+                    averageScore: 81
+                    topIssueCategory: logic
+                  - userId: 770e8400-e29b-41d4-a716-446655440002
+                    githubLogin: saraheng
+                    avatarUrl: https://avatars.githubusercontent.com/u/456
+                    reviewCount: 38
+                    averageScore: 88
+                    topIssueCategory: style
+                teamAverageScore: 84
+                teamTotalReviews: 156
+                topIssues:
+                  - title: Missing error handling
+                    category: logic
+                    count: 45
+        '401':
+          $ref: '#/components/responses/Unauthorized'
+        '403':
+          $ref: '#/components/responses/Forbidden'
+
+  /api/dashboard/team/members/{memberId}:
+    get:
+      tags: [Dashboard]
+      summary: Get team member detail
+      description: Returns detailed review statistics for a specific team member.
+      operationId: getTeamMemberStats
+      security:
+        - bearerAuth: []
+      parameters:
+        - name: memberId
+          in: path
+          required: true
+          schema:
+            type: string
+            format: uuid
+        - name: orgId
+          in: query
+          required: true
+          schema:
+            type: string
+            format: uuid
+        - name: from
+          in: query
+          schema:
+            type: string
+            format: date
+        - name: to
+          in: query
+          schema:
+            type: string
+            format: date
+      responses:
+        '200':
+          description: Member statistics
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/MemberStats'
+        '401':
+          $ref: '#/components/responses/Unauthorized'
+        '403':
+          $ref: '#/components/responses/Forbidden'
+        '404':
+          $ref: '#/components/responses/NotFound'
+
+  /api/dashboard/org:
+    get:
+      tags: [Dashboard]
+      summary: Get organization analytics
+      description: |
+        Returns organization-wide analytics including per-repository
+        comparisons and overall quality trends. For VP/executive view.
+      operationId: getOrgStats
+      security:
+        - bearerAuth: []
+      parameters:
+        - name: orgId
+          in: query
+          required: true
+          schema:
+            type: string
+            format: uuid
+        - name: from
+          in: query
+          schema:
+            type: string
+            format: date
+        - name: to
+          in: query
+          schema:
+            type: string
+            format: date
+      responses:
+        '200':
+          description: Organization analytics
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/OrgStats'
+        '401':
+          $ref: '#/components/responses/Unauthorized'
+        '403':
+          $ref: '#/components/responses/Forbidden'
+
+  # ─── Settings ───────────────────────────────────────────────────────
+  /api/settings/profile:
+    get:
+      tags: [Dashboard]
+      summary: Get user profile settings
+      description: Returns the authenticated user's profile and notification preferences.
+      operationId: getProfileSettings
+      security:
+        - bearerAuth: []
+      responses:
+        '200':
+          description: Profile settings
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/ProfileSettings'
+        '401':
+          $ref: '#/components/responses/Unauthorized'
+
+    patch:
+      tags: [Dashboard]
+      summary: Update profile settings
+      description: Updates notification preferences and display settings.
+      operationId: updateProfileSettings
+      security:
+        - bearerAuth: []
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              type: object
+              properties:
+                notifyOnReviewComplete:
+                  type: boolean
+                notifyOnCriticalFinding:
+                  type: boolean
+                notifyOnLimitReached:
+                  type: boolean
+                emailDigestFrequency:
+                  type: string
+                  enum: [daily, weekly, never]
+      responses:
+        '200':
+          description: Settings updated
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/ProfileSettings'
+        '401':
+          $ref: '#/components/responses/Unauthorized'
+
+  /api/settings/organization/{orgId}:
+    get:
+      tags: [Dashboard]
+      summary: Get organization settings
+      description: Returns organization-level configuration.
+      operationId: getOrgSettings
+      security:
+        - bearerAuth: []
+      parameters:
+        - name: orgId
+          in: path
+          required: true
+          schema:
+            type: string
+            format: uuid
+      responses:
+        '200':
+          description: Organization settings
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/OrgSettings'
+        '401':
+          $ref: '#/components/responses/Unauthorized'
+        '403':
+          $ref: '#/components/responses/Forbidden'
+
+    patch:
+      tags: [Dashboard]
+      summary: Update organization settings
+      description: Updates organization-level defaults. Requires admin or owner role.
+      operationId: updateOrgSettings
+      security:
+        - bearerAuth: []
+      parameters:
+        - name: orgId
+          in: path
+          required: true
+          schema:
+            type: string
+            format: uuid
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              $ref: '#/components/schemas/OrgSettingsUpdate'
+      responses:
+        '200':
+          description: Settings updated
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/OrgSettings'
+        '401':
+          $ref: '#/components/responses/Unauthorized'
+        '403':
+          $ref: '#/components/responses/Forbidden'
+
+  # ─── Billing ────────────────────────────────────────────────────────
+  /api/billing/subscription:
+    get:
+      tags: [Billing]
+      summary: Get current subscription
+      description: |
+        Returns the current subscription details for the authenticated
+        user or their organization.
+      operationId: getSubscription
+      security:
+        - bearerAuth: []
+      parameters:
+        - name: orgId
+          in: query
+          schema:
+            type: string
+            format: uuid
+          description: Organization ID (omit for personal subscription)
+      responses:
+        '200':
+          description: Subscription details
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/Subscription'
+              example:
+                id: 550e8400-e29b-41d4-a716-446655440000
+                plan: pro
+                status: active
+                seatCount: 5
+                prLimit: null
+                prsUsedThisMonth: 42
+                currentPeriodStart: '2026-02-01T00:00:00Z'
+                currentPeriodEnd: '2026-03-01T00:00:00Z'
+                stripeCustomerId: cus_abc123
+        '401':
+          $ref: '#/components/responses/Unauthorized'
+
+  /api/billing/usage:
+    get:
+      tags: [Billing]
+      summary: Get usage statistics
+      description: Returns current billing period usage metrics.
+      operationId: getUsage
+      security:
+        - bearerAuth: []
+      parameters:
+        - name: orgId
+          in: query
+          schema:
+            type: string
+            format: uuid
+      responses:
+        '200':
+          description: Usage statistics
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/UsageStats'
+              example:
+                plan: pro
+                currentPeriod:
+                  start: '2026-02-01T00:00:00Z'
+                  end: '2026-03-01T00:00:00Z'
+                reviews:
+                  used: 42
+                  limit: null
+                  isLimited: false
+                seats:
+                  used: 4
+                  total: 5
+        '401':
+          $ref: '#/components/responses/Unauthorized'
+
+  /api/billing/checkout-session:
+    post:
+      tags: [Billing]
+      summary: Create Stripe checkout session
+      description: |
+        Creates a Stripe Checkout session for upgrading to a paid plan.
+        Returns a URL to redirect the user to Stripe's hosted checkout page.
+      operationId: createCheckoutSession
+      security:
+        - bearerAuth: []
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              type: object
+              required: [plan]
+              properties:
+                plan:
+                  type: string
+                  enum: [pro, enterprise]
+                  description: Target plan
+                seats:
+                  type: integer
+                  minimum: 1
+                  default: 1
+                  description: Number of seats
+                orgId:
+                  type: string
+                  format: uuid
+                  description: Organization ID (for org subscriptions)
+            example:
+              plan: pro
+              seats: 5
+              orgId: 550e8400-e29b-41d4-a716-446655440000
+      responses:
+        '200':
+          description: Checkout session created
+          content:
+            application/json:
+              schema:
+                type: object
+                properties:
+                  checkoutUrl:
+                    type: string
+                    format: uri
+                    description: Stripe Checkout URL to redirect to
+                    example: https://checkout.stripe.com/c/pay/cs_test_abc123
+                  sessionId:
+                    type: string
+                    description: Stripe session ID
+                    example: cs_test_abc123
+        '400':
+          $ref: '#/components/responses/BadRequest'
+        '401':
+          $ref: '#/components/responses/Unauthorized'
+
+  /api/billing/portal-session:
+    post:
+      tags: [Billing]
+      summary: Create Stripe billing portal session
+      description: |
+        Creates a Stripe Billing Portal session where users can manage
+        their subscription, update payment methods, and view invoices.
+      operationId: createPortalSession
+      security:
+        - bearerAuth: []
+      requestBody:
+        content:
+          application/json:
+            schema:
+              type: object
+              properties:
+                orgId:
+                  type: string
+                  format: uuid
+      responses:
+        '200':
+          description: Portal session created
+          content:
+            application/json:
+              schema:
+                type: object
+                properties:
+                  portalUrl:
+                    type: string
+                    format: uri
+                    example: https://billing.stripe.com/p/session/test_abc123
+        '401':
+          $ref: '#/components/responses/Unauthorized'
+
+  /api/billing/plans:
+    get:
+      tags: [Billing]
+      summary: List available plans
+      description: Returns all available subscription plans with features and pricing.
+      operationId: listPlans
+      responses:
+        '200':
+          description: Available plans
+          content:
+            application/json:
+              schema:
+                type: object
+                properties:
+                  plans:
+                    type: array
+                    items:
+                      $ref: '#/components/schemas/Plan'
+              example:
+                plans:
+                  - id: free
+                    name: Free
+                    priceMonthly: 0
+                    priceAnnual: 0
+                    features:
+                      prReviews: 5
+                      repositories: 1
+                      aiModels: 2
+                      teamAnalytics: false
+                      customRouting: false
+                      sso: false
+                  - id: pro
+                    name: Pro
+                    priceMonthly: 4900
+                    priceAnnual: 47040
+                    features:
+                      prReviews: -1
+                      repositories: -1
+                      aiModels: 4
+                      teamAnalytics: true
+                      customRouting: false
+                      sso: false
+                  - id: enterprise
+                    name: Enterprise
+                    priceMonthly: 19900
+                    priceAnnual: 202980
+                    features:
+                      prReviews: -1
+                      repositories: -1
+                      aiModels: -1
+                      teamAnalytics: true
+                      customRouting: true
+                      sso: true
+
+# ═══════════════════════════════════════════════════════════════════════
+# Components
+# ═══════════════════════════════════════════════════════════════════════
+components:
+  securitySchemes:
+    bearerAuth:
+      type: http
+      scheme: bearer
+      bearerFormat: JWT
+
+  # ─── Reusable Responses ─────────────────────────────────────────────
+  responses:
+    BadRequest:
+      description: Bad request -- invalid input
+      content:
+        application/json:
+          schema:
+            $ref: '#/components/schemas/Error'
+          example:
+            error:
+              code: BAD_REQUEST
+              message: Invalid request parameters
+              statusCode: 400
+
+    Unauthorized:
+      description: Authentication required or token expired
+      content:
+        application/json:
+          schema:
+            $ref: '#/components/schemas/Error'
+          example:
+            error:
+              code: UNAUTHORIZED
+              message: Authentication required
+              statusCode: 401
+
+    Forbidden:
+      description: Insufficient permissions
+      content:
+        application/json:
+          schema:
+            $ref: '#/components/schemas/Error'
+          example:
+            error:
+              code: FORBIDDEN
+              message: You do not have permission to access this resource
+              statusCode: 403
+
+    NotFound:
+      description: Resource not found
+      content:
+        application/json:
+          schema:
+            $ref: '#/components/schemas/Error'
+          example:
+            error:
+              code: NOT_FOUND
+              message: Resource not found
+              statusCode: 404
+
+    RateLimited:
+      description: Rate limit exceeded
+      headers:
+        Retry-After:
+          schema:
+            type: integer
+          description: Seconds until rate limit resets
+          example: 30
+      content:
+        application/json:
+          schema:
+            $ref: '#/components/schemas/Error'
+          example:
+            error:
+              code: RATE_LIMITED
+              message: Too many requests. Please try again later.
+              statusCode: 429
+
+  # ─── Schemas ────────────────────────────────────────────────────────
+  schemas:
+    Error:
+      type: object
+      required: [error]
+      properties:
+        error:
+          type: object
+          required: [code, message, statusCode]
+          properties:
+            code:
+              type: string
+              description: Machine-readable error code
+            message:
+              type: string
+              description: Human-readable error message
+            statusCode:
+              type: integer
+              description: HTTP status code
+
+    AuthResponse:
+      type: object
+      properties:
+        token:
+          type: string
+          description: JWT session token
+        user:
+          $ref: '#/components/schemas/User'
+
+    User:
+      type: object
+      properties:
+        id:
+          type: string
+          format: uuid
+        githubLogin:
+          type: string
+        email:
+          type: string
+          format: email
+        avatarUrl:
+          type: string
+          format: uri
+        organizations:
+          type: array
+          items:
+            type: object
+            properties:
+              id:
+                type: string
+                format: uuid
+              name:
+                type: string
+              role:
+                type: string
+                enum: [owner, admin, member]
+        createdAt:
+          type: string
+          format: date-time
+
+    GitHubWebhookPayload:
+      type: object
+      description: GitHub webhook event payload (varies by event type)
+      properties:
+        action:
+          type: string
+        number:
+          type: integer
+        pull_request:
+          type: object
+          properties:
+            title:
+              type: string
+            head:
+              type: object
+              properties:
+                sha:
+                  type: string
+                ref:
+                  type: string
+            base:
+              type: object
+              properties:
+                ref:
+                  type: string
+        repository:
+          type: object
+          properties:
+            id:
+              type: integer
+            full_name:
+              type: string
+        installation:
+          type: object
+          properties:
+            id:
+              type: integer
+
+    ReviewSummary:
+      type: object
+      properties:
+        id:
+          type: string
+          format: uuid
+        repository:
+          type: string
+          description: Repository full name (owner/repo)
+        prNumber:
+          type: integer
+        prTitle:
+          type: string
+        status:
+          type: string
+          enum: [pending, queued, analyzing, complete, failed]
+        score:
+          type: integer
+          minimum: 0
+          maximum: 100
+          nullable: true
+        scoreBreakdown:
+          $ref: '#/components/schemas/ScoreBreakdown'
+        findingsCount:
+          type: integer
+        durationMs:
+          type: integer
+          nullable: true
+        createdAt:
+          type: string
+          format: date-time
+        completedAt:
+          type: string
+          format: date-time
+          nullable: true
+
+    ReviewDetail:
+      allOf:
+        - $ref: '#/components/schemas/ReviewSummary'
+        - type: object
+          properties:
+            findings:
+              type: array
+              items:
+                $ref: '#/components/schemas/Finding'
+            metadata:
+              $ref: '#/components/schemas/ReviewMetadata'
+
+    Finding:
+      type: object
+      properties:
+        id:
+          type: string
+          format: uuid
+        category:
+          type: string
+          enum: [security, logic, performance, style]
+        severity:
+          type: string
+          enum: [critical, high, medium, low, info]
+        title:
+          type: string
+        description:
+          type: string
+        suggestion:
+          type: string
+          nullable: true
+          description: Suggested code fix
+        filePath:
+          type: string
+        lineStart:
+          type: integer
+        lineEnd:
+          type: integer
+          nullable: true
+        owaspId:
+          type: string
+          nullable: true
+          description: OWASP category ID (e.g., A03:2021)
+        cweId:
+          type: string
+          nullable: true
+          description: CWE identifier (e.g., CWE-89)
+        modelUsed:
+          type: string
+          description: AI model that generated this finding
+        dismissed:
+          type: boolean
+        dismissedReason:
+          type: string
+          nullable: true
+          enum: [false_positive, wont_fix, not_applicable, already_fixed, null]
+
+    ScoreBreakdown:
+      type: object
+      nullable: true
+      properties:
+        security:
+          type: integer
+          minimum: 0
+          maximum: 100
+        logic:
+          type: integer
+          minimum: 0
+          maximum: 100
+        performance:
+          type: integer
+          minimum: 0
+          maximum: 100
+        style:
+          type: integer
+          minimum: 0
+          maximum: 100
+
+    ReviewMetadata:
+      type: object
+      properties:
+        headSha:
+          type: string
+        baseBranch:
+          type: string
+        headBranch:
+          type: string
+        linesChanged:
+          type: integer
+        filesChanged:
+          type: integer
+        durationMs:
+          type: integer
+        modelsUsed:
+          type: array
+          items:
+            type: string
+        chunksProcessed:
+          type: integer
+
+    RepositorySummary:
+      type: object
+      properties:
+        id:
+          type: string
+          format: uuid
+        fullName:
+          type: string
+        defaultBranch:
+          type: string
+        monitoringEnabled:
+          type: boolean
+        lastReviewAt:
+          type: string
+          format: date-time
+          nullable: true
+        reviewCount:
+          type: integer
+        averageScore:
+          type: number
+          nullable: true
+
+    RepositoryDetail:
+      allOf:
+        - $ref: '#/components/schemas/RepositorySummary'
+        - type: object
+          properties:
+            installation:
+              type: object
+              properties:
+                id:
+                  type: string
+                  format: uuid
+                status:
+                  type: string
+                  enum: [active, suspended]
+            recentReviews:
+              type: array
+              items:
+                $ref: '#/components/schemas/ReviewSummary'
+            scoreTrend:
+              type: array
+              items:
+                type: object
+                properties:
+                  date:
+                    type: string
+                    format: date
+                  averageScore:
+                    type: number
+
+    RepositorySettings:
+      type: object
+      properties:
+        id:
+          type: string
+          format: uuid
+        fullName:
+          type: string
+        monitoringEnabled:
+          type: boolean
+        routingConfig:
+          $ref: '#/components/schemas/RoutingConfig'
+        scoreThreshold:
+          type: integer
+          minimum: 0
+          maximum: 100
+          description: Minimum score to pass status check
+        blockOnCritical:
+          type: boolean
+          description: Block merge on critical findings regardless of score
+        updatedAt:
+          type: string
+          format: date-time
+
+    RepositorySettingsUpdate:
+      type: object
+      properties:
+        monitoringEnabled:
+          type: boolean
+        routingConfig:
+          $ref: '#/components/schemas/RoutingConfig'
+        scoreThreshold:
+          type: integer
+          minimum: 0
+          maximum: 100
+        blockOnCritical:
+          type: boolean
+
+    RoutingConfig:
+      type: object
+      properties:
+        security:
+          $ref: '#/components/schemas/CheckTypeConfig'
+        logic:
+          $ref: '#/components/schemas/CheckTypeConfig'
+        performance:
+          $ref: '#/components/schemas/CheckTypeConfig'
+        style:
+          $ref: '#/components/schemas/CheckTypeConfig'
+
+    CheckTypeConfig:
+      type: object
+      properties:
+        primaryModel:
+          type: string
+          description: Primary AI model identifier
+        fallbackModel:
+          type: string
+          description: Fallback AI model identifier
+        timeoutSeconds:
+          type: integer
+          minimum: 5
+          maximum: 120
+
+    DashboardStats:
+      type: object
+      properties:
+        period:
+          type: object
+          properties:
+            from:
+              type: string
+              format: date
+            to:
+              type: string
+              format: date
+        summary:
+          type: object
+          properties:
+            totalReviews:
+              type: integer
+            averageScore:
+              type: number
+            totalFindings:
+              type: integer
+            criticalFindings:
+              type: integer
+            highFindings:
+              type: integer
+            mediumFindings:
+              type: integer
+            lowFindings:
+              type: integer
+        trends:
+          type: object
+          properties:
+            scoreHistory:
+              type: array
+              items:
+                type: object
+                properties:
+                  date:
+                    type: string
+                    format: date
+                  averageScore:
+                    type: number
+            reviewsPerWeek:
+              type: array
+              items:
+                type: object
+                properties:
+                  week:
+                    type: string
+                  count:
+                    type: integer
+        topIssues:
+          type: array
+          items:
+            type: object
+            properties:
+              title:
+                type: string
+              category:
+                type: string
+                enum: [security, logic, performance, style]
+              count:
+                type: integer
+
+    TeamStats:
+      type: object
+      properties:
+        orgId:
+          type: string
+          format: uuid
+        orgName:
+          type: string
+        period:
+          type: object
+          properties:
+            from:
+              type: string
+              format: date
+            to:
+              type: string
+              format: date
+        members:
+          type: array
+          items:
+            type: object
+            properties:
+              userId:
+                type: string
+                format: uuid
+              githubLogin:
+                type: string
+              avatarUrl:
+                type: string
+                format: uri
+              reviewCount:
+                type: integer
+              averageScore:
+                type: number
+              topIssueCategory:
+                type: string
+                enum: [security, logic, performance, style]
+        teamAverageScore:
+          type: number
+        teamTotalReviews:
+          type: integer
+        topIssues:
+          type: array
+          items:
+            type: object
+            properties:
+              title:
+                type: string
+              category:
+                type: string
+              count:
+                type: integer
+
+    MemberStats:
+      type: object
+      properties:
+        userId:
+          type: string
+          format: uuid
+        githubLogin:
+          type: string
+        avatarUrl:
+          type: string
+          format: uri
+        period:
+          type: object
+          properties:
+            from:
+              type: string
+              format: date
+            to:
+              type: string
+              format: date
+        reviewCount:
+          type: integer
+        averageScore:
+          type: number
+        scoreBreakdown:
+          $ref: '#/components/schemas/ScoreBreakdown'
+        scoreTrend:
+          type: array
+          items:
+            type: object
+            properties:
+              date:
+                type: string
+                format: date
+              averageScore:
+                type: number
+        topIssues:
+          type: array
+          items:
+            type: object
+            properties:
+              title:
+                type: string
+              category:
+                type: string
+              count:
+                type: integer
+        recentReviews:
+          type: array
+          items:
+            $ref: '#/components/schemas/ReviewSummary'
+
+    OrgStats:
+      type: object
+      properties:
+        orgId:
+          type: string
+          format: uuid
+        orgName:
+          type: string
+        period:
+          type: object
+          properties:
+            from:
+              type: string
+              format: date
+            to:
+              type: string
+              format: date
+        totalReviews:
+          type: integer
+        averageScore:
+          type: number
+        repositories:
+          type: array
+          items:
+            type: object
+            properties:
+              id:
+                type: string
+                format: uuid
+              fullName:
+                type: string
+              reviewCount:
+                type: integer
+              averageScore:
+                type: number
+        scoreTrend:
+          type: array
+          items:
+            type: object
+            properties:
+              date:
+                type: string
+                format: date
+              averageScore:
+                type: number
+
+    ProfileSettings:
+      type: object
+      properties:
+        id:
+          type: string
+          format: uuid
+        githubLogin:
+          type: string
+        email:
+          type: string
+          format: email
+        avatarUrl:
+          type: string
+          format: uri
+        notifications:
+          type: object
+          properties:
+            onReviewComplete:
+              type: boolean
+            onCriticalFinding:
+              type: boolean
+            onLimitReached:
+              type: boolean
+            emailDigestFrequency:
+              type: string
+              enum: [daily, weekly, never]
+
+    OrgSettings:
+      type: object
+      properties:
+        orgId:
+          type: string
+          format: uuid
+        orgName:
+          type: string
+        defaultRoutingConfig:
+          $ref: '#/components/schemas/RoutingConfig'
+        defaultScoreThreshold:
+          type: integer
+        defaultBlockOnCritical:
+          type: boolean
+        members:
+          type: array
+          items:
+            type: object
+            properties:
+              userId:
+                type: string
+                format: uuid
+              githubLogin:
+                type: string
+              role:
+                type: string
+                enum: [owner, admin, member]
+
+    OrgSettingsUpdate:
+      type: object
+      properties:
+        defaultRoutingConfig:
+          $ref: '#/components/schemas/RoutingConfig'
+        defaultScoreThreshold:
+          type: integer
+          minimum: 0
+          maximum: 100
+        defaultBlockOnCritical:
+          type: boolean
+
+    Subscription:
+      type: object
+      properties:
+        id:
+          type: string
+          format: uuid
+        plan:
+          type: string
+          enum: [free, pro, enterprise]
+        status:
+          type: string
+          enum: [active, past_due, canceled, suspended]
+        seatCount:
+          type: integer
+        prLimit:
+          type: integer
+          nullable: true
+          description: null means unlimited
+        prsUsedThisMonth:
+          type: integer
+        currentPeriodStart:
+          type: string
+          format: date-time
+        currentPeriodEnd:
+          type: string
+          format: date-time
+        stripeCustomerId:
+          type: string
+          nullable: true
+
+    UsageStats:
+      type: object
+      properties:
+        plan:
+          type: string
+          enum: [free, pro, enterprise]
+        currentPeriod:
+          type: object
+          properties:
+            start:
+              type: string
+              format: date-time
+            end:
+              type: string
+              format: date-time
+        reviews:
+          type: object
+          properties:
+            used:
+              type: integer
+            limit:
+              type: integer
+              nullable: true
+            isLimited:
+              type: boolean
+        seats:
+          type: object
+          properties:
+            used:
+              type: integer
+            total:
+              type: integer
+
+    Plan:
+      type: object
+      properties:
+        id:
+          type: string
+          enum: [free, pro, enterprise]
+        name:
+          type: string
+        priceMonthly:
+          type: integer
+          description: Price in cents per seat per month
+        priceAnnual:
+          type: integer
+          description: Price in cents per seat per year (with discount)
+        features:
+          type: object
+          properties:
+            prReviews:
+              type: integer
+              description: -1 means unlimited
+            repositories:
+              type: integer
+              description: -1 means unlimited
+            aiModels:
+              type: integer
+              description: Number of AI models available (-1 for unlimited)
+            teamAnalytics:
+              type: boolean
+            customRouting:
+              type: boolean
+            sso:
+              type: boolean
+
+    Pagination:
+      type: object
+      properties:
+        page:
+          type: integer
+        limit:
+          type: integer
+        total:
+          type: integer
+        totalPages:
+          type: integer
+        hasMore:
+          type: boolean
