@@ -52,8 +52,12 @@ echo "--- Check 1: PRD Requirement IDs ---"
 
 PRD_FILE="$PRODUCT_DIR/docs/PRD.md"
 if [ -f "$PRD_FILE" ]; then
-  US_COUNT=$(grep -c '\bUS-[0-9]\+\b' "$PRD_FILE" 2>/dev/null || echo "0")
-  FR_COUNT=$(grep -c '\bFR-[0-9]\+\b' "$PRD_FILE" 2>/dev/null || echo "0")
+  US_COUNT=$(grep -cE '\bUS-[0-9]+\b' "$PRD_FILE" 2>/dev/null || true)
+  US_COUNT=${US_COUNT:-0}
+  US_COUNT=$(echo "$US_COUNT" | tr -d '[:space:]')
+  FR_COUNT=$(grep -cE '\bFR-[0-9]+\b' "$PRD_FILE" 2>/dev/null || true)
+  FR_COUNT=${FR_COUNT:-0}
+  FR_COUNT=$(echo "$FR_COUNT" | tr -d '[:space:]')
 
   if [ "$US_COUNT" -gt 0 ]; then
     pass "PRD contains $US_COUNT user story IDs (US-XX)"
