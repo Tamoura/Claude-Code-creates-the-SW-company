@@ -188,8 +188,9 @@ export default function ProductDetail() {
           <div className="flex items-center gap-4 shrink-0">
             {/* PDF Download */}
             <PdfExportButton
-              contentSelector="#doc-content-fullscreen"
-              filename={`${name}-${docContent.title}`}
+              productName={name!}
+              docFilename={selectedDoc!}
+              title={docContent.title}
               theme={docTheme}
               compact
             />
@@ -215,7 +216,7 @@ export default function ProductDetail() {
         </div>
 
         {/* Fullscreen content */}
-        <div id="doc-content-fullscreen" className="max-w-5xl mx-auto px-8 py-8">
+        <div className="max-w-5xl mx-auto px-8 py-8">
           <MarkdownRenderer content={docContent.content} theme={docTheme} />
         </div>
       </div>
@@ -419,8 +420,9 @@ export default function ProductDetail() {
                         <div className="flex items-center gap-2 shrink-0">
                           {/* PDF Download */}
                           <PdfExportButton
-                            contentSelector="#doc-content"
-                            filename={`${name}-${docContent.title}`}
+                            productName={name!}
+                            docFilename={selectedDoc!}
+                            title={docContent.title}
                             theme={docTheme}
                             compact
                           />
@@ -463,9 +465,7 @@ export default function ProductDetail() {
                     </div>
 
                     {/* Markdown content */}
-                    <div id="doc-content">
-                      <MarkdownRenderer content={docContent.content} theme={docTheme} />
-                    </div>
+                    <MarkdownRenderer content={docContent.content} theme={docTheme} />
                   </div>
                 ) : (
                   <div className="text-center py-12 text-red-400">
