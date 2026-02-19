@@ -3,6 +3,7 @@ import { useState, useEffect, useCallback } from 'react';
 import { useApi } from '../hooks/useApi.js';
 import Badge from '../components/Badge.js';
 import MarkdownRenderer from '../components/MarkdownRenderer.js';
+import PdfExportButton from '../components/PdfExportButton.js';
 
 interface DocInfo {
   filename: string;
@@ -185,6 +186,13 @@ export default function ProductDetail() {
             </Badge>
           </div>
           <div className="flex items-center gap-4 shrink-0">
+            {/* PDF Download */}
+            <PdfExportButton
+              contentSelector="#doc-content-fullscreen"
+              filename={`${name}-${docContent.title}`}
+              theme={docTheme}
+              compact
+            />
             {/* Theme toggle */}
             <button
               onClick={() => setDocTheme(isLight ? 'dark' : 'light')}
@@ -207,7 +215,7 @@ export default function ProductDetail() {
         </div>
 
         {/* Fullscreen content */}
-        <div className="max-w-5xl mx-auto px-8 py-8">
+        <div id="doc-content-fullscreen" className="max-w-5xl mx-auto px-8 py-8">
           <MarkdownRenderer content={docContent.content} theme={docTheme} />
         </div>
       </div>
@@ -409,6 +417,13 @@ export default function ProductDetail() {
                       <div className="flex items-start justify-between mb-3">
                         <h1 className={`text-3xl font-bold ${isLight ? 'text-gray-900' : 'text-white'}`}>{docContent.title}</h1>
                         <div className="flex items-center gap-2 shrink-0">
+                          {/* PDF Download */}
+                          <PdfExportButton
+                            contentSelector="#doc-content"
+                            filename={`${name}-${docContent.title}`}
+                            theme={docTheme}
+                            compact
+                          />
                           {/* Theme toggle */}
                           <button
                             onClick={() => setDocTheme(isLight ? 'dark' : 'light')}
@@ -448,7 +463,9 @@ export default function ProductDetail() {
                     </div>
 
                     {/* Markdown content */}
-                    <MarkdownRenderer content={docContent.content} theme={docTheme} />
+                    <div id="doc-content">
+                      <MarkdownRenderer content={docContent.content} theme={docTheme} />
+                    </div>
                   </div>
                 ) : (
                   <div className="text-center py-12 text-red-400">
