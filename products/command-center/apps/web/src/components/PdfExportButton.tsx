@@ -31,61 +31,109 @@ export default function PdfExportButton({
 
     setExporting(true);
 
+    let clone: HTMLElement | null = null;
+
     try {
-      // Dynamic import to avoid bundling html2pdf.js unless used
       const html2pdf = (await import('html2pdf.js')).default;
 
-      // Clone the content to apply print-friendly styles without affecting the page
-      const clone = element.cloneNode(true) as HTMLElement;
-
-      // Force light background for PDF regardless of current theme
+      // Clone and append to DOM — html2canvas requires an in-DOM element
+      // with computed layout, otherwise it renders zero-size (empty PDF).
+      clone = element.cloneNode(true) as HTMLElement;
+      clone.style.position = 'fixed';
+      clone.style.left = '-9999px';
+      clone.style.top = '0';
+      clone.style.width = '900px';
+      clone.style.zIndex = '-1';
       clone.style.backgroundColor = '#ffffff';
       clone.style.color = '#111827';
-      clone.style.padding = '0';
+      clone.style.padding = '24px';
+      clone.removeAttribute('id'); // Avoid duplicate IDs
+      document.body.appendChild(clone);
 
-      // Fix SVG diagrams for PDF rendering — ensure they have explicit dimensions
-      const svgs = clone.querySelectorAll('svg');
-      svgs.forEach((svg) => {
-        if (!svg.getAttribute('width')) {
-          const bbox = (element.querySelector(`svg[id="${svg.id}"]`) as SVGSVGElement)?.getBBox?.();
-          if (bbox) {
-            svg.setAttribute('width', String(Math.ceil(bbox.width + 20)));
-            svg.setAttribute('height', String(Math.ceil(bbox.height + 20)));
+      // Give the browser a frame to compute layout
+      await new Promise((r) => requestAnimationFrame(r));
+
+      // Fix SVG diagrams — ensure all have explicit width/height for html2canvas
+      const originalSvgs = element.querySelectorAll('svg');
+      const cloneSvgs = clone.querySelectorAll('svg');
+      cloneSvgs.forEach((svg, i) => {
+        const origSvg = originalSvgs[i] as SVGSVGElement | undefined;
+        if (!svg.getAttribute('width') || svg.getAttribute('width') === '100%') {
+          // Use the original's bounding rect (it's in-DOM with real layout)
+          const rect = origSvg?.getBoundingClientRect();
+          if (rect && rect.width > 0) {
+            svg.setAttribute('width', String(Math.ceil(rect.width)));
+            svg.setAttribute('height', String(Math.ceil(rect.height)));
+          }
+        }
+        svg.removeAttribute('id'); // Avoid duplicate IDs
+      });
+
+      // Force light-mode colors on all text for print readability
+      const allEls = clone.querySelectorAll('*');
+      allEls.forEach((el) => {
+        const htmlEl = el as HTMLElement;
+        const style = window.getComputedStyle(htmlEl);
+
+        // Convert any light-on-dark text to dark text
+        const color = style.color;
+        if (color) {
+          const match = color.match(/rgb\((\d+),\s*(\d+),\s*(\d+)/);
+          if (match) {
+            const [, r, g, b] = match.map(Number);
+            // If text is light (for dark backgrounds), make it dark
+            if (r > 150 && g > 150 && b > 150) {
+              htmlEl.style.color = '#111827';
+            }
+          }
+        }
+
+        // Fix dark backgrounds
+        const bg = style.backgroundColor;
+        if (bg && bg !== 'rgba(0, 0, 0, 0)' && bg !== 'transparent') {
+          const bgMatch = bg.match(/rgb\((\d+),\s*(\d+),\s*(\d+)/);
+          if (bgMatch) {
+            const [, r, g, b] = bgMatch.map(Number);
+            // Dark backgrounds → light
+            if (r < 60 && g < 60 && b < 60) {
+              htmlEl.style.backgroundColor = '#ffffff';
+            }
           }
         }
       });
 
-      // If in dark theme, restyle text colors in the clone for print
-      if (theme === 'dark') {
-        const allElements = clone.querySelectorAll('*');
-        allElements.forEach((el) => {
-          const htmlEl = el as HTMLElement;
-          const color = window.getComputedStyle(htmlEl).color;
-          // Convert light-on-dark colors to dark-on-light
-          if (color && (color.includes('rgb(255') || color.includes('rgb(209') || color.includes('rgb(156') || color.includes('rgb(229'))) {
-            htmlEl.style.color = '#111827';
+      // Fix table borders for print
+      clone.querySelectorAll('table, th, td').forEach((el) => {
+        (el as HTMLElement).style.borderColor = '#d1d5db';
+      });
+
+      // Fix code blocks
+      clone.querySelectorAll('pre').forEach((el) => {
+        el.style.backgroundColor = '#f3f4f6';
+        el.style.color = '#111827';
+      });
+
+      // Fix inline code
+      clone.querySelectorAll('code').forEach((el) => {
+        const style = window.getComputedStyle(el);
+        const bg = style.backgroundColor;
+        const bgMatch = bg?.match(/rgb\((\d+),\s*(\d+),\s*(\d+)/);
+        if (bgMatch) {
+          const [, r, g, b] = bgMatch.map(Number);
+          if (r < 60 && g < 60 && b < 60) {
+            el.style.backgroundColor = '#f3f4f6';
+            el.style.color = '#111827';
           }
-        });
-        // Fix table borders
-        const tables = clone.querySelectorAll('table, th, td');
-        tables.forEach((el) => {
-          (el as HTMLElement).style.borderColor = '#d1d5db';
-        });
-        // Fix code blocks
-        const codeBlocks = clone.querySelectorAll('pre');
-        codeBlocks.forEach((el) => {
-          el.style.backgroundColor = '#f3f4f6';
-          el.style.color = '#111827';
-        });
-      }
+        }
+      });
 
       const sanitizedFilename = filename.replace(/[^a-zA-Z0-9-_. ]/g, '_');
 
       // eslint-disable-next-line @typescript-eslint/no-explicit-any
       const opt: any = {
-        margin: [15, 15, 15, 15],
+        margin: [10, 10, 10, 10],
         filename: `${sanitizedFilename}.pdf`,
-        image: { type: 'jpeg', quality: 0.98 },
+        image: { type: 'jpeg', quality: 0.95 },
         html2canvas: {
           scale: 2,
           useCORS: true,
@@ -93,6 +141,7 @@ export default function PdfExportButton({
           letterRendering: true,
           scrollY: 0,
           windowWidth: 900,
+          backgroundColor: '#ffffff',
         },
         jsPDF: {
           unit: 'mm',
@@ -111,9 +160,12 @@ export default function PdfExportButton({
     } catch (err) {
       console.error('PDF export failed:', err);
     } finally {
+      if (clone && clone.parentNode) {
+        clone.parentNode.removeChild(clone);
+      }
       setExporting(false);
     }
-  }, [contentSelector, filename, theme]);
+  }, [contentSelector, filename]);
 
   const isLight = theme === 'light';
   const baseStyles = isLight
