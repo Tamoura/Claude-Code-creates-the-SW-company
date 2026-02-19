@@ -28,7 +28,8 @@
 | 3114 | linkedin-agent | Active | http://localhost:3114 |
 | 3115 | codeguardian | Active | http://localhost:3115 |
 | 3116 | archforge | Active | http://localhost:3116 |
-| 3117-3199 | *Available* | Free | - |
+| 3117 | humanid | Active | http://localhost:3117 |
+| 3118-3199 | *Available* | Free | - |
 
 ### Backend APIs (5000-5099)
 
@@ -43,7 +44,8 @@
 | 5010 | linkedin-agent | Active | http://localhost:5010 |
 | 5011 | codeguardian | Active | http://localhost:5011 |
 | 5012 | archforge | Active | http://localhost:5012 |
-| 5013-5099 | *Available* | Free | - |
+| 5013 | humanid | Active | http://localhost:5013 |
+| 5014-5099 | *Available* | Free | - |
 
 ### Mobile Development (8081-8099)
 

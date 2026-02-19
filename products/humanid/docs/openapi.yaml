@@ -1,0 +1,2032 @@
+openapi: 3.0.3
+info:
+  title: HumanID API
+  description: |
+    Universal Digital Identity Platform API.
+
+    HumanID enables decentralized identity creation, verifiable credential management,
+    zero-knowledge proof verification, and blockchain-anchored identity events.
+
+    ## Authentication
+
+    The API supports two authentication methods:
+    - **JWT Bearer Token**: For user sessions (`Authorization: Bearer <token>`)
+    - **API Key**: For developer integrations (`Authorization: ApiKey <key>`)
+
+    ## Rate Limiting
+
+    | Tier | Limit | Use Case |
+    |------|-------|----------|
+    | Public | 20 req/hr | Unauthenticated endpoints |
+    | Authenticated | 1,000 req/hr | JWT users |
+    | Sandbox | 100 req/hr | Sandbox API keys |
+    | Production | 10,000 req/hr | Production API keys |
+    | Enterprise | Custom | Negotiated |
+
+    Rate limit headers: `X-RateLimit-Limit`, `X-RateLimit-Remaining`, `X-RateLimit-Reset`
+  version: 1.0.0
+  contact:
+    name: HumanID Developer Support
+    url: https://humanid.io/developer
+    email: developers@humanid.io
+  license:
+    name: Proprietary
+    url: https://humanid.io/legal/terms
+
+servers:
+  - url: http://localhost:5013/api/v1
+    description: Local development
+  - url: https://api.humanid.io/v1
+    description: Production
+
+tags:
+  - name: Auth
+    description: User registration, login, and session management
+  - name: DIDs
+    description: Decentralized Identifier creation, resolution, and management
+  - name: Credentials
+    description: Verifiable Credential issuance, storage, and revocation
+  - name: Verification
+    description: Credential verification and presentation
+  - name: Issuers
+    description: Trusted issuer registration and management
+  - name: Developers
+    description: Developer portal, API keys, and sandbox
+  - name: Admin
+    description: Platform administration (admin role required)
+  - name: Templates
+    description: Credential template management (issuer role required)
+  - name: Wallet
+    description: Identity wallet operations (holder role)
+
+# ============================================================================
+# SECURITY SCHEMES
+# ============================================================================
+
+security: []
+
+components:
+  securitySchemes:
+    BearerAuth:
+      type: http
+      scheme: bearer
+      bearerFormat: JWT
+      description: JWT access token (15 min expiry)
+    ApiKeyAuth:
+      type: apiKey
+      in: header
+      name: Authorization
+      description: "API key authentication: `ApiKey humanid_sk_...`"
+
+  # ==========================================================================
+  # REUSABLE SCHEMAS
+  # ==========================================================================
+  schemas:
+    # --- Common ---
+    Error:
+      type: object
+      required: [type, title, status, detail]
+      properties:
+        type:
+          type: string
+          format: uri
+          example: "https://humanid.io/errors/validation-error"
+        title:
+          type: string
+          example: "Validation Error"
+        status:
+          type: integer
+          example: 400
+        detail:
+          type: string
+          example: "The 'email' field is required"
+        instance:
+          type: string
+          example: "/api/v1/auth/register"
+        extensions:
+          type: object
+          additionalProperties: true
+
+    PaginatedResponse:
+      type: object
+      properties:
+        page:
+          type: integer
+          example: 1
+        limit:
+          type: integer
+          example: 20
+        total:
+          type: integer
+          example: 150
+        totalPages:
+          type: integer
+          example: 8
+        hasMore:
+          type: boolean
+          example: true
+
+    # --- Auth ---
+    RegisterRequest:
+      type: object
+      required: [email, password, role]
+      properties:
+        email:
+          type: string
+          format: email
+          example: "amira@example.com"
+        password:
+          type: string
+          minLength: 8
+          example: "SecurePass123!"
+          description: "Min 8 chars, 1 uppercase, 1 lowercase, 1 digit, 1 special"
+        role:
+          type: string
+          enum: [holder, issuer, developer]
+          example: "holder"
+        organizationName:
+          type: string
+          description: "Required for issuer and developer roles"
+          example: "University of Ghana"
+
+    LoginRequest:
+      type: object
+      required: [email, password]
+      properties:
+        email:
+          type: string
+          format: email
+          example: "amira@example.com"
+        password:
+          type: string
+          example: "SecurePass123!"
+
+    AuthResponse:
+      type: object
+      properties:
+        accessToken:
+          type: string
+          example: "eyJhbGciOiJFZERTQSIs..."
+        expiresIn:
+          type: integer
+          example: 900
+          description: "Token TTL in seconds (15 min)"
+        user:
+          type: object
+          properties:
+            id:
+              type: string
+              format: uuid
+            email:
+              type: string
+              format: email
+            role:
+              type: string
+              enum: [holder, issuer, developer, admin]
+            emailVerified:
+              type: boolean
+
+    # --- DID ---
+    CreateDIDRequest:
+      type: object
+      required: [did, didDocument, publicKey]
+      properties:
+        did:
+          type: string
+          pattern: "^did:humanid:[a-zA-Z0-9]+$"
+          example: "did:humanid:z6Mkf5rGMoatrSj1f37YtUbQ..."
+        didDocument:
+          type: object
+          description: "W3C DID Document JSON-LD"
+          properties:
+            "@context":
+              type: array
+              items:
+                type: string
+              example: ["https://www.w3.org/ns/did/v1", "https://w3id.org/security/suites/ed25519-2020/v1"]
+            id:
+              type: string
+              example: "did:humanid:z6Mkf5rGMoatrSj1f37YtUbQ..."
+            verificationMethod:
+              type: array
+              items:
+                type: object
+            authentication:
+              type: array
+              items:
+                type: string
+            assertionMethod:
+              type: array
+              items:
+                type: string
+        publicKey:
+          type: string
+          description: "Ed25519 public key (base58 encoded)"
+          example: "z6Mkf5rGMoatrSj1f37YtUbQ..."
+        fido2CredentialId:
+          type: string
+          description: "WebAuthn credential ID from biometric enrollment"
+        fido2PublicKey:
+          type: string
+          description: "WebAuthn public key"
+        biometricTemplateHash:
+          type: string
+          description: "SHA-256 hash of on-device biometric template"
+
+    DIDResponse:
+      type: object
+      properties:
+        id:
+          type: string
+          format: uuid
+        did:
+          type: string
+          example: "did:humanid:z6Mkf5rGMoatrSj1f37YtUbQ..."
+        status:
+          type: string
+          enum: [active, suspended, deactivated]
+        didDocument:
+          type: object
+          description: "W3C DID Document"
+        publicKey:
+          type: string
+        recoveryConfigured:
+          type: boolean
+        anchoringStatus:
+          type: string
+          enum: [pending, confirmed, failed]
+        createdAt:
+          type: string
+          format: date-time
+
+    DIDDocumentResponse:
+      type: object
+      description: "W3C DID Document"
+      properties:
+        "@context":
+          type: array
+          items:
+            type: string
+        id:
+          type: string
+        verificationMethod:
+          type: array
+          items:
+            type: object
+        authentication:
+          type: array
+        assertionMethod:
+          type: array
+        keyAgreement:
+          type: array
+        service:
+          type: array
+
+    # --- Credential ---
+    IssueCredentialRequest:
+      type: object
+      required: [holderDid, credentialType, claims]
+      properties:
+        holderDid:
+          type: string
+          example: "did:humanid:z6Mkf5rGMoatrSj1f37YtUbQ..."
+        templateId:
+          type: string
+          format: uuid
+          description: "Optional credential template ID"
+        credentialType:
+          type: string
+          example: "BachelorsDegree"
+        claims:
+          type: object
+          description: "Credential claims (key-value pairs)"
+          example:
+            degree: "Bachelor of Science"
+            field: "Computer Science"
+            honors: "Cum Laude"
+            graduationDate: "2025-06-15"
+        expiresAt:
+          type: string
+          format: date-time
+          description: "Optional expiry date"
+
+    CredentialResponse:
+      type: object
+      properties:
+        id:
+          type: string
+          format: uuid
+        credentialType:
+          type: string
+        holderDid:
+          type: string
+        issuerDid:
+          type: string
+        issuerName:
+          type: string
+        status:
+          type: string
+          enum: [offered, active, revoked, expired, suspended]
+        claims:
+          type: object
+          description: "Decrypted credential claims (only visible to holder)"
+        proof:
+          type: object
+          description: "Ed25519Signature2020 proof"
+        issuedAt:
+          type: string
+          format: date-time
+        expiresAt:
+          type: string
+          format: date-time
+        anchorTxHash:
+          type: string
+          description: "Blockchain transaction hash (null if pending)"
+
+    BatchIssueRequest:
+      type: object
+      required: [templateId, credentials]
+      properties:
+        templateId:
+          type: string
+          format: uuid
+        credentials:
+          type: array
+          maxItems: 500
+          items:
+            type: object
+            required: [holderDid, claims]
+            properties:
+              holderDid:
+                type: string
+              claims:
+                type: object
+
+    BatchIssueResponse:
+      type: object
+      properties:
+        total:
+          type: integer
+          example: 500
+        succeeded:
+          type: integer
+          example: 498
+        failed:
+          type: integer
+          example: 2
+        results:
+          type: array
+          items:
+            type: object
+            properties:
+              index:
+                type: integer
+              status:
+                type: string
+                enum: [success, failed]
+              credentialId:
+                type: string
+                format: uuid
+              error:
+                type: string
+
+    ReceiveCredentialRequest:
+      type: object
+      required: [credentialId]
+      properties:
+        credentialId:
+          type: string
+          format: uuid
+          description: "ID of the offered credential to accept"
+
+    # --- Verification ---
+    CreateVerificationRequest:
+      type: object
+      required: [holderDid, requestedAttributes]
+      properties:
+        holderDid:
+          type: string
+          example: "did:humanid:z6Mkf5rGMoatrSj1f37YtUbQ..."
+        requestedAttributes:
+          type: object
+          properties:
+            required:
+              type: array
+              items:
+                type: string
+              example: ["full_name", "date_of_birth"]
+            optional:
+              type: array
+              items:
+                type: string
+              example: ["nationality"]
+        credentialType:
+          type: string
+          description: "Optional filter by credential type"
+          example: "NationalID"
+        purpose:
+          type: string
+          description: "Human-readable verification purpose"
+          example: "KYC verification for account opening"
+
+    VerificationRequestResponse:
+      type: object
+      properties:
+        id:
+          type: string
+          format: uuid
+        status:
+          type: string
+          enum: [created, sent, pending, approved, denied, expired, verified, failed]
+        holderDid:
+          type: string
+        requestedAttributes:
+          type: object
+        createdAt:
+          type: string
+          format: date-time
+        expiresAt:
+          type: string
+          format: date-time
+
+    PresentCredentialRequest:
+      type: object
+      required: [requestId, presentation]
+      properties:
+        requestId:
+          type: string
+          format: uuid
+        presentation:
+          type: object
+          description: "W3C Verifiable Presentation"
+          properties:
+            "@context":
+              type: array
+              items:
+                type: string
+            type:
+              type: array
+              items:
+                type: string
+            verifiableCredential:
+              type: array
+              items:
+                type: object
+            proof:
+              type: object
+        zkpProof:
+          type: object
+          description: "Optional Groth16 ZKP proof for selective disclosure"
+          properties:
+            proof:
+              type: object
+              description: "Groth16 proof (pi_a, pi_b, pi_c)"
+            publicSignals:
+              type: array
+              items:
+                type: string
+            circuit:
+              type: string
+              description: "Circuit identifier"
+
+    VerificationResult:
+      type: object
+      properties:
+        verified:
+          type: boolean
+          example: true
+        claims:
+          type: object
+          description: "Verified claims from the presentation"
+          example:
+            full_name: "Amira Hassan"
+            age_over_18: true
+        issuer:
+          type: object
+          properties:
+            did:
+              type: string
+            name:
+              type: string
+            trustStatus:
+              type: string
+        confidence:
+          type: string
+          enum: [high, medium, low]
+          description: "Based on issuer trust level and proof type"
+        verificationId:
+          type: string
+          format: uuid
+        timestamp:
+          type: string
+          format: date-time
+        reason:
+          type: string
+          description: "Failure reason (only when verified=false)"
+          example: "credential_revoked"
+
+    # --- Issuer ---
+    RegisterIssuerRequest:
+      type: object
+      required: [organizationName, didId]
+      properties:
+        organizationName:
+          type: string
+          example: "University of Ghana"
+        didId:
+          type: string
+          format: uuid
+        legalEntityId:
+          type: string
+          description: "Legal entity registration number"
+          example: "GH-REG-2025-00123"
+        allowedCredentialTypes:
+          type: array
+          items:
+            type: string
+          example: ["BachelorsDegree", "MastersDegree", "Transcript"]
+        verificationDocuments:
+          type: array
+          items:
+            type: object
+            properties:
+              type:
+                type: string
+                example: "registration_certificate"
+              url:
+                type: string
+                format: uri
+
+    IssuerResponse:
+      type: object
+      properties:
+        id:
+          type: string
+          format: uuid
+        organizationName:
+          type: string
+        did:
+          type: string
+        trustStatus:
+          type: string
+          enum: [pending, trusted, revoked]
+        allowedCredentialTypes:
+          type: array
+          items:
+            type: string
+        verifiedAt:
+          type: string
+          format: date-time
+        createdAt:
+          type: string
+          format: date-time
+
+    # --- Developer ---
+    DeveloperRegisterRequest:
+      type: object
+      required: [email, password, organizationName]
+      properties:
+        email:
+          type: string
+          format: email
+          example: "raj@fintech.app"
+        password:
+          type: string
+          minLength: 8
+        organizationName:
+          type: string
+          example: "Raj's Fintech"
+
+    CreateApiKeyRequest:
+      type: object
+      required: [name, environment]
+      properties:
+        name:
+          type: string
+          example: "Production Key"
+        environment:
+          type: string
+          enum: [sandbox, production]
+
+    ApiKeyResponse:
+      type: object
+      properties:
+        id:
+          type: string
+          format: uuid
+        name:
+          type: string
+        keyPrefix:
+          type: string
+          example: "humanid_sk_"
+        environment:
+          type: string
+          enum: [sandbox, production]
+        rateLimit:
+          type: integer
+          example: 100
+        status:
+          type: string
+          enum: [active, revoked]
+        lastUsedAt:
+          type: string
+          format: date-time
+        createdAt:
+          type: string
+          format: date-time
+        key:
+          type: string
+          description: "Full API key (only returned on creation, never again)"
+          example: "humanid_sk_test_abc123..."
+
+    UsageResponse:
+      type: object
+      properties:
+        period:
+          type: string
+          example: "2026-02"
+        totalRequests:
+          type: integer
+          example: 4523
+        verificationsByType:
+          type: object
+          example:
+            identity: 2100
+            credential: 1800
+            zkp: 623
+        dailyBreakdown:
+          type: array
+          items:
+            type: object
+            properties:
+              date:
+                type: string
+                format: date
+              requests:
+                type: integer
+        rateLimit:
+          type: object
+          properties:
+            limit:
+              type: integer
+            remaining:
+              type: integer
+            resetsAt:
+              type: string
+              format: date-time
+
+    # --- Template ---
+    CreateTemplateRequest:
+      type: object
+      required: [name, credentialType, schema, requiredAttributes]
+      properties:
+        name:
+          type: string
+          example: "Bachelor's Degree"
+        credentialType:
+          type: string
+          example: "BachelorsDegree"
+        schema:
+          type: object
+          description: "JSON-LD schema"
+        requiredAttributes:
+          type: array
+          items:
+            type: string
+          example: ["degree", "field", "graduationDate"]
+        optionalAttributes:
+          type: array
+          items:
+            type: string
+          example: ["honors", "gpa"]
+        defaultExpiryDays:
+          type: integer
+          example: 3650
+
+    TemplateResponse:
+      type: object
+      properties:
+        id:
+          type: string
+          format: uuid
+        name:
+          type: string
+        credentialType:
+          type: string
+        schema:
+          type: object
+        requiredAttributes:
+          type: array
+          items:
+            type: string
+        optionalAttributes:
+          type: array
+          items:
+            type: string
+        defaultExpiryDays:
+          type: integer
+        isActive:
+          type: boolean
+        createdAt:
+          type: string
+          format: date-time
+
+    # --- Wallet ---
+    WalletCredentialResponse:
+      type: object
+      properties:
+        credentials:
+          type: array
+          items:
+            $ref: '#/components/schemas/CredentialResponse'
+        categories:
+          type: object
+          description: "Credentials grouped by category"
+          properties:
+            identity:
+              type: array
+              items:
+                $ref: '#/components/schemas/CredentialResponse'
+            education:
+              type: array
+              items:
+                $ref: '#/components/schemas/CredentialResponse'
+            employment:
+              type: array
+              items:
+                $ref: '#/components/schemas/CredentialResponse'
+            finance:
+              type: array
+              items:
+                $ref: '#/components/schemas/CredentialResponse'
+
+    SharingHistoryResponse:
+      type: object
+      properties:
+        presentations:
+          type: array
+          items:
+            type: object
+            properties:
+              id:
+                type: string
+                format: uuid
+              credentialType:
+                type: string
+              verifierName:
+                type: string
+              disclosedAttributes:
+                type: array
+                items:
+                  type: string
+              proofType:
+                type: string
+                enum: [full, selective, zkp]
+              status:
+                type: string
+                enum: [active, revoked]
+              presentedAt:
+                type: string
+                format: date-time
+
+    ScanQRRequest:
+      type: object
+      required: [qrData]
+      properties:
+        qrData:
+          type: string
+          description: "Decoded QR code content (credential offer or verification request URL)"
+
+    ScanQRResponse:
+      type: object
+      properties:
+        type:
+          type: string
+          enum: [credential_offer, verification_request]
+        credentialOffer:
+          $ref: '#/components/schemas/CredentialResponse'
+        verificationRequest:
+          $ref: '#/components/schemas/VerificationRequestResponse'
+
+    # --- Admin ---
+    AdminAnalyticsResponse:
+      type: object
+      properties:
+        totalDIDs:
+          type: integer
+        totalCredentials:
+          type: integer
+        totalVerifications:
+          type: integer
+        verificationsPerDay:
+          type: array
+          items:
+            type: object
+            properties:
+              date:
+                type: string
+                format: date
+              count:
+                type: integer
+        topIssuers:
+          type: array
+          items:
+            type: object
+            properties:
+              id:
+                type: string
+              organizationName:
+                type: string
+              credentialsIssued:
+                type: integer
+        topVerifiers:
+          type: array
+          items:
+            type: object
+            properties:
+              id:
+                type: string
+              verificationsCount:
+                type: integer
+
+    AuditLogEntry:
+      type: object
+      properties:
+        id:
+          type: string
+          format: uuid
+        userId:
+          type: string
+          format: uuid
+        action:
+          type: string
+        entityType:
+          type: string
+        entityId:
+          type: string
+        metadata:
+          type: object
+        ipAddress:
+          type: string
+        createdAt:
+          type: string
+          format: date-time
+
+  # ==========================================================================
+  # REUSABLE PARAMETERS
+  # ==========================================================================
+  parameters:
+    PageParam:
+      name: page
+      in: query
+      schema:
+        type: integer
+        minimum: 1
+        default: 1
+    LimitParam:
+      name: limit
+      in: query
+      schema:
+        type: integer
+        minimum: 1
+        maximum: 100
+        default: 20
+    StatusFilter:
+      name: status
+      in: query
+      schema:
+        type: string
+
+# ============================================================================
+# PATHS
+# ============================================================================
+
+paths:
+  # --- AUTH (5 endpoints) ---
+  /auth/register:
+    post:
+      tags: [Auth]
+      summary: Register a new user account
+      operationId: registerUser
+      description: |
+        Create a new user account. Sends email verification link.
+        Supports holder, issuer, and developer roles.
+        **US-11**: Developer registration with sandbox API key provisioning.
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              $ref: '#/components/schemas/RegisterRequest'
+      responses:
+        '201':
+          description: User registered successfully
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/AuthResponse'
+        '400':
+          description: Validation error
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/Error'
+        '409':
+          description: Email already registered
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/Error'
+
+  /auth/login:
+    post:
+      tags: [Auth]
+      summary: Login with email and password
+      operationId: loginUser
+      description: Returns JWT access token and sets httpOnly refresh token cookie.
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              $ref: '#/components/schemas/LoginRequest'
+      responses:
+        '200':
+          description: Login successful
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/AuthResponse'
+          headers:
+            Set-Cookie:
+              schema:
+                type: string
+              description: "httpOnly refresh token cookie"
+        '401':
+          description: Invalid credentials
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/Error'
+
+  /auth/refresh:
+    post:
+      tags: [Auth]
+      summary: Refresh access token
+      operationId: refreshToken
+      description: Uses httpOnly refresh token cookie to issue new access token (token rotation).
+      responses:
+        '200':
+          description: Token refreshed
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/AuthResponse'
+        '401':
+          description: Invalid or expired refresh token
+
+  /auth/logout:
+    post:
+      tags: [Auth]
+      summary: Logout and revoke refresh token
+      operationId: logoutUser
+      security:
+        - BearerAuth: []
+      description: Revokes the refresh token and clears the cookie.
+      responses:
+        '204':
+          description: Logged out successfully
+
+  /auth/verify-email:
+    post:
+      tags: [Auth]
+      summary: Verify email address
+      operationId: verifyEmail
+      description: |
+        Verify email with the token sent during registration.
+        **US-11**: Part of developer registration flow.
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              type: object
+              required: [token]
+              properties:
+                token:
+                  type: string
+                  description: "Email verification token"
+      responses:
+        '200':
+          description: Email verified successfully
+        '400':
+          description: Invalid or expired token
+
+  # --- DIDS (4 endpoints) ---
+  /dids:
+    post:
+      tags: [DIDs]
+      summary: Create a new DID
+      operationId: createDID
+      security:
+        - BearerAuth: []
+      description: |
+        Create a decentralized identifier. The DID, key pair, and biometric
+        enrollment happen on-device. This endpoint registers the DID document
+        with the server and triggers async blockchain anchoring.
+        **US-01**: Create Decentralized Identifier.
+        **US-02**: Biometric enrollment (FIDO2 credential linked).
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              $ref: '#/components/schemas/CreateDIDRequest'
+      responses:
+        '201':
+          description: DID created
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/DIDResponse'
+        '400':
+          description: Invalid DID document
+        '409':
+          description: DID already exists
+
+  /dids/{did}:
+    get:
+      tags: [DIDs]
+      summary: Resolve a DID document
+      operationId: resolveDID
+      description: |
+        Resolve a DID to its DID document. Public endpoint (no auth required).
+        Returns the latest version of the DID document.
+        **FR-002**: Publish DID documents to the resolver.
+      parameters:
+        - name: did
+          in: path
+          required: true
+          schema:
+            type: string
+          example: "did:humanid:z6Mkf5rGMoatrSj1f37YtUbQ..."
+      responses:
+        '200':
+          description: DID document resolved
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/DIDDocumentResponse'
+        '404':
+          description: DID not found
+
+    put:
+      tags: [DIDs]
+      summary: Update a DID document
+      operationId: updateDID
+      security:
+        - BearerAuth: []
+      description: |
+        Update the DID document (new version). Only the DID owner can update.
+        Used for key rotation, service endpoint updates, and recovery configuration.
+        **US-03**: Recovery setup updates the DID document.
+      parameters:
+        - name: did
+          in: path
+          required: true
+          schema:
+            type: string
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              type: object
+              properties:
+                didDocument:
+                  type: object
+                  description: "Updated W3C DID Document"
+                recoveryConfig:
+                  type: object
+                  description: "Recovery configuration"
+                  properties:
+                    method:
+                      type: string
+                      enum: [phrase, social, cloud]
+                    encryptedConfig:
+                      type: string
+                      description: "AES-256-GCM encrypted recovery data"
+      responses:
+        '200':
+          description: DID updated
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/DIDResponse'
+        '403':
+          description: Not the DID owner
+        '404':
+          description: DID not found
+
+    delete:
+      tags: [DIDs]
+      summary: Deactivate a DID
+      operationId: deactivateDID
+      security:
+        - BearerAuth: []
+      description: |
+        Deactivate a DID. This marks the DID as deactivated, anchors the
+        deactivation on-chain, and queues PII for 30-day purge (GDPR).
+      parameters:
+        - name: did
+          in: path
+          required: true
+          schema:
+            type: string
+      responses:
+        '200':
+          description: DID deactivated
+        '403':
+          description: Not the DID owner
+        '404':
+          description: DID not found
+
+  # --- CREDENTIALS (6 endpoints) ---
+  /credentials:
+    post:
+      tags: [Credentials]
+      summary: Issue a verifiable credential
+      operationId: issueCredential
+      security:
+        - BearerAuth: []
+      description: |
+        Issue a W3C Verifiable Credential to a holder. Requires issuer role
+        and trusted issuer status. Claims are encrypted at rest.
+        **US-07**: Issue a Verifiable Credential.
+        **FR-008**: W3C VC signed with Ed25519.
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              $ref: '#/components/schemas/IssueCredentialRequest'
+      responses:
+        '201':
+          description: Credential issued
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/CredentialResponse'
+        '400':
+          description: Invalid claims or missing required fields
+        '403':
+          description: Not a trusted issuer
+
+    get:
+      tags: [Credentials]
+      summary: List credentials
+      operationId: listCredentials
+      security:
+        - BearerAuth: []
+      description: |
+        List credentials. For holders: their wallet. For issuers: issued credentials.
+        **US-15**: View credentials in wallet.
+      parameters:
+        - $ref: '#/components/parameters/PageParam'
+        - $ref: '#/components/parameters/LimitParam'
+        - name: status
+          in: query
+          schema:
+            type: string
+            enum: [offered, active, revoked, expired, suspended]
+        - name: credentialType
+          in: query
+          schema:
+            type: string
+      responses:
+        '200':
+          description: Credentials list
+          content:
+            application/json:
+              schema:
+                allOf:
+                  - $ref: '#/components/schemas/PaginatedResponse'
+                  - type: object
+                    properties:
+                      data:
+                        type: array
+                        items:
+                          $ref: '#/components/schemas/CredentialResponse'
+
+  /credentials/receive:
+    post:
+      tags: [Credentials]
+      summary: Accept a credential offer
+      operationId: receiveCredential
+      security:
+        - BearerAuth: []
+      description: |
+        Accept a credential offer. Verifies the issuer's signature before storing.
+        **US-04**: Receive a Verifiable Credential.
+        **FR-010**: Verify issuer signature on receive.
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              $ref: '#/components/schemas/ReceiveCredentialRequest'
+      responses:
+        '200':
+          description: Credential accepted and stored
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/CredentialResponse'
+        '400':
+          description: Invalid issuer signature
+        '404':
+          description: Credential offer not found
+
+  /credentials/{id}:
+    get:
+      tags: [Credentials]
+      summary: Get credential details
+      operationId: getCredential
+      security:
+        - BearerAuth: []
+      description: |
+        Get full credential details including claims, proof, and anchor status.
+        Only accessible by the credential holder or issuer.
+        **US-15**: View credential detail in wallet.
+      parameters:
+        - name: id
+          in: path
+          required: true
+          schema:
+            type: string
+            format: uuid
+      responses:
+        '200':
+          description: Credential details
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/CredentialResponse'
+        '403':
+          description: Not authorized to view this credential
+        '404':
+          description: Credential not found
+
+  /credentials/{id}/revoke:
+    post:
+      tags: [Credentials]
+      summary: Revoke a credential
+      operationId: revokeCredential
+      security:
+        - BearerAuth: []
+      description: |
+        Revoke a credential. Only the original issuer can revoke.
+        Anchors revocation on-chain within 60 seconds.
+        **US-06**: Revoke credential.
+        **FR-014**: On-chain revocation.
+      parameters:
+        - name: id
+          in: path
+          required: true
+          schema:
+            type: string
+            format: uuid
+      requestBody:
+        content:
+          application/json:
+            schema:
+              type: object
+              properties:
+                reason:
+                  type: string
+                  example: "Credential data is no longer accurate"
+      responses:
+        '200':
+          description: Credential revoked
+        '403':
+          description: Not the credential issuer
+        '404':
+          description: Credential not found
+        '409':
+          description: Credential already revoked
+
+  /credentials/batch:
+    post:
+      tags: [Credentials]
+      summary: Batch issue credentials
+      operationId: batchIssueCredentials
+      security:
+        - BearerAuth: []
+      description: |
+        Issue up to 500 credentials in a single request.
+        Target: complete within 60 seconds.
+        **US-07**: Batch issuance.
+        **FR-012**: 500 credentials in 60s.
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              $ref: '#/components/schemas/BatchIssueRequest'
+      responses:
+        '200':
+          description: Batch issuance results
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/BatchIssueResponse'
+        '400':
+          description: Invalid batch data
+        '403':
+          description: Not a trusted issuer
+
+  # --- VERIFICATION (4 endpoints) ---
+  /verify/request:
+    post:
+      tags: [Verification]
+      summary: Create a verification request
+      operationId: createVerificationRequest
+      security:
+        - BearerAuth: []
+        - ApiKeyAuth: []
+      description: |
+        Create a verification request specifying which attributes are needed.
+        The holder is notified and can approve/deny.
+        **US-10**: Verifier-initiated presentation request.
+        **US-12**: SDK integration via API key.
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              $ref: '#/components/schemas/CreateVerificationRequest'
+      responses:
+        '201':
+          description: Verification request created
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/VerificationRequestResponse'
+        '400':
+          description: Invalid request
+        '404':
+          description: Holder DID not found
+
+  /verify/present:
+    post:
+      tags: [Verification]
+      summary: Present credentials for verification
+      operationId: presentCredentials
+      security:
+        - BearerAuth: []
+      description: |
+        Submit a verifiable presentation in response to a verification request.
+        Supports both full disclosure and ZKP selective disclosure.
+        **US-05**: Selective disclosure with ZKP.
+        **US-09**: Verify presented credential.
+        **FR-015**: Four-check verification in < 2 seconds.
+        **FR-016**: ZKP selective disclosure.
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              $ref: '#/components/schemas/PresentCredentialRequest'
+      responses:
+        '200':
+          description: Verification result
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/VerificationResult'
+        '400':
+          description: Invalid presentation
+        '404':
+          description: Verification request not found
+
+  /verify/{id}/status:
+    get:
+      tags: [Verification]
+      summary: Check verification request status
+      operationId: getVerificationStatus
+      security:
+        - BearerAuth: []
+        - ApiKeyAuth: []
+      description: |
+        Poll the status of a verification request. Used by SDK for async flow.
+        **US-09**: Verification status polling.
+      parameters:
+        - name: id
+          in: path
+          required: true
+          schema:
+            type: string
+            format: uuid
+      responses:
+        '200':
+          description: Verification request status
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/VerificationRequestResponse'
+        '404':
+          description: Request not found
+
+  /verify/{id}/result:
+    get:
+      tags: [Verification]
+      summary: Get verification result
+      operationId: getVerificationResult
+      security:
+        - BearerAuth: []
+        - ApiKeyAuth: []
+      description: |
+        Get the full verification result (only available when status is 'verified' or 'failed').
+        **US-09**: Get verification outcome.
+      parameters:
+        - name: id
+          in: path
+          required: true
+          schema:
+            type: string
+            format: uuid
+      responses:
+        '200':
+          description: Verification result
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/VerificationResult'
+        '404':
+          description: Request not found
+        '409':
+          description: Verification not yet complete
+
+  # --- ISSUERS (4 endpoints) ---
+  /issuers/register:
+    post:
+      tags: [Issuers]
+      summary: Register as a credential issuer
+      operationId: registerIssuer
+      security:
+        - BearerAuth: []
+      description: |
+        Register an organization as a credential issuer.
+        Starts in 'pending' status until admin approval.
+        **US-07**: Issuer registration prerequisite.
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              $ref: '#/components/schemas/RegisterIssuerRequest'
+      responses:
+        '201':
+          description: Issuer registration submitted
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/IssuerResponse'
+        '400':
+          description: Validation error
+        '409':
+          description: Issuer already registered
+
+  /issuers/{id}/verify:
+    put:
+      tags: [Issuers]
+      summary: Verify (approve) an issuer
+      operationId: verifyIssuer
+      security:
+        - BearerAuth: []
+      description: |
+        Admin-only. Approve an issuer's trust status.
+        **US-17**: Manage trusted issuers.
+      parameters:
+        - name: id
+          in: path
+          required: true
+          schema:
+            type: string
+            format: uuid
+      requestBody:
+        content:
+          application/json:
+            schema:
+              type: object
+              properties:
+                trustStatus:
+                  type: string
+                  enum: [trusted, revoked]
+                reason:
+                  type: string
+      responses:
+        '200':
+          description: Issuer trust status updated
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/IssuerResponse'
+        '403':
+          description: Admin role required
+        '404':
+          description: Issuer not found
+
+  /issuers:
+    get:
+      tags: [Issuers]
+      summary: List issuers
+      operationId: listIssuers
+      security:
+        - BearerAuth: []
+      description: |
+        List issuers. Regular users see trusted issuers only.
+        Admins see all issuers with all trust statuses.
+        **US-17**: Issuer management.
+      parameters:
+        - $ref: '#/components/parameters/PageParam'
+        - $ref: '#/components/parameters/LimitParam'
+        - name: trustStatus
+          in: query
+          schema:
+            type: string
+            enum: [pending, trusted, revoked]
+      responses:
+        '200':
+          description: Issuers list
+          content:
+            application/json:
+              schema:
+                allOf:
+                  - $ref: '#/components/schemas/PaginatedResponse'
+                  - type: object
+                    properties:
+                      data:
+                        type: array
+                        items:
+                          $ref: '#/components/schemas/IssuerResponse'
+
+  /issuers/{id}/revoke:
+    post:
+      tags: [Issuers]
+      summary: Revoke issuer trust
+      operationId: revokeIssuer
+      security:
+        - BearerAuth: []
+      description: |
+        Admin-only. Revoke an issuer's trusted status.
+        Future verifications of their credentials will return 'untrusted_issuer'.
+        **US-17**: Manage trusted issuers.
+      parameters:
+        - name: id
+          in: path
+          required: true
+          schema:
+            type: string
+            format: uuid
+      requestBody:
+        content:
+          application/json:
+            schema:
+              type: object
+              required: [reason]
+              properties:
+                reason:
+                  type: string
+                  example: "Organization failed compliance audit"
+      responses:
+        '200':
+          description: Issuer trust revoked
+        '403':
+          description: Admin role required
+        '404':
+          description: Issuer not found
+
+  # --- DEVELOPERS (4 endpoints) ---
+  /developers/register:
+    post:
+      tags: [Developers]
+      summary: Register a developer account
+      operationId: registerDeveloper
+      description: |
+        Create a developer account with sandbox API key.
+        Email verification required before production access.
+        **US-11**: Developer registration with sandbox key in 30 seconds.
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              $ref: '#/components/schemas/DeveloperRegisterRequest'
+      responses:
+        '201':
+          description: Developer registered with sandbox API key
+          content:
+            application/json:
+              schema:
+                type: object
+                properties:
+                  user:
+                    $ref: '#/components/schemas/AuthResponse'
+                  sandboxApiKey:
+                    $ref: '#/components/schemas/ApiKeyResponse'
+        '409':
+          description: Email already registered
+
+  /developers/api-keys:
+    post:
+      tags: [Developers]
+      summary: Create an API key
+      operationId: createApiKey
+      security:
+        - BearerAuth: []
+      description: |
+        Create a new API key. Production keys require email verification.
+        **US-11**: API key management.
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              $ref: '#/components/schemas/CreateApiKeyRequest'
+      responses:
+        '201':
+          description: API key created (full key returned only once)
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/ApiKeyResponse'
+        '403':
+          description: Email not verified (for production keys)
+
+  /developers/usage:
+    get:
+      tags: [Developers]
+      summary: Get API usage statistics
+      operationId: getUsage
+      security:
+        - BearerAuth: []
+      description: |
+        Get API usage statistics for the authenticated developer.
+        **US-13**: View API usage and billing.
+      parameters:
+        - name: period
+          in: query
+          schema:
+            type: string
+            example: "2026-02"
+            description: "YYYY-MM format"
+      responses:
+        '200':
+          description: Usage statistics
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/UsageResponse'
+
+  /developers/sandbox:
+    post:
+      tags: [Developers]
+      summary: Create sandbox environment
+      operationId: createSandbox
+      security:
+        - BearerAuth: []
+      description: |
+        Create or reset the sandbox environment with mock data.
+        Includes test DIDs, credentials, and issuers.
+        **US-12**: Sandbox for SDK testing.
+      responses:
+        '201':
+          description: Sandbox created
+          content:
+            application/json:
+              schema:
+                type: object
+                properties:
+                  testDids:
+                    type: array
+                    items:
+                      type: string
+                  testCredentials:
+                    type: array
+                    items:
+                      type: string
+                  testIssuers:
+                    type: array
+                    items:
+                      type: string
+
+  # --- ADMIN (4 endpoints) ---
+  /admin/issuers:
+    get:
+      tags: [Admin]
+      summary: Admin - List all issuers
+      operationId: adminListIssuers
+      security:
+        - BearerAuth: []
+      description: |
+        Admin-only. List all issuers with all trust statuses.
+        **US-17**: Platform issuer management.
+      parameters:
+        - $ref: '#/components/parameters/PageParam'
+        - $ref: '#/components/parameters/LimitParam'
+        - name: trustStatus
+          in: query
+          schema:
+            type: string
+            enum: [pending, trusted, revoked]
+      responses:
+        '200':
+          description: All issuers
+          content:
+            application/json:
+              schema:
+                allOf:
+                  - $ref: '#/components/schemas/PaginatedResponse'
+                  - type: object
+                    properties:
+                      data:
+                        type: array
+                        items:
+                          $ref: '#/components/schemas/IssuerResponse'
+        '403':
+          description: Admin role required
+
+  /admin/users:
+    get:
+      tags: [Admin]
+      summary: Admin - List all users
+      operationId: adminListUsers
+      security:
+        - BearerAuth: []
+      description: Admin-only. List all users with filtering.
+      parameters:
+        - $ref: '#/components/parameters/PageParam'
+        - $ref: '#/components/parameters/LimitParam'
+        - name: role
+          in: query
+          schema:
+            type: string
+            enum: [holder, issuer, developer, admin]
+        - name: status
+          in: query
+          schema:
+            type: string
+            enum: [active, suspended, deactivated]
+      responses:
+        '200':
+          description: Users list
+        '403':
+          description: Admin role required
+
+  /admin/analytics:
+    get:
+      tags: [Admin]
+      summary: Admin - Platform analytics
+      operationId: adminGetAnalytics
+      security:
+        - BearerAuth: []
+      description: |
+        Admin-only. Platform-wide analytics.
+        **US-18**: Platform analytics dashboard.
+      parameters:
+        - name: from
+          in: query
+          schema:
+            type: string
+            format: date
+        - name: to
+          in: query
+          schema:
+            type: string
+            format: date
+      responses:
+        '200':
+          description: Platform analytics
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/AdminAnalyticsResponse'
+        '403':
+          description: Admin role required
+
+  /admin/audit:
+    get:
+      tags: [Admin]
+      summary: Admin - Query audit logs
+      operationId: adminGetAuditLogs
+      security:
+        - BearerAuth: []
+      description: |
+        Admin-only. Query audit logs with filtering.
+        **US-18**: Audit trail access.
+      parameters:
+        - $ref: '#/components/parameters/PageParam'
+        - $ref: '#/components/parameters/LimitParam'
+        - name: action
+          in: query
+          schema:
+            type: string
+        - name: entityType
+          in: query
+          schema:
+            type: string
+        - name: userId
+          in: query
+          schema:
+            type: string
+            format: uuid
+        - name: from
+          in: query
+          schema:
+            type: string
+            format: date-time
+        - name: to
+          in: query
+          schema:
+            type: string
+            format: date-time
+      responses:
+        '200':
+          description: Audit logs
+          content:
+            application/json:
+              schema:
+                allOf:
+                  - $ref: '#/components/schemas/PaginatedResponse'
+                  - type: object
+                    properties:
+                      data:
+                        type: array
+                        items:
+                          $ref: '#/components/schemas/AuditLogEntry'
+        '403':
+          description: Admin role required
+
+  # --- TEMPLATES (3 endpoints) ---
+  /templates:
+    get:
+      tags: [Templates]
+      summary: List credential templates
+      operationId: listTemplates
+      security:
+        - BearerAuth: []
+      description: |
+        List credential templates for the authenticated issuer.
+        **US-08**: Manage credential templates.
+      parameters:
+        - $ref: '#/components/parameters/PageParam'
+        - $ref: '#/components/parameters/LimitParam'
+        - name: credentialType
+          in: query
+          schema:
+            type: string
+      responses:
+        '200':
+          description: Templates list
+          content:
+            application/json:
+              schema:
+                allOf:
+                  - $ref: '#/components/schemas/PaginatedResponse'
+                  - type: object
+                    properties:
+                      data:
+                        type: array
+                        items:
+                          $ref: '#/components/schemas/TemplateResponse'
+
+    post:
+      tags: [Templates]
+      summary: Create a credential template
+      operationId: createTemplate
+      security:
+        - BearerAuth: []
+      description: |
+        Create a new credential template. Issuer role required.
+        **US-08**: Create credential template.
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              $ref: '#/components/schemas/CreateTemplateRequest'
+      responses:
+        '201':
+          description: Template created
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/TemplateResponse'
+        '400':
+          description: Invalid schema
+        '403':
+          description: Issuer role required
+
+  /templates/{id}:
+    put:
+      tags: [Templates]
+      summary: Update a credential template
+      operationId: updateTemplate
+      security:
+        - BearerAuth: []
+      description: |
+        Update a credential template. Does not affect previously issued credentials.
+        **US-08**: Edit existing template.
+      parameters:
+        - name: id
+          in: path
+          required: true
+          schema:
+            type: string
+            format: uuid
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              $ref: '#/components/schemas/CreateTemplateRequest'
+      responses:
+        '200':
+          description: Template updated
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/TemplateResponse'
+        '403':
+          description: Not the template owner
+        '404':
+          description: Template not found
+
+  # --- WALLET (3 endpoints) ---
+  /wallet/credentials:
+    get:
+      tags: [Wallet]
+      summary: Get wallet credentials (categorized)
+      operationId: getWalletCredentials
+      security:
+        - BearerAuth: []
+      description: |
+        Get all credentials in the holder's wallet, organized by category.
+        **US-15**: View and manage credentials in wallet.
+      responses:
+        '200':
+          description: Wallet credentials
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/WalletCredentialResponse'
+
+  /wallet/sharing-history:
+    get:
+      tags: [Wallet]
+      summary: Get sharing history
+      operationId: getSharingHistory
+      security:
+        - BearerAuth: []
+      description: |
+        List all credential presentations (sharing history).
+        Shows which attributes were shared with which verifier and when.
+        **US-06**: View and revoke shared credentials.
+      parameters:
+        - $ref: '#/components/parameters/PageParam'
+        - $ref: '#/components/parameters/LimitParam'
+      responses:
+        '200':
+          description: Sharing history
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/SharingHistoryResponse'
+
+  /wallet/scan:
+    post:
+      tags: [Wallet]
+      summary: Process scanned QR code
+      operationId: scanQR
+      security:
+        - BearerAuth: []
+      description: |
+        Process a scanned QR code. Decodes and returns either a credential
+        offer or a verification request for user action.
+        **US-16**: QR code credential exchange.
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              $ref: '#/components/schemas/ScanQRRequest'
+      responses:
+        '200':
+          description: QR code processed
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/ScanQRResponse'
+        '400':
+          description: Invalid or expired QR code

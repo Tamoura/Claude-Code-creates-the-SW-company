@@ -228,7 +228,8 @@ All endpoints use `/api/v1/` prefix.
 | Issuers | issuers | Issuer |
 | Infrastructure | blockchain_anchors, api_keys, audit_logs | Blockchain Anchor |
 
-Full ER diagram: See PRD Section 8.
+Full ER diagram: See `docs/architecture.md` Section 5.
+Full Prisma schema: See `apps/api/prisma/schema.prisma`.
 
 ### Plugin Registration Order (Fastify)
 
@@ -249,6 +250,38 @@ Full ER diagram: See PRD Section 8.
 | `@connectsw/auth` | JWT + API key auth plugin, auth routes, frontend useAuth hook |
 | `@connectsw/ui` | Button, Card, Input, Badge, DataTable, DashboardLayout, Sidebar |
 | `@connectsw/shared` | Logger, crypto utils, Prisma plugin, Redis plugin |
+| `@connectsw/audit` | Audit logging with DB + ring buffer fallback |
+| `@connectsw/notifications` | Email verification, issuer notifications, usage alerts |
+
+### Architecture Decision Records (ADRs)
+
+| ADR | Decision | Rationale |
+|-----|----------|-----------|
+| ADR-001 | `did:humanid` custom DID method | Full control over resolution, key rotation support, offline generation |
+| ADR-002 | snarkjs + circom for ZKP | WASM support, Groth16 prover, 128-byte proofs, 10ms verification |
+| ADR-003 | Polygon L2 for anchoring | ~$0.001/tx, 2s finality, EVM compatible, shared infra with stablecoin-gateway |
+| ADR-004 | W3C VC Data Model 2.0 | Industry standard, JSON-LD, interoperable |
+| ADR-005 | WebCrypto + non-extractable keys | Browser-native, hardware-backed, no key exfiltration |
+
+### Cryptographic Standards
+
+| Operation | Algorithm | Key Size |
+|-----------|-----------|----------|
+| DID key generation | Ed25519 | 256-bit |
+| Credential signing | Ed25519Signature2020 | 256-bit |
+| Claims encryption at rest | AES-256-GCM | 256-bit |
+| Password hashing | Bcrypt | 12 rounds |
+| API key hashing | HMAC-SHA256 | 256-bit |
+| ZKP proof system | Groth16 (BN128) | 128-bit security |
+| Document hashing | SHA-256 | 256-bit |
+
+### Security Architecture Summary
+
+- **6 security layers**: Transport, Authentication, Authorization, Data Protection, Infrastructure, Audit
+- **OWASP Top 10 mitigations**: All 10 categories addressed
+- **Privacy by design**: Biometric templates + private keys NEVER leave device
+- **Compliance**: GDPR + CCPA + FIDO2; eIDAS 2.0 in Phase 2
+- Full security document: See `docs/security.md`
 
 ---
 
@@ -297,9 +330,11 @@ Full ER diagram: See PRD Section 8.
 ## Key Documents
 
 - **PRD**: `products/humanid/docs/PRD.md`
-- **Architecture**: `products/humanid/docs/architecture.md` (to be created)
-- **API Contract**: `products/humanid/docs/API.md` (to be created)
-- **ADRs**: `products/humanid/docs/ADRs/`
+- **Architecture**: `products/humanid/docs/architecture.md`
+- **OpenAPI Contract**: `products/humanid/docs/openapi.yaml` (37 endpoints, OpenAPI 3.0)
+- **Security**: `products/humanid/docs/security.md`
+- **ADRs**: `products/humanid/docs/ADRs/` (5 ADRs)
+- **Prisma Schema**: `products/humanid/apps/api/prisma/schema.prisma` (14 tables)
 - **Task Graph**: `products/humanid/.claude/task-graph.yml`
 
 ---
