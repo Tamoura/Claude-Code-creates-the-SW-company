@@ -146,8 +146,22 @@ function buildDocInfo(fullPath: string, filename: string): DocInfo {
 function extractTitle(fullPath: string, filename: string): string {
   try {
     const content = readFileSync(fullPath, 'utf-8');
-    const match = content.match(/^#\s+(.+)$/m);
-    if (match) return match[1].trim();
+    const isYaml = fullPath.endsWith('.yml') || fullPath.endsWith('.yaml');
+
+    if (isYaml) {
+      // YAML: extract from top-level `title:` or `info.title:` field
+      const titleMatch = content.match(/^title:\s*['"]?(.+?)['"]?\s*$/m);
+      if (titleMatch) return titleMatch[1].trim();
+      const infoTitleMatch = content.match(/^\s+title:\s*['"]?(.+?)['"]?\s*$/m);
+      if (infoTitleMatch) return infoTitleMatch[1].trim();
+    } else {
+      // Markdown: extract from first # heading (skip lines that are only symbols)
+      const match = content.match(/^#\s+(.+)$/m);
+      if (match) {
+        const title = match[1].trim();
+        if (!/^[=\-_#*~`]{4,}$/.test(title)) return title;
+      }
+    }
   } catch { /* ignore */ }
   // Fallback to filename without extension
   return filename.replace(/\.[^.]+$/, '');
