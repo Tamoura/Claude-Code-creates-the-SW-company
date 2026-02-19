@@ -324,19 +324,19 @@ sequenceDiagram
     participant Usage as Usage Service
     participant Diff as Diff Extractor
     participant Router as Model Router
-    participant SecAI as Claude Sonnet<br/>(Security)
-    participant LogAI as Claude Opus<br/>(Logic)
-    participant PerfAI as GPT-4o<br/>(Performance)
-    participant StyleAI as Claude Haiku<br/>(Style)
+    participant SecAI as Claude Sonnet (Security)
+    participant LogAI as Claude Opus (Logic)
+    participant PerfAI as GPT-4o (Performance)
+    participant StyleAI as Claude Haiku (Style)
     participant Agg as Aggregator
     participant Scorer as Quality Scorer
     participant Poster as Comment Poster
     participant DB as PostgreSQL
 
     Dev->>GH: Open/update PR
-    GH->>WH: POST /webhooks/github<br/>(X-Hub-Signature-256)
+    GH->>WH: POST /webhooks/github (X-Hub-Signature-256)
 
-    Note over WH: Verify HMAC-SHA256<br/>signature
+    Note over WH: Verify HMAC-SHA256 signature
 
     WH->>DB: Lookup repo by github_repo_id
     DB-->>WH: Repo found, monitoring enabled
@@ -345,7 +345,7 @@ sequenceDiagram
     DB-->>WH: Installation active
 
     WH->>DB: Create Review record (status: pending)
-    WH->>Q: Enqueue review job<br/>{reviewId, prNumber, installationId}
+    WH->>Q: Enqueue review job {reviewId, prNumber, installationId}
     WH-->>GH: 200 OK {status: "accepted", reviewId}
 
     Note over WH,GH: Webhook acknowledged < 500ms
@@ -362,41 +362,41 @@ sequenceDiagram
     GH-->>Diff: File list with patches
     Diff-->>W: Parsed diff chunks
 
-    Note over W: Split diff into chunks<br/>(max 500 lines each)
+    Note over W: Split diff into chunks (max 500 lines each)
 
     par Security Analysis
         W->>Router: Route security check
-        Router->>SecAI: POST /messages<br/>(security-focused prompt + diff)
+        Router->>SecAI: POST /messages (security-focused prompt + diff)
         SecAI-->>Router: Security findings
     and Logic Analysis
         W->>Router: Route logic check
-        Router->>LogAI: POST /messages<br/>(reasoning prompt + diff)
+        Router->>LogAI: POST /messages (reasoning prompt + diff)
         LogAI-->>Router: Logic findings
     and Performance Analysis
         W->>Router: Route performance check
-        Router->>PerfAI: POST /chat/completions<br/>(performance prompt + diff)
+        Router->>PerfAI: POST /chat/completions (performance prompt + diff)
         PerfAI-->>Router: Performance findings
     and Style Analysis
         W->>Router: Route style check
-        Router->>StyleAI: POST /messages<br/>(style prompt + diff)
+        Router->>StyleAI: POST /messages (style prompt + diff)
         StyleAI-->>Router: Style findings
     end
 
     Router-->>W: All findings collected
 
     W->>Agg: Aggregate findings
-    Note over Agg: Deduplicate by<br/>file + line range
+    Note over Agg: Deduplicate by file + line range
     Agg->>Scorer: Calculate score
-    Note over Scorer: Security(35%) + Logic(30%)<br/>+ Performance(20%) + Style(15%)
-    Scorer-->>Agg: Score: 78/100<br/>(Sec:90 Log:72 Perf:80 Style:65)
+    Note over Scorer: Security(35%) + Logic(30%) + Performance(20%) + Style(15%)
+    Scorer-->>Agg: Score: 78/100 (Sec:90 Log:72 Perf:80 Style:65)
     Agg-->>W: Aggregated result
 
-    W->>DB: Store review + findings<br/>(status: complete)
+    W->>DB: Store review + findings (status: complete)
 
     W->>Poster: Post results to GitHub
-    Poster->>GH: POST /repos/:owner/:repo/pulls/:pr/reviews<br/>(inline comments per finding)
-    Poster->>GH: POST /repos/:owner/:repo/statuses/:sha<br/>(quality score status check)
-    GH-->>Dev: PR updated with review<br/>comments + status check
+    Poster->>GH: POST /repos/:owner/:repo/pulls/:pr/reviews (inline comments per finding)
+    Poster->>GH: POST /repos/:owner/:repo/statuses/:sha (quality score status check)
+    GH-->>Dev: PR updated with review comments + status check
 
     W->>Usage: Increment review counter
 ```
@@ -408,8 +408,8 @@ This shows the dual flow: user authenticates via OAuth, then installs the GitHub
 ```mermaid
 sequenceDiagram
     participant User as User (Browser)
-    participant Web as Web App<br/>(Next.js)
-    participant API as API Server<br/>(Fastify)
+    participant Web as Web App (Next.js)
+    participant API as API Server (Fastify)
     participant GH_OAuth as GitHub OAuth
     participant GH_App as GitHub App Install
     participant DB as PostgreSQL
@@ -422,44 +422,44 @@ sequenceDiagram
     API->>DB: Store state + verifier (TTL 10 min)
     API-->>Web: 302 Redirect to GitHub OAuth
 
-    Web->>GH_OAuth: Redirect to github.com/login/oauth/authorize<br/>?client_id=xxx&state=yyy&scope=read:user,user:email
+    Web->>GH_OAuth: Redirect to github.com/login/oauth/authorize ?client_id=xxx&state=yyy&scope=read:user,user:email
 
     GH_OAuth->>User: Show authorization prompt
     User->>GH_OAuth: Authorize CodeGuardian
-    GH_OAuth->>API: GET /auth/github/callback<br/>?code=abc&state=yyy
+    GH_OAuth->>API: GET /auth/github/callback ?code=abc&state=yyy
 
     API->>DB: Validate state parameter
     DB-->>API: State valid, retrieve PKCE verifier
-    API->>GH_OAuth: POST /login/oauth/access_token<br/>(exchange code for tokens)
+    API->>GH_OAuth: POST /login/oauth/access_token (exchange code for tokens)
     GH_OAuth-->>API: access_token + refresh_token
 
     API->>GH_OAuth: GET /user (fetch profile)
     GH_OAuth-->>API: {id, login, email, avatar_url}
 
-    API->>DB: Upsert user record<br/>(encrypt tokens at rest)
+    API->>DB: Upsert user record (encrypt tokens at rest)
     API->>API: Generate JWT (7d expiry)
     API-->>Web: Set httpOnly cookie + redirect to /onboarding
 
     Note over User,DB: Phase 2: GitHub App Installation
 
-    Web->>User: Onboarding wizard Step 1:<br/>"Install CodeGuardian GitHub App"
+    Web->>User: Onboarding wizard Step 1: "Install CodeGuardian GitHub App"
     User->>Web: Click "Install App"
     Web->>GH_App: Redirect to github.com/apps/codeguardian/installations/new
 
     GH_App->>User: Select account/org + repositories
     User->>GH_App: Confirm installation
-    GH_App->>API: POST /webhooks/github<br/>(installation.created event)
+    GH_App->>API: POST /webhooks/github (installation.created event)
 
-    API->>DB: Store Installation record<br/>(installation_id, account_type, repos)
+    API->>DB: Store Installation record (installation_id, account_type, repos)
     API->>DB: Create Repository records for selected repos
 
-    GH_App-->>Web: Redirect to /onboarding/complete<br/>?installation_id=xxx
+    GH_App-->>Web: Redirect to /onboarding/complete ?installation_id=xxx
 
     Web->>API: GET /api/repositories
     API->>DB: Fetch user's repositories
     DB-->>API: Repository list
     API-->>Web: Repositories with monitoring status
-    Web->>User: "Setup complete!<br/>Open a PR to see your first review."
+    Web->>User: "Setup complete! Open a PR to see your first review."
 ```
 
 ### 5.3 Billing Check + Metering Flow
@@ -479,7 +479,7 @@ sequenceDiagram
     WH->>DB: Get repo owner (user or org)
     DB-->>WH: Owner identified
 
-    WH->>Usage: Check review limits<br/>(userId/orgId)
+    WH->>Usage: Check review limits (userId/orgId)
 
     Usage->>DB: Get subscription for owner
     DB-->>Usage: Subscription {plan, status}
@@ -497,8 +497,8 @@ sequenceDiagram
             Usage->>DB: Sync usage record
         else At or over limit (>= 5)
             Usage-->>WH: DENIED (limit reached)
-            WH->>GH: POST status check<br/>"CodeGuardian: Monthly limit reached.<br/>Upgrade for unlimited reviews."
-            WH->>Email: Send limit notification<br/>"You've used all 5 free reviews..."
+            WH->>GH: POST status check "CodeGuardian: Monthly limit reached. Upgrade for unlimited reviews."
+            WH->>Email: Send limit notification "You've used all 5 free reviews..."
             WH-->>WH: Return 200 (acknowledged, not reviewed)
         end
 
@@ -514,7 +514,7 @@ sequenceDiagram
         WH->>Q: Enqueue review job
     end
 
-    Note over Usage,Redis: Counter resets monthly<br/>(TTL on Redis key: 35 days)
+    Note over Usage,Redis: Counter resets monthly (TTL on Redis key: 35 days)
 ```
 
 ### 5.4 Stripe Subscription Lifecycle
@@ -531,10 +531,10 @@ sequenceDiagram
     Note over User,Redis: Upgrade Flow
 
     User->>Web: Click "Upgrade to Pro"
-    Web->>API: POST /api/billing/checkout-session<br/>{plan: "pro", seats: 5, orgId: "xxx"}
+    Web->>API: POST /api/billing/checkout-session {plan: "pro", seats: 5, orgId: "xxx"}
 
     API->>DB: Get/create Stripe customer
-    API->>Stripe: Create Checkout Session<br/>(price_id, quantity, customer_id)
+    API->>Stripe: Create Checkout Session (price_id, quantity, customer_id)
     Stripe-->>API: Checkout session URL
     API-->>Web: {checkoutUrl: "https://checkout.stripe.com/..."}
 
@@ -542,9 +542,9 @@ sequenceDiagram
     User->>Stripe: Enter payment details
     Stripe->>Stripe: Process payment
 
-    Stripe->>API: POST /webhooks/stripe<br/>(checkout.session.completed)
+    Stripe->>API: POST /webhooks/stripe (checkout.session.completed)
     API->>API: Verify Stripe signature
-    API->>DB: Create/update Subscription<br/>(plan: pro, status: active)
+    API->>DB: Create/update Subscription (plan: pro, status: active)
     API->>Redis: Clear usage limits cache
     API->>DB: Record BillingEvent
 
@@ -553,18 +553,18 @@ sequenceDiagram
 
     Note over User,Redis: Payment Failure Flow
 
-    Stripe->>API: POST /webhooks/stripe<br/>(invoice.payment_failed)
-    API->>DB: Update Subscription<br/>(status: past_due)
+    Stripe->>API: POST /webhooks/stripe (invoice.payment_failed)
+    API->>DB: Update Subscription (status: past_due)
     API->>DB: Record BillingEvent
-    API->>API: Send warning email<br/>"Update your payment method<br/>within 14 days"
+    API->>API: Send warning email "Update your payment method within 14 days"
 
     Note over API,DB: 14-day grace period
 
     alt Payment recovered
-        Stripe->>API: POST /webhooks/stripe<br/>(invoice.paid)
-        API->>DB: Update Subscription<br/>(status: active)
+        Stripe->>API: POST /webhooks/stripe (invoice.paid)
+        API->>DB: Update Subscription (status: active)
     else Grace period expired
-        API->>DB: Downgrade to Free<br/>(scheduled job)
+        API->>DB: Downgrade to Free (scheduled job)
         API->>Redis: Reset usage limits
     end
 ```
@@ -577,13 +577,13 @@ This shows what happens when a primary model fails and the fallback is used.
 sequenceDiagram
     participant W as Review Worker
     participant Router as Model Router
-    participant Primary as Primary Model<br/>(Claude Sonnet)
-    participant Fallback as Fallback Model<br/>(GPT-4o)
+    participant Primary as Primary Model (Claude Sonnet)
+    participant Fallback as Fallback Model (GPT-4o)
 
-    W->>Router: Route security check<br/>(diff chunk, config)
-    Router->>Router: Load routing config<br/>(primary: claude-sonnet,<br/>fallback: gpt-4o,<br/>timeout: 30s)
+    W->>Router: Route security check (diff chunk, config)
+    Router->>Router: Load routing config (primary: claude-sonnet, fallback: gpt-4o, timeout: 30s)
 
-    Router->>Primary: POST /messages<br/>(security prompt + diff)
+    Router->>Primary: POST /messages (security prompt + diff)
 
     alt Primary succeeds
         Primary-->>Router: Security findings
@@ -592,7 +592,7 @@ sequenceDiagram
     else Primary fails (timeout or error)
         Primary--xRouter: Timeout after 30s
 
-        Router->>Router: Wait exponential backoff<br/>(1s * 2^attempt)
+        Router->>Router: Wait exponential backoff (1s * 2^attempt)
 
         Router->>Primary: Retry POST /messages
         alt Retry succeeds
@@ -603,13 +603,13 @@ sequenceDiagram
 
             Note over Router: Fall back to secondary model
 
-            Router->>Fallback: POST /chat/completions<br/>(same security prompt + diff)
+            Router->>Fallback: POST /chat/completions (same security prompt + diff)
             alt Fallback succeeds
                 Fallback-->>Router: Security findings
                 Router-->>W: Findings (source: gpt-4o, fallback)
             else Fallback also fails
                 Fallback--xRouter: Error
-                Router-->>W: Check type SKIPPED<br/>(security analysis unavailable)
+                Router-->>W: Check type SKIPPED (security analysis unavailable)
             end
         end
     end
