@@ -1,0 +1,534 @@
+// HumanID - Universal Digital Identity Platform
+// Prisma Schema - 14 tables, 5 domains
+// Database: PostgreSQL 15+
+// Version: 1.0.0
+
+generator client {
+  provider = "prisma-client-js"
+}
+
+datasource db {
+  provider = "postgresql"
+  url      = env("DATABASE_URL")
+}
+
+// ============================================================================
+// ENUMS
+// ============================================================================
+
+enum UserRole {
+  HOLDER
+  ISSUER
+  DEVELOPER
+  ADMIN
+
+  @@map("user_role")
+}
+
+enum UserStatus {
+  ACTIVE
+  SUSPENDED
+  DEACTIVATED
+
+  @@map("user_status")
+}
+
+enum DIDStatus {
+  ACTIVE
+  SUSPENDED
+  DEACTIVATED
+
+  @@map("did_status")
+}
+
+enum BiometricType {
+  FIDO2
+  FACE
+
+  @@map("biometric_type")
+}
+
+enum RecoveryMethod {
+  PHRASE
+  SOCIAL
+  CLOUD
+
+  @@map("recovery_method")
+}
+
+enum RecoveryStatus {
+  ACTIVE
+  USED
+  EXPIRED
+
+  @@map("recovery_status")
+}
+
+enum CredentialStatus {
+  OFFERED
+  ACTIVE
+  REVOKED
+  EXPIRED
+  SUSPENDED
+
+  @@map("credential_status")
+}
+
+enum PresentationProofType {
+  FULL
+  SELECTIVE
+  ZKP
+
+  @@map("presentation_proof_type")
+}
+
+enum PresentationStatus {
+  ACTIVE
+  REVOKED
+
+  @@map("presentation_status")
+}
+
+enum VerificationRequestStatus {
+  CREATED
+  SENT
+  PENDING
+  APPROVED
+  DENIED
+  EXPIRED
+  VERIFIED
+  FAILED
+
+  @@map("verification_request_status")
+}
+
+enum IssuerTrustStatus {
+  PENDING
+  TRUSTED
+  REVOKED
+
+  @@map("issuer_trust_status")
+}
+
+enum AnchorEntityType {
+  DID
+  CREDENTIAL
+  REVOCATION
+
+  @@map("anchor_entity_type")
+}
+
+enum AnchorChain {
+  POLYGON
+
+  @@map("anchor_chain")
+}
+
+enum AnchorStatus {
+  PENDING
+  CONFIRMED
+  FAILED
+
+  @@map("anchor_status")
+}
+
+enum ApiKeyEnvironment {
+  SANDBOX
+  PRODUCTION
+
+  @@map("api_key_environment")
+}
+
+enum ApiKeyStatus {
+  ACTIVE
+  REVOKED
+
+  @@map("api_key_status")
+}
+
+// ============================================================================
+// DOMAIN 1: IDENTITY
+// ============================================================================
+
+/// User accounts for all roles (holder, issuer, developer, admin)
+model User {
+  id            String     @id @default(uuid())
+  email         String     @unique
+  passwordHash  String     @map("password_hash")
+  role          UserRole   @default(HOLDER)
+  status        UserStatus @default(ACTIVE)
+  emailVerified Boolean    @default(false) @map("email_verified")
+  createdAt     DateTime   @default(now()) @map("created_at")
+  updatedAt     DateTime   @updatedAt @map("updated_at")
+
+  // Relations
+  dids      DID[]
+  sessions  Session[]
+  apiKeys   ApiKey[]
+  auditLogs AuditLog[]
+  issuers   Issuer[]
+
+  // Verification requests created by this user (as verifier)
+  verificationRequests VerificationRequest[]
+
+  @@index([email])
+  @@index([role])
+  @@index([status])
+  @@map("users")
+}
+
+/// Decentralized Identifiers owned by users
+model DID {
+  id           String    @id @default(uuid())
+  userId       String    @map("user_id")
+  did          String    @unique // did:humanid:base58(pubkey)
+  method       String    @default("humanid")
+  publicKey    String    @map("public_key") // Ed25519 public key (base58)
+  status       DIDStatus @default(ACTIVE)
+  keyAgreement Json?     @map("key_agreement") // X25519 for encryption
+
+  createdAt DateTime @default(now()) @map("created_at")
+  updatedAt DateTime @updatedAt @map("updated_at")
+
+  // Relations
+  user               User                @relation(fields: [userId], references: [id], onDelete: Cascade)
+  documents          DIDDocument[]
+  biometricBindings  BiometricBinding[]
+  recoveryConfigs    RecoveryConfig[]
+  blockchainAnchors  BlockchainAnchor[]
+
+  // Credentials where this DID is the holder
+  credentialsHeld    Credential[]        @relation("holder_did")
+  // Credentials where this DID is the issuer
+  credentialsIssued  Credential[]        @relation("issuer_did")
+
+  // Presentations where this DID is the holder
+  presentationsAsHolder CredentialPresentation[] @relation("presentation_holder")
+  // Presentations where this DID is the verifier
+  presentationsAsVerifier CredentialPresentation[] @relation("presentation_verifier")
+
+  // Issuer profile linked to this DID
+  issuerProfile Issuer?
+
+  @@index([userId])
+  @@index([did])
+  @@index([status])
+  @@map("dids")
+}
+
+/// Versioned DID documents (W3C DID Document JSON-LD)
+model DIDDocument {
+  id           String @id @default(uuid())
+  didId        String @map("did_id")
+  version      Int    @default(1)
+  document     Json   // W3C DID Document JSON-LD
+  documentHash String @map("document_hash") // SHA-256 of document
+
+  createdAt DateTime @default(now()) @map("created_at")
+
+  // Relations
+  did DID @relation(fields: [didId], references: [id], onDelete: Cascade)
+
+  @@unique([didId, version])
+  @@index([didId])
+  @@map("did_documents")
+}
+
+/// Biometric bindings linking FIDO2/face credentials to DIDs
+model BiometricBinding {
+  id               String        @id @default(uuid())
+  didId            String        @map("did_id")
+  type             BiometricType
+  templateHash     String        @map("template_hash") // SHA-256 of biometric template
+  fido2CredentialId String?      @map("fido2_credential_id") // WebAuthn credential ID
+  fido2PublicKey   String?       @map("fido2_public_key") // WebAuthn public key
+  metadata         Json?         // Device info, attestation data
+
+  createdAt DateTime @default(now()) @map("created_at")
+
+  // Relations
+  did DID @relation(fields: [didId], references: [id], onDelete: Cascade)
+
+  @@index([didId])
+  @@index([fido2CredentialId])
+  @@map("biometric_bindings")
+}
+
+/// Recovery configuration for identity recovery
+model RecoveryConfig {
+  id              String         @id @default(uuid())
+  didId           String         @map("did_id")
+  method          RecoveryMethod
+  encryptedConfig String         @map("encrypted_config") @db.Text // AES-256-GCM encrypted
+  status          RecoveryStatus @default(ACTIVE)
+
+  createdAt DateTime @default(now()) @map("created_at")
+  updatedAt DateTime @updatedAt @map("updated_at")
+
+  // Relations
+  did DID @relation(fields: [didId], references: [id], onDelete: Cascade)
+
+  @@index([didId])
+  @@index([status])
+  @@map("recovery_configs")
+}
+
+/// User sessions with refresh tokens
+model Session {
+  id         String @id @default(uuid())
+  userId     String @map("user_id")
+  tokenHash  String @unique @map("token_hash") // SHA-256 of refresh token
+  deviceInfo String @map("device_info")
+  ipAddress  String @map("ip_address")
+
+  expiresAt DateTime @map("expires_at")
+  createdAt DateTime @default(now()) @map("created_at")
+
+  // Relations
+  user User @relation(fields: [userId], references: [id], onDelete: Cascade)
+
+  @@index([userId])
+  @@index([tokenHash])
+  @@index([expiresAt])
+  @@map("sessions")
+}
+
+// ============================================================================
+// DOMAIN 2: CREDENTIALS
+// ============================================================================
+
+/// Verifiable Credentials (W3C VC Data Model 2.0)
+model Credential {
+  id              String           @id @default(uuid())
+  holderDidId     String           @map("holder_did_id")
+  issuerDidId     String           @map("issuer_did_id")
+  issuerId        String?          @map("issuer_id")
+  templateId      String?          @map("template_id")
+  credentialType  String           @map("credential_type")
+  encryptedClaims String           @map("encrypted_claims") @db.Text // AES-256-GCM
+  proof           Json             // Ed25519Signature2020
+  credentialHash  String           @map("credential_hash") // SHA-256 for anchoring
+  status          CredentialStatus @default(OFFERED)
+
+  issuedAt   DateTime  @default(now()) @map("issued_at")
+  expiresAt  DateTime? @map("expires_at")
+  revokedAt  DateTime? @map("revoked_at")
+  acceptedAt DateTime? @map("accepted_at")
+
+  // Relations
+  holderDid     DID                     @relation("holder_did", fields: [holderDidId], references: [id])
+  issuerDid     DID                     @relation("issuer_did", fields: [issuerDidId], references: [id])
+  issuer        Issuer?                 @relation(fields: [issuerId], references: [id])
+  template      CredentialTemplate?     @relation(fields: [templateId], references: [id])
+  presentations CredentialPresentation[]
+  anchors       BlockchainAnchor[]
+
+  @@index([holderDidId])
+  @@index([issuerDidId])
+  @@index([issuerId])
+  @@index([templateId])
+  @@index([status])
+  @@index([credentialType])
+  @@index([issuedAt])
+  @@map("credentials")
+}
+
+/// Credential templates for consistent issuance
+model CredentialTemplate {
+  id                 String  @id @default(uuid())
+  issuerId           String  @map("issuer_id")
+  name               String
+  credentialType     String  @map("credential_type")
+  schema             Json    // JSON-LD schema definition
+  requiredAttributes Json    @map("required_attributes")
+  optionalAttributes Json    @map("optional_attributes")
+  defaultExpiryDays  Int?    @map("default_expiry_days")
+  isActive           Boolean @default(true) @map("is_active")
+
+  createdAt DateTime @default(now()) @map("created_at")
+  updatedAt DateTime @updatedAt @map("updated_at")
+
+  // Relations
+  issuer      Issuer       @relation(fields: [issuerId], references: [id], onDelete: Cascade)
+  credentials Credential[]
+
+  @@index([issuerId])
+  @@index([credentialType])
+  @@index([isActive])
+  @@map("credential_templates")
+}
+
+/// Credential presentations (verifiable presentations shared with verifiers)
+model CredentialPresentation {
+  id                    String               @id @default(uuid())
+  credentialId          String               @map("credential_id")
+  holderDidId           String               @map("holder_did_id")
+  verifierDidId         String?              @map("verifier_did_id")
+  verificationRequestId String?              @map("verification_request_id")
+  disclosedAttributes   Json                 @map("disclosed_attributes")
+  proofType             PresentationProofType @map("proof_type")
+  zkpProof              Json?                @map("zkp_proof") // Groth16 proof data
+  status                PresentationStatus   @default(ACTIVE)
+
+  presentedAt DateTime  @default(now()) @map("presented_at")
+  revokedAt   DateTime? @map("revoked_at")
+
+  // Relations
+  credential          Credential           @relation(fields: [credentialId], references: [id])
+  holderDid           DID                  @relation("presentation_holder", fields: [holderDidId], references: [id])
+  verifierDid         DID?                 @relation("presentation_verifier", fields: [verifierDidId], references: [id])
+  verificationRequest VerificationRequest? @relation(fields: [verificationRequestId], references: [id])
+  auditLogs           AuditLog[]
+
+  @@index([credentialId])
+  @@index([holderDidId])
+  @@index([verifierDidId])
+  @@index([verificationRequestId])
+  @@index([status])
+  @@index([presentedAt])
+  @@map("credential_presentations")
+}
+
+// ============================================================================
+// DOMAIN 3: VERIFICATION
+// ============================================================================
+
+/// Verification requests from verifiers to holders
+model VerificationRequest {
+  id                   String                    @id @default(uuid())
+  verifierId           String                    @map("verifier_id") // User ID
+  holderDid            String                    @map("holder_did") // DID string
+  requestedAttributes  Json                      @map("requested_attributes")
+  status               VerificationRequestStatus @default(CREATED)
+  result               Json?                     // Verification result payload
+  failureReason        String?                   @map("failure_reason")
+
+  createdAt   DateTime  @default(now()) @map("created_at")
+  respondedAt DateTime? @map("responded_at")
+  expiresAt   DateTime  @map("expires_at")
+
+  // Relations
+  verifier      User                    @relation(fields: [verifierId], references: [id])
+  presentations CredentialPresentation[]
+
+  @@index([verifierId])
+  @@index([holderDid])
+  @@index([status])
+  @@index([expiresAt])
+  @@map("verification_requests")
+}
+
+// ============================================================================
+// DOMAIN 4: ISSUERS
+// ============================================================================
+
+/// Registered credential issuers (organizations)
+model Issuer {
+  id                   String            @id @default(uuid())
+  userId               String            @map("user_id")
+  didId                String            @unique @map("did_id")
+  organizationName     String            @map("organization_name")
+  legalEntityId        String?           @map("legal_entity_id")
+  trustStatus          IssuerTrustStatus @default(PENDING) @map("trust_status")
+  allowedCredentialTypes Json?           @map("allowed_credential_types")
+  verificationDocuments Json?            @map("verification_documents")
+
+  verifiedAt DateTime? @map("verified_at")
+  revokedAt  DateTime? @map("revoked_at")
+  createdAt  DateTime  @default(now()) @map("created_at")
+  updatedAt  DateTime  @updatedAt @map("updated_at")
+
+  // Relations
+  user        User                 @relation(fields: [userId], references: [id], onDelete: Cascade)
+  did         DID                  @relation(fields: [didId], references: [id])
+  credentials Credential[]
+  templates   CredentialTemplate[]
+
+  @@index([userId])
+  @@index([didId])
+  @@index([trustStatus])
+  @@index([organizationName])
+  @@map("issuers")
+}
+
+// ============================================================================
+// DOMAIN 5: INFRASTRUCTURE
+// ============================================================================
+
+/// Blockchain anchoring records for identity events
+model BlockchainAnchor {
+  id              String           @id @default(uuid())
+  entityType      AnchorEntityType @map("entity_type")
+  entityId        String           @map("entity_id")
+  chain           AnchorChain      @default(POLYGON)
+  transactionHash String?          @unique @map("transaction_hash")
+  blockNumber     String?          @map("block_number")
+  dataHash        String           @map("data_hash") // SHA-256 hash anchored
+  status          AnchorStatus     @default(PENDING)
+  retryCount      Int              @default(0) @map("retry_count")
+  errorMessage    String?          @map("error_message")
+
+  anchoredAt DateTime? @map("anchored_at")
+  createdAt  DateTime  @default(now()) @map("created_at")
+
+  // Polymorphic relations (linked via entityType + entityId)
+  did        DID?        @relation(fields: [entityId], references: [id], map: "fk_anchor_did")
+  credential Credential? @relation(fields: [entityId], references: [id], map: "fk_anchor_credential")
+
+  @@index([entityType, entityId])
+  @@index([status])
+  @@index([chain])
+  @@index([transactionHash])
+  @@index([createdAt])
+  @@map("blockchain_anchors")
+}
+
+/// API keys for developer access
+model ApiKey {
+  id          String            @id @default(uuid())
+  userId      String            @map("user_id")
+  keyHash     String            @unique @map("key_hash") // HMAC-SHA256
+  keyPrefix   String            @map("key_prefix") // humanid_sk_ or humanid_pk_
+  name        String
+  environment ApiKeyEnvironment @default(SANDBOX)
+  status      ApiKeyStatus      @default(ACTIVE)
+  permissions Json              @default("{\"read\":true,\"write\":true}")
+  rateLimit   Int               @default(100) @map("rate_limit") // requests per hour
+
+  lastUsedAt DateTime? @map("last_used_at")
+  createdAt  DateTime  @default(now()) @map("created_at")
+
+  // Relations
+  user User @relation(fields: [userId], references: [id], onDelete: Cascade)
+
+  @@index([userId])
+  @@index([keyHash])
+  @@index([environment])
+  @@index([status])
+  @@map("api_keys")
+}
+
+/// Immutable audit log for all identity events
+model AuditLog {
+  id         String  @id @default(uuid())
+  userId     String? @map("user_id")
+  action     String  // e.g., "did.created", "credential.issued", "verification.completed"
+  entityType String  @map("entity_type") // "did", "credential", "verification", "issuer"
+  entityId   String  @map("entity_id")
+  metadata   Json?   // Request details, outcome, additional context
+  ipAddress  String? @map("ip_address")
+  userAgent  String? @map("user_agent")
+
+  createdAt DateTime @default(now()) @map("created_at")
+
+  // Relations (optional -- audit logs may reference deleted entities)
+  user         User?                   @relation(fields: [userId], references: [id], onDelete: SetNull)
+  presentation CredentialPresentation? @relation(fields: [entityId], references: [id], map: "fk_audit_presentation")
+
+  @@index([userId])
+  @@index([action])
+  @@index([entityType])
+  @@index([entityId])
+  @@index([createdAt(sort: Desc)])
+  @@map("audit_logs")
+}
