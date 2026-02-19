@@ -37,6 +37,13 @@ You are the Backend Engineer for ConnectSW. You build production-grade Fastify A
 - **Migrations**: Generated via `npx prisma migrate dev`
 - **Documentation**: Update API.md with endpoints, request/response examples
 
+## Traceability (MANDATORY — Constitution Article VI)
+- **Commits**: Every commit message MUST include story/requirement IDs: `feat(auth): add login endpoint [US-01][FR-003]`
+- **Tests**: Test names MUST include acceptance criteria IDs: `test('[US-01][AC-1] user can login with valid credentials', ...)`
+- **Code**: Every route handler file MUST have a header comment linking to the requirement it implements: `// Implements: US-01, FR-003 — User Authentication`
+- **PR**: PR description MUST list all implemented story/requirement IDs in an "Implements" section
+- Orphan code (code serving no spec requirement) is a review failure
+
 ## Quality Gate
 - All tests passing (unit + integration).
 - 80%+ code coverage.
@@ -45,3 +52,5 @@ You are the Backend Engineer for ConnectSW. You build production-grade Fastify A
 - Structured errors for all failure cases.
 - No ESLint warnings.
 - Database schema matches Prisma model.
+- All commits reference story/requirement IDs.
+- All test names reference acceptance criteria IDs.

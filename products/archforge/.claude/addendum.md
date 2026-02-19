@@ -23,7 +23,7 @@
 | Backend | Fastify + TypeScript | Plugin architecture |
 | Database | PostgreSQL 15+ via Prisma | Primary data store |
 | AI/LLM | Claude API (Anthropic) | Artifact generation, document ingestion |
-| Canvas | React Flow or Excalidraw | Interactive diagram editing |
+| Canvas | React Flow (xyflow) | Interactive diagram editing (ADR-002) |
 | Real-time | WebSocket (Fastify WS) | Collaboration |
 | Auth | JWT + API Keys | Dual auth pattern |
 | Export | Sharp (images), PDFKit (PDF) | Multi-format |
@@ -103,4 +103,111 @@ Draft → In Review → Approved → Published → Archived
 ## Key Documents
 - **PRD**: `products/archforge/docs/PRD.md`
 - **Strategy**: `products/archforge/docs/strategy/PRODUCT-STRATEGY-2026.md`
-- **Architecture**: `products/archforge/docs/architecture.md` (pending)
+- **Architecture**: `products/archforge/docs/architecture.md`
+- **API Contract**: `products/archforge/docs/api-contract.yaml`
+- **DB Schema**: `products/archforge/docs/db-schema.sql`
+- **ADRs**: `products/archforge/docs/ADRs/`
+
+---
+
+## Technical Architecture
+
+### System Components
+
+```mermaid
+graph TD
+    subgraph "ArchForge"
+        WEB["Web App<br/>(Next.js 14, :3116)"]
+        API["API Server<br/>(Fastify 4, :5012)"]
+        DB["PostgreSQL 15"]
+        REDIS["Redis 7"]
+        S3["S3 / MinIO"]
+    end
+
+    subgraph "External"
+        CLAUDE["Claude API (primary)"]
+        OPENAI["OpenAI API (fallback)"]
+        OAUTH["OAuth Providers"]
+        EMAIL["SendGrid"]
+    end
+
+    WEB --> API
+    API --> DB & REDIS & S3
+    API --> CLAUDE
+    API -.-> OPENAI
+
+    style WEB fill:#339af0,color:#fff
+    style API fill:#51cf66,color:#fff
+```
+
+| Component | Technology | Responsibility |
+|-----------|-----------|----------------|
+| Web App | Next.js 14, React 18, Tailwind, React Flow | UI, interactive canvas, NL input |
+| API Server | Fastify 4, TypeScript | REST API, WebSocket, business logic |
+| AI Layer | Claude API (primary), OpenAI (fallback) | NL processing, artifact generation, document extraction |
+| Canvas | React Flow (xyflow) | Interactive diagram editing with custom nodes |
+| Database | PostgreSQL 15 via Prisma | Primary data store (18 tables) |
+| Cache / Pub/Sub | Redis 7 | Rate limiting, generation cache, WebSocket broadcast |
+| Object Storage | S3 (prod) / MinIO (dev) | Document uploads, exports, avatars |
+| Auth | @connectsw/auth package | JWT + API key dual authentication |
+| Export | Sharp + PDFKit + custom serializers | PNG, SVG, PDF, PlantUML, ArchiMate XML, Mermaid, Draw.io |
+
+### API Surface Summary
+
+| Area | Endpoints | Method Summary |
+|------|-----------|----------------|
+| Auth | 5 | Register, login, refresh, logout, profile |
+| Projects | 7 | CRUD + members + archive |
+| Artifacts | 6 | CRUD + generate + ingest |
+| Versions | 3 | List, create, restore |
+| Templates | 3 | List, get, create |
+| Collaboration | 5 | Comments CRUD + share + WebSocket |
+| Export | 1 | Multi-format export |
+| **Total** | **30** | |
+
+All endpoints use `/api/v1/` prefix. Full spec: `docs/api-contract.yaml`.
+
+### Data Model Overview
+
+18 tables organized into domains:
+
+| Domain | Tables | Key Entity |
+|--------|--------|-----------|
+| Identity | users, oauth_accounts, sessions, api_keys, notification_preferences | User |
+| Organization | workspaces, workspace_members | Workspace |
+| Architecture | projects, artifacts, artifact_versions, artifact_elements, artifact_relationships | Artifact |
+| Content | templates, document_uploads | Template |
+| Collaboration | comments, shares | Comment |
+| Operations | exports, audit_log | AuditLog |
+
+Full schema: `docs/db-schema.sql`.
+
+### Key Architectural Decisions
+
+| ADR | Decision | Rationale |
+|-----|----------|-----------|
+| ADR-001 | Streaming AI with circuit-breaker failover | Real-time element rendering; automatic failover to OpenAI if Claude is down |
+| ADR-002 | React Flow for canvas | MIT license, React-native custom nodes, viewport culling for 200+ elements |
+| ADR-003 | WebSocket + Redis Pub/Sub for collaboration | Low-latency comments/presence; scales across server instances; no CRDT complexity in MVP |
+| ADR-004 | Server-side export pipeline | Deterministic output; browser-independent; enables future API batch exports |
+
+### Reused ConnectSW Packages
+
+| Package | Usage |
+|---------|-------|
+| `@connectsw/auth` | JWT + API key auth plugin, auth routes, frontend useAuth hook |
+| `@connectsw/ui` | Button, Card, Input, Badge, DataTable, DashboardLayout, Sidebar |
+| `@connectsw/shared` | Logger, crypto utils, Prisma plugin, Redis plugin |
+
+### Plugin Registration Order (Fastify)
+
+Per PATTERN-009:
+```
+1. Observability (Pino logging, Sentry)
+2. Prisma (database connection)
+3. Redis (cache, pub/sub)
+4. Rate Limit (Redis-backed)
+5. Auth (@connectsw/auth plugin)
+6. WebSocket (@fastify/websocket)
+7. Routes (auth, projects, artifacts, templates, collaboration)
+```

@@ -1,0 +1,76 @@
+#!/bin/bash
+#
+# Commit message traceability hook (Constitution Article VI)
+# Enforces story/requirement IDs in commit messages for feature/fix commits.
+#
+# REQUIRED for: feat(), fix(), refactor(), test() commits
+# EXEMPT: docs(), chore(), ci(), style(), build() commits
+#
+# Valid formats:
+#   feat(auth): add login endpoint [US-01][FR-003]
+#   fix(canvas): handle null elements [US-04] #123
+#   test(api): add auth integration tests [US-01][AC-1]
+#
+# Accepted ID patterns:
+#   [US-XX]    — User story ID
+#   [FR-XXX]   — Functional requirement ID
+#   [NFR-XXX]  — Non-functional requirement ID
+#   [AC-X]     — Acceptance criteria ID (in test commits)
+#   #NNN       — GitHub issue number
+
+COMMIT_MSG_FILE=$1
+COMMIT_MSG=$(cat "$COMMIT_MSG_FILE")
+
+# Extract the first line (subject)
+SUBJECT=$(head -1 "$COMMIT_MSG_FILE")
+
+# Determine commit type from conventional commit format
+COMMIT_TYPE=$(echo "$SUBJECT" | sed -n 's/^\([a-z]*\)(.*/\1/p')
+
+# Exempt types that don't need traceability
+EXEMPT_TYPES="docs chore ci style build merge revert"
+for exempt in $EXEMPT_TYPES; do
+  if [ "$COMMIT_TYPE" = "$exempt" ]; then
+    exit 0
+  fi
+done
+
+# Also exempt if it starts with "Merge" (merge commits)
+if echo "$SUBJECT" | grep -q "^Merge"; then
+  exit 0
+fi
+
+# Check for traceability IDs in the FULL commit message (subject + body)
+if echo "$COMMIT_MSG" | grep -qE '\[US-[0-9]+\]|\[FR-[0-9]+\]|\[NFR-[0-9]+\]|\[AC-[0-9]+\]|#[0-9]+'; then
+  exit 0
+fi
+
+# If we got here, the commit is missing traceability
+echo ""
+echo "⚠️  TRACEABILITY WARNING (Constitution Article VI)"
+echo ""
+echo "  Commit type '$COMMIT_TYPE' should reference a story or requirement ID."
+echo ""
+echo "  Add one of these to your commit message:"
+echo "    [US-XX]    — User story ID (e.g., [US-01])"
+echo "    [FR-XXX]   — Functional requirement ID (e.g., [FR-003])"
+echo "    [NFR-XXX]  — Non-functional requirement ID"
+echo "    #NNN       — GitHub issue number"
+echo ""
+echo "  Example: feat(auth): add login endpoint [US-01][FR-003]"
+echo ""
+echo "  Exempt types: docs, chore, ci, style, build"
+echo ""
+echo "  To bypass (NOT recommended): SKIP_TRACEABILITY=1 git commit ..."
+echo ""
+
+# WARNING mode — allow but warn. Switch to exit 1 for hard enforcement.
+if [ "${SKIP_TRACEABILITY:-0}" = "1" ]; then
+  echo "  ⚠️  Bypassing traceability check (SKIP_TRACEABILITY=1)"
+  exit 0
+fi
+
+# For now, warn but don't block (soft enforcement)
+# Uncomment the next line for hard enforcement:
+# exit 1
+exit 0

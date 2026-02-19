@@ -365,9 +365,18 @@ C. INVOKE AGENTS (PARALLEL-AWARE)
    - Verify staged files before commit (git diff --cached --stat)
    - Use conventional commit messages
 
+   ## Traceability (Constitution Article VI — MANDATORY)
+   - Commits MUST include story/requirement IDs: feat(scope): message [US-XX][FR-XXX]
+   - Test names MUST include acceptance criteria: test('[US-XX][AC-X] description', ...)
+   - E2E tests organized by story: e2e/tests/stories/{story-id}/*.spec.ts
+   - Feature code MUST have header comment: // Implements: US-XX, FR-XXX — description
+   - Story IDs for this task: {STORY_IDS}
+   - Requirement IDs for this task: {REQUIREMENT_IDS}
+
    ## When Complete
    Report: status (success/failure/blocked), summary, files changed,
-   tests added/passing, time spent, learned patterns, blockers.
+   tests added/passing, time spent, learned patterns, blockers,
+   story_ids implemented, requirement_ids addressed.
 
    Then run:
    .claude/scripts/post-task-update.sh {AGENT} {TASK_ID} {PRODUCT} {STATUS} {MINUTES} "{SUMMARY}" "{PATTERN}"
@@ -455,7 +464,11 @@ F. CHECK FOR CHECKPOINT
        E2E test files. If not, route to QA Engineer to write them. Products without E2E tests
        CANNOT pass the checkpoint — this is non-negotiable. Interactive bugs (broken buttons,
        missing navigation, hardcoded values) are only caught by E2E tests.
-     - **All pass condition**: smoke test PASS + no placeholders + E2E tests exist and pass + testing gate PASS + all audit scores >= 8/10
+     - Run Traceability Gate: `.claude/scripts/traceability-gate.sh [product]`
+       - Verifies: commit IDs, test names, E2E organization, architecture matrix
+       - Constitution Article VI compliance check
+       - If FAIL: Route to appropriate agent to add missing traceability
+     - **All pass condition**: smoke test PASS + no placeholders + E2E tests exist and pass + testing gate PASS + traceability gate PASS + all audit scores >= 8/10
      - Once all pass:
        - PAUSE execution loop
        - Generate CEO report with audit scores + smoke test report

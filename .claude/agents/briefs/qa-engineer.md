@@ -44,9 +44,24 @@ Next Steps:
 - [If FAIL: what needs fixing]
 ```
 
+## Traceability (MANDATORY — Constitution Article VI)
+- **E2E Test Organization**: Tests MUST be organized by story ID: `e2e/tests/stories/{story-id}/*.spec.ts`
+- **Test Names**: MUST include story + acceptance criteria IDs: `test('[US-01][AC-1] user can register with email', ...)`
+- **Requirement Coverage Report**: Testing Gate report MUST include a coverage matrix:
+  ```
+  | US/FR ID | Acceptance Criteria | Test File | Status |
+  |----------|-------------------|-----------|--------|
+  | US-01    | AC-1: Register    | us-01/register.spec.ts | PASS |
+  ```
+- **Orphan Tests**: Flag any test that doesn't reference a story/requirement ID
+- **Missing Coverage**: Flag any acceptance criterion without a corresponding test
+
 ## Quality Gate
 - All unit tests passing.
 - All E2E tests passing.
 - All interactive elements covered by E2E tests.
 - Smoke tests pass (health endpoints, critical user flows).
 - Visual verification confirms UI matches design.
+- Requirement coverage matrix included in test report.
+- Every acceptance criterion has at least one test.
+- All test names reference [US-XX][AC-X] IDs.

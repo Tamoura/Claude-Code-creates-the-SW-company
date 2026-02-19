@@ -1,12 +1,24 @@
 # New Product Workflow Task Graph Template
 # Placeholders: {PRODUCT}, {DESCRIPTION}
+#
+# TRACEABILITY RULES (Constitution Article VI):
+#   - Every task MUST have story_ids and/or requirement_ids once PRD exists
+#   - Planning tasks (PRD-01, ARCH-01) create stories — they link to epics instead
+#   - Foundation tasks link to foundation stories defined in the PRD
+#   - Commits MUST include [US-XX] or [FR-XXX] in the message
+#   - Tests MUST reference acceptance criteria IDs in test names
+#   - E2E tests MUST be organized by story: e2e/tests/stories/{story-id}/
 
 metadata:
   product: "{PRODUCT}"
-  version: "1.0.0"
+  version: "2.0.0"
   workflow_type: "new-product"
   created_at: "{TIMESTAMP}"
   updated_at: "{TIMESTAMP}"
+  traceability:
+    brd_ref: "products/{PRODUCT}/docs/PRD.md"
+    epic: "EP-{PRODUCT}-FOUNDATION"
+    sprint: "Sprint 0 — Foundation"
 
 tasks:
   # ============================================================================
@@ -18,13 +30,22 @@ tasks:
     description: |
       Analyze CEO brief: {DESCRIPTION}
       Create comprehensive PRD with:
-      - User personas and stories
+      - User personas and stories (each with unique ID: US-01, US-02, etc.)
       - Core features and MVP scope
+      - Functional requirements (FR-001, FR-002, etc.)
+      - Non-functional requirements (NFR-001, NFR-002, etc.)
       - Success metrics
       - Technical constraints
       - Create product addendum (.claude/addendum.md)
+
+      TRACEABILITY: This task CREATES the requirement IDs. Every user story
+      must have a unique ID (US-XX) and every requirement must have a unique
+      ID (FR-XXX / NFR-XXX). These IDs are used by ALL downstream tasks.
     agent: "product-manager"
     depends_on: []
+    story_ids: []
+    requirement_ids: []
+    epic: "EP-{PRODUCT}-INCEPTION"
     produces:
       - name: "PRD"
         type: "document"
@@ -32,15 +53,20 @@ tasks:
       - name: "Product Addendum"
         type: "document"
         path: "products/{PRODUCT}/.claude/addendum.md"
+      - name: "Requirement Index"
+        type: "index"
+        description: "US-XX and FR-XXX IDs defined in PRD, used by all downstream tasks"
     parallel_ok: false
     checkpoint: true
     priority: "critical"
     estimated_time_minutes: 120
     acceptance_criteria:
       - "PRD follows template structure"
-      - "All user stories have acceptance criteria"
+      - "All user stories have unique IDs (US-XX) and acceptance criteria (Given/When/Then)"
+      - "All functional requirements have unique IDs (FR-XXX)"
+      - "All non-functional requirements have unique IDs (NFR-XXX)"
       - "Success metrics are measurable"
-      - "MVP scope is clearly defined"
+      - "MVP scope is clearly defined with story IDs listed"
       - "Product addendum created with tech stack and conventions"
     status: "pending"
 
@@ -58,12 +84,21 @@ tasks:
       - Technology stack confirmation
       - Security considerations
       - Update product addendum with architecture details
+
+      TRACEABILITY: Map every API endpoint to the FR-XXX / US-XX it serves.
+      Include a traceability matrix in architecture.md showing:
+      US-XX → FR-XXX → API endpoint → DB table
     agent: "architect"
     depends_on: ["PRD-01"]
+    story_ids: ["ALL — maps PRD stories to architecture"]
+    requirement_ids: ["ALL — maps PRD requirements to technical design"]
+    epic: "EP-{PRODUCT}-ARCHITECTURE"
     consumes:
       - name: "PRD"
         required_from_task: "PRD-01"
       - name: "Product Addendum"
+        required_from_task: "PRD-01"
+      - name: "Requirement Index"
         required_from_task: "PRD-01"
     produces:
       - name: "Architecture Document"
@@ -78,16 +113,21 @@ tasks:
       - name: "ADRs"
         type: "directory"
         path: "products/{PRODUCT}/docs/ADRs/"
+      - name: "Traceability Matrix"
+        type: "section"
+        description: "US-XX → FR-XXX → endpoint → table mapping in architecture.md"
     parallel_ok: false
     checkpoint: true
     priority: "critical"
     estimated_time_minutes: 180
     acceptance_criteria:
       - "API contracts define all MVP endpoints"
+      - "Every API endpoint maps to at least one FR-XXX or US-XX"
       - "Database schema is normalized"
       - "At least 2 ADRs documenting key decisions"
       - "Security considerations documented"
       - "Tech stack confirmed and documented"
+      - "Traceability matrix included: US → FR → endpoint → table"
     status: "pending"
 
   # ============================================================================
@@ -102,8 +142,14 @@ tasks:
       - Docker configuration
       - Environment setup (dev, staging, prod)
       - Database provisioning scripts
+
+      TRACEABILITY: Include [NFR-INFRA] in commits. CI pipeline must
+      enforce traceability checks (see .githooks/commit-msg).
     agent: "devops-engineer"
     depends_on: ["ARCH-01"]
+    story_ids: []
+    requirement_ids: ["NFR-INFRA"]
+    epic: "EP-{PRODUCT}-FOUNDATION"
     consumes:
       - name: "Architecture Document"
         required_from_task: "ARCH-01"
@@ -137,12 +183,21 @@ tasks:
       - Basic middleware (logging, cors, error handling)
       - Health check endpoint
       - Unit test setup with Jest
+
+      TRACEABILITY: Link to auth stories (US-01) and foundation requirements.
+      Every commit must include [US-XX] or [FR-XXX]. Test names must
+      reference acceptance criteria: test('[US-01][AC-1] user can register', ...).
     agent: "backend-engineer"
     depends_on: ["ARCH-01"]
+    story_ids: ["{FOUNDATION_STORY_IDS}"]
+    requirement_ids: ["{FOUNDATION_REQUIREMENT_IDS}"]
+    epic: "EP-{PRODUCT}-FOUNDATION"
     consumes:
       - name: "API Schema"
         required_from_task: "ARCH-01"
       - name: "Database Schema"
+        required_from_task: "ARCH-01"
+      - name: "Traceability Matrix"
         required_from_task: "ARCH-01"
     produces:
       - name: "Backend App"
@@ -164,6 +219,8 @@ tasks:
       - "Health check endpoint returns 200"
       - "At least 10 unit tests passing"
       - "Test coverage > 80%"
+      - "All commits reference story/requirement IDs"
+      - "Test names include acceptance criteria IDs"
     status: "pending"
 
   - id: "FRONTEND-01"
@@ -176,10 +233,18 @@ tasks:
       - Routing structure
       - Basic pages (home, 404, error)
       - Unit test setup with React Testing Library
+
+      TRACEABILITY: Link to UI stories from PRD. Every commit must include
+      [US-XX] or [FR-XXX]. Test names must reference acceptance criteria.
     agent: "frontend-engineer"
     depends_on: ["ARCH-01"]
+    story_ids: ["{FOUNDATION_STORY_IDS}"]
+    requirement_ids: ["{FOUNDATION_REQUIREMENT_IDS}"]
+    epic: "EP-{PRODUCT}-FOUNDATION"
     consumes:
       - name: "Architecture Document"
+        required_from_task: "ARCH-01"
+      - name: "Traceability Matrix"
         required_from_task: "ARCH-01"
     produces:
       - name: "Frontend App"
@@ -201,6 +266,8 @@ tasks:
       - "Tailwind CSS styles apply correctly"
       - "Layout is responsive"
       - "At least 5 component tests passing"
+      - "All commits reference story/requirement IDs"
+      - "Test names include acceptance criteria IDs"
     status: "pending"
 
   # ============================================================================
@@ -215,12 +282,22 @@ tasks:
       - Test utilities and helpers
       - Page Object Models
       - Database seeding for tests
-      - Basic smoke tests
+      - Basic smoke tests organized by user story
+
+      TRACEABILITY: E2E tests MUST be organized by story ID:
+        e2e/tests/stories/{story-id}/*.spec.ts
+      Test descriptions MUST include story ID:
+        test('[US-01][AC-1] user can register with email', ...)
     agent: "qa-engineer"
     depends_on: ["FRONTEND-01"]
+    story_ids: ["{FOUNDATION_STORY_IDS}"]
+    requirement_ids: ["{FOUNDATION_REQUIREMENT_IDS}"]
+    epic: "EP-{PRODUCT}-FOUNDATION"
     consumes:
       - name: "Frontend App"
         required_from_task: "FRONTEND-01"
+      - name: "Traceability Matrix"
+        required_from_task: "ARCH-01"
     produces:
       - name: "E2E Test Setup"
         type: "directory"
@@ -231,6 +308,9 @@ tasks:
       - name: "Smoke Tests"
         type: "directory"
         path: "products/{PRODUCT}/e2e/tests/smoke"
+      - name: "Story-Based Tests"
+        type: "directory"
+        path: "products/{PRODUCT}/e2e/tests/stories"
     parallel_ok: false
     checkpoint: false
     priority: "high"
@@ -238,6 +318,8 @@ tasks:
     acceptance_criteria:
       - "Playwright installed and configured"
       - "At least 3 smoke tests created"
+      - "Tests organized by story ID in e2e/tests/stories/"
+      - "Test descriptions include [US-XX][AC-X] IDs"
       - "Tests can run headless and headed"
       - "Test data seeding works"
     status: "pending"
@@ -251,9 +333,15 @@ tasks:
       - Start dev server and verify app loads
       - Visual verification (buttons, forms, layout)
       - Check for console errors
-      - Generate test report
+      - Generate test report with traceability section
+
+      TRACEABILITY: Test report MUST include a "Requirement Coverage" section:
+      | US/FR ID | Acceptance Criteria | Test File | Status |
     agent: "qa-engineer"
     depends_on: ["BACKEND-01", "FRONTEND-01", "DEVOPS-01", "QA-01"]
+    story_ids: ["{ALL_MVP_STORY_IDS}"]
+    requirement_ids: ["{ALL_MVP_REQUIREMENT_IDS}"]
+    epic: "EP-{PRODUCT}-FOUNDATION"
     consumes:
       - name: "Backend App"
         required_from_task: "BACKEND-01"
@@ -273,6 +361,8 @@ tasks:
       - "App loads without errors on http://localhost:3100+"
       - "All UI elements visible and styled"
       - "No console errors"
+      - "Test report includes requirement coverage matrix"
+      - "Every MVP acceptance criterion has at least one test"
     status: "pending"
 
   - id: "DOCS-01"
@@ -280,11 +370,17 @@ tasks:
     description: |
       Document the foundation:
       - README with setup instructions
-      - API documentation
+      - API documentation (endpoints mapped to FR-XXX IDs)
       - Development guide
       - Deployment guide (basic)
+
+      TRACEABILITY: API docs must map endpoints → FR-XXX.
+      README must reference the PRD and architecture docs.
     agent: "technical-writer"
     depends_on: ["BACKEND-01", "FRONTEND-01", "DEVOPS-01"]
+    story_ids: []
+    requirement_ids: []
+    epic: "EP-{PRODUCT}-FOUNDATION"
     consumes:
       - name: "Backend App"
         required_from_task: "BACKEND-01"
@@ -306,7 +402,7 @@ tasks:
     estimated_time_minutes: 60
     acceptance_criteria:
       - "README has clear setup instructions"
-      - "API endpoints documented with examples"
+      - "API endpoints documented with requirement IDs (FR-XXX)"
       - "Development guide covers common tasks"
     status: "pending"
 
