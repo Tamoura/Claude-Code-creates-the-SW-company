@@ -1,0 +1,39 @@
+# Render Blueprint — HumanID Backend
+# https://render.com/docs/blueprint-spec
+
+services:
+  - type: web
+    name: humanid-api
+    runtime: node
+    plan: free
+    rootDir: products/humanid/apps/api
+    buildCommand: npm ci && npx prisma generate && npx tsc
+    startCommand: npx prisma migrate deploy && node dist/index.js
+    healthCheckPath: /health
+    envVars:
+      - key: NODE_ENV
+        value: production
+      - key: PORT
+        value: 5013
+      - key: DATABASE_URL
+        fromDatabase:
+          name: humanid-db
+          property: connectionString
+      - key: JWT_SECRET
+        generateValue: true
+      - key: API_KEY_HMAC_SECRET
+        generateValue: true
+      - key: CLAIMS_ENCRYPTION_KEY
+        generateValue: true
+      - key: INTERNAL_API_KEY
+        generateValue: true
+      - key: ALLOWED_ORIGINS
+        sync: false
+      - key: REDIS_URL
+        sync: false
+
+databases:
+  - name: humanid-db
+    plan: free
+    databaseName: humanid_prod
+    user: humanid
