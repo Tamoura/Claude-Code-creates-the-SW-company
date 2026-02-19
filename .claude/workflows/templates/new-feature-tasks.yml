@@ -1,14 +1,30 @@
 # New Feature Workflow Task Graph Template
 # Placeholders: {PRODUCT}, {FEATURE}, {FEATURE_ID}, {DESCRIPTION}, {TIMESTAMP}
+# Traceability Placeholders: {STORY_IDS}, {REQUIREMENT_IDS}, {EPIC_ID}, {SPRINT}
+#
+# TRACEABILITY RULES (Constitution Article VI):
+#   - Every task MUST populate story_ids and requirement_ids
+#   - Orchestrator fills these from the spec/PRD when instantiating
+#   - Commits MUST include [US-XX] or [FR-XXX] in the message
+#   - Tests MUST reference acceptance criteria IDs in test names
+#   - E2E tests organized by story: e2e/tests/stories/{story-id}/
+#   - PR description MUST list implemented story/requirement IDs
 
 metadata:
   product: "{PRODUCT}"
   feature: "{FEATURE}"
   feature_id: "{FEATURE_ID}"
-  version: "1.0.0"
+  version: "2.0.0"
   workflow_type: "new-feature"
   created_at: "{TIMESTAMP}"
   updated_at: "{TIMESTAMP}"
+  traceability:
+    brd_ref: "products/{PRODUCT}/docs/PRD.md"
+    spec_ref: "products/{PRODUCT}/docs/specs/{FEATURE_ID}.md"
+    story_ids: ["{STORY_IDS}"]
+    requirement_ids: ["{REQUIREMENT_IDS}"]
+    epic: "{EPIC_ID}"
+    sprint: "{SPRINT}"
 
 tasks:
   # ============================================================================
@@ -19,15 +35,19 @@ tasks:
     name: "Design {FEATURE}"
     description: |
       Review the feature request: {DESCRIPTION}
-      
+
       Tasks:
       - Review existing PRD and architecture
       - Design API changes (if any)
       - Design UI changes (if any)
       - Identify affected components
       - Create feature specification document
+      - Map new/changed endpoints to requirement IDs
     agent: "architect"
     depends_on: []
+    story_ids: ["{STORY_IDS}"]
+    requirement_ids: ["{REQUIREMENT_IDS}"]
+    epic: "{EPIC_ID}"
     produces:
       - name: "Feature Design"
         type: "document"
@@ -38,10 +58,11 @@ tasks:
     estimated_time_minutes: 60
     acceptance_criteria:
       - "Feature specification document created"
-      - "API changes documented (if applicable)"
+      - "API changes documented with FR-XXX / US-XX linkage"
       - "UI changes documented (if applicable)"
       - "Affected components identified"
       - "No conflicts with existing architecture"
+      - "Traceability: every change mapped to a story/requirement"
     status: "pending"
 
   # ============================================================================
@@ -56,8 +77,13 @@ tasks:
       - Implement API endpoints
       - Update database schema if needed
       - Ensure all tests pass
+      - Commits include [US-XX][FR-XXX] IDs
+      - Test names include [US-XX][AC-X] IDs
     agent: "backend-engineer"
     depends_on: ["DESIGN-{FEATURE_ID}"]
+    story_ids: ["{STORY_IDS}"]
+    requirement_ids: ["{REQUIREMENT_IDS}"]
+    epic: "{EPIC_ID}"
     consumes:
       - name: "Feature Design"
         required_from_task: "DESIGN-{FEATURE_ID}"
@@ -89,8 +115,13 @@ tasks:
       - Connect to backend API
       - Ensure responsive design
       - Add unit tests
+      - Commits include [US-XX][FR-XXX] IDs
+      - Test names include [US-XX][AC-X] IDs
     agent: "frontend-engineer"
     depends_on: ["DESIGN-{FEATURE_ID}"]
+    story_ids: ["{STORY_IDS}"]
+    requirement_ids: ["{REQUIREMENT_IDS}"]
+    epic: "{EPIC_ID}"
     consumes:
       - name: "Feature Design"
         required_from_task: "DESIGN-{FEATURE_ID}"
@@ -122,12 +153,18 @@ tasks:
     description: |
       Comprehensive testing for {FEATURE}:
       - Write E2E tests for new functionality
+      - Organize E2E tests by story: e2e/tests/stories/{story-id}/
+      - Test descriptions include [US-XX][AC-X] IDs
       - Run full test suite
       - Verify visual appearance
       - Check for regressions
       - Run Testing Gate checklist
+      - Generate requirement coverage report
     agent: "qa-engineer"
     depends_on: ["BACKEND-{FEATURE_ID}", "FRONTEND-{FEATURE_ID}"]
+    story_ids: ["{STORY_IDS}"]
+    requirement_ids: ["{REQUIREMENT_IDS}"]
+    epic: "{EPIC_ID}"
     consumes:
       - name: "Backend Implementation"
         required_from_task: "BACKEND-{FEATURE_ID}"

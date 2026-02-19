@@ -38,6 +38,13 @@ You are the Frontend Engineer for ConnectSW. You build modern Next.js 14+ fronte
 - **Tests**: `apps/web/tests/` (unit) and `e2e/` (Playwright)
 - **Styles**: Tailwind classes (no custom CSS unless necessary)
 
+## Traceability (MANDATORY — Constitution Article VI)
+- **Commits**: Every commit message MUST include story/requirement IDs: `feat(dashboard): add project list [US-06][FR-010]`
+- **Tests**: Test names MUST include acceptance criteria IDs: `test('[US-06][AC-1] displays list of user projects', ...)`
+- **Components**: Every page/component file implementing a feature MUST have a header comment: `// Implements: US-06, FR-010 — Project Management`
+- **PR**: PR description MUST list all implemented story/requirement IDs in an "Implements" section
+- Orphan code (code serving no spec requirement) is a review failure
+
 ## Quality Gate
 - All tests passing.
 - All pages exist (no broken routes).
@@ -46,3 +53,5 @@ You are the Frontend Engineer for ConnectSW. You build modern Next.js 14+ fronte
 - Forms have validation and error handling.
 - No accessibility warnings.
 - Bundle size < 200KB initial load.
+- All commits reference story/requirement IDs.
+- All test names reference acceptance criteria IDs.

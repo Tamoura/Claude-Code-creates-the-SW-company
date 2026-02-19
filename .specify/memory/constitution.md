@@ -90,16 +90,81 @@ Products MUST use the ConnectSW default stack unless an ADR justifies deviation.
 
 ## Article VI: Specification Traceability
 
-Every implementation artifact MUST trace back to a specification requirement.
+Every implementation artifact MUST trace back to a specification requirement. Traceability is enforced at every stage: code, commits, tests, PRs, audits, and quality gates.
 
 **Rules:**
-- Task IDs MUST reference spec requirement IDs (e.g., `[FR-001]`, `[US1]`)
-- Test names MUST reference acceptance criteria from the spec
-- PRs MUST link to the spec and list which requirements they address
-- Orphan code (code that serves no spec requirement) MUST be flagged during review
-- `/speckit.analyze` MUST be run before any CEO checkpoint to verify traceability
 
-**Rationale:** Traceability prevents scope creep, ensures nothing is missed, and makes audits straightforward.
+### 6.1 Requirement IDs (BRD/PRD Level)
+- Every user story MUST have a unique ID: `US-01`, `US-02`, etc.
+- Every functional requirement MUST have a unique ID: `FR-001`, `FR-002`, etc.
+- Every non-functional requirement MUST have a unique ID: `NFR-001`, `NFR-002`, etc.
+- Every acceptance criterion MUST have a unique ID within its story: `AC-1`, `AC-2`, etc.
+- IDs are defined in the PRD and referenced by all downstream artifacts
+
+### 6.2 Task Graph Traceability
+- Every task in the task graph MUST have `story_ids` and `requirement_ids` fields
+- The orchestrator populates these when instantiating the task graph from the PRD
+- Acceptance criteria in task graphs MUST reference PRD acceptance criteria IDs
+
+### 6.3 Commit Message Format
+- Feature/fix/refactor/test commits MUST include story or requirement IDs:
+  ```
+  feat(auth): add login endpoint [US-01][FR-003]
+  fix(canvas): handle null elements [US-04] #123
+  test(api): add auth integration tests [US-01][AC-1]
+  ```
+- Exempt commit types: `docs`, `chore`, `ci`, `style`, `build`
+- Enforced by `.githooks/commit-msg` hook (warning mode; hard mode available)
+
+### 6.4 Test Naming Convention
+- Unit/integration test names MUST include story + acceptance criteria IDs:
+  ```typescript
+  test('[US-01][AC-1] user can register with valid email', async () => { ... })
+  test('[US-04][AC-2] canvas renders 200+ elements without lag', async () => { ... })
+  ```
+- E2E tests MUST be organized by story ID:
+  ```
+  e2e/tests/stories/us-01-auth/register.spec.ts
+  e2e/tests/stories/us-01-auth/login.spec.ts
+  e2e/tests/stories/us-04-canvas/render.spec.ts
+  ```
+
+### 6.5 Code Linkage
+- Every route handler / page component implementing a feature MUST have a header comment:
+  ```typescript
+  // Implements: US-01, FR-003 — User Authentication
+  ```
+- Orphan code (code that serves no spec requirement) MUST be flagged during code review
+
+### 6.6 PR Requirements
+- PR description MUST include an "Implements" section listing all story/requirement IDs:
+  ```markdown
+  ## Implements
+  - [US-01] User Authentication (FR-001, FR-002, FR-003)
+  - [US-02] NL-to-Diagram Generation (FR-004, FR-005)
+  ```
+
+### 6.7 Quality Gate Enforcement
+- **Traceability Gate** (`.claude/scripts/traceability-gate.sh`): Runs alongside Testing Gate
+- Checks: commit IDs, test names, E2E organization, architecture matrix, PRD IDs
+- MUST pass before any CEO checkpoint
+- `/speckit.analyze` also verifies spec→plan→task alignment
+
+### 6.8 Audit Trail Linkage
+- Audit log entries MUST include `story_id` and `requirement_ids` fields
+- Enables querying: "show all work done for US-01" or "is FR-003 implemented?"
+
+### 6.9 Requirement Coverage Report
+- Testing Gate report MUST include a requirement coverage matrix:
+  ```
+  | US/FR ID | Acceptance Criteria | Test File       | Status |
+  |----------|-------------------|-----------------|--------|
+  | US-01    | AC-1: Register    | us-01/register  | PASS   |
+  | US-01    | AC-2: Login       | us-01/login     | PASS   |
+  | FR-003   | Password rules    | us-01/register  | PASS   |
+  ```
+
+**Rationale:** Traceability prevents scope creep, ensures nothing is missed, makes audits straightforward, and provides a complete chain from business requirement to deployed code. Without enforcement, traceability rules are aspirational — with enforcement, they are guaranteed.
 
 ---
 

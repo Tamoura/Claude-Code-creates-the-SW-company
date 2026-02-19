@@ -1,13 +1,24 @@
 # Bug Fix Workflow Task Graph Template
 # Placeholders: {PRODUCT}, {BUG_DESCRIPTION}, {ISSUE_ID}
+#
+# TRACEABILITY RULES (Constitution Article VI):
+#   - Bug must be linked to affected user story (US-XX) and requirement (FR-XXX)
+#   - Commits MUST include #{ISSUE_ID} and affected [US-XX] / [FR-XXX]
+#   - Regression tests MUST reference the affected acceptance criteria
+#   - PR description MUST list: issue, affected stories, root cause
 
 metadata:
   product: "{PRODUCT}"
-  version: "1.0.0"
+  version: "2.0.0"
   workflow_type: "bug-fix"
   issue_id: "{ISSUE_ID}"
   created_at: "{TIMESTAMP}"
   updated_at: "{TIMESTAMP}"
+  traceability:
+    brd_ref: "products/{PRODUCT}/docs/PRD.md"
+    issue_ref: "#{ISSUE_ID}"
+    affected_story_ids: ["{AFFECTED_STORY_IDS}"]
+    affected_requirement_ids: ["{AFFECTED_REQUIREMENT_IDS}"]
 
 tasks:
   # ============================================================================
