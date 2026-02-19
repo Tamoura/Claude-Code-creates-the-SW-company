@@ -1,0 +1,1838 @@
+openapi: 3.0.3
+info:
+  title: ArchForge API
+  description: |
+    REST API for ArchForge — AI-powered enterprise architecture platform.
+    Generates standards-compliant EA artifacts (ArchiMate, C4, TOGAF) from
+    natural language descriptions.
+  version: 1.0.0
+  contact:
+    name: ConnectSW Engineering
+    url: https://archforge.io
+  license:
+    name: Proprietary
+    url: https://archforge.io/terms
+
+servers:
+  - url: http://localhost:5012/api/v1
+    description: Local development
+  - url: https://api.archforge.io/api/v1
+    description: Production
+
+tags:
+  - name: Auth
+    description: User registration, login, token management
+  - name: Projects
+    description: Project and workspace management
+  - name: Artifacts
+    description: Artifact CRUD, AI generation, document ingestion
+  - name: Versions
+    description: Version history and change tracking
+  - name: Templates
+    description: Template library browsing and management
+  - name: Collaboration
+    description: Sharing, comments, real-time collaboration
+  - name: Export
+    description: Multi-format artifact export
+
+components:
+  securitySchemes:
+    BearerAuth:
+      type: http
+      scheme: bearer
+      bearerFormat: JWT
+      description: JWT access token (24-hour expiry)
+    ApiKeyAuth:
+      type: apiKey
+      in: header
+      name: X-API-Key
+      description: API key for programmatic access
+
+  schemas:
+    # ---- Error ----
+    ProblemDetail:
+      type: object
+      description: RFC 7807 Problem Details
+      required: [type, title, status]
+      properties:
+        type:
+          type: string
+          example: "https://archforge.io/errors/validation"
+        title:
+          type: string
+          example: "Validation Error"
+        status:
+          type: integer
+          example: 400
+        detail:
+          type: string
+          example: "The 'name' field is required."
+        instance:
+          type: string
+          example: "/api/v1/projects"
+        errors:
+          type: array
+          items:
+            type: object
+            properties:
+              field:
+                type: string
+              message:
+                type: string
+
+    # ---- Pagination ----
+    PaginationMeta:
+      type: object
+      properties:
+        total:
+          type: integer
+          example: 42
+        page:
+          type: integer
+          example: 1
+        pageSize:
+          type: integer
+          example: 20
+        hasMore:
+          type: boolean
+          example: true
+        nextCursor:
+          type: string
+          nullable: true
+          example: "eyJpZCI6IjEyMyJ9"
+
+    # ---- Auth ----
+    RegisterRequest:
+      type: object
+      required: [email, password, fullName]
+      properties:
+        email:
+          type: string
+          format: email
+          example: elena@example.com
+        password:
+          type: string
+          minLength: 8
+          description: "Min 8 chars: 1 uppercase, 1 lowercase, 1 number, 1 special character"
+          example: "Str0ng!Pass"
+        fullName:
+          type: string
+          minLength: 1
+          maxLength: 255
+          example: "Elena Petrova"
+
+    LoginRequest:
+      type: object
+      required: [email, password]
+      properties:
+        email:
+          type: string
+          format: email
+          example: elena@example.com
+        password:
+          type: string
+          example: "Str0ng!Pass"
+
+    AuthResponse:
+      type: object
+      properties:
+        accessToken:
+          type: string
+          description: JWT access token (24h expiry)
+        expiresAt:
+          type: string
+          format: date-time
+        user:
+          $ref: '#/components/schemas/UserSummary'
+
+    RefreshRequest:
+      type: object
+      description: Refresh token is sent via httpOnly cookie, no body needed.
+
+    UserSummary:
+      type: object
+      properties:
+        id:
+          type: string
+          format: uuid
+        email:
+          type: string
+          format: email
+        fullName:
+          type: string
+        avatarUrl:
+          type: string
+          nullable: true
+        role:
+          type: string
+          enum: [admin, member, viewer]
+        status:
+          type: string
+          enum: [registered, verified, active, suspended, deactivated]
+        emailVerified:
+          type: boolean
+        createdAt:
+          type: string
+          format: date-time
+
+    UserProfile:
+      allOf:
+        - $ref: '#/components/schemas/UserSummary'
+        - type: object
+          properties:
+            oauthProviders:
+              type: array
+              items:
+                type: string
+                enum: [google, github, microsoft]
+            totpEnabled:
+              type: boolean
+            lastLoginAt:
+              type: string
+              format: date-time
+              nullable: true
+
+    # ---- Projects ----
+    CreateProjectRequest:
+      type: object
+      required: [name]
+      properties:
+        name:
+          type: string
+          minLength: 1
+          maxLength: 255
+          example: "Cloud Migration Architecture"
+        description:
+          type: string
+          maxLength: 2000
+          example: "Architecture documentation for the 2026 cloud migration initiative"
+        frameworkPreference:
+          type: string
+          enum: [archimate, c4, togaf, auto]
+          default: auto
+          description: Default output framework for artifacts in this project
+
+    UpdateProjectRequest:
+      type: object
+      properties:
+        name:
+          type: string
+          minLength: 1
+          maxLength: 255
+        description:
+          type: string
+          maxLength: 2000
+        frameworkPreference:
+          type: string
+          enum: [archimate, c4, togaf, auto]
+
+    Project:
+      type: object
+      properties:
+        id:
+          type: string
+          format: uuid
+        name:
+          type: string
+        description:
+          type: string
+          nullable: true
+        frameworkPreference:
+          type: string
+          enum: [archimate, c4, togaf, auto]
+        status:
+          type: string
+          enum: [active, archived, deleted]
+        artifactCount:
+          type: integer
+        memberCount:
+          type: integer
+        createdBy:
+          $ref: '#/components/schemas/UserSummary'
+        createdAt:
+          type: string
+          format: date-time
+        updatedAt:
+          type: string
+          format: date-time
+        archivedAt:
+          type: string
+          format: date-time
+          nullable: true
+        thumbnailUrl:
+          type: string
+          nullable: true
+          description: Preview thumbnail of most recently edited artifact
+
+    ProjectMember:
+      type: object
+      properties:
+        id:
+          type: string
+          format: uuid
+        user:
+          $ref: '#/components/schemas/UserSummary'
+        role:
+          type: string
+          enum: [owner, admin, editor, viewer]
+        joinedAt:
+          type: string
+          format: date-time
+
+    AddMemberRequest:
+      type: object
+      required: [email, role]
+      properties:
+        email:
+          type: string
+          format: email
+        role:
+          type: string
+          enum: [admin, editor, viewer]
+
+    # ---- Artifacts ----
+    GenerateArtifactRequest:
+      type: object
+      required: [description, framework]
+      properties:
+        description:
+          type: string
+          minLength: 10
+          maxLength: 10000
+          description: Natural language description of the architecture
+          example: "An e-commerce platform with a React frontend, a Node.js API gateway, three microservices (orders, inventory, payments), a PostgreSQL database, and integrations with Stripe and SendGrid."
+        framework:
+          type: string
+          enum: [archimate, c4, togaf]
+          example: archimate
+        options:
+          type: object
+          properties:
+            detailLevel:
+              type: string
+              enum: [high, medium, low]
+              default: medium
+            includeRelationships:
+              type: boolean
+              default: true
+        clarifications:
+          type: object
+          description: Answers to previously asked clarifying questions
+          additionalProperties:
+            type: string
+
+    IngestDocumentRequest:
+      type: object
+      description: Multipart form data with file upload
+      required: [file]
+      properties:
+        file:
+          type: string
+          format: binary
+          description: "PDF, DOCX, TXT, MD, or HTML file (max 20MB)"
+        framework:
+          type: string
+          enum: [archimate, c4, togaf, auto]
+          default: auto
+
+    Artifact:
+      type: object
+      properties:
+        id:
+          type: string
+          format: uuid
+        projectId:
+          type: string
+          format: uuid
+        name:
+          type: string
+        type:
+          type: string
+          enum: [archimate_diagram, c4_diagram, togaf_view, bpmn_diagram, custom]
+        framework:
+          type: string
+          enum: [archimate, c4, togaf, bpmn, custom]
+        status:
+          type: string
+          enum: [draft, in_review, approved, published, archived]
+        canvasData:
+          type: object
+          description: "JSON structure containing elements, relationships, layout positions"
+          properties:
+            elements:
+              type: array
+              items:
+                $ref: '#/components/schemas/CanvasElement'
+            relationships:
+              type: array
+              items:
+                $ref: '#/components/schemas/CanvasRelationship'
+            viewport:
+              type: object
+              properties:
+                x: { type: number }
+                y: { type: number }
+                zoom: { type: number }
+        svgContent:
+          type: string
+          description: Pre-rendered SVG for quick display
+        nlDescription:
+          type: string
+          nullable: true
+          description: Original NL input that generated this artifact
+        currentVersion:
+          type: integer
+        validation:
+          $ref: '#/components/schemas/ValidationResult'
+        createdBy:
+          $ref: '#/components/schemas/UserSummary'
+        createdAt:
+          type: string
+          format: date-time
+        updatedAt:
+          type: string
+          format: date-time
+
+    CanvasElement:
+      type: object
+      properties:
+        id:
+          type: string
+        elementType:
+          type: string
+          description: "Framework-specific type (e.g., ApplicationComponent, Container, Actor)"
+        framework:
+          type: string
+          enum: [archimate, c4, togaf]
+        name:
+          type: string
+        description:
+          type: string
+          nullable: true
+        properties:
+          type: object
+          additionalProperties: true
+        position:
+          type: object
+          properties:
+            x: { type: number }
+            y: { type: number }
+            width: { type: number }
+            height: { type: number }
+        layer:
+          type: string
+          enum: [business, application, technology, motivation, strategy]
+          nullable: true
+
+    CanvasRelationship:
+      type: object
+      properties:
+        id:
+          type: string
+        sourceElementId:
+          type: string
+        targetElementId:
+          type: string
+        relationshipType:
+          type: string
+          description: "Framework-specific type (e.g., Serving, Composition, UsedBy)"
+        framework:
+          type: string
+          enum: [archimate, c4, togaf]
+        label:
+          type: string
+          nullable: true
+
+    UpdateArtifactRequest:
+      type: object
+      properties:
+        name:
+          type: string
+          maxLength: 255
+        status:
+          type: string
+          enum: [draft, in_review, approved, published, archived]
+        canvasData:
+          type: object
+          description: Full canvas state (elements + relationships + layout)
+
+    GenerationResponse:
+      type: object
+      properties:
+        artifact:
+          $ref: '#/components/schemas/Artifact'
+        status:
+          type: string
+          enum: [completed, needs_clarification]
+        clarifications:
+          type: array
+          description: Questions to ask the user (max 3)
+          items:
+            type: object
+            properties:
+              id:
+                type: string
+              question:
+                type: string
+        tokensUsed:
+          type: integer
+          description: LLM tokens consumed for this generation
+
+    ValidationResult:
+      type: object
+      properties:
+        valid:
+          type: boolean
+        framework:
+          type: string
+        errors:
+          type: array
+          items:
+            type: object
+            properties:
+              ruleId:
+                type: string
+              severity:
+                type: string
+                enum: [error, warning, info]
+              elementId:
+                type: string
+                nullable: true
+              message:
+                type: string
+              suggestion:
+                type: string
+                nullable: true
+        checkedAt:
+          type: string
+          format: date-time
+
+    # ---- Versions ----
+    ArtifactVersion:
+      type: object
+      properties:
+        id:
+          type: string
+          format: uuid
+        artifactId:
+          type: string
+          format: uuid
+        versionNumber:
+          type: integer
+        changeSummary:
+          type: string
+          description: Auto-generated description of changes
+        changeType:
+          type: string
+          enum: [manual_edit, ai_generation, ai_refinement, restoration, auto_save]
+        createdBy:
+          $ref: '#/components/schemas/UserSummary'
+        createdAt:
+          type: string
+          format: date-time
+
+    CreateVersionRequest:
+      type: object
+      properties:
+        canvasData:
+          type: object
+          description: Current canvas state to snapshot
+        changeSummary:
+          type: string
+          description: Optional manual change description
+
+    # ---- Templates ----
+    Template:
+      type: object
+      properties:
+        id:
+          type: string
+          format: uuid
+        name:
+          type: string
+        description:
+          type: string
+        category:
+          type: string
+          enum: [industry, pattern, framework]
+        subcategory:
+          type: string
+          description: "e.g., financial_services, microservices, archimate"
+        framework:
+          type: string
+          enum: [archimate, c4, togaf, multi]
+        svgPreview:
+          type: string
+          description: Preview SVG for gallery display
+        isPublic:
+          type: boolean
+        usageCount:
+          type: integer
+        createdBy:
+          $ref: '#/components/schemas/UserSummary'
+        createdAt:
+          type: string
+          format: date-time
+
+    CreateTemplateRequest:
+      type: object
+      required: [name, category, framework, canvasData]
+      properties:
+        name:
+          type: string
+          maxLength: 255
+        description:
+          type: string
+          maxLength: 2000
+        category:
+          type: string
+          enum: [industry, pattern, framework]
+        subcategory:
+          type: string
+        framework:
+          type: string
+          enum: [archimate, c4, togaf, multi]
+        canvasData:
+          type: object
+        isPublic:
+          type: boolean
+          default: false
+
+    # ---- Collaboration ----
+    Comment:
+      type: object
+      properties:
+        id:
+          type: string
+          format: uuid
+        artifactId:
+          type: string
+          format: uuid
+        elementId:
+          type: string
+          nullable: true
+          description: ID of the canvas element this comment is anchored to
+        body:
+          type: string
+        status:
+          type: string
+          enum: [open, resolved]
+        author:
+          $ref: '#/components/schemas/UserSummary'
+        parentCommentId:
+          type: string
+          format: uuid
+          nullable: true
+        replies:
+          type: array
+          items:
+            $ref: '#/components/schemas/Comment'
+        createdAt:
+          type: string
+          format: date-time
+        resolvedAt:
+          type: string
+          format: date-time
+          nullable: true
+
+    CreateCommentRequest:
+      type: object
+      required: [body]
+      properties:
+        body:
+          type: string
+          minLength: 1
+          maxLength: 5000
+        elementId:
+          type: string
+          nullable: true
+          description: Anchor comment to a specific canvas element
+        parentCommentId:
+          type: string
+          format: uuid
+          nullable: true
+          description: Reply to an existing comment
+
+    ShareRequest:
+      type: object
+      required: [permission]
+      properties:
+        email:
+          type: string
+          format: email
+          description: Required for invite shares
+        permission:
+          type: string
+          enum: [view, comment, edit]
+        shareType:
+          type: string
+          enum: [invite, link]
+          default: invite
+        expiresInDays:
+          type: integer
+          minimum: 1
+          maximum: 30
+          default: 7
+          description: For link shares, number of days until expiry
+
+    Share:
+      type: object
+      properties:
+        id:
+          type: string
+          format: uuid
+        artifactId:
+          type: string
+          format: uuid
+        permission:
+          type: string
+          enum: [view, comment, edit]
+        shareType:
+          type: string
+          enum: [invite, link]
+        sharedWith:
+          $ref: '#/components/schemas/UserSummary'
+        email:
+          type: string
+          nullable: true
+        linkToken:
+          type: string
+          nullable: true
+          description: Token for link-based shares
+        expiresAt:
+          type: string
+          format: date-time
+          nullable: true
+        createdAt:
+          type: string
+          format: date-time
+
+    # ---- Export ----
+    ExportRequest:
+      type: object
+      required: [format]
+      properties:
+        format:
+          type: string
+          enum: [png, svg, pdf, plantuml, archimate_xml, mermaid, drawio]
+        options:
+          type: object
+          properties:
+            resolution:
+              type: string
+              enum: ["1x", "2x", "3x"]
+              default: "2x"
+              description: For PNG export
+            includeInventory:
+              type: boolean
+              default: true
+              description: For PDF export, include component inventory table
+
+    ExportResponse:
+      type: object
+      properties:
+        id:
+          type: string
+          format: uuid
+        downloadUrl:
+          type: string
+          format: uri
+          description: Presigned S3 URL (valid for 24 hours)
+        format:
+          type: string
+        fileSizeBytes:
+          type: integer
+        expiresAt:
+          type: string
+          format: date-time
+
+    # ---- Document Upload ----
+    DocumentUpload:
+      type: object
+      properties:
+        id:
+          type: string
+          format: uuid
+        originalFilename:
+          type: string
+        fileType:
+          type: string
+          enum: [pdf, docx, txt, md, html]
+        fileSizeBytes:
+          type: integer
+        processingStatus:
+          type: string
+          enum: [uploaded, processing, completed, failed]
+        extractionResult:
+          type: object
+          nullable: true
+          properties:
+            components:
+              type: array
+              items:
+                type: object
+                properties:
+                  name: { type: string }
+                  type: { type: string }
+                  description: { type: string }
+            relationships:
+              type: array
+              items:
+                type: object
+                properties:
+                  source: { type: string }
+                  target: { type: string }
+                  type: { type: string }
+            technologies:
+              type: array
+              items:
+                type: string
+        createdAt:
+          type: string
+          format: date-time
+        processedAt:
+          type: string
+          format: date-time
+          nullable: true
+
+  responses:
+    BadRequest:
+      description: Invalid request parameters
+      content:
+        application/problem+json:
+          schema:
+            $ref: '#/components/schemas/ProblemDetail'
+    Unauthorized:
+      description: Missing or invalid authentication
+      content:
+        application/problem+json:
+          schema:
+            $ref: '#/components/schemas/ProblemDetail'
+    Forbidden:
+      description: Insufficient permissions
+      content:
+        application/problem+json:
+          schema:
+            $ref: '#/components/schemas/ProblemDetail'
+    NotFound:
+      description: Resource not found
+      content:
+        application/problem+json:
+          schema:
+            $ref: '#/components/schemas/ProblemDetail'
+    TooManyRequests:
+      description: Rate limit exceeded
+      content:
+        application/problem+json:
+          schema:
+            $ref: '#/components/schemas/ProblemDetail'
+          example:
+            type: "https://archforge.io/errors/rate-limit"
+            title: "Rate Limit Exceeded"
+            status: 429
+            detail: "You have exceeded the rate limit of 60 requests per minute."
+
+security:
+  - BearerAuth: []
+  - ApiKeyAuth: []
+
+paths:
+  # ============================================================
+  # AUTH
+  # ============================================================
+  /auth/register:
+    post:
+      tags: [Auth]
+      summary: Register a new user account
+      operationId: registerUser
+      security: []
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              $ref: '#/components/schemas/RegisterRequest'
+      responses:
+        '201':
+          description: Account created, verification email sent
+          content:
+            application/json:
+              schema:
+                type: object
+                properties:
+                  message:
+                    type: string
+                    example: "Account created. Please check your email to verify."
+                  userId:
+                    type: string
+                    format: uuid
+        '400':
+          $ref: '#/components/responses/BadRequest'
+        '409':
+          description: Email already registered
+          content:
+            application/problem+json:
+              schema:
+                $ref: '#/components/schemas/ProblemDetail'
+              example:
+                type: "https://archforge.io/errors/conflict"
+                title: "Conflict"
+                status: 409
+                detail: "An account with this email already exists."
+
+  /auth/login:
+    post:
+      tags: [Auth]
+      summary: Authenticate with email and password
+      operationId: loginUser
+      security: []
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              $ref: '#/components/schemas/LoginRequest'
+      responses:
+        '200':
+          description: Authentication successful
+          headers:
+            Set-Cookie:
+              description: httpOnly refresh token cookie (7-day expiry)
+              schema:
+                type: string
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/AuthResponse'
+        '401':
+          $ref: '#/components/responses/Unauthorized'
+        '429':
+          $ref: '#/components/responses/TooManyRequests'
+
+  /auth/refresh:
+    post:
+      tags: [Auth]
+      summary: Refresh access token using refresh token cookie
+      operationId: refreshToken
+      security: []
+      description: |
+        The refresh token is read from the httpOnly cookie set during login.
+        A new access token and rotated refresh token are returned.
+      responses:
+        '200':
+          description: Token refreshed successfully
+          headers:
+            Set-Cookie:
+              description: New rotated refresh token cookie
+              schema:
+                type: string
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/AuthResponse'
+        '401':
+          $ref: '#/components/responses/Unauthorized'
+
+  /auth/logout:
+    post:
+      tags: [Auth]
+      summary: Logout and revoke refresh token
+      operationId: logoutUser
+      responses:
+        '200':
+          description: Logged out successfully
+          content:
+            application/json:
+              schema:
+                type: object
+                properties:
+                  message:
+                    type: string
+                    example: "Logged out successfully."
+        '401':
+          $ref: '#/components/responses/Unauthorized'
+
+  /auth/me:
+    get:
+      tags: [Auth]
+      summary: Get current user profile
+      operationId: getCurrentUser
+      responses:
+        '200':
+          description: Current user profile
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/UserProfile'
+        '401':
+          $ref: '#/components/responses/Unauthorized'
+
+  # ============================================================
+  # PROJECTS
+  # ============================================================
+  /projects:
+    get:
+      tags: [Projects]
+      summary: List projects in the current workspace
+      operationId: listProjects
+      parameters:
+        - name: status
+          in: query
+          schema:
+            type: string
+            enum: [active, archived, all]
+            default: active
+        - name: search
+          in: query
+          description: Full-text search on project name
+          schema:
+            type: string
+        - name: cursor
+          in: query
+          description: Pagination cursor
+          schema:
+            type: string
+        - name: pageSize
+          in: query
+          schema:
+            type: integer
+            minimum: 1
+            maximum: 100
+            default: 20
+      responses:
+        '200':
+          description: List of projects
+          content:
+            application/json:
+              schema:
+                type: object
+                properties:
+                  data:
+                    type: array
+                    items:
+                      $ref: '#/components/schemas/Project'
+                  meta:
+                    $ref: '#/components/schemas/PaginationMeta'
+        '401':
+          $ref: '#/components/responses/Unauthorized'
+
+    post:
+      tags: [Projects]
+      summary: Create a new project
+      operationId: createProject
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              $ref: '#/components/schemas/CreateProjectRequest'
+      responses:
+        '201':
+          description: Project created
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/Project'
+        '400':
+          $ref: '#/components/responses/BadRequest'
+        '401':
+          $ref: '#/components/responses/Unauthorized'
+        '403':
+          $ref: '#/components/responses/Forbidden'
+
+  /projects/{projectId}:
+    parameters:
+      - name: projectId
+        in: path
+        required: true
+        schema:
+          type: string
+          format: uuid
+    get:
+      tags: [Projects]
+      summary: Get project details
+      operationId: getProject
+      responses:
+        '200':
+          description: Project details
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/Project'
+        '401':
+          $ref: '#/components/responses/Unauthorized'
+        '404':
+          $ref: '#/components/responses/NotFound'
+
+    put:
+      tags: [Projects]
+      summary: Update project
+      operationId: updateProject
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              $ref: '#/components/schemas/UpdateProjectRequest'
+      responses:
+        '200':
+          description: Project updated
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/Project'
+        '400':
+          $ref: '#/components/responses/BadRequest'
+        '401':
+          $ref: '#/components/responses/Unauthorized'
+        '403':
+          $ref: '#/components/responses/Forbidden'
+        '404':
+          $ref: '#/components/responses/NotFound'
+
+    delete:
+      tags: [Projects]
+      summary: Delete project (requires name confirmation)
+      operationId: deleteProject
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              type: object
+              required: [confirmName]
+              properties:
+                confirmName:
+                  type: string
+                  description: Must match the project name exactly
+      responses:
+        '200':
+          description: Project deleted
+          content:
+            application/json:
+              schema:
+                type: object
+                properties:
+                  message:
+                    type: string
+                    example: "Project deleted permanently."
+        '400':
+          description: Project name confirmation does not match
+          content:
+            application/problem+json:
+              schema:
+                $ref: '#/components/schemas/ProblemDetail'
+        '401':
+          $ref: '#/components/responses/Unauthorized'
+        '403':
+          $ref: '#/components/responses/Forbidden'
+
+  /projects/{projectId}/members:
+    parameters:
+      - name: projectId
+        in: path
+        required: true
+        schema:
+          type: string
+          format: uuid
+    get:
+      tags: [Projects]
+      summary: List project members
+      operationId: listProjectMembers
+      responses:
+        '200':
+          description: List of project members
+          content:
+            application/json:
+              schema:
+                type: object
+                properties:
+                  data:
+                    type: array
+                    items:
+                      $ref: '#/components/schemas/ProjectMember'
+        '401':
+          $ref: '#/components/responses/Unauthorized'
+        '404':
+          $ref: '#/components/responses/NotFound'
+
+    post:
+      tags: [Projects]
+      summary: Invite a member to the project
+      operationId: addProjectMember
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              $ref: '#/components/schemas/AddMemberRequest'
+      responses:
+        '201':
+          description: Member invited
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/ProjectMember'
+        '400':
+          $ref: '#/components/responses/BadRequest'
+        '401':
+          $ref: '#/components/responses/Unauthorized'
+        '403':
+          $ref: '#/components/responses/Forbidden'
+        '409':
+          description: User is already a member
+
+  # ============================================================
+  # ARTIFACTS
+  # ============================================================
+  /projects/{projectId}/artifacts:
+    parameters:
+      - name: projectId
+        in: path
+        required: true
+        schema:
+          type: string
+          format: uuid
+    get:
+      tags: [Artifacts]
+      summary: List artifacts in a project
+      operationId: listArtifacts
+      parameters:
+        - name: status
+          in: query
+          schema:
+            type: string
+            enum: [draft, in_review, approved, published, archived, all]
+            default: all
+        - name: framework
+          in: query
+          schema:
+            type: string
+            enum: [archimate, c4, togaf, all]
+            default: all
+        - name: cursor
+          in: query
+          schema:
+            type: string
+        - name: pageSize
+          in: query
+          schema:
+            type: integer
+            minimum: 1
+            maximum: 100
+            default: 20
+      responses:
+        '200':
+          description: List of artifacts
+          content:
+            application/json:
+              schema:
+                type: object
+                properties:
+                  data:
+                    type: array
+                    items:
+                      $ref: '#/components/schemas/Artifact'
+                  meta:
+                    $ref: '#/components/schemas/PaginationMeta'
+        '401':
+          $ref: '#/components/responses/Unauthorized'
+        '404':
+          $ref: '#/components/responses/NotFound'
+
+  /projects/{projectId}/artifacts/generate:
+    parameters:
+      - name: projectId
+        in: path
+        required: true
+        schema:
+          type: string
+          format: uuid
+    post:
+      tags: [Artifacts]
+      summary: Generate an artifact from natural language
+      operationId: generateArtifact
+      description: |
+        Sends a natural language description to the AI engine for artifact generation.
+        If the description is ambiguous, returns status `needs_clarification` with up
+        to 3 clarifying questions. Resubmit with `clarifications` field to continue.
+
+        Supports streaming via `Accept: text/event-stream` header.
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              $ref: '#/components/schemas/GenerateArtifactRequest'
+      responses:
+        '201':
+          description: Artifact generated successfully
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/GenerationResponse'
+        '202':
+          description: Clarification needed before generation
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/GenerationResponse'
+        '400':
+          $ref: '#/components/responses/BadRequest'
+        '401':
+          $ref: '#/components/responses/Unauthorized'
+        '429':
+          $ref: '#/components/responses/TooManyRequests'
+
+  /projects/{projectId}/artifacts/ingest:
+    parameters:
+      - name: projectId
+        in: path
+        required: true
+        schema:
+          type: string
+          format: uuid
+    post:
+      tags: [Artifacts]
+      summary: Upload a document for architecture extraction
+      operationId: ingestDocument
+      description: |
+        Upload a PDF, DOCX, TXT, MD, or HTML file (max 20MB). The system extracts
+        architecture elements and returns an extraction summary. Use the extraction
+        to generate an artifact via the generate endpoint.
+      requestBody:
+        required: true
+        content:
+          multipart/form-data:
+            schema:
+              $ref: '#/components/schemas/IngestDocumentRequest'
+      responses:
+        '202':
+          description: Document uploaded and processing started
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/DocumentUpload'
+        '400':
+          description: Invalid file type or size
+          content:
+            application/problem+json:
+              schema:
+                $ref: '#/components/schemas/ProblemDetail'
+        '401':
+          $ref: '#/components/responses/Unauthorized'
+        '429':
+          $ref: '#/components/responses/TooManyRequests'
+
+  /artifacts/{artifactId}:
+    parameters:
+      - name: artifactId
+        in: path
+        required: true
+        schema:
+          type: string
+          format: uuid
+    get:
+      tags: [Artifacts]
+      summary: Get artifact details including canvas data
+      operationId: getArtifact
+      responses:
+        '200':
+          description: Artifact details
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/Artifact'
+        '401':
+          $ref: '#/components/responses/Unauthorized'
+        '404':
+          $ref: '#/components/responses/NotFound'
+
+    put:
+      tags: [Artifacts]
+      summary: Update artifact (name, status, or canvas data)
+      operationId: updateArtifact
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              $ref: '#/components/schemas/UpdateArtifactRequest'
+      responses:
+        '200':
+          description: Artifact updated
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/Artifact'
+        '400':
+          $ref: '#/components/responses/BadRequest'
+        '401':
+          $ref: '#/components/responses/Unauthorized'
+        '403':
+          $ref: '#/components/responses/Forbidden'
+        '404':
+          $ref: '#/components/responses/NotFound'
+
+    delete:
+      tags: [Artifacts]
+      summary: Delete an artifact
+      operationId: deleteArtifact
+      responses:
+        '200':
+          description: Artifact deleted
+          content:
+            application/json:
+              schema:
+                type: object
+                properties:
+                  message:
+                    type: string
+                    example: "Artifact deleted."
+        '401':
+          $ref: '#/components/responses/Unauthorized'
+        '403':
+          $ref: '#/components/responses/Forbidden'
+        '404':
+          $ref: '#/components/responses/NotFound'
+
+  # ============================================================
+  # VERSIONS
+  # ============================================================
+  /artifacts/{artifactId}/versions:
+    parameters:
+      - name: artifactId
+        in: path
+        required: true
+        schema:
+          type: string
+          format: uuid
+    get:
+      tags: [Versions]
+      summary: List version history for an artifact
+      operationId: listArtifactVersions
+      parameters:
+        - name: cursor
+          in: query
+          schema:
+            type: string
+        - name: pageSize
+          in: query
+          schema:
+            type: integer
+            minimum: 1
+            maximum: 100
+            default: 20
+      responses:
+        '200':
+          description: Version history
+          content:
+            application/json:
+              schema:
+                type: object
+                properties:
+                  data:
+                    type: array
+                    items:
+                      $ref: '#/components/schemas/ArtifactVersion'
+                  meta:
+                    $ref: '#/components/schemas/PaginationMeta'
+        '401':
+          $ref: '#/components/responses/Unauthorized'
+        '404':
+          $ref: '#/components/responses/NotFound'
+
+    post:
+      tags: [Versions]
+      summary: Save a new version (manual save point)
+      operationId: createArtifactVersion
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              $ref: '#/components/schemas/CreateVersionRequest'
+      responses:
+        '201':
+          description: Version saved
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/ArtifactVersion'
+        '401':
+          $ref: '#/components/responses/Unauthorized'
+        '403':
+          $ref: '#/components/responses/Forbidden'
+        '404':
+          $ref: '#/components/responses/NotFound'
+
+  /artifacts/{artifactId}/versions/{versionId}/restore:
+    parameters:
+      - name: artifactId
+        in: path
+        required: true
+        schema:
+          type: string
+          format: uuid
+      - name: versionId
+        in: path
+        required: true
+        schema:
+          type: string
+          format: uuid
+    post:
+      tags: [Versions]
+      summary: Restore artifact to a specific version
+      operationId: restoreArtifactVersion
+      description: |
+        Restores the artifact canvas to the state of the specified version.
+        Creates a new version entry with changeType "restoration".
+      responses:
+        '200':
+          description: Artifact restored to selected version
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/Artifact'
+        '401':
+          $ref: '#/components/responses/Unauthorized'
+        '403':
+          $ref: '#/components/responses/Forbidden'
+        '404':
+          $ref: '#/components/responses/NotFound'
+
+  # ============================================================
+  # EXPORT
+  # ============================================================
+  /artifacts/{artifactId}/export:
+    parameters:
+      - name: artifactId
+        in: path
+        required: true
+        schema:
+          type: string
+          format: uuid
+    post:
+      tags: [Export]
+      summary: Export artifact in specified format
+      operationId: exportArtifact
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              $ref: '#/components/schemas/ExportRequest'
+      responses:
+        '200':
+          description: Export generated, download URL returned
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/ExportResponse'
+        '400':
+          $ref: '#/components/responses/BadRequest'
+        '401':
+          $ref: '#/components/responses/Unauthorized'
+        '404':
+          $ref: '#/components/responses/NotFound'
+        '429':
+          $ref: '#/components/responses/TooManyRequests'
+
+  # ============================================================
+  # TEMPLATES
+  # ============================================================
+  /templates:
+    get:
+      tags: [Templates]
+      summary: Browse template gallery
+      operationId: listTemplates
+      parameters:
+        - name: category
+          in: query
+          schema:
+            type: string
+            enum: [industry, pattern, framework, all]
+            default: all
+        - name: subcategory
+          in: query
+          schema:
+            type: string
+          description: "e.g., financial_services, microservices"
+        - name: framework
+          in: query
+          schema:
+            type: string
+            enum: [archimate, c4, togaf, multi, all]
+            default: all
+        - name: search
+          in: query
+          description: Full-text search on template name and description
+          schema:
+            type: string
+        - name: scope
+          in: query
+          description: Filter by public gallery or user's personal templates
+          schema:
+            type: string
+            enum: [public, mine, all]
+            default: public
+        - name: cursor
+          in: query
+          schema:
+            type: string
+        - name: pageSize
+          in: query
+          schema:
+            type: integer
+            minimum: 1
+            maximum: 100
+            default: 20
+      responses:
+        '200':
+          description: Template list
+          content:
+            application/json:
+              schema:
+                type: object
+                properties:
+                  data:
+                    type: array
+                    items:
+                      $ref: '#/components/schemas/Template'
+                  meta:
+                    $ref: '#/components/schemas/PaginationMeta'
+        '401':
+          $ref: '#/components/responses/Unauthorized'
+
+    post:
+      tags: [Templates]
+      summary: Create a new template (admin or from artifact)
+      operationId: createTemplate
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              $ref: '#/components/schemas/CreateTemplateRequest'
+      responses:
+        '201':
+          description: Template created
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/Template'
+        '400':
+          $ref: '#/components/responses/BadRequest'
+        '401':
+          $ref: '#/components/responses/Unauthorized'
+        '403':
+          $ref: '#/components/responses/Forbidden'
+
+  /templates/{templateId}:
+    parameters:
+      - name: templateId
+        in: path
+        required: true
+        schema:
+          type: string
+          format: uuid
+    get:
+      tags: [Templates]
+      summary: Get template details including canvas data
+      operationId: getTemplate
+      responses:
+        '200':
+          description: Template details
+          content:
+            application/json:
+              schema:
+                allOf:
+                  - $ref: '#/components/schemas/Template'
+                  - type: object
+                    properties:
+                      canvasData:
+                        type: object
+                        description: Full canvas data for applying this template
+        '401':
+          $ref: '#/components/responses/Unauthorized'
+        '404':
+          $ref: '#/components/responses/NotFound'
+
+  # ============================================================
+  # COLLABORATION
+  # ============================================================
+  /artifacts/{artifactId}/comments:
+    parameters:
+      - name: artifactId
+        in: path
+        required: true
+        schema:
+          type: string
+          format: uuid
+    get:
+      tags: [Collaboration]
+      summary: List comments on an artifact
+      operationId: listComments
+      parameters:
+        - name: status
+          in: query
+          schema:
+            type: string
+            enum: [open, resolved, all]
+            default: all
+        - name: elementId
+          in: query
+          description: Filter comments anchored to a specific element
+          schema:
+            type: string
+      responses:
+        '200':
+          description: List of comments with replies
+          content:
+            application/json:
+              schema:
+                type: object
+                properties:
+                  data:
+                    type: array
+                    items:
+                      $ref: '#/components/schemas/Comment'
+        '401':
+          $ref: '#/components/responses/Unauthorized'
+        '404':
+          $ref: '#/components/responses/NotFound'
+
+    post:
+      tags: [Collaboration]
+      summary: Add a comment (optionally anchored to an element)
+      operationId: createComment
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              $ref: '#/components/schemas/CreateCommentRequest'
+      responses:
+        '201':
+          description: Comment created
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/Comment'
+        '400':
+          $ref: '#/components/responses/BadRequest'
+        '401':
+          $ref: '#/components/responses/Unauthorized'
+        '403':
+          $ref: '#/components/responses/Forbidden'
+        '404':
+          $ref: '#/components/responses/NotFound'
+
+  /comments/{commentId}:
+    parameters:
+      - name: commentId
+        in: path
+        required: true
+        schema:
+          type: string
+          format: uuid
+    patch:
+      tags: [Collaboration]
+      summary: Update comment (resolve or edit body)
+      operationId: updateComment
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              type: object
+              properties:
+                body:
+                  type: string
+                status:
+                  type: string
+                  enum: [open, resolved]
+      responses:
+        '200':
+          description: Comment updated
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/Comment'
+        '401':
+          $ref: '#/components/responses/Unauthorized'
+        '403':
+          $ref: '#/components/responses/Forbidden'
+        '404':
+          $ref: '#/components/responses/NotFound'
+
+  /artifacts/{artifactId}/share:
+    parameters:
+      - name: artifactId
+        in: path
+        required: true
+        schema:
+          type: string
+          format: uuid
+    get:
+      tags: [Collaboration]
+      summary: List active shares for an artifact
+      operationId: listShares
+      responses:
+        '200':
+          description: List of shares
+          content:
+            application/json:
+              schema:
+                type: object
+                properties:
+                  data:
+                    type: array
+                    items:
+                      $ref: '#/components/schemas/Share'
+        '401':
+          $ref: '#/components/responses/Unauthorized'
+        '403':
+          $ref: '#/components/responses/Forbidden'
+
+    post:
+      tags: [Collaboration]
+      summary: Share an artifact (invite or generate link)
+      operationId: shareArtifact
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              $ref: '#/components/schemas/ShareRequest'
+      responses:
+        '201':
+          description: Share created
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/Share'
+        '400':
+          $ref: '#/components/responses/BadRequest'
+        '401':
+          $ref: '#/components/responses/Unauthorized'
+        '403':
+          $ref: '#/components/responses/Forbidden'
+
+  # ============================================================
+  # WEBSOCKET (documented for reference; not standard REST)
+  # ============================================================
+  # WS /api/v1/ws/artifacts/{artifactId}
+  #
+  # Connection: Upgrade to WebSocket. JWT passed as query parameter.
+  # Events (server -> client):
+  #   - { event: "presence", user: {...}, action: "joined"|"left" }
+  #   - { event: "comment:new", comment: {...} }
+  #   - { event: "comment:reply", comment: {...} }
+  #   - { event: "comment:resolved", commentId: "..." }
+  #   - { event: "artifact:updated", delta: {...} }
+  #   - { event: "cursor:move", user: {...}, position: {x, y} }
+  #
+  # Events (client -> server):
+  #   - { event: "cursor:move", position: {x, y} }
+  #   - { event: "ping" }
