@@ -197,7 +197,7 @@ ConnectSW uses [GitHub's spec-kit](https://github.com/github/spec-kit) methodolo
 | `/speckit.implement` | Orchestrator | Execute tasks via specialist agents |
 
 **Key files:**
-- `.specify/memory/constitution.md` — Governing principles (9 articles)
+- `.specify/memory/constitution.md` — Governing principles (10 articles)
 - `.specify/templates/` — Spec, plan, tasks, checklist templates
 - `.specify/templates/commands/` — Command definitions
 - `products/[product]/docs/specs/` — Feature specifications

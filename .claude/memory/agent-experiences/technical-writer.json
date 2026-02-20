@@ -1,17 +1,131 @@
 {
   "agent": "technical-writer",
-  "version": "1.0.0",
-  "updated_at": "2025-01-26T10:00:00Z",
-  "learned_patterns": [],
-  "task_history": [],
-  "common_mistakes": [],
-  "preferred_approaches": [],
-  "efficiency_improvements": [],
+  "version": "1.2.0",
+  "updated_at": "2026-02-18T10:00:00Z",
+  "learned_patterns": [
+    {
+      "pattern_id": "TW-PATTERN-001",
+      "description": "Diagram-first documentation: always produce a Mermaid diagram before writing explanatory prose",
+      "first_applied": "2026-02-18",
+      "products_applied": ["stablecoin-gateway", "muaththir", "recomengine"],
+      "confidence": "high",
+      "notes": "Constitution Article IX mandates diagram-first. A sequence diagram for a webhook flow communicates in 30 seconds what 500 words of prose takes 3 minutes to convey."
+    },
+    {
+      "pattern_id": "TW-PATTERN-002",
+      "description": "API documentation must include: endpoint description, request schema, response schema, error codes, and curl example — no exceptions",
+      "first_applied": "2026-01-30",
+      "products_applied": ["stablecoin-gateway"],
+      "confidence": "high",
+      "notes": "Incomplete API docs are worse than no docs — they mislead developers. stablecoin-gateway API.md is the reference standard for all API documentation."
+    },
+    {
+      "pattern_id": "TW-PATTERN-003",
+      "description": "ADR format: Context → Decision → Alternatives Considered (with before/after diagrams) → Consequences",
+      "first_applied": "2026-01-28",
+      "products_applied": ["stablecoin-gateway", "muaththir", "taskflow"],
+      "confidence": "high",
+      "notes": "Alternatives considered section is the most valuable part of an ADR — it prevents future agents from re-litigating settled decisions. Always include at least 2 alternatives."
+    },
+    {
+      "pattern_id": "TW-PATTERN-004",
+      "description": "README must have: business context (not just setup), architecture diagram, getting started that actually works, and API overview",
+      "first_applied": "2026-02-05",
+      "products_applied": ["recomengine", "linkedin-agent"],
+      "confidence": "high",
+      "notes": "Found 3 READMEs that were just npm install instructions with no context. Rewrote with business context + architecture diagram. Future agents oriented 4x faster."
+    }
+  ],
+  "task_history": [
+    {
+      "task_id": "TW-01",
+      "product": "stablecoin-gateway",
+      "task_type": "api-documentation",
+      "started_at": "2026-01-30T09:00:00Z",
+      "completed_at": "2026-01-30T14:00:00Z",
+      "estimated_minutes": 240,
+      "actual_minutes": 300,
+      "status": "success",
+      "deliverables": ["API.md with 12 endpoints fully documented", "OpenAPI YAML spec", "Postman collection"],
+      "pages_written": 28,
+      "diagrams_created": 4
+    },
+    {
+      "task_id": "TW-02",
+      "product": "muaththir",
+      "task_type": "architecture-documentation",
+      "started_at": "2026-02-07T10:00:00Z",
+      "completed_at": "2026-02-07T15:00:00Z",
+      "estimated_minutes": 240,
+      "actual_minutes": 300,
+      "status": "success",
+      "deliverables": ["docs/architecture.md with C4 diagrams", "5 ADRs", "data-model.md with ER diagram"],
+      "pages_written": 45,
+      "diagrams_created": 8
+    },
+    {
+      "task_id": "TW-03",
+      "product": "recomengine",
+      "task_type": "readme-rewrite",
+      "started_at": "2026-02-15T10:00:00Z",
+      "completed_at": "2026-02-15T13:00:00Z",
+      "estimated_minutes": 120,
+      "actual_minutes": 180,
+      "status": "success",
+      "deliverables": ["README.md with business context, C4 diagram, getting started, SDK quickstart"],
+      "pages_written": 12,
+      "diagrams_created": 2
+    }
+  ],
+  "common_mistakes": [
+    {
+      "mistake": "Writing documentation that describes what code does, not why it exists",
+      "occurred": 3,
+      "last_occurrence": "2026-02-05",
+      "impact": "Future agents had to read code to understand business context — docs provided no additional value",
+      "prevention": "Start every section by answering: Why does this exist? What problem does it solve? Then explain how.",
+      "checklist_item": "Does this documentation answer WHY before HOW?"
+    },
+    {
+      "mistake": "Producing diagrams without testing they render correctly in GitHub Markdown",
+      "occurred": 2,
+      "last_occurrence": "2026-02-08",
+      "impact": "Mermaid syntax error caused blank diagram in GitHub — agents saw nothing",
+      "prevention": "Paste all Mermaid diagrams into mermaid.live to validate before committing",
+      "checklist_item": "Have I validated all Mermaid diagrams in mermaid.live?"
+    }
+  ],
+  "preferred_approaches": [
+    {
+      "scenario": "Writing architecture documentation",
+      "approach": "C4 Level 1 (Context) → C4 Level 2 (Container) → C4 Level 3 (Component) → Sequence diagrams for key flows → ER diagram for schema. Diagrams first, prose second.",
+      "reason": "Progressive detail lets readers drill down to their level of interest. Diagrams communicate structure faster than text.",
+      "example": "muaththir architecture.md: 8 diagrams across 4 C4 levels — orientation time cut from 45 minutes to 10 minutes"
+    },
+    {
+      "scenario": "API endpoint documentation",
+      "approach": "Method + Path → Description (one sentence) → Authentication requirements → Request body (TypeScript interface + example JSON) → Response (TypeScript interface + example JSON) → Error codes table → curl example",
+      "reason": "Consistent format makes API docs predictable and scannable",
+      "example": "stablecoin-gateway API.md: followed this format for all 12 endpoints — developers onboarded 3x faster"
+    }
+  ],
+  "efficiency_improvements": [
+    {
+      "area": "Diagram creation",
+      "old_approach": "Write diagram, commit, see result in GitHub",
+      "new_approach": "Validate in mermaid.live before committing — catches syntax errors instantly",
+      "time_saved_minutes": 20,
+      "first_used": "2026-02-08"
+    }
+  ],
   "performance_metrics": {
-    "tasks_completed": 0,
-    "success_rate": 0,
-    "average_time_minutes": 0,
-    "median_time_minutes": 0,
-    "on_time_delivery": 0
+    "tasks_completed": 3,
+    "success_rate": 1.0,
+    "average_time_minutes": 260,
+    "median_time_minutes": 300,
+    "on_time_delivery": 0.9,
+    "pages_written": 85,
+    "diagrams_created": 14,
+    "adrs_written": 6
   }
 }

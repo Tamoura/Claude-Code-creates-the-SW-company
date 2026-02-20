@@ -1,0 +1,17 @@
+{
+  "name": "@linkedin-agent/e2e",
+  "version": "1.0.0",
+  "private": true,
+  "description": "End-to-end tests for LinkedIn Agent",
+  "scripts": {
+    "test": "playwright test",
+    "test:headed": "playwright test --headed",
+    "test:debug": "playwright test --debug",
+    "test:ui": "playwright test --ui",
+    "report": "playwright show-report"
+  },
+  "devDependencies": {
+    "@playwright/test": "^1.41.0",
+    "@types/node": "^20.0.0"
+  }
+}

@@ -1,0 +1,129 @@
+name: Command Center CI
+
+on:
+  pull_request:
+    paths:
+      - 'products/command-center/**'
+      - '.github/workflows/command-center-ci.yml'
+  push:
+    branches: [main]
+    paths:
+      - 'products/command-center/**'
+
+jobs:
+  lint-api:
+    runs-on: ubuntu-latest
+    defaults:
+      run:
+        working-directory: products/command-center/apps/api
+    steps:
+      - uses: actions/checkout@v4
+
+      - name: Setup Node.js
+        uses: actions/setup-node@v4
+        with:
+          node-version: '20'
+          cache: 'npm'
+          cache-dependency-path: products/command-center/apps/api/package-lock.json
+
+      - name: Install dependencies
+        run: npm ci
+
+      - name: Run lint
+        run: npm run lint --if-present
+
+      - name: Run typecheck
+        run: npx tsc --noEmit --pretty
+
+  test-api:
+    runs-on: ubuntu-latest
+    defaults:
+      run:
+        working-directory: products/command-center/apps/api
+    steps:
+      - uses: actions/checkout@v4
+
+      - name: Setup Node.js
+        uses: actions/setup-node@v4
+        with:
+          node-version: '20'
+          cache: 'npm'
+          cache-dependency-path: products/command-center/apps/api/package-lock.json
+
+      - name: Install dependencies
+        run: npm ci
+
+      - name: Run tests
+        run: npm test --if-present
+
+  lint-web:
+    runs-on: ubuntu-latest
+    defaults:
+      run:
+        working-directory: products/command-center/apps/web
+    steps:
+      - uses: actions/checkout@v4
+
+      - name: Setup Node.js
+        uses: actions/setup-node@v4
+        with:
+          node-version: '20'
+          cache: 'npm'
+          cache-dependency-path: products/command-center/apps/web/package-lock.json
+
+      - name: Install dependencies
+        run: npm ci
+
+      - name: Run lint
+        run: npm run lint --if-present
+
+      - name: Run typecheck
+        run: npx tsc --noEmit --pretty
+
+      - name: Run build
+        run: npm run build --if-present
+
+  security:
+    runs-on: ubuntu-latest
+    continue-on-error: true
+    defaults:
+      run:
+        working-directory: products/command-center/apps/api
+    steps:
+      - uses: actions/checkout@v4
+
+      - name: Setup Node.js
+        uses: actions/setup-node@v4
+        with:
+          node-version: '20'
+          cache: 'npm'
+          cache-dependency-path: products/command-center/apps/api/package-lock.json
+
+      - name: Install dependencies
+        run: npm ci
+
+      - name: Run security audit
+        run: npm audit --audit-level=critical --omit=dev || echo "::warning::Security vulnerabilities found - review npm audit output"
+
+  quality-gate:
+    needs: [lint-api, test-api, lint-web, security]
+    runs-on: ubuntu-latest
+    if: always()
+    steps:
+      - name: Verify all jobs succeeded
+        run: |
+          echo "Job results:"
+          echo "  lint-api:  ${{ needs.lint-api.result }}"
+          echo "  test-api:  ${{ needs.test-api.result }}"
+          echo "  lint-web:  ${{ needs.lint-web.result }}"
+          echo "  security:  ${{ needs.security.result }}"
+          if [ "${{ needs.lint-api.result }}" != "success" ] || \
+             [ "${{ needs.test-api.result }}" != "success" ] || \
+             [ "${{ needs.lint-web.result }}" != "success" ]; then
+            echo "Quality gate FAILED: one or more core jobs did not succeed"
+            exit 1
+          fi
+          if [ "${{ needs.security.result }}" != "success" ]; then
+            echo "::warning::Security audit reported issues - review recommended"
+          fi
+          echo "All quality gates passed for command-center"

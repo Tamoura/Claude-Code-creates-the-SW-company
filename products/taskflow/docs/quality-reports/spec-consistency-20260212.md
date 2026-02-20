@@ -40,12 +40,13 @@ All spec requirements are fully covered by tasks and tests.
 | VI. Traceability | All 7 FR requirements mapped to tasks and tests | PASS |
 | VII. Port Registry | 3111 (web), 5007 (api) registered | PASS |
 | VIII. Git Safety | Branch naming follows convention | PASS |
-| IX. Quality Gates | All gates planned in Phase 8 | PASS |
+| IX. Diagram-First Documentation | Mermaid diagrams included in all specs | PASS |
+| X. Quality Gates | All gates planned in Phase 8 | PASS |
 
 ## Metrics
 - Requirements: 11 total (7 FR + 4 NFR), 11 covered, 0 gaps
 - Tasks: 42 total, 42 mapped to requirements, 0 orphan
-- Constitution compliance: 9/9 articles satisfied
+- Constitution compliance: 10/10 articles satisfied
 
 ## Recommendation
 

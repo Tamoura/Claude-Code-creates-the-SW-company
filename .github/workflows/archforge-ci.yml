@@ -1,0 +1,61 @@
+name: ArchForge CI
+
+on:
+  pull_request:
+    paths:
+      - 'products/archforge/**'
+      - '.github/workflows/archforge-ci.yml'
+  push:
+    branches: [main]
+    paths:
+      - 'products/archforge/**'
+
+jobs:
+  validate-docs:
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v4
+
+      - name: Check required documentation files exist
+        run: |
+          echo "Checking required documentation files for archforge..."
+          MISSING=0
+
+          check_file() {
+            if [ ! -f "$1" ]; then
+              echo "::error::Missing required file: $1"
+              MISSING=$((MISSING + 1))
+            else
+              echo "  OK: $1"
+            fi
+          }
+
+          check_file "products/archforge/README.md"
+
+          if [ $MISSING -gt 0 ]; then
+            echo "::error::$MISSING required documentation file(s) missing"
+            exit 1
+          fi
+          echo "All required documentation files present"
+
+      - name: Validate YAML files
+        run: |
+          echo "Validating YAML files in products/archforge..."
+          ERRORS=0
+          find products/archforge -name "*.yml" -o -name "*.yaml" | while read f; do
+            python3 -c "import yaml, sys; yaml.safe_load(open('$f'))" 2>/dev/null || {
+              echo "::error::Invalid YAML: $f"
+              ERRORS=$((ERRORS + 1))
+            }
+            echo "  OK: $f"
+          done
+          echo "YAML validation complete"
+
+      - name: Check for broken markdown links
+        uses: gaurav-nelson/github-action-markdown-link-check@v1
+        with:
+          use-quiet-mode: 'yes'
+          use-verbose-mode: 'no'
+          folder-path: 'products/archforge'
+          config-file: '.github/mlc_config.json'
+        continue-on-error: true
