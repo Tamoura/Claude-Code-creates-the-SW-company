@@ -6,8 +6,7 @@ Create comprehensive READMEs for 8 products:
 2. recomengine (frontend 3109, backend 5009)
 3. qdb-one (frontend 3110, backend 5010)
 4. quantum-computing-usecases (frontend 3111, backend 5011)
-5. taskflow (frontend 3106, backend 5006)
-6. archforge (frontend 3114, backend 5013)
+5. archforge (frontend 3114, backend 5013)
 7. codeguardian (frontend 3115)
 8. humanid (frontend 3116) - already has a README, will enhance
 
@@ -16,7 +15,6 @@ Create comprehensive READMEs for 8 products:
 - RecomEngine: Full-stack + JS SDK. B2B SaaS recommendation engine. Modular monolith.
 - QDB One: Enterprise portal for Qatar Development Bank. Hub-and-spoke with Kafka. Frontend-only so far (Next.js).
 - Quantum Computing Use Cases: Frontend-only (Vite + React). Static content app. No backend.
-- TaskFlow: Full-stack personal task manager. MVP complete with 13 integration + 14 E2E tests.
 - ArchForge: Docs-only (no source code yet). AI-powered EA platform.
 - CodeGuardian: Docs-only (no source code yet). Multi-model AI code review.
 - HumanID: Full-stack. Decentralized identity platform. Already has a good README.

@@ -1,8 +1,8 @@
 # Stablecoin Gateway - System Architecture
 
-**Version**: 1.0
+**Version**: 1.1
 **Status**: Production Design
-**Last Updated**: 2026-01-27
+**Last Updated**: 2026-02-20
 **Architect**: Claude Architect
 
 ---
@@ -20,7 +20,285 @@ Stablecoin Gateway is transitioning from a validated prototype to a production-r
 
 ---
 
-## 2. Architecture Overview
+## Architecture Diagrams (Mermaid)
+
+### C4 Level 1 — System Context
+
+```mermaid
+graph TD
+    MERCHANT["👤 Merchant<br/>(E-commerce Business)"]
+    CUSTOMER["👤 Customer<br/>(Crypto Wallet User)"]
+
+    SG["<b>Stablecoin Gateway</b><br/>Payment Platform<br/>Ports: 3104 / 5001"]
+
+    BLOCKCHAIN["⛓️ Blockchain Networks<br/>Polygon, Ethereum"]
+    RPC["☁️ RPC Providers<br/>Alchemy, Infura, QuickNode"]
+    AWS["☁️ AWS Services<br/>KMS, ECS, RDS, ElastiCache"]
+    EMAIL["☁️ SendGrid<br/>Email Notifications"]
+
+    MERCHANT -->|"REST API<br/>(create payments,<br/>manage webhooks)"| SG
+    CUSTOMER -->|"Hosted checkout<br/>(connect wallet,<br/>approve transfer)"| SG
+    SG -->|"Monitor transactions,<br/>verify confirmations"| RPC
+    RPC -->|JSON-RPC| BLOCKCHAIN
+    SG -->|"KMS signing,<br/>managed infra"| AWS
+    SG -->|"Payment confirmations,<br/>refund notices"| EMAIL
+    SG -->|"Webhook events"| MERCHANT
+
+    style SG fill:#7950f2,color:#fff,stroke:#5c3dba,stroke-width:3px
+    style MERCHANT fill:#339af0,color:#fff
+    style CUSTOMER fill:#20c997,color:#fff
+    style BLOCKCHAIN fill:#ff922b,color:#fff
+```
+
+### C4 Level 2 — Container Diagram
+
+```mermaid
+graph TD
+    subgraph "Stablecoin Gateway"
+        WEB["🌐 Vite + React Frontend<br/>Tailwind, wagmi, ethers.js<br/>Port: 3104"]
+        API["⚡ Fastify API<br/>TypeScript, Zod validation<br/>Port: 5001"]
+        DB["🗄️ PostgreSQL<br/>10 tables<br/>Prisma ORM"]
+        REDIS["⚡ Redis<br/>BullMQ job queue<br/>Rate limiting cache"]
+        WORKERS["⚙️ BullMQ Workers<br/>Blockchain monitor<br/>Webhook delivery<br/>Email sender"]
+    end
+
+    subgraph "External"
+        RPC["☁️ RPC Providers<br/>Alchemy → Infura → QuickNode"]
+        KMS["🔐 AWS KMS<br/>Hot wallet signing"]
+        CHAIN["⛓️ Polygon / Ethereum"]
+    end
+
+    MERCHANT["👤 Merchant"] -->|"API keys +<br/>JWT auth"| API
+    CUSTOMER["👤 Customer"] -->|"Checkout page"| WEB
+    WEB -->|"REST + SSE"| API
+    API --> DB
+    API --> REDIS
+    WORKERS --> REDIS
+    WORKERS --> DB
+    WORKERS -->|"Verify tx,<br/>send refunds"| RPC
+    RPC --> CHAIN
+    WORKERS -->|"Sign refund tx"| KMS
+    WORKERS -->|"Deliver events"| MERCHANT
+
+    style WEB fill:#339af0,color:#fff
+    style API fill:#7950f2,color:#fff
+    style DB fill:#20c997,color:#fff
+    style REDIS fill:#ff922b,color:#fff
+    style WORKERS fill:#e64980,color:#fff
+```
+
+### Sequence Diagram — Payment Flow
+
+```mermaid
+sequenceDiagram
+    actor Merchant as Merchant Backend
+    participant API as Fastify API
+    participant DB as PostgreSQL
+    participant Customer as Customer Browser
+    participant Wallet as MetaMask/WalletConnect
+    participant Chain as Blockchain
+    participant Monitor as Blockchain Monitor
+    participant WH as Webhook Worker
+
+    Merchant->>API: POST /v1/payment-sessions<br/>{amount, merchant_address, network}
+    API->>DB: INSERT PaymentSession (PENDING)
+    API->>WH: Queue payment.created webhook
+    API-->>Merchant: {id, checkout_url, status: PENDING}
+
+    Customer->>API: GET /checkout/:sessionId
+    API-->>Customer: Payment page (amount, merchant)
+
+    Customer->>Wallet: Connect wallet
+    Wallet-->>Customer: Connected (address)
+    Customer->>API: PATCH {customer_address}
+
+    Customer->>Wallet: Approve ERC-20 transfer
+    Wallet->>Chain: Broadcast transaction
+    Chain-->>Wallet: tx_hash
+    Customer->>API: PATCH {tx_hash}
+    API->>DB: UPDATE status = CONFIRMING
+
+    loop Poll every 5s
+        Monitor->>Chain: eth_getTransactionReceipt(tx_hash)
+        Chain-->>Monitor: Receipt + confirmations
+    end
+
+    Note over Monitor: 12 confirmations (Polygon)<br/>3 confirmations (Ethereum)
+
+    Monitor->>DB: UPDATE status = COMPLETED<br/>(SELECT FOR UPDATE lock)
+    Monitor->>WH: Queue payment.completed webhook
+    WH->>Merchant: POST webhook_url<br/>X-Webhook-Signature: HMAC-SHA256
+```
+
+### Sequence Diagram — Refund Flow
+
+```mermaid
+sequenceDiagram
+    actor Merchant as Merchant Dashboard
+    participant API as Fastify API
+    participant DB as PostgreSQL
+    participant Worker as Refund Worker
+    participant KMS as AWS KMS
+    participant Chain as Blockchain
+    participant WH as Webhook Worker
+
+    Merchant->>API: POST /v1/refunds<br/>{payment_session_id, amount}
+    API->>DB: Validate payment COMPLETED
+    API->>DB: INSERT Refund (PENDING)
+    API-->>Merchant: {refund_id, status: PENDING}
+
+    Worker->>DB: Pick up refund job
+    Worker->>KMS: Request signature<br/>(never exposes private key)
+    KMS-->>Worker: Signed transaction
+    Worker->>Chain: Broadcast ERC-20 transfer<br/>(to: customer_address)
+    Chain-->>Worker: tx_hash
+
+    loop Confirm refund
+        Worker->>Chain: Check confirmations
+    end
+
+    Worker->>DB: UPDATE refund COMPLETED
+    Worker->>DB: UPDATE payment REFUNDED
+    Worker->>WH: Queue payment.refunded webhook
+    WH->>Merchant: POST webhook_url
+```
+
+### Entity-Relationship Diagram
+
+```mermaid
+erDiagram
+    User {
+        string id PK
+        string email UK
+        string passwordHash
+        enum role "MERCHANT|ADMIN"
+        datetime createdAt
+    }
+
+    PaymentSession {
+        string id PK
+        string userId FK
+        decimal amount "18,6 precision"
+        string currency "USD"
+        enum status "PENDING|CONFIRMING|COMPLETED|FAILED|REFUNDED"
+        string network "polygon|ethereum"
+        string token "USDC|USDT"
+        string txHash UK
+        string merchantAddress
+        string customerAddress
+        string idempotencyKey
+        datetime expiresAt
+    }
+
+    Refund {
+        string id PK
+        string paymentSessionId FK
+        decimal amount
+        string reason
+        enum status "PENDING|PROCESSING|COMPLETED|FAILED"
+        string txHash UK
+        string idempotencyKey
+    }
+
+    ApiKey {
+        string id PK
+        string userId FK
+        string name
+        string keyHash UK "SHA-256"
+        json permissions "read write refund"
+    }
+
+    WebhookEndpoint {
+        string id PK
+        string userId FK
+        string url "HTTPS only"
+        string secret "bcrypt hashed"
+        string[] events
+        boolean enabled
+    }
+
+    WebhookDelivery {
+        string id PK
+        string endpointId FK
+        string eventType
+        json payload
+        enum status "PENDING|DELIVERING|SUCCEEDED|FAILED"
+        int attempts
+    }
+
+    PaymentLink {
+        string id PK
+        string userId FK
+        string shortCode UK
+        decimal amount
+        string merchantAddress
+        int usageCount
+    }
+
+    RefreshToken {
+        string id PK
+        string userId FK
+        string tokenHash UK
+        datetime expiresAt
+        boolean revoked
+    }
+
+    User ||--o{ PaymentSession : "creates"
+    User ||--o{ ApiKey : "owns"
+    User ||--o{ WebhookEndpoint : "configures"
+    User ||--o{ RefreshToken : "has"
+    User ||--o{ PaymentLink : "creates"
+    PaymentSession ||--o{ Refund : "refunded via"
+    WebhookEndpoint ||--o{ WebhookDelivery : "receives"
+```
+
+### State Diagram — Payment Lifecycle
+
+```mermaid
+stateDiagram-v2
+    [*] --> PENDING: Merchant creates session
+    PENDING --> CONFIRMING: Customer submits tx_hash
+    CONFIRMING --> COMPLETED: Confirmations threshold met
+    CONFIRMING --> FAILED: Tx reverted or invalid
+    PENDING --> FAILED: Session expired (7 days)
+    COMPLETED --> REFUNDED: Merchant initiates refund
+
+    note right of CONFIRMING
+        Polygon: 12 confirmations
+        Ethereum: 3 confirmations
+        Pessimistic lock (FOR UPDATE)
+    end note
+```
+
+### Authentication Flow
+
+```mermaid
+sequenceDiagram
+    participant Client as Merchant Client
+    participant API as Fastify API
+    participant DB as PostgreSQL
+    participant Redis as Redis
+
+    Client->>API: POST /v1/auth/login {email, password}
+    API->>Redis: Check lockout (5 attempts / 15min)
+    API->>DB: Find user, verify bcrypt hash
+    API-->>Client: {access_token (15m), refresh_token (7d)}
+
+    Note over Client: Access token expires
+
+    Client->>API: POST /v1/auth/refresh {refresh_token}
+    API->>DB: Verify token hash, check not revoked
+    API-->>Client: {new_access_token}
+
+    Client->>API: POST /v1/auth/sse-token
+    API-->>Client: {sse_token (15m, scoped)}
+    Client->>API: GET /v1/payment-sessions/:id/events<br/>Authorization: Bearer <sse_token>
+    API-->>Client: SSE stream (payment status updates)
+```
+
+---
+
+## 2. Architecture Overview (Detailed)
 
 ### 2.1 High-Level Architecture
 

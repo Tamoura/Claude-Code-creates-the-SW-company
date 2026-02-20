@@ -355,7 +355,6 @@ graph TD
         CG["ConnectGRC<br/>AI-First GRC Platform"]
         AF["<b>ArchForge</b><br/>AI-First EA Platform"]
         CGD["CodeGuardian<br/>Code Security"]
-        TF["TaskFlow<br/>Task Management"]
         QDB["QDB-One<br/>Quantum Computing"]
         RE["RecomEngine<br/>Recommendations"]
         SG["StablecoinGW<br/>Payments"]

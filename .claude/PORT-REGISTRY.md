@@ -22,7 +22,7 @@
 | 3104 | stablecoin-gateway | Active | http://localhost:3104 |
 | 3108 | muaththir | Active | http://localhost:3108 |
 | 3110 | connectgrc | Active | http://localhost:3110 |
-| 3111 | taskflow | Active | http://localhost:3111 |
+| 3111 | *Available* | Free | - |
 | 3112 | recomengine | Active | http://localhost:3112 |
 | 3113 | command-center | Active | http://localhost:3113 |
 | 3114 | linkedin-agent | Active | http://localhost:3114 |
@@ -38,7 +38,7 @@
 | 5001 | stablecoin-gateway | Active | http://localhost:5001 |
 | 5005 | muaththir | Active | http://localhost:5005 |
 | 5006 | connectgrc | Active | http://localhost:5006 |
-| 5007 | taskflow | Active | http://localhost:5007 |
+| 5007 | *Available* | Free | - |
 | 5008 | recomengine | Active | http://localhost:5008 |
 | 5009 | command-center | Active | http://localhost:5009 |
 | 5010 | linkedin-agent | Active | http://localhost:5010 |

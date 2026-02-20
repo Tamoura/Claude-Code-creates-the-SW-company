@@ -308,3 +308,87 @@ See [API Documentation](API.md) for full endpoint reference.
 2. What is the pricing model? Free tier + paid?
 3. Should we build a Chrome extension for LinkedIn in-page content creation?
 4. How do we handle copyright concerns with trend analysis from pasted articles?
+
+## 11. User Stories & Acceptance Criteria
+
+### US-01: Trend Analysis from Pasted Content
+
+**As an** Arab tech professional, **I want to** paste articles or content and get AI-extracted trending topics, **so that** I can identify what's worth discussing on LinkedIn without reading multiple sources manually.
+
+| ID | Acceptance Criteria |
+|----|---------------------|
+| AC-01.1 | Given I am on the Trends page, When I paste content (min 10 characters) and click Analyze, Then the system returns trending topics within 30 seconds |
+| AC-01.2 | Given the analysis completes, When I view results, Then each topic shows a title, description, relevance score, and suggested angle |
+| AC-01.3 | Given the analysis completes, When I view results, Then recommended hashtags are displayed |
+| AC-01.4 | Given I click "Create Post" on a topic, When the navigation occurs, Then I am taken to the post generation page with the topic pre-filled |
+
+### US-02: Bilingual Post Generation
+
+**As a** bilingual content creator, **I want to** generate LinkedIn posts in Arabic, English, or both languages simultaneously, **so that** I can reach both audiences without doubling my content creation effort.
+
+| ID | Acceptance Criteria |
+|----|---------------------|
+| AC-02.1 | Given I am on the New Post page, When I select language "Both" and click Generate, Then the system produces content in both Arabic and English |
+| AC-02.2 | Given a post is generated in both languages, When I view the preview, Then Arabic content renders with RTL direction and English with LTR |
+| AC-02.3 | Given a post is generated, When I view it, Then the content includes a strong opening hook, structured paragraphs, and 3-5 relevant hashtags |
+| AC-02.4 | Given I want to refine content, When I click Edit on either language tab, Then I can modify the text and save changes |
+
+### US-03: Tone Selection
+
+**As a** tech professional, **I want to** choose the tone of my generated post (professional, casual, thought-leader, educational), **so that** the content matches my personal brand and audience expectations.
+
+| ID | Acceptance Criteria |
+|----|---------------------|
+| AC-03.1 | Given I am configuring a post, When I select a tone option, Then the generated content reflects that tone in word choice and structure |
+| AC-03.2 | Given I select "thought-leader" tone, When the post is generated, Then the content includes contrarian or forward-looking perspectives |
+| AC-03.3 | Given I select "educational" tone, When the post is generated, Then the content follows a teaching structure with clear takeaways |
+
+### US-04: Format Recommendation
+
+**As a** content creator, **I want to** receive AI-powered format recommendations (text, carousel, infographic, poll, link), **so that** I optimize engagement without guessing which format works best.
+
+| ID | Acceptance Criteria |
+|----|---------------------|
+| AC-04.1 | Given a post is generated, When I view the format recommendation, Then it shows the recommended format with a reason and alternative options |
+| AC-04.2 | Given the recommended format is "carousel", When I view the recommendation card, Then a "Generate Carousel Slides" button is displayed |
+| AC-04.3 | Given I disagree with the recommendation, When I choose a different format, Then the system adapts the content accordingly |
+
+### US-05: Carousel Slide Generation
+
+**As a** LinkedIn professional, **I want to** generate carousel slides with headlines, body text, and image prompts, **so that** I can create rich visual content efficiently without design skills.
+
+| ID | Acceptance Criteria |
+|----|---------------------|
+| AC-05.1 | Given a post draft exists, When I click "Generate Carousel", Then the system creates 4-12 slides with headline, body, and image prompt per slide |
+| AC-05.2 | Given carousel slides are generated, When I view the preview, Then I can navigate between slides using arrows |
+| AC-05.3 | Given carousel slides are generated, When I view each slide, Then the image prompt is compatible with DALL-E or Midjourney |
+
+### US-06: Post Translation
+
+**As a** bilingual creator, **I want to** translate an existing post between Arabic and English while preserving tone, **so that** I can expand my audience reach from content originally written in one language.
+
+| ID | Acceptance Criteria |
+|----|---------------------|
+| AC-06.1 | Given I have a post in English only, When I click "Translate to Arabic", Then the system generates an Arabic version that preserves tone and meaning |
+| AC-06.2 | Given a translation completes, When I view the result, Then both language versions are displayed with correct text direction |
+| AC-06.3 | Given a translation completes, When I check usage, Then the model, cost, and duration are displayed |
+
+### US-07: Post History & Management
+
+**As a** content creator, **I want to** view, edit, and manage all my generated posts with status tracking, **so that** I can maintain a content pipeline and reuse past work.
+
+| ID | Acceptance Criteria |
+|----|---------------------|
+| AC-07.1 | Given I navigate to the Posts page, When the page loads, Then I see a paginated list of all post drafts with status and format badges |
+| AC-07.2 | Given I click on a post, When the detail page loads, Then I see full content in both languages, carousel preview (if applicable), and generation logs |
+| AC-07.3 | Given I want to change a post's status, When I update it from "draft" to "published", Then the status badge updates and publishedAt timestamp is recorded |
+
+### US-08: Cost Transparency
+
+**As a** cost-conscious user, **I want to** see the AI model used, token cost, and response time for each generation, **so that** I can understand my usage and optimize spending.
+
+| ID | Acceptance Criteria |
+|----|---------------------|
+| AC-08.1 | Given a post is generated, When I view the result, Then the cost (USD), model name, and duration (seconds) are displayed |
+| AC-08.2 | Given I navigate to the Models page, When I view usage statistics, Then I see aggregated costs by model and by task type |
+| AC-08.3 | Given I select a time period (24h, 7d, 30d), When the usage data loads, Then the statistics reflect only that period |

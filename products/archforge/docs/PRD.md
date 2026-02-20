@@ -94,18 +94,15 @@ graph TD
         AF["<b>ArchForge</b><br/>AI-First EA Platform<br/>Port: 3116 / 5012"]
         CG["ConnectGRC<br/>GRC Platform<br/>Port: 3110 / 5006"]
         CGD["CodeGuardian<br/>Code Security<br/>Port: 3115 / 5011"]
-        TF["TaskFlow<br/>Task Management<br/>Port: 3111 / 5007"]
     end
 
     AF ---|"Architecture artifacts<br/>inform risk assessment"| CG
     AF ---|"Architecture diagrams<br/>guide code analysis"| CGD
-    AF ---|"Architecture tasks<br/>feed project planning"| TF
     CG ---|"Compliance requirements<br/>constrain architecture"| AF
 
     style AF fill:#7950f2,color:#fff,stroke:#5c3dba,stroke-width:3px
     style CG fill:#339af0,color:#fff
     style CGD fill:#339af0,color:#fff
-    style TF fill:#339af0,color:#fff
 ```
 
 | Synergy | Value |
