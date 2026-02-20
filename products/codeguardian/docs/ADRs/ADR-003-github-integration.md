@@ -1,0 +1,208 @@
+# ADR-003: GitHub Integration Approach
+
+**Status**: Accepted
+**Date**: 2026-02-18
+**Decision Makers**: Architect Agent
+**Product**: CodeGuardian
+
+---
+
+## Context
+
+CodeGuardian must integrate with GitHub for three purposes:
+
+1. **User authentication**: Users sign in with their GitHub identity
+2. **Repository access**: Receive PR webhooks, read diffs, post review comments and status checks
+3. **Installation management**: Users install CodeGuardian on their accounts/organizations
+
+GitHub offers three integration mechanisms:
+
+| Mechanism | Purpose | Token Type |
+|-----------|---------|-----------|
+| **OAuth App** | User authentication, access user data | User access token |
+| **GitHub App** | Webhooks, repo access, PR comments, status checks | Installation access token |
+| **Personal Access Token (PAT)** | Developer testing, scripts | User's PAT |
+
+The question is which combination to use.
+
+## Decision
+
+**Use both a GitHub App and GitHub OAuth 2.0 together. The GitHub App handles repository access (webhooks, diffs, reviews). GitHub OAuth handles user identity (authentication, profile data).**
+
+### Architecture: Dual Integration
+
+```mermaid
+graph TD
+    subgraph "User Authentication"
+        USER["User"] -->|"Sign in with GitHub"| OAUTH["GitHub OAuth 2.0<br/>(Authorization Code + PKCE)"]
+        OAUTH -->|"Access token + profile"| API["CodeGuardian API"]
+        API -->|"JWT session token"| USER
+    end
+
+    subgraph "Repository Access"
+        GH_APP["CodeGuardian GitHub App"] -->|"Webhooks"| API
+        API -->|"Installation token"| GH_API["GitHub API<br/>(read diffs, post reviews)"]
+    end
+
+    subgraph "Token Usage"
+        direction LR
+        T1["User OAuth Token<br/>- Read user profile<br/>- Check org membership<br/>- Personal data"]
+        T2["Installation Token<br/>- Read PR diffs<br/>- Post review comments<br/>- Set status checks<br/>- Read repo metadata"]
+    end
+
+    classDef auth fill:#438dd5,stroke:#2e6295,color:#ffffff
+    classDef app fill:#85bbf0,stroke:#5d99c6,color:#000000
+    classDef token fill:#f5da55,stroke:#b8a230,color:#000000
+
+    class OAUTH auth
+    class GH_APP app
+    class T1,T2 token
+```
+
+### Why Both?
+
+| Capability | OAuth App Only | GitHub App Only | Both (Chosen) |
+|-----------|---------------|-----------------|---------------|
+| User identity (login, email, avatar) | Yes | No (App tokens are not user-scoped) | Yes (via OAuth) |
+| Webhooks from all repos | No (requires user token per repo) | Yes (App receives webhooks) | Yes (via App) |
+| Post reviews on behalf of "CodeGuardian" bot | No (posts as user) | Yes (posts as App) | Yes (via App) |
+| Status checks | No | Yes | Yes (via App) |
+| Installation management (add/remove repos) | No | Yes | Yes (via App) |
+| User's org membership | Yes | Partial (only installed orgs) | Yes (via OAuth) |
+| Token refresh | Yes | Automatic (installation tokens expire in 1h) | Yes |
+
+### GitHub App Permissions
+
+| Permission | Access | Purpose |
+|-----------|--------|---------|
+| Pull requests | Read & Write | Read PR diffs, post review comments |
+| Checks | Read & Write | Post status checks (pass/fail with score) |
+| Contents | Read | Read file contents for context around diff |
+| Metadata | Read | Repository and organization metadata |
+| Members | Read | Org member list for team features |
+
+### Webhook Events Subscribed
+
+| Event | Actions | Purpose |
+|-------|---------|---------|
+| `pull_request` | opened, synchronize, reopened | Trigger code review |
+| `installation` | created, deleted, suspend, unsuspend | Manage app installation lifecycle |
+| `installation_repositories` | added, removed | Track which repos are accessible |
+
+### OAuth Scopes
+
+| Scope | Purpose |
+|-------|---------|
+| `read:user` | Read user profile (login, email, avatar) |
+| `user:email` | Access user's email addresses |
+
+### Token Management
+
+```mermaid
+flowchart TD
+    subgraph "User OAuth Tokens"
+        UT_STORE["Stored in DB<br/>(AES-256-GCM encrypted)"]
+        UT_USE["Used for:<br/>- User profile fetch<br/>- Org membership check<br/>- Email access"]
+        UT_REFRESH["Refresh via GitHub OAuth<br/>refresh token flow"]
+    end
+
+    subgraph "Installation Tokens"
+        IT_GEN["Generated on demand<br/>from App private key"]
+        IT_USE["Used for:<br/>- Read PR diffs<br/>- Post review comments<br/>- Set status checks"]
+        IT_EXPIRE["Expires in 1 hour<br/>Auto-regenerated"]
+    end
+
+    UT_STORE --> UT_USE
+    UT_USE -.->|"On 401"| UT_REFRESH
+    UT_REFRESH --> UT_STORE
+
+    IT_GEN --> IT_USE
+    IT_USE -.->|"On expiry"| IT_EXPIRE
+    IT_EXPIRE --> IT_GEN
+
+    classDef oauth fill:#438dd5,stroke:#2e6295,color:#ffffff
+    classDef app fill:#85bbf0,stroke:#5d99c6,color:#000000
+
+    class UT_STORE,UT_USE,UT_REFRESH oauth
+    class IT_GEN,IT_USE,IT_EXPIRE app
+```
+
+### Installation Token Generation
+
+GitHub App installation tokens are short-lived (1 hour) and generated by signing a JWT with the App's private key, then exchanging it for an installation token:
+
+```typescript
+// 1. Create a JWT signed with the App's private key
+const jwt = createAppJWT(appId, privateKey); // 10 min expiry
+
+// 2. Exchange JWT for an installation access token
+const token = await github.apps.createInstallationAccessToken({
+  installation_id: installationId,
+  headers: { authorization: `Bearer ${jwt}` }
+});
+// token.token expires in 1 hour
+```
+
+## Consequences
+
+### Positive
+- **Clean separation of concerns**: User identity via OAuth, repo access via App
+- **Bot identity**: Reviews appear from "CodeGuardian[bot]", not a user -- clear attribution
+- **Granular permissions**: App permissions are tightly scoped per capability
+- **Automatic webhook delivery**: GitHub routes webhooks to the App without per-repo configuration
+- **Marketplace listing**: GitHub App can be listed on GitHub Marketplace for discovery
+- **Installation management**: Users manage repos via GitHub's native UI
+- **No user token for reviews**: Reviews work even if a user's OAuth token expires
+
+### Negative
+- **Two token types to manage**: OAuth tokens (encrypted in DB) and installation tokens (generated on demand)
+- **App private key management**: The GitHub App private key must be stored securely (env var)
+- **Dual registration**: Must register both an OAuth App and a GitHub App in GitHub settings
+- **Complexity**: Two authentication flows to implement and maintain
+
+### Risks
+- **Private key exposure**: Mitigated by storing in environment variable, never in code or database
+- **Installation token expiry**: Mitigated by generating tokens on demand (not caching) or caching with TTL check
+- **OAuth token expiry**: Mitigated by automatic refresh using stored refresh token
+
+## Alternatives Considered
+
+### Alternative A: GitHub App Only (No OAuth)
+
+Use the GitHub App for everything, including user identity.
+
+```mermaid
+graph LR
+    USER["User"] -->|"Install App"| APP["GitHub App"]
+    APP -->|"All access"| GH["GitHub API"]
+```
+
+- **Pros**: Single integration point, simpler setup
+- **Cons**: GitHub App tokens are installation-scoped, not user-scoped. Cannot determine which user is logged in. Cannot access user's email or org memberships beyond installed orgs.
+- **Rejected because**: We need user identity for the dashboard. GitHub App tokens do not represent a user -- they represent an installation.
+
+### Alternative B: OAuth App Only (No GitHub App)
+
+Use only OAuth for everything.
+
+```mermaid
+graph LR
+    USER["User"] -->|"OAuth"| OAUTH["OAuth App"]
+    OAUTH -->|"User token"| GH["GitHub API"]
+```
+
+- **Pros**: Simpler (single flow), user-scoped access
+- **Cons**: No webhook support (must poll for PR events), reviews posted as the user (not a bot), requires each user to grant broad repo access, no installation lifecycle management.
+- **Rejected because**: Webhooks are essential for real-time review triggering. Posting reviews as a bot is cleaner than posting as the user.
+
+### Alternative C: Personal Access Token (PAT) Based
+
+Users provide a PAT with repo access.
+
+- **Pros**: Simple to implement, no OAuth flow needed
+- **Cons**: Security risk (PATs are long-lived), user experience is poor (copy-paste token), no webhook support, no Marketplace listing
+- **Rejected because**: Unacceptable security and UX for a production SaaS product.
+
+---
+
+*This ADR is final for MVP. Phase 2 may add support for fine-grained PATs as an alternative authentication method for CI/CD integration.*
