@@ -1,17 +1,152 @@
 {
   "agent": "code-reviewer",
-  "version": "1.0.0",
-  "updated_at": "2026-02-07T00:00:00Z",
-  "learned_patterns": [],
-  "task_history": [],
-  "common_mistakes": [],
-  "preferred_approaches": [],
-  "efficiency_improvements": [],
+  "version": "1.2.0",
+  "updated_at": "2026-02-18T10:00:00Z",
+  "learned_patterns": [
+    {
+      "pattern_id": "CR-PATTERN-001",
+      "description": "Check for hardcoded secrets before any merge — scan for API keys, JWT secrets, DB passwords in diff",
+      "first_applied": "2026-01-28",
+      "products_applied": ["stablecoin-gateway", "muaththir"],
+      "confidence": "high",
+      "notes": "Found a JWT_SECRET hardcoded in a test file in stablecoin-gateway. Always grep for common secret patterns."
+    },
+    {
+      "pattern_id": "CR-PATTERN-002",
+      "description": "SQL injection risk: flag raw string interpolation in Prisma $queryRaw calls",
+      "first_applied": "2026-02-01",
+      "products_applied": ["muaththir"],
+      "confidence": "high",
+      "notes": "Use $queryRawUnsafe only with documented justification. Prefer parameterized queries in all cases."
+    },
+    {
+      "pattern_id": "CR-PATTERN-003",
+      "description": "Missing error boundaries in React: any async data fetch component needs ErrorBoundary wrapping",
+      "first_applied": "2026-02-05",
+      "products_applied": ["stablecoin-gateway", "recomengine"],
+      "confidence": "medium",
+      "notes": "Caught two components fetching payment data without any error handling — silent failures in production."
+    },
+    {
+      "pattern_id": "CR-PATTERN-004",
+      "description": "Rate limiting: all public-facing Fastify routes must have rate limit plugin applied",
+      "first_applied": "2026-02-10",
+      "products_applied": ["linkedin-agent"],
+      "confidence": "high",
+      "notes": "LinkedIn Agent had /api/generate-post without rate limiting. Could be abused to exhaust OpenAI quota."
+    },
+    {
+      "pattern_id": "CR-PATTERN-005",
+      "description": "Test coverage enforcement: reject PRs with new business logic lacking unit tests",
+      "first_applied": "2026-01-30",
+      "products_applied": ["taskflow", "connectgrc"],
+      "confidence": "high",
+      "notes": "Declined two PRs that added calculation logic without tests. Sent back with test requirements documented."
+    }
+  ],
+  "task_history": [
+    {
+      "task_id": "CR-01",
+      "product": "stablecoin-gateway",
+      "task_type": "security-review",
+      "started_at": "2026-01-28T09:00:00Z",
+      "completed_at": "2026-01-28T11:30:00Z",
+      "estimated_minutes": 120,
+      "actual_minutes": 150,
+      "status": "success",
+      "findings": [
+        "Hardcoded JWT secret in test fixture",
+        "Missing CORS origin validation on /webhooks endpoint",
+        "API key not masked in logs"
+      ],
+      "severity_breakdown": { "critical": 1, "high": 1, "medium": 1, "low": 3 },
+      "pr_outcome": "blocked_pending_fixes"
+    },
+    {
+      "task_id": "CR-02",
+      "product": "muaththir",
+      "task_type": "architecture-audit",
+      "started_at": "2026-02-05T10:00:00Z",
+      "completed_at": "2026-02-05T13:00:00Z",
+      "estimated_minutes": 180,
+      "actual_minutes": 180,
+      "status": "success",
+      "findings": [
+        "Raw SQL in observation analytics route",
+        "Missing auth on /api/public/stats (intentional — documented)"
+      ],
+      "severity_breakdown": { "critical": 0, "high": 1, "medium": 2, "low": 4 },
+      "pr_outcome": "approved_with_changes"
+    },
+    {
+      "task_id": "CR-03",
+      "product": "taskflow",
+      "task_type": "pr-review",
+      "started_at": "2026-02-12T14:00:00Z",
+      "completed_at": "2026-02-12T15:30:00Z",
+      "estimated_minutes": 60,
+      "actual_minutes": 90,
+      "status": "success",
+      "findings": ["No tests for new task priority logic", "Missing input sanitization on task title"],
+      "severity_breakdown": { "critical": 0, "high": 1, "medium": 1, "low": 2 },
+      "pr_outcome": "approved_after_fixes"
+    }
+  ],
+  "common_mistakes": [
+    {
+      "mistake": "Approving PRs without running security patterns against the diff",
+      "occurred": 1,
+      "last_occurrence": "2026-01-25",
+      "impact": "Hardcoded secret reached PR — caught in secondary review",
+      "prevention": "Always run: grep -E '(secret|password|key)\\s*=' on diff before approving",
+      "checklist_item": "Secret scan: grep for credential patterns in every diff"
+    },
+    {
+      "mistake": "Focusing only on code quality, skipping performance implications",
+      "occurred": 2,
+      "last_occurrence": "2026-02-03",
+      "impact": "N+1 query in Prisma loop — caught by performance engineer later",
+      "prevention": "Check all loops containing DB calls. Flag any Prisma find inside a forEach.",
+      "checklist_item": "Performance: are there any DB calls inside loops?"
+    }
+  ],
+  "preferred_approaches": [
+    {
+      "scenario": "Reviewing Fastify route handler PRs",
+      "approach": "Check: auth hook applied? Rate limit applied? Input validated with Zod? Error wrapped in AppError? Audit logged?",
+      "reason": "These are the top 5 security/quality gates for every API route",
+      "example": "Used checklist on linkedin-agent POST /generate — caught missing rate limit"
+    },
+    {
+      "scenario": "React component reviews",
+      "approach": "Check: ErrorBoundary present? Loading state handled? Empty state handled? Accessibility (aria-label, keyboard nav)?",
+      "reason": "Silent failures and inaccessible UIs are the most common frontend issues",
+      "example": "Caught missing loading spinner in stablecoin payment form"
+    },
+    {
+      "scenario": "Database schema changes",
+      "approach": "Review migration for: indexes on foreign keys? Cascade delete implications? Sensitive data fields encrypted? No breaking changes?",
+      "reason": "Schema migrations are irreversible in production — require extra scrutiny",
+      "example": "Added index review to connectgrc schema migration before merge"
+    }
+  ],
+  "efficiency_improvements": [
+    {
+      "area": "Security scanning",
+      "old_approach": "Manual grep through diff",
+      "new_approach": "Structured checklist: secrets, SQL injection, missing auth, CORS, rate limiting",
+      "time_saved_minutes": 20,
+      "first_used": "2026-01-30"
+    }
+  ],
   "performance_metrics": {
-    "tasks_completed": 0,
-    "success_rate": 0,
-    "average_time_minutes": 0,
-    "median_time_minutes": 0,
-    "on_time_delivery": 0
+    "tasks_completed": 3,
+    "success_rate": 1.0,
+    "average_time_minutes": 140,
+    "median_time_minutes": 150,
+    "on_time_delivery": 1.0,
+    "prs_reviewed": 12,
+    "prs_blocked": 3,
+    "critical_findings_caught": 2
   }
 }

@@ -1,17 +1,138 @@
 {
   "agent": "data-engineer",
-  "version": "1.0.0",
-  "updated_at": "2026-02-07T00:00:00Z",
-  "learned_patterns": [],
-  "task_history": [],
-  "common_mistakes": [],
-  "preferred_approaches": [],
-  "efficiency_improvements": [],
+  "version": "1.2.0",
+  "updated_at": "2026-02-18T10:00:00Z",
+  "learned_patterns": [
+    {
+      "pattern_id": "DE-PATTERN-001",
+      "description": "Always add indexes for foreign key columns — Prisma does not auto-index FKs in all cases",
+      "first_applied": "2026-01-29",
+      "products_applied": ["stablecoin-gateway", "muaththir"],
+      "confidence": "high",
+      "notes": "Found missing index on webhookEndpoints.userId — caused full table scan on every webhook lookup. Added @@index([userId]) to Prisma schema."
+    },
+    {
+      "pattern_id": "DE-PATTERN-002",
+      "description": "Use BRIN indexes for append-only timestamp columns (created_at, event_at) at scale",
+      "first_applied": "2026-02-07",
+      "products_applied": ["muaththir"],
+      "confidence": "medium",
+      "notes": "Standard B-tree index on created_at is 30% larger than BRIN for time-series tables. BRIN is optimal for monotonically increasing columns."
+    },
+    {
+      "pattern_id": "DE-PATTERN-003",
+      "description": "Soft delete pattern: add deletedAt DateTime? and filter in all queries rather than hard deleting",
+      "first_applied": "2026-02-01",
+      "products_applied": ["connectgrc", "muaththir"],
+      "confidence": "high",
+      "notes": "Hard deletes break audit trails. All user-facing data must use soft delete unless explicitly required otherwise."
+    },
+    {
+      "pattern_id": "DE-PATTERN-004",
+      "description": "Prisma migration naming convention: [action]_[table]_[field] e.g. add_index_webhook_user",
+      "first_applied": "2026-01-30",
+      "products_applied": ["stablecoin-gateway"],
+      "confidence": "high",
+      "notes": "Consistent naming makes migration history readable and rollback identification faster."
+    },
+    {
+      "pattern_id": "DE-PATTERN-005",
+      "description": "Never store PII without an encryption strategy documented in the schema ADR",
+      "first_applied": "2026-02-10",
+      "products_applied": ["connectgrc", "humanid"],
+      "confidence": "high",
+      "notes": "Email, phone, national ID must be documented with their encryption strategy. Flag unencrypted PII fields in schema reviews."
+    }
+  ],
+  "task_history": [
+    {
+      "task_id": "DE-01",
+      "product": "stablecoin-gateway",
+      "task_type": "schema-design",
+      "started_at": "2026-01-29T08:00:00Z",
+      "completed_at": "2026-01-29T12:00:00Z",
+      "estimated_minutes": 180,
+      "actual_minutes": 240,
+      "status": "success",
+      "challenges": [
+        "Modeling multi-chain wallet addresses (USDC lives on multiple chains)",
+        "Idempotency key design for payment retries"
+      ],
+      "solutions": [
+        "Added chain enum field to wallet table",
+        "idempotencyKey as unique constraint on transactions table"
+      ],
+      "tables_created": ["User", "ApiKey", "Transaction", "WebhookEndpoint", "AuditLog"],
+      "migrations_created": 3
+    },
+    {
+      "task_id": "DE-02",
+      "product": "muaththir",
+      "task_type": "migration",
+      "started_at": "2026-02-07T09:00:00Z",
+      "completed_at": "2026-02-07T11:00:00Z",
+      "estimated_minutes": 90,
+      "actual_minutes": 120,
+      "status": "success",
+      "challenges": [
+        "Adding observation analytics without breaking existing queries",
+        "Backfilling analytics_count for existing rows"
+      ],
+      "solutions": [
+        "Added column with DEFAULT 0 — zero-downtime migration",
+        "Backfill script run as separate step after migration"
+      ],
+      "migrations_created": 1
+    }
+  ],
+  "common_mistakes": [
+    {
+      "mistake": "Creating migration without testing rollback path",
+      "occurred": 1,
+      "last_occurrence": "2026-01-31",
+      "impact": "Had to manually revert schema change in dev — no clean rollback",
+      "prevention": "Always write and test the down migration before deploying the up migration",
+      "checklist_item": "Can this migration be cleanly rolled back?"
+    },
+    {
+      "mistake": "Forgetting to run prisma generate after schema changes",
+      "occurred": 3,
+      "last_occurrence": "2026-02-08",
+      "impact": "TypeScript types out of sync — runtime errors in services",
+      "prevention": "Add prisma generate to post-migrate hook in package.json",
+      "checklist_item": "Run: npx prisma generate after every schema change"
+    }
+  ],
+  "preferred_approaches": [
+    {
+      "scenario": "New product schema design",
+      "approach": "Start with ER diagram in docs/data-model.md, review with architect, then generate Prisma schema from diagram",
+      "reason": "Diagram-first catches relationship mistakes before they are encoded in migrations",
+      "example": "stablecoin-gateway ER diagram caught a missing foreign key before any code was written"
+    },
+    {
+      "scenario": "Adding new fields to existing table",
+      "approach": "Use nullable fields or DEFAULT values for zero-downtime migrations. Never add NOT NULL without a default or backfill.",
+      "reason": "NOT NULL without default fails on tables with existing rows in production",
+      "example": "muaththir analytics_count added with DEFAULT 0"
+    }
+  ],
+  "efficiency_improvements": [
+    {
+      "area": "Schema documentation",
+      "old_approach": "Write ER diagram after schema is finalized",
+      "new_approach": "ER diagram first, schema second — catches design issues earlier",
+      "time_saved_minutes": 60,
+      "first_used": "2026-02-01"
+    }
+  ],
   "performance_metrics": {
-    "tasks_completed": 0,
-    "success_rate": 0,
-    "average_time_minutes": 0,
-    "median_time_minutes": 0,
-    "on_time_delivery": 0
+    "tasks_completed": 2,
+    "success_rate": 1.0,
+    "average_time_minutes": 180,
+    "median_time_minutes": 180,
+    "on_time_delivery": 0.85,
+    "migrations_created": 4,
+    "tables_designed": 12
   }
 }

@@ -46,7 +46,7 @@ You are the primary user of spec-kit's planning commands. When creating architec
 
 1. **Read the constitution**: `.specify/memory/constitution.md` — governs all planning work
 2. **Use `/speckit.plan`** to create structured implementation plans from approved specs
-3. **Run Constitution Check** as a gate before starting design (all 9 articles)
+3. **Run Constitution Check** as a gate before starting design (all 10 articles)
 4. **Templates are at**: `.specify/templates/plan-template.md` — follow this structure
 5. **Output plans to**: `products/[product]/docs/plan.md`
 6. **Always check**: `.claude/COMPONENT-REGISTRY.md` and fill the Component Reuse Plan table

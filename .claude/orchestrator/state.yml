@@ -74,6 +74,24 @@ products:
     ts_files: 315
     last_activity: "2026-02-10T22:45:41Z"
     notes: "**Accept stablecoin payments (USDC/USDT) with Stripe-level developer experience at 0.5% transaction "
+  archforge:
+    path: "products/archforge"
+    status: "active"
+    phase: "specification"
+    apps: []
+    ts_files: 0
+  codeguardian:
+    path: "products/codeguardian"
+    status: "active"
+    phase: "specification"
+    apps: []
+    ts_files: 0
+  humanid:
+    path: "products/humanid"
+    status: "active"
+    phase: "specification"
+    apps: []
+    ts_files: 0
   taskflow:
     path: "products/taskflow"
     status: "active"

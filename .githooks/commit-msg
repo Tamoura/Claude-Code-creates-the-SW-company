@@ -70,7 +70,5 @@ if [ "${SKIP_TRACEABILITY:-0}" = "1" ]; then
   exit 0
 fi
 
-# For now, warn but don't block (soft enforcement)
-# Uncomment the next line for hard enforcement:
-# exit 1
-exit 0
+# Hard enforcement enabled (Constitution Article VI)
+exit 1

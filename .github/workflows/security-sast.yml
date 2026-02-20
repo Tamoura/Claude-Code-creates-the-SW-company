@@ -1,0 +1,146 @@
+name: SAST Security Scanning
+
+on:
+  push:
+    branches: [main]
+  pull_request:
+
+jobs:
+  codeql:
+    name: CodeQL Analysis
+    runs-on: ubuntu-latest
+    permissions:
+      actions: read
+      contents: read
+      security-events: write
+    steps:
+      - uses: actions/checkout@v4
+
+      - name: Initialize CodeQL
+        uses: github/codeql-action/init@v3
+        with:
+          languages: javascript-typescript
+          queries: security-extended
+
+      - name: Autobuild
+        uses: github/codeql-action/autobuild@v3
+
+      - name: Perform CodeQL Analysis
+        uses: github/codeql-action/analyze@v3
+        with:
+          category: '/language:javascript-typescript'
+
+  semgrep:
+    name: Semgrep SAST
+    runs-on: ubuntu-latest
+    permissions:
+      contents: read
+      pull-requests: write
+    steps:
+      - uses: actions/checkout@v4
+
+      - name: Run Semgrep
+        uses: semgrep/semgrep-action@v1
+        with:
+          config: p/default
+          generateSarif: 'true'
+        env:
+          SEMGREP_TIMEOUT: 300
+        continue-on-error: true
+
+      - name: Upload Semgrep SARIF
+        uses: github/codeql-action/upload-sarif@v3
+        with:
+          sarif_file: semgrep.sarif
+        if: always()
+        continue-on-error: true
+
+      - name: Comment PR with Semgrep findings
+        if: github.event_name == 'pull_request'
+        uses: actions/github-script@v7
+        with:
+          script: |
+            const fs = require('fs');
+            let sarif;
+            try {
+              sarif = JSON.parse(fs.readFileSync('semgrep.sarif', 'utf8'));
+            } catch (e) {
+              console.log('No SARIF file found or parse error:', e.message);
+              return;
+            }
+            const runs = sarif.runs || [];
+            const results = runs.flatMap(r => r.results || []);
+            if (results.length === 0) {
+              await github.rest.issues.createComment({
+                owner: context.repo.owner,
+                repo: context.repo.repo,
+                issue_number: context.issue.number,
+                body: '## Semgrep SAST\n\nNo findings detected. All checks passed.'
+              });
+              return;
+            }
+            const findings = results.slice(0, 20).map(r => {
+              const loc = r.locations?.[0]?.physicalLocation;
+              const file = loc?.artifactLocation?.uri || 'unknown';
+              const line = loc?.region?.startLine || '?';
+              const msg = r.message?.text || 'No message';
+              const level = r.level || 'warning';
+              return `- **${level.toUpperCase()}** \`${file}:${line}\` — ${msg}`;
+            }).join('\n');
+            const more = results.length > 20 ? `\n\n...and ${results.length - 20} more findings.` : '';
+            await github.rest.issues.createComment({
+              owner: context.repo.owner,
+              repo: context.repo.repo,
+              issue_number: context.issue.number,
+              body: `## Semgrep SAST Findings\n\n${results.length} finding(s) detected:\n\n${findings}${more}\n\nReview the Security tab for full details.`
+            });
+
+  npm-audit:
+    name: npm Dependency Audit
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v4
+
+      - name: Setup Node.js
+        uses: actions/setup-node@v4
+        with:
+          node-version: '20'
+
+      - name: Audit all product and package dependencies
+        run: |
+          echo "Running npm audit across all products and packages..."
+          OVERALL_FAIL=0
+
+          audit_dir() {
+            local dir=$1
+            if [ -f "$dir/package.json" ] && [ -f "$dir/package-lock.json" ]; then
+              echo ""
+              echo "Auditing: $dir"
+              cd "$dir"
+              npm audit --audit-level=critical --omit=dev 2>&1 || {
+                echo "::warning::Critical vulnerability found in $dir"
+                OVERALL_FAIL=1
+              }
+              cd - > /dev/null
+            fi
+          }
+
+          # Audit all product app directories
+          for pkg in products/*/apps/*/package.json; do
+            dir=$(dirname "$pkg")
+            audit_dir "$dir"
+          done
+
+          # Audit all shared packages
+          for pkg in packages/*/package.json; do
+            dir=$(dirname "$pkg")
+            audit_dir "$dir"
+          done
+
+          if [ $OVERALL_FAIL -eq 1 ]; then
+            echo ""
+            echo "::error::One or more critical vulnerabilities found. Run 'npm audit fix' in affected directories."
+            exit 1
+          fi
+          echo ""
+          echo "npm audit complete — no critical vulnerabilities found."

@@ -4,7 +4,7 @@
 
 ConnectSW is not a framework, library, or boilerplate. It is a fully operational software company running inside a git repository. The CEO gives natural language commands. The Orchestrator breaks them into tasks. Specialist agents — Product Manager, Architect, Backend Engineer, Frontend Engineer, QA Engineer, and 12 others — execute those tasks across a multi-product portfolio.
 
-The result: **3 products in production, 60+ reusable components, 6 CI/CD pipelines, and a self-improving agent memory system** — all built by AI agents, governed by a 9-article constitution, and verified through 6 quality gates.
+The result: **3 products in production, 60+ reusable components, 6 CI/CD pipelines, and a self-improving agent memory system** — all built by AI agents, governed by a 10-article constitution, and verified through 6 quality gates.
 
 ---
 
@@ -94,7 +94,7 @@ Each agent has:
 
 ## Specification-Driven Development
 
-ConnectSW uses [GitHub's spec-kit](https://github.com/github/spec-kit) methodology, adapted with a 9-article constitution governing all work.
+ConnectSW uses [GitHub's spec-kit](https://github.com/github/spec-kit) methodology, adapted with a 10-article constitution governing all work.
 
 ### The Pipeline
 
@@ -110,7 +110,7 @@ CEO brief
 
 ### The Constitution
 
-9 articles that govern all specification-to-implementation work:
+10 articles that govern all specification-to-implementation work:
 
 | Article | Principle | Enforcement |
 |---------|-----------|-------------|
@@ -122,7 +122,8 @@ CEO brief
 | VI | Specification Traceability | Every task traces to a spec requirement |
 | VII | Port Registry Compliance | Unique ports, no conflicts |
 | VIII | Git Safety | Specific staging, pre-commit hooks, no `git add .` |
-| IX | Quality Gates | 6 gates from spec consistency to production readiness |
+| IX | Diagram-First Documentation | All complex explanations must include Mermaid diagrams |
+| X | Quality Gates | 6 gates from spec consistency to production readiness |
 
 ---
 
@@ -217,7 +218,7 @@ Inspired by [FullStack-Agent](https://arxiv.org/abs/2602.03798) research: produc
 │   └── PORT-REGISTRY.md              Port allocation system
 │
 ├── .specify/                        Spec-kit integration
-│   ├── memory/constitution.md         9-article governance document
+│   ├── memory/constitution.md         10-article governance document
 │   └── templates/                     Spec, plan, tasks, checklist templates
 │       └── commands/                  8 slash command definitions
 │
