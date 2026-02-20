@@ -25,14 +25,14 @@
     "dotenv": "^16.3.1",
     "fastify": "^4.24.0",
     "fastify-plugin": "^4.5.0",
-    "ioredis": "^5.3.0",
+    "ioredis": "^5.9.3",
     "zod": "^3.22.0"
   },
   "devDependencies": {
     "@types/bcrypt": "^5.0.2",
     "@types/jest": "^29.5.0",
     "@types/node": "^20.0.0",
-    "@typescript-eslint/eslint-plugin": "^8.0.0",
+    "@typescript-eslint/eslint-plugin": "^8.56.0",
     "@typescript-eslint/parser": "^8.0.0",
     "eslint": "^8.57.0",
     "jest": "^29.7.0",
