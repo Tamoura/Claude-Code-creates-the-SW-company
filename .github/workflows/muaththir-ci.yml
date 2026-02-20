@@ -21,7 +21,7 @@ jobs:
       run:
         working-directory: products/muaththir/apps/api
     steps:
-      - uses: actions/checkout@v4
+      - uses: actions/checkout@v6
       - uses: actions/setup-node@v4
         with:
           node-version: ${{ env.NODE_VERSION }}
@@ -56,7 +56,7 @@ jobs:
       JWT_SECRET: ci-test-secret-not-for-production
       NODE_ENV: test
     steps:
-      - uses: actions/checkout@v4
+      - uses: actions/checkout@v6
       - uses: actions/setup-node@v4
         with:
           node-version: ${{ env.NODE_VERSION }}
@@ -74,7 +74,7 @@ jobs:
       run:
         working-directory: products/muaththir/apps/web
     steps:
-      - uses: actions/checkout@v4
+      - uses: actions/checkout@v6
       - uses: actions/setup-node@v4
         with:
           node-version: ${{ env.NODE_VERSION }}
@@ -92,7 +92,7 @@ jobs:
       run:
         working-directory: products/muaththir/apps/web
     steps:
-      - uses: actions/checkout@v4
+      - uses: actions/checkout@v6
       - uses: actions/setup-node@v4
         with:
           node-version: ${{ env.NODE_VERSION }}
@@ -109,7 +109,7 @@ jobs:
       run:
         working-directory: products/muaththir/e2e
     steps:
-      - uses: actions/checkout@v4
+      - uses: actions/checkout@v6
       - uses: actions/setup-node@v4
         with:
           node-version: ${{ env.NODE_VERSION }}
@@ -141,7 +141,7 @@ jobs:
     runs-on: ubuntu-latest
     needs: [api-test, web-build]
     steps:
-      - uses: actions/checkout@v4
+      - uses: actions/checkout@v6
       - name: Build API Docker image
         run: docker build -f products/muaththir/apps/api/Dockerfile -t muaththir-api:test products/muaththir/
       - name: Build Web Docker image

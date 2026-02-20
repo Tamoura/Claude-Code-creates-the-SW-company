@@ -17,7 +17,7 @@ jobs:
       run:
         working-directory: products/recomengine/apps/api
     steps:
-      - uses: actions/checkout@v4
+      - uses: actions/checkout@v6
 
       - name: Setup Node.js
         uses: actions/setup-node@v4
@@ -60,7 +60,7 @@ jobs:
       NODE_ENV: test
       JWT_SECRET: test-jwt-secret-for-ci
     steps:
-      - uses: actions/checkout@v4
+      - uses: actions/checkout@v6
 
       - name: Setup Node.js
         uses: actions/setup-node@v4
@@ -84,7 +84,7 @@ jobs:
       run:
         working-directory: products/recomengine/apps/web
     steps:
-      - uses: actions/checkout@v4
+      - uses: actions/checkout@v6
 
       - name: Setup Node.js
         uses: actions/setup-node@v4
@@ -108,7 +108,7 @@ jobs:
       run:
         working-directory: products/recomengine/apps/sdk
     steps:
-      - uses: actions/checkout@v4
+      - uses: actions/checkout@v6
 
       - name: Setup Node.js
         uses: actions/setup-node@v4
@@ -136,7 +136,7 @@ jobs:
       run:
         working-directory: products/recomengine/apps/api
     steps:
-      - uses: actions/checkout@v4
+      - uses: actions/checkout@v6
 
       - name: Setup Node.js
         uses: actions/setup-node@v4
