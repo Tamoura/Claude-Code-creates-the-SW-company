@@ -1,0 +1,34 @@
+{
+  "name": "connectin",
+  "version": "0.1.0",
+  "private": true,
+  "description": "AI-native, Arabic-first professional networking platform",
+  "scripts": {
+    "dev": "concurrently --names api,web --prefix-colors blue,green \"npm run dev:api\" \"npm run dev:web\"",
+    "dev:api": "cd apps/api && npm run dev",
+    "dev:web": "cd apps/web && npm run dev",
+    "test": "npm run test:api && npm run test:web",
+    "test:api": "cd apps/api && npm test",
+    "test:web": "cd apps/web && npm test",
+    "build": "npm run build:api && npm run build:web",
+    "build:api": "cd apps/api && npm run build",
+    "build:web": "cd apps/web && npm run build",
+    "lint": "npm run lint:api && npm run lint:web",
+    "lint:api": "cd apps/api && npm run lint --if-present",
+    "lint:web": "cd apps/web && npm run lint --if-present",
+    "typecheck": "npm run typecheck:api && npm run typecheck:web",
+    "typecheck:api": "cd apps/api && npx tsc --noEmit",
+    "typecheck:web": "cd apps/web && npx tsc --noEmit",
+    "docker:up": "docker compose up -d",
+    "docker:down": "docker compose down",
+    "docker:build": "docker compose build",
+    "docker:logs": "docker compose logs -f",
+    "docker:infra": "docker compose up -d db redis",
+    "db:migrate": "cd apps/api && npx prisma migrate dev",
+    "db:studio": "cd apps/api && npx prisma studio",
+    "db:seed": "cd apps/api && npx tsx scripts/seed.ts"
+  },
+  "devDependencies": {
+    "concurrently": "^9.1.2"
+  }
+}

@@ -1,0 +1,89 @@
+version: "3.9"
+
+services:
+  api:
+    build:
+      context: ./apps/api
+      dockerfile: Dockerfile
+    container_name: connectin-api
+    ports:
+      - "5007:5007"
+    environment:
+      - DATABASE_URL=postgresql://postgres:postgres@db:5432/connectin_dev
+      - REDIS_URL=redis://redis:6379
+      - JWT_SECRET=${JWT_SECRET:-dev-secret-change-in-production}
+      - JWT_ACCESS_EXPIRY=15m
+      - JWT_REFRESH_EXPIRY=7d
+      - PORT=5007
+      - HOST=0.0.0.0
+      - NODE_ENV=development
+      - CORS_ORIGIN=http://localhost:3111
+    depends_on:
+      db:
+        condition: service_healthy
+      redis:
+        condition: service_healthy
+    restart: unless-stopped
+    networks:
+      - connectin
+
+  web:
+    build:
+      context: ./apps/web
+      dockerfile: Dockerfile
+    container_name: connectin-web
+    ports:
+      - "3111:3111"
+    environment:
+      - NEXT_PUBLIC_API_URL=http://localhost:5007
+      - PORT=3111
+      - NODE_ENV=development
+    depends_on:
+      - api
+    restart: unless-stopped
+    networks:
+      - connectin
+
+  db:
+    image: postgres:15-alpine
+    container_name: connectin-postgres
+    ports:
+      - "5433:5432"
+    environment:
+      - POSTGRES_DB=connectin_dev
+      - POSTGRES_USER=postgres
+      - POSTGRES_PASSWORD=postgres
+    volumes:
+      - connectin_pgdata:/var/lib/postgresql/data
+    healthcheck:
+      test: ["CMD-SHELL", "pg_isready -U postgres"]
+      interval: 5s
+      timeout: 5s
+      retries: 5
+    restart: unless-stopped
+    networks:
+      - connectin
+
+  redis:
+    image: redis:7-alpine
+    container_name: connectin-redis
+    ports:
+      - "6380:6379"
+    volumes:
+      - connectin_redisdata:/data
+    healthcheck:
+      test: ["CMD", "redis-cli", "ping"]
+      interval: 5s
+      timeout: 5s
+      retries: 5
+    restart: unless-stopped
+    networks:
+      - connectin
+
+networks:
+  connectin:
+    driver: bridge
+
+volumes:
+  connectin_pgdata:
+  connectin_redisdata:
