@@ -1650,3 +1650,33 @@ The following items are explicitly **not** included in QDB One v1 (Phases 0-2):
 | ADR-003: Cross-Portal Data Access Pattern | Architecture Advisory, Section 14 | Decision to use CQRS + GraphQL Federation hybrid |
 | ADR-004: Authorization Model | Architecture Advisory, Section 14 | Decision to use OpenFGA (ReBAC + RBAC) |
 | ADR-005: Frontend Architecture | Architecture Advisory, Section 14 | Decision to use Module Federation micro-frontends |
+
+---
+
+## Appendix C: User Stories Index
+
+Consolidated index of all user stories defined in this PRD. Each story uses the **As a / I want / So that** format with **Given / When / Then** acceptance criteria in the referenced section.
+
+| ID | Story | Persona | Section |
+|----|-------|---------|---------|
+| US-01 | As a QDB user, I want a single login page for all QDB services so that I do not need to remember which login method corresponds to which portal | QDB User | 3.1.1 |
+| US-02 | As a foreign shareholder without a Qatar ID, I want to log in using my QDB Foreign ID and email OTP so that I can access QDB services without NAS | Foreign Shareholder | 3.1.2 |
+| US-03 | As the QDB One system, I want to enrich the user session after NAS authentication so that the dashboard can display all of the user's roles and relationships | System | 3.1.3 |
+| US-04 | As a QDB user, I want my session to remain active for a reasonable period so that I do not need to re-authenticate frequently during a working session | QDB User | 3.1.4 |
+| US-05 | As an existing portal user logging into QDB One for the first time, I want the system to find and link my existing portal accounts so that I see all my data immediately | Existing User | 3.1.5 |
+| US-06 | As a QDB user with orphaned portal accounts, I want to manually link them to my QDB One identity so that I can see all my data | QDB User | 3.1.6 |
+| US-07 | As a multi-role user, I want to see all my QDB relationships in a single dashboard so that I have complete visibility across portals | Multi-Role User | 3.2 |
+| US-08 | As a Relationship Manager, I want a unified view of a customer's cross-portal relationships so that I can provide holistic service | Relationship Manager | 3.2 |
+| US-09 | As a Data Steward, I want to review and resolve identity conflicts in the MPI so that golden records remain accurate | Data Steward | 3.3 |
+
+### Acceptance Criteria Summary
+
+All acceptance criteria in this PRD follow the **Given / When / Then** format. Key quality attributes verified:
+
+| Quality Attribute | Criteria Examples |
+|-------------------|-------------------|
+| **Performance** | NAS redirect < 3s, MPI lookup < 2s, dashboard load < 2s |
+| **Security** | OTP expiry (5 min), account lockout (5 failed attempts), step-up auth for sensitive ops |
+| **Availability** | NAS circuit breaker with user-facing message, graceful degradation |
+| **Data Integrity** | Audit logging for all linking decisions, consent versioning, duplicate detection |
+| **Usability** | Session warning at 55 min, single-click session extension, clear error messages |

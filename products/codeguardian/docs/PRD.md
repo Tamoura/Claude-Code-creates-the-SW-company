@@ -1493,4 +1493,40 @@ The MVP is considered ready for launch when ALL of the following are true:
 
 ---
 
+---
+
+## Appendix C: User Stories Index
+
+Consolidated index of all user stories defined in this PRD. Each story uses the **As a / I want / So that** format with **Given / When / Then** acceptance criteria in the referenced feature section.
+
+### MVP Features (Phase 1)
+
+| ID | Story | Persona | Feature |
+|----|-------|---------|---------|
+| US-01 | As Alex, I want to sign in with my GitHub account so that I do not need to create a separate login | Developer | F-001 |
+| US-02 | As Priya, I want my team members to authenticate via GitHub so that repository permissions are automatically respected | Tech Lead | F-001 |
+| US-03 | As Alex, I want to install CodeGuardian on my personal repos so that my PRs get reviewed automatically | Developer | F-002 |
+| US-04 | As Priya, I want to install CodeGuardian on our organization and select specific repos so that only production repos are monitored | Tech Lead | F-002 |
+| US-05 | As Alex, I want CodeGuardian to automatically start reviewing when I open or update a PR so that I do not need to trigger reviews manually | Developer | F-003 |
+| US-06 | As Alex, I want to understand why the AI flagged an issue so that I can learn and fix it correctly | Developer | F-004 |
+| US-07 | As Alex, I want AI suggestions as GitHub Suggested Changes so that I can accept fixes with one click | Developer | F-005 |
+| US-08 | As Priya, I want a 0-100 quality score on every PR so that I can quickly triage which PRs need manual review | Tech Lead | F-006 |
+| US-09 | As Marcus, I want every PR scanned for OWASP Top 10 vulnerabilities so that security issues are caught before merge | Security Engineer | F-007 |
+| US-10 | As Priya, I want a dashboard showing review trends across my team so that I can identify patterns and coaching opportunities | Tech Lead | F-008 |
+| US-11 | As Diana, I want transparent billing with a free tier for individual developers so that adoption starts bottom-up without procurement friction | VP Engineering | F-009 |
+
+### Acceptance Criteria Summary
+
+All acceptance criteria in this PRD follow the **Given / When / Then** format within each feature section (F-001 through F-009). Key quality attributes verified:
+
+| Quality Attribute | Criteria Examples |
+|-------------------|-------------------|
+| **Performance** | Review completion < 60s for PRs under 500 lines, webhook processing < 5s |
+| **Security** | Webhook signature validation (HMAC-SHA256), OWASP Top 10 scanning, diff-only analysis (no full repo access) |
+| **Accuracy** | Quality score breakdown (security 30%, logic 30%, performance 20%, style 20%), false positive rate < 15% |
+| **Scalability** | Diff chunking at 2,000 lines, parallel model routing, rate limiting per installation |
+| **Usability** | One-click install, inline suggestions as GitHub native Suggested Changes, score badge on PR status |
+
+---
+
 *End of PRD. This document is maintained by the Product Manager and reviewed at each major milestone.*
