@@ -129,7 +129,7 @@ jobs:
         env:
           CI: true
           NEXT_PUBLIC_API_URL: http://localhost:5005
-      - uses: actions/upload-artifact@v4
+      - uses: actions/upload-artifact@v6
         if: failure()
         with:
           name: playwright-report
