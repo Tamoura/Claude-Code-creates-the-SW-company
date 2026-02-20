@@ -12,8 +12,8 @@
     "test:ui": "vitest --ui"
   },
   "dependencies": {
-    "i18next": "^25.8.0",
-    "i18next-browser-languagedetector": "^8.2.0",
+    "i18next": "^25.8.12",
+    "i18next-browser-languagedetector": "^8.2.1",
     "react": "^18.2.0",
     "react-dom": "^18.2.0",
     "react-i18next": "^16.5.4",
@@ -27,7 +27,7 @@
     "@types/react": "^18.2.43",
     "@types/react-dom": "^18.2.17",
     "@vitejs/plugin-react": "^4.2.1",
-    "autoprefixer": "^10.4.16",
+    "autoprefixer": "^10.4.24",
     "happy-dom": "^12.10.3",
     "postcss": "^8.4.32",
     "tailwindcss": "^3.4.0",
