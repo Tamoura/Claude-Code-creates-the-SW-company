@@ -21,7 +21,7 @@ graph TD
     end
 
     subgraph "HumanID Platform"
-        WEB["Web App<br/>(Next.js 14, :3117)"]
+        WEB["Web App<br/>(Next.js 14, :3116)"]
         API["API Server<br/>(Fastify 4, :5013)"]
 
         subgraph "Data Layer"
@@ -115,14 +115,14 @@ npm run db:generate
 # 6. Start development servers
 npm run dev
 # API: http://localhost:5013
-# Web: http://localhost:3117
+# Web: http://localhost:3116
 ```
 
 ### Port Assignments
 
 | Service | Port | URL |
 |---------|------|-----|
-| Frontend (Web) | 3117 | http://localhost:3117 |
+| Frontend (Web) | 3116 | http://localhost:3116 |
 | Backend (API) | 5013 | http://localhost:5013 |
 | PostgreSQL | 5432 | localhost:5432 |
 | Redis | 6379 | localhost:6379 |
