@@ -1,0 +1,428 @@
+// ============================================================
+// ArchForge Prisma Schema
+// PostgreSQL 15+
+//
+// 18 tables across 6 domains:
+//   Identity: users, oauth_accounts, sessions
+//   Organization: workspaces, workspace_members
+//   Architecture: projects, artifacts, artifact_versions,
+//                 artifact_elements, artifact_relationships
+//   Content: templates, document_uploads
+//   Collaboration: comments, shares
+//   Operations: exports, api_keys, audit_log, notification_preferences
+// ============================================================
+
+generator client {
+  provider = "prisma-client-js"
+}
+
+datasource db {
+  provider = "postgresql"
+  url      = env("DATABASE_URL")
+}
+
+// ============================================================
+// IDENTITY DOMAIN
+// ============================================================
+
+model User {
+  id            String    @id @default(uuid()) @db.Uuid
+  email         String    @unique @db.VarChar(255)
+  passwordHash  String?   @map("password_hash") @db.VarChar(255)
+  fullName      String    @map("full_name") @db.VarChar(255)
+  avatarUrl     String?   @map("avatar_url")
+  role          String    @default("member") @db.VarChar(20)
+  emailVerified Boolean   @default(false) @map("email_verified")
+  totpEnabled   Boolean   @default(false) @map("totp_enabled")
+  totpSecret    String?   @map("totp_secret") @db.VarChar(255)
+  status        String    @default("registered") @db.VarChar(20)
+  lastLoginAt   DateTime? @map("last_login_at") @db.Timestamptz()
+  createdAt     DateTime  @default(now()) @map("created_at") @db.Timestamptz()
+  updatedAt     DateTime  @updatedAt @map("updated_at") @db.Timestamptz()
+
+  // Relations
+  oauthAccounts           OauthAccount[]
+  sessions                Session[]
+  ownedWorkspaces         Workspace[]
+  workspaceMemberships    WorkspaceMember[]
+  createdProjects         Project[]
+  createdArtifacts        Artifact[]
+  createdArtifactVersions ArtifactVersion[]
+  createdTemplates        Template[]
+  comments                Comment[]
+  sharedBy                Share[]             @relation("SharedBy")
+  sharedWith              Share[]             @relation("SharedWith")
+  exports                 Export[]
+  documentUploads         DocumentUpload[]
+  apiKeys                 ApiKey[]
+  auditLogs               AuditLog[]
+  notificationPreferences NotificationPreferences?
+
+  @@index([email])
+  @@index([status])
+  @@map("users")
+}
+
+model OauthAccount {
+  id                String    @id @default(uuid()) @db.Uuid
+  userId            String    @map("user_id") @db.Uuid
+  provider          String    @db.VarChar(20)
+  providerAccountId String    @map("provider_account_id") @db.VarChar(255)
+  accessToken       String?   @map("access_token")
+  refreshToken      String?   @map("refresh_token")
+  tokenExpiresAt    DateTime? @map("token_expires_at") @db.Timestamptz()
+  createdAt         DateTime  @default(now()) @map("created_at") @db.Timestamptz()
+
+  user User @relation(fields: [userId], references: [id], onDelete: Cascade)
+
+  @@unique([provider, providerAccountId])
+  @@index([userId])
+  @@map("oauth_accounts")
+}
+
+model Session {
+  id        String    @id @default(uuid()) @db.Uuid
+  userId    String    @map("user_id") @db.Uuid
+  tokenHash String    @unique @map("token_hash") @db.VarChar(255)
+  jti       String    @unique @db.VarChar(255)
+  ipAddress String?   @map("ip_address")
+  userAgent String?   @map("user_agent")
+  expiresAt DateTime  @map("expires_at") @db.Timestamptz()
+  createdAt DateTime  @default(now()) @map("created_at") @db.Timestamptz()
+  revokedAt DateTime? @map("revoked_at") @db.Timestamptz()
+
+  user User @relation(fields: [userId], references: [id], onDelete: Cascade)
+
+  @@index([userId])
+  @@index([jti])
+  @@map("sessions")
+}
+
+// ============================================================
+// ORGANIZATION DOMAIN
+// ============================================================
+
+model Workspace {
+  id        String   @id @default(uuid()) @db.Uuid
+  name      String   @db.VarChar(255)
+  slug      String   @unique @db.VarChar(255)
+  ownerId   String   @map("owner_id") @db.Uuid
+  plan      String   @default("free") @db.VarChar(20)
+  settings  Json     @default("{}")
+  createdAt DateTime @default(now()) @map("created_at") @db.Timestamptz()
+  updatedAt DateTime @updatedAt @map("updated_at") @db.Timestamptz()
+
+  owner   User              @relation(fields: [ownerId], references: [id], onDelete: Restrict)
+  members WorkspaceMember[]
+
+  @@index([ownerId])
+  @@map("workspaces")
+}
+
+model WorkspaceMember {
+  id          String   @id @default(uuid()) @db.Uuid
+  workspaceId String   @map("workspace_id") @db.Uuid
+  userId      String   @map("user_id") @db.Uuid
+  role        String   @default("viewer") @db.VarChar(20)
+  joinedAt    DateTime @default(now()) @map("joined_at") @db.Timestamptz()
+
+  workspace Workspace @relation(fields: [workspaceId], references: [id], onDelete: Cascade)
+  user      User      @relation(fields: [userId], references: [id], onDelete: Cascade)
+
+  @@unique([workspaceId, userId])
+  @@index([workspaceId])
+  @@index([userId])
+  @@map("workspace_members")
+}
+
+// ============================================================
+// ARCHITECTURE DOMAIN
+// ============================================================
+
+model Project {
+  id                  String    @id @default(uuid()) @db.Uuid
+  workspaceId         String    @map("workspace_id") @db.Uuid
+  createdBy           String    @map("created_by") @db.Uuid
+  name                String    @db.VarChar(255)
+  description         String?
+  frameworkPreference String    @default("auto") @map("framework_preference") @db.VarChar(20)
+  status              String    @default("active") @db.VarChar(20)
+  settings            Json      @default("{}")
+  createdAt           DateTime  @default(now()) @map("created_at") @db.Timestamptz()
+  updatedAt           DateTime  @updatedAt @map("updated_at") @db.Timestamptz()
+  archivedAt          DateTime? @map("archived_at") @db.Timestamptz()
+
+  creator         User             @relation(fields: [createdBy], references: [id], onDelete: Restrict)
+  artifacts       Artifact[]
+  documentUploads DocumentUpload[]
+
+  @@index([workspaceId, status])
+  @@index([createdBy])
+  @@map("projects")
+}
+
+model Artifact {
+  id             String   @id @default(uuid()) @db.Uuid
+  projectId      String   @map("project_id") @db.Uuid
+  createdBy      String   @map("created_by") @db.Uuid
+  name           String   @db.VarChar(255)
+  type           String   @db.VarChar(30)
+  framework      String   @db.VarChar(20)
+  status         String   @default("draft") @db.VarChar(20)
+  canvasData     Json     @default("{\"elements\":[],\"relationships\":[],\"viewport\":{\"x\":0,\"y\":0,\"zoom\":1}}") @map("canvas_data")
+  svgContent     String?  @map("svg_content")
+  nlDescription  String?  @map("nl_description")
+  currentVersion Int      @default(1) @map("current_version")
+  createdAt      DateTime @default(now()) @map("created_at") @db.Timestamptz()
+  updatedAt      DateTime @updatedAt @map("updated_at") @db.Timestamptz()
+
+  project       Project              @relation(fields: [projectId], references: [id], onDelete: Cascade)
+  creator       User                 @relation(fields: [createdBy], references: [id], onDelete: Restrict)
+  versions      ArtifactVersion[]
+  elements      ArtifactElement[]
+  relationships ArtifactRelationship[]
+  comments      Comment[]
+  shares        Share[]
+  exports       Export[]
+
+  @@index([projectId, status])
+  @@index([createdBy])
+  @@index([framework])
+  @@map("artifacts")
+}
+
+model ArtifactVersion {
+  id            String   @id @default(uuid()) @db.Uuid
+  artifactId    String   @map("artifact_id") @db.Uuid
+  createdBy     String   @map("created_by") @db.Uuid
+  versionNumber Int      @map("version_number")
+  canvasData    Json     @map("canvas_data")
+  svgContent    String?  @map("svg_content")
+  changeSummary String?  @map("change_summary")
+  changeType    String   @default("manual_edit") @map("change_type") @db.VarChar(30)
+  createdAt     DateTime @default(now()) @map("created_at") @db.Timestamptz()
+
+  artifact Artifact @relation(fields: [artifactId], references: [id], onDelete: Cascade)
+  creator  User     @relation(fields: [createdBy], references: [id], onDelete: Restrict)
+
+  @@unique([artifactId, versionNumber])
+  @@index([artifactId, versionNumber])
+  @@map("artifact_versions")
+}
+
+model ArtifactElement {
+  id          String   @id @default(uuid()) @db.Uuid
+  artifactId  String   @map("artifact_id") @db.Uuid
+  elementId   String   @map("element_id") @db.VarChar(100)
+  elementType String   @map("element_type") @db.VarChar(100)
+  framework   String   @db.VarChar(20)
+  name        String   @db.VarChar(255)
+  description String?
+  properties  Json     @default("{}")
+  position    Json     @default("{\"x\":0,\"y\":0,\"width\":200,\"height\":100}")
+  layer       String?  @db.VarChar(30)
+  createdAt   DateTime @default(now()) @map("created_at") @db.Timestamptz()
+  updatedAt   DateTime @updatedAt @map("updated_at") @db.Timestamptz()
+
+  artifact Artifact @relation(fields: [artifactId], references: [id], onDelete: Cascade)
+
+  @@unique([artifactId, elementId])
+  @@index([artifactId])
+  @@index([elementType])
+  @@map("artifact_elements")
+}
+
+model ArtifactRelationship {
+  id               String   @id @default(uuid()) @db.Uuid
+  artifactId       String   @map("artifact_id") @db.Uuid
+  relationshipId   String   @map("relationship_id") @db.VarChar(100)
+  sourceElementId  String   @map("source_element_id") @db.VarChar(100)
+  targetElementId  String   @map("target_element_id") @db.VarChar(100)
+  relationshipType String   @map("relationship_type") @db.VarChar(100)
+  framework        String   @db.VarChar(20)
+  label            String?  @db.VarChar(255)
+  properties       Json     @default("{}")
+  createdAt        DateTime @default(now()) @map("created_at") @db.Timestamptz()
+
+  artifact Artifact @relation(fields: [artifactId], references: [id], onDelete: Cascade)
+
+  @@unique([artifactId, relationshipId])
+  @@index([artifactId])
+  @@index([artifactId, sourceElementId])
+  @@index([artifactId, targetElementId])
+  @@map("artifact_relationships")
+}
+
+// ============================================================
+// CONTENT DOMAIN
+// ============================================================
+
+model Template {
+  id          String   @id @default(uuid()) @db.Uuid
+  createdBy   String   @map("created_by") @db.Uuid
+  name        String   @db.VarChar(255)
+  description String?
+  category    String   @db.VarChar(20)
+  subcategory String?  @db.VarChar(100)
+  framework   String   @db.VarChar(20)
+  canvasData  Json     @map("canvas_data")
+  svgPreview  String?  @map("svg_preview")
+  isPublic    Boolean  @default(false) @map("is_public")
+  usageCount  Int      @default(0) @map("usage_count")
+  createdAt   DateTime @default(now()) @map("created_at") @db.Timestamptz()
+  updatedAt   DateTime @updatedAt @map("updated_at") @db.Timestamptz()
+
+  creator User @relation(fields: [createdBy], references: [id], onDelete: Restrict)
+
+  @@index([category, subcategory, isPublic])
+  @@index([framework, isPublic])
+  @@index([createdBy])
+  @@map("templates")
+}
+
+model DocumentUpload {
+  id               String    @id @default(uuid()) @db.Uuid
+  projectId        String    @map("project_id") @db.Uuid
+  uploadedBy       String    @map("uploaded_by") @db.Uuid
+  originalFilename String    @map("original_filename") @db.VarChar(500)
+  fileType         String    @map("file_type") @db.VarChar(10)
+  fileSizeBytes    Int       @map("file_size_bytes")
+  storageKey       String?   @map("storage_key") @db.VarChar(500)
+  processingStatus String    @default("uploaded") @map("processing_status") @db.VarChar(20)
+  extractionResult Json?     @map("extraction_result")
+  errorMessage     String?   @map("error_message")
+  createdAt        DateTime  @default(now()) @map("created_at") @db.Timestamptz()
+  processedAt      DateTime? @map("processed_at") @db.Timestamptz()
+
+  project  Project @relation(fields: [projectId], references: [id], onDelete: Cascade)
+  uploader User    @relation(fields: [uploadedBy], references: [id], onDelete: Restrict)
+
+  @@index([projectId])
+  @@index([processingStatus])
+  @@map("document_uploads")
+}
+
+// ============================================================
+// COLLABORATION DOMAIN
+// ============================================================
+
+model Comment {
+  id              String    @id @default(uuid()) @db.Uuid
+  artifactId      String    @map("artifact_id") @db.Uuid
+  authorId        String    @map("author_id") @db.Uuid
+  parentCommentId String?   @map("parent_comment_id") @db.Uuid
+  elementId       String?   @map("element_id") @db.VarChar(100)
+  body            String
+  status          String    @default("open") @db.VarChar(20)
+  createdAt       DateTime  @default(now()) @map("created_at") @db.Timestamptz()
+  updatedAt       DateTime  @updatedAt @map("updated_at") @db.Timestamptz()
+  resolvedAt      DateTime? @map("resolved_at") @db.Timestamptz()
+
+  artifact      Artifact  @relation(fields: [artifactId], references: [id], onDelete: Cascade)
+  author        User      @relation(fields: [authorId], references: [id], onDelete: Restrict)
+  parentComment Comment?  @relation("CommentReplies", fields: [parentCommentId], references: [id], onDelete: Cascade)
+  replies       Comment[] @relation("CommentReplies")
+
+  @@index([artifactId, status])
+  @@index([authorId])
+  @@index([parentCommentId])
+  @@map("comments")
+}
+
+model Share {
+  id         String    @id @default(uuid()) @db.Uuid
+  artifactId String    @map("artifact_id") @db.Uuid
+  sharedById String    @map("shared_by") @db.Uuid
+  sharedWithId String? @map("shared_with") @db.Uuid
+  email      String?   @db.VarChar(255)
+  permission String    @db.VarChar(20)
+  shareType  String    @map("share_type") @db.VarChar(10)
+  linkToken  String?   @unique @map("link_token") @db.VarChar(255)
+  expiresAt  DateTime? @map("expires_at") @db.Timestamptz()
+  createdAt  DateTime  @default(now()) @map("created_at") @db.Timestamptz()
+
+  artifact   Artifact @relation(fields: [artifactId], references: [id], onDelete: Cascade)
+  sharedBy   User     @relation("SharedBy", fields: [sharedById], references: [id], onDelete: Restrict)
+  sharedWith User?    @relation("SharedWith", fields: [sharedWithId], references: [id], onDelete: Cascade)
+
+  @@index([artifactId])
+  @@index([sharedWithId])
+  @@map("shares")
+}
+
+// ============================================================
+// OPERATIONS DOMAIN
+// ============================================================
+
+model Export {
+  id            String   @id @default(uuid()) @db.Uuid
+  artifactId    String   @map("artifact_id") @db.Uuid
+  userId        String   @map("user_id") @db.Uuid
+  format        String   @db.VarChar(20)
+  fileUrl       String   @map("file_url")
+  fileSizeBytes Int?     @map("file_size_bytes")
+  createdAt     DateTime @default(now()) @map("created_at") @db.Timestamptz()
+  expiresAt     DateTime @map("expires_at") @db.Timestamptz()
+
+  artifact Artifact @relation(fields: [artifactId], references: [id], onDelete: Cascade)
+  user     User     @relation(fields: [userId], references: [id], onDelete: Restrict)
+
+  @@index([artifactId])
+  @@index([userId])
+  @@index([expiresAt])
+  @@map("exports")
+}
+
+model ApiKey {
+  id          String    @id @default(uuid()) @db.Uuid
+  userId      String    @map("user_id") @db.Uuid
+  name        String    @db.VarChar(255)
+  keyHash     String    @unique @map("key_hash") @db.VarChar(255)
+  keyPrefix   String    @map("key_prefix") @db.VarChar(10)
+  permissions Json      @default("{\"read\": true, \"write\": false}")
+  lastUsedAt  DateTime? @map("last_used_at") @db.Timestamptz()
+  expiresAt   DateTime? @map("expires_at") @db.Timestamptz()
+  createdAt   DateTime  @default(now()) @map("created_at") @db.Timestamptz()
+
+  user User @relation(fields: [userId], references: [id], onDelete: Cascade)
+
+  @@index([userId])
+  @@index([keyHash])
+  @@map("api_keys")
+}
+
+model AuditLog {
+  id           String   @id @default(uuid()) @db.Uuid
+  userId       String?  @map("user_id") @db.Uuid
+  resourceId   String?  @map("resource_id") @db.Uuid
+  resourceType String   @map("resource_type") @db.VarChar(30)
+  action       String   @db.VarChar(30)
+  metadata     Json     @default("{}")
+  ipAddress    String?  @map("ip_address")
+  userAgent    String?  @map("user_agent")
+  createdAt    DateTime @default(now()) @map("created_at") @db.Timestamptz()
+
+  user User? @relation(fields: [userId], references: [id], onDelete: SetNull)
+
+  @@index([userId, createdAt(sort: Desc)])
+  @@index([resourceType, resourceId])
+  @@index([action, createdAt(sort: Desc)])
+  @@map("audit_log")
+}
+
+model NotificationPreferences {
+  id            String   @id @default(uuid()) @db.Uuid
+  userId        String   @unique @map("user_id") @db.Uuid
+  emailComments Boolean  @default(true) @map("email_comments")
+  emailShares   Boolean  @default(true) @map("email_shares")
+  emailReviews  Boolean  @default(true) @map("email_reviews")
+  emailSystem   Boolean  @default(true) @map("email_system")
+  inAppComments Boolean  @default(true) @map("in_app_comments")
+  inAppShares   Boolean  @default(true) @map("in_app_shares")
+  inAppReviews  Boolean  @default(true) @map("in_app_reviews")
+  updatedAt     DateTime @updatedAt @map("updated_at") @db.Timestamptz()
+
+  user User @relation(fields: [userId], references: [id], onDelete: Cascade)
+
+  @@map("notification_preferences")
+}
