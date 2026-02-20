@@ -96,14 +96,21 @@
     "posts": "Posts",
     "editProfile": "Edit Profile",
     "optimizeAi": "Optimize with AI",
-    "present": "Present"
+    "present": "Present",
+    "noExperience": "No experience added yet.",
+    "noEducation": "No education added yet.",
+    "noSkills": "No skills added yet.",
+    "professional": "Professional"
   },
   "network": {
     "myNetwork": "My Network",
     "pendingRequests": "Pending Requests",
     "peopleYouMayKnow": "People You May Know",
     "myConnections": "My Connections",
-    "searchConnections": "Search connections..."
+    "searchConnections": "Search connections...",
+    "noPendingRequests": "No pending requests.",
+    "noSuggestions": "No suggestions right now.",
+    "noConnections": "No connections yet."
   },
   "messages": {
     "inbox": "Messages",

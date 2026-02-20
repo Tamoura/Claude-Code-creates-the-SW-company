@@ -12,6 +12,7 @@ import {
   Settings,
 } from "lucide-react";
 import { UserAvatar } from "@/components/shared/UserAvatar";
+import { useAuthContext } from "@/providers/AuthProvider";
 import { cn } from "@/lib/utils";
 
 /**
@@ -22,6 +23,7 @@ import { cn } from "@/lib/utils";
 export function Sidebar() {
   const { t } = useTranslation();
   const pathname = usePathname();
+  const { user } = useAuthContext();
 
   const navItems = [
     { href: "/feed", icon: Home, label: t("nav.home") },
@@ -52,10 +54,10 @@ export function Sidebar() {
           href="/profile"
           className="flex items-center gap-3 focus:outline-none focus:ring-2 focus:ring-[#57BBCE] rounded-md p-1"
         >
-          <UserAvatar displayName="User" size="md" />
+          <UserAvatar displayName={user?.displayName || "User"} size="md" />
           <div className="min-w-0">
             <p className="text-sm font-semibold text-[#0F172A] dark:text-[#F1F5F9] truncate">
-              User
+              {user?.displayName || "User"}
             </p>
             <p className="text-xs text-[#64748B] dark:text-[#94A3B8] truncate">
               Professional
@@ -83,6 +85,7 @@ export function Sidebar() {
                   : "text-[#475569] dark:text-[#94A3B8] hover:bg-[#F8FAFC] dark:hover:bg-[#334155] hover:text-[#0C9AB8]",
                 "focus:outline-none focus:ring-2 focus:ring-[#57BBCE]"
               )}
+              aria-current={isActive ? "page" : undefined}
             >
               <item.icon
                 className={cn(
@@ -102,7 +105,7 @@ export function Sidebar() {
                     "text-xs font-medium rounded-full",
                     "flex items-center justify-center"
                   )}
-                  aria-label={`${item.badge} ${item.label}`}
+                  aria-label={`${item.badge} new ${item.label}`}
                 >
                   {item.badge}
                 </span>

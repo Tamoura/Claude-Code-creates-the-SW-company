@@ -96,14 +96,21 @@
     "posts": "المنشورات",
     "editProfile": "تعديل الملف الشخصي",
     "optimizeAi": "تحسين بالذكاء الاصطناعي",
-    "present": "حتى الآن"
+    "present": "حتى الآن",
+    "noExperience": "لم تتم إضافة خبرة بعد.",
+    "noEducation": "لم تتم إضافة تعليم بعد.",
+    "noSkills": "لم تتم إضافة مهارات بعد.",
+    "professional": "متخصص"
   },
   "network": {
     "myNetwork": "شبكتي",
     "pendingRequests": "طلبات معلقة",
     "peopleYouMayKnow": "أشخاص قد تعرفهم",
     "myConnections": "اتصالاتي",
-    "searchConnections": "البحث في الاتصالات..."
+    "searchConnections": "البحث في الاتصالات...",
+    "noPendingRequests": "لا توجد طلبات معلقة.",
+    "noSuggestions": "لا توجد اقتراحات حاليًا.",
+    "noConnections": "لا توجد اتصالات بعد."
   },
   "messages": {
     "inbox": "صندوق الرسائل",

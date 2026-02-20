@@ -13,6 +13,7 @@ import {
 import { Logo } from "@/components/shared/Logo";
 import { UserAvatar } from "@/components/shared/UserAvatar";
 import { LanguageToggle } from "@/components/layout/LanguageToggle";
+import { useAuthContext } from "@/providers/AuthProvider";
 import { cn } from "@/lib/utils";
 
 interface TopBarProps {
@@ -26,6 +27,7 @@ interface TopBarProps {
  */
 export function TopBar({ variant = "authenticated" }: TopBarProps) {
   const { t } = useTranslation();
+  const { user } = useAuthContext();
 
   if (variant === "unauthenticated") {
     return (
@@ -141,7 +143,7 @@ export function TopBar({ variant = "authenticated" }: TopBarProps) {
           href="/profile"
           className="focus:outline-none focus:ring-2 focus:ring-[#57BBCE] rounded-full"
         >
-          <UserAvatar displayName="User" size="sm" />
+          <UserAvatar displayName={user?.displayName || "User"} size="sm" />
         </Link>
 
         <LanguageToggle />
