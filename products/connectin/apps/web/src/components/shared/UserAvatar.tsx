@@ -1,5 +1,6 @@
 "use client";
 
+import Image from "next/image";
 import { cn, getInitials } from "@/lib/utils";
 
 interface UserAvatarProps {
@@ -17,6 +18,15 @@ const sizeMap = {
   lg: "h-16 w-16 text-lg",
   xl: "h-24 w-24 text-2xl",
   "2xl": "h-32 w-32 text-3xl",
+};
+
+const sizePx: Record<string, number> = {
+  xs: 24,
+  sm: 32,
+  md: 40,
+  lg: 64,
+  xl: 96,
+  "2xl": 128,
 };
 
 const onlineDotSize = {
@@ -44,9 +54,11 @@ export function UserAvatar({
   return (
     <div className={cn("relative inline-flex shrink-0", className)}>
       {avatarUrl ? (
-        <img
+        <Image
           src={avatarUrl}
-          alt={displayName}
+          alt={`${displayName}'s profile photo`}
+          width={sizePx[size]}
+          height={sizePx[size]}
           className={cn(
             "rounded-full object-cover",
             sizeMap[size]

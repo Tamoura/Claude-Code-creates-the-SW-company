@@ -30,7 +30,7 @@ describe("UserAvatar", () => {
       render(
         <UserAvatar displayName="Ahmad Hassan" avatarUrl="https://example.com/avatar.jpg" />
       );
-      const img = screen.getByAltText("Ahmad Hassan");
+      const img = screen.getByAltText("Ahmad Hassan's profile photo");
       expect(img).toBeInTheDocument();
       expect(img.tagName).toBe("IMG");
       expect(img).toHaveAttribute("src", "https://example.com/avatar.jpg");

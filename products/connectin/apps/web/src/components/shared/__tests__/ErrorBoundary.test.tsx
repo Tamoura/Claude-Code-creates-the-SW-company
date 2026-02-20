@@ -13,7 +13,7 @@ afterEach(() => {
 });
 
 /** Throws unconditionally — used to trigger the boundary. */
-function AlwaysThrows() {
+function AlwaysThrows(): React.ReactNode {
   throw new Error("Test error message");
 }
 
