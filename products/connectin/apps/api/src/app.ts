@@ -8,6 +8,7 @@ import authPlugin from './plugins/auth';
 import errorHandlerPlugin from './plugins/error-handler';
 import rateLimiterPlugin from './plugins/rate-limiter';
 import swaggerPlugin from './plugins/swagger';
+import metricsPlugin from './plugins/metrics';
 
 // Routes
 import healthRoutes from './modules/health/health.routes';
@@ -47,6 +48,7 @@ export async function buildApp(
 
   if (process.env.NODE_ENV !== 'test') {
     await app.register(swaggerPlugin);
+    await app.register(metricsPlugin);
   }
 
   // Routes

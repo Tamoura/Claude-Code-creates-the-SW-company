@@ -6,7 +6,7 @@ const config: Config = {
   roots: ['<rootDir>/tests'],
   testMatch: ['**/*.test.ts'],
   moduleFileExtensions: ['ts', 'js', 'json'],
-  setupFilesAfterSetup: ['<rootDir>/tests/setup.ts'],
+  setupFilesAfterEnv: ['<rootDir>/tests/setup.ts'],
   globalSetup: '<rootDir>/tests/global-setup.ts',
   globalTeardown: '<rootDir>/tests/global-teardown.ts',
   testTimeout: 30000,

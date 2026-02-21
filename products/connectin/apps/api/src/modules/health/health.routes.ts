@@ -1,22 +1,59 @@
 import { FastifyPluginAsync } from 'fastify';
 import { sendSuccess } from '../../lib/response';
 
-const healthRoutes: FastifyPluginAsync = async (fastify) => {
-  fastify.get('/health', async (_request, reply) => {
-    let dbStatus = 'disconnected';
-    try {
-      await fastify.prisma.$queryRaw`SELECT 1`;
-      dbStatus = 'connected';
-    } catch {
-      dbStatus = 'error';
-    }
+const startTime = Date.now();
 
-    return sendSuccess(reply, {
-      status: 'ok',
-      timestamp: new Date().toISOString(),
-      database: dbStatus,
-    });
-  });
+const healthRoutes: FastifyPluginAsync = async (fastify) => {
+  fastify.get(
+    '/health',
+    {
+      schema: {
+        description: 'Health check endpoint',
+        tags: ['System'],
+        response: {
+          200: {
+            type: 'object',
+            properties: {
+              success: { type: 'boolean' },
+              data: {
+                type: 'object',
+                properties: {
+                  status: { type: 'string' },
+                  timestamp: { type: 'string' },
+                  uptime: { type: 'number' },
+                  version: { type: 'string' },
+                  database: { type: 'string' },
+                  redis: { type: 'string' },
+                },
+              },
+            },
+          },
+        },
+      },
+    },
+    async (_request, reply) => {
+      let dbStatus = 'disconnected';
+      try {
+        await fastify.prisma.$queryRaw`SELECT 1`;
+        dbStatus = 'connected';
+      } catch {
+        dbStatus = 'error';
+      }
+
+      const uptimeSeconds = Math.floor(
+        (Date.now() - startTime) / 1000
+      );
+
+      return sendSuccess(reply, {
+        status: 'ok',
+        timestamp: new Date().toISOString(),
+        uptime: uptimeSeconds,
+        version: process.env.npm_package_version || '0.1.0',
+        database: dbStatus,
+        redis: 'not_configured',
+      });
+    }
+  );
 };
 
 export default healthRoutes;
