@@ -74,7 +74,7 @@ interface RawCommit {
 function parseCommitLog(): RawCommit[] {
   try {
     const output = execSync(
-      'git log --format="%H|%aI|%an|%s" --since="30 days ago" -200',
+      'git log --all --format="%H|%aI|%an|%s" --since="30 days ago" -200',
       { cwd: repoRoot(), encoding: 'utf-8', timeout: 10000, maxBuffer: 2 * 1024 * 1024 },
     );
     return output

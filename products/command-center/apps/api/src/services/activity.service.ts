@@ -59,7 +59,7 @@ export function getAuditTrail(limit = 50): AuditEntry[] {
 export function getRecentCommits(limit = 20): GitCommit[] {
   try {
     const output = execSync(
-      `git log --format="%H|%h|%an|%aI|%s" -n ${limit}`,
+      `git log --all --format="%H|%h|%an|%aI|%s" -n ${limit}`,
       { cwd: repoRoot(), encoding: 'utf-8', timeout: 5000 },
     );
     return output
