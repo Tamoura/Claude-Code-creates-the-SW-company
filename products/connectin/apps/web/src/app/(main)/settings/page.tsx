@@ -9,8 +9,8 @@ interface SettingsSectionProps {
 
 function SettingsSection({ title, children }: SettingsSectionProps) {
   return (
-    <div className="rounded-xl bg-white p-6 shadow-sm">
-      <h2 className="mb-4 text-lg font-semibold text-neutral-900">{title}</h2>
+    <div className="rounded-[18px] bg-white dark:bg-[#1C1C1E] p-6 shadow-apple-md">
+      <h2 className="mb-4 text-lg font-semibold text-neutral-900 tracking-[-0.01em]">{title}</h2>
       {children}
     </div>
   );
