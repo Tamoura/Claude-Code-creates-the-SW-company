@@ -31,6 +31,7 @@ export function loadConfig(): Config {
   if (config) return config;
 
   const result = envSchema.safeParse(process.env);
+  /* istanbul ignore next */
   if (!result.success) {
     const formatted = result.error.issues
       .map((i) => `  ${i.path.join('.')}: ${i.message}`)

@@ -399,6 +399,21 @@ Before marking architecture complete:
 - [ ] No premature optimization
 - [ ] No over-engineering
 
+## Pre-Design Security Checklist (MANDATORY — audit-aware)
+
+Before finalizing ANY API contract or data model, verify these are addressed in the design.
+Full checklist with details: `.claude/agents/briefs/architect.md`
+
+**OWASP API Top 10 (design phase):** BOLA ownership checks in contract, auth rate limiting spec, field-level authorization (public vs owner-only), pagination limits, BFLA role requirements, CORS/CSP policy, all endpoints documented.
+
+**Data Model Security:** Sensitive tokens stored as hashes, DB indexes on lookup fields, soft delete cascade plan, audit trail fields, account lockout fields.
+
+**Observability Design:** Health check 503 on failure, request correlation ID, Prometheus metrics, access logging, RFC 7807 error format with `type` field.
+
+**Privacy by Design:** Data export and deletion endpoints, consent endpoint, PII fields marked (never logged).
+
+**Session Management:** Session list and revoke endpoints, refresh token rotation.
+
 ## Git Workflow
 
 1. Work on branch: `arch/[product]`

@@ -480,3 +480,16 @@ Coordinate:
 - Run production deployment
 - Monitor post-deployment
 - Handle rollbacks if needed
+
+## Pre-Commit Quality Checklist (MANDATORY — audit-aware)
+
+Before committing ANY CI/CD, Docker, or infrastructure config, verify these.
+Full checklist with details: `.claude/agents/briefs/devops-engineer.md`
+
+**Docker:** Multi-stage builds, non-root user, HEALTHCHECK instruction, resource limits in compose, no secrets in files, port mappings documented.
+
+**CI Pipeline:** No `--passWithNoTests`, security audit blocks merge (no `continue-on-error`), coverage thresholds enforced, type checking and lint in CI, Docker build validation.
+
+**Observability Infra:** Health check returns 503 on failure, Prometheus metrics endpoint, structured JSON logging, rollback strategy in `docs/ROLLBACK.md`.
+
+**Secrets:** `.env.example` documents all required vars, `${VAR:-default}` in compose, GitHub Secrets for CI.

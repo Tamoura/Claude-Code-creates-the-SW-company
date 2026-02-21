@@ -1,5 +1,4 @@
 import { FastifyPluginAsync } from 'fastify';
-import { ZodError } from 'zod';
 import { ProfileService } from './profile.service';
 import {
   updateProfileSchema,
@@ -8,15 +7,7 @@ import {
 } from './profile.schemas';
 import { sendSuccess } from '../../lib/response';
 import { ValidationError } from '../../lib/errors';
-
-function zodToDetails(
-  err: ZodError
-): Array<{ field: string; message: string }> {
-  return err.errors.map((e) => ({
-    field: e.path.join('.') || 'unknown',
-    message: e.message,
-  }));
-}
+import { zodToDetails } from '../../lib/validation';
 
 const profileRoutes: FastifyPluginAsync = async (fastify) => {
   const profileService = new ProfileService(fastify.prisma);
@@ -52,11 +43,14 @@ const profileRoutes: FastifyPluginAsync = async (fastify) => {
   });
 
   // GET /api/v1/profiles/:id
+  // Intentionally public to authenticated users (professional networking).
+  // Sensitive fields (email, website) are stripped for non-owners in the service layer.
   fastify.get<{ Params: { id: string } }>(
     '/:id',
     async (request, reply) => {
       const profile = await profileService.getProfileById(
-        request.params.id
+        request.params.id,
+        request.user.sub
       );
       return sendSuccess(reply, profile);
     }

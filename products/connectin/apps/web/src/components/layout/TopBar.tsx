@@ -40,7 +40,7 @@ export function TopBar({ variant = "authenticated" }: TopBarProps) {
             <Link
               href="/login"
               className={cn(
-                "text-sm font-medium text-[#0A7F99] hover:text-[#086577]",
+                "text-sm font-medium text-[#0B6E7F] hover:text-[#086577]",
                 "focus:outline-none focus:ring-2 focus:ring-[#57BBCE] rounded px-2 py-1"
               )}
             >
@@ -50,7 +50,7 @@ export function TopBar({ variant = "authenticated" }: TopBarProps) {
               href="/register"
               className={cn(
                 "text-sm font-medium px-4 py-2 rounded",
-                "bg-[#0A7F99] text-white hover:bg-[#086577]",
+                "bg-[#0B6E7F] text-white hover:bg-[#086577]",
                 "transition-colors duration-100",
                 "focus:outline-none focus:ring-2 focus:ring-[#57BBCE] focus:ring-offset-2"
               )}

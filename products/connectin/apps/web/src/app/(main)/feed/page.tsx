@@ -12,6 +12,7 @@ export default function FeedPage() {
       {/* Post Composer */}
       <div className="rounded-xl bg-white p-4 shadow-sm">
         <textarea
+          aria-label={t("feed.composer")}
           value={postContent}
           onChange={(e) => setPostContent(e.target.value)}
           placeholder={t("feed.composer")}

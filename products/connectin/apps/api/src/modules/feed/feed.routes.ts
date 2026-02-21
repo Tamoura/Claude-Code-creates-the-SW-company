@@ -1,5 +1,4 @@
 import { FastifyPluginAsync } from 'fastify';
-import { ZodError } from 'zod';
 import { FeedService } from './feed.service';
 import {
   createPostSchema,
@@ -7,15 +6,7 @@ import {
 } from './feed.schemas';
 import { sendSuccess } from '../../lib/response';
 import { ValidationError } from '../../lib/errors';
-
-function zodToDetails(
-  err: ZodError
-): Array<{ field: string; message: string }> {
-  return err.errors.map((e) => ({
-    field: e.path.join('.') || 'unknown',
-    message: e.message,
-  }));
-}
+import { zodToDetails } from '../../lib/validation';
 
 const feedRoutes: FastifyPluginAsync = async (fastify) => {
   const feedService = new FeedService(fastify.prisma);
@@ -24,7 +15,14 @@ const feedRoutes: FastifyPluginAsync = async (fastify) => {
   fastify.addHook('preHandler', fastify.authenticate);
 
   // POST /api/v1/feed/posts
-  fastify.post('/posts', async (request, reply) => {
+  fastify.post('/posts', {
+    config: {
+      rateLimit: {
+        max: 10,
+        timeWindow: '1 minute',
+      },
+    },
+  }, async (request, reply) => {
     const result = createPostSchema.safeParse(
       request.body
     );
@@ -57,6 +55,14 @@ const feedRoutes: FastifyPluginAsync = async (fastify) => {
   // POST /api/v1/feed/posts/:id/like
   fastify.post<{ Params: { id: string } }>(
     '/posts/:id/like',
+    {
+      config: {
+        rateLimit: {
+          max: 30,
+          timeWindow: '1 minute',
+        },
+      },
+    },
     async (request, reply) => {
       const data = await feedService.likePost(
         request.params.id,
@@ -69,6 +75,14 @@ const feedRoutes: FastifyPluginAsync = async (fastify) => {
   // DELETE /api/v1/feed/posts/:id/like
   fastify.delete<{ Params: { id: string } }>(
     '/posts/:id/like',
+    {
+      config: {
+        rateLimit: {
+          max: 30,
+          timeWindow: '1 minute',
+        },
+      },
+    },
     async (request, reply) => {
       const data = await feedService.unlikePost(
         request.params.id,

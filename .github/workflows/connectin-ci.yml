@@ -174,7 +174,7 @@ jobs:
         run: npm ci
 
       - name: Run tests with coverage
-        run: npm test -- --coverage --passWithNoTests
+        run: npm test -- --coverage
 
       - name: Upload coverage report
         if: always()

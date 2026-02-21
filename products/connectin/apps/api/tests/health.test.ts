@@ -5,7 +5,7 @@ afterAll(async () => {
 });
 
 describe('Health Check', () => {
-  it('GET /health returns status ok', async () => {
+  it('GET /health returns status ok when database is connected', async () => {
     const app = await getApp();
     const res = await app.inject({
       method: 'GET',
@@ -18,5 +18,9 @@ describe('Health Check', () => {
     expect(body.data.status).toBe('ok');
     expect(body.data.database).toBe('connected');
     expect(body.data.timestamp).toBeDefined();
+    expect(typeof body.data.uptime).toBe('number');
+    expect(body.data.uptime).toBeGreaterThanOrEqual(0);
+    expect(body.data.version).toBeDefined();
+    expect(body.data.redis).toBe('not_configured');
   });
 });

@@ -2,6 +2,7 @@ import {
   getApp,
   closeApp,
   cleanDatabase,
+  getPrisma,
   authHeaders,
 } from './helpers';
 
@@ -36,7 +37,7 @@ describe('Auth Module', () => {
       expect(body.data.message).toContain('Verification');
     });
 
-    it('rejects duplicate email', async () => {
+    it('returns success for duplicate email (prevents enumeration)', async () => {
       const app = await getApp();
       const payload = {
         email: 'duplicate@example.com',
@@ -59,10 +60,11 @@ describe('Auth Module', () => {
         },
       });
 
-      expect(res.statusCode).toBe(409);
+      // Should return 201 with same shape to prevent user enumeration
+      expect(res.statusCode).toBe(201);
       const body = JSON.parse(res.body);
-      expect(body.success).toBe(false);
-      expect(body.error.code).toBe('CONFLICT');
+      expect(body.success).toBe(true);
+      expect(body.data.message).toContain('Verification');
     });
 
     it('rejects weak password', async () => {
@@ -195,32 +197,26 @@ describe('Auth Module', () => {
           },
         });
 
-        const loginBody = JSON.parse(loginRes.body);
-        // Extract refresh token from cookie
+        // Extract refresh token from httpOnly cookie
         const cookies = loginRes.cookies;
         const refreshCookie = cookies.find(
           (c: { name: string }) =>
             c.name === 'refreshToken'
         );
 
-        // Since the login route sets accessToken as
-        // refresh cookie (simplified for MVP), use body
+        expect(refreshCookie).toBeDefined();
+
         const res = await app.inject({
           method: 'POST',
           url: '/api/v1/auth/refresh',
           payload: {
-            refreshToken:
-              refreshCookie?.value ||
-              loginBody.data.accessToken,
+            refreshToken: refreshCookie!.value,
           },
         });
 
-        // The refresh endpoint requires a valid
-        // refresh token stored in the session table
-        // This will be 401 since we use accessToken
-        // in cookie (simplified), which isn't the
-        // actual refresh token stored in sessions
-        expect([200, 401]).toContain(res.statusCode);
+        expect(res.statusCode).toBe(200);
+        const body = JSON.parse(res.body);
+        expect(body.data.accessToken).toBeDefined();
       }
     );
   });
@@ -279,34 +275,34 @@ describe('Auth Module', () => {
     () => {
       it('verifies email with valid token', async () => {
         const app = await getApp();
-        const { getPrisma } = require('./helpers');
-        const prisma = getPrisma();
+        const crypto = await import('crypto');
+        const bcrypt = await import('bcrypt');
 
-        // Register
-        const regRes = await app.inject({
-          method: 'POST',
-          url: '/api/v1/auth/register',
-          payload: {
+        // Create user directly with a known verification token
+        const rawToken = crypto.randomBytes(32).toString('hex');
+        const tokenHash = crypto
+          .createHash('sha256')
+          .update(rawToken)
+          .digest('hex');
+        const passwordHash = await bcrypt.hash('SecureP@ss1', 10);
+
+        const db = getPrisma();
+        await db.user.create({
+          data: {
             email: 'verify@example.com',
-            password: 'SecureP@ss1',
+            passwordHash,
             displayName: 'Verify User',
+            verificationToken: tokenHash,
+            verificationExpires: new Date(
+              Date.now() + 24 * 60 * 60 * 1000
+            ),
+            profile: { create: { completenessScore: 0 } },
           },
         });
 
-        const userId = JSON.parse(
-          regRes.body
-        ).data.userId;
-
-        // Get verification token from DB
-        const user = await prisma.user.findUnique({
-          where: { id: userId },
-        });
-
-        expect(user?.verificationToken).toBeDefined();
-
         const res = await app.inject({
           method: 'GET',
-          url: `/api/v1/auth/verify-email/${user?.verificationToken}`,
+          url: `/api/v1/auth/verify-email/${rawToken}`,
         });
 
         expect(res.statusCode).toBe(200);

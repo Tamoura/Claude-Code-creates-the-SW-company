@@ -56,6 +56,8 @@ model User {
   resetTokenExpires   DateTime?           @map("reset_token_expires")
   languagePreference  LanguagePreference  @default(AR) @map("language_preference")
   status              UserStatus          @default(ACTIVE)
+  failedLoginAttempts Int                 @default(0) @map("failed_login_attempts")
+  lockedUntil         DateTime?           @map("locked_until")
   lastLoginAt         DateTime?           @map("last_login_at")
   createdAt           DateTime            @default(now()) @map("created_at")
   updatedAt           DateTime            @updatedAt @map("updated_at")
@@ -67,8 +69,10 @@ model User {
   posts               Post[]
   comments            Comment[]
   likes               Like[]
+  consents            Consent[]
 
   @@index([status, createdAt])
+  @@index([verificationToken])
   @@map("users")
 }
 
@@ -161,6 +165,7 @@ model Connection {
   receiver      User             @relation("ConnectionReceiver", fields: [receiverId], references: [id], onDelete: Cascade)
 
   @@unique([senderId, receiverId])
+  @@index([senderId, status])
   @@index([receiverId, status])
   @@index([status, expiresAt])
   @@map("connections")
@@ -180,6 +185,7 @@ model Session {
   user             User     @relation(fields: [userId], references: [id], onDelete: Cascade)
 
   @@index([userId])
+  @@index([refreshTokenHash])
   @@map("sessions")
 }
 
@@ -221,6 +227,35 @@ model Comment {
 
   @@index([postId, createdAt(sort: Desc)])
   @@map("comments")
+}
+
+// ─── Consents ─────────────────────────────────────────────────
+
+enum ConsentType {
+  TERMS_OF_SERVICE
+  PRIVACY_POLICY
+  MARKETING_EMAIL
+  DATA_PROCESSING
+  ANALYTICS
+}
+
+model Consent {
+  id          String      @id @default(uuid())
+  userId      String      @map("user_id")
+  type        ConsentType
+  granted     Boolean     @default(false)
+  version     String      @db.VarChar(20)
+  ipAddress   String?     @map("ip_address")
+  userAgent   String?     @map("user_agent")
+  grantedAt   DateTime?   @map("granted_at")
+  revokedAt   DateTime?   @map("revoked_at")
+  createdAt   DateTime    @default(now()) @map("created_at")
+
+  user        User        @relation(fields: [userId], references: [id], onDelete: Cascade)
+
+  @@unique([userId, type])
+  @@index([userId])
+  @@map("consents")
 }
 
 // ─── Likes ──────────────────────────────────────────────────

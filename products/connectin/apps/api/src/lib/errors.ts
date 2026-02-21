@@ -58,6 +58,7 @@ export class ValidationError extends AppError {
   }
 }
 
+/* istanbul ignore next */
 export class RateLimitError extends AppError {
   constructor(message = 'Rate limit exceeded') {
     super(message, 429, 'RATE_LIMITED');

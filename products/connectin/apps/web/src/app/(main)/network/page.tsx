@@ -18,6 +18,7 @@ export default function NetworkPage() {
       <div className="rounded-xl bg-white p-4 shadow-sm">
         <input
           type="text"
+          aria-label={t("network.searchConnections")}
           value={search}
           onChange={(e) => setSearch(e.target.value)}
           placeholder={t("network.searchConnections")}

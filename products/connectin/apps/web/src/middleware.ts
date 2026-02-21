@@ -20,8 +20,8 @@ export function middleware(request: NextRequest) {
     return NextResponse.next();
   }
 
-  // Check for auth token in cookies
-  const token = request.cookies.get("connectin-token")?.value;
+  // Check for refresh token cookie set by backend on login
+  const token = request.cookies.get("refreshToken")?.value;
 
   if (!token) {
     const loginUrl = new URL("/login", request.url);

@@ -13,6 +13,7 @@ interface SuccessResponse<T> {
 interface ErrorResponse {
   success: false;
   error: {
+    type: string;
     code: string;
     message: string;
     details?: Array<{ field: string; message: string }>;
@@ -39,9 +40,10 @@ export function sendError(
   message: string,
   details?: Array<{ field: string; message: string }>
 ): FastifyReply {
+  const errorType = `https://connectin.dev/errors/${code.toLowerCase()}`;
   const body: ErrorResponse = {
     success: false,
-    error: { code, message },
+    error: { type: errorType, code, message },
   };
   if (details && details.length > 0) {
     body.error.details = details;

@@ -54,6 +54,15 @@ const Sidebar = dynamic(
   }
 );
 
+/**
+ * Dynamically imported BottomNav — mobile navigation bar shown below the lg
+ * breakpoint. Hidden on desktop where the Sidebar is used instead.
+ */
+const BottomNav = dynamic(
+  () => import("@/components/layout/BottomNav").then((m) => m.BottomNav),
+  { ssr: false }
+);
+
 export default function MainLayout({
   children,
 }: {
@@ -62,12 +71,13 @@ export default function MainLayout({
   return (
     <div className="min-h-screen bg-neutral-50">
       <TopBar />
-      <div className="mx-auto flex max-w-6xl gap-6 px-4 py-6">
+      <div className="mx-auto flex max-w-6xl gap-6 px-4 py-6 pb-20 lg:pb-6">
         <aside className="hidden w-60 shrink-0 lg:block">
           <Sidebar />
         </aside>
         <main className="min-w-0 flex-1">{children}</main>
       </div>
+      <BottomNav />
     </div>
   );
 }

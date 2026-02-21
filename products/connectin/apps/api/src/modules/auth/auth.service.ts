@@ -4,7 +4,7 @@ import bcrypt from 'bcrypt';
 import crypto from 'crypto';
 import { getConfig } from '../../config';
 import {
-  ConflictError,
+  NotFoundError,
   UnauthorizedError,
   BadRequestError,
 } from '../../lib/errors';
@@ -27,7 +27,14 @@ export class AuthService {
     });
 
     if (existing) {
-      throw new ConflictError('Email already registered');
+      // Return same success shape to prevent user enumeration.
+      // In production, also send a "someone tried to register" email.
+      return {
+        userId: crypto.randomUUID(),
+        email: input.email.toLowerCase(),
+        message:
+          'Verification email sent. Please check your inbox.',
+      };
     }
 
     const config = getConfig();
@@ -35,7 +42,8 @@ export class AuthService {
       input.password,
       config.BCRYPT_ROUNDS
     );
-    const verificationToken = crypto.randomBytes(32).toString('hex');
+    const rawVerificationToken = crypto.randomBytes(32).toString('hex');
+    const verificationTokenHash = this.hashToken(rawVerificationToken);
     const verificationExpires = new Date(
       Date.now() + 24 * 60 * 60 * 1000
     );
@@ -45,7 +53,7 @@ export class AuthService {
         email: input.email.toLowerCase(),
         passwordHash,
         displayName: input.displayName,
-        verificationToken,
+        verificationToken: verificationTokenHash,
         verificationExpires,
         profile: {
           create: {
@@ -55,6 +63,7 @@ export class AuthService {
       },
     });
 
+    // Token should only be sent via email, never in API response
     return {
       userId: user.id,
       email: user.email,
@@ -63,7 +72,10 @@ export class AuthService {
     };
   }
 
-  async login(input: LoginInput): Promise<LoginResponse> {
+  async login(
+    input: LoginInput,
+    meta?: { ip?: string; userAgent?: string }
+  ): Promise<LoginResponse> {
     const user = await this.prisma.user.findUnique({
       where: { email: input.email.toLowerCase() },
     });
@@ -72,9 +84,18 @@ export class AuthService {
       throw new UnauthorizedError('Invalid email or password');
     }
 
-    if (user.status === 'SUSPENDED') {
+    // Unified error message for all non-active statuses to prevent enumeration
+    if (user.status !== 'ACTIVE') {
+      throw new UnauthorizedError('Invalid email or password');
+    }
+
+    // Check account lockout
+    if (user.lockedUntil && user.lockedUntil > new Date()) {
+      const minutesLeft = Math.ceil(
+        (user.lockedUntil.getTime() - Date.now()) / 60000
+      );
       throw new UnauthorizedError(
-        'Account is suspended. Contact support.'
+        `Account is locked. Try again in ${minutesLeft} minute(s).`
       );
     }
 
@@ -83,6 +104,22 @@ export class AuthService {
       user.passwordHash
     );
     if (!isValid) {
+      // Atomic increment to prevent race condition on concurrent failed logins
+      const updated = await this.prisma.user.update({
+        where: { id: user.id },
+        data: {
+          failedLoginAttempts: { increment: 1 },
+        },
+        select: { failedLoginAttempts: true },
+      });
+      if (updated.failedLoginAttempts >= 5) {
+        await this.prisma.user.update({
+          where: { id: user.id },
+          data: {
+            lockedUntil: new Date(Date.now() + 15 * 60 * 1000),
+          },
+        });
+      }
       throw new UnauthorizedError('Invalid email or password');
     }
 
@@ -92,15 +129,25 @@ export class AuthService {
       user.role
     );
 
-    await this.createSession(user.id, tokens.refreshToken);
+    await this.createSession(
+      user.id,
+      tokens.refreshToken,
+      meta?.ip,
+      meta?.userAgent
+    );
 
     await this.prisma.user.update({
       where: { id: user.id },
-      data: { lastLoginAt: new Date() },
+      data: {
+        lastLoginAt: new Date(),
+        failedLoginAttempts: 0,
+        lockedUntil: null,
+      },
     });
 
     return {
       accessToken: tokens.accessToken,
+      refreshToken: tokens.refreshToken,
       user: {
         id: user.id,
         email: user.email,
@@ -160,9 +207,10 @@ export class AuthService {
   async verifyEmail(
     token: string
   ): Promise<{ accessToken: string; message: string }> {
+    const tokenHash = this.hashToken(token);
     const user = await this.prisma.user.findFirst({
       where: {
-        verificationToken: token,
+        verificationToken: tokenHash,
         verificationExpires: { gt: new Date() },
       },
     });
@@ -216,17 +264,188 @@ export class AuthService {
 
   private async createSession(
     userId: string,
-    refreshToken: string
+    refreshToken: string,
+    ipAddress?: string,
+    userAgent?: string
   ): Promise<void> {
     const tokenHash = this.hashToken(refreshToken);
     await this.prisma.session.create({
       data: {
         userId,
         refreshTokenHash: tokenHash,
+        ipAddress: ipAddress ?? null,
+        userAgent: userAgent ?? null,
         expiresAt: new Date(
           Date.now() + 30 * 24 * 60 * 60 * 1000
         ),
       },
+    });
+  }
+
+  async exportUserData(userId: string) {
+    const user = await this.prisma.user.findUnique({
+      where: { id: userId },
+      include: {
+        profile: {
+          include: {
+            experiences: true,
+            profileSkills: { include: { skill: true } },
+          },
+        },
+        posts: true,
+        comments: true,
+        likes: { include: { post: { select: { id: true, content: true } } } },
+        sentConnections: {
+          include: {
+            receiver: { select: { id: true, displayName: true } },
+          },
+        },
+        receivedConnections: {
+          include: {
+            sender: { select: { id: true, displayName: true } },
+          },
+        },
+        sessions: {
+          select: {
+            id: true,
+            ipAddress: true,
+            userAgent: true,
+            createdAt: true,
+            expiresAt: true,
+          },
+        },
+        consents: {
+          select: {
+            type: true,
+            granted: true,
+            version: true,
+            grantedAt: true,
+            revokedAt: true,
+            createdAt: true,
+          },
+        },
+      },
+    });
+
+    if (!user) {
+      throw new BadRequestError('User not found');
+    }
+
+    // Strip internal/sensitive fields
+    const {
+      passwordHash: _ph,
+      verificationToken: _vt,
+      resetToken: _rt,
+      resetTokenExpires: _rte,
+      verificationExpires: _ve,
+      ...safeUser
+    } = user;
+    return {
+      exportedAt: new Date().toISOString(),
+      user: safeUser,
+    };
+  }
+
+  async deleteAccount(userId: string): Promise<void> {
+    await this.prisma.$transaction([
+      // Delete likes by this user
+      this.prisma.like.deleteMany({
+        where: { userId },
+      }),
+      // Soft-delete comments by this user
+      this.prisma.comment.updateMany({
+        where: { authorId: userId },
+        data: { isDeleted: true, content: '[deleted]' },
+      }),
+      // Soft-delete posts by this user
+      this.prisma.post.updateMany({
+        where: { authorId: userId },
+        data: { isDeleted: true, content: '[deleted]' },
+      }),
+      // Delete connections (both sent and received)
+      this.prisma.connection.deleteMany({
+        where: {
+          OR: [{ senderId: userId }, { receiverId: userId }],
+        },
+      }),
+      // Delete profile skills
+      this.prisma.profileSkill.deleteMany({
+        where: { profile: { userId } },
+      }),
+      // Delete experiences
+      this.prisma.experience.deleteMany({
+        where: { profile: { userId } },
+      }),
+      // Delete profile
+      this.prisma.profile.deleteMany({
+        where: { userId },
+      }),
+      // Delete consents
+      this.prisma.consent.deleteMany({
+        where: { userId },
+      }),
+      // Invalidate all sessions
+      this.prisma.session.deleteMany({
+        where: { userId },
+      }),
+      // Soft delete user: set status to DELETED and clear PII
+      this.prisma.user.update({
+        where: { id: userId },
+        data: {
+          status: 'DELETED',
+          email: `deleted-${userId}@deleted.connectin`,
+          displayName: 'Deleted User',
+          passwordHash: null,
+          verificationToken: null,
+          verificationExpires: null,
+          resetToken: null,
+          resetTokenExpires: null,
+        },
+      }),
+    ]);
+  }
+
+  async listSessions(
+    userId: string,
+    _currentJti?: string
+  ) {
+    const sessions = await this.prisma.session.findMany({
+      where: {
+        userId,
+        expiresAt: { gt: new Date() },
+      },
+      select: {
+        id: true,
+        ipAddress: true,
+        userAgent: true,
+        createdAt: true,
+      },
+      orderBy: { createdAt: 'desc' },
+    });
+
+    return sessions.map((s) => ({
+      id: s.id,
+      ipAddress: s.ipAddress,
+      userAgent: s.userAgent,
+      createdAt: s.createdAt,
+      current: false,
+    }));
+  }
+
+  async revokeSession(
+    sessionId: string,
+    userId: string
+  ): Promise<void> {
+    const session = await this.prisma.session.findUnique({
+      where: { id: sessionId },
+    });
+
+    if (!session || session.userId !== userId) {
+      throw new NotFoundError('Session not found');
+    }
+
+    await this.prisma.session.delete({
+      where: { id: sessionId },
     });
   }
 

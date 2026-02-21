@@ -41,7 +41,15 @@ export default function RootLayout({
       className={`${ibmPlexSansArabic.variable} ${inter.variable}`}
     >
       <body className="min-h-screen bg-background text-foreground font-sans antialiased">
-        <Providers>{children}</Providers>
+        <a
+          href="#main-content"
+          className="sr-only focus:not-sr-only focus:absolute focus:z-50 focus:bg-primary-600 focus:px-4 focus:py-2 focus:text-white"
+        >
+          Skip to main content
+        </a>
+        <Providers>
+          <div id="main-content">{children}</div>
+        </Providers>
       </body>
     </html>
   );

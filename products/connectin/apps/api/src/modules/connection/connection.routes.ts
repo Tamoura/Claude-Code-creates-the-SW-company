@@ -1,18 +1,9 @@
 import { FastifyPluginAsync } from 'fastify';
-import { ZodError } from 'zod';
 import { ConnectionService } from './connection.service';
 import { sendRequestSchema } from './connection.schemas';
 import { sendSuccess } from '../../lib/response';
 import { ValidationError } from '../../lib/errors';
-
-function zodToDetails(
-  err: ZodError
-): Array<{ field: string; message: string }> {
-  return err.errors.map((e) => ({
-    field: e.path.join('.') || 'unknown',
-    message: e.message,
-  }));
-}
+import { zodToDetails } from '../../lib/validation';
 
 const connectionRoutes: FastifyPluginAsync = async (
   fastify
@@ -25,7 +16,14 @@ const connectionRoutes: FastifyPluginAsync = async (
   fastify.addHook('preHandler', fastify.authenticate);
 
   // POST /api/v1/connections/request
-  fastify.post('/request', async (request, reply) => {
+  fastify.post('/request', {
+    config: {
+      rateLimit: {
+        max: 20,
+        timeWindow: '1 minute',
+      },
+    },
+  }, async (request, reply) => {
     const result = sendRequestSchema.safeParse(
       request.body
     );
@@ -79,7 +77,8 @@ const connectionRoutes: FastifyPluginAsync = async (
   // GET /api/v1/connections/pending
   fastify.get('/pending', async (request, reply) => {
     const data = await connectionService.listPending(
-      request.user.sub
+      request.user.sub,
+      request.query as { page?: string; limit?: string }
     );
     return sendSuccess(reply, data, 200, {
       incomingCount: data.incoming.length,
