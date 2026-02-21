@@ -20,6 +20,7 @@ export default function MessagesPage() {
       <div className="rounded-xl bg-white p-4 shadow-sm">
         <input
           type="text"
+          aria-label={t("messages.search")}
           value={search}
           onChange={(e) => setSearch(e.target.value)}
           placeholder={t("messages.search")}

@@ -273,8 +273,6 @@ describe('Auth Module', () => {
     () => {
       it('verifies email with valid token', async () => {
         const app = await getApp();
-        const { getPrisma } = require('./helpers');
-        const prisma = getPrisma();
 
         // Register
         const regRes = await app.inject({
@@ -287,20 +285,14 @@ describe('Auth Module', () => {
           },
         });
 
-        const userId = JSON.parse(
-          regRes.body
-        ).data.userId;
+        const regBody = JSON.parse(regRes.body);
+        const rawToken = regBody.data.verificationToken;
 
-        // Get verification token from DB
-        const user = await prisma.user.findUnique({
-          where: { id: userId },
-        });
-
-        expect(user?.verificationToken).toBeDefined();
+        expect(rawToken).toBeDefined();
 
         const res = await app.inject({
           method: 'GET',
-          url: `/api/v1/auth/verify-email/${user?.verificationToken}`,
+          url: `/api/v1/auth/verify-email/${rawToken}`,
         });
 
         expect(res.statusCode).toBe(200);

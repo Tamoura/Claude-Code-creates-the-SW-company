@@ -35,7 +35,8 @@ export class AuthService {
       input.password,
       config.BCRYPT_ROUNDS
     );
-    const verificationToken = crypto.randomBytes(32).toString('hex');
+    const rawVerificationToken = crypto.randomBytes(32).toString('hex');
+    const verificationTokenHash = this.hashToken(rawVerificationToken);
     const verificationExpires = new Date(
       Date.now() + 24 * 60 * 60 * 1000
     );
@@ -45,7 +46,7 @@ export class AuthService {
         email: input.email.toLowerCase(),
         passwordHash,
         displayName: input.displayName,
-        verificationToken,
+        verificationToken: verificationTokenHash,
         verificationExpires,
         profile: {
           create: {
@@ -58,6 +59,7 @@ export class AuthService {
     return {
       userId: user.id,
       email: user.email,
+      verificationToken: rawVerificationToken,
       message:
         'Verification email sent. Please check your inbox.',
     };
@@ -78,11 +80,39 @@ export class AuthService {
       );
     }
 
+    if (user.status === 'DEACTIVATED') {
+      throw new UnauthorizedError(
+        'Account is deactivated. Contact support to reactivate.'
+      );
+    }
+
+    if (user.status === 'DELETED') {
+      throw new UnauthorizedError('Invalid email or password');
+    }
+
+    // Check account lockout
+    if (user.lockedUntil && user.lockedUntil > new Date()) {
+      const minutesLeft = Math.ceil(
+        (user.lockedUntil.getTime() - Date.now()) / 60000
+      );
+      throw new UnauthorizedError(
+        `Account is locked. Try again in ${minutesLeft} minute(s).`
+      );
+    }
+
     const isValid = await bcrypt.compare(
       input.password,
       user.passwordHash
     );
     if (!isValid) {
+      const attempts = (user.failedLoginAttempts ?? 0) + 1;
+      const lockout = attempts >= 5
+        ? { lockedUntil: new Date(Date.now() + 15 * 60 * 1000) }
+        : {};
+      await this.prisma.user.update({
+        where: { id: user.id },
+        data: { failedLoginAttempts: attempts, ...lockout },
+      });
       throw new UnauthorizedError('Invalid email or password');
     }
 
@@ -96,7 +126,11 @@ export class AuthService {
 
     await this.prisma.user.update({
       where: { id: user.id },
-      data: { lastLoginAt: new Date() },
+      data: {
+        lastLoginAt: new Date(),
+        failedLoginAttempts: 0,
+        lockedUntil: null,
+      },
     });
 
     return {
@@ -161,9 +195,10 @@ export class AuthService {
   async verifyEmail(
     token: string
   ): Promise<{ accessToken: string; message: string }> {
+    const tokenHash = this.hashToken(token);
     const user = await this.prisma.user.findFirst({
       where: {
-        verificationToken: token,
+        verificationToken: tokenHash,
         verificationExpires: { gt: new Date() },
       },
     });
@@ -228,6 +263,28 @@ export class AuthService {
           Date.now() + 30 * 24 * 60 * 60 * 1000
         ),
       },
+    });
+  }
+
+  async deleteAccount(userId: string): Promise<void> {
+    // Soft delete: set status to DELETED and clear PII
+    await this.prisma.user.update({
+      where: { id: userId },
+      data: {
+        status: 'DELETED',
+        email: `deleted-${userId}@deleted.connectin`,
+        displayName: 'Deleted User',
+        passwordHash: null,
+        verificationToken: null,
+        verificationExpires: null,
+        resetToken: null,
+        resetTokenExpires: null,
+      },
+    });
+
+    // Invalidate all sessions
+    await this.prisma.session.deleteMany({
+      where: { userId },
     });
   }
 

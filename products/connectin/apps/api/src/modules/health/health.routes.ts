@@ -1,5 +1,5 @@
 import { FastifyPluginAsync } from 'fastify';
-import { sendSuccess } from '../../lib/response';
+import { sendSuccess, sendError } from '../../lib/response';
 
 const healthRoutes: FastifyPluginAsync = async (fastify) => {
   fastify.get('/health', async (_request, reply) => {
@@ -9,6 +9,14 @@ const healthRoutes: FastifyPluginAsync = async (fastify) => {
       dbStatus = 'connected';
     } catch {
       dbStatus = 'error';
+    }
+
+    const isHealthy = dbStatus === 'connected';
+
+    if (!isHealthy) {
+      return sendError(reply, 503, 'SERVICE_UNAVAILABLE', 'Service degraded', [
+        { field: 'database', message: dbStatus },
+      ]);
     }
 
     return sendSuccess(reply, {

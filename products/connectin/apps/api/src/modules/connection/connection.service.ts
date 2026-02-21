@@ -262,11 +262,19 @@ export class ConnectionService {
     return { data, meta: offsetMeta(total, params) };
   }
 
-  async listPending(userId: string) {
+  async listPending(
+    userId: string,
+    query: { page?: string; limit?: string } = {}
+  ) {
+    const params = parsePagination(query);
+    const skip = (params.page - 1) * params.limit;
+
     const [incoming, outgoing] = await Promise.all([
       this.prisma.connection.findMany({
         where: { receiverId: userId, status: 'PENDING' },
         orderBy: { createdAt: 'desc' },
+        skip,
+        take: params.limit,
         include: {
           sender: {
             select: {
@@ -285,6 +293,8 @@ export class ConnectionService {
       this.prisma.connection.findMany({
         where: { senderId: userId, status: 'PENDING' },
         orderBy: { createdAt: 'desc' },
+        skip,
+        take: params.limit,
         include: {
           receiver: {
             select: {

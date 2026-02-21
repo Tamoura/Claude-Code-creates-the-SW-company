@@ -56,6 +56,8 @@ model User {
   resetTokenExpires   DateTime?           @map("reset_token_expires")
   languagePreference  LanguagePreference  @default(AR) @map("language_preference")
   status              UserStatus          @default(ACTIVE)
+  failedLoginAttempts Int                 @default(0) @map("failed_login_attempts")
+  lockedUntil         DateTime?           @map("locked_until")
   lastLoginAt         DateTime?           @map("last_login_at")
   createdAt           DateTime            @default(now()) @map("created_at")
   updatedAt           DateTime            @updatedAt @map("updated_at")
@@ -69,6 +71,7 @@ model User {
   likes               Like[]
 
   @@index([status, createdAt])
+  @@index([verificationToken])
   @@map("users")
 }
 
@@ -161,6 +164,7 @@ model Connection {
   receiver      User             @relation("ConnectionReceiver", fields: [receiverId], references: [id], onDelete: Cascade)
 
   @@unique([senderId, receiverId])
+  @@index([senderId, status])
   @@index([receiverId, status])
   @@index([status, expiresAt])
   @@map("connections")
@@ -180,6 +184,7 @@ model Session {
   user             User     @relation(fields: [userId], references: [id], onDelete: Cascade)
 
   @@index([userId])
+  @@index([refreshTokenHash])
   @@map("sessions")
 }
 

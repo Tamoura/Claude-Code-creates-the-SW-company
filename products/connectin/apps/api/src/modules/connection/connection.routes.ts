@@ -79,7 +79,8 @@ const connectionRoutes: FastifyPluginAsync = async (
   // GET /api/v1/connections/pending
   fastify.get('/pending', async (request, reply) => {
     const data = await connectionService.listPending(
-      request.user.sub
+      request.user.sub,
+      request.query as { page?: string; limit?: string }
     );
     return sendSuccess(reply, data, 200, {
       incomingCount: data.incoming.length,

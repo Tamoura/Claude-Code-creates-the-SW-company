@@ -11,7 +11,11 @@ const authPlugin: FastifyPluginAsync = async (fastify) => {
   await fastify.register(jwt, {
     secret: config.JWT_SECRET,
     sign: {
+      algorithm: 'HS256',
       expiresIn: config.JWT_ACCESS_EXPIRY,
+    },
+    verify: {
+      algorithms: ['HS256'],
     },
   });
 

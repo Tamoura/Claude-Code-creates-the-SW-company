@@ -53,8 +53,13 @@ const errorHandlerPlugin: FastifyPluginAsync = async (fastify) => {
       );
     }
 
-    // Unexpected errors
-    fastify.log.error(error);
+    // Unexpected errors — log safe fields only (no PII)
+    fastify.log.error({
+      message: error.message,
+      name: error.name,
+      code: (error as any).code,
+      stack: process.env.NODE_ENV !== 'production' ? error.stack : undefined,
+    });
     return sendError(
       reply,
       500,

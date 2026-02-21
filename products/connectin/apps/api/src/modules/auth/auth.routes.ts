@@ -119,6 +119,23 @@ const authRoutes: FastifyPluginAsync = async (fastify) => {
     }
   );
 
+  // DELETE /api/v1/auth/account
+  fastify.delete(
+    '/account',
+    { preHandler: [fastify.authenticate] },
+    async (request, reply) => {
+      await authService.deleteAccount(request.user.sub);
+
+      reply.clearCookie('refreshToken', {
+        path: '/api/v1/auth',
+      });
+
+      return sendSuccess(reply, {
+        message: 'Account deleted successfully',
+      });
+    }
+  );
+
   // GET /api/v1/auth/verify-email/:token
   fastify.get<{ Params: { token: string } }>(
     '/verify-email/:token',
