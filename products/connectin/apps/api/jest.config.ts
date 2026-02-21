@@ -12,6 +12,14 @@ const config: Config = {
   testTimeout: 30000,
   verbose: true,
   maxWorkers: 1,
+  coverageThreshold: {
+    global: {
+      branches: 60,
+      functions: 75,
+      lines: 80,
+      statements: 80,
+    },
+  },
 };
 
 export default config;
