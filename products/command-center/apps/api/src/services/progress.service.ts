@@ -139,11 +139,11 @@ function parseSprints(productName: string): Sprint[] {
   let current: Sprint | null = null;
 
   for (const line of lines) {
-    // Match sprint/phase headers: ## Sprint 1.1: Name (Status) or ## Phase 1: Name
-    const headerMatch = line.match(/^##\s+(.+)/);
-    if (headerMatch && !line.startsWith('###')) {
-      // Skip non-sprint headers (e.g., "## Overall Progress", "## Traceability Matrix", "## Task Summary")
+    // Match sprint/phase headers: ## Sprint 1.1: Name or ### Sprint P.1: Name
+    const headerMatch = line.match(/^#{2,3}\s+(.+)/);
+    if (headerMatch) {
       const headerText = headerMatch[1].trim();
+      // Skip non-sprint headers (e.g., "## Overall Progress", "## Traceability Matrix", "### Tests First")
       if (
         !headerText.toLowerCase().startsWith('sprint') &&
         !headerText.toLowerCase().startsWith('phase')
@@ -167,7 +167,7 @@ function parseSprints(productName: string): Sprint[] {
 
     if (!current) continue;
 
-    // Parse task lines: - [x] **T001** `type` Title — FR-001
+    // Format 1: - [x] **T001** `type` Title — FR-001
     const taskMatch = line.match(
       /^- \[(x| |~)\] \*\*(\w+)\*\*\s+`(\w+)`\s+(.+?)(?:\s*—\s*(.+))?$/,
     );
@@ -183,6 +183,59 @@ function parseSprints(productName: string): Sprint[] {
         title: taskMatch[4].trim(),
         status,
         traceability: taskMatch[5]?.trim() ?? '',
+      });
+      continue;
+    }
+
+    // Format 2: - [ ] T001 [FR-XXX] Description -> file/path (recomengine style)
+    const simpleMatch = line.match(
+      /^- \[(x| |~)\]\s+([A-Z]?\w+-?\d+)\s+(.+?)$/,
+    );
+    if (simpleMatch) {
+      const checkbox = simpleMatch[1];
+      let status: SprintTask['status'] = 'pending';
+      if (checkbox === 'x') status = 'done';
+      else if (checkbox === '~') status = 'in-progress';
+
+      let title = simpleMatch[3].trim();
+      let traceability = '';
+
+      // Extract [FR-XXX] codes from the title
+      const frMatch = title.match(/\[FR-(\d+)\](?:\[FR-(\d+)\])?/);
+      if (frMatch) {
+        traceability = frMatch[0].replace(/\[|\]/g, '').replace(/FR-/g, 'FR-');
+        title = title.replace(/\[FR-\d+\]/g, '').trim();
+      }
+
+      // Remove file path suffix (-> path)
+      title = title.replace(/\s*->\s*.+$/, '').trim();
+
+      // Infer type from title
+      let type = 'feat';
+      if (title.toLowerCase().startsWith('test:') || title.toLowerCase().startsWith('test ')) type = 'test';
+      if (title.toLowerCase().startsWith('fix')) type = 'fix';
+
+      current.tasks.push({
+        id: simpleMatch[2],
+        type,
+        title,
+        status,
+        traceability,
+      });
+      continue;
+    }
+
+    // Format 3: | TASK-ID | Title | Agent | ... | (table format, qdb-one style)
+    const tableMatch = line.match(
+      /^\|\s*([A-Z]+-\d+)\s*\|\s*(.+?)\s*\|\s*(\w[\w\s]*?)\s*\|/,
+    );
+    if (tableMatch) {
+      current.tasks.push({
+        id: tableMatch[1],
+        type: 'feat',
+        title: tableMatch[2].trim(),
+        status: inferTableStatus(line),
+        traceability: '',
       });
     }
   }
@@ -213,6 +266,17 @@ function finalizeSprint(sprint: Sprint): void {
   } else {
     sprint.status = 'future';
   }
+}
+
+function inferTableStatus(line: string): SprintTask['status'] {
+  const lower = line.toLowerCase();
+  if (lower.includes('~~') || lower.includes('done') || lower.includes('complete')) {
+    return 'done';
+  }
+  if (lower.includes('in-progress') || lower.includes('wip') || lower.includes('active')) {
+    return 'in-progress';
+  }
+  return 'pending';
 }
 
 // --- User Story Parsing ---
