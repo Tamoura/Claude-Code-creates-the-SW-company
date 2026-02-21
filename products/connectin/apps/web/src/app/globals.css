@@ -10,7 +10,7 @@
   --primary-300: #57BBCE;
   --primary-400: #30ABC3;
   --primary-500: #0C9AB8;
-  --primary-600: #0A7F99;
+  --primary-600: #0B6E7F; /* WCAG AA: ~5.2:1 contrast vs white (was #0A7F99 at 4.27:1) */
   --primary-700: #086577;
   --primary-800: #064C59;
   --primary-900: #04333B;

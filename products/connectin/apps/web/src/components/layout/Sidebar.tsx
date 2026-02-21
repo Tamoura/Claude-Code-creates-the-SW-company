@@ -91,7 +91,7 @@ export function Sidebar() {
                 className={cn(
                   "h-5 w-5",
                   isActive
-                    ? "text-[#0A7F99]"
+                    ? "text-[#0B6E7F]"
                     : "text-[#94A3B8]"
                 )}
                 aria-hidden="true"
