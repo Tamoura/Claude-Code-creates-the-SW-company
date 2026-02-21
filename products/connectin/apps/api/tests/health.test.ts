@@ -5,7 +5,7 @@ afterAll(async () => {
 });
 
 describe('Health Check', () => {
-  it('GET /health returns status ok', async () => {
+  it('GET /health returns status ok when database is connected', async () => {
     const app = await getApp();
     const res = await app.inject({
       method: 'GET',

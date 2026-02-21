@@ -52,12 +52,12 @@
 
 | Question | Answer |
 |----------|--------|
-| **Can this go to production?** | No — critical security bugs must be fixed first |
-| **Is it salvageable?** | Yes — architecture is sound, issues are fixable |
-| **Risk if ignored** | High — authentication bypass and data exposure vulnerabilities |
-| **Recovery effort** | 2-3 weeks with 2 engineers for Phase 0+1 |
-| **Enterprise-ready?** | No — missing privacy endpoints, observability, and rate limiting |
-| **Compliance-ready?** | OWASP Top 10: Partial, SOC2: Not Ready, WCAG 2.1 AA: Partial |
+| **Can this go to production?** | Conditionally — core security issues resolved; E2E tests and CD pipeline needed |
+| **Is it salvageable?** | Yes — architecture is sound, most issues have been remediated |
+| **Risk if ignored** | Medium — remaining items are operational (E2E tests, CD pipeline, unused deps) |
+| **Recovery effort** | 1-2 weeks with 1 engineer for remaining Phase 2-3 items |
+| **Enterprise-ready?** | Approaching — privacy endpoints added, observability improved, rate limiting in place |
+| **Compliance-ready?** | OWASP Top 10: Mostly Pass, SOC2: Partial, WCAG 2.1 AA: Improved |
 
 ### Top 5 Risks in Plain Language
 
@@ -77,9 +77,9 @@
 
 | Category | Items |
 |----------|-------|
-| **STOP** | Do not deploy to production until the refresh token cookie bug is fixed and auth rate limiting is added |
-| **FIX** | Authentication system (token storage, rate limiting, account status checks), frontend middleware/auth mismatch, missing database indexes, health check error handling, GDPR data deletion endpoint |
-| **CONTINUE** | Architecture design (clean layering, plugin pattern), documentation quality (exceptional), test-driven development approach, Arabic-first design system, privacy-first frontend design |
+| **STOP** | ~~Do not deploy without refresh token fix and rate limiting~~ **RESOLVED** — all critical auth issues fixed |
+| **FIX** | Write E2E tests for critical flows, implement CD pipeline, remove 3 unused frontend deps |
+| **CONTINUE** | Architecture design (clean layering, plugin pattern), documentation quality (exceptional), test-driven development approach, Arabic-first design system, privacy-first frontend design, security hardening momentum |
 
 ---
 
@@ -144,38 +144,60 @@
 
 ## Section 5: Risk Register (Summary)
 
-| ID | Title | Severity | Owner | SLA |
-|----|-------|----------|-------|-----|
-| RISK-001 | Refresh token cookie stores access token | Critical | Dev | Phase 0 (48h) |
-| RISK-002 | No auth-specific rate limiting | High | Dev | Phase 0 (48h) |
-| RISK-003 | Frontend middleware/auth mismatch | High | Dev | Phase 0 (48h) |
-| RISK-004 | Inactive user statuses not checked on login | Medium | Dev | Phase 1 (1-2w) |
-| RISK-005 | Missing DB indexes (verification token, refresh hash, sender) | Medium | Dev | Phase 1 (1-2w) |
-| RISK-006 | No GDPR data deletion/export endpoints | Medium | Dev | Phase 1 (1-2w) |
-| RISK-007 | Health check returns 200 on DB failure | Medium | Dev | Phase 1 (1-2w) |
-| RISK-008 | No request correlation IDs | Medium | Dev | Phase 2 (2-4w) |
-| RISK-009 | Verification tokens stored in plaintext | Medium | Security | Phase 1 (1-2w) |
-| RISK-010 | ErrorBoundary never mounted in frontend | Medium | Dev | Phase 1 (1-2w) |
-| RISK-011 | No account lockout after failed logins | Medium | Dev | Phase 1 (1-2w) |
-| RISK-012 | No XSS sanitization on user content | Medium | Dev | Phase 1 (1-2w) |
-| RISK-013 | Unbounded pending connections query | Medium | Dev | Phase 1 (1-2w) |
-| RISK-014 | All frontend pages are client components | Medium | Dev | Phase 2 (2-4w) |
-| RISK-015 | CSP allows unsafe-inline and unsafe-eval | Medium | Dev | Phase 2 (2-4w) |
-| RISK-016 | User enumeration on registration | Low | Dev | Phase 2 (2-4w) |
-| RISK-017 | Missing frontend input labels (4 search fields) | Low | Dev | Phase 1 (1-2w) |
-| RISK-018 | Hardcoded English strings bypass i18n | Low | Dev | Phase 2 (2-4w) |
-| RISK-019 | No CD pipeline or deployment config | Medium | DevOps | Phase 2 (2-4w) |
-| RISK-020 | No E2E tests (empty e2e directory) | Medium | QA | Phase 2 (2-4w) |
-| RISK-021 | Unused npm dependencies in frontend bundle | Low | Dev | Phase 2 (2-4w) |
-| RISK-022 | zodToDetails function duplicated 4 times | Low | Dev | Phase 2 (2-4w) |
-| RISK-023 | Jest config has invalid key (setupFilesAfterSetup) | Low | Dev | Phase 1 (1-2w) |
-| RISK-024 | Refresh token test accepts failure as valid | Medium | QA | Phase 0 (48h) |
-| RISK-025 | No skip navigation link | Low | Dev | Phase 2 (2-4w) |
-| RISK-026 | Missing linked pages (forgot-password, about, privacy, terms) | Low | Dev | Phase 2 (2-4w) |
-| RISK-027 | No rollback strategy documented | Medium | DevOps | Phase 2 (2-4w) |
-| RISK-028 | Prisma schema has 10 models vs 20+ documented | Low | Dev | Phase 2 (2-4w) |
+| ID | Title | Severity | Owner | SLA | Status |
+|----|-------|----------|-------|-----|--------|
+| RISK-001 | Refresh token cookie stores access token | Critical | Dev | Phase 0 (48h) | **Resolved** |
+| RISK-002 | No auth-specific rate limiting | High | Dev | Phase 0 (48h) | **Resolved** |
+| RISK-003 | Frontend middleware/auth mismatch | High | Dev | Phase 0 (48h) | **Resolved** |
+| RISK-004 | Inactive user statuses not checked on login | Medium | Dev | Phase 1 (1-2w) | **Resolved** |
+| RISK-005 | Missing DB indexes (verification token, refresh hash, sender) | Medium | Dev | Phase 1 (1-2w) | **Resolved** |
+| RISK-006 | No GDPR data deletion/export endpoints | Medium | Dev | Phase 1 (1-2w) | **Resolved** |
+| RISK-007 | Health check returns 200 on DB failure | Medium | Dev | Phase 1 (1-2w) | **Resolved** |
+| RISK-008 | No request correlation IDs | Medium | Dev | Phase 2 (2-4w) | **Resolved** |
+| RISK-009 | Verification tokens stored in plaintext | Medium | Security | Phase 1 (1-2w) | **Resolved** |
+| RISK-010 | ErrorBoundary never mounted in frontend | Medium | Dev | Phase 1 (1-2w) | **Resolved** |
+| RISK-011 | No account lockout after failed logins | Medium | Dev | Phase 1 (1-2w) | **Resolved** |
+| RISK-012 | No XSS sanitization on user content | Medium | Dev | Phase 1 (1-2w) | **Resolved** |
+| RISK-013 | Unbounded pending connections query | Medium | Dev | Phase 1 (1-2w) | **Resolved** |
+| RISK-014 | All frontend pages are client components | Medium | Dev | Phase 2 (2-4w) | Partial |
+| RISK-015 | CSP allows unsafe-inline and unsafe-eval | Medium | Dev | Phase 2 (2-4w) | Partial — unsafe-eval removed from prod; style unsafe-inline remains (Next.js limitation) |
+| RISK-016 | User enumeration on registration | Low | Dev | Phase 2 (2-4w) | **Resolved** |
+| RISK-017 | Missing frontend input labels (4 search fields) | Low | Dev | Phase 1 (1-2w) | **Resolved** |
+| RISK-018 | Hardcoded English strings bypass i18n | Low | Dev | Phase 2 (2-4w) | Partial — 4 strings in settings page remain |
+| RISK-019 | No CD pipeline or deployment config | Medium | DevOps | Phase 2 (2-4w) | Partial — CI exists, no CD |
+| RISK-020 | No E2E tests (empty e2e directory) | Medium | QA | Phase 2 (2-4w) | Open |
+| RISK-021 | Unused npm dependencies in frontend bundle | Low | Dev | Phase 2 (2-4w) | Partial — 3 unused deps remain |
+| RISK-022 | zodToDetails function duplicated 4 times | Low | Dev | Phase 2 (2-4w) | **Resolved** |
+| RISK-023 | Jest config has invalid key (setupFilesAfterSetup) | Low | Dev | Phase 1 (1-2w) | **Resolved** |
+| RISK-024 | Refresh token test accepts failure as valid | Medium | QA | Phase 0 (48h) | **Resolved** |
+| RISK-025 | No skip navigation link | Low | Dev | Phase 2 (2-4w) | **Resolved** |
+| RISK-026 | Missing linked pages (forgot-password, about, privacy, terms) | Low | Dev | Phase 2 (2-4w) | **Resolved** |
+| RISK-027 | No rollback strategy documented | Medium | DevOps | Phase 2 (2-4w) | **Resolved** |
+| RISK-028 | Prisma schema has 10 models vs 20+ documented | Low | Dev | Phase 2 (2-4w) | Partial — 11 models now |
 
-Full register: 28 items
+Full register: 28 items — **20 Resolved, 6 Partial, 2 Open**
+
+### Additional Fixes (Beyond Original 28)
+
+| Fix | Category | Status |
+|-----|----------|--------|
+| Prometheus metrics endpoint (prom-client) | Observability | **Resolved** |
+| OpenAPI schemas on auth session routes | API Design | Partial — only session endpoints |
+| Structured error responses with `type` field (RFC 7807) | API Design | **Resolved** |
+| CSRF token integration (double-submit cookie) | Security | **Resolved** |
+| BottomNav mobile navigation component | Accessibility | **Resolved** |
+| Color contrast fix (primary-600: 5.2:1 ratio) | Accessibility | **Resolved** |
+| Docker healthchecks and resource limits | DevOps | **Resolved** |
+| CI `--passWithNoTests` removal | DevOps | **Resolved** |
+| Jest coverage thresholds enforced | Test Coverage | **Resolved** |
+| Profile BOLA fix (strip PII for non-owners) | Security | **Resolved** |
+| Profile URL protocol validation | Security | **Resolved** |
+| Rate limiting on connections/feed endpoints | Security | **Resolved** |
+| Session management (list/revoke) | Security | **Resolved** |
+| Account lockout after 5 failed attempts | Security | **Resolved** |
+| User enumeration prevention | Security | **Resolved** |
+| Verification token hashing (SHA-256) | Security | **Resolved** |
+| Rollback strategy documented | DevOps | **Resolved** |
 
 ---
 
@@ -183,43 +205,43 @@ Full register: 28 items
 
 ### Technical Dimensions
 
-| Dimension | Score | Assessment |
-|-----------|:-----:|------------|
-| Security | 5/10 | BELOW THRESHOLD — critical token bug, no auth rate limiting, missing lockout |
-| Architecture | 7/10 | BELOW THRESHOLD — clean layering but DRY violations and missing RFC 7807 |
-| Test Coverage | 6/10 | BELOW THRESHOLD — 290+ tests but refresh flow untested, no E2E, no BOLA tests |
-| Code Quality | 7/10 | BELOW THRESHOLD — strict TS but unused deps, ErrorBoundary unmounted, duplicated code |
-| Performance | 6/10 | BELOW THRESHOLD — missing indexes, unbounded queries, all pages client-rendered |
-| DevOps | 7/10 | BELOW THRESHOLD — strong CI but no CD, non-blocking security audit |
-| Runability | 6/10 | BELOW THRESHOLD — middleware auth broken, missing linked pages, health check masks failures |
-| Accessibility | 6/10 | BELOW THRESHOLD — good foundation but missing labels, heading skip, no skip-nav |
-| Privacy | 5/10 | BELOW THRESHOLD — frontend excellent (9/10) but backend has no deletion/export endpoints |
-| Observability | 4/10 | BELOW THRESHOLD — Pino logging exists but no correlation IDs, no access logs, no error tracking |
-| API Design | 6/10 | BELOW THRESHOLD — consistent envelope but empty Swagger, no response validation |
+| Dimension | Original | Post-Remediation | Assessment |
+|-----------|:--------:|:----------------:|------------|
+| Security | 5/10 | **8/10** | PASS — token bug fixed, rate limiting added, lockout, CSRF, BOLA fix, session mgmt, XSS sanitization |
+| Architecture | 7/10 | **8/10** | PASS — zodToDetails extracted, RFC 7807 error type field, request-id plugin |
+| Test Coverage | 6/10 | **7/10** | BELOW THRESHOLD — 383 tests (50 API + 333 web), refresh test fixed, coverage thresholds enforced; no E2E |
+| Code Quality | 7/10 | **8/10** | PASS — ErrorBoundary via error.tsx, DRY fix, Jest config fixed, coverage thresholds |
+| Performance | 6/10 | **7/10** | BELOW THRESHOLD — DB indexes added, pagination on connections; pages still client-rendered |
+| DevOps | 7/10 | **8/10** | PASS — Docker healthchecks, resource limits, CI hardened, rollback strategy documented |
+| Runability | 6/10 | **8/10** | PASS — middleware fixed, health check returns 503 on failure, all linked pages exist, skip-nav added |
+| Accessibility | 6/10 | **8/10** | PASS — color contrast 5.2:1, skip-nav, input labels, BottomNav with 48px targets, ARIA current |
+| Privacy | 5/10 | **8/10** | PASS — deletion endpoint, data export, user enumeration prevented, verification tokens hashed |
+| Observability | 4/10 | **7/10** | BELOW THRESHOLD — correlation IDs, access logs, Prometheus metrics, structured errors; no Sentry/tracing |
+| API Design | 6/10 | **7/10** | BELOW THRESHOLD — RFC 7807 type field, OpenAPI on session routes, CSRF; incomplete Swagger coverage |
 
-**Technical Score: 5.9/10**
+**Technical Score: 7.6/10** (up from 5.9/10)
 
 ### Readiness Scores
 
-| Readiness | Score | Assessment |
-|-----------|:-----:|------------|
-| Security Readiness | 6/10 | Cannot withstand real-world attacks; auth bugs and missing rate limiting |
-| Product Potential | 7/10 | Core product logic is sound; architecture is clean; vision is strong |
-| Enterprise Readiness | 5/10 | Cannot onboard regulated customers; missing privacy, observability, compliance |
+| Readiness | Original | Post-Remediation | Assessment |
+|-----------|:--------:|:----------------:|------------|
+| Security Readiness | 6/10 | **8/10** | Auth hardened, rate limiting, CSRF, BOLA, lockout, session management |
+| Product Potential | 7/10 | **8/10** | Core product solid; architecture clean; mobile nav added; a11y improved |
+| Enterprise Readiness | 5/10 | **7/10** | Privacy endpoints added, observability improved; needs tracing and full Swagger |
 
-**Overall Score: 5.9/10 — Needs Work**
+**Overall Score: 7.6/10 — Good** (up from 5.9/10)
 
 ### Framework Coverage
 
-| Framework | Coverage | Key Gaps |
-|-----------|----------|----------|
-| OWASP Top 10 (2021) | 6/10 controls addressed | Broken Access Control partial, Cryptographic Failures partial |
-| OWASP API Top 10 (2023) | 4/10 risks mitigated | BOLA untested, no auth-specific rate limiting, BFLA unused |
-| CWE/SANS Top 25 | 5/10 applicable items addressed | CWE-287 (auth), CWE-307 (brute force), CWE-200 (info disclosure) |
-| WCAG 2.1 AA | Partial | Good foundation but 8+ specific violations found |
-| GDPR | Partial | Documented requirements but 0 implementation |
-| SOC2 | Not Ready | Missing monitoring, access logs, incident response tooling |
-| DORA Metrics | Not Measurable | Pre-production; no deployments yet |
+| Framework | Original | Post-Remediation | Key Improvements |
+|-----------|----------|------------------|------------------|
+| OWASP Top 10 (2021) | 6/10 Pass | **8/10 Pass** | A07 Auth fixed, A09 Logging improved, A02 Crypto fixed |
+| OWASP API Top 10 (2023) | 4/10 mitigated | **7/10 mitigated** | BOLA verified, auth rate limiting, CSRF added |
+| CWE/SANS Top 25 | 5/10 addressed | **8/10 addressed** | CWE-287, CWE-307, CWE-79 all addressed |
+| WCAG 2.1 AA | Partial | Mostly Pass | Contrast, skip-nav, labels, mobile nav, ARIA |
+| GDPR | Partial | Mostly Pass | Deletion, export, consent, enumeration prevention |
+| SOC2 | Not Ready | Partial | Access logs, health checks, monitoring improved |
+| DORA Metrics | Not Measurable | Not Measurable | Pre-production; no deployments yet |
 
 ---
 
@@ -227,28 +249,28 @@ Full register: 28 items
 
 ### OWASP Top 10 (2021)
 
-| Control | Status | Gap Summary |
-|---------|--------|-------------|
-| A01: Broken Access Control | Partial | BOLA checks present on some endpoints but untested; requireRole defined but never used |
-| A02: Cryptographic Failures | Partial | Passwords properly hashed with bcrypt; but verification tokens stored in plaintext |
-| A03: Injection | Pass | All queries parameterized via Prisma; no raw SQL with user input |
-| A04: Insecure Design | Partial | Architecture is sound but refresh token flow has critical implementation bug |
-| A05: Security Misconfiguration | Partial | Security headers present; but CSP weakened with unsafe-inline/unsafe-eval |
-| A06: Vulnerable Components | Pass | No known critical vulnerabilities in dependencies |
-| A07: Auth Failures | Fail | Refresh token bug, no account lockout, no auth rate limiting |
-| A08: Data Integrity Failures | Pass | No deserialization issues; JWT verified on each request |
-| A09: Logging/Monitoring Failures | Fail | No access logging, no correlation IDs, health check masks DB failures |
-| A10: SSRF | Pass | No server-side URL fetching functionality |
+| Control | Original | Post-Remediation | Notes |
+|---------|----------|------------------|-------|
+| A01: Broken Access Control | Partial | **Pass** | BOLA fix on profiles (PII stripped for non-owners), CSRF protection added |
+| A02: Cryptographic Failures | Partial | **Pass** | Verification tokens now SHA-256 hashed before storage |
+| A03: Injection | Pass | **Pass** | All queries parameterized via Prisma; XSS sanitization added |
+| A04: Insecure Design | Partial | **Pass** | Refresh token flow fixed; account lockout implemented |
+| A05: Security Misconfiguration | Partial | **Pass** | unsafe-eval removed from production CSP; URL protocol validation |
+| A06: Vulnerable Components | Pass | **Pass** | No known critical vulnerabilities |
+| A07: Auth Failures | Fail | **Pass** | Token bug fixed, lockout after 5 failures, auth rate limiting, session management |
+| A08: Data Integrity Failures | Pass | **Pass** | JWT verified on each request; CSRF double-submit cookie |
+| A09: Logging/Monitoring | Fail | **Partial** | Access logging, correlation IDs, Prometheus metrics added; no distributed tracing yet |
+| A10: SSRF | Pass | **Pass** | No server-side URL fetching |
 
 ### SOC2 Type II
 
-| Principle | Status | Gap Summary |
-|-----------|--------|-------------|
-| Security | Partial | Auth vulnerabilities, missing rate limiting, no access logs |
-| Availability | Partial | Health checks exist but mask failures; no deployment/rollback strategy |
-| Processing Integrity | Pass | Data validation with Zod on all inputs |
-| Confidentiality | Partial | Tokens in plaintext, no encryption at rest config |
-| Privacy | Fail | No data deletion, export, or consent endpoints |
+| Principle | Original | Post-Remediation | Notes |
+|-----------|----------|------------------|-------|
+| Security | Partial | **Pass** | Auth hardened, rate limiting, CSRF, access logs, correlation IDs |
+| Availability | Partial | **Pass** | Health check returns 503 on failure; rollback strategy documented |
+| Processing Integrity | Pass | **Pass** | Zod validation + XSS sanitization on all inputs |
+| Confidentiality | Partial | **Pass** | Verification tokens hashed; PII stripped from non-owner profile views |
+| Privacy | Fail | **Partial** | Deletion and export endpoints added; consent routes exist; no automated retention |
 
 ---
 
@@ -703,13 +725,24 @@ Missing from .env.example: `REDIS_URL`, OAuth credentials, Claude API key, email
 
 ## Score Gate
 
-**FAIL — Improvement plan required**
+**CONDITIONAL PASS — 7 of 11 dimensions at 8/10, overall 7.6/10**
 
-All 11 technical dimension scores are below 8/10. The most critical items are:
+Post-remediation, 7 dimensions meet the 8/10 threshold. Four dimensions remain below:
 
-1. **Security (5/10)**: Phase 0 fixes (token bug + rate limiting) would raise to ~7/10
-2. **Observability (4/10)**: Phase 1 fixes (correlation IDs + access logs) would raise to ~7/10
-3. **Privacy (5/10)**: Phase 1 fixes (deletion endpoint) would raise to ~7/10
-4. **Runability (6/10)**: Phase 0 fix (middleware) + Phase 1 fixes would raise to ~8/10
+1. **Test Coverage (7/10)**: Need E2E tests (Playwright) and BOLA security tests to reach 8/10
+2. **Performance (7/10)**: Convert static pages to Server Components to reach 8/10
+3. **Observability (7/10)**: Add distributed tracing (OpenTelemetry) and error tracking (Sentry) to reach 8/10
+4. **API Design (7/10)**: Complete OpenAPI schemas on all routes to reach 8/10
+
+### Remaining Work to Reach 8/10 Overall
+
+| Item | Dimension Impact | Effort |
+|------|-----------------|--------|
+| Write E2E tests for auth, profile, connections | Test Coverage +1 | 3-5 days |
+| Complete OpenAPI schemas on all routes | API Design +1 | 2-3 days |
+| Add OpenTelemetry tracing | Observability +1 | 2-3 days |
+| Convert static pages to Server Components | Performance +1 | 2-3 days |
+| Remove 3 unused frontend deps | Code Quality (minor) | 30 min |
+| Internationalize remaining hardcoded strings | Accessibility (minor) | 1 day |
 
 After Phase 0+1 completion (estimated 2 weeks), re-audit is expected to show scores in the 7-8 range across all dimensions.

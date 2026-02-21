@@ -11,6 +11,7 @@ import requestIdPlugin from './plugins/request-id';
 import accessLogPlugin from './plugins/access-log';
 import swaggerPlugin from './plugins/swagger';
 import csrfPlugin from './plugins/csrf';
+import metricsPlugin from './plugins/metrics';
 
 // Routes
 import healthRoutes from './modules/health/health.routes';
@@ -55,6 +56,7 @@ export async function buildApp(
   if (process.env.NODE_ENV !== 'test') {
     await app.register(accessLogPlugin);
     await app.register(swaggerPlugin);
+    await app.register(metricsPlugin);
   }
 
   // Routes

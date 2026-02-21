@@ -28,6 +28,23 @@ const healthRoutes: FastifyPluginAsync = async (fastify) => {
               },
             },
           },
+          503: {
+            type: 'object',
+            properties: {
+              success: { type: 'boolean' },
+              data: {
+                type: 'object',
+                properties: {
+                  status: { type: 'string' },
+                  timestamp: { type: 'string' },
+                  uptime: { type: 'number' },
+                  version: { type: 'string' },
+                  database: { type: 'string' },
+                  redis: { type: 'string' },
+                },
+              },
+            },
+          },
         },
       },
     },
@@ -44,14 +61,17 @@ const healthRoutes: FastifyPluginAsync = async (fastify) => {
         (Date.now() - startTime) / 1000
       );
 
+      const isHealthy = dbStatus === 'connected';
+      const statusCode = isHealthy ? 200 : 503;
+
       return sendSuccess(reply, {
-        status: 'ok',
+        status: isHealthy ? 'ok' : 'degraded',
         timestamp: new Date().toISOString(),
         uptime: uptimeSeconds,
         version: process.env.npm_package_version || '0.1.0',
         database: dbStatus,
         redis: 'not_configured',
-      });
+      }, statusCode);
     }
   );
 };
