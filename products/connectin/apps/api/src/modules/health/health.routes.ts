@@ -5,7 +5,7 @@ const startTime = Date.now();
 
 const healthRoutes: FastifyPluginAsync = async (fastify) => {
   // GET /csrf-token — generates a CSRF token for the double-submit cookie pattern
-  fastify.get('/api/v1/csrf-token', async (request, reply) => {
+  fastify.get('/api/v1/csrf-token', async (_request, reply) => {
     const token = await reply.generateCsrf();
     return { token };
   });
