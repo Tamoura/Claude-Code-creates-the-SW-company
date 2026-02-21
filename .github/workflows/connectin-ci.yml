@@ -1,0 +1,298 @@
+name: ConnectIn CI
+
+on:
+  push:
+    branches: [main, 'foundation/connectin', 'feature/connectin/**']
+    paths:
+      - 'products/connectin/**'
+      - '.github/workflows/connectin-ci.yml'
+  pull_request:
+    paths:
+      - 'products/connectin/**'
+      - '.github/workflows/connectin-ci.yml'
+
+env:
+  NODE_VERSION: '20'
+
+jobs:
+  lint-and-typecheck:
+    name: Lint & Type Check
+    runs-on: ubuntu-latest
+    strategy:
+      fail-fast: false
+      matrix:
+        app:
+          - name: api
+            path: products/connectin/apps/api
+            needs-prisma: true
+          - name: web
+            path: products/connectin/apps/web
+            needs-prisma: false
+    defaults:
+      run:
+        working-directory: ${{ matrix.app.path }}
+    steps:
+      - uses: actions/checkout@v4
+
+      - name: Check if app exists
+        id: check
+        run: |
+          if [ -f "${{ matrix.app.path }}/package.json" ]; then
+            echo "exists=true" >> $GITHUB_OUTPUT
+          else
+            echo "exists=false" >> $GITHUB_OUTPUT
+            echo "::notice::${{ matrix.app.name }} app not found on this branch — skipping"
+          fi
+        working-directory: .
+
+      - name: Setup Node.js
+        if: steps.check.outputs.exists == 'true'
+        uses: actions/setup-node@v4
+        with:
+          node-version: ${{ env.NODE_VERSION }}
+          cache: npm
+          cache-dependency-path: ${{ matrix.app.path }}/package-lock.json
+
+      - name: Install dependencies
+        if: steps.check.outputs.exists == 'true'
+        run: npm ci
+
+      - name: Generate Prisma client
+        if: steps.check.outputs.exists == 'true' && matrix.app.needs-prisma
+        run: npx prisma generate
+
+      - name: Run lint
+        if: steps.check.outputs.exists == 'true'
+        run: npm run lint --if-present
+
+      - name: Run type check
+        if: steps.check.outputs.exists == 'true'
+        run: npx tsc --noEmit --pretty
+
+  test-api:
+    name: API Tests
+    runs-on: ubuntu-latest
+    needs: lint-and-typecheck
+    if: always()
+    defaults:
+      run:
+        working-directory: products/connectin/apps/api
+    services:
+      postgres:
+        image: postgres:15-alpine
+        env:
+          POSTGRES_DB: connectin_test
+          POSTGRES_USER: postgres
+          POSTGRES_PASSWORD: postgres
+        ports:
+          - 5432:5432
+        options: >-
+          --health-cmd pg_isready
+          --health-interval 10s
+          --health-timeout 5s
+          --health-retries 5
+      redis:
+        image: redis:7-alpine
+        ports:
+          - 6379:6379
+        options: >-
+          --health-cmd "redis-cli ping"
+          --health-interval 10s
+          --health-timeout 5s
+          --health-retries 5
+    env:
+      DATABASE_URL: postgresql://postgres:postgres@localhost:5432/connectin_test
+      REDIS_URL: redis://localhost:6379
+      JWT_SECRET: ci-test-secret-not-for-production
+      NODE_ENV: test
+      PORT: 5007
+    steps:
+      - uses: actions/checkout@v4
+
+      - name: Check if API app exists
+        id: check
+        run: |
+          if [ -f "products/connectin/apps/api/package.json" ]; then
+            echo "exists=true" >> $GITHUB_OUTPUT
+          else
+            echo "exists=false" >> $GITHUB_OUTPUT
+            echo "::notice::API app not found on this branch — skipping"
+          fi
+        working-directory: .
+
+      - name: Setup Node.js
+        if: steps.check.outputs.exists == 'true'
+        uses: actions/setup-node@v4
+        with:
+          node-version: ${{ env.NODE_VERSION }}
+          cache: npm
+          cache-dependency-path: products/connectin/apps/api/package-lock.json
+
+      - name: Install dependencies
+        if: steps.check.outputs.exists == 'true'
+        run: npm ci
+
+      - name: Generate Prisma client
+        if: steps.check.outputs.exists == 'true'
+        run: npx prisma generate
+
+      - name: Push database schema
+        if: steps.check.outputs.exists == 'true'
+        run: npx prisma db push --force-reset
+
+      - name: Run tests with coverage
+        if: steps.check.outputs.exists == 'true'
+        run: npm test -- --coverage
+
+      - name: Upload coverage report
+        if: always() && steps.check.outputs.exists == 'true'
+        uses: actions/upload-artifact@v4
+        with:
+          name: api-coverage
+          path: products/connectin/apps/api/coverage/
+          retention-days: 7
+
+  test-web:
+    name: Web Tests
+    runs-on: ubuntu-latest
+    needs: lint-and-typecheck
+    if: always()
+    defaults:
+      run:
+        working-directory: products/connectin/apps/web
+    steps:
+      - uses: actions/checkout@v4
+
+      - name: Setup Node.js
+        uses: actions/setup-node@v4
+        with:
+          node-version: ${{ env.NODE_VERSION }}
+          cache: npm
+          cache-dependency-path: products/connectin/apps/web/package-lock.json
+
+      - name: Install dependencies
+        run: npm ci
+
+      - name: Run tests with coverage
+        run: npm test -- --coverage --passWithNoTests
+
+      - name: Upload coverage report
+        if: always()
+        uses: actions/upload-artifact@v4
+        with:
+          name: web-coverage
+          path: products/connectin/apps/web/coverage/
+          retention-days: 7
+
+  security:
+    name: Security Audit
+    runs-on: ubuntu-latest
+    strategy:
+      fail-fast: false
+      matrix:
+        app:
+          - products/connectin/apps/api
+          - products/connectin/apps/web
+    defaults:
+      run:
+        working-directory: ${{ matrix.app }}
+    steps:
+      - uses: actions/checkout@v4
+
+      - name: Check if app exists
+        id: check
+        run: |
+          if [ -f "${{ matrix.app }}/package.json" ]; then
+            echo "exists=true" >> $GITHUB_OUTPUT
+          else
+            echo "exists=false" >> $GITHUB_OUTPUT
+            echo "::notice::App at ${{ matrix.app }} not found — skipping security audit"
+          fi
+        working-directory: .
+
+      - name: Setup Node.js
+        if: steps.check.outputs.exists == 'true'
+        uses: actions/setup-node@v4
+        with:
+          node-version: ${{ env.NODE_VERSION }}
+          cache: npm
+          cache-dependency-path: ${{ matrix.app }}/package-lock.json
+
+      - name: Install dependencies
+        if: steps.check.outputs.exists == 'true'
+        run: npm ci
+
+      - name: Run security audit
+        if: steps.check.outputs.exists == 'true'
+        run: npm audit --audit-level=critical --omit=dev || echo "::warning::Security vulnerabilities found - review npm audit output"
+        continue-on-error: true
+
+  build:
+    name: Docker Build
+    runs-on: ubuntu-latest
+    needs: [test-api, test-web]
+    if: always()
+    steps:
+      - uses: actions/checkout@v4
+
+      - name: Build Docker images
+        run: |
+          if [ ! -f "products/connectin/docker-compose.yml" ]; then
+            echo "::notice::docker-compose.yml not found — skipping Docker build"
+            exit 0
+          fi
+
+          SERVICES=""
+          if [ -f "products/connectin/apps/web/Dockerfile" ]; then
+            SERVICES="$SERVICES web"
+          fi
+          if [ -f "products/connectin/apps/api/Dockerfile" ] && [ -f "products/connectin/apps/api/package-lock.json" ]; then
+            SERVICES="$SERVICES api"
+          fi
+
+          if [ -z "$SERVICES" ]; then
+            echo "::notice::No buildable services found — skipping Docker build"
+            exit 0
+          fi
+
+          echo "Building services:$SERVICES"
+          docker compose -f products/connectin/docker-compose.yml build $SERVICES
+
+  quality-gate:
+    name: Quality Gate
+    needs: [test-api, test-web, lint-and-typecheck, security, build]
+    runs-on: ubuntu-latest
+    if: always()
+    steps:
+      - name: Verify all jobs succeeded
+        run: |
+          echo "Job results:"
+          echo "  lint-and-typecheck: ${{ needs.lint-and-typecheck.result }}"
+          echo "  test-api:          ${{ needs.test-api.result }}"
+          echo "  test-web:          ${{ needs.test-web.result }}"
+          echo "  security:          ${{ needs.security.result }}"
+          echo "  build:             ${{ needs.build.result }}"
+
+          FAILED=false
+
+          # Each core job must pass or be successfully skipped
+          for job_result in \
+            "${{ needs.lint-and-typecheck.result }}" \
+            "${{ needs.test-api.result }}" \
+            "${{ needs.test-web.result }}" \
+            "${{ needs.build.result }}"; do
+            if [ "$job_result" != "success" ] && [ "$job_result" != "skipped" ]; then
+              FAILED=true
+            fi
+          done
+
+          if [ "$FAILED" = "true" ]; then
+            echo "Quality gate FAILED: one or more core jobs did not succeed"
+            exit 1
+          fi
+
+          if [ "${{ needs.security.result }}" != "success" ]; then
+            echo "::warning::Security audit reported issues - review recommended"
+          fi
+
+          echo "All quality gates passed for ConnectIn"

@@ -1,0 +1,146 @@
+{
+  "app": {
+    "name": "ConnectIn",
+    "tagline": "Your Professional Network, Built Arabic-First",
+    "description": "AI-powered networking for Arab tech professionals worldwide"
+  },
+  "nav": {
+    "home": "Home",
+    "network": "My Network",
+    "messages": "Messages",
+    "jobs": "Jobs",
+    "profile": "Profile",
+    "settings": "Settings",
+    "saved": "Saved",
+    "notifications": "Notifications",
+    "search": "Search professionals, jobs, and posts",
+    "admin": "Admin Dashboard"
+  },
+  "actions": {
+    "connect": "Connect",
+    "message": "Message",
+    "like": "Like",
+    "unlike": "Unlike",
+    "comment": "Comment",
+    "share": "Share",
+    "save": "Save",
+    "apply": "Apply",
+    "post": "Post",
+    "edit": "Edit",
+    "delete": "Delete",
+    "cancel": "Cancel",
+    "confirm": "Confirm",
+    "accept": "Accept",
+    "reject": "Reject",
+    "withdraw": "Withdraw",
+    "dismiss": "Dismiss",
+    "viewAll": "View All",
+    "seeMore": "...see more",
+    "loadMore": "Load More",
+    "back": "Back",
+    "next": "Next",
+    "submit": "Submit",
+    "remove": "Remove"
+  },
+  "landing": {
+    "hero": {
+      "title": "Your Professional Network,\nBuilt Arabic-First",
+      "subtitle": "AI-powered networking for Arab tech professionals worldwide",
+      "cta": "Get Started -- Free",
+      "login": "Log In"
+    },
+    "features": {
+      "ai": {
+        "title": "AI-Native",
+        "description": "AI profile optimizer and smart matching"
+      },
+      "arabic": {
+        "title": "Arabic-First",
+        "description": "RTL-native design and bilingual content"
+      },
+      "privacy": {
+        "title": "Privacy-First",
+        "description": "Your data, your control"
+      },
+      "openSource": {
+        "title": "Open Source",
+        "description": "Community-driven open platform"
+      }
+    },
+    "social": {
+      "count": "{{count}}+ professionals connected",
+      "quote": "Finally, a platform that gets Arabic right."
+    },
+    "footer": {
+      "about": "About",
+      "privacy": "Privacy",
+      "terms": "Terms",
+      "contact": "Contact",
+      "copyright": "ConnectIn. All rights reserved."
+    }
+  },
+  "feed": {
+    "composer": "Start a post...",
+    "empty": "No posts yet. Be the first to share!",
+    "trending": "Trending Topics",
+    "suggestions": "People You May Know"
+  },
+  "profile": {
+    "completeness": "Profile Completeness",
+    "connections": "connections",
+    "mutualConnections": "mutual connections",
+    "experience": "Experience",
+    "education": "Education",
+    "skills": "Skills",
+    "about": "About",
+    "posts": "Posts",
+    "editProfile": "Edit Profile",
+    "optimizeAi": "Optimize with AI",
+    "present": "Present",
+    "noExperience": "No experience added yet.",
+    "noEducation": "No education added yet.",
+    "noSkills": "No skills added yet.",
+    "professional": "Professional"
+  },
+  "network": {
+    "myNetwork": "My Network",
+    "pendingRequests": "Pending Requests",
+    "peopleYouMayKnow": "People You May Know",
+    "myConnections": "My Connections",
+    "searchConnections": "Search connections...",
+    "noPendingRequests": "No pending requests.",
+    "noSuggestions": "No suggestions right now.",
+    "noConnections": "No connections yet."
+  },
+  "messages": {
+    "inbox": "Messages",
+    "search": "Search messages...",
+    "typeMessage": "Type a message...",
+    "send": "Send",
+    "read": "Read",
+    "sent": "Sent",
+    "delivered": "Delivered"
+  },
+  "jobs": {
+    "search": "Search jobs...",
+    "filters": "Filters",
+    "remote": "Remote",
+    "hybrid": "Hybrid",
+    "onsite": "On-site",
+    "applied": "Applied",
+    "applicants": "applicants"
+  },
+  "settings": {
+    "account": "Account",
+    "notifications": "Notifications",
+    "privacy": "Privacy",
+    "language": "Language"
+  },
+  "language": {
+    "switchTo": "العربية",
+    "label": "Switch language"
+  },
+  "loading": "Loading...",
+  "error": "An error occurred",
+  "noResults": "No results found"
+}
