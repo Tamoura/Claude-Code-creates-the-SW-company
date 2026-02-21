@@ -9,6 +9,7 @@ interface I18nProviderProps {
 }
 
 function updateDocumentAttributes(lng: string) {
+  if (typeof document === "undefined") return;
   const dir = lng === "ar" ? "rtl" : "ltr";
   document.documentElement.setAttribute("dir", dir);
   document.documentElement.setAttribute("lang", lng);
@@ -27,6 +28,7 @@ export function I18nProvider({ children }: I18nProviderProps) {
   }
 
   useEffect(() => {
+    updateDocumentAttributes(i18n.language);
     i18n.on("languageChanged", updateDocumentAttributes);
     return () => {
       i18n.off("languageChanged", updateDocumentAttributes);
