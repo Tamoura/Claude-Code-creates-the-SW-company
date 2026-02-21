@@ -9,7 +9,7 @@ import dynamic from "next/dynamic";
 function TopBarSkeleton() {
   return (
     <div
-      className="sticky top-0 z-20 h-16 w-full border-b border-[#E2E8F0] bg-white dark:border-[#334155] dark:bg-[#1E293B]"
+      className="sticky top-0 z-20 h-16 w-full backdrop-blur-xl bg-white/80 dark:bg-[#1C1C1E]/80"
       aria-hidden="true"
     />
   );
@@ -22,7 +22,7 @@ function TopBarSkeleton() {
 function SidebarSkeleton() {
   return (
     <div
-      className="hidden h-[calc(100vh-64px)] w-[280px] shrink-0 animate-pulse rounded-md bg-neutral-100 dark:bg-[#1E293B] lg:block"
+      className="hidden h-[calc(100vh-64px)] w-[280px] shrink-0 animate-pulse rounded-[18px] bg-neutral-100 dark:bg-[#1C1C1E] lg:block"
       aria-hidden="true"
     />
   );
@@ -75,7 +75,7 @@ export default function MainLayout({
         <aside className="hidden w-60 shrink-0 lg:block">
           <Sidebar />
         </aside>
-        <main className="min-w-0 flex-1">{children}</main>
+        <main className="min-w-0 flex-1" style={{ animation: "fadeUp 0.5s ease-out both" }}>{children}</main>
       </div>
       <BottomNav />
     </div>

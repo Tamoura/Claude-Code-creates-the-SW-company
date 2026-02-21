@@ -44,15 +44,15 @@ export function Sidebar() {
       className={cn(
         "hidden lg:flex flex-col w-[280px] shrink-0",
         "h-[calc(100vh-64px)] sticky top-16 overflow-y-auto",
-        "bg-white dark:bg-[#1E293B]",
-        "border-e border-[#E2E8F0] dark:border-[#334155]"
+        "bg-white dark:bg-[#1C1C1E]",
+        "border-e border-[#E2E8F0] dark:border-white/8"
       )}
     >
       {/* Profile mini-card */}
-      <div className="p-4 border-b border-[#E2E8F0] dark:border-[#334155]">
+      <div className="p-4 border-b border-[#E2E8F0] dark:border-white/8">
         <Link
           href="/profile"
-          className="flex items-center gap-3 focus:outline-none focus:ring-2 focus:ring-[#57BBCE] rounded-md p-1"
+          className="flex items-center gap-3 focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-[#57BBCE] rounded-xl p-1"
         >
           <UserAvatar displayName={user?.displayName || "User"} size="md" />
           <div className="min-w-0">
@@ -78,12 +78,12 @@ export function Sidebar() {
               key={item.href}
               href={item.href}
               className={cn(
-                "flex items-center gap-3 px-4 py-2.5 mx-2 rounded-md",
-                "text-sm transition-colors duration-100",
+                "flex items-center gap-3 px-4 py-2.5 mx-2 rounded-xl",
+                "text-sm transition-all duration-[180ms]",
                 isActive
-                  ? "bg-[#E6F4F8] text-[#086577] font-medium border-s-[3px] border-[#0C9AB8]"
-                  : "text-[#475569] dark:text-[#94A3B8] hover:bg-[#F8FAFC] dark:hover:bg-[#334155] hover:text-[#0C9AB8]",
-                "focus:outline-none focus:ring-2 focus:ring-[#57BBCE]"
+                  ? "bg-[#E6F4F8] text-[#086577] font-medium"
+                  : "text-[#475569] dark:text-[#94A3B8] hover:bg-[#F8FAFC] dark:hover:bg-white/5 hover:text-[#0C9AB8] hover:ps-5",
+                "focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-[#57BBCE]"
               )}
               aria-current={isActive ? "page" : undefined}
             >
@@ -116,7 +116,7 @@ export function Sidebar() {
       </nav>
 
       {/* Footer */}
-      <div className="mt-auto p-4 border-t border-[#E2E8F0] dark:border-[#334155]">
+      <div className="mt-auto p-4 border-t border-[#E2E8F0] dark:border-white/8">
         <div className="text-xs text-[#94A3B8] dark:text-[#64748B] space-y-1">
           <div className="flex gap-2">
             <Link href="/about" className="hover:underline">

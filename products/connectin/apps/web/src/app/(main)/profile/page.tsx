@@ -22,21 +22,30 @@ export default function ProfilePage() {
   return (
     <div className="space-y-4">
       {/* Profile Header Card */}
-      <div className="rounded-xl bg-white p-6 shadow-sm">
-        {/* Cover / Avatar row */}
+      <div className="rounded-[18px] bg-white dark:bg-[#1C1C1E] shadow-apple-md overflow-hidden">
+        {/* Cover photo gradient */}
+        <div className="h-28 bg-gradient-to-r from-[#0C9AB8] to-[#0B6E7F]" />
+
+        <div className="p-6 -mt-10">
+        {/* Avatar + name row */}
         <div className="mb-4 flex items-start justify-between">
-          <div>
-            <h1 className="text-2xl font-bold text-neutral-900">
-              {user?.displayName}
-            </h1>
-            <p className="mt-1 text-sm text-neutral-500">
-              {headline || t("profile.editProfile")}
-            </p>
+          <div className="flex items-end gap-4">
+            <div className="h-20 w-20 rounded-full ring-4 ring-white dark:ring-[#1C1C1E] bg-primary-100 flex items-center justify-center text-2xl font-bold text-primary-700">
+              {user?.displayName?.charAt(0) || "U"}
+            </div>
+            <div>
+              <h1 className="text-2xl font-bold text-neutral-900 tracking-[-0.02em]">
+                {user?.displayName}
+              </h1>
+              <p className="mt-1 text-sm text-neutral-500">
+                {headline || t("profile.editProfile")}
+              </p>
+            </div>
           </div>
 
           <button
             type="button"
-            className="rounded-lg border border-primary-600 px-4 py-2 text-sm font-medium text-primary-600 hover:bg-primary-50"
+            className="rounded-full border-2 border-primary-600 px-4 py-2 text-sm font-medium text-primary-600 hover:bg-primary-50 hover:-translate-y-0.5 active:scale-[0.97] transition-all duration-[180ms]"
           >
             {t("profile.editProfile")}
           </button>
@@ -61,10 +70,11 @@ export default function ProfilePage() {
             </div>
           </div>
         )}
+        </div>
       </div>
 
       {/* Tabs: About / Posts */}
-      <div className="rounded-xl bg-white shadow-sm">
+      <div className="rounded-[18px] bg-white dark:bg-[#1C1C1E] shadow-apple-md">
         <div className="flex border-b border-neutral-200">
           <button
             type="button"
@@ -85,7 +95,7 @@ export default function ProfilePage() {
           <section aria-labelledby="experience-heading">
             <h2
               id="experience-heading"
-              className="mb-3 text-lg font-semibold text-neutral-900"
+              className="mb-3 text-lg font-semibold text-neutral-900 tracking-[-0.01em]"
             >
               {t("profile.experience")}
             </h2>
@@ -121,7 +131,7 @@ export default function ProfilePage() {
           <section aria-labelledby="education-heading">
             <h2
               id="education-heading"
-              className="mb-3 text-lg font-semibold text-neutral-900"
+              className="mb-3 text-lg font-semibold text-neutral-900 tracking-[-0.01em]"
             >
               {t("profile.education")}
             </h2>
@@ -153,7 +163,7 @@ export default function ProfilePage() {
           <section aria-labelledby="skills-heading">
             <h2
               id="skills-heading"
-              className="mb-3 text-lg font-semibold text-neutral-900"
+              className="mb-3 text-lg font-semibold text-neutral-900 tracking-[-0.01em]"
             >
               {t("profile.skills")}
             </h2>

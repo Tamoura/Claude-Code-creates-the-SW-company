@@ -15,8 +15,8 @@ export default function ForgotPasswordPage() {
 
   if (submitted) {
     return (
-      <div className="text-center">
-        <h1 className="mb-4 text-2xl font-bold text-neutral-900">
+      <div className="rounded-[18px] glass-light dark:glass-dark p-8 shadow-apple-lg text-center">
+        <h1 className="mb-4 text-2xl font-bold text-neutral-900 tracking-[-0.02em]">
           {t("auth.checkEmail", "Check your email")}
         </h1>
         <p className="text-neutral-600">
@@ -30,15 +30,15 @@ export default function ForgotPasswordPage() {
   }
 
   return (
-    <div>
-      <h1 className="mb-6 text-2xl font-bold text-neutral-900">
+    <div className="rounded-[18px] glass-light dark:glass-dark p-8 shadow-apple-lg">
+      <h1 className="mb-6 text-2xl font-bold text-neutral-900 tracking-[-0.02em]">
         {t("auth.forgotPassword", "Forgot Password")}
       </h1>
       <form onSubmit={handleSubmit} className="space-y-4">
         <div>
           <label
             htmlFor="email"
-            className="mb-1 block text-sm font-medium text-neutral-700"
+            className="mb-1 block text-sm font-medium text-neutral-600"
           >
             {t("auth.email", "Email")}
           </label>
@@ -48,12 +48,12 @@ export default function ForgotPasswordPage() {
             required
             value={email}
             onChange={(e) => setEmail(e.target.value)}
-            className="w-full rounded-lg border border-neutral-200 px-3 py-2 text-neutral-900 focus:border-primary-500 focus:outline-none focus:ring-1 focus:ring-primary-500"
+            className="w-full rounded-[10px] border-0 bg-[#F1F5F9] px-3 py-2.5 text-neutral-900 focus:bg-white focus:outline-none focus:ring-2 focus:ring-primary-500/30 transition-all duration-[180ms]"
           />
         </div>
         <button
           type="submit"
-          className="w-full rounded-lg bg-primary-600 px-4 py-2 font-medium text-white hover:bg-primary-700"
+          className="w-full rounded-full bg-primary-600 px-4 py-2.5 font-medium text-white shadow-apple-sm hover:bg-primary-700 hover:-translate-y-0.5 hover:shadow-apple-md active:scale-[0.97] transition-all duration-[180ms]"
         >
           {t("auth.sendResetLink", "Send Reset Link")}
         </button>

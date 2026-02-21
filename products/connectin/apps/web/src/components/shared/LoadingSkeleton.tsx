@@ -2,6 +2,13 @@
 
 import { cn } from "@/lib/utils";
 
+const shimmerStyle = {
+  backgroundImage:
+    "linear-gradient(90deg, transparent 0%, rgba(255,255,255,0.4) 50%, transparent 100%)",
+  backgroundSize: "200% 100%",
+  animation: "shimmer 1.8s ease-in-out infinite",
+} as const;
+
 interface LoadingSkeletonProps {
   variant?: "text" | "circular" | "rectangular";
   width?: string;
@@ -12,7 +19,7 @@ interface LoadingSkeletonProps {
 
 /**
  * Skeleton loading placeholder that matches component dimensions.
- * Uses the design system's neutral-200 to neutral-100 pulse animation.
+ * Uses shimmer gradient animation over neutral background.
  */
 export function LoadingSkeleton({
   variant = "text",
@@ -28,7 +35,7 @@ export function LoadingSkeleton({
           "rounded-full bg-[#E2E8F0] dark:bg-[#334155] animate-pulse",
           className
         )}
-        style={{ width: width || "40px", height: height || "40px" }}
+        style={{ width: width || "40px", height: height || "40px", ...shimmerStyle }}
         aria-hidden="true"
       />
     );
@@ -41,7 +48,7 @@ export function LoadingSkeleton({
           "rounded-md bg-[#E2E8F0] dark:bg-[#334155] animate-pulse",
           className
         )}
-        style={{ width: width || "100%", height: height || "200px" }}
+        style={{ width: width || "100%", height: height || "200px", ...shimmerStyle }}
         aria-hidden="true"
       />
     );
@@ -52,11 +59,12 @@ export function LoadingSkeleton({
       {Array.from({ length: lines }).map((_, i) => (
         <div
           key={i}
-          className="h-4 rounded bg-[#E2E8F0] dark:bg-[#334155] animate-pulse"
+          className="h-4 rounded-[18px] bg-[#E2E8F0] dark:bg-[#334155] animate-pulse"
           style={{
             width:
               width ||
               (i === lines - 1 && lines > 1 ? "75%" : "100%"),
+            ...shimmerStyle,
           }}
         />
       ))}
@@ -70,7 +78,7 @@ export function LoadingSkeleton({
 export function PostCardSkeleton() {
   return (
     <div
-      className="rounded-md bg-white dark:bg-[#1E293B] p-4 shadow-sm"
+      className="rounded-[18px] bg-white dark:bg-[#1C1C1E] p-4 shadow-apple-md"
       aria-label="Loading post"
     >
       <div className="flex items-start gap-3">
