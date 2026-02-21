@@ -19,6 +19,7 @@ import AgentMonitor from './pages/AgentMonitor.js';
 import DependencyGraph from './pages/DependencyGraph.js';
 import KnowledgeBase from './pages/KnowledgeBase.js';
 import SprintBoard from './pages/SprintBoard.js';
+import ProductProgress from './pages/ProductProgress.js';
 import AlertCenter from './pages/AlertCenter.js';
 import Settings from './pages/Settings.js';
 import Simulate from './pages/Simulate.js';
@@ -31,6 +32,7 @@ export default function App() {
         <Route path="overview" element={<Overview />} />
         <Route path="products" element={<Products />} />
         <Route path="products/:name" element={<ProductDetail />} />
+        <Route path="products/:name/progress" element={<ProductProgress />} />
         <Route path="agents" element={<Agents />} />
         <Route path="agents/:id" element={<AgentDetail />} />
         <Route path="workflows" element={<Workflows />} />

@@ -16,6 +16,7 @@ import { dependencyGraphRoutes } from './routes/v1/dependency-graph.js';
 import { knowledgeBaseRoutes } from './routes/v1/knowledge-base.js';
 import { qualityGatesRoutes } from './routes/v1/quality-gates.js';
 import { sprintBoardRoutes } from './routes/v1/sprint-board.js';
+import { progressRoutes } from './routes/v1/progress.js';
 import { alertsRoutes } from './routes/v1/alerts.js';
 import { settingsRoutes } from './routes/v1/settings.js';
 import { simulationRoutes } from './routes/v1/simulations.js';
@@ -60,6 +61,7 @@ export async function buildApp() {
   await app.register(knowledgeBaseRoutes, { prefix: '/api/v1' });
   await app.register(qualityGatesRoutes, { prefix: '/api/v1' });
   await app.register(sprintBoardRoutes, { prefix: '/api/v1' });
+  await app.register(progressRoutes, { prefix: '/api/v1' });
   await app.register(alertsRoutes, { prefix: '/api/v1' });
   await app.register(settingsRoutes, { prefix: '/api/v1' });
   await app.register(simulationRoutes, { prefix: '/api/v1' });
