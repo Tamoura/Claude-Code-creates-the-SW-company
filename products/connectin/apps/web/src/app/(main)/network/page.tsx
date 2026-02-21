@@ -32,7 +32,7 @@ export default function NetworkPage() {
   if (error) {
     return (
       <div className="rounded-[18px] bg-white dark:bg-[#1C1C1E] p-8 text-center shadow-apple-md">
-        <p className="text-red-500">{error}</p>
+        <p className="text-red-700">{error}</p>
       </div>
     );
   }

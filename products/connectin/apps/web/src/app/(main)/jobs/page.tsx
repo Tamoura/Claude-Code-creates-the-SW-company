@@ -90,6 +90,7 @@ export default function JobsPage() {
 
   return (
     <div className="space-y-4">
+      <h1 className="sr-only">{t("nav.jobs") || "Jobs"}</h1>
       {/* Search */}
       <div className="rounded-[18px] bg-white dark:bg-[#1C1C1E] p-4 shadow-apple-md flex items-center gap-3">
         <input
@@ -163,7 +164,7 @@ export default function JobsPage() {
         </div>
       ) : error ? (
         <div className="rounded-[18px] bg-white dark:bg-[#1C1C1E] p-8 text-center shadow-apple-md">
-          <p className="text-red-500">{error}</p>
+          <p className="text-red-700">{error}</p>
         </div>
       ) : jobs.length === 0 ? (
         <div className="rounded-[18px] bg-white dark:bg-[#1C1C1E] p-8 text-center shadow-apple-md">

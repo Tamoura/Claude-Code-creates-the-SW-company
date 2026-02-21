@@ -36,6 +36,7 @@ export default function FeedPage() {
 
   return (
     <div className="space-y-4">
+      <h1 className="sr-only">{t("nav.home") || "Feed"}</h1>
       {/* Post Composer */}
       <div className="rounded-[18px] bg-white dark:bg-[#1C1C1E] p-4 shadow-apple-md">
         <textarea
@@ -52,7 +53,7 @@ export default function FeedPage() {
             className={[
               "text-xs tabular-nums",
               isOverLimit
-                ? "text-red-500 font-medium"
+                ? "text-red-700 font-medium"
                 : charsLeft < 100
                   ? "text-amber-500"
                   : "text-neutral-400",

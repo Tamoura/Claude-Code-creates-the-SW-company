@@ -71,9 +71,9 @@ export default function LandingPage() {
               className="rounded-[18px] bg-white p-6 text-center shadow-apple-md hover:-translate-y-1.5 hover:shadow-apple-lg transition-all duration-[300ms]"
             >
               <div className="mb-3 text-3xl">{ICON_MAP[icon]}</div>
-              <h3 className="font-semibold text-neutral-900 tracking-[-0.01em]">
+              <h2 className="font-semibold text-neutral-900 tracking-[-0.01em]">
                 {t(`landing.features.${key}.title`)}
-              </h3>
+              </h2>
               <p className="mt-1 text-sm text-neutral-500">
                 {t(`landing.features.${key}.description`)}
               </p>
