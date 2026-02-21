@@ -17,7 +17,7 @@ jest.mock("next/link", () => {
 // Mock react-i18next
 jest.mock("react-i18next", () => ({
   useTranslation: () => ({
-    t: (key: string, opts?: Record<string, unknown>) => {
+    t: (key: string) => {
       const translations: Record<string, string> = {
         "landing.hero.title":
           "Your Professional Network,\nBuilt Arabic-First",

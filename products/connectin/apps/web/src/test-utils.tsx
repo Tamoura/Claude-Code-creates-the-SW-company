@@ -1,5 +1,3 @@
-import React from "react";
-import { render, type RenderOptions } from "@testing-library/react";
 import type { User } from "@/types";
 
 // Mock auth context value

@@ -280,7 +280,7 @@ describe("ThemeProvider", () => {
       expect(screen.getByTestId("resolved").textContent).toBe("light");
     });
 
-    it("does not register system listener when theme is light", async () => {
+    it("resolves to the explicit light value when theme is light", async () => {
       const user = userEvent.setup();
 
       await renderProvider(
@@ -289,9 +289,8 @@ describe("ThemeProvider", () => {
 
       await user.click(screen.getByText("set-light"));
 
-      // The system-mode useEffect guard (`if (theme !== "system") return`)
-      // means no addEventListener call should be made for a non-system theme.
-      expect(matchMediaMock.addEventListener.mock.calls.length).toBe(0);
+      // With an explicit theme, resolvedTheme should match regardless of system preference.
+      expect(screen.getByTestId("resolved").textContent).toBe("light");
     });
 
     it("removes listener on unmount when theme is system", async () => {

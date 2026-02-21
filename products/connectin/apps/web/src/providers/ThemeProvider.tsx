@@ -4,6 +4,7 @@ import {
   createContext,
   useContext,
   useEffect,
+  useSyncExternalStore,
   useState,
   useCallback,
   type ReactNode,
@@ -24,6 +25,19 @@ interface ThemeProviderProps {
   defaultTheme?: Theme;
 }
 
+function getSystemPreference(): "light" | "dark" {
+  if (typeof window === "undefined") return "light";
+  return window.matchMedia("(prefers-color-scheme: dark)").matches
+    ? "dark"
+    : "light";
+}
+
+function subscribeToSystemPreference(callback: () => void) {
+  const mql = window.matchMedia("(prefers-color-scheme: dark)");
+  mql.addEventListener("change", callback);
+  return () => mql.removeEventListener("change", callback);
+}
+
 /**
  * Theme provider for dark/light mode.
  * Persists preference to localStorage and applies the 'dark'
@@ -33,44 +47,27 @@ export function ThemeProvider({
   children,
   defaultTheme = "system",
 }: ThemeProviderProps) {
-  const [theme, setThemeState] = useState<Theme>(defaultTheme);
-  const [resolvedTheme, setResolvedTheme] = useState<"light" | "dark">("light");
-
-  const resolveTheme = useCallback((t: Theme): "light" | "dark" => {
-    if (t === "system") {
-      return window.matchMedia("(prefers-color-scheme: dark)").matches
-        ? "dark"
-        : "light";
-    }
-    return t;
-  }, []);
-
-  useEffect(() => {
+  const getInitialTheme = useCallback((): Theme => {
+    if (typeof window === "undefined") return defaultTheme;
     const stored = localStorage.getItem("connectin-theme") as Theme | null;
-    if (stored) {
-      setThemeState(stored);
-    }
-  }, []);
+    return stored ?? defaultTheme;
+  }, [defaultTheme]);
+
+  const [theme, setThemeState] = useState<Theme>(getInitialTheme);
+
+  const systemPreference = useSyncExternalStore(
+    subscribeToSystemPreference,
+    getSystemPreference,
+    () => "light" as const
+  );
+
+  const resolvedTheme: "light" | "dark" =
+    theme === "system" ? systemPreference : theme;
 
   useEffect(() => {
-    const resolved = resolveTheme(theme);
-    setResolvedTheme(resolved);
-    document.documentElement.classList.toggle("dark", resolved === "dark");
+    document.documentElement.classList.toggle("dark", resolvedTheme === "dark");
     localStorage.setItem("connectin-theme", theme);
-  }, [theme, resolveTheme]);
-
-  useEffect(() => {
-    if (theme !== "system") return;
-
-    const mql = window.matchMedia("(prefers-color-scheme: dark)");
-    const handler = () => {
-      const resolved = resolveTheme("system");
-      setResolvedTheme(resolved);
-      document.documentElement.classList.toggle("dark", resolved === "dark");
-    };
-    mql.addEventListener("change", handler);
-    return () => mql.removeEventListener("change", handler);
-  }, [theme, resolveTheme]);
+  }, [theme, resolvedTheme]);
 
   const setTheme = useCallback((newTheme: Theme) => {
     setThemeState(newTheme);
