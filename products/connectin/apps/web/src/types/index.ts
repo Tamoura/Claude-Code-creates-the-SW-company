@@ -90,6 +90,17 @@ export interface Connection {
   requestedAt?: string;
 }
 
+export interface PendingRequest {
+  connectionId: string;
+  user: {
+    id: string;
+    displayName: string;
+    avatarUrl?: string;
+    headlineEn?: string;
+  };
+  requestedAt: string;
+}
+
 export type ConnectionStatus =
   | "none"
   | "pending_sent"
