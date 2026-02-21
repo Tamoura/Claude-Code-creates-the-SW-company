@@ -75,7 +75,7 @@ export default function RegisterPage() {
       </div>
 
       {submitError && (
-        <div className="mb-4 rounded-lg bg-error-50 p-3 text-sm text-error-700">
+        <div role="alert" className="mb-4 rounded-lg bg-error-50 p-3 text-sm text-error-700">
           {submitError}
         </div>
       )}
@@ -91,12 +91,15 @@ export default function RegisterPage() {
           <input
             id="displayName"
             type="text"
+            autoComplete="name"
+            aria-describedby={errors.displayName ? "displayName-error" : undefined}
+            aria-invalid={!!errors.displayName}
             value={displayName}
             onChange={(e) => setDisplayName(e.target.value)}
             className="w-full rounded-lg border border-neutral-200 px-3 py-2 text-neutral-900 placeholder:text-neutral-400 focus:border-primary-500 focus:outline-none focus:ring-1 focus:ring-primary-500"
           />
           {errors.displayName && (
-            <p className="mt-1 text-sm text-error-700">
+            <p id="displayName-error" role="alert" className="mt-1 text-sm text-error-700">
               {errors.displayName}
             </p>
           )}
@@ -112,13 +115,16 @@ export default function RegisterPage() {
           <input
             id="email"
             type="email"
+            autoComplete="email"
+            aria-describedby={errors.email ? "email-error" : undefined}
+            aria-invalid={!!errors.email}
             value={email}
             onChange={(e) => setEmail(e.target.value)}
             className="w-full rounded-lg border border-neutral-200 px-3 py-2 text-neutral-900 placeholder:text-neutral-400 focus:border-primary-500 focus:outline-none focus:ring-1 focus:ring-primary-500"
             placeholder="name@example.com"
           />
           {errors.email && (
-            <p className="mt-1 text-sm text-error-700">{errors.email}</p>
+            <p id="email-error" role="alert" className="mt-1 text-sm text-error-700">{errors.email}</p>
           )}
         </div>
 
@@ -132,15 +138,18 @@ export default function RegisterPage() {
           <input
             id="password"
             type="password"
+            autoComplete="new-password"
+            aria-describedby={errors.password ? "password-error password-hint" : "password-hint"}
+            aria-invalid={!!errors.password}
             value={password}
             onChange={(e) => setPassword(e.target.value)}
             className="w-full rounded-lg border border-neutral-200 px-3 py-2 text-neutral-900 placeholder:text-neutral-400 focus:border-primary-500 focus:outline-none focus:ring-1 focus:ring-primary-500"
           />
-          <p className="mt-1 text-xs text-neutral-400">
+          <p id="password-hint" className="mt-1 text-xs text-neutral-400">
             {t("passwordHint")}
           </p>
           {errors.password && (
-            <p className="mt-1 text-sm text-error-700">{errors.password}</p>
+            <p id="password-error" role="alert" className="mt-1 text-sm text-error-700">{errors.password}</p>
           )}
         </div>
 
@@ -154,12 +163,15 @@ export default function RegisterPage() {
           <input
             id="confirmPassword"
             type="password"
+            autoComplete="new-password"
+            aria-describedby={errors.confirmPassword ? "confirmPassword-error" : undefined}
+            aria-invalid={!!errors.confirmPassword}
             value={confirmPassword}
             onChange={(e) => setConfirmPassword(e.target.value)}
             className="w-full rounded-lg border border-neutral-200 px-3 py-2 text-neutral-900 placeholder:text-neutral-400 focus:border-primary-500 focus:outline-none focus:ring-1 focus:ring-primary-500"
           />
           {errors.confirmPassword && (
-            <p className="mt-1 text-sm text-error-700">
+            <p id="confirmPassword-error" role="alert" className="mt-1 text-sm text-error-700">
               {errors.confirmPassword}
             </p>
           )}

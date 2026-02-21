@@ -41,6 +41,7 @@ export async function cleanDatabase(): Promise<void> {
   await db.profileSkill.deleteMany();
   await db.skill.deleteMany();
   await db.experience.deleteMany();
+  await db.consent.deleteMany();
   await db.session.deleteMany();
   await db.profile.deleteMany();
   await db.user.deleteMany();

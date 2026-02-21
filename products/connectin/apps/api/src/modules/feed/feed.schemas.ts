@@ -1,7 +1,11 @@
 import { z } from 'zod';
+import sanitizeHtml from 'sanitize-html';
 
 function stripHtml(str: string): string {
-  return str.replace(/<[^>]*>/g, '');
+  return sanitizeHtml(str, {
+    allowedTags: [],
+    allowedAttributes: {},
+  });
 }
 
 export const createPostSchema = z.object({

@@ -15,7 +15,6 @@ export interface UserResponse {
 export interface RegisterResponse {
   userId: string;
   email: string;
-  verificationToken: string;
   message: string;
 }
 

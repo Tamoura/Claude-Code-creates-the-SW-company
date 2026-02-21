@@ -35,7 +35,7 @@ const nextConfig: NextConfig = {
             "style-src 'self' 'unsafe-inline'",
             "font-src 'self' https://fonts.gstatic.com",
             "img-src 'self' data: https:",
-            "connect-src 'self' http://localhost:5007",
+            `connect-src 'self' ${process.env.NEXT_PUBLIC_API_URL || 'http://localhost:5007'}`,
             "frame-ancestors 'none'",
             "base-uri 'self'",
             "form-action 'self'",

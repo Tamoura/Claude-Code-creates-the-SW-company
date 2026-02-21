@@ -10,6 +10,7 @@ import rateLimiterPlugin from './plugins/rate-limiter';
 import requestIdPlugin from './plugins/request-id';
 import accessLogPlugin from './plugins/access-log';
 import swaggerPlugin from './plugins/swagger';
+import csrfPlugin from './plugins/csrf';
 
 // Routes
 import healthRoutes from './modules/health/health.routes';
@@ -17,6 +18,7 @@ import authRoutes from './modules/auth/auth.routes';
 import profileRoutes from './modules/profile/profile.routes';
 import connectionRoutes from './modules/connection/connection.routes';
 import feedRoutes from './modules/feed/feed.routes';
+import consentRoutes from './modules/consent/consent.routes';
 
 export interface BuildAppOptions {
   skipRateLimit?: boolean;
@@ -48,6 +50,8 @@ export async function buildApp(
     await app.register(rateLimiterPlugin);
   }
 
+  await app.register(csrfPlugin);
+
   if (process.env.NODE_ENV !== 'test') {
     await app.register(accessLogPlugin);
     await app.register(swaggerPlugin);
@@ -66,6 +70,9 @@ export async function buildApp(
   });
   await app.register(feedRoutes, {
     prefix: '/api/v1/feed',
+  });
+  await app.register(consentRoutes, {
+    prefix: '/api/v1/consent',
   });
 
   return app;

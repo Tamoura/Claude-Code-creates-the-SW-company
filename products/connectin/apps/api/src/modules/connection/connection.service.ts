@@ -111,86 +111,90 @@ export class ConnectionService {
     connectionId: string,
     userId: string
   ) {
-    const connection =
-      await this.prisma.connection.findUnique({
+    return this.prisma.$transaction(async (tx) => {
+      const connection =
+        await tx.connection.findUnique({
+          where: { id: connectionId },
+        });
+
+      if (!connection) {
+        throw new NotFoundError('Connection request not found');
+      }
+
+      if (connection.receiverId !== userId) {
+        throw new ForbiddenError(
+          'Only the recipient can accept this request'
+        );
+      }
+
+      if (connection.status !== 'PENDING') {
+        throw new BadRequestError(
+          'Connection request is no longer pending'
+        );
+      }
+
+      const updated = await tx.connection.update({
         where: { id: connectionId },
+        data: {
+          status: 'ACCEPTED',
+          respondedAt: new Date(),
+        },
       });
 
-    if (!connection) {
-      throw new NotFoundError('Connection request not found');
-    }
-
-    if (connection.receiverId !== userId) {
-      throw new ForbiddenError(
-        'Only the recipient can accept this request'
-      );
-    }
-
-    if (connection.status !== 'PENDING') {
-      throw new BadRequestError(
-        'Connection request is no longer pending'
-      );
-    }
-
-    const updated = await this.prisma.connection.update({
-      where: { id: connectionId },
-      data: {
-        status: 'ACCEPTED',
-        respondedAt: new Date(),
-      },
+      return {
+        connectionId: updated.id,
+        status: updated.status,
+        respondedAt: updated.respondedAt,
+      };
     });
-
-    return {
-      connectionId: updated.id,
-      status: updated.status,
-      respondedAt: updated.respondedAt,
-    };
   }
 
   async rejectRequest(
     connectionId: string,
     userId: string
   ) {
-    const connection =
-      await this.prisma.connection.findUnique({
+    return this.prisma.$transaction(async (tx) => {
+      const connection =
+        await tx.connection.findUnique({
+          where: { id: connectionId },
+        });
+
+      if (!connection) {
+        throw new NotFoundError('Connection request not found');
+      }
+
+      if (connection.receiverId !== userId) {
+        throw new ForbiddenError(
+          'Only the recipient can reject this request'
+        );
+      }
+
+      if (connection.status !== 'PENDING') {
+        throw new BadRequestError(
+          'Connection request is no longer pending'
+        );
+      }
+
+      const cooldownUntil = new Date();
+      cooldownUntil.setDate(
+        cooldownUntil.getDate() + COOLDOWN_DAYS
+      );
+
+      const updated = await tx.connection.update({
         where: { id: connectionId },
+        data: {
+          status: 'REJECTED',
+          respondedAt: new Date(),
+          cooldownUntil,
+        },
       });
 
-    if (!connection) {
-      throw new NotFoundError('Connection request not found');
-    }
-
-    if (connection.receiverId !== userId) {
-      throw new ForbiddenError(
-        'Only the recipient can reject this request'
-      );
-    }
-
-    if (connection.status !== 'PENDING') {
-      throw new BadRequestError(
-        'Connection request is no longer pending'
-      );
-    }
-
-    const cooldownUntil = new Date();
-    cooldownUntil.setDate(
-      cooldownUntil.getDate() + COOLDOWN_DAYS
-    );
-
-    const updated = await this.prisma.connection.update({
-      where: { id: connectionId },
-      data: {
-        status: 'REJECTED',
-        respondedAt: new Date(),
-        cooldownUntil,
-      },
+      return {
+        connectionId: updated.id,
+        status: updated.status,
+        cooldownUntil: updated.cooldownUntil,
+      };
     });
-
-    return {
-      connectionId: updated.id,
-      status: updated.status,
-      cooldownUntil: updated.cooldownUntil,
-    };
   }
 
   async listConnections(

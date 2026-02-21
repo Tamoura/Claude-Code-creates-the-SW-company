@@ -46,7 +46,10 @@ const authRoutes: FastifyPluginAsync = async (fastify) => {
       );
     }
 
-    const data = await authService.login(result.data);
+    const data = await authService.login(result.data, {
+      ip: request.ip,
+      userAgent: request.headers['user-agent'],
+    });
 
     // Set refresh token as httpOnly cookie
     reply.setCookie('refreshToken', data.refreshToken, {
@@ -63,7 +66,14 @@ const authRoutes: FastifyPluginAsync = async (fastify) => {
   });
 
   // POST /api/v1/auth/refresh
-  fastify.post('/refresh', async (request, reply) => {
+  fastify.post('/refresh', {
+    config: {
+      rateLimit: {
+        max: 10,
+        timeWindow: '1 minute',
+      },
+    },
+  }, async (request, reply) => {
     const refreshToken =
       (request.cookies as Record<string, string | undefined>)
         ?.refreshToken ||
@@ -113,7 +123,15 @@ const authRoutes: FastifyPluginAsync = async (fastify) => {
   // DELETE /api/v1/auth/account
   fastify.delete(
     '/account',
-    { preHandler: [fastify.authenticate] },
+    {
+      preHandler: [fastify.authenticate],
+      config: {
+        rateLimit: {
+          max: 3,
+          timeWindow: '1 hour',
+        },
+      },
+    },
     async (request, reply) => {
       await authService.deleteAccount(request.user.sub);
 
@@ -130,7 +148,15 @@ const authRoutes: FastifyPluginAsync = async (fastify) => {
   // GET /api/v1/auth/export — GDPR data export
   fastify.get(
     '/export',
-    { preHandler: [fastify.authenticate] },
+    {
+      preHandler: [fastify.authenticate],
+      config: {
+        rateLimit: {
+          max: 5,
+          timeWindow: '1 hour',
+        },
+      },
+    },
     async (request, reply) => {
       const data = await authService.exportUserData(
         request.user.sub
@@ -142,6 +168,14 @@ const authRoutes: FastifyPluginAsync = async (fastify) => {
   // GET /api/v1/auth/verify-email/:token
   fastify.get<{ Params: { token: string } }>(
     '/verify-email/:token',
+    {
+      config: {
+        rateLimit: {
+          max: 5,
+          timeWindow: '1 minute',
+        },
+      },
+    },
     async (request, reply) => {
       const data = await authService.verifyEmail(
         request.params.token

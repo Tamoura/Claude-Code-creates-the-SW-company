@@ -2,6 +2,7 @@ import {
   getApp,
   closeApp,
   cleanDatabase,
+  getPrisma,
   authHeaders,
 } from './helpers';
 
@@ -274,22 +275,30 @@ describe('Auth Module', () => {
     () => {
       it('verifies email with valid token', async () => {
         const app = await getApp();
+        const crypto = await import('crypto');
+        const bcrypt = await import('bcrypt');
 
-        // Register
-        const regRes = await app.inject({
-          method: 'POST',
-          url: '/api/v1/auth/register',
-          payload: {
+        // Create user directly with a known verification token
+        const rawToken = crypto.randomBytes(32).toString('hex');
+        const tokenHash = crypto
+          .createHash('sha256')
+          .update(rawToken)
+          .digest('hex');
+        const passwordHash = await bcrypt.hash('SecureP@ss1', 10);
+
+        const db = getPrisma();
+        await db.user.create({
+          data: {
             email: 'verify@example.com',
-            password: 'SecureP@ss1',
+            passwordHash,
             displayName: 'Verify User',
+            verificationToken: tokenHash,
+            verificationExpires: new Date(
+              Date.now() + 24 * 60 * 60 * 1000
+            ),
+            profile: { create: { completenessScore: 0 } },
           },
         });
-
-        const regBody = JSON.parse(regRes.body);
-        const rawToken = regBody.data.verificationToken;
-
-        expect(rawToken).toBeDefined();
 
         const res = await app.inject({
           method: 'GET',

@@ -29,9 +29,8 @@ export class AuthService {
       // Return same success shape to prevent user enumeration.
       // In production, also send a "someone tried to register" email.
       return {
-        userId: existing.id,
-        email: existing.email,
-        verificationToken: '',
+        userId: crypto.randomUUID(),
+        email: input.email.toLowerCase(),
         message:
           'Verification email sent. Please check your inbox.',
       };
@@ -63,16 +62,19 @@ export class AuthService {
       },
     });
 
+    // Token should only be sent via email, never in API response
     return {
       userId: user.id,
       email: user.email,
-      verificationToken: rawVerificationToken,
       message:
         'Verification email sent. Please check your inbox.',
     };
   }
 
-  async login(input: LoginInput): Promise<LoginResponse> {
+  async login(
+    input: LoginInput,
+    meta?: { ip?: string; userAgent?: string }
+  ): Promise<LoginResponse> {
     const user = await this.prisma.user.findUnique({
       where: { email: input.email.toLowerCase() },
     });
@@ -81,19 +83,8 @@ export class AuthService {
       throw new UnauthorizedError('Invalid email or password');
     }
 
-    if (user.status === 'SUSPENDED') {
-      throw new UnauthorizedError(
-        'Account is suspended. Contact support.'
-      );
-    }
-
-    if (user.status === 'DEACTIVATED') {
-      throw new UnauthorizedError(
-        'Account is deactivated. Contact support to reactivate.'
-      );
-    }
-
-    if (user.status === 'DELETED') {
+    // Unified error message for all non-active statuses to prevent enumeration
+    if (user.status !== 'ACTIVE') {
       throw new UnauthorizedError('Invalid email or password');
     }
 
@@ -112,14 +103,22 @@ export class AuthService {
       user.passwordHash
     );
     if (!isValid) {
-      const attempts = (user.failedLoginAttempts ?? 0) + 1;
-      const lockout = attempts >= 5
-        ? { lockedUntil: new Date(Date.now() + 15 * 60 * 1000) }
-        : {};
-      await this.prisma.user.update({
+      // Atomic increment to prevent race condition on concurrent failed logins
+      const updated = await this.prisma.user.update({
         where: { id: user.id },
-        data: { failedLoginAttempts: attempts, ...lockout },
+        data: {
+          failedLoginAttempts: { increment: 1 },
+        },
+        select: { failedLoginAttempts: true },
       });
+      if (updated.failedLoginAttempts >= 5) {
+        await this.prisma.user.update({
+          where: { id: user.id },
+          data: {
+            lockedUntil: new Date(Date.now() + 15 * 60 * 1000),
+          },
+        });
+      }
       throw new UnauthorizedError('Invalid email or password');
     }
 
@@ -129,7 +128,12 @@ export class AuthService {
       user.role
     );
 
-    await this.createSession(user.id, tokens.refreshToken);
+    await this.createSession(
+      user.id,
+      tokens.refreshToken,
+      meta?.ip,
+      meta?.userAgent
+    );
 
     await this.prisma.user.update({
       where: { id: user.id },
@@ -259,13 +263,17 @@ export class AuthService {
 
   private async createSession(
     userId: string,
-    refreshToken: string
+    refreshToken: string,
+    ipAddress?: string,
+    userAgent?: string
   ): Promise<void> {
     const tokenHash = this.hashToken(refreshToken);
     await this.prisma.session.create({
       data: {
         userId,
         refreshTokenHash: tokenHash,
+        ipAddress: ipAddress ?? null,
+        userAgent: userAgent ?? null,
         expiresAt: new Date(
           Date.now() + 30 * 24 * 60 * 60 * 1000
         ),
@@ -283,10 +291,38 @@ export class AuthService {
             profileSkills: { include: { skill: true } },
           },
         },
-        posts: { where: { isDeleted: false } },
-        comments: { where: { isDeleted: false } },
-        sentConnections: true,
-        receivedConnections: true,
+        posts: true,
+        comments: true,
+        likes: { include: { post: { select: { id: true, content: true } } } },
+        sentConnections: {
+          include: {
+            receiver: { select: { id: true, displayName: true } },
+          },
+        },
+        receivedConnections: {
+          include: {
+            sender: { select: { id: true, displayName: true } },
+          },
+        },
+        sessions: {
+          select: {
+            id: true,
+            ipAddress: true,
+            userAgent: true,
+            createdAt: true,
+            expiresAt: true,
+          },
+        },
+        consents: {
+          select: {
+            type: true,
+            granted: true,
+            version: true,
+            grantedAt: true,
+            revokedAt: true,
+            createdAt: true,
+          },
+        },
       },
     });
 
@@ -294,8 +330,15 @@ export class AuthService {
       throw new BadRequestError('User not found');
     }
 
-    // Strip internal fields
-    const { passwordHash: _ph, verificationToken: _vt, resetToken: _rt, ...safeUser } = user;
+    // Strip internal/sensitive fields
+    const {
+      passwordHash: _ph,
+      verificationToken: _vt,
+      resetToken: _rt,
+      resetTokenExpires: _rte,
+      verificationExpires: _ve,
+      ...safeUser
+    } = user;
     return {
       exportedAt: new Date().toISOString(),
       user: safeUser,
@@ -303,25 +346,62 @@ export class AuthService {
   }
 
   async deleteAccount(userId: string): Promise<void> {
-    // Soft delete: set status to DELETED and clear PII
-    await this.prisma.user.update({
-      where: { id: userId },
-      data: {
-        status: 'DELETED',
-        email: `deleted-${userId}@deleted.connectin`,
-        displayName: 'Deleted User',
-        passwordHash: null,
-        verificationToken: null,
-        verificationExpires: null,
-        resetToken: null,
-        resetTokenExpires: null,
-      },
-    });
-
-    // Invalidate all sessions
-    await this.prisma.session.deleteMany({
-      where: { userId },
-    });
+    await this.prisma.$transaction([
+      // Delete likes by this user
+      this.prisma.like.deleteMany({
+        where: { userId },
+      }),
+      // Soft-delete comments by this user
+      this.prisma.comment.updateMany({
+        where: { authorId: userId },
+        data: { isDeleted: true, content: '[deleted]' },
+      }),
+      // Soft-delete posts by this user
+      this.prisma.post.updateMany({
+        where: { authorId: userId },
+        data: { isDeleted: true, content: '[deleted]' },
+      }),
+      // Delete connections (both sent and received)
+      this.prisma.connection.deleteMany({
+        where: {
+          OR: [{ senderId: userId }, { receiverId: userId }],
+        },
+      }),
+      // Delete profile skills
+      this.prisma.profileSkill.deleteMany({
+        where: { profile: { userId } },
+      }),
+      // Delete experiences
+      this.prisma.experience.deleteMany({
+        where: { profile: { userId } },
+      }),
+      // Delete profile
+      this.prisma.profile.deleteMany({
+        where: { userId },
+      }),
+      // Delete consents
+      this.prisma.consent.deleteMany({
+        where: { userId },
+      }),
+      // Invalidate all sessions
+      this.prisma.session.deleteMany({
+        where: { userId },
+      }),
+      // Soft delete user: set status to DELETED and clear PII
+      this.prisma.user.update({
+        where: { id: userId },
+        data: {
+          status: 'DELETED',
+          email: `deleted-${userId}@deleted.connectin`,
+          displayName: 'Deleted User',
+          passwordHash: null,
+          verificationToken: null,
+          verificationExpires: null,
+          resetToken: null,
+          resetTokenExpires: null,
+        },
+      }),
+    ]);
   }
 
   private hashToken(token: string): string {

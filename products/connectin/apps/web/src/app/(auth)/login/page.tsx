@@ -59,7 +59,7 @@ export default function LoginPage() {
       </div>
 
       {submitError && (
-        <div className="mb-4 rounded-lg bg-error-50 p-3 text-sm text-error-700">
+        <div role="alert" className="mb-4 rounded-lg bg-error-50 p-3 text-sm text-error-700">
           {submitError}
         </div>
       )}
@@ -75,13 +75,16 @@ export default function LoginPage() {
           <input
             id="email"
             type="email"
+            autoComplete="email"
+            aria-describedby={errors.email ? "email-error" : undefined}
+            aria-invalid={!!errors.email}
             value={email}
             onChange={(e) => setEmail(e.target.value)}
             className="w-full rounded-lg border border-neutral-200 px-3 py-2 text-neutral-900 placeholder:text-neutral-400 focus:border-primary-500 focus:outline-none focus:ring-1 focus:ring-primary-500"
             placeholder="name@example.com"
           />
           {errors.email && (
-            <p className="mt-1 text-sm text-error-700">{errors.email}</p>
+            <p id="email-error" role="alert" className="mt-1 text-sm text-error-700">{errors.email}</p>
           )}
         </div>
 
@@ -95,12 +98,15 @@ export default function LoginPage() {
           <input
             id="password"
             type="password"
+            autoComplete="current-password"
+            aria-describedby={errors.password ? "password-error" : undefined}
+            aria-invalid={!!errors.password}
             value={password}
             onChange={(e) => setPassword(e.target.value)}
             className="w-full rounded-lg border border-neutral-200 px-3 py-2 text-neutral-900 placeholder:text-neutral-400 focus:border-primary-500 focus:outline-none focus:ring-1 focus:ring-primary-500"
           />
           {errors.password && (
-            <p className="mt-1 text-sm text-error-700">{errors.password}</p>
+            <p id="password-error" role="alert" className="mt-1 text-sm text-error-700">{errors.password}</p>
           )}
         </div>
 

@@ -69,6 +69,7 @@ model User {
   posts               Post[]
   comments            Comment[]
   likes               Like[]
+  consents            Consent[]
 
   @@index([status, createdAt])
   @@index([verificationToken])
@@ -226,6 +227,35 @@ model Comment {
 
   @@index([postId, createdAt(sort: Desc)])
   @@map("comments")
+}
+
+// ─── Consents ─────────────────────────────────────────────────
+
+enum ConsentType {
+  TERMS_OF_SERVICE
+  PRIVACY_POLICY
+  MARKETING_EMAIL
+  DATA_PROCESSING
+  ANALYTICS
+}
+
+model Consent {
+  id          String      @id @default(uuid())
+  userId      String      @map("user_id")
+  type        ConsentType
+  granted     Boolean     @default(false)
+  version     String      @db.VarChar(20)
+  ipAddress   String?     @map("ip_address")
+  userAgent   String?     @map("user_agent")
+  grantedAt   DateTime?   @map("granted_at")
+  revokedAt   DateTime?   @map("revoked_at")
+  createdAt   DateTime    @default(now()) @map("created_at")
+
+  user        User        @relation(fields: [userId], references: [id], onDelete: Cascade)
+
+  @@unique([userId, type])
+  @@index([userId])
+  @@map("consents")
 }
 
 // ─── Likes ──────────────────────────────────────────────────
