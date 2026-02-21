@@ -22,8 +22,10 @@ jest.mock("next/link", () => {
 
 // Mock next/navigation
 const mockUsePathname = jest.fn(() => "/feed");
+const mockPush = jest.fn();
 jest.mock("next/navigation", () => ({
   usePathname: () => mockUsePathname(),
+  useRouter: () => ({ push: mockPush }),
 }));
 
 // Mock react-i18next

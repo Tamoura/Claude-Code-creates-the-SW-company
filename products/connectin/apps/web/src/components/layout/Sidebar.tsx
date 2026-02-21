@@ -10,7 +10,9 @@ import {
   MessageCircle,
   Bookmark,
   Settings,
+  LogOut,
 } from "lucide-react";
+import { useRouter } from "next/navigation";
 import { UserAvatar } from "@/components/shared/UserAvatar";
 import { useAuthContext } from "@/providers/AuthProvider";
 import { cn } from "@/lib/utils";
@@ -23,7 +25,8 @@ import { cn } from "@/lib/utils";
 export function Sidebar() {
   const { t } = useTranslation();
   const pathname = usePathname();
-  const { user } = useAuthContext();
+  const { user, logout } = useAuthContext();
+  const router = useRouter();
 
   const navItems = [
     { href: "/feed", icon: Home, label: t("nav.home") },
@@ -116,7 +119,25 @@ export function Sidebar() {
       </nav>
 
       {/* Footer */}
-      <div className="mt-auto p-4 border-t border-[#E2E8F0] dark:border-white/8">
+      <div className="mt-auto p-4 border-t border-[#E2E8F0] dark:border-white/8 space-y-3">
+        {/* Sign out */}
+        <button
+          type="button"
+          onClick={async () => {
+            await logout();
+            router.push("/login");
+          }}
+          className={cn(
+            "flex items-center gap-3 px-4 py-2.5 mx-2 rounded-xl w-full",
+            "text-sm text-[#EF4444] hover:bg-red-50 dark:hover:bg-red-900/20",
+            "transition-all duration-[180ms]",
+            "focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-red-400"
+          )}
+        >
+          <LogOut className="h-5 w-5" aria-hidden="true" />
+          <span>Sign Out</span>
+        </button>
+
         <div className="text-xs text-[#94A3B8] dark:text-[#64748B] space-y-1">
           <div className="flex gap-2">
             <Link href="/about" className="hover:underline">

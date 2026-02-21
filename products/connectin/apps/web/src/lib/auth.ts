@@ -6,6 +6,33 @@
 
 let accessToken: string | null = null;
 
+/**
+ * Module-level singleton for token refresh calls.
+ *
+ * React Strict Mode (development) fires useEffect twice: mount → cleanup →
+ * mount. Without this guard both mounts would call POST /auth/refresh. Since
+ * the endpoint rotates the refresh token, the second call would receive an
+ * already-rotated (invalid) token and fail.
+ *
+ * `getOrStartRefresh` ensures only ONE in-flight refresh promise exists at a
+ * time. All callers share the same promise; when it settles the singleton is
+ * cleared so the next genuine page-load can refresh again.
+ */
+// eslint-disable-next-line @typescript-eslint/no-explicit-any
+let _pendingRefresh: Promise<any> | null = null;
+
+export function getOrStartRefresh<T>(
+  doRefresh: () => Promise<T>
+): Promise<T> {
+  if (_pendingRefresh) return _pendingRefresh as Promise<T>;
+  const p = doRefresh();
+  _pendingRefresh = p;
+  p.finally(() => {
+    if (_pendingRefresh === p) _pendingRefresh = null;
+  });
+  return p;
+}
+
 export function setAccessToken(token: string | null): void {
   accessToken = token;
 }

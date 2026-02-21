@@ -20,10 +20,12 @@ export function middleware(request: NextRequest) {
     return NextResponse.next();
   }
 
-  // Check for refresh token cookie set by backend on login
-  const token = request.cookies.get("refreshToken")?.value;
+  // Check for the session flag cookie set by the client after login.
+  // The httpOnly refreshToken is scoped to the API origin so the middleware
+  // cannot read it directly; we use a lightweight "session" cookie instead.
+  const session = request.cookies.get("session")?.value;
 
-  if (!token) {
+  if (!session) {
     const loginUrl = new URL("/login", request.url);
     loginUrl.searchParams.set("redirect", pathname);
     return NextResponse.redirect(loginUrl);

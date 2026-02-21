@@ -168,7 +168,7 @@ describe("RegisterPage", () => {
     });
   });
 
-  it("redirects to feed on successful registration", async () => {
+  it("shows email verification screen on successful registration", async () => {
     mockRegister.mockResolvedValue(true);
     render(<RegisterPage />);
 
@@ -184,7 +184,9 @@ describe("RegisterPage", () => {
     );
 
     await waitFor(() => {
-      expect(mockPush).toHaveBeenCalledWith("/feed");
+      // Register endpoint never returns an access token — the page shows a
+      // "check your email" confirmation instead of navigating to /feed.
+      expect(screen.getByText(/check your email/i)).toBeInTheDocument();
     });
   });
 

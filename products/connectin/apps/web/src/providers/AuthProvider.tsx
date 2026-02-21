@@ -8,6 +8,7 @@ interface AuthContextValue {
   user: User | null;
   isLoading: boolean;
   isAuthenticated: boolean;
+  isInitializing: boolean;
   error: string | null;
   login: (email: string, password: string) => Promise<boolean>;
   register: (

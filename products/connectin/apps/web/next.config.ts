@@ -31,10 +31,11 @@ const nextConfig: NextConfig = {
           key: "Content-Security-Policy",
           value: [
             "default-src 'self'",
-            // Next.js App Router does not require 'unsafe-inline' for scripts.
-            // 'unsafe-eval' is needed in development only for Fast Refresh/HMR.
+            // Next.js 16 Turbopack injects inline <script> tags for React RSC
+            // hydration bootstrapping in dev mode — 'unsafe-inline' is required.
+            // Production builds use hash/nonce-based CSP via a nonce middleware.
             process.env.NODE_ENV === "development"
-              ? "script-src 'self' 'unsafe-eval'"
+              ? "script-src 'self' 'unsafe-eval' 'unsafe-inline'"
               : "script-src 'self'",
             // Next.js requires 'unsafe-inline' for styles because it injects
             // CSS via <style> tags for Tailwind and CSS-in-JS. This is a known
@@ -43,7 +44,10 @@ const nextConfig: NextConfig = {
             "style-src 'self' 'unsafe-inline'",
             "font-src 'self' https://fonts.gstatic.com",
             "img-src 'self' data: https:",
-            `connect-src 'self' ${process.env.NEXT_PUBLIC_API_URL || "http://localhost:5007"}`,
+            // Use the API origin only (no path) — CSP path-matching without a
+            // trailing slash matches ONLY that exact path, not sub-paths.
+            // e.g. http://localhost:5007/api/v1 would block /api/v1/auth/login.
+            `connect-src 'self' ${new URL(process.env.NEXT_PUBLIC_API_URL || "http://localhost:5007").origin}`,
             "frame-ancestors 'none'",
             "base-uri 'self'",
             "form-action 'self'",
