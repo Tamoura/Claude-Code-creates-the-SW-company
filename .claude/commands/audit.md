@@ -19,7 +19,7 @@ Example:
 
 ## What This Command Does
 
-This command invokes the **Code Reviewer** agent to perform a full professional audit of the specified product. The audit follows a strict methodology and produces a **decision-ready** report suitable for:
+This command invokes the **Code Reviewer** agent to perform a full professional audit of the specified product across **11 technical dimensions** (Security, Architecture, Test Coverage, Code Quality, Performance, DevOps, Runability, Accessibility, Privacy, Observability, API Design) against **9 industry frameworks** (OWASP Top 10, OWASP API Top 10, OWASP ASVS, CWE/SANS Top 25, WCAG 2.1 AA, GDPR, ISO 25010, DORA, SRE Golden Signals). The audit produces a **decision-ready** report suitable for:
 - CEO / Board presentations
 - Investment committee reviews
 - Regulated customer due diligence
@@ -50,6 +50,10 @@ Use parallel exploration agents to analyze the product thoroughly:
 3. **Plugins, Utils & Schema Agent**: Read all files in `apps/api/src/plugins/`, `apps/api/src/utils/`, and `apps/api/prisma/schema.prisma`. Analyze authentication, encryption, database schema, validation, and configuration.
 
 4. **Tests & CI/CD Agent**: Read all files in `apps/api/tests/`, `.github/workflows/`, and `apps/web/` (if exists). Analyze test coverage, test quality, CI pipeline security, and deployment safety.
+
+5. **Accessibility & UX Agent**: If `apps/web/` exists, analyze all frontend components for WCAG 2.1 AA compliance: color contrast, alt text, form labels, keyboard navigation, heading hierarchy, ARIA attributes, focus management, responsive design. Note: run Lighthouse Accessibility if possible.
+
+6. **Privacy & Observability Agent**: Scan all source files for: PII handling (storage, logging, transmission), consent mechanisms, data deletion capabilities, data export features, retention policies, structured logging configuration, health check endpoints, monitoring setup, error tracking, tracing configuration.
 
 ### Step 3: Synthesize Findings
 
@@ -254,9 +258,133 @@ Map findings to compliance frameworks with explicit control-by-control assessmen
 | A.16 Information Security Incident Management | Pass / Partial / Fail | Specific findings |
 | A.18 Compliance | Pass / Partial / Fail | Specific findings |
 
-**GDPR/PDPL** (if applicable): Data handling assessment with specific gaps.
+**OWASP API Security Top 10 (2023):**
+
+| Risk | Status | Evidence / Gap |
+|------|--------|----------------|
+| API1: Broken Object Level Authorization (BOLA) | Pass / Partial / Fail | Specific findings |
+| API2: Broken Authentication | Pass / Partial / Fail | Specific findings |
+| API3: Broken Object Property Level Authorization | Pass / Partial / Fail | Specific findings |
+| API4: Unrestricted Resource Consumption | Pass / Partial / Fail | Specific findings |
+| API5: Broken Function Level Authorization (BFLA) | Pass / Partial / Fail | Specific findings |
+| API6: Unrestricted Sensitive Business Flows | Pass / Partial / Fail | Specific findings |
+| API7: Server Side Request Forgery (SSRF) | Pass / Partial / Fail | Specific findings |
+| API8: Security Misconfiguration | Pass / Partial / Fail | Specific findings |
+| API9: Improper Inventory Management | Pass / Partial / Fail | Specific findings |
+| API10: Unsafe Consumption of APIs | Pass / Partial / Fail | Specific findings |
+
+**WCAG 2.1 AA (Accessibility):**
+
+| Principle | Status | Evidence / Gap |
+|-----------|--------|----------------|
+| 1. Perceivable (text alternatives, contrast, adaptable) | Pass / Partial / Fail | Specific findings |
+| 2. Operable (keyboard, timing, navigation) | Pass / Partial / Fail | Specific findings |
+| 3. Understandable (readable, predictable, input assistance) | Pass / Partial / Fail | Specific findings |
+| 4. Robust (compatible with assistive tech) | Pass / Partial / Fail | Specific findings |
+| Lighthouse Accessibility Score | [score]/100 | |
+
+**GDPR/PDPL (Privacy & Data Protection):**
+
+| Requirement | Status | Evidence / Gap |
+|-------------|--------|----------------|
+| Consent capture (granular, withdrawable, auditable) | Implemented / Partial / Missing | Specific findings |
+| Right of Access (Art. 15) | Implemented / Missing | DSAR mechanism details |
+| Right to Rectification (Art. 16) | Implemented / Missing | User data correction capability |
+| Right to Erasure (Art. 17) | Implemented / Missing | Deletion cascade, backups |
+| Right to Restrict Processing (Art. 18) | Implemented / Missing | Processing limitation mechanism |
+| Right to Data Portability (Art. 20) | Implemented / Missing | Export format |
+| Right to Object (Art. 21) | Implemented / Missing | Objection mechanism |
+| Data Minimization | Pass / Fail | Only necessary data collected? |
+| Retention Policies | Defined / Undefined | Per-type retention periods |
+| Encryption at Rest | Yes / No | Database and file encryption |
+| No PII in Logs | Pass / Fail | Log scanning results |
+| Breach Notification Process | Documented / Undocumented | 72-hour notification capability |
+
+**DORA Metrics (Delivery Health):**
+
+| Metric | Value | Tier |
+|--------|-------|------|
+| Deployment Frequency | [value] | Elite / High / Medium / Low |
+| Lead Time for Changes | [value] | Elite / High / Medium / Low |
+| Change Failure Rate | [value] | Elite / High / Medium / Low |
+| Time to Restore Service | [value] | Elite / High / Medium / Low |
 
 Note: This is a technical audit assessment, not a formal compliance certification. It identifies technical gaps that would block compliance.
+
+#### Section 11b: Accessibility Assessment
+
+WCAG 2.1 AA assessment for all frontend pages:
+
+- **Automated checks** (run Lighthouse Accessibility or axe-core):
+  - Color contrast ratios (1.4.3: >= 4.5:1 text, 1.4.11: >= 3:1 non-text)
+  - Alt text on all images (1.1.1)
+  - Form labels present and associated (1.3.1, 3.3.2)
+  - Heading hierarchy (no skipped levels) (1.3.1)
+  - Language attribute on HTML element (3.1.1)
+  - ARIA roles and properties correct (4.1.2)
+  - Focus indicators visible (2.4.7)
+  - Keyboard navigation for all interactive elements (2.1.1)
+  - No keyboard traps (2.1.2)
+  - Content reflows at 320px width (1.4.10)
+
+- **Manual checks**:
+  - Screen reader compatibility (meaningful reading order, status messages announced)
+  - Error identification in text (3.3.1) — not just color
+  - Error suggestions provided (3.3.3)
+  - Consistent navigation across pages (3.2.3)
+  - Link purpose clear from context (2.4.4)
+  - Page titles descriptive (2.4.2)
+
+Report: Lighthouse Accessibility score, list of violations by severity, affected pages/components.
+
+#### Section 11c: Privacy & Data Protection Assessment
+
+For each personal data type collected by the product:
+
+| Data Type | Lawful Basis | Retention Period | Encrypted at Rest | Deletable | Exportable |
+|-----------|-------------|------------------|-------------------|-----------|------------|
+| e.g., Email | Consent | 2 years | Yes/No | Yes/No | Yes/No |
+
+Check and report on:
+- Consent capture mechanism (granular? withdrawable? timestamped?)
+- All 6 GDPR data subject rights implementation status
+- PII presence in application logs (scan for email patterns, names, IPs)
+- Data minimization (only necessary fields collected?)
+- Cross-border data transfer safeguards (if applicable)
+
+#### Section 11d: Observability Assessment
+
+| Signal | Monitored | Tool/Method | Alert Threshold |
+|--------|-----------|-------------|-----------------|
+| Latency (p50/p95/p99) | Yes/No | [tool] | [threshold] |
+| Traffic (req/sec) | Yes/No | [tool] | [threshold] |
+| Errors (error rate %) | Yes/No | [tool] | [threshold] |
+| Saturation (CPU/mem/disk) | Yes/No | [tool] | [threshold] |
+
+Check and report on:
+- Structured logging format (JSON with correlation IDs, or unstructured?)
+- Log levels configured (ERROR/WARN/INFO/DEBUG) with DEBUG off in production
+- Distributed tracing present (OpenTelemetry SDK? W3C Trace Context headers?)
+- Health check endpoints (exist? monitored externally?)
+- Error tracking service (Sentry, Datadog, etc.?)
+- Database monitoring (slow query log, connection pool, replication lag)
+- Alerting strategy (SLO-based or raw metrics? Runbooks exist?)
+- No sensitive data in logs (PII, tokens, passwords)
+
+#### Section 11e: API Design Assessment
+
+| Check | Status | Details |
+|-------|--------|---------|
+| OpenAPI/Swagger documentation complete | Yes/Partial/No | Coverage % |
+| API versioning strategy | Implemented/Missing | URL path, header, or query param |
+| Consistent error format (RFC 7807) | Yes/No | Example |
+| Pagination on all list endpoints | Yes/Partial/No | Endpoints missing pagination |
+| BOLA protection (object-level authz) | Pass/Fail | Test: User A accesses User B's object |
+| BFLA protection (function-level authz) | Pass/Fail | Test: Regular user accesses admin endpoint |
+| Rate limiting configured | Yes/Partial/No | Endpoints and limits |
+| CORS properly configured | Yes/No | No wildcard in production |
+| Request/response schema validation | Yes/Partial/No | Middleware used |
+| Deprecated endpoints marked | N/A/Yes/No | Sunset dates |
 
 #### Section 12: Technical Debt Map
 
@@ -311,15 +439,27 @@ Numbered list of changes that can be done in under a day each, with file referen
 
 Produce THREE score categories:
 
-#### A. Technical Dimension Scores (0-10 scale)
+#### A. Technical Dimension Scores (0-10 scale, 11 dimensions)
 
-- **Security**: auth, input validation, secrets, OWASP compliance
-- **Architecture**: separation of concerns, patterns, scalability
-- **Test Coverage**: line coverage %, edge case coverage, integration tests
-- **Code Quality**: readability, DRY, error handling, logging
-- **Performance**: query efficiency, caching, resource usage
-- **DevOps**: CI/CD, monitoring, deployment safety
-- **Runability**: does it actually start and serve real responses? Scoring guide:
+**Core Dimensions (7):**
+
+- **Security**: Auth, input validation, secrets, OWASP Top 10, OWASP ASVS L2, CWE/SANS Top 25 coverage. Scoring guide:
+  - Check OWASP ASVS categories: V2 (Auth), V3 (Sessions), V4 (Access Control), V5 (Validation), V6 (Crypto), V7 (Error/Logging), V8 (Data Protection), V13 (API Security), V14 (Configuration)
+  - Check CWE Top 25 applicable weaknesses: XSS (CWE-79), SQLi (CWE-89), CSRF (CWE-352), Path Traversal (CWE-22), Command Injection (CWE-78), Missing Auth (CWE-862/306), Hardcoded Creds (CWE-798)
+  - Check OWASP API Security Top 10 (2023): BOLA (API1), Broken Auth (API2), Broken Object Property Auth (API3), Unrestricted Resource Consumption (API4), BFLA (API5), Sensitive Business Flows (API6), SSRF (API7), Misconfiguration (API8), Inventory (API9), Unsafe Consumption (API10)
+- **Architecture**: Separation of concerns, patterns, scalability, ISO 25010 Maintainability (modularity, reusability, analyzability, modifiability, testability)
+- **Test Coverage**: Line coverage %, edge case coverage, integration tests, database state verification, traceability to requirements
+- **Code Quality**: Readability, DRY, error handling, logging, complexity (cyclomatic < 10), naming, no dead code, type safety
+- **Performance**: Concrete thresholds required:
+  - Backend: API p95 latency <= 400ms, p99 <= 1000ms, error rate < 1%, no N+1 queries, DB query p95 < 100ms
+  - Frontend: LCP <= 2.5s, INP <= 200ms, CLS <= 0.1, Lighthouse Performance >= 90
+  - Budgets: JS bundle < 300KB gzip, total page < 1.5MB, < 50 requests
+- **DevOps**: CI/CD pipeline, deployment safety, secrets management, rollback capability. Include DORA metrics assessment:
+  - Deployment Frequency (Elite: multiple/day, High: weekly-monthly)
+  - Lead Time for Changes (Elite: < 1 day, High: < 1 week)
+  - Change Failure Rate (Elite: 0-15%)
+  - Time to Restore (Elite: < 1 hour, High: < 1 day)
+- **Runability**: Does it actually start and serve real responses? Scoring guide:
   - 0: No start script, missing deps, immediate crash
   - 2: Starts but crashes within seconds
   - 4: Starts but /health or frontend returns errors
@@ -327,21 +467,68 @@ Produce THREE score categories:
   - 8: Full stack starts, health OK, UI loads real data, no placeholders
   - 10: Full stack starts, health OK, real data, no placeholders, production build succeeds, zero console errors
 
-**Technical Score** = average of all dimension scores.
+**New Dimensions (4):**
+
+- **Accessibility**: WCAG 2.1 AA compliance. Scoring guide:
+  - Check: Color contrast >= 4.5:1 (WCAG 1.4.3), alt text on images (1.1.1), form labels (1.3.1/3.3.2), keyboard navigation (2.1.1), focus indicators (2.4.7), heading hierarchy (1.3.1), language attribute (3.1.1), ARIA roles (4.1.2), reflow at 320px (1.4.10), error identification (3.3.1)
+  - 0: No accessibility consideration at all
+  - 4: Some alt text and labels but major keyboard/contrast issues
+  - 6: Lighthouse Accessibility >= 70, basic keyboard nav works
+  - 8: Lighthouse Accessibility >= 90, keyboard nav complete, contrast passes, ARIA correct
+  - 10: Full WCAG 2.1 AA compliance, tested with screen reader, no violations
+- **Privacy & Data Protection**: GDPR/PDPL compliance. Scoring guide:
+  - Check: Consent capture (granular, withdrawable, auditable), data subject rights (access, rectification, erasure, portability, restrict, object), data minimization, retention policies, encryption at rest, no PII in logs, data processing register
+  - 0: No privacy consideration, PII stored in plaintext, no consent
+  - 4: Passwords hashed but PII in logs, no consent mechanism, no deletion capability
+  - 6: Basic consent, password hashing, but no DSAR mechanism, no retention policy
+  - 8: Consent capture, all 6 data subject rights implemented, no PII in logs, encryption at rest
+  - 10: Full GDPR compliance, automated retention, DPIA completed, breach notification process
+- **Observability**: Production monitoring readiness (SRE Four Golden Signals). Scoring guide:
+  - Check: Structured logging (JSON + correlation IDs), Four Golden Signals monitored (latency, traffic, errors, saturation), distributed tracing (OpenTelemetry/W3C Trace Context), SLO-based alerting, runbooks for P1/P2 alerts, health check endpoints, error tracking, database monitoring, dependency health monitoring
+  - 0: No logging, no monitoring, no health endpoints
+  - 4: Basic console.log, health endpoint exists, no structured logging
+  - 6: Structured JSON logging, health checks, basic error tracking, no tracing
+  - 8: Structured logging with correlation IDs, all 4 golden signals monitored, error tracking with context, DB monitoring
+  - 10: Full observability stack (logs + metrics + traces), SLO-based alerting, runbooks, circuit breakers, dependency monitoring
+- **API Design**: REST/GraphQL design quality and OWASP API Top 10 compliance. Scoring guide:
+  - Check: OpenAPI/Swagger documentation complete, API versioning strategy, consistent error format (RFC 7807), pagination on all list endpoints, no overfetching, CORS configured (no wildcard), request/response schema validation, deprecated endpoints marked, BOLA/BFLA protection verified
+  - 0: No documentation, inconsistent responses, no pagination
+  - 4: Some Swagger docs but incomplete, inconsistent error format
+  - 6: OpenAPI docs, consistent errors, pagination, but no versioning, some BOLA gaps
+  - 8: Complete OpenAPI docs, consistent RFC 7807 errors, pagination, BOLA/BFLA verified, CORS correct
+  - 10: Full API documentation, versioning, deprecation policy, all OWASP API Top 10 addressed
+
+**Technical Score** = average of all 11 dimension scores.
 
 #### B. Readiness Scores (0-10 scale)
 
 These translate technical findings into business decisions:
 
-- **Security Readiness**: Can it withstand real-world attacks? (weighted from Security + DevOps + Architecture scores)
-- **Product Potential**: Is the core product logic sound? (weighted from Code Quality + Architecture + Runability)
-- **Enterprise Readiness**: Can it onboard regulated/enterprise customers? (weighted from Security + DevOps + Compliance mapping)
+- **Security Readiness**: Can it withstand real-world attacks? (weighted: Security 40% + API Design 20% + DevOps 20% + Architecture 20%)
+- **Product Potential**: Is the core product logic sound? (weighted: Code Quality 30% + Architecture 25% + Runability 25% + Accessibility 20%)
+- **Enterprise Readiness**: Can it onboard regulated/enterprise customers? (weighted: Security 30% + Privacy 25% + Observability 20% + DevOps 15% + Compliance mapping 10%)
 
 This prevents the "everything is garbage" reaction. A product can score 3/10 on Security Readiness but 7/10 on Product Potential — meaning the vision is sound but the security posture needs work.
 
 #### C. Overall Score
 
 **Overall Score** = average of Technical Score and Readiness Scores.
+
+#### D. Framework Coverage Summary
+
+Every audit must report coverage against these frameworks:
+
+| Framework | How to Report |
+|-----------|--------------|
+| OWASP Top 10 (2021) | Control-by-control: A01-A10 Pass/Partial/Fail (already in Section 11) |
+| OWASP API Top 10 (2023) | API1-API10 Pass/Partial/Fail (new in Section 11) |
+| OWASP ASVS L2 | Categories V1-V14 coverage percentage |
+| CWE/SANS Top 25 | Applicable weaknesses checked/not-checked |
+| WCAG 2.1 AA | Principles (POUR) with pass/fail per guideline |
+| GDPR | 6 data subject rights + consent + retention: implemented/missing |
+| ISO 25010 | Map each finding to quality characteristic |
+| DORA Metrics | 4 metrics with Elite/High/Medium/Low tier |
+| SRE Golden Signals | 4 signals: monitored/not-monitored |
 
 ### Step 5: Save Report
 
@@ -394,16 +581,22 @@ FIX:      [2-3 items that must be remediated]
 CONTINUE: [2-3 things working well]
 
 ============================================
-SCORES
+SCORES (11 Dimensions)
 ============================================
-TECHNICAL DIMENSIONS:
-- Security:      X/10  [PASS/BELOW THRESHOLD]
-- Architecture:  X/10  [PASS/BELOW THRESHOLD]
-- Test Coverage: X/10  [PASS/BELOW THRESHOLD]
-- Code Quality:  X/10  [PASS/BELOW THRESHOLD]
-- Performance:   X/10  [PASS/BELOW THRESHOLD]
-- DevOps:        X/10  [PASS/BELOW THRESHOLD]
-- Runability:    X/10  [PASS/BELOW THRESHOLD]
+CORE DIMENSIONS:
+- Security:       X/10  [PASS/BELOW THRESHOLD]
+- Architecture:   X/10  [PASS/BELOW THRESHOLD]
+- Test Coverage:  X/10  [PASS/BELOW THRESHOLD]
+- Code Quality:   X/10  [PASS/BELOW THRESHOLD]
+- Performance:    X/10  [PASS/BELOW THRESHOLD]
+- DevOps:         X/10  [PASS/BELOW THRESHOLD]
+- Runability:     X/10  [PASS/BELOW THRESHOLD]
+
+NEW DIMENSIONS:
+- Accessibility:  X/10  [PASS/BELOW THRESHOLD]
+- Privacy:        X/10  [PASS/BELOW THRESHOLD]
+- Observability:  X/10  [PASS/BELOW THRESHOLD]
+- API Design:     X/10  [PASS/BELOW THRESHOLD]
 
 READINESS:
 - Security Readiness:   X/10
@@ -429,12 +622,22 @@ Phase 2 (2-4w): [production-ready]
 ============================================
 COMPLIANCE (Control-Level)
 ============================================
-OWASP Top 10:  X/10 Pass, Y/10 Partial, Z/10 Fail
+OWASP Top 10:       X/10 Pass, Y/10 Partial, Z/10 Fail
   Failing: [List specific A0X controls]
-SOC2 Type II:  [Ready / Not Ready]
+OWASP API Top 10:   X/10 Pass, Y/10 Partial, Z/10 Fail
+  Failing: [List specific API-X risks]
+SOC2 Type II:       [Ready / Not Ready]
   Gaps: [List specific principles]
-ISO 27001:     [Ready / Not Ready]
+ISO 27001:          [Ready / Not Ready]
   Gaps: [List specific Annex A controls]
+WCAG 2.1 AA:        [Compliant / Partial / Non-Compliant]
+  Lighthouse A11y: [score]/100
+  Violations: [count by severity]
+GDPR:               [Compliant / Partial / Non-Compliant]
+  Rights: [X/6 implemented]
+  Gaps: [List missing rights]
+DORA:               [Elite / High / Medium / Low]
+  [Metric]: [tier] for each of 4 metrics
 
 ============================================
 RISK REGISTER (Top 5)

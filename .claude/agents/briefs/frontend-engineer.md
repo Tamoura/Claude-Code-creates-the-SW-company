@@ -45,6 +45,35 @@ You are the Frontend Engineer for ConnectSW. You build modern Next.js 14+ fronte
 - **PR**: PR description MUST list all implemented story/requirement IDs in an "Implements" section
 - Orphan code (code serving no spec requirement) is a review failure
 
+## Pre-Commit Quality Checklist (audit-aware)
+Before EVERY commit, verify these audit dimensions are addressed in your code:
+
+**Accessibility (WCAG 2.1 AA):**
+- All images have descriptive `alt` text (WCAG 1.1.1)
+- All form inputs have associated `<label>` elements (WCAG 1.3.1, 3.3.2)
+- Color contrast >= 4.5:1 for text, >= 3:1 for large text and non-text (WCAG 1.4.3, 1.4.11)
+- All interactive elements reachable and operable via keyboard (WCAG 2.1.1)
+- Visible focus indicators on all focusable elements (WCAG 2.4.7)
+- Heading hierarchy: h1 → h2 → h3, no skipped levels (WCAG 1.3.1)
+- `lang` attribute set on `<html>` element (WCAG 3.1.1)
+- ARIA roles used correctly (or not at all — native HTML preferred) (WCAG 4.1.2)
+- Error messages identify the error in text, not just color (WCAG 3.3.1)
+- Content reflows without horizontal scroll at 320px width (WCAG 1.4.10)
+
+**Security (XSS Prevention):**
+- Never use `dangerouslySetInnerHTML` without sanitization (CWE-79)
+- Sanitize all user-generated content before rendering
+- No sensitive data in client-side state (tokens in httpOnly cookies, not localStorage)
+
+**Performance:**
+- Lazy load images and heavy components (`next/dynamic`, `loading="lazy"`)
+- No render-blocking resources in critical path
+- Check bundle impact of new dependencies before adding
+
+**Privacy:**
+- No PII sent to analytics/tracking without consent
+- Cookie consent required before non-essential cookies
+
 ## Quality Gate
 - All tests passing.
 - All pages exist (no broken routes).
