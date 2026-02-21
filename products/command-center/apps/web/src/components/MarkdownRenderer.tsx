@@ -94,28 +94,88 @@ function isWireframe(code: string): boolean {
   return boxLines / lines.length > 0.4;
 }
 
+// ---------------------------------------------------------------------------
+// asciiToBoxDrawing — converts ASCII wireframe characters (+, -, |) to
+// proper Unicode box-drawing characters (┌, ─, │, etc.) by analyzing
+// the surrounding context of each + junction.
+// ---------------------------------------------------------------------------
+
+function asciiToBoxDrawing(code: string): string {
+  const lines = code.split('\n');
+  // Pad all lines to equal length for safe neighbor lookups
+  const maxLen = Math.max(...lines.map((l) => l.length));
+  const grid = lines.map((l) => l.padEnd(maxLen).split(''));
+
+  const isVert = (ch: string) => ch === '|' || ch === '+';
+  const isHoriz = (ch: string) => ch === '-' || ch === '+';
+
+  const junctionMap: Record<string, string> = {
+    '0000': '+', // isolated (shouldn't happen)
+    '0001': '─', '0010': '│', '0011': '└',
+    '0100': '─', '0101': '─', '0110': '┘',
+    '0111': '┴',
+    '1000': '│', '1001': '┌', '1010': '│',
+    '1011': '├',
+    '1100': '┐', '1101': '┬', '1110': '┤',
+    '1111': '┼',
+  };
+
+  for (let r = 0; r < grid.length; r++) {
+    for (let c = 0; c < grid[r].length; c++) {
+      const ch = grid[r][c];
+      if (ch === '+') {
+        const down  = r + 1 < grid.length ? isVert(grid[r + 1][c]) : false;
+        const right = c + 1 < grid[r].length ? isHoriz(grid[r][c + 1]) : false;
+        const up    = r - 1 >= 0 ? isVert(grid[r - 1][c]) : false;
+        const left  = c - 1 >= 0 ? isHoriz(grid[r][c - 1]) : false;
+        const key = `${down ? 1 : 0}${right ? 1 : 0}${up ? 1 : 0}${left ? 1 : 0}`;
+        grid[r][c] = junctionMap[key] || '┼';
+      } else if (ch === '-') {
+        grid[r][c] = '─';
+      } else if (ch === '|') {
+        grid[r][c] = '│';
+      }
+    }
+  }
+
+  return grid.map((row) => row.join('').trimEnd()).join('\n');
+}
+
 function WireframeBlock({ code, dark }: { code: string; dark: boolean }) {
+  const rendered = asciiToBoxDrawing(code);
+
   return (
-    <div className={`my-6 rounded-lg border-2 border-dashed overflow-hidden ${
-      dark ? 'border-indigo-500/40 bg-gray-950' : 'border-indigo-400/50 bg-gray-50'
+    <div className={`my-6 rounded-xl overflow-hidden border ${
+      dark ? 'border-slate-600/50 bg-slate-900' : 'border-slate-300 bg-white'
     }`}>
-      {/* Wireframe label */}
-      <div className={`flex items-center gap-2 px-4 py-2 border-b text-xs font-medium ${
+      {/* Header bar */}
+      <div className={`flex items-center gap-2 px-4 py-2.5 border-b text-xs font-semibold tracking-wide uppercase ${
         dark
-          ? 'bg-indigo-500/10 border-indigo-500/20 text-indigo-400'
-          : 'bg-indigo-50 border-indigo-200 text-indigo-600'
+          ? 'bg-slate-800 border-slate-700 text-slate-400'
+          : 'bg-slate-100 border-slate-200 text-slate-500'
       }`}>
         <svg className="w-4 h-4" fill="none" stroke="currentColor" viewBox="0 0 24 24">
           <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={1.5} d="M9 17V7m0 10a2 2 0 01-2 2H5a2 2 0 01-2-2V7a2 2 0 012-2h2a2 2 0 012 2m0 10a2 2 0 002 2h2a2 2 0 002-2M9 7a2 2 0 012-2h2a2 2 0 012 2m0 10V7m0 10a2 2 0 002 2h2a2 2 0 002-2V7a2 2 0 00-2-2h-2a2 2 0 00-2 2" />
         </svg>
         Wireframe
       </div>
-      {/* Wireframe content — centered with constrained width */}
-      <div className="p-6 overflow-x-auto flex justify-center">
-        <pre className={`text-xs leading-relaxed font-mono whitespace-pre ${
-          dark ? 'text-indigo-300/90' : 'text-indigo-800'
-        }`} style={{ tabSize: 2 }}>
-          {code}
+      {/* Blueprint-style wireframe content */}
+      <div
+        className="p-6 overflow-x-auto flex justify-center"
+        style={{
+          backgroundImage: dark
+            ? 'radial-gradient(circle, rgba(100,116,139,0.15) 1px, transparent 1px)'
+            : 'radial-gradient(circle, rgba(148,163,184,0.2) 1px, transparent 1px)',
+          backgroundSize: '12px 12px',
+        }}
+      >
+        <pre
+          className={`text-[13px] leading-[1.35] whitespace-pre ${
+            dark ? 'text-sky-300/80' : 'text-slate-600'
+          }`}
+          style={{ fontFamily: "'SF Mono', 'Cascadia Code', 'Fira Code', Menlo, monospace" }}
+        >
+          {rendered}
         </pre>
       </div>
     </div>
