@@ -5,6 +5,7 @@ export class NetworkPage {
 
   async goto() {
     await this.page.goto('/network');
+    await this.page.waitForLoadState('networkidle');
   }
 
   async expectLoaded() {

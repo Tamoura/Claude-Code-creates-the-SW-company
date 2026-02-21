@@ -5,10 +5,12 @@ export class ProfilePage {
 
   async goto() {
     await this.page.goto('/profile');
+    await this.page.waitForLoadState('networkidle');
   }
 
   async gotoUser(userId: string) {
     await this.page.goto(`/profile/${userId}`);
+    await this.page.waitForLoadState('networkidle');
   }
 
   async expectLoaded() {

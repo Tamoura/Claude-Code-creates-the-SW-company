@@ -5,6 +5,7 @@ export class JobsPage {
 
   async goto() {
     await this.page.goto('/jobs');
+    await this.page.waitForLoadState('networkidle');
   }
 
   async expectLoaded() {

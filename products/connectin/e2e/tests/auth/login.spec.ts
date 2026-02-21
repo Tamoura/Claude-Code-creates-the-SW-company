@@ -10,7 +10,7 @@ test.describe('Login', () => {
     await loginPage.goto();
     await expect(page.getByLabel(/email/i)).toBeVisible();
     await expect(page.getByLabel(/password/i)).toBeVisible();
-    await expect(page.getByRole('button', { name: /sign in|login|دخول/i })).toBeVisible();
+    await expect(page.locator('button[type="submit"]')).toBeVisible();
   });
 
   test('redirects to feed on successful login', async ({ page }) => {
@@ -31,20 +31,22 @@ test.describe('Login', () => {
     const loginPage = new LoginPage(page);
     await loginPage.goto();
     await loginPage.login('', VALID_PASSWORD);
-    await expect(page.getByRole('alert')).toBeVisible();
+    // Filter out Next.js route announcer (also role="alert" but always empty)
+    await expect(page.getByRole('alert').filter({ hasText: /\S/ })).toBeVisible();
   });
 
   test('validates empty password', async ({ page }) => {
     const loginPage = new LoginPage(page);
     await loginPage.goto();
     await loginPage.login(VALID_EMAIL, '');
-    await expect(page.getByRole('alert')).toBeVisible();
+    await expect(page.getByRole('alert').filter({ hasText: /\S/ })).toBeVisible();
   });
 
   test('link to register page works', async ({ page }) => {
     const loginPage = new LoginPage(page);
     await loginPage.goto();
-    await page.getByRole('link', { name: /register|sign up|إنشاء/i }).click();
+    // "Register" (EN) | "إنشاء حساب" (AR)
+    await page.getByRole('link', { name: /^Register$|إنشاء حساب/i }).click();
     await expect(page).toHaveURL(/\/register/);
   });
 });

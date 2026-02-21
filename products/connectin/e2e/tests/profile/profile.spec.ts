@@ -20,7 +20,6 @@ test.describe('Profile', () => {
     await profilePage.goto();
     const newHeadline = `Senior Engineer @ ConnectIn ${Date.now()}`;
     await profilePage.editHeadline(newHeadline);
-    // Headline should update on the page
     await expect(page.getByText(newHeadline)).toBeVisible({ timeout: 8_000 });
   });
 });
