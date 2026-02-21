@@ -224,8 +224,7 @@ jobs:
 
       - name: Run security audit
         if: steps.check.outputs.exists == 'true'
-        run: npm audit --audit-level=critical --omit=dev || echo "::warning::Security vulnerabilities found - review npm audit output"
-        continue-on-error: true
+        run: npm audit --audit-level=critical --omit=dev
 
   test-e2e:
     name: E2E Tests (Playwright)
