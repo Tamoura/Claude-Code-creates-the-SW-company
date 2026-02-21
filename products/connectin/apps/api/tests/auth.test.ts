@@ -130,7 +130,7 @@ describe('Auth Module', () => {
       expect(body.data.user.email).toBe(
         'login@example.com'
       );
-      expect(body.data.user.role).toBe('USER');
+      expect(body.data.user.role).toBe('user');
     });
 
     it('rejects wrong password', async () => {

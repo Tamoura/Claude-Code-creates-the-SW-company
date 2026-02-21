@@ -53,6 +53,15 @@ const errorHandlerPlugin: FastifyPluginAsync = async (fastify) => {
       );
     }
 
+    // Rate-limit errors: @fastify/rate-limit v9 throws the errorResponseBuilder
+    // result directly (not as an Error), so it reaches here as a plain object.
+    if (
+      !(error instanceof Error) &&
+      (error as any)?.error?.code === 'RATE_LIMITED'
+    ) {
+      return reply.status(429).send(error);
+    }
+
     // Unexpected errors — log safe fields only (no PII)
     fastify.log.error({
       message: error.message,

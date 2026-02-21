@@ -47,7 +47,8 @@ const authRoutes: FastifyPluginAsync = async (fastify) => {
   fastify.post('/login', {
     config: {
       rateLimit: {
-        max: 5,
+        // Higher limit in dev/test to allow E2E test suites (each test does a fresh login)
+        max: process.env.NODE_ENV === 'production' ? 5 : 100,
         timeWindow: '1 minute',
       },
     },
@@ -70,8 +71,19 @@ const authRoutes: FastifyPluginAsync = async (fastify) => {
       httpOnly: true,
       secure: process.env.NODE_ENV === 'production',
       sameSite: 'strict',
-      path: '/api/v1/auth',
+      path: '/', // Path=/ so Next.js middleware can read it for auth checks
       maxAge: 30 * 24 * 60 * 60, // 30 days
+    });
+
+    // Set lightweight session flag (non-httpOnly) so the Next.js middleware and
+    // the client-side useAuth hook can detect an active session without needing
+    // to read the httpOnly refreshToken cookie.
+    reply.setCookie('session', '1', {
+      httpOnly: false,
+      secure: process.env.NODE_ENV === 'production',
+      sameSite: 'strict',
+      path: '/',
+      maxAge: 30 * 24 * 60 * 60,
     });
 
     // Return accessToken + user in body; refreshToken is in httpOnly cookie only
@@ -83,8 +95,16 @@ const authRoutes: FastifyPluginAsync = async (fastify) => {
   fastify.post('/refresh', {
     config: {
       rateLimit: {
-        max: 10,
+        // Higher limit in dev/test — E2E tests trigger a refresh on every page navigation
+        max: process.env.NODE_ENV === 'production' ? 10 : 200,
         timeWindow: '1 minute',
+      },
+    },
+    // Allow empty or missing body — the refresh token comes from the httpOnly cookie
+    schema: {
+      body: {
+        type: 'object',
+        additionalProperties: true,
       },
     },
   }, async (request, reply) => {
@@ -105,7 +125,30 @@ const authRoutes: FastifyPluginAsync = async (fastify) => {
     }
 
     const data = await authService.refresh(refreshToken);
-    return sendSuccess(reply, data);
+
+    // Rotate the refresh token cookie — the new token was generated and
+    // stored in the DB; send it to the client so subsequent refreshes work.
+    reply.setCookie('refreshToken', data.refreshToken, {
+      httpOnly: true,
+      secure: process.env.NODE_ENV === 'production',
+      sameSite: 'strict',
+      path: '/',
+      maxAge: 30 * 24 * 60 * 60, // 30 days
+    });
+
+    // Keep the session flag fresh so the client knows the session is alive.
+    reply.setCookie('session', '1', {
+      httpOnly: false,
+      secure: process.env.NODE_ENV === 'production',
+      sameSite: 'strict',
+      path: '/',
+      maxAge: 30 * 24 * 60 * 60,
+    });
+
+    // Strip the raw refreshToken from the response body — it lives in the
+    // httpOnly cookie only.
+    const { refreshToken: _rt, ...responseData } = data;
+    return sendSuccess(reply, responseData);
   });
 
   // POST /api/v1/auth/logout
@@ -124,9 +167,8 @@ const authRoutes: FastifyPluginAsync = async (fastify) => {
         await authService.logout(refreshToken);
       }
 
-      reply.clearCookie('refreshToken', {
-        path: '/api/v1/auth',
-      });
+      reply.clearCookie('refreshToken', { path: '/' });
+      reply.clearCookie('session', { path: '/' });
 
       return sendSuccess(reply, {
         message: 'Logged out successfully',
@@ -149,9 +191,7 @@ const authRoutes: FastifyPluginAsync = async (fastify) => {
     async (request, reply) => {
       await authService.deleteAccount(request.user.sub);
 
-      reply.clearCookie('refreshToken', {
-        path: '/api/v1/auth',
-      });
+      reply.clearCookie('refreshToken', { path: '/' });
 
       return sendSuccess(reply, {
         message: 'Account deleted successfully',
