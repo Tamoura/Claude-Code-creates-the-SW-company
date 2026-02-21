@@ -245,10 +245,10 @@ export default function ProductDetail() {
         )}
       </div>
 
-      <div className="grid grid-cols-1 lg:grid-cols-4 gap-6">
-        {/* Left sidebar navigation */}
-        <div className="lg:col-span-1">
-          <div className="bg-gray-900 border border-gray-800 rounded-xl p-4 sticky top-6">
+      <div className="grid grid-cols-1 lg:grid-cols-4 gap-6 lg:h-[calc(100vh-8rem)]">
+        {/* Left sidebar navigation — scrolls independently */}
+        <div className="lg:col-span-1 lg:overflow-y-auto lg:min-h-0 scrollbar-thin">
+          <div className="bg-gray-900 border border-gray-800 rounded-xl p-4">
             {/* Product header */}
             <div className="mb-4 pb-4 border-b border-gray-800">
               <h2 className="text-lg font-semibold text-white mb-2">
@@ -323,8 +323,8 @@ export default function ProductDetail() {
           </div>
         </div>
 
-        {/* Main content area */}
-        <div className="lg:col-span-3">
+        {/* Main content area — scrolls independently */}
+        <div className="lg:col-span-3 lg:overflow-y-auto lg:min-h-0 scrollbar-thin">
           <div className={`rounded-xl p-8 border ${selectedDoc && isLight ? 'bg-white border-gray-200' : 'bg-gray-900 border-gray-800'}`}>
             {!selectedDoc ? (
               // Landing page - product overview
