@@ -21,6 +21,14 @@ jest.mock("next/link", () => {
   };
 });
 
+// Mock next/image
+jest.mock("next/image", () => {
+  return function MockImage({ src, alt }: { src: string; alt: string }) {
+    // eslint-disable-next-line @next/next/no-img-element
+    return <img src={src} alt={alt} />;
+  };
+});
+
 // Mock react-i18next
 jest.mock("react-i18next", () => ({
   useTranslation: () => ({
@@ -28,9 +36,12 @@ jest.mock("react-i18next", () => ({
       const translations: Record<string, string> = {
         "network.myNetwork": "My Network",
         "network.pendingRequests": "Pending Requests",
-        "network.peopleYouMayKnow": "People You May Know",
         "network.myConnections": "My Connections",
         "network.searchConnections": "Search connections...",
+        "network.noConnections": "You have no connections yet.",
+        "network.noSearchResults": "No results found.",
+        "actions.accept": "Accept",
+        "actions.decline": "Decline",
       };
       return translations[key] || key;
     },
@@ -60,9 +71,30 @@ jest.mock("@/providers/AuthProvider", () => ({
   }),
 }));
 
+// Mock useConnections hook
+const mockAcceptConnection = jest.fn();
+const mockRejectConnection = jest.fn();
+
+jest.mock("@/hooks/useConnections", () => ({
+  useConnections: () => ({
+    connections: [],
+    pendingIncoming: [],
+    pendingOutgoing: [],
+    isLoading: false,
+    error: null,
+    acceptConnection: mockAcceptConnection,
+    rejectConnection: mockRejectConnection,
+    refetch: jest.fn(),
+  }),
+}));
+
 import NetworkPage from "../network/page";
 
 describe("NetworkPage", () => {
+  beforeEach(() => {
+    jest.clearAllMocks();
+  });
+
   it('renders "My Network" heading', () => {
     render(<NetworkPage />);
 
@@ -79,19 +111,19 @@ describe("NetworkPage", () => {
     ).toBeInTheDocument();
   });
 
-  it('renders "Pending Requests" section', () => {
+  it('renders "My Connections" section', () => {
     render(<NetworkPage />);
 
     expect(
-      screen.getByRole("heading", { name: "Pending Requests", level: 2 })
+      screen.getByRole("heading", { name: "My Connections", level: 2 })
     ).toBeInTheDocument();
   });
 
-  it('renders "People You May Know" section', () => {
+  it("shows empty connections message when no connections", () => {
     render(<NetworkPage />);
 
     expect(
-      screen.getByRole("heading", { name: "People You May Know", level: 2 })
+      screen.getByText("You have no connections yet.")
     ).toBeInTheDocument();
   });
 });

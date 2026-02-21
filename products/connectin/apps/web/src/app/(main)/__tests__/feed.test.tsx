@@ -30,9 +30,12 @@ jest.mock("react-i18next", () => ({
         "feed.composer": "Start a post...",
         "feed.empty": "No posts yet. Be the first to share!",
         "actions.post": "Post",
+        "actions.posting": "Posting...",
         "actions.like": "Like",
         "actions.comment": "Comment",
         "actions.share": "Share",
+        "actions.loading": "Loading...",
+        "actions.loadMore": "Load more",
       };
       return translations[key] || key;
     },
@@ -62,10 +65,34 @@ jest.mock("@/providers/AuthProvider", () => ({
   }),
 }));
 
+// Mock useFeed hook
+const mockToggleLike = jest.fn();
+const mockCreatePost = jest.fn().mockResolvedValue(true);
+const mockLoadMore = jest.fn();
+
+jest.mock("@/hooks/useFeed", () => ({
+  useFeed: () => ({
+    posts: [],
+    isLoading: false,
+    isLoadingMore: false,
+    isSubmitting: false,
+    hasMore: false,
+    error: null,
+    createPost: mockCreatePost,
+    loadMore: mockLoadMore,
+    toggleLike: mockToggleLike,
+    refetch: jest.fn(),
+  }),
+}));
+
 import FeedPage from "../feed/page";
 
 describe("FeedPage", () => {
   const user = userEvent.setup();
+
+  beforeEach(() => {
+    jest.clearAllMocks();
+  });
 
   it("renders post composer", () => {
     render(<FeedPage />);

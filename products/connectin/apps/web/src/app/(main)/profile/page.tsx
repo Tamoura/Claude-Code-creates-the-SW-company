@@ -1,13 +1,51 @@
 "use client";
 
+import { useState } from "react";
 import { useTranslation } from "react-i18next";
 import { useAuthContext } from "@/providers/AuthProvider";
 import { useProfile } from "@/hooks/useProfile";
+import { apiClient } from "@/lib/api";
 
 export default function ProfilePage() {
   const { t } = useTranslation("common");
   const { user } = useAuthContext();
-  const { profile, isLoading } = useProfile();
+  const { profile, isLoading, refetch } = useProfile();
+
+  const [isEditing, setIsEditing] = useState(false);
+  const [headlineValue, setHeadlineValue] = useState("");
+  const [isSaving, setIsSaving] = useState(false);
+  const [saveError, setSaveError] = useState<string | null>(null);
+
+  function handleEditClick() {
+    setHeadlineValue(profile?.headlineEn || profile?.headlineAr || "");
+    setSaveError(null);
+    setIsEditing(true);
+  }
+
+  function handleCancel() {
+    setIsEditing(false);
+    setSaveError(null);
+  }
+
+  async function handleSave() {
+    setIsSaving(true);
+    setSaveError(null);
+    try {
+      const response = await apiClient.put("/profiles/me", {
+        headlineEn: headlineValue,
+      });
+      if (response.success) {
+        setIsEditing(false);
+        await refetch();
+      } else {
+        setSaveError(response.error?.message || "Failed to save");
+      }
+    } catch {
+      setSaveError("Network error. Please try again.");
+    } finally {
+      setIsSaving(false);
+    }
+  }
 
   if (isLoading) {
     return (
@@ -27,49 +65,88 @@ export default function ProfilePage() {
         <div className="h-28 bg-gradient-to-r from-[#0C9AB8] to-[#0B6E7F]" />
 
         <div className="p-6 -mt-10">
-        {/* Avatar + name row */}
-        <div className="mb-4 flex items-start justify-between">
-          <div className="flex items-end gap-4">
-            <div className="h-20 w-20 rounded-full ring-4 ring-white dark:ring-[#1C1C1E] bg-primary-100 flex items-center justify-center text-2xl font-bold text-primary-700">
-              {user?.displayName?.charAt(0) || "U"}
+          {/* Avatar + name row */}
+          <div className="mb-4 flex items-start justify-between">
+            <div className="flex items-end gap-4">
+              <div className="h-20 w-20 rounded-full ring-4 ring-white dark:ring-[#1C1C1E] bg-primary-100 flex items-center justify-center text-2xl font-bold text-primary-700">
+                {user?.displayName?.charAt(0) || "U"}
+              </div>
+              <div>
+                <h1 className="text-2xl font-bold text-neutral-900 tracking-[-0.02em]">
+                  {user?.displayName}
+                </h1>
+                {isEditing ? (
+                  <div className="mt-2 flex flex-col gap-2">
+                    <input
+                      type="text"
+                      value={headlineValue}
+                      onChange={(e) => setHeadlineValue(e.target.value)}
+                      aria-label={t("profile.editHeadline")}
+                      placeholder={t("profile.headlinePlaceholder")}
+                      autoFocus
+                      maxLength={200}
+                      className="rounded-[10px] border-0 bg-[#F1F5F9] dark:bg-white/5 px-3 py-2 text-sm text-neutral-900 dark:text-neutral-100 placeholder:text-neutral-400 focus:bg-white dark:focus:bg-white/10 focus:outline-none focus:ring-2 focus:ring-primary-500/30 transition-all duration-[180ms] w-64"
+                    />
+                    {saveError && (
+                      <p className="text-xs text-red-500">{saveError}</p>
+                    )}
+                    <div className="flex gap-2">
+                      <button
+                        type="button"
+                        onClick={() => void handleSave()}
+                        disabled={isSaving}
+                        className="rounded-full bg-primary-600 px-4 py-1.5 text-xs font-medium text-white hover:-translate-y-0.5 hover:shadow-apple-md active:scale-[0.97] disabled:opacity-50 transition-all duration-[180ms]"
+                      >
+                        {isSaving ? t("actions.saving") : t("actions.save")}
+                      </button>
+                      <button
+                        type="button"
+                        onClick={handleCancel}
+                        disabled={isSaving}
+                        className="rounded-full border border-neutral-300 px-4 py-1.5 text-xs font-medium text-neutral-600 hover:bg-neutral-50 active:scale-[0.97] transition-all duration-[180ms]"
+                      >
+                        {t("actions.cancel")}
+                      </button>
+                    </div>
+                  </div>
+                ) : (
+                  <p className="mt-1 text-sm text-neutral-500">
+                    {headline || t("profile.addHeadline")}
+                  </p>
+                )}
+              </div>
             </div>
-            <div>
-              <h1 className="text-2xl font-bold text-neutral-900 tracking-[-0.02em]">
-                {user?.displayName}
-              </h1>
-              <p className="mt-1 text-sm text-neutral-500">
-                {headline || t("profile.editProfile")}
-              </p>
-            </div>
+
+            {!isEditing && (
+              <button
+                type="button"
+                onClick={handleEditClick}
+                className="rounded-full border-2 border-primary-600 px-4 py-2 text-sm font-medium text-primary-600 hover:bg-primary-50 hover:-translate-y-0.5 active:scale-[0.97] transition-all duration-[180ms]"
+              >
+                {t("profile.editProfile")}
+              </button>
+            )}
           </div>
 
-          <button
-            type="button"
-            className="rounded-full border-2 border-primary-600 px-4 py-2 text-sm font-medium text-primary-600 hover:bg-primary-50 hover:-translate-y-0.5 active:scale-[0.97] transition-all duration-[180ms]"
-          >
-            {t("profile.editProfile")}
-          </button>
-        </div>
-
-        {/* Profile Completeness */}
-        {profile && (
-          <div className="mt-4">
-            <div className="mb-1 flex items-center justify-between text-sm">
-              <span className="font-medium text-neutral-700">
-                {t("profile.completeness")}
-              </span>
-              <span className="text-primary-600 font-medium">
-                {profile.completenessScore}%
-              </span>
+          {/* Profile Completeness */}
+          {profile && (
+            <div className="mt-4">
+              <div className="mb-1 flex items-center justify-between text-sm">
+                <span className="font-medium text-neutral-700">
+                  {t("profile.completeness")}
+                </span>
+                <span className="text-primary-600 font-medium">
+                  {profile.completenessScore}%
+                </span>
+              </div>
+              <div className="h-2 w-full overflow-hidden rounded-full bg-neutral-200">
+                <div
+                  className="h-full rounded-full bg-primary-600 transition-all"
+                  style={{ width: `${profile.completenessScore}%` }}
+                />
+              </div>
             </div>
-            <div className="h-2 w-full overflow-hidden rounded-full bg-neutral-200">
-              <div
-                className="h-full rounded-full bg-primary-600 transition-all"
-                style={{ width: `${profile.completenessScore}%` }}
-              />
-            </div>
-          </div>
-        )}
+          )}
         </div>
       </div>
 
