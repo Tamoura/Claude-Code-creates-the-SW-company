@@ -175,6 +175,27 @@ function MermaidDiagram({ chart, theme }: { chart: string; theme: 'light' | 'dar
 }
 
 // ---------------------------------------------------------------------------
+// extractText — recursively extracts text from React children.
+// rehype-raw converts <br/> inside code blocks into actual React elements,
+// breaking String(children). This function walks the tree and recovers the
+// original text, converting <br> elements back to <br/> for Mermaid.
+// ---------------------------------------------------------------------------
+
+function extractText(node: unknown): string {
+  if (node == null) return '';
+  if (typeof node === 'string') return node;
+  if (typeof node === 'number') return String(node);
+  if (Array.isArray(node)) return node.map(extractText).join('');
+  if (typeof node === 'object' && 'props' in (node as any)) {
+    const el = node as any;
+    // Convert <br> elements back to <br/> text for Mermaid
+    if (el.type === 'br' || el.props?.node?.tagName === 'br') return '<br/>';
+    return extractText(el.props?.children);
+  }
+  return '';
+}
+
+// ---------------------------------------------------------------------------
 // MarkdownRenderer
 // ---------------------------------------------------------------------------
 
@@ -281,13 +302,13 @@ export default function MarkdownRenderer({ content, theme = 'dark' }: MarkdownRe
 
         // Mermaid diagrams
         if (codeProps?.className?.includes('language-mermaid')) {
-          const code = String(codeProps.children ?? '').replace(/\n$/, '');
+          const code = extractText(codeProps.children).replace(/\n$/, '');
           return <MermaidDiagram chart={code} theme={theme} />;
         }
 
         // Wireframe detection for unlabeled code blocks
         if (!codeProps?.className) {
-          const code = String(codeProps.children ?? '').replace(/\n$/, '');
+          const code = extractText(codeProps.children).replace(/\n$/, '');
           if (isWireframe(code)) {
             return <WireframeBlock code={code} dark={dark} />;
           }
