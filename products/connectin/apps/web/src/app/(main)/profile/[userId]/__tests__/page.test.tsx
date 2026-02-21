@@ -18,7 +18,8 @@ jest.spyOn(React, "use").mockImplementation((value: unknown) => {
     // Fallback: return a default userId so the component renders
     return { userId: "user-42" };
   }
-  return realUse(value);
+  // eslint-disable-next-line @typescript-eslint/no-explicit-any
+  return realUse(value as any);
 });
 
 // Mock next/navigation
