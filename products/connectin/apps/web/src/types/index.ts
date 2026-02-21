@@ -110,22 +110,22 @@ export type ConnectionStatus =
 export interface Job {
   id: string;
   title: string;
-  company: {
-    name: string;
-    logoUrl?: string;
-    id?: string;
-  };
-  location: string;
-  workType: "onsite" | "hybrid" | "remote";
-  experienceLevel: "entry" | "mid" | "senior" | "lead" | "executive";
+  company: string;
+  location?: string;
+  workType: "ONSITE" | "HYBRID" | "REMOTE";
+  experienceLevel: "ENTRY" | "MID" | "SENIOR" | "LEAD" | "EXECUTIVE";
+  description: string;
+  requirements?: string;
   salaryMin?: number;
   salaryMax?: number;
   salaryCurrency?: string;
-  language: "ar" | "en" | "bilingual";
-  createdAt: string;
+  language: string;
+  status: "OPEN" | "CLOSED" | "ARCHIVED";
   applicantCount: number;
-  isApplied: boolean;
-  isSaved: boolean;
+  createdAt: string;
+  isApplied?: boolean;
+  isSaved?: boolean;
+  applicationId?: string;
 }
 
 export interface Message {
