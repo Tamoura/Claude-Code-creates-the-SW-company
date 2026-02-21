@@ -31,7 +31,14 @@ jest.mock("react-i18next", () => ({
         "jobs.remote": "Remote",
         "jobs.hybrid": "Hybrid",
         "jobs.onsite": "On-site",
+        "jobs.entry": "Entry",
+        "jobs.mid": "Mid",
+        "jobs.senior": "Senior",
+        "jobs.lead": "Lead",
+        "jobs.postJob": "Post a Job",
         noResults: "No results found",
+        "actions.loadMore": "Load more",
+        "actions.loading": "Loading...",
       };
       return translations[key] || key;
     },
@@ -58,6 +65,23 @@ jest.mock("@/providers/AuthProvider", () => ({
     login: jest.fn(),
     register: jest.fn(),
     logout: jest.fn(),
+  }),
+}));
+
+// Mock useJobs hook so the page renders the empty state immediately
+jest.mock("@/hooks/useJobs", () => ({
+  useJobs: () => ({
+    jobs: [],
+    isLoading: false,
+    isLoadingMore: false,
+    hasMore: false,
+    error: null,
+    filters: { q: "", location: "", workType: "", experienceLevel: "" },
+    setFilter: jest.fn(),
+    loadMore: jest.fn(),
+    saveJob: jest.fn(),
+    unsaveJob: jest.fn(),
+    applyToJob: jest.fn(),
   }),
 }));
 

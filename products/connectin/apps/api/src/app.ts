@@ -20,6 +20,7 @@ import profileRoutes from './modules/profile/profile.routes';
 import connectionRoutes from './modules/connection/connection.routes';
 import feedRoutes from './modules/feed/feed.routes';
 import consentRoutes from './modules/consent/consent.routes';
+import jobsRoutes from './modules/jobs/jobs.routes';
 
 export interface BuildAppOptions {
   skipRateLimit?: boolean;
@@ -78,6 +79,9 @@ export async function buildApp(
   });
   await app.register(consentRoutes, {
     prefix: '/api/v1/consent',
+  });
+  await app.register(jobsRoutes, {
+    prefix: '/api/v1/jobs',
   });
 
   return app;
