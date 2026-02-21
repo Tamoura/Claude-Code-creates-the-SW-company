@@ -195,32 +195,26 @@ describe('Auth Module', () => {
           },
         });
 
-        const loginBody = JSON.parse(loginRes.body);
-        // Extract refresh token from cookie
+        // Extract refresh token from httpOnly cookie
         const cookies = loginRes.cookies;
         const refreshCookie = cookies.find(
           (c: { name: string }) =>
             c.name === 'refreshToken'
         );
 
-        // Since the login route sets accessToken as
-        // refresh cookie (simplified for MVP), use body
+        expect(refreshCookie).toBeDefined();
+
         const res = await app.inject({
           method: 'POST',
           url: '/api/v1/auth/refresh',
           payload: {
-            refreshToken:
-              refreshCookie?.value ||
-              loginBody.data.accessToken,
+            refreshToken: refreshCookie!.value,
           },
         });
 
-        // The refresh endpoint requires a valid
-        // refresh token stored in the session table
-        // This will be 401 since we use accessToken
-        // in cookie (simplified), which isn't the
-        // actual refresh token stored in sessions
-        expect([200, 401]).toContain(res.statusCode);
+        expect(res.statusCode).toBe(200);
+        const body = JSON.parse(res.body);
+        expect(body.data.accessToken).toBeDefined();
       }
     );
   });

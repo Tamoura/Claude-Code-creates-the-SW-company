@@ -18,7 +18,14 @@ const authRoutes: FastifyPluginAsync = async (fastify) => {
   const authService = new AuthService(fastify.prisma, fastify);
 
   // POST /api/v1/auth/register
-  fastify.post('/register', async (request, reply) => {
+  fastify.post('/register', {
+    config: {
+      rateLimit: {
+        max: 3,
+        timeWindow: '1 minute',
+      },
+    },
+  }, async (request, reply) => {
     const result = registerSchema.safeParse(request.body);
     if (!result.success) {
       throw new ValidationError(
@@ -32,7 +39,14 @@ const authRoutes: FastifyPluginAsync = async (fastify) => {
   });
 
   // POST /api/v1/auth/login
-  fastify.post('/login', async (request, reply) => {
+  fastify.post('/login', {
+    config: {
+      rateLimit: {
+        max: 5,
+        timeWindow: '1 minute',
+      },
+    },
+  }, async (request, reply) => {
     const result = loginSchema.safeParse(request.body);
     if (!result.success) {
       throw new ValidationError(
@@ -44,7 +58,7 @@ const authRoutes: FastifyPluginAsync = async (fastify) => {
     const data = await authService.login(result.data);
 
     // Set refresh token as httpOnly cookie
-    reply.setCookie('refreshToken', data.accessToken, {
+    reply.setCookie('refreshToken', data.refreshToken, {
       httpOnly: true,
       secure: process.env.NODE_ENV === 'production',
       sameSite: 'strict',
@@ -52,7 +66,9 @@ const authRoutes: FastifyPluginAsync = async (fastify) => {
       maxAge: 30 * 24 * 60 * 60, // 30 days
     });
 
-    return sendSuccess(reply, data);
+    // Return accessToken + user in body; refreshToken is in httpOnly cookie only
+    const { refreshToken: _rt, ...responseData } = data;
+    return sendSuccess(reply, responseData);
   });
 
   // POST /api/v1/auth/refresh
