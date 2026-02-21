@@ -234,6 +234,110 @@ Future consideration: LinkedIn OAuth (adds credibility but creates dependency on
 
 ---
 
+## 6. Apple Design System (MANDATORY for all frontend work)
+
+ConnectIn uses an Apple-inspired design language. All new or modified UI must follow these patterns. Deviating from these patterns is a PR rejection.
+
+### 6.1 Design Tokens (defined in `globals.css`)
+
+| Token | Value | Usage |
+|-------|-------|-------|
+| `--shadow-apple-xs` through `--shadow-apple-xl` | Layered shadows with 0.5px inset highlight | All elevated surfaces |
+| `--ease-spring` | `cubic-bezier(0.34, 1.56, 0.64, 1)` | Overshoot animations (modals, toasts) |
+| `--ease-out-expo` | `cubic-bezier(0.16, 1, 0.3, 1)` | Fast-settle transitions (hover, nav) |
+| `--tracking-hero` | `-0.03em` | Hero headlines (text-5xl+) |
+| `--tracking-display` | `-0.02em` | Display headings (text-2xl-4xl) |
+| `--tracking-tight` | `-0.01em` | Section headings (text-lg-xl) |
+| `--radius-card` | `18px` | All cards |
+| `--radius-input` | `10px` | All inputs and textareas |
+| `--radius-pill` | `9999px` | Buttons, filter chips, badges |
+| `--glass-light-bg` / `--glass-dark-bg` | `rgba(255,255,255,0.72)` / `rgba(28,28,30,0.72)` | Headers, overlays |
+
+### 6.2 Component Patterns
+
+**Cards** — every card in the app:
+```
+rounded-[18px] bg-white dark:bg-[#1C1C1E] shadow-apple-md
+```
+
+**Inputs** — filled style, no visible border:
+```
+rounded-[10px] border-0 bg-[#F1F5F9] dark:bg-white/5
+focus:bg-white dark:focus:bg-white/10
+focus:outline-none focus:ring-2 focus:ring-primary-500/30
+transition-all duration-[180ms]
+```
+
+**Buttons (primary)** — pill shape with microinteraction:
+```
+rounded-full shadow-apple-sm
+hover:-translate-y-0.5 hover:shadow-apple-md
+active:scale-[0.97]
+transition-all duration-[180ms]
+```
+
+**Buttons (secondary/outline)** — pill with border:
+```
+rounded-full border-2 border-primary-600
+hover:-translate-y-0.5 active:scale-[0.97]
+transition-all duration-[180ms]
+```
+
+**Headers (TopBar, auth header)** — frosted glass:
+```
+glass-light dark:glass-dark backdrop-blur-xl
+```
+(Uses `@utility` classes defined in globals.css)
+
+**Nav items** — rounded-xl with hover nudge:
+```
+rounded-xl transition-all duration-[180ms]
+hover:bg-black/5 dark:hover:bg-white/5
+```
+
+**Focus rings** — keyboard-only:
+```
+focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-[#57BBCE]
+```
+(Use `focus-visible:`, NOT `focus:`)
+
+### 6.3 Dark Mode Surface Colors
+
+| Element | Light | Dark |
+|---------|-------|------|
+| Cards | `bg-white` | `bg-[#1C1C1E]` (Apple dark surface) |
+| Sidebar | `bg-white` | `bg-[#1C1C1E]` |
+| Borders | `border-[#E2E8F0]` | `border-white/8` or `border-white/10` |
+| Glass | `glass-light` | `glass-dark` |
+
+### 6.4 Typography
+
+- Hero (landing page): `text-5xl md:text-6xl lg:text-7xl leading-[1.05] tracking-[-0.03em]`
+- Page headings (h1): `text-2xl font-bold tracking-[-0.02em]`
+- Section headings (h2): `text-lg font-semibold tracking-[-0.01em]`
+- Labels: `text-sm font-medium text-neutral-600` (not neutral-700)
+
+### 6.5 Animation
+
+- All interactive transitions: `duration-[180ms]` with `ease-out-expo`
+- Hover lifts: `hover:-translate-y-0.5`
+- Active press: `active:scale-[0.97]` (buttons) or `active:scale-90` (nav icons)
+- Page entry: `animation: fadeUp 0.5s ease-out both`
+- Loading skeletons: shimmer gradient + `animate-pulse`
+
+### 6.6 Rules
+
+1. **Never use `rounded-lg` or `rounded-xl` on cards** — always `rounded-[18px]`
+2. **Never use `shadow-sm` on cards** — always `shadow-apple-md` (or lg/xl)
+3. **Never use bordered inputs** — always filled gray (`bg-[#F1F5F9] border-0`)
+4. **Never use `rounded-lg` on buttons** — always `rounded-full` (pill)
+5. **Never use `focus:` for focus rings** — always `focus-visible:`
+6. **Never use `bg-[#1E293B]` for dark cards** — always `bg-[#1C1C1E]`
+7. **Never omit hover microinteractions** — buttons/cards must have lift or scale
+8. **All headings must have tracking** — hero: -0.03em, display: -0.02em, section: -0.01em
+
+---
+
 ## Document History
 
 | Version | Date | Author | Changes |

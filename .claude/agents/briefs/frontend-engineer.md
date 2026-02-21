@@ -91,6 +91,18 @@ Before EVERY commit, verify these audit dimensions are addressed in your code:
 - All user-visible strings go through `t()` translation function — never hardcode English
 - Error messages, validation text, and placeholder text must all use i18n keys
 
+## ConnectIn Apple Design System (MANDATORY)
+When working on ConnectIn, all UI must follow the Apple-inspired design language defined in `products/connectin/.claude/addendum.md` Section 6. Key rules:
+- Cards: `rounded-[18px] shadow-apple-md` (never rounded-xl shadow-sm)
+- Inputs: filled gray `bg-[#F1F5F9] border-0 rounded-[10px]` (never bordered)
+- Buttons: `rounded-full` pill with `hover:-translate-y-0.5 active:scale-[0.97]`
+- Headers: `glass-light dark:glass-dark backdrop-blur-xl` (frosted glass)
+- Dark cards: `bg-[#1C1C1E]` (never `bg-[#1E293B]`)
+- Focus: `focus-visible:` only (never `focus:`)
+- Headings: hero `-0.03em`, display `-0.02em`, section `-0.01em` tracking
+- Transitions: `duration-[180ms]` with ease-out-expo
+- All tokens defined in `apps/web/src/app/globals.css`
+
 ## Quality Gate
 - All tests passing.
 - All pages exist (no broken routes).

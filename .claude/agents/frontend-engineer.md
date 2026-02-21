@@ -585,6 +585,26 @@ async function addToCart(formData: FormData) {
 
 Full documentation: https://github.com/vercel-labs/agent-skills/tree/main/skills/react-best-practices
 
+## ConnectIn Apple Design System (MANDATORY)
+
+When working on **ConnectIn**, all UI must follow the Apple-inspired design language. The full specification is in `products/connectin/.claude/addendum.md` Section 6. Read it before starting any ConnectIn frontend work.
+
+**Quick reference — these patterns are non-negotiable:**
+
+| Element | Pattern | Anti-pattern |
+|---------|---------|-------------|
+| Cards | `rounded-[18px] bg-white dark:bg-[#1C1C1E] shadow-apple-md` | `rounded-xl shadow-sm`, `dark:bg-[#1E293B]` |
+| Inputs | `rounded-[10px] border-0 bg-[#F1F5F9] focus:ring-2 focus:ring-primary-500/30` | `rounded-lg border border-neutral-200` |
+| Buttons | `rounded-full hover:-translate-y-0.5 active:scale-[0.97] shadow-apple-sm` | `rounded-lg` with no hover effect |
+| Headers | `glass-light dark:glass-dark backdrop-blur-xl` | Solid `bg-white` |
+| Nav items | `rounded-xl hover:bg-black/5 duration-[180ms]` | `rounded-md` |
+| Focus | `focus-visible:ring-2` | `focus:ring-2` |
+| Dark surfaces | `bg-[#1C1C1E]`, `border-white/8` | `bg-[#1E293B]`, `border-[#334155]` |
+| Headings | hero: `tracking-[-0.03em]`, display: `tracking-[-0.02em]`, section: `tracking-[-0.01em]` | No tracking |
+| Transitions | `transition-all duration-[180ms]` | `transition-colors duration-100` |
+
+**Design tokens** are defined in `apps/web/src/app/globals.css`: shadow scale (xs→xl), easing curves, radii, glass surfaces, keyframes (shimmer, fadeUp, scaleIn), and `@utility` classes.
+
 ## Pre-Completion Checklist (MANDATORY)
 
 Before marking any task complete, you MUST:
