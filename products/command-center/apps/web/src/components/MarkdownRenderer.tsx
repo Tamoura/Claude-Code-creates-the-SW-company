@@ -5,19 +5,126 @@ import rehypeRaw from 'rehype-raw';
 import type { Components } from 'react-markdown';
 import mermaid from 'mermaid';
 
-let mermaidCounter = 0;
+// ---------------------------------------------------------------------------
+// Mermaid render queue — serializes render() calls to prevent race conditions.
+// When a document has many diagrams (ConnectIn has up to 19 per file), calling
+// mermaid.initialize() + mermaid.render() concurrently causes failures because
+// mermaid's internal state is shared.
+// ---------------------------------------------------------------------------
 
-function initMermaid(theme: 'light' | 'dark') {
-  mermaid.initialize({
-    startOnLoad: false,
-    theme: theme === 'dark' ? 'dark' : 'default',
-    flowchart: { useMaxWidth: true, htmlLabels: true },
-    sequence: { useMaxWidth: true },
+let mermaidCounter = 0;
+let currentTheme: 'light' | 'dark' = 'dark';
+
+function ensureMermaidTheme(theme: 'light' | 'dark') {
+  if (currentTheme !== theme) {
+    currentTheme = theme;
+    mermaid.initialize({
+      startOnLoad: false,
+      theme: theme === 'dark' ? 'dark' : 'default',
+      flowchart: { useMaxWidth: true, htmlLabels: true },
+      sequence: { useMaxWidth: true },
+    });
+  }
+}
+
+// Initialize once at module load
+mermaid.initialize({
+  startOnLoad: false,
+  theme: 'dark',
+  flowchart: { useMaxWidth: true, htmlLabels: true },
+  sequence: { useMaxWidth: true },
+});
+
+type QueueItem = {
+  id: string;
+  chart: string;
+  theme: 'light' | 'dark';
+  resolve: (svg: string) => void;
+  reject: (err: unknown) => void;
+};
+
+const renderQueue: QueueItem[] = [];
+let rendering = false;
+
+async function processQueue() {
+  if (rendering) return;
+  rendering = true;
+
+  while (renderQueue.length > 0) {
+    const item = renderQueue.shift()!;
+    try {
+      ensureMermaidTheme(item.theme);
+      const { svg } = await mermaid.render(item.id, item.chart.trim());
+      item.resolve(svg);
+    } catch (err) {
+      item.reject(err);
+    }
+    // Clean up any leftover temporary element mermaid may have created
+    const tmp = document.getElementById(item.id);
+    if (tmp) tmp.remove();
+  }
+
+  rendering = false;
+}
+
+function enqueueRender(chart: string, theme: 'light' | 'dark'): Promise<string> {
+  const id = `mermaid-${++mermaidCounter}`;
+  return new Promise<string>((resolve, reject) => {
+    renderQueue.push({ id, chart, theme, resolve, reject });
+    processQueue();
   });
 }
 
-// Initialize with default
-initMermaid('dark');
+// ---------------------------------------------------------------------------
+// Wireframe detection — identifies ASCII wireframe art in unlabeled code blocks
+// by looking for box-drawing patterns like +---+, |...|, etc.
+// ---------------------------------------------------------------------------
+
+function isWireframe(code: string): boolean {
+  const lines = code.split('\n');
+  if (lines.length < 4) return false;
+
+  let boxLines = 0;
+  for (const line of lines) {
+    if (/^\s*[+|]/.test(line) || /[+|]\s*$/.test(line) || /\+-{3,}/.test(line)) {
+      boxLines++;
+    }
+  }
+  // If more than 40% of lines look like box-drawing, it's a wireframe
+  return boxLines / lines.length > 0.4;
+}
+
+function WireframeBlock({ code, dark }: { code: string; dark: boolean }) {
+  return (
+    <div className={`my-6 rounded-lg border-2 border-dashed overflow-hidden ${
+      dark ? 'border-indigo-500/40 bg-gray-950' : 'border-indigo-400/50 bg-gray-50'
+    }`}>
+      {/* Wireframe label */}
+      <div className={`flex items-center gap-2 px-4 py-2 border-b text-xs font-medium ${
+        dark
+          ? 'bg-indigo-500/10 border-indigo-500/20 text-indigo-400'
+          : 'bg-indigo-50 border-indigo-200 text-indigo-600'
+      }`}>
+        <svg className="w-4 h-4" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+          <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={1.5} d="M9 17V7m0 10a2 2 0 01-2 2H5a2 2 0 01-2-2V7a2 2 0 012-2h2a2 2 0 012 2m0 10a2 2 0 002 2h2a2 2 0 002-2M9 7a2 2 0 012-2h2a2 2 0 012 2m0 10V7m0 10a2 2 0 002 2h2a2 2 0 002-2V7a2 2 0 00-2-2h-2a2 2 0 00-2 2" />
+        </svg>
+        Wireframe
+      </div>
+      {/* Wireframe content — centered with constrained width */}
+      <div className="p-6 overflow-x-auto flex justify-center">
+        <pre className={`text-xs leading-relaxed font-mono whitespace-pre ${
+          dark ? 'text-indigo-300/90' : 'text-indigo-800'
+        }`} style={{ tabSize: 2 }}>
+          {code}
+        </pre>
+      </div>
+    </div>
+  );
+}
+
+// ---------------------------------------------------------------------------
+// MermaidDiagram — renders a single Mermaid chart via the serialized queue
+// ---------------------------------------------------------------------------
 
 function MermaidDiagram({ chart, theme }: { chart: string; theme: 'light' | 'dark' }) {
   const containerRef = useRef<HTMLDivElement>(null);
@@ -25,12 +132,10 @@ function MermaidDiagram({ chart, theme }: { chart: string; theme: 'light' | 'dar
   const [error, setError] = useState<string>('');
 
   useEffect(() => {
-    const id = `mermaid-${++mermaidCounter}`;
     let cancelled = false;
 
-    initMermaid(theme);
-    mermaid.render(id, chart.trim()).then(
-      ({ svg: renderedSvg }) => {
+    enqueueRender(chart, theme).then(
+      (renderedSvg) => {
         if (!cancelled) { setSvg(renderedSvg); setError(''); }
       },
       (err) => {
@@ -68,6 +173,10 @@ function MermaidDiagram({ chart, theme }: { chart: string; theme: 'light' | 'dar
     </div>
   );
 }
+
+// ---------------------------------------------------------------------------
+// MarkdownRenderer
+// ---------------------------------------------------------------------------
 
 interface MarkdownRendererProps {
   content: string;
@@ -169,9 +278,19 @@ export default function MarkdownRenderer({ content, theme = 'dark' }: MarkdownRe
       const child = children as ReactNode;
       if (child && typeof child === 'object' && 'props' in (child as any)) {
         const codeProps = (child as any).props;
+
+        // Mermaid diagrams
         if (codeProps?.className?.includes('language-mermaid')) {
           const code = String(codeProps.children ?? '').replace(/\n$/, '');
           return <MermaidDiagram chart={code} theme={theme} />;
+        }
+
+        // Wireframe detection for unlabeled code blocks
+        if (!codeProps?.className) {
+          const code = String(codeProps.children ?? '').replace(/\n$/, '');
+          if (isWireframe(code)) {
+            return <WireframeBlock code={code} dark={dark} />;
+          }
         }
       }
       return (

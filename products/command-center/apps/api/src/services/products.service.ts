@@ -5,7 +5,7 @@ import { repoPath } from './repo.service.js';
 export interface DocInfo {
   filename: string;
   title: string;
-  category: 'prd' | 'api' | 'architecture' | 'adr' | 'audit' | 'other';
+  category: 'prd' | 'api' | 'architecture' | 'adr' | 'audit' | 'design' | 'security' | 'strategy' | 'other';
   sizeBytes: number;
   lastModified: string;
 }
@@ -172,6 +172,9 @@ function categorizeDoc(filename: string): DocInfo['category'] {
   const basename = normalized.split('/').pop() ?? '';
 
   if (normalized.includes('adrs/') || normalized.includes('adr/')) return 'adr';
+  if (normalized.includes('design/') || basename.includes('wireframe') || basename.includes('design-system') || basename.includes('component-spec')) return 'design';
+  if (normalized.includes('security/') || basename.includes('threat') || basename.includes('security')) return 'security';
+  if (normalized.includes('strategy/') || basename.includes('market') || basename.includes('innovation')) return 'strategy';
   if (basename === 'prd.md') return 'prd';
   if (basename === 'api.md') return 'api';
   if (basename === 'architecture.md') return 'architecture';
@@ -304,11 +307,23 @@ function detectPhase(dir: string): string {
 function listDocs(dir: string): string[] {
   const docsDir = join(dir, 'docs');
   if (!existsSync(docsDir)) return [];
+  const result: string[] = [];
+  collectDocPaths(docsDir, result);
+  return result;
+}
+
+function collectDocPaths(currentDir: string, result: string[]): void {
   try {
-    return readdirSync(docsDir).filter((f) => f.endsWith('.md'));
-  } catch {
-    return [];
-  }
+    const entries = readdirSync(currentDir, { withFileTypes: true });
+    for (const entry of entries) {
+      const fullPath = join(currentDir, entry.name);
+      if (entry.isDirectory()) {
+        collectDocPaths(fullPath, result);
+      } else if (entry.name.endsWith('.md') || entry.name.endsWith('.yml') || entry.name.endsWith('.yaml')) {
+        result.push(entry.name);
+      }
+    }
+  } catch { /* ignore */ }
 }
 
 
