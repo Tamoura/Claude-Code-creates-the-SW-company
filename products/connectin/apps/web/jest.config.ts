@@ -26,6 +26,14 @@ const config: Config = {
     "!src/__mocks__/**",
     "!src/types/**",
   ],
+  coverageThreshold: {
+    global: {
+      branches: 50,
+      functions: 70,
+      lines: 75,
+      statements: 75,
+    },
+  },
 };
 
 export default config;

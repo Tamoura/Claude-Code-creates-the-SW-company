@@ -9,7 +9,7 @@ services:
     ports:
       - "5007:5007"
     environment:
-      - DATABASE_URL=postgresql://postgres:postgres@db:5432/connectin_dev
+      - DATABASE_URL=postgresql://postgres:${POSTGRES_PASSWORD:-postgres}@db:5432/connectin_dev
       - REDIS_URL=redis://redis:6379
       - JWT_SECRET=${JWT_SECRET:-dev-secret-change-in-production}
       - JWT_ACCESS_EXPIRY=15m
@@ -24,6 +24,14 @@ services:
       redis:
         condition: service_healthy
     restart: unless-stopped
+    deploy:
+      resources:
+        limits:
+          cpus: '1.0'
+          memory: 512M
+        reservations:
+          cpus: '0.25'
+          memory: 128M
     networks:
       - connectin
 
@@ -41,18 +49,27 @@ services:
     depends_on:
       - api
     restart: unless-stopped
+    deploy:
+      resources:
+        limits:
+          cpus: '1.0'
+          memory: 512M
+        reservations:
+          cpus: '0.25'
+          memory: 128M
     networks:
       - connectin
 
   db:
     image: postgres:15-alpine
     container_name: connectin-postgres
+    # DEV ONLY: Remove host port mapping in production
     ports:
       - "5433:5432"
     environment:
       - POSTGRES_DB=connectin_dev
       - POSTGRES_USER=postgres
-      - POSTGRES_PASSWORD=postgres
+      - POSTGRES_PASSWORD=${POSTGRES_PASSWORD:-postgres}
     volumes:
       - connectin_pgdata:/var/lib/postgresql/data
     healthcheck:
@@ -61,12 +78,21 @@ services:
       timeout: 5s
       retries: 5
     restart: unless-stopped
+    deploy:
+      resources:
+        limits:
+          cpus: '1.0'
+          memory: 1G
+        reservations:
+          cpus: '0.25'
+          memory: 256M
     networks:
       - connectin
 
   redis:
     image: redis:7-alpine
     container_name: connectin-redis
+    # DEV ONLY: Remove host port mapping in production
     ports:
       - "6380:6379"
     volumes:
@@ -77,6 +103,14 @@ services:
       timeout: 5s
       retries: 5
     restart: unless-stopped
+    deploy:
+      resources:
+        limits:
+          cpus: '0.5'
+          memory: 256M
+        reservations:
+          cpus: '0.1'
+          memory: 64M
     networks:
       - connectin
 

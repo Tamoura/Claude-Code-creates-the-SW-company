@@ -11,6 +11,14 @@ const config: Config = {
   globalTeardown: '<rootDir>/tests/global-teardown.ts',
   testTimeout: 30000,
   verbose: true,
+  coverageThreshold: {
+    global: {
+      branches: 60,
+      functions: 75,
+      lines: 80,
+      statements: 80,
+    },
+  },
 };
 
 export default config;
