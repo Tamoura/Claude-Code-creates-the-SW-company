@@ -237,11 +237,26 @@ jobs:
 
       - name: Build Docker images
         run: |
-          if [ -f "products/connectin/docker-compose.yml" ]; then
-            docker compose -f products/connectin/docker-compose.yml build
-          else
+          if [ ! -f "products/connectin/docker-compose.yml" ]; then
             echo "::notice::docker-compose.yml not found — skipping Docker build"
+            exit 0
           fi
+
+          SERVICES=""
+          if [ -f "products/connectin/apps/web/Dockerfile" ]; then
+            SERVICES="$SERVICES web"
+          fi
+          if [ -f "products/connectin/apps/api/Dockerfile" ] && [ -f "products/connectin/apps/api/package-lock.json" ]; then
+            SERVICES="$SERVICES api"
+          fi
+
+          if [ -z "$SERVICES" ]; then
+            echo "::notice::No buildable services found — skipping Docker build"
+            exit 0
+          fi
+
+          echo "Building services:$SERVICES"
+          docker compose -f products/connectin/docker-compose.yml build $SERVICES
 
   quality-gate:
     name: Quality Gate
