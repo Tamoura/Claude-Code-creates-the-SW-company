@@ -70,6 +70,9 @@ model User {
   comments            Comment[]
   likes               Like[]
   consents            Consent[]
+  jobs                Job[]
+  applications        JobApplication[]
+  savedJobs           SavedJob[]
 
   @@index([status, createdAt])
   @@index([verificationToken])
@@ -271,4 +274,96 @@ model Like {
 
   @@unique([postId, userId])
   @@map("likes")
+}
+
+// ─── Jobs ────────────────────────────────────────────────────
+
+enum WorkType {
+  ONSITE
+  HYBRID
+  REMOTE
+}
+
+enum ExperienceLevel {
+  ENTRY
+  MID
+  SENIOR
+  LEAD
+  EXECUTIVE
+}
+
+enum JobStatus {
+  OPEN
+  CLOSED
+  ARCHIVED
+}
+
+enum ApplicationStatus {
+  PENDING
+  REVIEWED
+  SHORTLISTED
+  REJECTED
+  WITHDRAWN
+}
+
+model Job {
+  id               String          @id @default(uuid())
+  recruiterId      String          @map("recruiter_id")
+  title            String          @db.VarChar(200)
+  company          String          @db.VarChar(200)
+  location         String?         @db.VarChar(200)
+  workType         WorkType        @default(ONSITE) @map("work_type")
+  experienceLevel  ExperienceLevel @default(MID) @map("experience_level")
+  description      String          @db.Text
+  requirements     String?         @db.Text
+  salaryMin        Int?            @map("salary_min")
+  salaryMax        Int?            @map("salary_max")
+  salaryCurrency   String?         @default("USD") @map("salary_currency") @db.VarChar(10)
+  language         String          @default("en") @db.VarChar(5)
+  status           JobStatus       @default(OPEN)
+  applicantCount   Int             @default(0) @map("applicant_count")
+  createdAt        DateTime        @default(now()) @map("created_at")
+  updatedAt        DateTime        @updatedAt @map("updated_at")
+
+  recruiter        User            @relation(fields: [recruiterId], references: [id], onDelete: Cascade)
+  applications     JobApplication[]
+  savedBy          SavedJob[]
+
+  @@index([recruiterId])
+  @@index([status, createdAt])
+  @@index([workType])
+  @@index([experienceLevel])
+  @@map("jobs")
+}
+
+model JobApplication {
+  id          String            @id @default(uuid())
+  jobId       String            @map("job_id")
+  applicantId String            @map("applicant_id")
+  coverNote   String?           @db.VarChar(500) @map("cover_note")
+  status      ApplicationStatus @default(PENDING)
+  appliedAt   DateTime          @default(now()) @map("applied_at")
+  updatedAt   DateTime          @updatedAt @map("updated_at")
+
+  job         Job               @relation(fields: [jobId], references: [id], onDelete: Cascade)
+  applicant   User              @relation(fields: [applicantId], references: [id], onDelete: Cascade)
+
+  @@unique([jobId, applicantId])
+  @@index([applicantId])
+  @@index([jobId])
+  @@map("job_applications")
+}
+
+model SavedJob {
+  id        String   @id @default(uuid())
+  jobId     String   @map("job_id")
+  userId    String   @map("user_id")
+  savedAt   DateTime @default(now()) @map("saved_at")
+
+  job       Job      @relation(fields: [jobId], references: [id], onDelete: Cascade)
+  user      User     @relation(fields: [userId], references: [id], onDelete: Cascade)
+
+  @@unique([jobId, userId])
+  @@index([userId])
+  @@map("saved_jobs")
 }
