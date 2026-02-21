@@ -41,21 +41,21 @@ graph TD
     end
 
     subgraph TB3["Trust Boundary 3: Application Layer"]
-        FE[Next.js Frontend<br/>Port 3111]
-        API[Fastify API<br/>Port 5007]
-        WS[WebSocket Server<br/>Real-time Messaging]
+        FE["Next.js Frontend<br/>Port 3111"]
+        API["Fastify API<br/>Port 5007"]
+        WS["WebSocket Server<br/>Real-time Messaging"]
     end
 
     subgraph TB4["Trust Boundary 4: Data Layer"]
-        DB[(PostgreSQL<br/>+ pgvector)]
-        REDIS[(Redis<br/>Sessions + Cache)]
-        S3[Object Storage<br/>R2 / S3]
+        DB[("PostgreSQL<br/>+ pgvector")]
+        REDIS[("Redis<br/>Sessions + Cache")]
+        S3["Object Storage<br/>R2 / S3"]
     end
 
     subgraph TB5["Trust Boundary 5: External Services"]
-        OAUTH[OAuth Providers<br/>Google, GitHub]
-        CLAUDE[Claude API<br/>Anthropic]
-        EMAIL[Email Service<br/>Resend / SendGrid]
+        OAUTH["OAuth Providers<br/>Google, GitHub"]
+        CLAUDE["Claude API<br/>Anthropic"]
+        EMAIL["Email Service<br/>Resend / SendGrid"]
     end
 
     BROWSER -->|HTTPS / TLS 1.3| CDN
@@ -240,7 +240,7 @@ graph LR
     subgraph Public["Public Entry Points (No Auth)"]
         EP1[POST /api/auth/register]
         EP2[POST /api/auth/login]
-        EP3[GET /api/auth/verify/:token]
+        EP3["GET /api/auth/verify/:token"]
         EP4[POST /api/auth/forgot-password]
         EP5[POST /api/auth/reset-password]
         EP6[GET /api/auth/oauth/google]
@@ -249,21 +249,21 @@ graph LR
     end
 
     subgraph Authenticated["Authenticated Entry Points"]
-        EP9[Profile CRUD<br/>/api/profiles/*]
-        EP10[Connection CRUD<br/>/api/connections/*]
-        EP11[Post CRUD<br/>/api/posts/*]
-        EP12[Job Search + Apply<br/>/api/jobs/*]
-        EP13[Messaging<br/>/api/messages/*]
-        EP14[Search<br/>/api/search/*]
-        EP15[AI Features<br/>/api/ai/*]
-        EP16[WebSocket<br/>ws://.../*]
-        EP17[File Upload<br/>/api/profiles/me/avatar<br/>/api/posts (images)]
+        EP9["Profile CRUD<br/>/api/profiles/*"]
+        EP10["Connection CRUD<br/>/api/connections/*"]
+        EP11["Post CRUD<br/>/api/posts/*"]
+        EP12["Job Search + Apply<br/>/api/jobs/*"]
+        EP13["Messaging<br/>/api/messages/*"]
+        EP14["Search<br/>/api/search/*"]
+        EP15["AI Features<br/>/api/ai/*"]
+        EP16["WebSocket<br/>ws://.../*"]
+        EP17["File Upload<br/>/api/profiles/me/avatar<br/>/api/posts images"]
     end
 
     subgraph Admin["Admin Entry Points"]
-        EP18[Dashboard<br/>/api/admin/dashboard]
-        EP19[Moderation<br/>/api/admin/reports/*]
-        EP20[User Management<br/>/api/admin/users/*]
+        EP18["Dashboard<br/>/api/admin/dashboard"]
+        EP19["Moderation<br/>/api/admin/reports/*"]
+        EP20["User Management<br/>/api/admin/users/*"]
     end
 
     subgraph Risk["Risk Rating"]

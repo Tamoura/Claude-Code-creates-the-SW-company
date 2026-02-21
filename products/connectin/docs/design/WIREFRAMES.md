@@ -436,7 +436,7 @@ flowchart LR
 flowchart TD
     BANNER[Banner Image Area] --> AVATAR[Avatar + Name + Headline]
     AVATAR --> ACTIONS[Action Buttons: Edit/Connect/Message]
-    ACTIONS --> TABS[Tabs: About | Experience | Education | Skills | Posts]
+    ACTIONS --> TABS["Tabs: About | Experience | Education | Skills | Posts"]
     TABS --> CONTENT[Tab Content Area]
     CONTENT --> SIDEBAR[Sidebar: Completeness Score + Suggestions]
 ```

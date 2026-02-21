@@ -141,42 +141,220 @@ function asciiToBoxDrawing(code: string): string {
   return grid.map((row) => row.join('').trimEnd()).join('\n');
 }
 
+// ---------------------------------------------------------------------------
+// Wireframe tokenizer — parses box-drawn wireframe lines into typed segments
+// so each element (input, button, icon, etc.) can be styled distinctly,
+// producing a B&W form-like visual from ASCII art.
+// ---------------------------------------------------------------------------
+
+const BOX_CHARS = new Set('┌┐└┘├┤┬┴┼─│');
+
+type WireTokenType =
+  | 'border' | 'input' | 'button' | 'link' | 'icon'
+  | 'radio' | 'checkbox' | 'toggle' | 'progress' | 'text';
+
+interface WireToken { type: WireTokenType; raw: string; active?: boolean; pct?: number }
+
+function tokenizeWireframeLine(line: string): WireToken[] {
+  const tokens: WireToken[] = [];
+  let i = 0;
+  let buf = '';
+  const flush = () => { if (buf) { tokens.push({ type: 'text', raw: buf }); buf = ''; } };
+
+  while (i < line.length) {
+    const ch = line[i];
+
+    // Box-drawing characters
+    if (BOX_CHARS.has(ch)) {
+      flush();
+      let j = i;
+      while (j < line.length && BOX_CHARS.has(line[j])) j++;
+      tokens.push({ type: 'border', raw: line.slice(i, j) });
+      i = j; continue;
+    }
+
+    // Radio (*)
+    if (ch === '(' && i + 2 < line.length && line[i + 1] === '*' && line[i + 2] === ')') {
+      flush(); tokens.push({ type: 'radio', raw: '(*)', active: true }); i += 3; continue;
+    }
+
+    // Checkbox [x]
+    if (ch === '[' && i + 2 < line.length && line[i + 1] === 'x' && line[i + 2] === ']') {
+      flush(); tokens.push({ type: 'checkbox', raw: '[x]', active: true }); i += 3; continue;
+    }
+
+    // Toggle on [v ...]
+    if (ch === '[' && i + 2 < line.length && line[i + 1] === 'v' && line[i + 2] === ' ') {
+      const end = line.indexOf(']', i);
+      if (end !== -1 && end - i < 15) {
+        flush(); tokens.push({ type: 'toggle', raw: line.slice(i, end + 1), active: true });
+        i = end + 1; continue;
+      }
+    }
+
+    // Toggle off [  Off]
+    if (ch === '[' && i + 1 < line.length && line[i + 1] === ' ') {
+      const end = line.indexOf(']', i);
+      if (end !== -1 && end - i < 15 && /^off$/i.test(line.slice(i + 1, end).trim())) {
+        flush(); tokens.push({ type: 'toggle', raw: line.slice(i, end + 1), active: false });
+        i = end + 1; continue;
+      }
+    }
+
+    // Progress bar [===---]
+    if (ch === '[') {
+      const end = line.indexOf(']', i);
+      if (end !== -1) {
+        const inner = line.slice(i + 1, end);
+        if (/^[=\- ]+$/.test(inner) && inner.includes('=') && inner.length > 3) {
+          flush();
+          const filled = (inner.match(/=/g) || []).length;
+          const total = filled + (inner.match(/-/g) || []).length;
+          tokens.push({ type: 'progress', raw: line.slice(i, end + 1), pct: total > 0 ? Math.round(filled / total * 100) : 0 });
+          i = end + 1; continue;
+        }
+      }
+    }
+
+    // Input field {text}
+    if (ch === '{') {
+      const end = line.indexOf('}', i);
+      if (end !== -1) { flush(); tokens.push({ type: 'input', raw: line.slice(i, end + 1) }); i = end + 1; continue; }
+    }
+
+    // Button [text]
+    if (ch === '[') {
+      const end = line.indexOf(']', i);
+      if (end !== -1 && end - i < 60) { flush(); tokens.push({ type: 'button', raw: line.slice(i, end + 1) }); i = end + 1; continue; }
+    }
+
+    // Icon <text>
+    if (ch === '<') {
+      const end = line.indexOf('>', i);
+      if (end !== -1 && end - i < 25 && !line.slice(i + 1, end).includes('<')) {
+        flush(); tokens.push({ type: 'icon', raw: line.slice(i, end + 1) }); i = end + 1; continue;
+      }
+    }
+
+    // Link (text) — more than 3 chars
+    if (ch === '(') {
+      const end = line.indexOf(')', i);
+      if (end !== -1 && end - i > 3 && end - i < 50) {
+        flush(); tokens.push({ type: 'link', raw: line.slice(i, end + 1) }); i = end + 1; continue;
+      }
+    }
+
+    buf += ch; i++;
+  }
+  flush();
+  return tokens;
+}
+
+// ---------------------------------------------------------------------------
+// WireframeBlock — renders tokenized wireframe with B&W form styling
+// ---------------------------------------------------------------------------
+
 function WireframeBlock({ code, dark }: { code: string; dark: boolean }) {
-  const rendered = asciiToBoxDrawing(code);
+  const boxDrawn = asciiToBoxDrawing(code);
+  const lines = boxDrawn.split('\n');
+  // Delimiter color — nearly invisible so brackets/braces fade out
+  const dim = dark ? 'text-gray-700' : 'text-gray-300';
+
+  function renderToken(t: WireToken, key: number) {
+    switch (t.type) {
+      case 'border':
+        return <span key={key} className={dark ? 'text-gray-600' : 'text-gray-300'}>{t.raw}</span>;
+      case 'input': {
+        const inner = t.raw.slice(1, -1);
+        return (
+          <span key={key}>
+            <span className={dim}>{t.raw[0]}</span>
+            <span className={dark ? 'text-gray-300' : 'text-gray-700'}
+              style={{ boxShadow: `inset 0 -1.5px 0 ${dark ? 'rgba(156,163,175,0.5)' : 'rgba(107,114,128,0.4)'}` }}>
+              {inner}
+            </span>
+            <span className={dim}>{t.raw[t.raw.length - 1]}</span>
+          </span>
+        );
+      }
+      case 'button': {
+        const inner = t.raw.slice(1, -1);
+        return (
+          <span key={key}>
+            <span className={dim}>{t.raw[0]}</span>
+            <span className={`font-semibold ${dark ? 'bg-gray-600 text-white' : 'bg-gray-800 text-white'}`}>{inner}</span>
+            <span className={dim}>{t.raw[t.raw.length - 1]}</span>
+          </span>
+        );
+      }
+      case 'link': {
+        const inner = t.raw.slice(1, -1);
+        return (
+          <span key={key}>
+            <span className={dim}>{t.raw[0]}</span>
+            <span className={`underline ${dark ? 'text-gray-400' : 'text-gray-500'}`}>{inner}</span>
+            <span className={dim}>{t.raw[t.raw.length - 1]}</span>
+          </span>
+        );
+      }
+      case 'icon': {
+        const inner = t.raw.slice(1, -1);
+        return (
+          <span key={key}>
+            <span className={dim}>{t.raw[0]}</span>
+            <span className={`italic ${dark ? 'text-gray-500' : 'text-gray-400'}`}>{inner}</span>
+            <span className={dim}>{t.raw[t.raw.length - 1]}</span>
+          </span>
+        );
+      }
+      case 'radio':
+        return <span key={key} className={`font-bold ${dark ? 'text-gray-200' : 'text-gray-800'}`}>{t.raw}</span>;
+      case 'checkbox':
+        return <span key={key} className={`font-bold ${dark ? 'text-gray-200' : 'text-gray-800'}`}>{t.raw}</span>;
+      case 'toggle':
+        return (
+          <span key={key} className={`font-semibold ${
+            t.active ? (dark ? 'bg-gray-500 text-white' : 'bg-gray-700 text-white') : (dark ? 'text-gray-600' : 'text-gray-400')
+          }`}>{t.raw}</span>
+        );
+      case 'progress':
+        return (
+          <span key={key}>
+            {[...t.raw].map((c, ci) => {
+              if (c === '=') return <span key={ci} className={`font-bold ${dark ? 'text-gray-200' : 'text-gray-700'}`}>{c}</span>;
+              if (c === '-') return <span key={ci} className={dark ? 'text-gray-700' : 'text-gray-300'}>{c}</span>;
+              return <span key={ci} className={dim}>{c}</span>;
+            })}
+          </span>
+        );
+      default:
+        return <span key={key}>{t.raw}</span>;
+    }
+  }
 
   return (
     <div className={`my-6 rounded-xl overflow-hidden border ${
-      dark ? 'border-slate-600/50 bg-slate-900' : 'border-slate-300 bg-white'
-    }`}>
-      {/* Header bar */}
+      dark ? 'border-gray-700 bg-gray-950' : 'border-gray-200 bg-white'
+    }`} style={{ boxShadow: dark ? 'none' : '0 1px 3px rgba(0,0,0,0.06)' }}>
       <div className={`flex items-center gap-2 px-4 py-2.5 border-b text-xs font-semibold tracking-wide uppercase ${
-        dark
-          ? 'bg-slate-800 border-slate-700 text-slate-400'
-          : 'bg-slate-100 border-slate-200 text-slate-500'
+        dark ? 'bg-gray-900 border-gray-800 text-gray-500' : 'bg-gray-50 border-gray-200 text-gray-400'
       }`}>
         <svg className="w-4 h-4" fill="none" stroke="currentColor" viewBox="0 0 24 24">
           <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={1.5} d="M9 17V7m0 10a2 2 0 01-2 2H5a2 2 0 01-2-2V7a2 2 0 012-2h2a2 2 0 012 2m0 10a2 2 0 002 2h2a2 2 0 002-2M9 7a2 2 0 012-2h2a2 2 0 012 2m0 10V7m0 10a2 2 0 002 2h2a2 2 0 002-2V7a2 2 0 00-2-2h-2a2 2 0 00-2 2" />
         </svg>
         Wireframe
       </div>
-      {/* Blueprint-style wireframe content */}
-      <div
-        className="p-6 overflow-x-auto flex justify-center"
-        style={{
-          backgroundImage: dark
-            ? 'radial-gradient(circle, rgba(100,116,139,0.15) 1px, transparent 1px)'
-            : 'radial-gradient(circle, rgba(148,163,184,0.2) 1px, transparent 1px)',
-          backgroundSize: '12px 12px',
-        }}
-      >
-        <pre
-          className={`text-[13px] leading-[1.35] whitespace-pre ${
-            dark ? 'text-sky-300/80' : 'text-slate-600'
-          }`}
-          style={{ fontFamily: "'SF Mono', 'Cascadia Code', 'Fira Code', Menlo, monospace" }}
+      <div className={`p-6 overflow-x-auto ${dark ? 'bg-gray-950' : 'bg-white'}`}>
+        <div
+          style={{ fontFamily: "'SF Mono', 'Cascadia Code', 'Fira Code', Menlo, monospace", fontSize: '13px', lineHeight: 1.5 }}
+          className={dark ? 'text-gray-300' : 'text-gray-700'}
         >
-          {rendered}
-        </pre>
+          {lines.map((ln, li) => (
+            <div key={li} className="whitespace-pre">
+              {tokenizeWireframeLine(ln).map((t, ti) => renderToken(t, ti))}
+            </div>
+          ))}
+        </div>
       </div>
     </div>
   );
