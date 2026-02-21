@@ -1,0 +1,239 @@
+generator client {
+  provider = "prisma-client-js"
+}
+
+datasource db {
+  provider = "postgresql"
+  url      = env("DATABASE_URL")
+}
+
+// ─── Enums ──────────────────────────────────────────────────
+
+enum UserRole {
+  USER
+  RECRUITER
+  ADMIN
+}
+
+enum UserStatus {
+  ACTIVE
+  SUSPENDED
+  DEACTIVATED
+  DELETED
+}
+
+enum LanguagePreference {
+  AR
+  EN
+}
+
+enum ConnectionStatus {
+  PENDING
+  ACCEPTED
+  REJECTED
+  WITHDRAWN
+  EXPIRED
+}
+
+enum TextDirection {
+  RTL
+  LTR
+  AUTO
+}
+
+// ─── Users ──────────────────────────────────────────────────
+
+model User {
+  id                  String              @id @default(uuid())
+  email               String              @unique
+  passwordHash        String?             @map("password_hash")
+  displayName         String              @map("display_name")
+  role                UserRole            @default(USER)
+  emailVerified       Boolean             @default(false) @map("email_verified")
+  verificationToken   String?             @map("verification_token")
+  verificationExpires DateTime?           @map("verification_expires")
+  resetToken          String?             @map("reset_token")
+  resetTokenExpires   DateTime?           @map("reset_token_expires")
+  languagePreference  LanguagePreference  @default(AR) @map("language_preference")
+  status              UserStatus          @default(ACTIVE)
+  lastLoginAt         DateTime?           @map("last_login_at")
+  createdAt           DateTime            @default(now()) @map("created_at")
+  updatedAt           DateTime            @updatedAt @map("updated_at")
+
+  profile             Profile?
+  sessions            Session[]
+  sentConnections     Connection[]        @relation("ConnectionSender")
+  receivedConnections Connection[]        @relation("ConnectionReceiver")
+  posts               Post[]
+  comments            Comment[]
+  likes               Like[]
+
+  @@index([status, createdAt])
+  @@map("users")
+}
+
+// ─── Profiles ───────────────────────────────────────────────
+
+model Profile {
+  id                String          @id @default(uuid())
+  userId            String          @unique @map("user_id")
+  headlineAr        String?         @map("headline_ar") @db.VarChar(220)
+  headlineEn        String?         @map("headline_en") @db.VarChar(220)
+  summaryAr         String?         @map("summary_ar")
+  summaryEn         String?         @map("summary_en")
+  avatarUrl         String?         @map("avatar_url") @db.VarChar(500)
+  location          String?         @db.VarChar(100)
+  website           String?         @db.VarChar(255)
+  completenessScore Int             @default(0) @map("completeness_score")
+  createdAt         DateTime        @default(now()) @map("created_at")
+  updatedAt         DateTime        @updatedAt @map("updated_at")
+
+  user              User            @relation(fields: [userId], references: [id], onDelete: Cascade)
+  experiences       Experience[]
+  profileSkills     ProfileSkill[]
+
+  @@map("profiles")
+}
+
+// ─── Experiences ────────────────────────────────────────────
+
+model Experience {
+  id          String    @id @default(uuid())
+  profileId   String    @map("profile_id")
+  company     String    @db.VarChar(200)
+  title       String    @db.VarChar(200)
+  location    String?   @db.VarChar(100)
+  description String?
+  startDate   DateTime  @map("start_date") @db.Date
+  endDate     DateTime? @map("end_date") @db.Date
+  isCurrent   Boolean   @default(false) @map("is_current")
+  sortOrder   Int       @default(0) @map("sort_order")
+  createdAt   DateTime  @default(now()) @map("created_at")
+
+  profile     Profile   @relation(fields: [profileId], references: [id], onDelete: Cascade)
+
+  @@index([profileId])
+  @@map("experiences")
+}
+
+// ─── Skills ─────────────────────────────────────────────────
+
+model Skill {
+  id        String         @id @default(uuid())
+  nameEn    String         @unique @map("name_en") @db.VarChar(100)
+  nameAr    String?        @map("name_ar") @db.VarChar(100)
+  category  String?        @db.VarChar(50)
+  createdAt DateTime       @default(now()) @map("created_at")
+
+  profileSkills ProfileSkill[]
+
+  @@map("skills")
+}
+
+model ProfileSkill {
+  id               String   @id @default(uuid())
+  profileId        String   @map("profile_id")
+  skillId          String   @map("skill_id")
+  endorsementCount Int      @default(0) @map("endorsement_count")
+  createdAt        DateTime @default(now()) @map("created_at")
+
+  profile          Profile  @relation(fields: [profileId], references: [id], onDelete: Cascade)
+  skill            Skill    @relation(fields: [skillId], references: [id], onDelete: Cascade)
+
+  @@unique([profileId, skillId])
+  @@map("profile_skills")
+}
+
+// ─── Connections ────────────────────────────────────────────
+
+model Connection {
+  id            String           @id @default(uuid())
+  senderId      String           @map("sender_id")
+  receiverId    String           @map("receiver_id")
+  status        ConnectionStatus @default(PENDING)
+  message       String?          @db.VarChar(300)
+  respondedAt   DateTime?        @map("responded_at")
+  cooldownUntil DateTime?        @map("cooldown_until")
+  expiresAt     DateTime?        @map("expires_at")
+  createdAt     DateTime         @default(now()) @map("created_at")
+
+  sender        User             @relation("ConnectionSender", fields: [senderId], references: [id], onDelete: Cascade)
+  receiver      User             @relation("ConnectionReceiver", fields: [receiverId], references: [id], onDelete: Cascade)
+
+  @@unique([senderId, receiverId])
+  @@index([receiverId, status])
+  @@index([status, expiresAt])
+  @@map("connections")
+}
+
+// ─── Sessions ───────────────────────────────────────────────
+
+model Session {
+  id               String   @id @default(uuid())
+  userId           String   @map("user_id")
+  refreshTokenHash String   @map("refresh_token_hash")
+  ipAddress        String?  @map("ip_address")
+  userAgent        String?  @map("user_agent")
+  expiresAt        DateTime @map("expires_at")
+  createdAt        DateTime @default(now()) @map("created_at")
+
+  user             User     @relation(fields: [userId], references: [id], onDelete: Cascade)
+
+  @@index([userId])
+  @@map("sessions")
+}
+
+// ─── Posts ───────────────────────────────────────────────────
+
+model Post {
+  id            String        @id @default(uuid())
+  authorId      String        @map("author_id")
+  content       String        @db.VarChar(3000)
+  textDirection TextDirection @default(AUTO) @map("text_direction")
+  likeCount     Int           @default(0) @map("like_count")
+  commentCount  Int           @default(0) @map("comment_count")
+  isDeleted     Boolean       @default(false) @map("is_deleted")
+  createdAt     DateTime      @default(now()) @map("created_at")
+  updatedAt     DateTime      @updatedAt @map("updated_at")
+
+  author        User          @relation(fields: [authorId], references: [id], onDelete: Cascade)
+  comments      Comment[]
+  likes         Like[]
+
+  @@index([authorId, createdAt(sort: Desc)])
+  @@index([createdAt(sort: Desc)])
+  @@map("posts")
+}
+
+// ─── Comments ───────────────────────────────────────────────
+
+model Comment {
+  id            String        @id @default(uuid())
+  postId        String        @map("post_id")
+  authorId      String        @map("author_id")
+  content       String        @db.VarChar(1000)
+  textDirection TextDirection @default(AUTO) @map("text_direction")
+  isDeleted     Boolean       @default(false) @map("is_deleted")
+  createdAt     DateTime      @default(now()) @map("created_at")
+
+  post          Post          @relation(fields: [postId], references: [id], onDelete: Cascade)
+  author        User          @relation(fields: [authorId], references: [id], onDelete: Cascade)
+
+  @@index([postId, createdAt(sort: Desc)])
+  @@map("comments")
+}
+
+// ─── Likes ──────────────────────────────────────────────────
+
+model Like {
+  id        String   @id @default(uuid())
+  postId    String   @map("post_id")
+  userId    String   @map("user_id")
+  createdAt DateTime @default(now()) @map("created_at")
+
+  post      Post     @relation(fields: [postId], references: [id], onDelete: Cascade)
+  user      User     @relation(fields: [userId], references: [id], onDelete: Cascade)
+
+  @@unique([postId, userId])
+  @@map("likes")
+}
