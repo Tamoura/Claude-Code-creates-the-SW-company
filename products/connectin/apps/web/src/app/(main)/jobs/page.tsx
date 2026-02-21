@@ -13,14 +13,14 @@ export default function JobsPage() {
   return (
     <div className="space-y-4">
       {/* Search */}
-      <div className="rounded-xl bg-white p-4 shadow-sm">
+      <div className="rounded-[18px] bg-white dark:bg-[#1C1C1E] p-4 shadow-apple-md">
         <input
           type="text"
           aria-label={t("jobs.search")}
           value={search}
           onChange={(e) => setSearch(e.target.value)}
           placeholder={t("jobs.search")}
-          className="w-full rounded-lg border border-neutral-200 px-3 py-2 text-neutral-900 placeholder:text-neutral-400 focus:border-primary-500 focus:outline-none focus:ring-1 focus:ring-primary-500"
+          className="w-full rounded-[10px] border-0 bg-[#F1F5F9] dark:bg-white/5 px-3 py-2.5 text-neutral-900 dark:text-neutral-100 placeholder:text-neutral-400 focus:bg-white dark:focus:bg-white/10 focus:outline-none focus:ring-2 focus:ring-primary-500/30 transition-all duration-[180ms]"
         />
       </div>
 
@@ -37,10 +37,10 @@ export default function JobsPage() {
                 setActiveFilter(isActive ? null : filterKey)
               }
               className={[
-                "rounded-full border px-4 py-1.5 text-sm font-medium transition-colors",
+                "rounded-full border px-4 py-1.5 text-sm font-medium transition-all duration-[180ms]",
                 isActive
-                  ? "border-primary-600 bg-primary-600 text-white"
-                  : "border-neutral-300 bg-white text-neutral-700 hover:border-primary-500 hover:text-primary-600",
+                  ? "border-primary-600 bg-primary-600 text-white shadow-apple-sm"
+                  : "border-neutral-300 bg-white dark:bg-[#1C1C1E] text-neutral-700 dark:text-neutral-300 hover:border-primary-500 hover:text-primary-600 hover:-translate-y-0.5",
               ].join(" ")}
             >
               {label}
@@ -50,7 +50,7 @@ export default function JobsPage() {
       </div>
 
       {/* Job listings - empty state */}
-      <div className="rounded-xl bg-white p-8 text-center shadow-sm">
+      <div className="rounded-[18px] bg-white dark:bg-[#1C1C1E] p-8 text-center shadow-apple-md">
         <p className="text-neutral-500">{t("noResults")}</p>
       </div>
     </div>

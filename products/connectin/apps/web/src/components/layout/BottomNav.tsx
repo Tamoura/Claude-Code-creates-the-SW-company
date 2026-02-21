@@ -28,8 +28,7 @@ export function BottomNav() {
       className={cn(
         "fixed inset-x-0 bottom-0 z-20 lg:hidden",
         "flex items-center justify-around",
-        "h-14 bg-white dark:bg-[#1E293B]",
-        "border-t border-[#E2E8F0] dark:border-[#334155]",
+        "h-14 glass-light dark:glass-dark",
         "safe-area-pb"
       )}
       aria-label="Mobile navigation"
@@ -44,17 +43,21 @@ export function BottomNav() {
             key={item.href}
             href={item.href}
             className={cn(
-              "flex flex-col items-center justify-center gap-0.5",
-              "min-w-[48px] min-h-[48px] px-2 py-1 rounded-md",
-              "text-xs transition-colors duration-100",
+              "relative flex flex-col items-center justify-center gap-0.5",
+              "min-w-[48px] min-h-[48px] px-2 py-1 rounded-xl",
+              "text-xs transition-all duration-[180ms]",
+              "active:scale-90",
               isActive
                 ? "text-[#0B6E7F] font-medium"
                 : "text-[#64748B] dark:text-[#94A3B8]",
-              "focus:outline-none focus:ring-2 focus:ring-[#57BBCE]"
+              "focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-[#57BBCE]"
             )}
             aria-current={isActive ? "page" : undefined}
             aria-label={item.label}
           >
+            {isActive && (
+              <span className="absolute top-0 inset-x-3 h-1 rounded-full bg-[#0C9AB8]" aria-hidden="true" />
+            )}
             <item.icon
               className={cn(
                 "h-5 w-5",

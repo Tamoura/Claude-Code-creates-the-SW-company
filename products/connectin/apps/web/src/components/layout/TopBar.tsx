@@ -31,9 +31,9 @@ export function TopBar({ variant = "authenticated" }: TopBarProps) {
 
   if (variant === "unauthenticated") {
     return (
-      <header className="sticky top-0 z-20 h-16 bg-white dark:bg-[#1E293B] border-b border-[#E2E8F0] dark:border-[#334155]">
+      <header className="sticky top-0 z-20 h-16 glass-light dark:glass-dark border-b border-[#E2E8F0]/60 dark:border-white/10">
         <div className="max-w-7xl mx-auto px-4 h-full flex items-center justify-between">
-          <Link href="/" className="focus:outline-none focus:ring-2 focus:ring-[#57BBCE] rounded">
+          <Link href="/" className="focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-[#57BBCE] rounded">
             <Logo size="md" />
           </Link>
           <div className="flex items-center gap-4">
@@ -41,7 +41,7 @@ export function TopBar({ variant = "authenticated" }: TopBarProps) {
               href="/login"
               className={cn(
                 "text-sm font-medium text-[#0B6E7F] hover:text-[#086577]",
-                "focus:outline-none focus:ring-2 focus:ring-[#57BBCE] rounded px-2 py-1"
+                "focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-[#57BBCE] rounded px-2 py-1"
               )}
             >
               {t("landing.hero.login")}
@@ -49,10 +49,12 @@ export function TopBar({ variant = "authenticated" }: TopBarProps) {
             <Link
               href="/register"
               className={cn(
-                "text-sm font-medium px-4 py-2 rounded",
+                "text-sm font-medium px-5 py-2 rounded-full",
                 "bg-[#0B6E7F] text-white hover:bg-[#086577]",
-                "transition-colors duration-100",
-                "focus:outline-none focus:ring-2 focus:ring-[#57BBCE] focus:ring-offset-2"
+                "shadow-apple-sm hover:shadow-apple-md",
+                "hover:-translate-y-0.5 active:scale-[0.97]",
+                "transition-all duration-[180ms]",
+                "focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-[#57BBCE] focus-visible:ring-offset-2"
               )}
             >
               {t("register.submit", { ns: "auth" })}
@@ -72,9 +74,9 @@ export function TopBar({ variant = "authenticated" }: TopBarProps) {
   ];
 
   return (
-    <header className="sticky top-0 z-20 h-16 bg-white dark:bg-[#1E293B] border-b border-[#E2E8F0] dark:border-[#334155]">
+    <header className="sticky top-0 z-20 h-16 glass-light dark:glass-dark border-b border-[#E2E8F0]/60 dark:border-white/10">
       <div className="max-w-7xl mx-auto px-4 h-full flex items-center gap-4">
-        <Link href="/feed" className="shrink-0 focus:outline-none focus:ring-2 focus:ring-[#57BBCE] rounded">
+        <Link href="/feed" className="shrink-0 focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-[#57BBCE] rounded">
           <Logo size="sm" />
         </Link>
 
@@ -110,10 +112,11 @@ export function TopBar({ variant = "authenticated" }: TopBarProps) {
               key={item.href}
               href={item.href}
               className={cn(
-                "flex flex-col items-center gap-0.5 px-3 py-1.5 rounded",
+                "flex flex-col items-center gap-0.5 px-3 py-1.5 rounded-xl",
                 "text-[#64748B] dark:text-[#94A3B8]",
-                "hover:text-[#0C9AB8] transition-colors duration-100",
-                "focus:outline-none focus:ring-2 focus:ring-[#57BBCE]"
+                "hover:text-[#0C9AB8] hover:-translate-y-0.5 hover:bg-black/5 dark:hover:bg-white/5",
+                "transition-all duration-[180ms]",
+                "focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-[#57BBCE]"
               )}
               aria-label={item.label}
             >
@@ -130,8 +133,9 @@ export function TopBar({ variant = "authenticated" }: TopBarProps) {
             "relative p-2 rounded-full",
             "text-[#64748B] dark:text-[#94A3B8]",
             "hover:bg-[#F1F5F9] dark:hover:bg-[#334155]",
-            "transition-colors duration-100",
-            "focus:outline-none focus:ring-2 focus:ring-[#57BBCE]"
+            "hover:scale-110 active:scale-95",
+            "transition-all duration-[180ms]",
+            "focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-[#57BBCE]"
           )}
           aria-label={t("nav.notifications")}
         >
@@ -141,7 +145,7 @@ export function TopBar({ variant = "authenticated" }: TopBarProps) {
         {/* Avatar */}
         <Link
           href="/profile"
-          className="focus:outline-none focus:ring-2 focus:ring-[#57BBCE] rounded-full"
+          className="focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-[#57BBCE] rounded-full"
         >
           <UserAvatar displayName={user?.displayName || "User"} size="sm" />
         </Link>

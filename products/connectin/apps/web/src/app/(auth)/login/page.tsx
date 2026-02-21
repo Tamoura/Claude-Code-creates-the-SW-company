@@ -50,16 +50,16 @@ export default function LoginPage() {
   }
 
   return (
-    <div className="rounded-xl bg-white p-8 shadow-sm">
+    <div className="rounded-[18px] glass-light dark:glass-dark p-8 shadow-apple-lg">
       <div className="mb-6 text-center">
-        <h1 className="text-2xl font-bold text-neutral-900">
+        <h1 className="text-2xl font-bold text-neutral-900 tracking-[-0.02em]">
           {t("login.title")}
         </h1>
         <p className="mt-1 text-neutral-500">{t("login.subtitle")}</p>
       </div>
 
       {submitError && (
-        <div role="alert" className="mb-4 rounded-lg bg-error-50 p-3 text-sm text-error-700">
+        <div role="alert" className="mb-4 rounded-xl border border-red-100 bg-error-50 p-3 text-sm text-error-700">
           {submitError}
         </div>
       )}
@@ -68,7 +68,7 @@ export default function LoginPage() {
         <div className="mb-4">
           <label
             htmlFor="email"
-            className="mb-1 block text-sm font-medium text-neutral-700"
+            className="mb-1 block text-sm font-medium text-neutral-600"
           >
             {t("fields.email")}
           </label>
@@ -80,7 +80,7 @@ export default function LoginPage() {
             aria-invalid={!!errors.email}
             value={email}
             onChange={(e) => setEmail(e.target.value)}
-            className="w-full rounded-lg border border-neutral-200 px-3 py-2 text-neutral-900 placeholder:text-neutral-400 focus:border-primary-500 focus:outline-none focus:ring-1 focus:ring-primary-500"
+            className="w-full rounded-[10px] border-0 bg-[#F1F5F9] px-3 py-2.5 text-neutral-900 placeholder:text-neutral-400 focus:bg-white focus:outline-none focus:ring-2 focus:ring-primary-500/30 transition-all duration-[180ms]"
             placeholder="name@example.com"
           />
           {errors.email && (
@@ -91,7 +91,7 @@ export default function LoginPage() {
         <div className="mb-4">
           <label
             htmlFor="password"
-            className="mb-1 block text-sm font-medium text-neutral-700"
+            className="mb-1 block text-sm font-medium text-neutral-600"
           >
             {t("fields.password")}
           </label>
@@ -103,7 +103,7 @@ export default function LoginPage() {
             aria-invalid={!!errors.password}
             value={password}
             onChange={(e) => setPassword(e.target.value)}
-            className="w-full rounded-lg border border-neutral-200 px-3 py-2 text-neutral-900 placeholder:text-neutral-400 focus:border-primary-500 focus:outline-none focus:ring-1 focus:ring-primary-500"
+            className="w-full rounded-[10px] border-0 bg-[#F1F5F9] px-3 py-2.5 text-neutral-900 placeholder:text-neutral-400 focus:bg-white focus:outline-none focus:ring-2 focus:ring-primary-500/30 transition-all duration-[180ms]"
           />
           {errors.password && (
             <p id="password-error" role="alert" className="mt-1 text-sm text-error-700">{errors.password}</p>
@@ -122,7 +122,7 @@ export default function LoginPage() {
         <button
           type="submit"
           disabled={isLoading}
-          className="w-full rounded-lg bg-primary-600 py-2.5 font-medium text-white hover:bg-primary-700 focus:outline-none focus:ring-2 focus:ring-primary-500 focus:ring-offset-2 disabled:opacity-50"
+          className="w-full rounded-full bg-primary-600 py-2.5 font-medium text-white shadow-apple-sm hover:bg-primary-700 hover:-translate-y-0.5 hover:shadow-apple-md active:scale-[0.97] focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-primary-500 focus-visible:ring-offset-2 disabled:opacity-50 transition-all duration-[180ms]"
         >
           {isLoading ? "..." : t("login.submit")}
         </button>
