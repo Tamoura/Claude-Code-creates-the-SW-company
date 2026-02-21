@@ -127,6 +127,18 @@ const authRoutes: FastifyPluginAsync = async (fastify) => {
     }
   );
 
+  // GET /api/v1/auth/export — GDPR data export
+  fastify.get(
+    '/export',
+    { preHandler: [fastify.authenticate] },
+    async (request, reply) => {
+      const data = await authService.exportUserData(
+        request.user.sub
+      );
+      return sendSuccess(reply, data);
+    }
+  );
+
   // GET /api/v1/auth/verify-email/:token
   fastify.get<{ Params: { token: string } }>(
     '/verify-email/:token',

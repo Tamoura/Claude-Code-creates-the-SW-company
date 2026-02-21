@@ -8,6 +8,7 @@ import authPlugin from './plugins/auth';
 import errorHandlerPlugin from './plugins/error-handler';
 import rateLimiterPlugin from './plugins/rate-limiter';
 import requestIdPlugin from './plugins/request-id';
+import accessLogPlugin from './plugins/access-log';
 import swaggerPlugin from './plugins/swagger';
 
 // Routes
@@ -48,6 +49,7 @@ export async function buildApp(
   }
 
   if (process.env.NODE_ENV !== 'test') {
+    await app.register(accessLogPlugin);
     await app.register(swaggerPlugin);
   }
 

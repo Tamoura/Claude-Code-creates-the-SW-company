@@ -273,6 +273,35 @@ export class AuthService {
     });
   }
 
+  async exportUserData(userId: string) {
+    const user = await this.prisma.user.findUnique({
+      where: { id: userId },
+      include: {
+        profile: {
+          include: {
+            experiences: true,
+            profileSkills: { include: { skill: true } },
+          },
+        },
+        posts: { where: { isDeleted: false } },
+        comments: { where: { isDeleted: false } },
+        sentConnections: true,
+        receivedConnections: true,
+      },
+    });
+
+    if (!user) {
+      throw new BadRequestError('User not found');
+    }
+
+    // Strip internal fields
+    const { passwordHash: _ph, verificationToken: _vt, resetToken: _rt, ...safeUser } = user;
+    return {
+      exportedAt: new Date().toISOString(),
+      user: safeUser,
+    };
+  }
+
   async deleteAccount(userId: string): Promise<void> {
     // Soft delete: set status to DELETED and clear PII
     await this.prisma.user.update({
