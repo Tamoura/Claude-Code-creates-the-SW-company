@@ -1,0 +1,121 @@
+import { FastifyPluginAsync } from 'fastify';
+import { ZodError } from 'zod';
+import { AuthService } from './auth.service';
+import { registerSchema, loginSchema } from './auth.schemas';
+import { sendSuccess, sendError } from '../../lib/response';
+import { ValidationError } from '../../lib/errors';
+
+function zodToDetails(
+  err: ZodError
+): Array<{ field: string; message: string }> {
+  return err.errors.map((e) => ({
+    field: e.path.join('.') || 'unknown',
+    message: e.message,
+  }));
+}
+
+const authRoutes: FastifyPluginAsync = async (fastify) => {
+  const authService = new AuthService(fastify.prisma, fastify);
+
+  // POST /api/v1/auth/register
+  fastify.post('/register', async (request, reply) => {
+    const result = registerSchema.safeParse(request.body);
+    if (!result.success) {
+      throw new ValidationError(
+        'Validation failed',
+        zodToDetails(result.error)
+      );
+    }
+
+    const data = await authService.register(result.data);
+    return sendSuccess(reply, data, 201);
+  });
+
+  // POST /api/v1/auth/login
+  fastify.post('/login', async (request, reply) => {
+    const result = loginSchema.safeParse(request.body);
+    if (!result.success) {
+      throw new ValidationError(
+        'Validation failed',
+        zodToDetails(result.error)
+      );
+    }
+
+    const data = await authService.login(result.data);
+
+    // Set refresh token as httpOnly cookie
+    reply.setCookie('refreshToken', data.accessToken, {
+      httpOnly: true,
+      secure: process.env.NODE_ENV === 'production',
+      sameSite: 'strict',
+      path: '/api/v1/auth',
+      maxAge: 30 * 24 * 60 * 60, // 30 days
+    });
+
+    return sendSuccess(reply, data);
+  });
+
+  // POST /api/v1/auth/refresh
+  fastify.post('/refresh', async (request, reply) => {
+    const refreshToken =
+      (request.cookies as Record<string, string | undefined>)
+        ?.refreshToken ||
+      (
+        request.body as { refreshToken?: string } | undefined
+      )?.refreshToken;
+
+    if (!refreshToken) {
+      return sendError(
+        reply,
+        401,
+        'UNAUTHORIZED',
+        'Refresh token required'
+      );
+    }
+
+    const data = await authService.refresh(refreshToken);
+    return sendSuccess(reply, data);
+  });
+
+  // POST /api/v1/auth/logout
+  fastify.post(
+    '/logout',
+    { preHandler: [fastify.authenticate] },
+    async (request, reply) => {
+      const refreshToken =
+        (request.cookies as Record<string, string | undefined>)
+          ?.refreshToken ||
+        (
+          request.body as { refreshToken?: string } | undefined
+        )?.refreshToken;
+
+      if (refreshToken) {
+        await authService.logout(refreshToken);
+      }
+
+      reply.clearCookie('refreshToken', {
+        path: '/api/v1/auth',
+      });
+
+      return sendSuccess(reply, {
+        message: 'Logged out successfully',
+      });
+    }
+  );
+
+  // GET /api/v1/auth/verify-email/:token
+  fastify.get<{ Params: { token: string } }>(
+    '/verify-email/:token',
+    async (request, reply) => {
+      const data = await authService.verifyEmail(
+        request.params.token
+      );
+      return sendSuccess(reply, {
+        ...data,
+        redirectTo: '/profile/setup',
+      });
+    }
+  );
+};
+
+export default authRoutes;
