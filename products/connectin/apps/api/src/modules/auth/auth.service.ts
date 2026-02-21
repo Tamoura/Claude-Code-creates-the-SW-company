@@ -4,6 +4,7 @@ import bcrypt from 'bcrypt';
 import crypto from 'crypto';
 import { getConfig } from '../../config';
 import {
+  NotFoundError,
   UnauthorizedError,
   BadRequestError,
 } from '../../lib/errors';
@@ -402,6 +403,50 @@ export class AuthService {
         },
       }),
     ]);
+  }
+
+  async listSessions(
+    userId: string,
+    _currentJti?: string
+  ) {
+    const sessions = await this.prisma.session.findMany({
+      where: {
+        userId,
+        expiresAt: { gt: new Date() },
+      },
+      select: {
+        id: true,
+        ipAddress: true,
+        userAgent: true,
+        createdAt: true,
+      },
+      orderBy: { createdAt: 'desc' },
+    });
+
+    return sessions.map((s) => ({
+      id: s.id,
+      ipAddress: s.ipAddress,
+      userAgent: s.userAgent,
+      createdAt: s.createdAt,
+      current: false,
+    }));
+  }
+
+  async revokeSession(
+    sessionId: string,
+    userId: string
+  ): Promise<void> {
+    const session = await this.prisma.session.findUnique({
+      where: { id: sessionId },
+    });
+
+    if (!session || session.userId !== userId) {
+      throw new NotFoundError('Session not found');
+    }
+
+    await this.prisma.session.delete({
+      where: { id: sessionId },
+    });
   }
 
   private hashToken(token: string): string {

@@ -16,7 +16,14 @@ const connectionRoutes: FastifyPluginAsync = async (
   fastify.addHook('preHandler', fastify.authenticate);
 
   // POST /api/v1/connections/request
-  fastify.post('/request', async (request, reply) => {
+  fastify.post('/request', {
+    config: {
+      rateLimit: {
+        max: 20,
+        timeWindow: '1 minute',
+      },
+    },
+  }, async (request, reply) => {
     const result = sendRequestSchema.safeParse(
       request.body
     );

@@ -1,30 +1,59 @@
 import { FastifyPluginAsync } from 'fastify';
-import { sendSuccess, sendError } from '../../lib/response';
+import { sendSuccess } from '../../lib/response';
+
+const startTime = Date.now();
 
 const healthRoutes: FastifyPluginAsync = async (fastify) => {
-  fastify.get('/health', async (_request, reply) => {
-    let dbStatus = 'disconnected';
-    try {
-      await fastify.prisma.$queryRaw`SELECT 1`;
-      dbStatus = 'connected';
-    } catch {
-      dbStatus = 'error';
+  fastify.get(
+    '/health',
+    {
+      schema: {
+        description: 'Health check endpoint',
+        tags: ['System'],
+        response: {
+          200: {
+            type: 'object',
+            properties: {
+              success: { type: 'boolean' },
+              data: {
+                type: 'object',
+                properties: {
+                  status: { type: 'string' },
+                  timestamp: { type: 'string' },
+                  uptime: { type: 'number' },
+                  version: { type: 'string' },
+                  database: { type: 'string' },
+                  redis: { type: 'string' },
+                },
+              },
+            },
+          },
+        },
+      },
+    },
+    async (_request, reply) => {
+      let dbStatus = 'disconnected';
+      try {
+        await fastify.prisma.$queryRaw`SELECT 1`;
+        dbStatus = 'connected';
+      } catch {
+        dbStatus = 'error';
+      }
+
+      const uptimeSeconds = Math.floor(
+        (Date.now() - startTime) / 1000
+      );
+
+      return sendSuccess(reply, {
+        status: 'ok',
+        timestamp: new Date().toISOString(),
+        uptime: uptimeSeconds,
+        version: process.env.npm_package_version || '0.1.0',
+        database: dbStatus,
+        redis: 'not_configured',
+      });
     }
-
-    const isHealthy = dbStatus === 'connected';
-
-    if (!isHealthy) {
-      return sendError(reply, 503, 'SERVICE_UNAVAILABLE', 'Service degraded', [
-        { field: 'database', message: dbStatus },
-      ]);
-    }
-
-    return sendSuccess(reply, {
-      status: 'ok',
-      timestamp: new Date().toISOString(),
-      database: dbStatus,
-    });
-  });
+  );
 };
 
 export default healthRoutes;

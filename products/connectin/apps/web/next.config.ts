@@ -31,11 +31,19 @@ const nextConfig: NextConfig = {
           key: "Content-Security-Policy",
           value: [
             "default-src 'self'",
-            "script-src 'self' 'unsafe-inline'",
+            // Next.js App Router does not require 'unsafe-inline' for scripts.
+            // 'unsafe-eval' is needed in development only for Fast Refresh/HMR.
+            process.env.NODE_ENV === "development"
+              ? "script-src 'self' 'unsafe-eval'"
+              : "script-src 'self'",
+            // Next.js requires 'unsafe-inline' for styles because it injects
+            // CSS via <style> tags for Tailwind and CSS-in-JS. This is a known
+            // Next.js limitation; nonce-based style-src is not yet supported
+            // in the App Router. See: https://nextjs.org/docs/app/building-your-application/configuring/content-security-policy
             "style-src 'self' 'unsafe-inline'",
             "font-src 'self' https://fonts.gstatic.com",
             "img-src 'self' data: https:",
-            `connect-src 'self' ${process.env.NEXT_PUBLIC_API_URL || 'http://localhost:5007'}`,
+            `connect-src 'self' ${process.env.NEXT_PUBLIC_API_URL || "http://localhost:5007"}`,
             "frame-ancestors 'none'",
             "base-uri 'self'",
             "form-action 'self'",

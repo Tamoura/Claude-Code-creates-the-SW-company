@@ -15,7 +15,14 @@ const feedRoutes: FastifyPluginAsync = async (fastify) => {
   fastify.addHook('preHandler', fastify.authenticate);
 
   // POST /api/v1/feed/posts
-  fastify.post('/posts', async (request, reply) => {
+  fastify.post('/posts', {
+    config: {
+      rateLimit: {
+        max: 10,
+        timeWindow: '1 minute',
+      },
+    },
+  }, async (request, reply) => {
     const result = createPostSchema.safeParse(
       request.body
     );
@@ -48,6 +55,14 @@ const feedRoutes: FastifyPluginAsync = async (fastify) => {
   // POST /api/v1/feed/posts/:id/like
   fastify.post<{ Params: { id: string } }>(
     '/posts/:id/like',
+    {
+      config: {
+        rateLimit: {
+          max: 30,
+          timeWindow: '1 minute',
+        },
+      },
+    },
     async (request, reply) => {
       const data = await feedService.likePost(
         request.params.id,
@@ -60,6 +75,14 @@ const feedRoutes: FastifyPluginAsync = async (fastify) => {
   // DELETE /api/v1/feed/posts/:id/like
   fastify.delete<{ Params: { id: string } }>(
     '/posts/:id/like',
+    {
+      config: {
+        rateLimit: {
+          max: 30,
+          timeWindow: '1 minute',
+        },
+      },
+    },
     async (request, reply) => {
       const data = await feedService.unlikePost(
         request.params.id,

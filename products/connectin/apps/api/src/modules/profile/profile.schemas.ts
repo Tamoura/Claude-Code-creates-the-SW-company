@@ -1,16 +1,30 @@
 import { z } from 'zod';
+/**
+ * Strip HTML tags from a string to prevent XSS via stored HTML.
+ */
+function stripHtml(str: string): string {
+  return str
+    .replace(/<[^>]*>/g, '')
+    .replace(/&lt;/g, '<')
+    .replace(/&gt;/g, '>')
+    .replace(/&amp;/g, '&')
+    .trim();
+}
+
 
 export const updateProfileSchema = z.object({
   headlineAr: z
     .string()
     .max(220, 'Headline must be 220 characters or fewer')
+    .transform(stripHtml)
     .optional(),
   headlineEn: z
     .string()
     .max(220, 'Headline must be 220 characters or fewer')
+    .transform(stripHtml)
     .optional(),
-  summaryAr: z.string().optional(),
-  summaryEn: z.string().optional(),
+  summaryAr: z.string().transform(stripHtml).optional(),
+  summaryEn: z.string().transform(stripHtml).optional(),
   location: z
     .string()
     .max(100, 'Location must be 100 characters or fewer')
@@ -19,6 +33,10 @@ export const updateProfileSchema = z.object({
     .string()
     .max(255, 'Website URL must be 255 characters or fewer')
     .url('Must be a valid URL')
+    .refine(
+      (url) => /^https?:\/\//i.test(url),
+      'Website must use http or https protocol'
+    )
     .optional()
     .or(z.literal('')),
 });

@@ -18,5 +18,9 @@ describe('Health Check', () => {
     expect(body.data.status).toBe('ok');
     expect(body.data.database).toBe('connected');
     expect(body.data.timestamp).toBeDefined();
+    expect(typeof body.data.uptime).toBe('number');
+    expect(body.data.uptime).toBeGreaterThanOrEqual(0);
+    expect(body.data.version).toBeDefined();
+    expect(body.data.redis).toBe('not_configured');
   });
 });

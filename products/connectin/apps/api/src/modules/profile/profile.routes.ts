@@ -43,11 +43,14 @@ const profileRoutes: FastifyPluginAsync = async (fastify) => {
   });
 
   // GET /api/v1/profiles/:id
+  // Intentionally public to authenticated users (professional networking).
+  // Sensitive fields (email, website) are stripped for non-owners in the service layer.
   fastify.get<{ Params: { id: string } }>(
     '/:id',
     async (request, reply) => {
       const profile = await profileService.getProfileById(
-        request.params.id
+        request.params.id,
+        request.user.sub
       );
       return sendSuccess(reply, profile);
     }

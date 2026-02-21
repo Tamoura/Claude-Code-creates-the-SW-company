@@ -35,7 +35,18 @@ export class ProfileService {
     return this.formatProfile(profile);
   }
 
-  async getProfileById(profileUserId: string) {
+  /**
+   * Get a profile by user ID.
+   *
+   * Visibility: profiles are publicly viewable by any authenticated
+   * user (by design -- this is a professional networking platform,
+   * similar to LinkedIn). Sensitive fields such as email are stripped
+   * when the requester is not the profile owner.
+   */
+  async getProfileById(
+    profileUserId: string,
+    requesterId: string
+  ) {
     const profile = await this.prisma.profile.findUnique({
       where: { userId: profileUserId },
       include: {
@@ -49,7 +60,10 @@ export class ProfileService {
           include: { skill: true },
         },
         user: {
-          select: { displayName: true },
+          select: {
+            displayName: true,
+            email: true,
+          },
         },
       },
     });
@@ -58,7 +72,22 @@ export class ProfileService {
       throw new NotFoundError('Profile not found');
     }
 
-    return this.formatProfile(profile);
+    const formatted = this.formatProfile(profile);
+
+    // Strip sensitive fields for non-owners
+    const isOwner = profileUserId === requesterId;
+    if (!isOwner) {
+      return {
+        ...formatted,
+        email: undefined,
+        website: undefined,
+      };
+    }
+
+    return {
+      ...formatted,
+      email: profile.user.email,
+    };
   }
 
   async updateProfile(

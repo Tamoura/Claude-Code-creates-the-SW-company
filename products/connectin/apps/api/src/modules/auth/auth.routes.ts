@@ -5,6 +5,20 @@ import { sendSuccess, sendError } from '../../lib/response';
 import { ValidationError } from '../../lib/errors';
 import { zodToDetails } from '../../lib/validation';
 
+const errorResponseSchema = {
+  type: 'object',
+  properties: {
+    success: { type: 'boolean' },
+    error: {
+      type: 'object',
+      properties: {
+        code: { type: 'string' },
+        message: { type: 'string' },
+      },
+    },
+  },
+};
+
 const authRoutes: FastifyPluginAsync = async (fastify) => {
   const authService = new AuthService(fastify.prisma, fastify);
 
@@ -183,6 +197,93 @@ const authRoutes: FastifyPluginAsync = async (fastify) => {
       return sendSuccess(reply, {
         ...data,
         redirectTo: '/profile/setup',
+      });
+    }
+  );
+
+  // GET /api/v1/auth/sessions -- List active sessions
+  fastify.get(
+    '/sessions',
+    {
+      schema: {
+        description: 'List all active sessions for the current user',
+        tags: ['Auth'],
+        security: [{ bearerAuth: [] }],
+        response: {
+          200: {
+            type: 'object',
+            properties: {
+              success: { type: 'boolean' },
+              data: {
+                type: 'array',
+                items: {
+                  type: 'object',
+                  properties: {
+                    id: { type: 'string' },
+                    ipAddress: { type: 'string', nullable: true },
+                    userAgent: { type: 'string', nullable: true },
+                    createdAt: { type: 'string', format: 'date-time' },
+                    current: { type: 'boolean' },
+                  },
+                },
+              },
+            },
+          },
+          401: errorResponseSchema,
+        },
+      },
+      preHandler: [fastify.authenticate],
+    },
+    async (request, reply) => {
+      const sessions = await authService.listSessions(
+        request.user.sub,
+        request.user.jti
+      );
+      return sendSuccess(reply, sessions);
+    }
+  );
+
+  // DELETE /api/v1/auth/sessions/:id -- Revoke a session
+  fastify.delete<{ Params: { id: string } }>(
+    '/sessions/:id',
+    {
+      schema: {
+        description: 'Revoke a specific session',
+        tags: ['Auth'],
+        security: [{ bearerAuth: [] }],
+        params: {
+          type: 'object',
+          required: ['id'],
+          properties: {
+            id: { type: 'string', format: 'uuid' },
+          },
+        },
+        response: {
+          200: {
+            type: 'object',
+            properties: {
+              success: { type: 'boolean' },
+              data: {
+                type: 'object',
+                properties: {
+                  message: { type: 'string' },
+                },
+              },
+            },
+          },
+          401: errorResponseSchema,
+          404: errorResponseSchema,
+        },
+      },
+      preHandler: [fastify.authenticate],
+    },
+    async (request, reply) => {
+      await authService.revokeSession(
+        request.params.id,
+        request.user.sub
+      );
+      return sendSuccess(reply, {
+        message: 'Session revoked successfully',
       });
     }
   );
