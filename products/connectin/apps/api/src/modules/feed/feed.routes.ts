@@ -1,5 +1,4 @@
 import { FastifyPluginAsync } from 'fastify';
-import { ZodError } from 'zod';
 import { FeedService } from './feed.service';
 import {
   createPostSchema,
@@ -7,15 +6,7 @@ import {
 } from './feed.schemas';
 import { sendSuccess } from '../../lib/response';
 import { ValidationError } from '../../lib/errors';
-
-function zodToDetails(
-  err: ZodError
-): Array<{ field: string; message: string }> {
-  return err.errors.map((e) => ({
-    field: e.path.join('.') || 'unknown',
-    message: e.message,
-  }));
-}
+import { zodToDetails } from '../../lib/validation';
 
 const feedRoutes: FastifyPluginAsync = async (fastify) => {
   const feedService = new FeedService(fastify.prisma);

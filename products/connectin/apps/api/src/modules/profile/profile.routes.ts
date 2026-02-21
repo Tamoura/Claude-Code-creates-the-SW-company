@@ -1,5 +1,4 @@
 import { FastifyPluginAsync } from 'fastify';
-import { ZodError } from 'zod';
 import { ProfileService } from './profile.service';
 import {
   updateProfileSchema,
@@ -8,15 +7,7 @@ import {
 } from './profile.schemas';
 import { sendSuccess } from '../../lib/response';
 import { ValidationError } from '../../lib/errors';
-
-function zodToDetails(
-  err: ZodError
-): Array<{ field: string; message: string }> {
-  return err.errors.map((e) => ({
-    field: e.path.join('.') || 'unknown',
-    message: e.message,
-  }));
-}
+import { zodToDetails } from '../../lib/validation';
 
 const profileRoutes: FastifyPluginAsync = async (fastify) => {
   const profileService = new ProfileService(fastify.prisma);

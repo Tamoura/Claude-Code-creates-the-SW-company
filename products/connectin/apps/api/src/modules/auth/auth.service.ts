@@ -4,7 +4,6 @@ import bcrypt from 'bcrypt';
 import crypto from 'crypto';
 import { getConfig } from '../../config';
 import {
-  ConflictError,
   UnauthorizedError,
   BadRequestError,
 } from '../../lib/errors';
@@ -27,7 +26,15 @@ export class AuthService {
     });
 
     if (existing) {
-      throw new ConflictError('Email already registered');
+      // Return same success shape to prevent user enumeration.
+      // In production, also send a "someone tried to register" email.
+      return {
+        userId: existing.id,
+        email: existing.email,
+        verificationToken: '',
+        message:
+          'Verification email sent. Please check your inbox.',
+      };
     }
 
     const config = getConfig();

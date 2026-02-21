@@ -7,6 +7,7 @@ import corsPlugin from './plugins/cors';
 import authPlugin from './plugins/auth';
 import errorHandlerPlugin from './plugins/error-handler';
 import rateLimiterPlugin from './plugins/rate-limiter';
+import requestIdPlugin from './plugins/request-id';
 import swaggerPlugin from './plugins/swagger';
 
 // Routes
@@ -36,6 +37,7 @@ export async function buildApp(
   });
 
   // Core plugins
+  await app.register(requestIdPlugin);
   await app.register(errorHandlerPlugin);
   await app.register(prismaPlugin);
   await app.register(corsPlugin);

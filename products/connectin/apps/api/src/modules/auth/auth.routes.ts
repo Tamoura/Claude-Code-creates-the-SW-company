@@ -1,18 +1,9 @@
 import { FastifyPluginAsync } from 'fastify';
-import { ZodError } from 'zod';
 import { AuthService } from './auth.service';
 import { registerSchema, loginSchema } from './auth.schemas';
 import { sendSuccess, sendError } from '../../lib/response';
 import { ValidationError } from '../../lib/errors';
-
-function zodToDetails(
-  err: ZodError
-): Array<{ field: string; message: string }> {
-  return err.errors.map((e) => ({
-    field: e.path.join('.') || 'unknown',
-    message: e.message,
-  }));
-}
+import { zodToDetails } from '../../lib/validation';
 
 const authRoutes: FastifyPluginAsync = async (fastify) => {
   const authService = new AuthService(fastify.prisma, fastify);

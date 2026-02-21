@@ -1,18 +1,9 @@
 import { FastifyPluginAsync } from 'fastify';
-import { ZodError } from 'zod';
 import { ConnectionService } from './connection.service';
 import { sendRequestSchema } from './connection.schemas';
 import { sendSuccess } from '../../lib/response';
 import { ValidationError } from '../../lib/errors';
-
-function zodToDetails(
-  err: ZodError
-): Array<{ field: string; message: string }> {
-  return err.errors.map((e) => ({
-    field: e.path.join('.') || 'unknown',
-    message: e.message,
-  }));
-}
+import { zodToDetails } from '../../lib/validation';
 
 const connectionRoutes: FastifyPluginAsync = async (
   fastify

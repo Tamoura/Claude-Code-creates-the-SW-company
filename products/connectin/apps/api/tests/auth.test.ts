@@ -36,7 +36,7 @@ describe('Auth Module', () => {
       expect(body.data.message).toContain('Verification');
     });
 
-    it('rejects duplicate email', async () => {
+    it('returns success for duplicate email (prevents enumeration)', async () => {
       const app = await getApp();
       const payload = {
         email: 'duplicate@example.com',
@@ -59,10 +59,11 @@ describe('Auth Module', () => {
         },
       });
 
-      expect(res.statusCode).toBe(409);
+      // Should return 201 with same shape to prevent user enumeration
+      expect(res.statusCode).toBe(201);
       const body = JSON.parse(res.body);
-      expect(body.success).toBe(false);
-      expect(body.error.code).toBe('CONFLICT');
+      expect(body.success).toBe(true);
+      expect(body.data.message).toContain('Verification');
     });
 
     it('rejects weak password', async () => {
