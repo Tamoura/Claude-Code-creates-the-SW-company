@@ -640,3 +640,16 @@ Provide:
 - Testable UI
 - Data attributes for E2E selection
 - Documentation of user flows
+
+## Pre-Commit Quality Checklist (MANDATORY — audit-aware)
+
+Before EVERY commit, verify these audit dimensions are addressed.
+Full checklist with details: `.claude/agents/briefs/frontend-engineer.md`
+
+**Accessibility:** Labels with `htmlFor`, contrast >= 4.5:1, focus rings, skip-nav link, `aria-current="page"`, 48px touch targets, mobile bottom nav, `aria-invalid`/`aria-describedby` on form errors, heading hierarchy.
+
+**Security/CSP/CSRF:** No `dangerouslySetInnerHTML`, CSP with no `unsafe-eval` in prod, `frame-ancestors 'none'`, CSRF token on mutating requests, `credentials: "include"`, `connect-src` from env var.
+
+**Performance:** Server Components by default, remove unused deps, lazy load heavy components.
+
+**i18n:** All user-visible strings through `t()` — never hardcode English text.

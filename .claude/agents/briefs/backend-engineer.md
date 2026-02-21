@@ -55,22 +55,39 @@ Before EVERY commit, verify these audit dimensions are addressed in your code:
 - No raw SQL: always use Prisma parameterized queries (prevents CWE-89)
 - Object-level authorization: verify user owns the resource on every endpoint (BOLA/API1)
 - Function-level authorization: verify role permissions on admin endpoints (BFLA/API5)
+- CSRF protection: register `@fastify/csrf-protection` plugin with double-submit cookie pattern
+- XSS sanitization: strip HTML tags from all user-generated text fields before storage
+- URL validation: block `javascript:`, `data:`, `vbscript:` protocols on user-submitted URLs
+- Account lockout: track failed login attempts, lock after 5 failures for 15 minutes
+- User enumeration prevention: return identical responses for existing/non-existing accounts
+- Token hashing: store verification and reset tokens as SHA-256 hashes, never plaintext
+- Session management: implement list sessions and revoke session endpoints
+- Auth rate limiting: 5 req/min on login, 3 req/min on register (separate from global limit)
 
 **Privacy (GDPR):**
 - Never log PII (emails, names, IPs) — redact or omit from Pino output
 - Implement soft delete with cascade for user data deletion capability
 - Only collect necessary data fields (data minimization)
+- Data export endpoint: `GET /account/export` returns all user data as JSON
+- Account deletion endpoint: `DELETE /account` with full cascade and PII scrubbing
+- Strip PII from responses for non-owners (e.g., email/website hidden on public profiles)
 
 **Observability (SRE):**
 - Structured JSON logging with Pino (already in rules) + correlation/request IDs
 - Log entry and exit of critical business operations (not just errors)
 - Include error context in logs (request params, user ID — never secrets)
+- Health check returns 503 (not 200) when database or dependencies are unhealthy
+- Prometheus metrics plugin registered: `http_request_duration_seconds`, `http_requests_total`
+- Access logging plugin with method, route, status, duration, request ID
 
 **API Design:**
 - Consistent RFC 7807 error responses on ALL error paths (not just validation)
+- Error response includes `type` field: `https://{product}.dev/errors/{code}`
 - Pagination on every list endpoint with `limit`, `offset`, `total` in response
 - Rate limiting on all public endpoints (especially auth, password reset)
+- Rate limiting on abuse-prone endpoints (connection requests, post creation, likes)
 - Schema validation on request AND response (Zod for both directions)
+- OpenAPI schema annotations on every route (description, tags, params, response)
 
 ## Quality Gate
 - All tests passing (unit + integration).

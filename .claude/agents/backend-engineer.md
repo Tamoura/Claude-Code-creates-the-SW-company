@@ -393,3 +393,16 @@ Ensure:
 - All unit/integration tests pass
 - API matches contract
 - Error cases handled
+
+## Pre-Commit Quality Checklist (MANDATORY — audit-aware)
+
+Before EVERY commit, verify these audit dimensions are addressed.
+Full checklist with details: `.claude/agents/briefs/backend-engineer.md`
+
+**Security:** CSRF protection, XSS sanitization, URL protocol validation, account lockout, user enumeration prevention, token hashing, session management, auth-specific rate limiting, BOLA/BFLA checks.
+
+**Privacy:** No PII in logs, data export/deletion endpoints, PII stripped from non-owner responses, data minimization.
+
+**Observability:** Health check returns 503 on failure, Prometheus metrics, access logging, correlation IDs, RFC 7807 error type field.
+
+**API Design:** OpenAPI schema annotations on every route, pagination on all list endpoints, rate limiting on abuse-prone endpoints, Zod validation on request AND response.

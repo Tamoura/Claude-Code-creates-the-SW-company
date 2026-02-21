@@ -50,29 +50,46 @@ Before EVERY commit, verify these audit dimensions are addressed in your code:
 
 **Accessibility (WCAG 2.1 AA):**
 - All images have descriptive `alt` text (WCAG 1.1.1)
-- All form inputs have associated `<label>` elements (WCAG 1.3.1, 3.3.2)
+- All form inputs have associated `<label>` elements with `htmlFor` (WCAG 1.3.1, 3.3.2)
 - Color contrast >= 4.5:1 for text, >= 3:1 for large text and non-text (WCAG 1.4.3, 1.4.11)
 - All interactive elements reachable and operable via keyboard (WCAG 2.1.1)
-- Visible focus indicators on all focusable elements (WCAG 2.4.7)
+- Visible focus indicators on all focusable elements: `focus:ring-2` (WCAG 2.4.7)
 - Heading hierarchy: h1 → h2 → h3, no skipped levels (WCAG 1.3.1)
 - `lang` attribute set on `<html>` element (WCAG 3.1.1)
 - ARIA roles used correctly (or not at all — native HTML preferred) (WCAG 4.1.2)
 - Error messages identify the error in text, not just color (WCAG 3.3.1)
 - Content reflows without horizontal scroll at 320px width (WCAG 1.4.10)
+- Skip navigation link: `<a href="#main-content" class="sr-only focus:not-sr-only">` as first child of body
+- `aria-current="page"` on active navigation links
+- Mobile touch targets minimum 48x48px (`min-w-[48px] min-h-[48px]`)
+- Mobile bottom navigation for small viewports (hidden on `lg:` breakpoint)
+- `aria-invalid` and `aria-describedby` on form inputs with validation errors
 
-**Security (XSS Prevention):**
+**Security (XSS/CSP/CSRF):**
 - Never use `dangerouslySetInnerHTML` without sanitization (CWE-79)
 - Sanitize all user-generated content before rendering
 - No sensitive data in client-side state (tokens in httpOnly cookies, not localStorage)
+- CSP in `next.config.ts`: no `unsafe-eval` in production `script-src`; `unsafe-inline` only for `style-src` (Next.js limitation — document why)
+- CSP directives: `frame-ancestors 'none'`, `base-uri 'self'`, `form-action 'self'`
+- `connect-src` uses environment variable for API URL, not hardcoded localhost
+- CSRF: API client sends `x-csrf-token` header on all mutating requests (POST/PUT/PATCH/DELETE)
+- CSRF token fetched from backend `GET /csrf-token` endpoint, cached in module variable
+- `credentials: "include"` on all API fetch calls for cookie-based auth
 
 **Performance:**
 - Lazy load images and heavy components (`next/dynamic`, `loading="lazy"`)
 - No render-blocking resources in critical path
 - Check bundle impact of new dependencies before adding
+- Use Server Components by default; only add `"use client"` for state/effects/handlers
+- Remove unused npm dependencies before committing (audit `package.json` vs imports)
 
 **Privacy:**
 - No PII sent to analytics/tracking without consent
 - Cookie consent required before non-essential cookies
+
+**i18n:**
+- All user-visible strings go through `t()` translation function — never hardcode English
+- Error messages, validation text, and placeholder text must all use i18n keys
 
 ## Quality Gate
 - All tests passing.
