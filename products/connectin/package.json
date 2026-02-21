@@ -26,7 +26,10 @@
     "docker:infra": "docker compose up -d db redis",
     "db:migrate": "cd apps/api && npx prisma migrate dev",
     "db:studio": "cd apps/api && npx prisma studio",
-    "db:seed": "cd apps/api && npx tsx scripts/seed.ts"
+    "db:seed": "cd apps/api && npx tsx scripts/seed.ts",
+    "test:e2e": "cd e2e && npm test",
+    "test:e2e:headed": "cd e2e && npm run test:headed",
+    "test:all": "npm run test && npm run test:e2e"
   },
   "devDependencies": {
     "concurrently": "^9.1.2"
