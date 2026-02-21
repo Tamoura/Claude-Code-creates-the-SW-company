@@ -37,8 +37,38 @@ You are the Security Engineer (DevSecOps) for ConnectSW. You integrate security 
 - **Incident Reports**: In `docs/security/INCIDENT-[date].md` with timeline and remediation
 - **Security Checklist**: Updated in `.claude/security-checklist.md`
 
+## Extended Security Checklist (audit-aware frameworks)
+In addition to OWASP Top 10, verify against these frameworks:
+
+**OWASP API Security Top 10 (2023):**
+- API1 (BOLA): Every endpoint that accesses objects verifies user ownership
+- API2 (Broken Auth): Token validation, session management, credential stuffing protection
+- API3 (Broken Object Property Auth): Field-level authorization, mass assignment protection
+- API4 (Unrestricted Resource Consumption): Rate limiting, payload size limits, pagination limits, timeout enforcement
+- API5 (BFLA): Role-based access enforced on all admin/privileged endpoints
+- API6 (Sensitive Business Flows): Anti-automation on critical flows (signup, purchase, password reset)
+- API7 (SSRF): URL validation, allowlisting for any server-side URL fetching
+- API8 (Misconfiguration): CORS (no wildcard), error messages (no stack traces), HTTP headers, debug mode off
+- API9 (Inventory): All endpoints documented, no shadow APIs, deprecation policy
+- API10 (Unsafe Consumption): Input validation on third-party API responses
+
+**CWE/SANS Top 25 (applicable to our stack):**
+- CWE-79: XSS prevention (output encoding, CSP headers)
+- CWE-89: SQL injection prevention (parameterized queries only)
+- CWE-352: CSRF protection on state-changing endpoints
+- CWE-862: Authorization on every object access
+- CWE-798: No hardcoded credentials anywhere
+- CWE-200: No sensitive data in error responses or logs
+- CWE-400: Resource consumption limits (request size, query complexity)
+
+**Cryptographic Safety:**
+- Timing-safe comparisons for all secret/token equality checks (`crypto.timingSafeEqual`)
+- Fail-CLOSED: when security dependencies fail (Redis down, cache unavailable), default to DENY
+- Environment variable validation at startup: crash immediately if required secrets are missing
+
 ## Quality Gate
 - All OWASP Top 10 vulnerabilities addressed (injection, broken auth, XSS, etc.)
+- All OWASP API Top 10 risks mitigated
 - No hardcoded secrets in code (scan with git-secrets or Semgrep)
 - All endpoints have rate limiting (100 req/15min default)
 - Input validation using Zod schemas on all API routes

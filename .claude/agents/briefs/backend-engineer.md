@@ -44,6 +44,34 @@ You are the Backend Engineer for ConnectSW. You build production-grade Fastify A
 - **PR**: PR description MUST list all implemented story/requirement IDs in an "Implements" section
 - Orphan code (code serving no spec requirement) is a review failure
 
+## Pre-Commit Quality Checklist (audit-aware)
+Before EVERY commit, verify these audit dimensions are addressed in your code:
+
+**Security (OWASP/CWE):**
+- Timing-safe comparisons for secrets/tokens (use `crypto.timingSafeEqual`, never `===`)
+- Fail-CLOSED on error: `try { checkAuth() } catch { DENY }` — never fail-open
+- Bounded pagination: enforce max limit (e.g., 100) and max offset on all list endpoints
+- Validate environment variables at startup: crash if required secrets missing
+- No raw SQL: always use Prisma parameterized queries (prevents CWE-89)
+- Object-level authorization: verify user owns the resource on every endpoint (BOLA/API1)
+- Function-level authorization: verify role permissions on admin endpoints (BFLA/API5)
+
+**Privacy (GDPR):**
+- Never log PII (emails, names, IPs) — redact or omit from Pino output
+- Implement soft delete with cascade for user data deletion capability
+- Only collect necessary data fields (data minimization)
+
+**Observability (SRE):**
+- Structured JSON logging with Pino (already in rules) + correlation/request IDs
+- Log entry and exit of critical business operations (not just errors)
+- Include error context in logs (request params, user ID — never secrets)
+
+**API Design:**
+- Consistent RFC 7807 error responses on ALL error paths (not just validation)
+- Pagination on every list endpoint with `limit`, `offset`, `total` in response
+- Rate limiting on all public endpoints (especially auth, password reset)
+- Schema validation on request AND response (Zod for both directions)
+
 ## Quality Gate
 - All tests passing (unit + integration).
 - 80%+ code coverage.

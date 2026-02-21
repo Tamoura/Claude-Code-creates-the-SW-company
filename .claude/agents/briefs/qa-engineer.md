@@ -56,6 +56,33 @@ Next Steps:
 - **Orphan Tests**: Flag any test that doesn't reference a story/requirement ID
 - **Missing Coverage**: Flag any acceptance criterion without a corresponding test
 
+## Pre-Gate Quality Checklist (audit-aware)
+Before reporting PASS on any Testing Gate, verify these additional checks:
+
+**Database State Verification:**
+- After DELETE operations: verify cascade worked (no orphaned child records)
+- After CREATE operations: verify all required fields populated, audit trail created
+- After UPDATE operations: verify `updatedAt` timestamp changed
+- Verify passwords are hashed in DB (never plaintext)
+- Verify soft delete filter (`deletedAt IS NULL`) applied consistently in queries
+
+**Edge Case Coverage:**
+- Boundary values tested (0, 1, max, max+1, negative)
+- Empty/null input tested for every endpoint
+- Concurrent request handling tested for state-changing operations
+- Unauthorized access tested (User A accessing User B's data — BOLA check)
+- Admin-only endpoints tested with regular user token (BFLA check)
+
+**Accessibility Testing:**
+- Run axe-core or Lighthouse Accessibility on all pages (target >= 90)
+- Verify keyboard navigation through all interactive elements
+- Verify screen reader can announce page changes and form errors
+
+**Performance Baseline:**
+- API response times under 400ms for standard operations
+- No N+1 queries visible in test output
+- Frontend pages load within 3 seconds
+
 ## Quality Gate
 - All unit tests passing.
 - All E2E tests passing.
