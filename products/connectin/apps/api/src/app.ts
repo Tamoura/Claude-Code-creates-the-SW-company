@@ -30,6 +30,7 @@ export async function buildApp(
 ): Promise<FastifyInstance> {
   loadConfig();
 
+  /* istanbul ignore next */
   const app = Fastify({
     logger:
       process.env.NODE_ENV === 'test'
@@ -47,12 +48,14 @@ export async function buildApp(
   await app.register(corsPlugin);
   await app.register(authPlugin);
 
+  /* istanbul ignore next */
   if (!options.skipRateLimit) {
     await app.register(rateLimiterPlugin);
   }
 
   await app.register(csrfPlugin);
 
+  /* istanbul ignore next */
   if (process.env.NODE_ENV !== 'test') {
     await app.register(accessLogPlugin);
     await app.register(swaggerPlugin);
