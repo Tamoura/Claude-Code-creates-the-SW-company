@@ -19,6 +19,7 @@ jobs:
     name: Lint & Type Check
     runs-on: ubuntu-latest
     strategy:
+      fail-fast: false
       matrix:
         app:
           - name: api
@@ -33,7 +34,19 @@ jobs:
     steps:
       - uses: actions/checkout@v4
 
+      - name: Check if app exists
+        id: check
+        run: |
+          if [ -f "${{ matrix.app.path }}/package.json" ]; then
+            echo "exists=true" >> $GITHUB_OUTPUT
+          else
+            echo "exists=false" >> $GITHUB_OUTPUT
+            echo "::notice::${{ matrix.app.name }} app not found on this branch — skipping"
+          fi
+        working-directory: .
+
       - name: Setup Node.js
+        if: steps.check.outputs.exists == 'true'
         uses: actions/setup-node@v4
         with:
           node-version: ${{ env.NODE_VERSION }}
@@ -41,22 +54,26 @@ jobs:
           cache-dependency-path: ${{ matrix.app.path }}/package-lock.json
 
       - name: Install dependencies
+        if: steps.check.outputs.exists == 'true'
         run: npm ci
 
       - name: Generate Prisma client
-        if: ${{ matrix.app.needs-prisma }}
+        if: steps.check.outputs.exists == 'true' && matrix.app.needs-prisma
         run: npx prisma generate
 
       - name: Run lint
+        if: steps.check.outputs.exists == 'true'
         run: npm run lint --if-present
 
       - name: Run type check
+        if: steps.check.outputs.exists == 'true'
         run: npx tsc --noEmit --pretty
 
   test-api:
     name: API Tests
     runs-on: ubuntu-latest
     needs: lint-and-typecheck
+    if: always()
     defaults:
       run:
         working-directory: products/connectin/apps/api
@@ -92,7 +109,19 @@ jobs:
     steps:
       - uses: actions/checkout@v4
 
+      - name: Check if API app exists
+        id: check
+        run: |
+          if [ -f "products/connectin/apps/api/package.json" ]; then
+            echo "exists=true" >> $GITHUB_OUTPUT
+          else
+            echo "exists=false" >> $GITHUB_OUTPUT
+            echo "::notice::API app not found on this branch — skipping"
+          fi
+        working-directory: .
+
       - name: Setup Node.js
+        if: steps.check.outputs.exists == 'true'
         uses: actions/setup-node@v4
         with:
           node-version: ${{ env.NODE_VERSION }}
@@ -100,19 +129,23 @@ jobs:
           cache-dependency-path: products/connectin/apps/api/package-lock.json
 
       - name: Install dependencies
+        if: steps.check.outputs.exists == 'true'
         run: npm ci
 
       - name: Generate Prisma client
+        if: steps.check.outputs.exists == 'true'
         run: npx prisma generate
 
       - name: Push database schema
+        if: steps.check.outputs.exists == 'true'
         run: npx prisma db push --force-reset
 
       - name: Run tests with coverage
+        if: steps.check.outputs.exists == 'true'
         run: npm test -- --coverage
 
       - name: Upload coverage report
-        if: always()
+        if: always() && steps.check.outputs.exists == 'true'
         uses: actions/upload-artifact@v4
         with:
           name: api-coverage
@@ -123,6 +156,7 @@ jobs:
     name: Web Tests
     runs-on: ubuntu-latest
     needs: lint-and-typecheck
+    if: always()
     defaults:
       run:
         working-directory: products/connectin/apps/web
@@ -154,6 +188,7 @@ jobs:
     name: Security Audit
     runs-on: ubuntu-latest
     strategy:
+      fail-fast: false
       matrix:
         app:
           - products/connectin/apps/api
@@ -164,7 +199,19 @@ jobs:
     steps:
       - uses: actions/checkout@v4
 
+      - name: Check if app exists
+        id: check
+        run: |
+          if [ -f "${{ matrix.app }}/package.json" ]; then
+            echo "exists=true" >> $GITHUB_OUTPUT
+          else
+            echo "exists=false" >> $GITHUB_OUTPUT
+            echo "::notice::App at ${{ matrix.app }} not found — skipping security audit"
+          fi
+        working-directory: .
+
       - name: Setup Node.js
+        if: steps.check.outputs.exists == 'true'
         uses: actions/setup-node@v4
         with:
           node-version: ${{ env.NODE_VERSION }}
@@ -172,9 +219,11 @@ jobs:
           cache-dependency-path: ${{ matrix.app }}/package-lock.json
 
       - name: Install dependencies
+        if: steps.check.outputs.exists == 'true'
         run: npm ci
 
       - name: Run security audit
+        if: steps.check.outputs.exists == 'true'
         run: npm audit --audit-level=critical --omit=dev || echo "::warning::Security vulnerabilities found - review npm audit output"
         continue-on-error: true
 
@@ -182,11 +231,17 @@ jobs:
     name: Docker Build
     runs-on: ubuntu-latest
     needs: [test-api, test-web]
+    if: always()
     steps:
       - uses: actions/checkout@v4
 
       - name: Build Docker images
-        run: docker compose -f products/connectin/docker-compose.yml build
+        run: |
+          if [ -f "products/connectin/docker-compose.yml" ]; then
+            docker compose -f products/connectin/docker-compose.yml build
+          else
+            echo "::notice::docker-compose.yml not found — skipping Docker build"
+          fi
 
   quality-gate:
     name: Quality Gate
@@ -203,11 +258,20 @@ jobs:
           echo "  security:          ${{ needs.security.result }}"
           echo "  build:             ${{ needs.build.result }}"
 
-          # Core jobs must pass; security audit is advisory
-          if [ "${{ needs.lint-and-typecheck.result }}" != "success" ] || \
-             [ "${{ needs.test-api.result }}" != "success" ] || \
-             [ "${{ needs.test-web.result }}" != "success" ] || \
-             [ "${{ needs.build.result }}" != "success" ]; then
+          FAILED=false
+
+          # Each core job must pass or be successfully skipped
+          for job_result in \
+            "${{ needs.lint-and-typecheck.result }}" \
+            "${{ needs.test-api.result }}" \
+            "${{ needs.test-web.result }}" \
+            "${{ needs.build.result }}"; do
+            if [ "$job_result" != "success" ] && [ "$job_result" != "skipped" ]; then
+              FAILED=true
+            fi
+          done
+
+          if [ "$FAILED" = "true" ]; then
             echo "Quality gate FAILED: one or more core jobs did not succeed"
             exit 1
           fi
