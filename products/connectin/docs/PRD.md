@@ -776,10 +776,10 @@ flowchart TD
     CHECK_EXISTING -->|No| CREATE_OAUTH[Create Account<br/>Status: Verified]
 
     CREATE_ACCOUNT --> SEND_EMAIL[Send Verification Email]
-    SEND_EMAIL --> VERIFY_PROMPT[Show 'Check Your Email' Page]
+    SEND_EMAIL --> VERIFY_PROMPT["Show 'Check Your Email' Page"]
     VERIFY_PROMPT --> CLICK_LINK{User Clicks<br/>Verification Link}
     CLICK_LINK -->|Valid| VERIFY[Mark Account Verified]
-    CLICK_LINK -->|Expired| RESEND[Show 'Link Expired'<br/>+ Resend Option]
+    CLICK_LINK -->|Expired| RESEND["Show 'Link Expired'<br/>+ Resend Option"]
     RESEND --> SEND_EMAIL
 
     VERIFY --> PROFILE_SETUP
@@ -876,7 +876,7 @@ stateDiagram-v2
 
 ```mermaid
 flowchart TD
-    START([User on Home Feed]) --> COMPOSE[Click 'Start a Post']
+    START([User on Home Feed]) --> COMPOSE["Click 'Start a Post'"]
     COMPOSE --> EDITOR[Rich Text Editor Opens<br/>Auto-detects Arabic/English]
 
     EDITOR --> TYPE{Content Type?}
@@ -896,8 +896,8 @@ flowchart TD
     ADD_TAGS --> PUBLISH
     HASHTAGS -->|No| PUBLISH
 
-    PUBLISH[Click 'Post'] --> PROCESS[Server Processing:<br/>- Store text<br/>- Upload images to CDN<br/>- Extract hashtags<br/>- Index for search]
-    PROCESS --> DISTRIBUTE[Distribute to Feed:<br/>- Connections' feeds<br/>- Hashtag followers' feeds<br/>- Search index]
+    PUBLISH["Click 'Post'"] --> PROCESS["Server Processing:<br/>- Store text<br/>- Upload images to CDN<br/>- Extract hashtags<br/>- Index for search"]
+    PROCESS --> DISTRIBUTE["Distribute to Feed:<br/>- Connections' feeds<br/>- Hashtag followers' feeds<br/>- Search index"]
     DISTRIBUTE --> DONE([Post Visible in Feed<br/>within 10 seconds])
 
     style START fill:#3498DB,color:#fff
@@ -916,17 +916,17 @@ flowchart TD
     SAVE --> END1([Return to Job Search])
 
     APPLY -->|Yes| ALREADY{Already Applied?}
-    ALREADY -->|Yes| SHOW_STATUS[Show 'Applied on [date]'<br/>Button Disabled]
+    ALREADY -->|Yes| SHOW_STATUS["Show 'Applied on [date]'<br/>Button Disabled"]
     SHOW_STATUS --> END2([Return to Job Details])
 
-    ALREADY -->|No| CONFIRM[Confirmation Screen:<br/>- Profile snapshot shown<br/>- Cover note field (optional, 500 chars)<br/>- 'Submit Application' button]
+    ALREADY -->|No| CONFIRM["Confirmation Screen:<br/>- Profile snapshot shown<br/>- Cover note field (optional, 500 chars)<br/>- 'Submit Application' button"]
 
-    CONFIRM --> SUBMIT[Click 'Submit Application']
-    SUBMIT --> RECORD[Server Processing:<br/>- Record application<br/>- Notify recruiter<br/>- Update job status for user]
+    CONFIRM --> SUBMIT["Click 'Submit Application'"]
+    SUBMIT --> RECORD["Server Processing:<br/>- Record application<br/>- Notify recruiter<br/>- Update job status for user"]
 
-    RECORD --> RECRUITER_VIEW[Recruiter Notification:<br/>- New application alert<br/>- Candidate profile link<br/>- Cover note if provided]
+    RECORD --> RECRUITER_VIEW["Recruiter Notification:<br/>- New application alert<br/>- Candidate profile link<br/>- Cover note if provided"]
 
-    RECORD --> APPLICANT_VIEW[Applicant Confirmation:<br/>- 'Application Submitted' message<br/>- Job card shows 'Applied']
+    RECORD --> APPLICANT_VIEW["Applicant Confirmation:<br/>- 'Application Submitted' message<br/>- Job card shows 'Applied'"]
 
     APPLICANT_VIEW --> END3([Return to Jobs])
     RECRUITER_VIEW --> END4([Recruiter Reviews<br/>in Candidate Pipeline])
