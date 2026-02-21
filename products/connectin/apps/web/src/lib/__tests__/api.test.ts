@@ -26,6 +26,7 @@ describe("ApiClient", () => {
     // Reset the cached CSRF token between tests by fetching a fresh one
     // We do this by reaching into the public API — fetchCsrfToken will
     // be called lazily by each mutating method.
+    // eslint-disable-next-line @typescript-eslint/no-explicit-any
     (apiClient as any).csrfToken = null;
   });
 

@@ -263,4 +263,20 @@ describe('Connection Module', () => {
       );
     });
   });
+
+  describe('POST /api/v1/connections/request — validation', () => {
+    it('rejects missing receiverId', async () => {
+      const app = await getApp();
+      const user = await createTestUser(app);
+
+      const res = await app.inject({
+        method: 'POST',
+        url: '/api/v1/connections/request',
+        headers: authHeaders(user.accessToken),
+        payload: {},
+      });
+
+      expect(res.statusCode).toBe(422);
+    });
+  });
 });
