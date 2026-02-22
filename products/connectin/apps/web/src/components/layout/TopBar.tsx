@@ -127,7 +127,7 @@ export function TopBar({ variant = "authenticated" }: TopBarProps) {
               href={item.href}
               className={cn(
                 "flex flex-col items-center gap-0.5 px-3 py-1.5 rounded-xl",
-                "text-[#64748B] dark:text-[#94A3B8]",
+                "text-[#64748B] dark:text-[#CBD5E1]",
                 "hover:text-[#0C9AB8] hover:-translate-y-0.5 hover:bg-black/5 dark:hover:bg-white/5",
                 "transition-all duration-[180ms]",
                 "focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-[#57BBCE]"
@@ -147,7 +147,7 @@ export function TopBar({ variant = "authenticated" }: TopBarProps) {
             aria-label={`Notifications${unreadCount > 0 ? `, ${unreadCount} unread` : ""}`}
             onClick={notifOpen ? closePanel : openPanel}
             className={cn(
-              "w-10 h-10 flex items-center justify-center rounded-xl",
+              "w-11 h-11 flex items-center justify-center rounded-xl",
               "text-neutral-500 hover:text-neutral-700 dark:hover:text-neutral-300",
               "hover:bg-[#F1F5F9] dark:hover:bg-white/5 transition-colors",
               "focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-[#57BBCE]",

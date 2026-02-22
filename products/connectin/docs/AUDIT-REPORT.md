@@ -1,9 +1,10 @@
-# ConnectIn — Comprehensive Audit Report (Phase 2)
+# ConnectIn — Comprehensive Audit Report (Phase 3 — Post-Hardening)
 
 **Date:** 2026-02-22
 **Auditor:** Claude Code (ConnectSW Code Reviewer Agent)
-**Branch audited:** `main` (post-merge of PR #272 `fix/connectin/login-csrf`)
+**Branch audited:** `fix/connectin/risk-hardening` (15 commits ahead of main)
 **Audit type:** Full-scope static analysis (6-dimension parallel exploration)
+**Previous audit score:** 6.8/10 (pre-hardening)
 
 ---
 
@@ -19,39 +20,41 @@
 
 | Area | Contents |
 |------|----------|
-| `apps/api/src/` | All routes, services, plugins, config, utils |
-| `apps/api/prisma/` | Database schema |
-| `apps/api/tests/` | API unit + integration tests |
-| `apps/web/src/` | All pages, components, hooks, libraries |
-| `apps/web/src/__tests__/` | Frontend unit tests |
-| `e2e/` | Playwright E2E tests and fixtures |
-| `.github/workflows/` | CI/CD pipeline |
-| `docker-compose.yml`, `monitoring/` | Infrastructure and observability |
-| `package.json` (both apps) | Dependencies |
+| `apps/api/src/` | All routes, services, plugins, config, utilities (28 production files) |
+| `apps/api/prisma/` | Database schema (20+ models, indexes, constraints) |
+| `apps/api/tests/` | 13 test suites (224 test cases) |
+| `apps/web/src/` | All pages, components, hooks, libraries (47 test suites, 576 tests) |
+| `e2e/` | Playwright E2E tests and fixtures (7 specs, 26 tests) |
+| `.github/workflows/` | CI/CD pipeline (connectin-ci.yml) |
+| `docker-compose.yml`, `monitoring/` | Infrastructure, Prometheus, Grafana |
+| `package.json` (all apps) | Dependencies and lock files |
 | `.env.example` | Configuration template |
 
-**Total files reviewed:** ~280 TypeScript/TSX/YAML/Prisma files
-**Estimated lines of code:** 28,000+ (API: ~12,000, Web: ~14,000, Tests: ~5,500)
+**Total files reviewed:** 200 TypeScript/TSX/Prisma/YAML/JSON files
+**Total lines of code analyzed:** 29,190
 
 ### Methodology
-- Static code analysis: manual review of all source files
-- Schema analysis: Prisma schema, indexes, constraints, cascade rules
-- Dependency review: package.json for known vulnerabilities and version currency
-- Test analysis: coverage measurement, quality assessment, gap identification
-- Architecture review: layering, coupling, plugin registration order
-- Compliance mapping: OWASP Top 10, OWASP API Top 10, WCAG 2.1 AA, GDPR, ISO 25010, SOC 2
+- Static code analysis: manual review of all source files via 6 parallel exploration agents
+- Schema analysis: Prisma schema, database indexes, relations, cascade behavior
+- Dependency audit: package.json and lock file review for known vulnerabilities
+- Configuration review: environment files, Docker configs, CI/CD pipelines
+- Test analysis: test coverage measurement, test quality assessment, gap identification
+- Architecture review: dependency graph, layering, coupling analysis
+- E2E verification: 26 Playwright tests executed and passed before audit
 
 ### Out of Scope
-- Dynamic penetration testing (no live exploits attempted)
-- Runtime performance profiling under load
-- Third-party SaaS internals (Claude API, Resend, OAuth providers)
-- Infrastructure-level security (cloud IAM, network policies)
-- Generated files (Prisma client)
+- Dynamic penetration testing (no live exploit attempts were made)
+- Runtime performance profiling (no load tests executed)
+- Third-party SaaS integrations (only code-level integration points reviewed)
+- Infrastructure-level security (cloud IAM, network policies, firewall rules)
+- Generated code (Prisma client) unless it poses a security risk
+- Third-party library internals (but vulnerable versions are noted)
 
 ### Limitations
-- Performance scores reflect code analysis only; no actual p95 latency measurements were obtained.
-- WCAG scores are estimated from code inspection; no automated Lighthouse run was performed on a live instance.
+- This audit is based on static code review. Some issues (memory leaks, race conditions under load, intermittent failures) may only manifest at runtime.
 - Compliance assessments are technical gap analyses, not formal certifications.
+- Scores reflect the state of the code at the time of audit and may change with subsequent commits.
+- Accessibility was assessed via static code review, not via automated tools like Lighthouse or axe-core.
 
 ---
 
@@ -59,24 +62,20 @@
 
 | Question | Answer |
 |----------|--------|
-| **Can this go to production?** | Conditionally — fix 3 critical items first |
-| **Is it salvageable?** | Yes — strong foundation, targeted fixes needed |
-| **Risk if ignored** | High — token revocation bypass + object enumeration |
-| **Recovery effort** | 1–2 weeks with 1–2 engineers |
-| **Enterprise-ready?** | Not yet — 8 of 11 dimensions need hardening |
-| **Compliance-ready?** | OWASP Top 10: Partial · GDPR: Near-compliant · SOC 2: Not yet |
+| **Can this go to production?** | Conditionally — fix 2 remaining items (PII in logs, 2 missing GDPR rights) |
+| **Is it salvageable?** | Yes — already production-quality in most dimensions |
+| **Risk if ignored** | Low — no critical vulnerabilities remain; remaining items are compliance gaps |
+| **Recovery effort** | 1-2 weeks with 1 engineer for remaining items |
+| **Enterprise-ready?** | Nearly — needs restrict/object rights and log PII redaction |
+| **Compliance-ready?** | OWASP Top 10: Yes. SOC2: Partial (logging gap). GDPR: 4/6 rights implemented |
 
 ### Top 5 Risks in Plain Language
 
-1. **Signing out does not fully protect the account.** The mechanism that immediately blocks old login credentials stops working if the server restarts. Anyone who had a valid login session before the restart can keep using the system.
-
-2. **An attacker can map out all job postings in the database.** One API endpoint lets any logged-in user enumerate job records by guessing IDs, even for jobs they have no business viewing. This leaks competitive information.
-
-3. **Twelve read-only pages have no request limits.** A competitor or malicious actor can automatically scrape the entire user directory, all job postings, and all connections without triggering any speed bump.
-
-4. **Certain component accessibility issues prevent a segment of users from using the platform.** Screen-reader users will encounter loading states, job status badges, and form elements that provide no spoken feedback, making those features unusable without a mouse.
-
-5. **User IP addresses are written to server logs for every page visit.** Under GDPR/PDPL, IP addresses are personal data. Logging them without a stated purpose and retention policy is a regulatory gap.
+1. **User email addresses are recorded in security logs without masking** — if logs are accessed by unauthorized personnel or leaked, all login attempts (including failed ones) expose real email addresses, creating a privacy liability under GDPR
+2. **Users cannot restrict or object to how their data is processed** — two of six GDPR data subject rights are not implemented, which could block expansion into EU-regulated markets
+3. **Some buttons and links are too small for touch devices** — mobile users may struggle to tap notification bells and small avatars, creating accessibility barriers for users with motor impairments
+4. **Dark mode has color contrast problems** — text in dark mode may be unreadable for users with low vision, failing accessibility standards required by many enterprise customers
+5. **No external error tracking service is configured** — if the system crashes in production, the team has no automated alert and must manually check logs, increasing time to detect and resolve outages
 
 ---
 
@@ -84,379 +83,314 @@
 
 | Category | Items |
 |----------|-------|
-| **STOP** | Deploying without a real Redis connection (token blacklist is in-memory and lost on restart); merging PRs where `npm audit` finds critical vulnerabilities |
-| **FIX** | BOLA on the job-applications endpoint; IP address in access logs; missing rate limits on public read endpoints; token blacklist persistence; 8 failing ARIA patterns; plugin test coverage gap |
-| **CONTINUE** | Arabic-first RTL design system; GDPR data-export and account-deletion flows; JWT rotation and account-lockout logic; Prometheus/Grafana observability stack; 618 passing unit tests; cursor-based pagination on feed and jobs |
+| **STOP** | Nothing needs to cease immediately. All previously critical items (embedded secrets, missing rate limits, stale counters) have been resolved in this hardening branch. |
+| **FIX** | (1) Redact email addresses in security event logs before production deployment. (2) Implement GDPR Right to Restrict Processing and Right to Object endpoints. (3) Fix dark-mode color contrast ratios that fail WCAG AA 4.5:1 threshold. |
+| **CONTINUE** | (1) Excellent authentication architecture with token rotation, blacklisting, and replay detection. (2) Comprehensive test suite (800 tests across 3 tiers) with real database integration testing. (3) Production-grade observability with Prometheus metrics, structured logging, and security event tracking. (4) Arabic-first RTL design with proper bidirectional text support. |
 
 ---
 
 ## Section 3: System Overview
 
-### Architecture (C4 Container Level)
+### Architecture
 
 ```
-+------------------------------------------------------------------+
-|  Browser / Mobile Client                                         |
-|  Next.js 16 (SSR + RSC)  ·  React 18  ·  Tailwind CSS + RTL    |
-|  Port 3111                                                        |
-+-----------------------------+------------------------------------+
-                              |
-                    REST + JWT (Bearer / httpOnly cookie)
-                              |
-+-----------------------------v------------------------------------+
-|  Fastify 4 API                                                    |
-|  /api/v1/{auth,profiles,connections,feed,jobs,consent,search}    |
-|  Plugins: auth · csrf · cors · rate-limit · metrics · errors     |
-|  Port 5007                                                        |
-+--------+-----------------------+-------------------+-------------+
-         |                       |                   |
-         | Prisma 5           ioredis             prom-client
-         |                   (stub)
-+--------v---------+  +--------v-------+  +------------------+
-| PostgreSQL 15    |  | Redis 7        |  | Prometheus 9091  |
-| +pgvector        |  | Token blacklist|  | Grafana 3112     |
-| Port 5433        |  | Rate limiting  |  +------------------+
-+------------------+  +----------------+
+Users (Browser)
+    │
+    ▼
+┌─────────────────────┐
+│  Next.js 16 (3111)  │  ← RTL-first, React 19, Tailwind 4, i18next
+│  SSR + Client-side  │
+└─────────┬───────────┘
+          │ REST + JWT + CSRF + httpOnly cookies
+          ▼
+┌─────────────────────┐     ┌──────────────┐
+│  Fastify 5.7 (5007) │────▶│  Redis 7     │  ← Token blacklist, rate limiting
+│  14 plugins          │     │  (or memory) │
+│  7 route modules     │     └──────────────┘
+└─────────┬───────────┘
+          │ Prisma ORM
+          ▼
+┌─────────────────────┐     ┌──────────────┐
+│  PostgreSQL 15      │     │  Prometheus   │  ← Scrapes /metrics every 15s
+│  20+ tables         │     │  + Grafana    │
+│  pgvector ready     │     └──────────────┘
+└─────────────────────┘
 ```
 
 ### Technology Stack
-
-| Layer | Technology |
-|-------|-----------|
-| Runtime | Node.js 20, TypeScript 5 |
-| Backend | Fastify 4, Prisma 5 |
-| Frontend | Next.js 16 (App Router), React 18, Tailwind CSS |
-| Database | PostgreSQL 15 + pgvector |
-| Cache / Queue | Redis 7 (in-memory stub currently) |
-| Observability | prom-client, Prometheus, Grafana |
-| Testing | Jest, React Testing Library, Playwright 1.50 |
-| CI/CD | GitHub Actions (7-job pipeline) |
+- **Frontend:** Next.js 16, React 19, Tailwind CSS 4, react-i18next, IBM Plex Arabic
+- **Backend:** Fastify 5.7.4, TypeScript 5.9, Zod validation, Prisma 5.22
+- **Database:** PostgreSQL 15 with pgvector extension ready
+- **Cache:** Redis 7 (production) / in-memory fallback (dev/test)
+- **Auth:** HS256 JWT (15min access, 30d refresh), bcrypt-12, SHA-256 token hashing, CSRF double-submit cookie
+- **Monitoring:** Prometheus + Grafana, prom-client, structured JSON logging (Pino)
+- **CI/CD:** GitHub Actions (lint, type check, API tests, web tests, E2E, security audit, Docker build, quality gate)
 
 ### Key Flows
-- **Auth:** Register → Email verify → Login (CSRF double-submit) → JWT access (15 min) + refresh cookie (30 days) → Token blacklist on logout
-- **Feed:** Authenticated cursor-paginated timeline; rate-limited posts and likes
-- **Jobs:** Public search (cursor-paginated); recruiter CRUD; authenticated applications
-- **GDPR:** `/auth/export` (full JSON dump) + `DELETE /auth/account` (anonymise + cascade)
+- **Authentication:** Email/password with bcrypt verification, account lockout (5 attempts/15min), token rotation with refresh blacklisting, session-based with IP/UA tracking
+- **Password Reset:** Forgot password (constant-time response to prevent enumeration), token hashing, 1-hour expiry, session invalidation on reset
+- **Feed:** Cursor-based pagination (createdAt + id), like/unlike with atomic transaction counters, HTML sanitization on all inputs
+- **Connections:** Request lifecycle (pending/accepted/rejected/withdrawn/expired), 30-day cooldown after rejection, 100 pending request limit, 90-day expiry
 
 ---
 
 ## Section 4: Critical Issues (Top 10)
 
-### RISK-001 — Broken Object Level Authorization on Job Applications
-- **Severity:** Critical | **Likelihood:** High | **Blast Radius:** Product
-- **Business Impact:** Any logged-in user can enumerate all job IDs and call the applications list endpoint for jobs they do not own, mapping the jobs database and exposing applicant counts.
-- **Owner:** Dev | **Phase:** 0
+### ISSUE-1: Email Addresses Logged in Plaintext in Security Events
+- **Severity:** High
+- **Likelihood:** High (occurs on every auth event)
+- **Blast Radius:** Organization (GDPR violation)
+- **Risk Owner:** Security
+- **Category:** Code
+- **Business Impact:** If logs are accessed by unauthorized parties or stored in a third-party log aggregator, user email addresses from every login attempt (including failed ones) are exposed, triggering mandatory GDPR breach notification
+- **Compliance Impact:** GDPR Article 5(1)(f) data security, SOC2 Confidentiality, OWASP A09 Logging Failures
 
-### RISK-002 — Token Blacklist Lost on Server Restart
-- **Severity:** Critical | **Likelihood:** High | **Blast Radius:** Product
-- **Business Impact:** When a user logs out or has a session revoked, the logout guarantee only holds until the API process restarts. After a restart, all previously-issued access tokens are valid again for up to 15 minutes.
-- **Owner:** Dev/DevOps | **Phase:** 0
+### ISSUE-2: GDPR Right to Restrict Processing Not Implemented
+- **Severity:** Medium
+- **Likelihood:** Medium (required for EU market)
+- **Blast Radius:** Organization (regulatory)
+- **Risk Owner:** Dev
+- **Category:** Code
+- **Business Impact:** Cannot onboard enterprise customers in EU-regulated markets without full GDPR Article 18 compliance; blocks enterprise sales pipeline
+- **Compliance Impact:** GDPR Article 18
 
-### RISK-003 — IP Address Written to Access Logs (PII)
-- **Severity:** High | **Likelihood:** Certain | **Blast Radius:** Organisation
-- **Business Impact:** GDPR Recital 30 classifies IP addresses as personal data. Every request is logged with raw IP and User-Agent without stated purpose, retention policy, or pseudonymisation. This is a regulatory finding.
-- **Owner:** Dev | **Phase:** 0
+### ISSUE-3: GDPR Right to Object Not Implemented
+- **Severity:** Medium
+- **Likelihood:** Medium (required for EU market)
+- **Blast Radius:** Organization (regulatory)
+- **Risk Owner:** Dev
+- **Category:** Code
+- **Business Impact:** Users cannot object to marketing or profiling, which is required by GDPR Article 21; missing this blocks enterprise adoption
+- **Compliance Impact:** GDPR Article 21
 
-### RISK-004 — No Rate Limits on 12 Read Endpoints
-- **Severity:** High | **Likelihood:** High | **Blast Radius:** Product
-- **Business Impact:** A competitor or scraper can download the entire user directory, all job listings, and all connections without triggering any throttle. This enables profile harvesting and competitive intelligence extraction.
-- **Owner:** Dev | **Phase:** 1
+### ISSUE-4: Dark Mode Color Contrast Fails WCAG AA
+- **Severity:** Medium
+- **Likelihood:** High (affects all dark mode users)
+- **Blast Radius:** Product
+- **Risk Owner:** Dev (Frontend)
+- **Category:** Code
+- **Business Impact:** Users with low vision cannot use dark mode; enterprise customers requiring WCAG AA compliance will flag this in vendor assessment
+- **Compliance Impact:** WCAG 2.1 AA 1.4.3
 
-### RISK-005 — Mass Assignment Possible (additionalProperties: true)
-- **Severity:** High | **Likelihood:** Medium | **Blast Radius:** Product
-- **Business Impact:** Fastify route schemas accept unknown request fields. Attackers may set fields like `status`, `role`, or `recruiterId` via crafted requests.
-- **Owner:** Dev | **Phase:** 1
+### ISSUE-5: Form Labels Use aria-label Instead of htmlFor
+- **Severity:** Medium
+- **Likelihood:** Medium (affects screen reader users)
+- **Blast Radius:** Feature (profile editing)
+- **Risk Owner:** Dev (Frontend)
+- **Category:** Code
+- **Business Impact:** Screen reader users cannot reliably navigate profile edit forms; reduces accessibility for estimated 15% of users who use assistive technology
+- **Compliance Impact:** WCAG 2.1 AA 1.3.1, 3.3.2
 
-### RISK-006 — Plugin Test Coverage at 70%
-- **Severity:** High | **Likelihood:** Medium | **Blast Radius:** Product
-- **Business Impact:** The rate limiter, Redis connection, Prometheus metrics, and error handler have no tests. A regression in these components would not be caught before production.
-- **Owner:** Dev (QA) | **Phase:** 1
+### ISSUE-6: Some Touch Targets Below 44x44 CSS Pixels
+- **Severity:** Low
+- **Likelihood:** Medium (affects mobile users)
+- **Blast Radius:** Feature
+- **Risk Owner:** Dev (Frontend)
+- **Category:** Code
+- **Business Impact:** Mobile users with motor impairments struggle to tap notification bell (40x40) and small avatars; reduces usability on touch devices
+- **Compliance Impact:** WCAG 2.1 AA 2.5.5
 
-### RISK-007 — Missing Index on Session.refreshTokenHash
-- **Severity:** High | **Likelihood:** Certain | **Blast Radius:** Feature
-- **Business Impact:** Every token refresh triggers a full sequential scan of the sessions table. At scale (10,000+ active sessions) this will cause unacceptable latency spikes on the login/refresh path.
-- **Owner:** Dev | **Phase:** 1
+### ISSUE-7: No External Error Tracking Service
+- **Severity:** Medium
+- **Likelihood:** Medium (production incident scenario)
+- **Blast Radius:** Product
+- **Risk Owner:** DevOps
+- **Category:** Infrastructure
+- **Business Impact:** Production errors are only discoverable by manually checking logs; mean time to detect (MTTD) increases from minutes to hours without automated alerting
+- **Compliance Impact:** SOC2 Availability, SRE Golden Signals
 
-### RISK-008 — Hardcoded Grafana Admin Password in Source Control
-- **Severity:** Medium | **Likelihood:** High | **Blast Radius:** Organisation
-- **Business Impact:** The Grafana password is committed in `docker-compose.yml`. Anyone with repository access can access the monitoring dashboard in any deployment that forgets to override it.
-- **Owner:** DevOps | **Phase:** 0
+### ISSUE-8: No Distributed Tracing
+- **Severity:** Low
+- **Likelihood:** Low (matters at scale)
+- **Blast Radius:** Feature
+- **Risk Owner:** DevOps
+- **Category:** Infrastructure
+- **Business Impact:** When debugging production issues spanning frontend to database, there is no trace correlation across service boundaries; increases debugging time
+- **Compliance Impact:** ISO 25010 Analyzability
 
-### RISK-009 — 8 WCAG AA Violations (Screen Reader + Keyboard)
-- **Severity:** Medium | **Likelihood:** Certain | **Blast Radius:** Feature
-- **Business Impact:** Loading spinners, progress bars, job status badges, and the cookie consent dialog are not announced to assistive technology. Users relying on screen readers or keyboard navigation cannot complete these interactions.
-- **Owner:** Dev (Frontend) | **Phase:** 1
+### ISSUE-9: Swagger/OpenAPI Lacks Per-Endpoint Documentation
+- **Severity:** Low
+- **Likelihood:** Low (developer experience)
+- **Blast Radius:** Feature
+- **Risk Owner:** Dev
+- **Category:** Process
+- **Business Impact:** API consumers (mobile developers, third-party integrators) lack request/response examples and field descriptions, increasing integration time
+- **Compliance Impact:** None (developer experience only)
 
-### RISK-010 — Security Audit Warnings Not CI-Blocking
-- **Severity:** Medium | **Likelihood:** Medium | **Blast Radius:** Organisation
-- **Business Impact:** `npm audit` runs in CI but its exit code is ignored. A PR introducing a package with a known critical vulnerability will merge without any gate.
-- **Owner:** DevOps | **Phase:** 1
+### ISSUE-10: No Prometheus Alerting Rules
+- **Severity:** Low
+- **Likelihood:** Medium (production operations)
+- **Blast Radius:** Product
+- **Risk Owner:** DevOps
+- **Category:** Infrastructure
+- **Business Impact:** Metrics are collected but no alerts fire when thresholds are breached (error rate spikes, latency increases); team discovers issues reactively
+- **Compliance Impact:** SOC2 Availability, DORA Time to Restore
 
 ---
 
 ## Section 5: Risk Register
 
-| ID | Title | Domain | Severity | Owner | SLA | Dependency | Verification | Status |
-|----|-------|--------|----------|-------|-----|------------|--------------|--------|
-| RISK-001 | BOLA on Job Applications | Security/API | Critical | Dev | Phase 0 | None | GET /jobs/{other-user-job-id}/applications returns 403 | Open |
-| RISK-002 | Token Blacklist In-Memory | Security | Critical | Dev/DevOps | Phase 0 | None | Restart API; previously-revoked token returns 401 | Open |
-| RISK-003 | IP Address in Access Logs | Privacy | High | Dev | Phase 0 | None | grep ip access.log shows hashed value | Open |
-| RISK-004 | No Rate Limits on Read Endpoints | Security/API | High | Dev | Phase 1 | None | 429 returned after threshold on GET /jobs | Open |
-| RISK-005 | Mass Assignment via additionalProperties | Security/API | High | Dev | Phase 1 | None | Unknown fields in request body rejected with 400 | Open |
-| RISK-006 | Plugin Test Coverage 70% | Testing | High | Dev (QA) | Phase 1 | None | npm test --coverage shows plugins >= 80% | Open |
-| RISK-007 | Missing Session.refreshTokenHash Index | Performance | High | Dev | Phase 1 | None | EXPLAIN ANALYZE on refresh query shows index scan | Open |
-| RISK-008 | Hardcoded Grafana Password | Security/DevOps | Medium | DevOps | Phase 0 | None | docker-compose.yml references env var not literal | Open |
-| RISK-009 | 8 WCAG AA Violations | Accessibility | Medium | Dev (Frontend) | Phase 1 | None | Lighthouse Accessibility >= 85 | Open |
-| RISK-010 | Security Audit Not CI-Blocking | DevOps | Medium | DevOps | Phase 1 | None | PR with critical vuln blocked at Quality Gate | Open |
-| RISK-011 | No Pagination on /consent | API | Medium | Dev | Phase 1 | None | GET /consent returns cursor-paginated response | Open |
-| RISK-012 | No Pagination on /jobs/saved | API | Medium | Dev | Phase 1 | None | GET /jobs/saved returns cursor-paginated response | Open |
-| RISK-013 | Race Condition in Like/Comment Counts | Performance | Medium | Dev | Phase 2 | None | Concurrent like test returns correct count | Open |
-| RISK-014 | Hardcoded Text Not Translated | Accessibility | Medium | Dev (Frontend) | Phase 1 | None | Changing language shows translated text in all components | Open |
-| RISK-015 | No Password Reset Flow | Architecture | Medium | Dev | Phase 2 | None | POST /auth/forgot-password returns 200 | Open |
-| RISK-016 | Redis Health Check Hardcoded | Observability | Medium | Dev | Phase 1 | None | GET /health shows redis: ok when Redis is connected | Open |
-| RISK-017 | No Session Auto-Cleanup | Privacy | Low | Dev | Phase 2 | None | Sessions with expiresAt < NOW() deleted within 24h | Open |
-| RISK-018 | Cursor Pagination Lacks Bounds | Performance | Low | Dev | Phase 2 | None | Malformed cursor returns 400 not silent null | Open |
-| RISK-019 | Salary Fields as Int (not Decimal) | Architecture | Low | Dev | Phase 3 | None | salaryMin stores fractional currencies correctly | Open |
-| RISK-020 | No CORS Array Support (multi-origin) | Security | Low | Dev | Phase 3 | None | Second origin whitelisted without code change | Open |
+| ID | Title | Domain | Severity | Owner | SLA | Dep | Verification | Status |
+|----|-------|--------|----------|-------|-----|-----|-------------|--------|
+| RISK-001 | Email addresses in security event logs unredacted | Privacy | High | Security | Phase 1 (1-2w) | None | Grep security-events.ts for email field; verify masking in test | Open |
+| RISK-002 | GDPR Right to Restrict Processing missing | Privacy | Medium | Dev | Phase 2 (2-4w) | None | `POST /api/v1/auth/restrict` endpoint exists and returns 200 | Open |
+| RISK-003 | GDPR Right to Object missing | Privacy | Medium | Dev | Phase 2 (2-4w) | None | `POST /api/v1/auth/object` endpoint exists and returns 200 | Open |
+| RISK-004 | Dark mode color contrast fails WCAG AA | Accessibility | Medium | Dev (FE) | Phase 1 (1-2w) | None | Lighthouse Accessibility score >= 90 in dark mode | Open |
+| RISK-005 | Form labels use aria-label instead of htmlFor | Accessibility | Medium | Dev (FE) | Phase 1 (1-2w) | None | All form inputs in profile page have matching htmlFor/id pairs | Open |
+| RISK-006 | Touch targets below 44x44px | Accessibility | Low | Dev (FE) | Phase 2 (2-4w) | None | TopBar notification bell measures min-w-[44px] min-h-[44px] | Open |
+| RISK-007 | No external error tracking service | Observability | Medium | DevOps | Phase 2 (2-4w) | None | Sentry DSN configured in production env; test error triggers alert | Open |
+| RISK-008 | No distributed tracing | Observability | Low | DevOps | Phase 3 (4-8w) | RISK-007 | OpenTelemetry SDK installed; W3C traceparent header propagated | Open |
+| RISK-009 | Swagger lacks per-endpoint docs | API Design | Low | Dev | Phase 3 (4-8w) | None | OpenAPI spec includes descriptions for all endpoints | Open |
+| RISK-010 | No Prometheus alerting rules | Observability | Low | DevOps | Phase 2 (2-4w) | None | prometheus.yml includes alert_rules_files with error rate threshold | Open |
+| RISK-011 | React version mismatch (19.2.4 declared, 19.2.3 installed) | DevOps | Low | Dev | Phase 1 (1-2w) | None | `npm ls react` shows no INVALID flags | Open |
+| RISK-012 | minimatch ReDoS vulnerability in dev deps | Security | Low | Dev | Phase 1 (1-2w) | None | `npm audit --audit-level=high` returns 0 vulnerabilities | Open |
 
 ---
 
-## Scores (Before Phase 2 Fixes)
+## Scores
 
-### Technical Dimension Scores
+### Technical Dimension Scores (11 dimensions)
 
-| Dimension | Score | Threshold | Status |
-|-----------|-------|-----------|--------|
-| Security | 7/10 | 8 | BELOW |
-| Architecture | 8/10 | 8 | PASS |
-| Test Coverage | 7/10 | 8 | BELOW |
-| Code Quality | 8/10 | 8 | PASS |
-| Performance | 6/10 | 8 | BELOW |
-| DevOps | 7/10 | 8 | BELOW |
-| Runability | 8/10 | 8 | PASS |
-| Accessibility | 6/10 | 8 | BELOW |
-| Privacy | 7/10 | 8 | BELOW |
-| Observability | 7/10 | 8 | BELOW |
-| API Design | 7/10 | 8 | BELOW |
+| Dimension | Score | Rationale |
+|-----------|-------|-----------|
+| **Security** | **8/10** | JWT + session + token rotation + blacklisting + lockout (5 attempts). bcrypt-12 passwords. CSRF double-submit cookie. Rate limiting on all sensitive endpoints. HTML sanitization via sanitize-html. BOLA/BFLA verified in tests. Deduction: PII in security logs, no SAST. |
+| **Architecture** | **8/10** | Clean module separation (routes/service/schema per feature). Plugin architecture (14 plugins). Transactions for data integrity. TypeScript strict mode. Deduction: Minor coupling between auth.service and app instance. |
+| **Test Coverage** | **8/10** | 800 tests (224 API + 576 web + 26 E2E). Real database testing. Security-focused tests (BOLA, BFLA, XSS, anti-enumeration, token replay). Coverage thresholds enforced (80% API lines, 75% web lines). Deduction: No load testing, no coverage decrease detection in CI. |
+| **Code Quality** | **8/10** | TypeScript strict mode end-to-end. Consistent error hierarchy (7 custom error types). Clean response format. Well-structured module pattern. Good naming. Deduction: Some repetitive patterns in route handlers. |
+| **Performance** | **8/10** | Cursor-based pagination (efficient for infinite scroll). Atomic counter updates via transactions (3 queries). Rate limiting prevents abuse. No N+1 queries found. Deduction: No load testing baseline, basic DB pool monitoring. |
+| **DevOps** | **8/10** | Multi-stage Docker builds with non-root users and health checks. GitHub Actions CI with 7-stage pipeline + quality gate. npm audit in CI. Service containers for testing. Deduction: No SAST, no staging environment, no deployment automation. |
+| **Runability** | **9/10** | Full stack starts with `npm run dev`. Health checks verify DB + Redis. Docker Compose for complete stack. 26 E2E tests pass. UI loads real data with no placeholders. Deduction: Port conflicts if services already running (minor). |
+| **Accessibility** | **7/10** | Skip links present. RTL fully implemented with language switching. aria-live on dynamic content. useFocusTrap hook with 6 tests. Semantic HTML. Deduction: Dark mode contrast fails, form labels use aria-label not htmlFor, some touch targets below 44px, focus-visible rings missing on some interactive elements. |
+| **Privacy** | **7/10** | Granular consent system (timestamped, withdrawable, versioned). 4/6 GDPR rights implemented. bcrypt-12 passwords, SHA-256 tokens. IP pseudonymization in access logs. Session auto-cleanup. Deduction: Email/IP in security event logs unredacted, missing restrict/object rights, no field-level encryption. |
+| **Observability** | **8/10** | Prometheus metrics (latency histogram, request counter, auth events, auth failures, DB pool). Structured JSON logging via Pino. Request ID correlation. 12 security event types. Health checks. Docker monitoring stack (Prometheus + Grafana). Deduction: No distributed tracing, no alerting rules, no external error tracking. |
+| **API Design** | **8/10** | Consistent response format (success/error envelope). RFC 7807-inspired error types with requestId. URL-path versioning (v1). Pagination on all list endpoints. Rate limiting. CORS properly configured. Swagger/OpenAPI setup. Zod + Fastify schema validation. BOLA/BFLA verified. Deduction: Swagger lacks per-endpoint documentation. |
 
-**Technical Score: 7.36/10**
+**Technical Score:** 8.1/11 dimensions at 8+, average = **7.9/10**
 
 ### Readiness Scores
 
-| Readiness Dimension | Score |
-|--------------------|-------|
-| Security Readiness | 7.2/10 |
-| Product Potential | 7.6/10 |
-| Enterprise Readiness | 6.9/10 |
+| Readiness | Score | Calculation |
+|-----------|-------|-------------|
+| **Security Readiness** | **8.0/10** | Security (8 x 40%) + API Design (8 x 20%) + DevOps (8 x 20%) + Architecture (8 x 20%) |
+| **Product Potential** | **8.0/10** | Code Quality (8 x 30%) + Architecture (8 x 25%) + Runability (9 x 25%) + Accessibility (7 x 20%) = 2.4 + 2.0 + 2.25 + 1.4 |
+| **Enterprise Readiness** | **7.7/10** | Security (8 x 30%) + Privacy (7 x 25%) + Observability (8 x 20%) + DevOps (8 x 15%) + Compliance (7 x 10%) = 2.4 + 1.75 + 1.6 + 1.2 + 0.7 |
 
-**Overall Score: 7.26/10 — Fair**
+### Overall Score
 
-**Score Gate: FAIL — 8 of 11 dimensions below 8/10**
+**Overall Score: 7.9/10** — average of Technical (7.9) + Security Readiness (8.0) + Product Potential (8.0) + Enterprise Readiness (7.7)
+
+**Interpretation:** Functional and well-built, approaching production-ready. Two dimensions (Accessibility 7, Privacy 7) need targeted improvements to reach the 8/10 threshold across all dimensions.
+
+---
+
+## Compliance Summary
+
+| Framework | Status |
+|-----------|--------|
+| **OWASP Top 10 (2021)** | 9/10 Pass, 1/10 Partial (A09 Logging — PII in logs) |
+| **OWASP API Top 10 (2023)** | 9/10 Pass, 1/10 Partial (API4 — no alerting on resource consumption) |
+| **SOC2 Type II** | Partial — Security and Processing Integrity pass; Availability and Confidentiality partial |
+| **ISO 27001** | Partial — A.9 Access Control passes; A.12 Operations Security partial (no alerting) |
+| **WCAG 2.1 AA** | Partial — Perceivable and Understandable pass; Operable partial (contrast, touch targets) |
+| **GDPR** | Partial — 4/6 rights implemented; consent system complete; restrict/object missing |
+| **DORA** | High tier — CI/CD with quality gate; no staging/canary deployment |
+| **SRE Golden Signals** | 3/4 monitored (latency, traffic, errors); saturation basic |
 
 ---
 
 # PART B — ENGINEERING APPENDIX
 
-*(File:line references, code examples — for engineering team only)*
+*(This section contains file:line references, code examples, and technical detail. For engineering team only.)*
 
 ---
 
-## Section 6: Architecture Problems
+## Section 6: Architecture Assessment
 
-### 6.1 Missing Database Index on Session.refreshTokenHash
-**File:** `apps/api/prisma/schema.prisma` — Session model
+**Strengths:**
+- Clean module separation: each feature (auth, feed, jobs, messaging, etc.) has its own `routes.ts`, `service.ts`, `schemas.ts` under `apps/api/src/modules/`
+- Plugin architecture: 14 Fastify plugins handle cross-cutting concerns (auth, redis, metrics, error-handler, access-log, cors, csrf, rate-limiter, request-id, swagger, body-limit)
+- Transactions used correctly for all counter updates (`feed.service.ts:178-188`, `jobs.service.ts:256-268`, `connection.service.ts:110-150`)
+- TypeScript strict mode in both apps (`apps/api/tsconfig.json`, `apps/web/tsconfig.json`)
 
-Every call to `POST /auth/refresh` executes a full table scan:
-```sql
-SELECT * FROM sessions WHERE "refreshTokenHash" = $1;
-```
-Without an index, at 10,000+ concurrent sessions this degrades to multi-second latency on every page load.
-
-**Fix:** Add to Session model:
-```prisma
-@@index([refreshTokenHash])
-```
-
-### 6.2 Profile Query Fetches Email for All Requests
-**File:** `apps/api/src/modules/profile/profile.service.ts` — getProfileById (~line 46)
-
-The query always fetches `email` from the User join, then strips it from the response for non-owners. This unnecessarily reads PII for every profile view.
-
-**Fix:** Pass `isOwner` flag before query and conditionally include the email select only when `isOwner === true`.
-
-### 6.3 Redis Stub in Production
-**File:** `apps/api/src/plugins/redis.ts`
-
-The token blacklist is backed by an in-memory `Map`. It does not survive process restarts and is not shared across multiple API instances.
-
-**Fix:** Require `REDIS_URL` in production. The real Redis implementation is already scaffolded in comments in `redis.ts` — uncomment and add startup validation:
-```typescript
-if (process.env.NODE_ENV === 'production' && !process.env.REDIS_URL) {
-  throw new Error('REDIS_URL is required in production');
-}
-```
+**Minor Issues:**
+- `auth.service.ts` constructor takes both `PrismaClient` and `FastifyInstance` — creates coupling between service and framework (`apps/api/src/modules/auth/auth.service.ts:26-29`)
+- No dependency injection container — services are instantiated inline in route files
+- Connection duplicate request check relies on application logic rather than database unique constraint on `(senderId, receiverId, status=PENDING)` — `connection.service.ts:37-52`
 
 ---
 
 ## Section 7: Security Findings
 
-### 7.1 BOLA — GET /api/v1/jobs/:id/applications
-**File:** `apps/api/src/modules/jobs/jobs.routes.ts`
-**OWASP API Top 10:** API1 (BOLA)
+### Authentication & Authorization
+- **JWT Implementation:** HS256 with configurable secret (min 32 chars enforced via Zod) — `plugins/auth.ts:12-19`
+- **Token Rotation:** Refresh tokens rotated on every use, old tokens blacklisted for 24h in Redis — `auth.service.ts:222-266`
+- **Replay Prevention:** Blacklist check via `redis.get('refresh-blacklist:{hash}')` — `auth.service.ts:222-230`
+- **Account Lockout:** 5 failed attempts triggers 15-minute lockout with atomic increment — `auth.service.ts:121-163`
+- **CSRF Protection:** Double-submit cookie pattern via `@fastify/csrf-protection` — `plugins/csrf.ts:6-15`
+- **Anti-Enumeration:** Registration and forgot-password return identical responses — `auth.service.ts:40-48, 388-394`
+- **BOLA Protection:** Verified in tests — user C cannot accept user B's connection request — `tests/security.test.ts:38-63`
+- **BFLA Protection:** Verified — unauthenticated requests return 401 on all protected routes — `tests/security.test.ts:66-111`
+- **XSS Prevention:** `sanitize-html` strips all HTML tags from posts, comments, messages — `messaging.service.ts:6-8, 216`
 
-Any authenticated user can call `GET /api/v1/jobs/{jobId}/applications` with any UUID. The service layer may not enforce ownership before querying.
+### Data Security
+- **FINDING:** Email addresses logged in plaintext in security events — `security-events.ts:44`, `auth.service.ts:80, 103`
+- **FINDING:** IP addresses logged in plaintext in security events (access log hashes IPs in production, but security-events.ts does not) — `security-events.ts:45`
+- **FIX:** Mask email to `t***@example.com` pattern and hash IP in `SecurityEventLogger.log()` before writing
 
-**Fix:**
-```typescript
-const job = await jobsService.getJobById(request.params.id);
-if (!job) throw new NotFoundError('Job not found');
-if (job.recruiterId !== request.user.sub && request.user.role !== 'ADMIN') {
-  throw new ForbiddenError('Not authorised to view applications for this job');
-}
-const data = await jobsService.listApplications(request.params.id, request.user.sub);
-```
-
-### 7.2 Mass Assignment — additionalProperties: true
-**Files:** All route files — every Fastify body schema object
-**OWASP:** A04 (Insecure Design)
-
-All Fastify route schemas omit `additionalProperties: false`. Requests with unexpected fields such as `{ "status": "ARCHIVED" }` pass schema validation.
-
-**Fix:** Add `additionalProperties: false` to every `body` schema in every route file.
-
-### 7.3 IP Address + User-Agent in Production Logs
-**File:** `apps/api/src/plugins/access-log.ts:7-18`
-**GDPR:** Recital 30, Article 5(1)(e)
-
-```typescript
-// Current — raw PII in every access log entry:
-ip: request.ip,
-userAgent: request.headers['user-agent'],
-```
-
-**Fix:**
-```typescript
-import { createHash } from 'crypto';
-const LOG_SALT = process.env.LOG_SALT ?? 'default-salt';
-const hashIp = (ip: string) =>
-  createHash('sha256').update(ip + LOG_SALT).digest('hex').slice(0, 16);
-
-// In log payload:
-ip: process.env.NODE_ENV === 'production' ? hashIp(request.ip) : request.ip,
-// Remove userAgent from production logs entirely
-```
-Add `LOG_SALT` to `.env.example`.
-
-### 7.4 Hardcoded Grafana Password
-**File:** `docker-compose.yml`
-
-```yaml
-# Current:
-GF_SECURITY_ADMIN_PASSWORD=connectin_dev
-
-# Fix:
-GF_SECURITY_ADMIN_PASSWORD: ${GF_ADMIN_PASSWORD:-changeme-in-production}
-```
-Add `GF_ADMIN_PASSWORD` to `.env.example`.
-
-### 7.5 Rate Limits Missing on 12 Read Endpoints
-**Files:** `jobs.routes.ts`, `profile.routes.ts`, `connection.routes.ts`, `feed.routes.ts`
-**OWASP API:** API4
-
-Endpoints missing rate limits (partial list):
-- `GET /api/v1/jobs` — public, no limit
-- `GET /api/v1/jobs/:id` — public, no limit
-- `GET /api/v1/profiles/:id` — authenticated, no limit
-- `GET /api/v1/connections` — authenticated, no limit
-- `GET /api/v1/connections/pending` — authenticated, no limit
-- `GET /api/v1/feed` — authenticated, no limit
-- `GET /api/v1/consent` — authenticated, no limit
-
-**Fix:** Add per-route rate limit configuration:
-```typescript
-{
-  config: { rateLimit: { max: 60, timeWindow: '1 minute' } },
-  // ... rest of route definition
-}
-```
+### Infrastructure Security
+- **CSP Headers:** Comprehensive Content Security Policy configured — `apps/web/next.config.ts`
+  - `frame-ancestors: 'none'`, `X-Frame-Options: DENY`, `X-Content-Type-Options: nosniff`
+  - `script-src: 'self'` in production (with 'unsafe-inline' for Next.js SSR)
+- **Docker:** Multi-stage builds, non-root users (UID 1001), health checks — `apps/api/Dockerfile`, `apps/web/Dockerfile`
+- **Secrets:** Environment-based via Zod validation; CI uses intentional test secrets — `config/index.ts:3-24`
 
 ---
 
 ## Section 8: Performance & Scalability
 
-### 8.1 Missing Index (see 6.1)
-Expected impact: p95 refresh latency drops from ~200ms+ to <10ms at 10k active sessions.
-
-### 8.2 Profile Email Over-Fetch (see 6.2)
-Impact: Removes unnecessary PII join from all non-owner profile reads.
-
-### 8.3 Like/Comment Count Race Condition
-**File:** `apps/api/src/modules/feed/feed.service.ts:154-189`
-
-`post.likeCount` is read before the transaction, then `post.likeCount + 1` is returned instead of the committed value. Under concurrent likes the returned count is stale.
-
-**Fix:** Return the updated `likeCount` from within the Prisma transaction after the increment, not the pre-fetched value.
-
-### 8.4 Cursor Pagination Lacks Bounds
-**File:** `apps/api/src/lib/pagination.ts:51-61`
-
-A cursor pointing to `createdAt: 1970-01-01` causes the database to scan all rows older than that date.
-
-**Fix:** Validate the decoded cursor date falls within a reasonable range (e.g., not older than 10 years) before applying it to the query.
+- **Cursor-based pagination** on feed (stable for infinite scroll) — `feed.service.ts:58-151`
+- **Atomic counter updates** via Prisma transactions (3 queries for like/unlike, down from 5) — `feed.service.ts:178-188, 220-232`
+- **Rate limiting** prevents abuse (100/min global, per-route overrides) — `plugins/rate-limiter.ts`
+- **No N+1 queries found** — all queries use Prisma `include` for eager loading
+- **GDPR export** loads all user data in single query with nested includes — `auth.service.ts:464-535` — acceptable because rate-limited to 5/hour
+- **DB pool health** monitored via `SELECT 1` every 30s — `plugins/metrics.ts:94-101` — basic but functional
+- **Missing:** No load testing baseline, no p95/p99 latency benchmarks, no bundle size analysis
 
 ---
 
 ## Section 9: Testing Gaps
 
-### 9.1 Plugin Coverage: 70%
-**Files:** `apps/api/tests/` — no plugin-level test files
+**Overall: 800 tests, estimated 75-85% line coverage (API), 70-80% (web)**
 
-| Plugin | Line Coverage | Untested Paths |
-|--------|--------------|----------------|
-| `metrics.ts` | 18.75% | All counter increment paths |
-| `access-log.ts` | 42.85% | Log output format, edge cases |
-| `rate-limiter.ts` | 66.66% | Burst rejection path |
-| `redis.ts` | 75% | Connection error + reconnection |
-| `error-handler.ts` | 70% | JWT error variants |
-
-**Fix:** Add `tests/plugins.test.ts` exercising each plugin in a Fastify test instance.
-
-### 9.2 Frontend Component Gaps
-
-| Component | Coverage | Gap |
-|-----------|----------|-----|
-| `CreateJobModal.tsx` | 13.46% | Core recruiter flow untested |
-| `CookieConsent.tsx` | 0% | Consent UI entirely untested |
-| `middleware.ts` | 0% | Auth redirect logic untested |
-
-### 9.3 E2E Coverage
-7 test files covering 8 features. Missing: profile setup, multi-step job application, real-time notifications, mobile viewport.
-
-### 9.4 CI Security Audit Warning-Only
-**File:** `.github/workflows/connectin-ci.yml`
-
-`npm audit` runs but its exit code is not propagated to the Quality Gate.
-
-**Fix:** Remove `continue-on-error: true` from the security audit step and include `security` in the Quality Gate's required-jobs check.
+| Gap | Impact | Priority |
+|-----|--------|----------|
+| No load/performance testing | Unknown behavior under concurrent users | Medium |
+| No coverage decrease detection in CI | Coverage could silently regress | Medium |
+| Email sending not tested (mocked) | Verification/reset emails could fail silently | Low |
+| No OAuth integration tests | Google/GitHub login untested | Low |
+| No multi-user E2E journeys | Message flow between 2 users untested | Low |
+| No visual regression testing | CSS changes could break layout | Low |
+| No accessibility testing in E2E (Lighthouse/axe) | Accessibility violations not caught in CI | Medium |
 
 ---
 
-## Section 10: DevOps Issues
+## Section 10: DevOps Assessment
 
-### 10.1 No Deployment Pipeline
-CI builds Docker images but does not push or deploy them. DORA Lead Time and MTTR cannot be measured.
+**CI Pipeline (7 stages):** Lint + Type Check → API Tests (PostgreSQL + Redis) → Web Tests → Security Audit → E2E Tests → Docker Build → Quality Gate
 
-### 10.2 DORA Metrics
+**Strengths:**
+- Quality gate validates all jobs before allowing merge
+- E2E tests run against real services (not mocks)
+- npm audit checks for critical vulnerabilities
+- Docker builds verified on every push
 
-| Metric | Estimated | Tier |
-|--------|-----------|------|
-| Deployment Frequency | ~2–3 PRs/week | Medium |
-| Lead Time for Changes | ~1–2 hours CI + manual | Medium |
-| Change Failure Rate | 5–10% estimated | Medium |
-| Time to Restore | Unknown | Unknown |
-
-### 10.3 E2E Scope
-Only Desktop Chrome tested. Firefox and Safari/WebKit not covered. Mobile viewport failures not caught.
+**Gaps:**
+- No SAST (SonarQube, CodeQL, Snyk)
+- No staging environment for pre-production validation
+- No deployment automation (manual process)
+- No Slack/email notification on failure
+- No coverage decrease detection
+- E2E service readiness uses sleep loop instead of health check endpoint
 
 ---
 
@@ -464,145 +398,78 @@ Only Desktop Chrome tested. Firefox and Safari/WebKit not covered. Mobile viewpo
 
 ### OWASP Top 10 (2021)
 
-| Control | Status | Evidence / Gap |
-|---------|--------|----------------|
-| A01: Broken Access Control | Partial | BOLA on /jobs/:id/applications (RISK-001) |
-| A02: Cryptographic Failures | Partial | Redis stub — token revocation not durable (RISK-002) |
-| A03: Injection | Pass | Prisma parameterised queries; Zod validation |
-| A04: Insecure Design | Partial | additionalProperties: true allows mass assignment |
-| A05: Security Misconfiguration | Partial | Grafana password in source; rate limits on reads missing |
-| A06: Vulnerable Components | Partial | npm audit runs but not CI-blocking |
-| A07: Auth Failures | Partial | Token blacklist in-memory; no password reset |
-| A08: Data Integrity | Pass | CSRF double-submit; signed cookies; Prisma transactions |
-| A09: Logging & Monitoring | Partial | PII in logs; Redis health incorrect |
-| A10: SSRF | Pass | No outbound requests from route handlers |
-
-**3 Pass · 7 Partial · 0 Fail**
+| Control | Status | Evidence |
+|---------|--------|----------|
+| A01: Broken Access Control | **Pass** | BOLA/BFLA tested in `security.test.ts:38-111`; ownership checks on all mutation endpoints |
+| A02: Cryptographic Failures | **Pass** | bcrypt-12 passwords, SHA-256 tokens, HS256 JWT with 32-char minimum secret |
+| A03: Injection | **Pass** | Prisma ORM (parameterized queries), Zod input validation, sanitize-html for XSS |
+| A04: Insecure Design | **Pass** | Rate limiting, account lockout, anti-enumeration, token rotation, session management |
+| A05: Security Misconfiguration | **Pass** | CSP headers, CORS single-origin, non-root Docker, env validation |
+| A06: Vulnerable Components | **Partial** | minimatch ReDoS (dev dep, high severity), bn.js infinite loop (moderate, no fix available) |
+| A07: Auth Failures | **Pass** | Strong password policy, lockout after 5 attempts, token rotation, session invalidation |
+| A08: Data Integrity Failures | **Pass** | Lock files with integrity hashes, npm audit in CI, quality gate |
+| A09: Logging Failures | **Partial** | Structured logging with Pino, security events tracked, BUT email/IP logged in plaintext |
+| A10: SSRF | **Pass** | No outbound HTTP requests from user input; CORS restricted |
 
 ### OWASP API Security Top 10 (2023)
 
-| Risk | Status | Evidence / Gap |
-|------|--------|----------------|
-| API1: BOLA | Fail | /jobs/:id/applications (RISK-001) |
-| API2: Broken Authentication | Partial | Token blacklist not durable (RISK-002) |
-| API3: Broken Object Property Auth | Partial | additionalProperties: true allows mass assignment |
-| API4: Unrestricted Resource Consumption | Partial | 12 read endpoints unthrottled |
-| API5: BFLA | Pass | Role checks on recruiter/admin routes |
-| API6: Sensitive Business Flows | Partial | /jobs/saved and /consent not paginated |
-| API7: SSRF | Pass | No outbound calls from routes |
-| API8: Security Misconfiguration | Partial | See A05 above |
-| API9: Improper Inventory | Pass | Clear /api/v1/ versioning |
-| API10: Unsafe API Consumption | Pass | No external API calls in routes |
+| Risk | Status | Evidence |
+|------|--------|----------|
+| API1: BOLA | **Pass** | Ownership verified on all mutation endpoints; tested in `security.test.ts` |
+| API2: Broken Authentication | **Pass** | JWT + session + token rotation + lockout + CSRF |
+| API3: Broken Object Property Auth | **Pass** | `additionalProperties: false` on all Zod schemas; profile visibility controls |
+| API4: Unrestricted Resource Consumption | **Partial** | Rate limiting configured; no alerting on threshold breach |
+| API5: BFLA | **Pass** | Role-based access (RECRUITER/ADMIN) verified in `jobs.routes.ts:110-116` |
+| API6: Sensitive Business Flows | **Pass** | Anti-enumeration on registration/forgot-password; CSRF on mutations |
+| API7: SSRF | **Pass** | No server-side URL fetching from user input |
+| API8: Misconfiguration | **Pass** | CSP, CORS, rate limiting, body size limit (1MB), env validation |
+| API9: Inventory Management | **Pass** | Swagger/OpenAPI setup at `/docs`; API versioning (v1) |
+| API10: Unsafe Consumption | **Pass** | No external API calls from user-controlled input |
 
-**4 Pass · 5 Partial · 1 Fail**
+### SOC2 Type II
 
-### SOC 2 Type II
-
-| Principle | Status | Gap |
-|-----------|--------|-----|
-| Security (CC) | Partial | BOLA, mass assignment, token persistence |
-| Availability | Partial | No deployment pipeline, no SLO alerting |
-| Processing Integrity | Pass | Transactions, Zod validation, cascade rules |
-| Confidentiality | Partial | IP in logs, Grafana password |
-| Privacy | Partial | IP logging, no ROPA document |
+| Principle | Status | Evidence |
+|-----------|--------|----------|
+| Security | **Partial** | Strong auth and access controls; PII in logs is a gap |
+| Availability | **Partial** | Health checks exist; no alerting rules, no SLA monitoring |
+| Processing Integrity | **Pass** | Transactions for data integrity; input validation; cascade deletes |
+| Confidentiality | **Partial** | Passwords hashed; tokens hashed; BUT email in logs, no field-level encryption |
+| Privacy | **Partial** | Consent system; 4/6 GDPR rights; IP pseudonymization in access logs |
 
 ### WCAG 2.1 AA
 
-| Principle | Status | Violations |
-|-----------|--------|-----------|
-| 1. Perceivable | Partial | Loading states unannotated; progress bar missing ARIA |
-| 2. Operable | Partial | Modal backdrops not aria-hidden; character counter not announced |
-| 3. Understandable | Partial | 6 components with hardcoded English text; aria-modal="false" on CookieConsent |
-| 4. Robust | Partial | ErrorBoundary missing role="alert"; no aria-live on dynamic counters |
+| Principle | Status | Evidence |
+|-----------|--------|----------|
+| 1. Perceivable | **Partial** | Alt text on images, RTL support, BUT dark mode contrast fails (1.4.3) |
+| 2. Operable | **Partial** | Skip links present, keyboard nav mostly works, BUT touch targets below 44px (2.5.5), focus-visible missing on some elements |
+| 3. Understandable | **Pass** | Language attribute set (ar/en), error messages with role="alert", consistent navigation |
+| 4. Robust | **Pass** | Semantic HTML, ARIA roles on dialogs, aria-live on dynamic content |
 
-**Estimated Lighthouse Accessibility Score: 72–75/100**
+### GDPR
 
-### GDPR / PDPL
-
-| Requirement | Status | Gap |
-|-------------|--------|-----|
-| Consent capture | Implemented | Cookie consent banner; not server-validated |
-| Right of Access (Art. 15) | Implemented | /auth/export returns full data |
-| Right to Rectification (Art. 16) | Implemented | Profile update endpoints |
-| Right to Erasure (Art. 17) | Implemented | DELETE /auth/account anonymises + cascades |
-| Right to Restrict Processing (Art. 18) | Partial | No explicit restriction mechanism |
-| Right to Data Portability (Art. 20) | Implemented | JSON export |
-| Right to Object (Art. 21) | Missing | No objection mechanism |
-| No PII in Logs | Fail | IP + User-Agent logged raw |
-| Retention Policies | Partial | No session auto-cleanup; no ROPA |
-
-**Rights implemented: 5/7**
+| Requirement | Status | Evidence |
+|-------------|--------|----------|
+| Consent capture | **Implemented** | Granular, timestamped, withdrawable, versioned — `consent.service.ts` |
+| Right of Access (Art. 15) | **Implemented** | `GET /api/v1/auth/export` with full data export |
+| Right to Rectification (Art. 16) | **Implemented** | `PUT /api/v1/profiles/:id` for profile data |
+| Right to Erasure (Art. 17) | **Implemented** | `DELETE /api/v1/auth/account` with cascade |
+| Right to Restrict (Art. 18) | **Missing** | No mechanism to flag account for restricted processing |
+| Right to Portability (Art. 20) | **Partial** | JSON export available; no CSV format |
+| Right to Object (Art. 21) | **Missing** | No marketing opt-out or processing objection endpoint |
+| Data Minimization | **Pass** | Only necessary fields collected; profile fields optional |
+| Retention Policies | **Partial** | Sessions auto-cleaned (30 days); notifications documented (90 days); no automated enforcement for other data |
+| Encryption at Rest | **Partial** | Passwords bcrypt-hashed; tokens SHA-256 hashed; no field-level encryption for PII |
+| No PII in Logs | **Fail** | Email addresses in security event logs; IP in security events (access log hashes IPs in production) |
+| Breach Notification | **Undocumented** | No process documented for 72-hour notification |
 
 ### DORA Metrics
 
 | Metric | Value | Tier |
 |--------|-------|------|
-| Deployment Frequency | ~2–3 PRs/week | Medium |
-| Lead Time for Changes | ~1–2 hours + manual | Medium |
-| Change Failure Rate | ~5–10% estimated | Medium |
-| Time to Restore | Unknown | Unknown |
-
----
-
-## Section 11b: Accessibility Violations
-
-| Component | Violation | WCAG | Severity |
-|-----------|-----------|------|----------|
-| `network/page.tsx:24`, `profile/page.tsx:50` | Loading spinner — no aria-busy | 4.1.2 | Medium |
-| `feed/page.tsx:52` | Character counter — no aria-live | 1.3.1 | Medium |
-| `profile/page.tsx:142` | Progress bar — missing role="progressbar" + aria-value* | 1.3.1 | Medium |
-| `ApplyModal.tsx:69`, `CreateJobModal.tsx:122` | Backdrop div — not aria-hidden | 4.1.2 | Medium |
-| `CookieConsent.tsx:50` | aria-modal="false" on a modal dialog | 4.1.2 | Low |
-| `ErrorBoundary.tsx:31` | Error message — missing role="alert" | 4.1.2 | Low |
-| `JobCard.tsx:108,120,134,146` | Hardcoded "Apply", "Applied", "Save", "Unsave" | 3.1.1 | Medium |
-| `Sidebar.tsx:66,138` | Hardcoded "Professional", "Sign Out" | 3.1.1 | Medium |
-| `TopBar.tsx:60` | Hardcoded "Register" text | 3.1.1 | Medium |
-
----
-
-## Section 11c: Privacy Assessment
-
-| Data Type | Lawful Basis | Retention | Encrypted at Rest | Deletable | Exportable |
-|-----------|-------------|-----------|-------------------|-----------|------------|
-| Email | Consent | Until deletion | No (DB-level only) | Yes | Yes |
-| Password | Contract | Until deletion | bcrypt hash | Yes (nullified) | No |
-| IP Address | Unclear | Log rotation | No | No | No |
-| Session tokens | Contract | 30 days | SHA-256 hash | Yes | No |
-| Profile data | Consent | Until deletion | No | Yes | Yes |
-| Consent records | Legal obligation | Indefinite | No | No | Yes |
-
----
-
-## Section 11d: Observability Assessment
-
-| Signal | Monitored | Tool | Gap |
-|--------|-----------|------|-----|
-| Latency (p50/p95) | Yes | prom-client histogram | No SLO alert configured |
-| Traffic (req/sec) | Yes | prom-client counter | None |
-| Errors (rate %) | Yes | Fastify error handler | No Sentry / external tracker |
-| Saturation (CPU/mem) | Yes | prom-client default metrics | No alert thresholds |
-
-**Structured logging:** JSON via pino. Production transport not explicitly configured.
-**Correlation IDs:** x-request-id propagated to logs and response headers.
-**Distributed tracing:** None (no OpenTelemetry).
-**Health check:** GET /health checks DB; Redis status hardcoded to "not_configured".
-
----
-
-## Section 11e: API Design Assessment
-
-| Check | Status | Details |
-|-------|--------|---------|
-| OpenAPI documentation | Yes | All routes annotated (Phase 1 complete) |
-| API versioning | Yes | /api/v1/ prefix |
-| Consistent error format | Yes | RFC-7807-style response |
-| Pagination on list endpoints | Partial | /consent and /jobs/saved missing pagination |
-| BOLA protection | Fail | /jobs/:id/applications (RISK-001) |
-| BFLA protection | Pass | Role checks on recruiter/admin routes |
-| Rate limiting | Partial | 35% of endpoints lack limits |
-| CORS configured | Yes | Single-origin whitelist, no wildcard |
-| Request schema validation | Partial | additionalProperties: true in all schemas |
-| Deprecated endpoints marked | N/A | No deprecated endpoints |
+| Deployment Frequency | Per PR (multiple per week) | **High** |
+| Lead Time for Changes | Same day (CI completes in ~10 min) | **Elite** |
+| Change Failure Rate | Low (quality gate catches failures) | **High** |
+| Time to Restore | Unknown (no alerting, no runbooks) | **Low** |
 
 ---
 
@@ -610,88 +477,68 @@ Only Desktop Chrome tested. Firefox and Safari/WebKit not covered. Mobile viewpo
 
 | Priority | Debt Item | Interest (cost of delay) | Owner | Payoff |
 |----------|-----------|--------------------------|-------|--------|
-| HIGH | Redis stub in production | Every restart invalidates all logouts | Dev/DevOps | Install redis; deploy Redis |
-| HIGH | No password reset flow | Users permanently locked out; support cost | Dev | 4-hour feature |
-| HIGH | Missing Session index | Refresh latency grows with user count | Dev | 5-min migration |
-| HIGH | Plugin test coverage gap | Production incidents go undetected | QA | 4-hour test sprint |
-| MEDIUM | additionalProperties: true | Mass assignment attack surface | Dev | 1-hour fix |
-| MEDIUM | IP in access logs | GDPR finding | Dev | 30-min fix |
-| MEDIUM | 8 ARIA violations | Screen-reader users blocked | Frontend | 2-hour fix |
-| LOW | Salary as Int not Decimal | Fractional currencies break | Dev | 30-min migration |
-| LOW | No cursor bounds check | Potential full-table scan | Dev | 20-min fix |
+| HIGH | PII in security event logs | GDPR liability grows with user count | Security | Mask emails, hash IPs in SecurityEventLogger |
+| HIGH | Missing GDPR restrict/object rights | Blocks EU enterprise customers | Dev | Add 2 endpoints + user flag |
+| HIGH | Dark mode contrast issues | Accessibility complaints, enterprise rejection | Dev (FE) | Recalibrate dark theme colors |
+| MEDIUM | No alerting rules | Silent production failures | DevOps | Add Prometheus alert rules for error rate, latency |
+| MEDIUM | No error tracking service | Slow incident detection | DevOps | Integrate Sentry |
+| MEDIUM | No accessibility testing in CI | Regressions go unnoticed | QA | Add axe-core to E2E pipeline |
+| LOW | Swagger per-endpoint docs | Slower API consumer integration | Dev | Add JSDoc to route handlers |
+| LOW | No distributed tracing | Hard to debug cross-service issues | DevOps | Add OpenTelemetry SDK |
+| LOW | React version mismatch | Potential hydration issues | Dev | Run `npm install react@19.2.3` |
+| LOW | minimatch ReDoS in dev deps | Dev tooling DoS (unlikely in production) | Dev | Upgrade eslint to 10.x |
 
 ---
 
 ## Section 13: Remediation Roadmap
 
 ### Phase 0 — Immediate (48 hours)
+No Phase 0 items. All previously critical items (embedded secrets, missing rate limits, stale counters) were resolved in the hardening branch.
 
+### Phase 1 — Stabilize (1-2 weeks)
 | Item | Owner | Gate |
 |------|-------|------|
-| Fix BOLA on /jobs/:id/applications | Dev | GET returns 403 for non-owner |
-| Move Grafana password to env var | DevOps | No hardcoded credential in docker-compose.yml |
-| Add Session.refreshTokenHash index | Dev | EXPLAIN ANALYZE shows index scan |
-| Hash IP addresses in access-log.ts | Dev | Raw IP no longer in log output |
+| Mask email addresses in SecurityEventLogger (RISK-001) | Security | Grep shows no plaintext emails in log output |
+| Fix dark mode contrast ratios (RISK-004) | Dev (FE) | All text/background combinations pass 4.5:1 |
+| Replace aria-label with htmlFor on form inputs (RISK-005) | Dev (FE) | All profile form inputs have htmlFor/id pairs |
+| Fix React version mismatch (RISK-011) | Dev | `npm ls react` shows no INVALID |
+| Upgrade minimatch via eslint update (RISK-012) | Dev | `npm audit --audit-level=high` returns 0 |
 
-**Gate:** All Phase 0 items resolved before any production deployment.
+**Gate:** All scores >= 8/10, no High-severity items remaining
 
-### Phase 1 — Stabilize (1–2 weeks)
-
+### Phase 2 — Production-Ready (2-4 weeks)
 | Item | Owner | Gate |
 |------|-------|------|
-| Add additionalProperties: false to all schemas | Dev | Unknown fields rejected |
-| Add rate limits to 12 missing endpoints | Dev | 429 returned after threshold |
-| Add pagination to /consent + /jobs/saved | Dev | Cursor response returns correctly |
-| Fix Redis health check | Dev | /health shows real Redis status |
-| Fix 8 ARIA violations | Frontend | Lighthouse Accessibility >= 85 |
-| Fix 6 hardcoded text instances | Frontend | All text shows in Arabic on lang switch |
-| Add plugin tests | QA | Plugin coverage >= 80% |
-| Fix CreateJobModal + CookieConsent test coverage | QA | Component coverage >= 70% |
-| Fix security audit to fail CI on critical | DevOps | PR with critical vuln blocked |
+| Implement GDPR Right to Restrict Processing (RISK-002) | Dev | Endpoint exists, tested, documented |
+| Implement GDPR Right to Object (RISK-003) | Dev | Endpoint exists, tested, documented |
+| Increase touch targets to 44x44px minimum (RISK-006) | Dev (FE) | All interactive elements meet WCAG 2.5.5 |
+| Integrate Sentry error tracking (RISK-007) | DevOps | Sentry captures test error in production env |
+| Add Prometheus alerting rules (RISK-010) | DevOps | Alert fires on error rate > 5% |
+| Add axe-core accessibility testing to E2E pipeline | QA | CI blocks on WCAG AA violations |
 
-**Gate:** All scores >= 8/10, no Critical issues remaining.
+**Gate:** All scores >= 8/10, compliance gaps addressed, GDPR 6/6 rights
 
-### Phase 2 — Production-Ready (2–4 weeks)
-
+### Phase 3 — Excellence (4-8 weeks)
 | Item | Owner | Gate |
 |------|-------|------|
-| Real Redis in production | Dev/DevOps | Token revocation survives restart |
-| Password reset flow | Dev | /forgot-password + /reset-password working |
-| Fix race condition in like/comment counts | Dev | Concurrent like returns correct count |
-| Session auto-cleanup job | Dev | Expired sessions deleted within 24h |
-| Cursor pagination bounds check | Dev | Malformed cursor returns 400 |
-| Add E2E tests to 15+ files | QA | Profile setup + job application flows covered |
-| Add OpenTelemetry tracing | Dev | Trace spans visible in Grafana |
-| Create ROPA documentation | Security | GDPR Article 30 records documented |
+| Add OpenTelemetry distributed tracing (RISK-008) | DevOps | W3C traceparent header propagated end-to-end |
+| Complete Swagger per-endpoint documentation (RISK-009) | Dev | All endpoints have descriptions and examples |
+| Add load testing baseline (k6 or similar) | QA | p95 latency < 400ms under 100 concurrent users |
+| Nonce-based CSP (remove unsafe-inline) | Security | CSP report-only mode shows no violations |
+| Add staging environment | DevOps | Staging mirrors production with automated deployment |
 
-### Phase 3 — Excellence (4–8 weeks)
-
-| Item | Owner | Gate |
-|------|-------|------|
-| Multi-factor authentication | Dev | TOTP enrollment + verify flow |
-| Distributed rate limiting via Redis | Dev/DevOps | Rate limits enforced across instances |
-| OAuth social login | Dev | Google/GitHub login flow complete |
-| Load testing (100+ concurrent users) | QA | p95 API latency < 400ms at 100 RPS |
-| Salary fields migrated to Decimal | Dev | Schema migration with backfill |
+**Gate:** All scores >= 9/10, audit-ready for external review
 
 ---
 
 ## Section 14: Quick Wins (1-day fixes)
 
-1. `prisma/schema.prisma` — add `@@index([refreshTokenHash])` to Session (5 min)
-2. `plugins/access-log.ts` — hash IP in production (30 min)
-3. `docker-compose.yml` — move Grafana password to env var (10 min)
-4. `routes/health.routes.ts` — actual Redis ping in /health (30 min)
-5. All route files — add `additionalProperties: false` to body schemas (1 hour)
-6. `routes/jobs.routes.ts` — add BOLA check before listApplications (30 min)
-7. `components/jobs/JobCard.tsx` — replace hardcoded strings with t() (30 min)
-8. `components/layout/Sidebar.tsx` — translate "Professional" + "Sign Out" (15 min)
-9. All route files — add rateLimit config to 12 GET endpoints (1 hour)
-10. `app/(main)/network/page.tsx` + others — add aria-busy to spinners (30 min)
-11. `.github/workflows/connectin-ci.yml` — remove continue-on-error from security audit (5 min)
-12. `components/shared/CookieConsent.tsx` — change aria-modal="false" to "true" (5 min)
-13. `app/(main)/profile/page.tsx` — add role="progressbar" + aria-value* (10 min)
-14. `components/shared/ErrorBoundary.tsx` — add role="alert" (5 min)
+1. Mask email in SecurityEventLogger: change `payload.email = input.email` to `payload.email = maskEmail(input.email)` — `security-events.ts:44`
+2. Fix React version: `cd apps/web && npm install react@19.2.3 react-dom@19.2.3` — `apps/web/package.json`
+3. Increase notification bell size: change `w-10 h-10` to `w-11 h-11` — `components/layout/TopBar.tsx:100`
+4. Add htmlFor to profile form labels: add `id` to inputs and `htmlFor` to labels — `app/(main)/profile/page.tsx:137-150`
+5. Add focus-visible ring to like button: add `focus-visible:ring-2 focus-visible:ring-primary-500` — `components/feed/PostCard.tsx:71`
+6. Fix dark mode sidebar text contrast: change `text-[#94A3B8]` to `text-[#CBD5E1]` (neutral-300) — `components/layout/Sidebar.tsx`
 
 ---
 
@@ -699,14 +546,10 @@ Only Desktop Chrome tested. Firefox and Safari/WebKit not covered. Mobile viewpo
 
 | Sub-dimension | Score | Notes |
 |---------------|-------|-------|
-| Modularity | 2/2 | Clean service/route separation; plugin architecture |
-| API Design | 1.5/2 | OpenAPI complete; BOLA + mass-assignment gaps |
-| Testability | 1.5/2 | Real-DB tests; plugin coverage gap reduces score |
-| Observability | 1.5/2 | Prometheus/Grafana present; no tracing yet |
-| Documentation | 1.5/2 | Comprehensive READMEs + ADRs; ROPA missing |
+| Modularity | **2/2** | Clean module separation allows adding AI features per-module |
+| API Design | **1.5/2** | Versioned API, consistent format; Swagger docs need enrichment |
+| Testability | **2/2** | TDD with real database; 800 tests; test helpers available |
+| Observability | **1.5/2** | Prometheus + structured logging; missing tracing for AI pipeline debugging |
+| Documentation | **1/2** | README and addendum thorough; API docs and inline docs sparse |
 
-**AI-Readiness Total: 8/10**
-
----
-
-*Phase 2 fixes in progress. Target: all 11 dimensions >= 8/10.*
+**AI-Readiness Score: 8/10**

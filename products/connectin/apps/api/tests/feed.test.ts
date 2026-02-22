@@ -4,6 +4,7 @@ import {
   cleanDatabase,
   createTestUser,
   authHeaders,
+  getPrisma,
 } from './helpers';
 
 beforeEach(async () => {
@@ -235,6 +236,98 @@ describe('Feed Module', () => {
       const body = JSON.parse(res.body);
       expect(body.data.liked).toBe(false);
       expect(body.data.likeCount).toBe(0);
+    });
+  });
+
+  describe('Like/unlike count accuracy (RISK-013)', () => {
+    it('like returns count matching DB state', async () => {
+      const app = await getApp();
+      const user = await createTestUser(app);
+      const db = getPrisma();
+
+      const postRes = await app.inject({
+        method: 'POST',
+        url: '/api/v1/feed/posts',
+        headers: authHeaders(user.accessToken),
+        payload: { content: 'Count accuracy test' },
+      });
+      const postId = JSON.parse(postRes.body).data.id;
+
+      const likeRes = await app.inject({
+        method: 'POST',
+        url: `/api/v1/feed/posts/${postId}/like`,
+        headers: authHeaders(user.accessToken),
+      });
+
+      const body = JSON.parse(likeRes.body);
+      const dbPost = await db.post.findUnique({
+        where: { id: postId },
+      });
+
+      expect(body.data.likeCount).toBe(dbPost!.likeCount);
+    });
+
+    it('unlike returns count matching DB state', async () => {
+      const app = await getApp();
+      const user = await createTestUser(app);
+      const db = getPrisma();
+
+      const postRes = await app.inject({
+        method: 'POST',
+        url: '/api/v1/feed/posts',
+        headers: authHeaders(user.accessToken),
+        payload: { content: 'Unlike count accuracy' },
+      });
+      const postId = JSON.parse(postRes.body).data.id;
+
+      // Like then unlike
+      await app.inject({
+        method: 'POST',
+        url: `/api/v1/feed/posts/${postId}/like`,
+        headers: authHeaders(user.accessToken),
+      });
+
+      const unlikeRes = await app.inject({
+        method: 'DELETE',
+        url: `/api/v1/feed/posts/${postId}/like`,
+        headers: authHeaders(user.accessToken),
+      });
+
+      const body = JSON.parse(unlikeRes.body);
+      const dbPost = await db.post.findUnique({
+        where: { id: postId },
+      });
+
+      expect(body.data.likeCount).toBe(dbPost!.likeCount);
+    });
+
+    it('concurrent likes return accurate counts', async () => {
+      const app = await getApp();
+      const user1 = await createTestUser(app);
+      const user2 = await createTestUser(app);
+
+      const postRes = await app.inject({
+        method: 'POST',
+        url: '/api/v1/feed/posts',
+        headers: authHeaders(user1.accessToken),
+        payload: { content: 'Concurrent likes test' },
+      });
+      const postId = JSON.parse(postRes.body).data.id;
+
+      // Both users like the post
+      await app.inject({
+        method: 'POST',
+        url: `/api/v1/feed/posts/${postId}/like`,
+        headers: authHeaders(user1.accessToken),
+      });
+      const secondLike = await app.inject({
+        method: 'POST',
+        url: `/api/v1/feed/posts/${postId}/like`,
+        headers: authHeaders(user2.accessToken),
+      });
+
+      const body = JSON.parse(secondLike.body);
+      expect(body.data.likeCount).toBe(2);
     });
   });
 

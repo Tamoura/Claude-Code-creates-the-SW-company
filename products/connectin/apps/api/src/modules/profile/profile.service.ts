@@ -49,6 +49,17 @@ export class ProfileService {
   ) {
     const isOwner = profileUserId === requesterId;
 
+    // Block access to profiles of deleted/suspended users (RISK-004)
+    if (!isOwner) {
+      const user = await this.prisma.user.findUnique({
+        where: { id: profileUserId },
+        select: { status: true },
+      });
+      if (!user || user.status !== 'ACTIVE') {
+        throw new NotFoundError('Profile not found');
+      }
+    }
+
     const profile = await this.prisma.profile.findUnique({
       where: { userId: profileUserId },
       include: {

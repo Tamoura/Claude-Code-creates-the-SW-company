@@ -480,8 +480,8 @@ export class JobsService {
     experienceLevel: ExperienceLevel;
     description: string;
     requirements: string | null;
-    salaryMin: number | null;
-    salaryMax: number | null;
+    salaryMin: { toNumber(): number } | number | null;
+    salaryMax: { toNumber(): number } | number | null;
     salaryCurrency: string | null;
     language: string;
     status: JobStatus;
@@ -499,8 +499,16 @@ export class JobsService {
       experienceLevel: job.experienceLevel,
       description: job.description,
       requirements: job.requirements,
-      salaryMin: job.salaryMin,
-      salaryMax: job.salaryMax,
+      salaryMin: job.salaryMin != null
+        ? (typeof job.salaryMin === 'object' && 'toNumber' in job.salaryMin
+            ? job.salaryMin.toNumber()
+            : Number(job.salaryMin))
+        : null,
+      salaryMax: job.salaryMax != null
+        ? (typeof job.salaryMax === 'object' && 'toNumber' in job.salaryMax
+            ? job.salaryMax.toNumber()
+            : Number(job.salaryMax))
+        : null,
       salaryCurrency: job.salaryCurrency,
       language: job.language,
       status: job.status,

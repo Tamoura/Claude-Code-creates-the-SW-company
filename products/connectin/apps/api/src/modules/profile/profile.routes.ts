@@ -32,6 +32,12 @@ const profileRoutes: FastifyPluginAsync = async (fastify) => {
         },
       },
     },
+    config: {
+      rateLimit: {
+        max: 60,
+        timeWindow: '1 minute',
+      },
+    },
   }, async (request, reply) => {
     const profile = await profileService.getMyProfile(
       request.user.sub
@@ -67,6 +73,12 @@ const profileRoutes: FastifyPluginAsync = async (fastify) => {
             data: { type: 'object', additionalProperties: true },
           },
         },
+      },
+    },
+    config: {
+      rateLimit: {
+        max: 60,
+        timeWindow: '1 minute',
       },
     },
   }, async (request, reply) => {
@@ -162,6 +174,12 @@ const profileRoutes: FastifyPluginAsync = async (fastify) => {
         },
       },
     },
+    config: {
+      rateLimit: {
+        max: 60,
+        timeWindow: '1 minute',
+      },
+    },
   }, async (request, reply) => {
     const result = addExperienceSchema.safeParse(
       request.body
@@ -211,6 +229,12 @@ const profileRoutes: FastifyPluginAsync = async (fastify) => {
             },
           },
         },
+      },
+    },
+    config: {
+      rateLimit: {
+        max: 60,
+        timeWindow: '1 minute',
       },
     },
   }, async (request, reply) => {

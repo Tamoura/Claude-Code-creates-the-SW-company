@@ -1,3 +1,5 @@
+import { BadRequestError } from './errors';
+
 export interface PaginationParams {
   page: number;
   limit: number;
@@ -45,18 +47,31 @@ export function encodeCursor(createdAt: Date, id: string): string {
   ).toString('base64');
 }
 
+const UUID_REGEX =
+  /^[0-9a-f]{8}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{12}$/i;
+
 export function decodeCursor(
   cursor: string
 ): { createdAt: Date; id: string } | null {
+  if (!cursor) return null;
+
+  let decoded: { createdAt?: string; id?: string };
   try {
-    const decoded = JSON.parse(
+    decoded = JSON.parse(
       Buffer.from(cursor, 'base64').toString('utf-8')
     );
-    return {
-      createdAt: new Date(decoded.createdAt),
-      id: decoded.id,
-    };
   } catch {
-    return null;
+    throw new BadRequestError('Invalid cursor format');
   }
+
+  const date = new Date(decoded.createdAt ?? '');
+  if (isNaN(date.getTime())) {
+    throw new BadRequestError('Invalid cursor: bad date');
+  }
+
+  if (!decoded.id || !UUID_REGEX.test(decoded.id)) {
+    throw new BadRequestError('Invalid cursor: bad id');
+  }
+
+  return { createdAt: date, id: decoded.id };
 }

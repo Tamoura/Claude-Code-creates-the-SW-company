@@ -70,6 +70,7 @@ export function PostCard({ post, onToggleLike }: PostCardProps) {
           className={[
             "flex items-center gap-1.5 rounded-full px-3 py-1.5 text-xs font-medium",
             "hover:-translate-y-0.5 active:scale-[0.97] transition-all duration-[180ms]",
+            "focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-primary-500",
             isLikedByMe
               ? "bg-primary-50 dark:bg-primary-900/30 text-primary-600"
               : "text-neutral-500 hover:bg-neutral-100 dark:hover:bg-white/5",

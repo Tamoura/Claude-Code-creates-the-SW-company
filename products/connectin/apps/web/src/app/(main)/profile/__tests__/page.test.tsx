@@ -76,9 +76,11 @@ jest.mock("@/hooks/useProfile", () => ({
 }));
 
 const mockPut = jest.fn();
+const mockGet = jest.fn().mockResolvedValue({ success: true, data: [] });
 jest.mock("@/lib/api", () => ({
   apiClient: {
     put: (...args: unknown[]) => mockPut(...args),
+    get: (...args: unknown[]) => mockGet(...args),
   },
 }));
 
@@ -147,6 +149,8 @@ describe("ProfilePage — edit headline", () => {
 
     expect(mockPut).toHaveBeenCalledWith("/profiles/me", {
       headlineEn: "New Headline",
+      location: "",
+      summaryEn: "",
     });
   });
 

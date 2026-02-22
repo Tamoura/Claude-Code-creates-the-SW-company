@@ -14,13 +14,23 @@ import {
   LoginResponse,
   RefreshResponse,
 } from './auth.types';
-import { RegisterInput, LoginInput } from './auth.schemas';
+import {
+  RegisterInput,
+  LoginInput,
+  ForgotPasswordInput,
+  ResetPasswordInput,
+} from './auth.schemas';
+import { SecurityEventLogger } from '../../lib/security-events';
 
 export class AuthService {
+  private readonly secLog: SecurityEventLogger;
+
   constructor(
     private readonly prisma: PrismaClient,
     private readonly app: FastifyInstance
-  ) {}
+  ) {
+    this.secLog = new SecurityEventLogger(app.log);
+  }
 
   async register(input: RegisterInput): Promise<RegisterResponse> {
     const existing = await this.prisma.user.findUnique({
@@ -64,6 +74,12 @@ export class AuthService {
       },
     });
 
+    this.secLog.log({
+      event: 'auth.register',
+      userId: user.id,
+      email: user.email,
+    });
+
     // Token should only be sent via email, never in API response
     return {
       userId: user.id,
@@ -82,11 +98,23 @@ export class AuthService {
     });
 
     if (!user || !user.passwordHash) {
+      this.secLog.log({
+        event: 'auth.login.failed',
+        email: input.email,
+        ip: meta?.ip,
+        reason: 'user_not_found',
+      });
       throw new UnauthorizedError('Invalid email or password');
     }
 
     // Unified error message for all non-active statuses to prevent enumeration
     if (user.status !== 'ACTIVE') {
+      this.secLog.log({
+        event: 'auth.login.failed',
+        userId: user.id,
+        ip: meta?.ip,
+        reason: 'inactive_account',
+      });
       throw new UnauthorizedError('Invalid email or password');
     }
 
@@ -95,6 +123,12 @@ export class AuthService {
       const minutesLeft = Math.ceil(
         (user.lockedUntil.getTime() - Date.now()) / 60000
       );
+      this.secLog.log({
+        event: 'auth.login.locked',
+        userId: user.id,
+        ip: meta?.ip,
+        reason: 'account_locked',
+      });
       throw new UnauthorizedError(
         `Account is locked. Try again in ${minutesLeft} minute(s).`
       );
@@ -120,7 +154,19 @@ export class AuthService {
             lockedUntil: new Date(Date.now() + 15 * 60 * 1000),
           },
         });
+        this.secLog.log({
+          event: 'auth.account.locked',
+          userId: user.id,
+          ip: meta?.ip,
+          reason: 'max_failed_attempts',
+        });
       }
+      this.secLog.log({
+        event: 'auth.login.failed',
+        userId: user.id,
+        ip: meta?.ip,
+        reason: 'invalid_password',
+      });
       throw new UnauthorizedError('Invalid email or password');
     }
 
@@ -146,6 +192,12 @@ export class AuthService {
       },
     });
 
+    this.secLog.log({
+      event: 'auth.login.success',
+      userId: user.id,
+      ip: meta?.ip,
+    });
+
     return {
       accessToken: tokens.accessToken,
       refreshToken: tokens.refreshToken,
@@ -167,6 +219,16 @@ export class AuthService {
   ): Promise<RefreshResponse> {
     const tokenHash = this.hashToken(refreshToken);
 
+    // Reject blacklisted (already-rotated) refresh tokens (RISK-008)
+    const blacklisted = await this.app.redis.get(`refresh-blacklist:${tokenHash}`);
+    if (blacklisted) {
+      this.secLog.log({
+        event: 'auth.token.replay',
+        reason: 'blacklisted_refresh_token',
+      });
+      throw new UnauthorizedError('Invalid or expired refresh token');
+    }
+
     const session = await this.prisma.session.findFirst({
       where: {
         refreshTokenHash: tokenHash,
@@ -185,7 +247,7 @@ export class AuthService {
       session.user.role
     );
 
-    // Rotate refresh token
+    // Rotate refresh token — blacklist old token to prevent reuse (RISK-008)
     const newTokenHash = this.hashToken(tokens.refreshToken);
     await this.prisma.session.update({
       where: { id: session.id },
@@ -195,6 +257,17 @@ export class AuthService {
           Date.now() + 30 * 24 * 60 * 60 * 1000
         ),
       },
+    });
+    // Blacklist old refresh token hash for 24h so it cannot be replayed
+    await this.app.redis.set(
+      `refresh-blacklist:${tokenHash}`,
+      '1',
+      { EX: 86400 }
+    );
+
+    this.secLog.log({
+      event: 'auth.token.refresh',
+      userId: session.user.id,
     });
 
     return {
@@ -213,10 +286,14 @@ export class AuthService {
     };
   }
 
-  async logout(refreshToken: string): Promise<void> {
+  async logout(refreshToken: string, userId?: string): Promise<void> {
     const tokenHash = this.hashToken(refreshToken);
     await this.prisma.session.deleteMany({
       where: { refreshTokenHash: tokenHash },
+    });
+    this.secLog.log({
+      event: 'auth.logout',
+      userId,
     });
   }
 
@@ -253,6 +330,11 @@ export class AuthService {
     );
 
     await this.createSession(user.id, tokens.refreshToken);
+
+    this.secLog.log({
+      event: 'auth.email.verified',
+      userId: user.id,
+    });
 
     return {
       accessToken: tokens.accessToken,
@@ -298,6 +380,87 @@ export class AuthService {
     });
   }
 
+  async forgotPassword(input: ForgotPasswordInput): Promise<{ message: string }> {
+    const user = await this.prisma.user.findUnique({
+      where: { email: input.email.toLowerCase() },
+    });
+
+    // Always return success to prevent email enumeration
+    const successMessage =
+      'If an account with that email exists, a password reset link has been sent.';
+
+    if (!user) {
+      return { message: successMessage };
+    }
+
+    const rawToken = crypto.randomBytes(32).toString('hex');
+    const tokenHash = this.hashToken(rawToken);
+    const expires = new Date(Date.now() + 60 * 60 * 1000); // 1 hour
+
+    await this.prisma.user.update({
+      where: { id: user.id },
+      data: {
+        resetToken: tokenHash,
+        resetTokenExpires: expires,
+      },
+    });
+
+    this.secLog.log({
+      event: 'auth.password.reset_requested',
+      userId: user.id,
+    });
+
+    // In production, send the rawToken via email.
+    // Token is NOT returned in the API response.
+    return { message: successMessage };
+  }
+
+  async resetPassword(input: ResetPasswordInput): Promise<{ message: string }> {
+    const tokenHash = this.hashToken(input.token);
+
+    const user = await this.prisma.user.findFirst({
+      where: {
+        resetToken: tokenHash,
+        resetTokenExpires: { gt: new Date() },
+      },
+    });
+
+    if (!user) {
+      throw new BadRequestError('Invalid or expired reset token');
+    }
+
+    const config = getConfig();
+    const passwordHash = await bcrypt.hash(
+      input.newPassword,
+      config.BCRYPT_ROUNDS
+    );
+
+    await this.prisma.$transaction([
+      // Update password and clear reset token
+      this.prisma.user.update({
+        where: { id: user.id },
+        data: {
+          passwordHash,
+          resetToken: null,
+          resetTokenExpires: null,
+          failedLoginAttempts: 0,
+          lockedUntil: null,
+        },
+      }),
+      // Invalidate all sessions
+      this.prisma.session.deleteMany({
+        where: { userId: user.id },
+      }),
+    ]);
+
+    this.secLog.log({
+      event: 'auth.password.reset_completed',
+      userId: user.id,
+    });
+
+    return { message: 'Password has been reset successfully.' };
+  }
+
   async exportUserData(userId: string) {
     const user = await this.prisma.user.findUnique({
       where: { id: userId },
@@ -340,6 +503,34 @@ export class AuthService {
             createdAt: true,
           },
         },
+        applications: {
+          include: {
+            job: { select: { id: true, title: true, company: true } },
+          },
+        },
+        savedJobs: {
+          include: {
+            job: { select: { id: true, title: true, company: true } },
+          },
+        },
+        sentMessages: {
+          select: {
+            id: true,
+            content: true,
+            conversationId: true,
+            createdAt: true,
+          },
+        },
+        notifications: {
+          select: {
+            id: true,
+            type: true,
+            title: true,
+            message: true,
+            isRead: true,
+            createdAt: true,
+          },
+        },
       },
     });
 
@@ -358,6 +549,14 @@ export class AuthService {
     } = user;
     return {
       exportedAt: new Date().toISOString(),
+      retentionPolicy: {
+        sessions: '30 days from last activity (auto-cleaned hourly)',
+        notifications: '90 days (auto-cleaned)',
+        account: 'Until user-initiated deletion (GDPR Art. 17)',
+        posts: 'Until user-initiated deletion',
+        messages: 'Until user-initiated deletion',
+        consents: 'Retained for audit trail per regulatory requirement',
+      },
       user: safeUser,
     };
   }
@@ -419,6 +618,11 @@ export class AuthService {
         },
       }),
     ]);
+
+    this.secLog.log({
+      event: 'auth.account.deleted',
+      userId,
+    });
   }
 
   async listSessions(
@@ -463,6 +667,13 @@ export class AuthService {
     await this.prisma.session.delete({
       where: { id: sessionId },
     });
+  }
+
+  async cleanupExpiredSessions(): Promise<number> {
+    const result = await this.prisma.session.deleteMany({
+      where: { expiresAt: { lt: new Date() } },
+    });
+    return result.count;
   }
 
   private hashToken(token: string): string {

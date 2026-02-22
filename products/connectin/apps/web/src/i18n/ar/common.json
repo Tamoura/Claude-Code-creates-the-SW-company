@@ -148,11 +148,18 @@
     "remote": "عن بعد",
     "hybrid": "هجين",
     "onsite": "في الموقع",
+    "entry": "مبتدئ",
+    "mid": "متوسط",
+    "senior": "خبير",
+    "lead": "قائد",
     "applied": "تقدمت",
     "apply": "تقدم",
     "save": "حفظ",
     "unsave": "إلغاء الحفظ",
-    "applicants": "متقدم"
+    "applicants": "متقدم",
+    "description": "الوصف",
+    "requirements": "المتطلبات",
+    "postJob": "نشر وظيفة"
   },
   "settings": {
     "account": "الحساب",

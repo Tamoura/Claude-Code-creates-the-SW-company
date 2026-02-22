@@ -153,13 +153,14 @@ export class FeedService {
   async likePost(postId: string, userId: string) {
     const post = await this.prisma.post.findUnique({
       where: { id: postId },
+      select: { id: true, isDeleted: true, likeCount: true },
     });
 
     if (!post || post.isDeleted) {
       throw new NotFoundError('Post not found');
     }
 
-    // Upsert-like: try to create, ignore if already exists
+    // Check if already liked (idempotent)
     const existingLike =
       await this.prisma.like.findUnique({
         where: {
@@ -174,25 +175,28 @@ export class FeedService {
       };
     }
 
-    await this.prisma.$transaction([
+    // Create like and increment count in a single transaction
+    const [, updatedPost] = await this.prisma.$transaction([
       this.prisma.like.create({
         data: { postId, userId },
       }),
       this.prisma.post.update({
         where: { id: postId },
         data: { likeCount: { increment: 1 } },
+        select: { likeCount: true },
       }),
     ]);
 
     return {
       liked: true,
-      likeCount: post.likeCount + 1,
+      likeCount: updatedPost.likeCount,
     };
   }
 
   async unlikePost(postId: string, userId: string) {
     const post = await this.prisma.post.findUnique({
       where: { id: postId },
+      select: { id: true, isDeleted: true, likeCount: true },
     });
 
     if (!post || post.isDeleted) {
@@ -213,7 +217,8 @@ export class FeedService {
       };
     }
 
-    await this.prisma.$transaction([
+    // Delete like and decrement count in a single transaction
+    const [, updatedPost] = await this.prisma.$transaction([
       this.prisma.like.delete({
         where: { id: existingLike.id },
       }),
@@ -222,12 +227,13 @@ export class FeedService {
         data: {
           likeCount: { decrement: 1 },
         },
+        select: { likeCount: true },
       }),
     ]);
 
     return {
       liked: false,
-      likeCount: Math.max(0, post.likeCount - 1),
+      likeCount: Math.max(0, updatedPost.likeCount),
     };
   }
 

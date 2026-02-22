@@ -1,6 +1,8 @@
 "use client";
 
+import { useState } from "react";
 import { useTranslation } from "react-i18next";
+import { ChevronDown, ChevronUp } from "lucide-react";
 import type { Job } from "@/types";
 
 interface JobCardProps {
@@ -25,13 +27,11 @@ const EXPERIENCE_LABELS: Record<Job["experienceLevel"], string> = {
 
 /**
  * Job listing card for ConnectIn.
- * Shows job details with save/apply actions and optimistic state.
- *
- * Usage:
- *   <JobCard job={job} onApply={(id) => openApplyModal(id)} onSave={(id, saved) => ...} />
+ * Shows job details with save/apply actions and expandable description.
  */
 export function JobCard({ job, onApply, onSave }: JobCardProps) {
   const { t } = useTranslation("common");
+  const [expanded, setExpanded] = useState(false);
   const {
     id,
     title,
@@ -39,6 +39,8 @@ export function JobCard({ job, onApply, onSave }: JobCardProps) {
     location,
     workType,
     experienceLevel,
+    description,
+    requirements,
     salaryMin,
     salaryMax,
     salaryCurrency,
@@ -57,6 +59,13 @@ export function JobCard({ job, onApply, onSave }: JobCardProps) {
     <article
       className="rounded-[18px] bg-white dark:bg-[#1C1C1E] p-5 shadow-apple-md hover:-translate-y-0.5 transition-all duration-[180ms] cursor-pointer"
       aria-label={`${title} at ${company}`}
+      onClick={() => setExpanded((prev) => !prev)}
+      onKeyDown={(e) => {
+        if (e.key === "Enter" || e.key === " ") {
+          e.preventDefault();
+          setExpanded((prev) => !prev);
+        }
+      }}
     >
       {/* Header: company + location */}
       <div className="flex items-start justify-between gap-3">
@@ -70,6 +79,11 @@ export function JobCard({ job, onApply, onSave }: JobCardProps) {
             </p>
           )}
         </div>
+        {expanded ? (
+          <ChevronUp className="h-5 w-5 text-neutral-400 shrink-0" aria-hidden="true" />
+        ) : (
+          <ChevronDown className="h-5 w-5 text-neutral-400 shrink-0" aria-hidden="true" />
+        )}
       </div>
 
       {/* Job title */}
@@ -102,6 +116,32 @@ export function JobCard({ job, onApply, onSave }: JobCardProps) {
       <p className="mt-1 text-xs text-neutral-400 dark:text-neutral-500">
         {applicantCount} applicant{applicantCount !== 1 ? "s" : ""}
       </p>
+
+      {/* Expanded details */}
+      {expanded && (
+        <div className="mt-4 space-y-3 border-t border-neutral-200 dark:border-neutral-700 pt-4">
+          {description && (
+            <div>
+              <h4 className="text-sm font-medium text-neutral-700 dark:text-neutral-300 mb-1">
+                {t("jobs.description")}
+              </h4>
+              <p className="text-sm text-neutral-600 dark:text-neutral-400 whitespace-pre-line">
+                {description}
+              </p>
+            </div>
+          )}
+          {requirements && (
+            <div>
+              <h4 className="text-sm font-medium text-neutral-700 dark:text-neutral-300 mb-1">
+                {t("jobs.requirements")}
+              </h4>
+              <p className="text-sm text-neutral-600 dark:text-neutral-400 whitespace-pre-line">
+                {requirements}
+              </p>
+            </div>
+          )}
+        </div>
+      )}
 
       {/* Actions */}
       <div className="mt-4 flex items-center gap-2">

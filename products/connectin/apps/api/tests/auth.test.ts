@@ -4,6 +4,7 @@ import {
   cleanDatabase,
   getPrisma,
   authHeaders,
+  createTestUser,
 } from './helpers';
 
 beforeEach(async () => {
@@ -271,6 +272,326 @@ describe('Auth Module', () => {
     });
   });
 
+  describe('POST /api/v1/auth/forgot-password', () => {
+    it('returns success for existing email', async () => {
+      const app = await getApp();
+      await app.inject({
+        method: 'POST',
+        url: '/api/v1/auth/register',
+        payload: {
+          email: 'forgot@example.com',
+          password: 'SecureP@ss1',
+          displayName: 'Forgot User',
+        },
+      });
+
+      const res = await app.inject({
+        method: 'POST',
+        url: '/api/v1/auth/forgot-password',
+        payload: { email: 'forgot@example.com' },
+      });
+
+      expect(res.statusCode).toBe(200);
+      const body = JSON.parse(res.body);
+      expect(body.data.message).toContain('reset');
+    });
+
+    it('returns same success for unknown email (anti-enumeration)', async () => {
+      const app = await getApp();
+
+      const res = await app.inject({
+        method: 'POST',
+        url: '/api/v1/auth/forgot-password',
+        payload: { email: 'nobody@example.com' },
+      });
+
+      expect(res.statusCode).toBe(200);
+      const body = JSON.parse(res.body);
+      expect(body.data.message).toContain('reset');
+    });
+  });
+
+  describe('POST /api/v1/auth/reset-password', () => {
+    async function setupResetToken(_app: Awaited<ReturnType<typeof getApp>>) {
+      const crypto = await import('crypto');
+      const bcrypt = await import('bcrypt');
+      const db = getPrisma();
+
+      const rawToken = crypto.randomBytes(32).toString('hex');
+      const tokenHash = crypto
+        .createHash('sha256')
+        .update(rawToken)
+        .digest('hex');
+      const passwordHash = await bcrypt.hash('OldP@ss123', 10);
+
+      const user = await db.user.create({
+        data: {
+          email: 'reset@example.com',
+          passwordHash,
+          displayName: 'Reset User',
+          resetToken: tokenHash,
+          resetTokenExpires: new Date(Date.now() + 3600000),
+          profile: { create: { completenessScore: 0 } },
+        },
+      });
+
+      return { rawToken, user };
+    }
+
+    it('resets password with valid token', async () => {
+      const app = await getApp();
+      const { rawToken } = await setupResetToken(app);
+
+      const res = await app.inject({
+        method: 'POST',
+        url: '/api/v1/auth/reset-password',
+        payload: {
+          token: rawToken,
+          newPassword: 'NewSecureP@ss1',
+        },
+      });
+
+      expect(res.statusCode).toBe(200);
+      const body = JSON.parse(res.body);
+      expect(body.data.message).toContain('reset');
+    });
+
+    it('rejects expired token', async () => {
+      const app = await getApp();
+      const crypto = await import('crypto');
+      const bcrypt = await import('bcrypt');
+      const db = getPrisma();
+
+      const rawToken = crypto.randomBytes(32).toString('hex');
+      const tokenHash = crypto
+        .createHash('sha256')
+        .update(rawToken)
+        .digest('hex');
+      const passwordHash = await bcrypt.hash('OldP@ss123', 10);
+
+      await db.user.create({
+        data: {
+          email: 'expired-reset@example.com',
+          passwordHash,
+          displayName: 'Expired Reset',
+          resetToken: tokenHash,
+          resetTokenExpires: new Date(Date.now() - 1000),
+          profile: { create: { completenessScore: 0 } },
+        },
+      });
+
+      const res = await app.inject({
+        method: 'POST',
+        url: '/api/v1/auth/reset-password',
+        payload: {
+          token: rawToken,
+          newPassword: 'NewSecureP@ss1',
+        },
+      });
+
+      expect(res.statusCode).toBe(400);
+    });
+
+    it('rejects invalid token', async () => {
+      const app = await getApp();
+
+      const res = await app.inject({
+        method: 'POST',
+        url: '/api/v1/auth/reset-password',
+        payload: {
+          token: 'totally-invalid-token',
+          newPassword: 'NewSecureP@ss1',
+        },
+      });
+
+      expect(res.statusCode).toBe(400);
+    });
+
+    it('rejects weak new password', async () => {
+      const app = await getApp();
+      const { rawToken } = await setupResetToken(app);
+
+      const res = await app.inject({
+        method: 'POST',
+        url: '/api/v1/auth/reset-password',
+        payload: {
+          token: rawToken,
+          newPassword: 'weak',
+        },
+      });
+
+      expect(res.statusCode).toBe(422);
+    });
+
+    it('token is single-use (cannot reuse)', async () => {
+      const app = await getApp();
+      const { rawToken } = await setupResetToken(app);
+
+      // First use
+      await app.inject({
+        method: 'POST',
+        url: '/api/v1/auth/reset-password',
+        payload: {
+          token: rawToken,
+          newPassword: 'NewSecureP@ss1',
+        },
+      });
+
+      // Second use should fail
+      const res = await app.inject({
+        method: 'POST',
+        url: '/api/v1/auth/reset-password',
+        payload: {
+          token: rawToken,
+          newPassword: 'AnotherP@ss1',
+        },
+      });
+
+      expect(res.statusCode).toBe(400);
+    });
+
+    it('old password is invalid after reset', async () => {
+      const app = await getApp();
+      const { rawToken } = await setupResetToken(app);
+
+      await app.inject({
+        method: 'POST',
+        url: '/api/v1/auth/reset-password',
+        payload: {
+          token: rawToken,
+          newPassword: 'NewSecureP@ss1',
+        },
+      });
+
+      const loginRes = await app.inject({
+        method: 'POST',
+        url: '/api/v1/auth/login',
+        payload: {
+          email: 'reset@example.com',
+          password: 'OldP@ss123',
+        },
+      });
+
+      expect(loginRes.statusCode).toBe(401);
+    });
+
+    it('new password works after reset', async () => {
+      const app = await getApp();
+      const { rawToken } = await setupResetToken(app);
+
+      await app.inject({
+        method: 'POST',
+        url: '/api/v1/auth/reset-password',
+        payload: {
+          token: rawToken,
+          newPassword: 'NewSecureP@ss1',
+        },
+      });
+
+      const loginRes = await app.inject({
+        method: 'POST',
+        url: '/api/v1/auth/login',
+        payload: {
+          email: 'reset@example.com',
+          password: 'NewSecureP@ss1',
+        },
+      });
+
+      expect(loginRes.statusCode).toBe(200);
+    });
+
+    it('invalidates all sessions after reset', async () => {
+      const app = await getApp();
+      const { rawToken, user } = await setupResetToken(app);
+      const db = getPrisma();
+
+      // Create a session for this user
+      await db.session.create({
+        data: {
+          userId: user.id,
+          refreshTokenHash: 'fake-hash',
+          expiresAt: new Date(Date.now() + 86400000),
+        },
+      });
+
+      await app.inject({
+        method: 'POST',
+        url: '/api/v1/auth/reset-password',
+        payload: {
+          token: rawToken,
+          newPassword: 'NewSecureP@ss1',
+        },
+      });
+
+      const sessions = await db.session.findMany({
+        where: { userId: user.id },
+      });
+
+      expect(sessions).toHaveLength(0);
+    });
+  });
+
+  describe('Session cleanup (RISK-017)', () => {
+    it('cleanupExpiredSessions deletes expired sessions', async () => {
+      const app = await getApp();
+      const db = getPrisma();
+      const { AuthService } = await import(
+        '../src/modules/auth/auth.service'
+      );
+      const authService = new AuthService(db, app);
+
+      // Create a user
+      const user = await db.user.create({
+        data: {
+          email: 'cleanup@example.com',
+          displayName: 'Cleanup User',
+          passwordHash: 'hash',
+          profile: { create: { completenessScore: 0 } },
+        },
+      });
+
+      // Create an expired session
+      await db.session.create({
+        data: {
+          userId: user.id,
+          refreshTokenHash: 'expired-hash',
+          expiresAt: new Date(Date.now() - 1000),
+        },
+      });
+
+      // Create a valid session
+      await db.session.create({
+        data: {
+          userId: user.id,
+          refreshTokenHash: 'valid-hash',
+          expiresAt: new Date(Date.now() + 86400000),
+        },
+      });
+
+      const count = await authService.cleanupExpiredSessions();
+
+      expect(count).toBe(1);
+
+      const remaining = await db.session.findMany({
+        where: { userId: user.id },
+      });
+      expect(remaining).toHaveLength(1);
+      expect(remaining[0].refreshTokenHash).toBe('valid-hash');
+    });
+
+    it('cleanupExpiredSessions returns 0 when no expired sessions', async () => {
+      const app = await getApp();
+      const db = getPrisma();
+      const { AuthService } = await import(
+        '../src/modules/auth/auth.service'
+      );
+      const authService = new AuthService(db, app);
+
+      const count = await authService.cleanupExpiredSessions();
+      expect(count).toBe(0);
+    });
+  });
+
   describe('GET /api/v1/auth/verify-email/:token',
     () => {
       it('verifies email with valid token', async () => {
@@ -327,4 +648,201 @@ describe('Auth Module', () => {
       });
     }
   );
+
+  describe('GET /api/v1/auth/export (GDPR DSAR)', () => {
+    it('exports all user data including jobs, messages, and notifications', async () => {
+      const app = await getApp();
+      const db = getPrisma();
+      const user = await createTestUser(app);
+
+      // Create a post
+      await app.inject({
+        method: 'POST',
+        url: '/api/v1/feed/posts',
+        headers: authHeaders(user.accessToken),
+        payload: { content: 'My exported post' },
+      });
+
+      // Grant consent
+      await app.inject({
+        method: 'POST',
+        url: '/api/v1/consent',
+        headers: authHeaders(user.accessToken),
+        payload: { type: 'PRIVACY_POLICY', granted: true, version: '1.0' },
+      });
+
+      // Create a job application (need a recruiter + job first)
+      const recruiter = await db.user.create({
+        data: {
+          email: 'recruiter-export@test.com',
+          displayName: 'Recruiter',
+          passwordHash: 'hash',
+          role: 'RECRUITER',
+          profile: { create: { completenessScore: 0 } },
+        },
+      });
+      const job = await db.job.create({
+        data: {
+          recruiterId: recruiter.id,
+          title: 'Test Job',
+          company: 'Test Co',
+          description: 'A job',
+        },
+      });
+      await db.jobApplication.create({
+        data: {
+          jobId: job.id,
+          applicantId: user.id,
+          coverNote: 'Hire me!',
+        },
+      });
+      await db.savedJob.create({
+        data: { jobId: job.id, userId: user.id },
+      });
+
+      // Create a notification
+      await db.notification.create({
+        data: {
+          userId: user.id,
+          type: 'SYSTEM',
+          title: 'Welcome!',
+          message: 'Welcome to ConnectIn',
+        },
+      });
+
+      const res = await app.inject({
+        method: 'GET',
+        url: '/api/v1/auth/export',
+        headers: authHeaders(user.accessToken),
+      });
+
+      expect(res.statusCode).toBe(200);
+      const body = JSON.parse(res.body);
+      expect(body.data.exportedAt).toBeDefined();
+      expect(body.data.user.email).toBe(user.email);
+      // Sensitive fields must be stripped
+      expect(body.data.user.passwordHash).toBeUndefined();
+      expect(body.data.user.verificationToken).toBeUndefined();
+      expect(body.data.user.resetToken).toBeUndefined();
+      // Must include jobs data
+      expect(body.data.user.applications).toBeDefined();
+      expect(body.data.user.applications).toHaveLength(1);
+      expect(body.data.user.applications[0].coverNote).toBe('Hire me!');
+      // Must include saved jobs
+      expect(body.data.user.savedJobs).toBeDefined();
+      expect(body.data.user.savedJobs).toHaveLength(1);
+      // Must include notifications
+      expect(body.data.user.notifications).toBeDefined();
+      expect(body.data.user.notifications).toHaveLength(1);
+      // Must include consents
+      expect(body.data.user.consents).toBeDefined();
+      expect(body.data.user.consents.length).toBeGreaterThanOrEqual(1);
+      // Must include posts
+      expect(body.data.user.posts).toBeDefined();
+      expect(body.data.user.posts.length).toBeGreaterThanOrEqual(1);
+    });
+
+    it('requires authentication', async () => {
+      const app = await getApp();
+      const res = await app.inject({
+        method: 'GET',
+        url: '/api/v1/auth/export',
+      });
+      expect(res.statusCode).toBe(401);
+    });
+
+    it('includes retention policy metadata', async () => {
+      const app = await getApp();
+      const user = await createTestUser(app);
+
+      const res = await app.inject({
+        method: 'GET',
+        url: '/api/v1/auth/export',
+        headers: authHeaders(user.accessToken),
+      });
+
+      expect(res.statusCode).toBe(200);
+      const body = JSON.parse(res.body);
+      expect(body.data.retentionPolicy).toBeDefined();
+      expect(body.data.retentionPolicy.sessions).toBeDefined();
+      expect(body.data.retentionPolicy.notifications).toBeDefined();
+      expect(body.data.retentionPolicy.account).toBeDefined();
+    });
+  });
+
+  describe('DELETE /api/v1/auth/account (GDPR erasure)', () => {
+    it('deletes account and all associated data', async () => {
+      const app = await getApp();
+      const db = getPrisma();
+      const user = await createTestUser(app);
+
+      // Create some data
+      await app.inject({
+        method: 'POST',
+        url: '/api/v1/feed/posts',
+        headers: authHeaders(user.accessToken),
+        payload: { content: 'Will be deleted' },
+      });
+
+      const res = await app.inject({
+        method: 'DELETE',
+        url: '/api/v1/auth/account',
+        headers: authHeaders(user.accessToken),
+      });
+
+      expect(res.statusCode).toBe(200);
+
+      // User should be marked DELETED with PII cleared
+      const deletedUser = await db.user.findUnique({
+        where: { id: user.id },
+      });
+      expect(deletedUser!.status).toBe('DELETED');
+      expect(deletedUser!.email).toContain('deleted-');
+      expect(deletedUser!.displayName).toBe('Deleted User');
+      expect(deletedUser!.passwordHash).toBeNull();
+    });
+  });
+
+  describe('Refresh token blacklist (RISK-008)', () => {
+    it('old refresh token is rejected after rotation', async () => {
+      const app = await getApp();
+      const email = 'blacklist@test.com';
+
+      // Register and login
+      await app.inject({
+        method: 'POST',
+        url: '/api/v1/auth/register',
+        payload: {
+          email,
+          password: 'StrongP@ss1!',
+          displayName: 'Blacklist',
+          acceptTerms: true,
+        },
+      });
+      const loginRes = await app.inject({
+        method: 'POST',
+        url: '/api/v1/auth/login',
+        payload: { email, password: 'StrongP@ss1!' },
+      });
+      const oldRefresh = loginRes.cookies.find(
+        (c: { name: string }) => c.name === 'refreshToken'
+      )!.value;
+
+      // Rotate: use the old refresh token to get a new one
+      const rotateRes = await app.inject({
+        method: 'POST',
+        url: '/api/v1/auth/refresh',
+        payload: { refreshToken: oldRefresh },
+      });
+      expect(rotateRes.statusCode).toBe(200);
+
+      // Attempt to reuse the old refresh token — should fail
+      const replayRes = await app.inject({
+        method: 'POST',
+        url: '/api/v1/auth/refresh',
+        payload: { refreshToken: oldRefresh },
+      });
+      expect(replayRes.statusCode).toBe(401);
+    });
+  });
 });
