@@ -32,10 +32,12 @@ const connectionRoutes: FastifyPluginAsync = async (
       response: {
         201: {
           type: 'object',
+          additionalProperties: true,
           properties: {
             success: { type: 'boolean' },
             data: {
               type: 'object',
+              additionalProperties: true,
               properties: {
                 id: { type: 'string' },
                 status: { type: 'string' },
@@ -90,9 +92,10 @@ const connectionRoutes: FastifyPluginAsync = async (
         response: {
           200: {
             type: 'object',
+            additionalProperties: true,
             properties: {
               success: { type: 'boolean' },
-              data: { type: 'object' },
+              data: { type: 'object', additionalProperties: true },
             },
           },
         },
@@ -125,9 +128,10 @@ const connectionRoutes: FastifyPluginAsync = async (
         response: {
           200: {
             type: 'object',
+            additionalProperties: true,
             properties: {
               success: { type: 'boolean' },
-              data: { type: 'object' },
+              data: { type: 'object', additionalProperties: true },
             },
           },
         },
@@ -158,11 +162,12 @@ const connectionRoutes: FastifyPluginAsync = async (
       response: {
         200: {
           type: 'object',
+          additionalProperties: true,
           properties: {
             success: { type: 'boolean' },
             data: {
               type: 'array',
-              items: { type: 'object' },
+              items: { type: 'object', additionalProperties: true },
             },
           },
         },
@@ -192,9 +197,10 @@ const connectionRoutes: FastifyPluginAsync = async (
       response: {
         200: {
           type: 'object',
+          additionalProperties: true,
           properties: {
             success: { type: 'boolean' },
-            data: { type: 'object' },
+            data: { type: 'object', additionalProperties: true },
           },
         },
       },

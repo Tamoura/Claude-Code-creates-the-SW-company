@@ -29,9 +29,10 @@ const consentRoutes: FastifyPluginAsync = async (fastify) => {
       response: {
         201: {
           type: 'object',
+          additionalProperties: true,
           properties: {
             success: { type: 'boolean' },
-            data: { type: 'object' },
+            data: { type: 'object', additionalProperties: true },
           },
         },
       },
@@ -67,12 +68,14 @@ const consentRoutes: FastifyPluginAsync = async (fastify) => {
       response: {
         200: {
           type: 'object',
+          additionalProperties: true,
           properties: {
             success: { type: 'boolean' },
             data: {
               type: 'array',
               items: {
                 type: 'object',
+                additionalProperties: true,
                 properties: {
                   type: { type: 'string' },
                   granted: { type: 'boolean' },

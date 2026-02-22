@@ -7,10 +7,12 @@ import { zodToDetails } from '../../lib/validation';
 
 const errorResponseSchema = {
   type: 'object',
+  additionalProperties: true,
   properties: {
     success: { type: 'boolean' },
     error: {
       type: 'object',
+      additionalProperties: true,
       properties: {
         code: { type: 'string' },
         message: { type: 'string' },
@@ -39,10 +41,12 @@ const authRoutes: FastifyPluginAsync = async (fastify) => {
       response: {
         201: {
           type: 'object',
+          additionalProperties: true,
           properties: {
             success: { type: 'boolean' },
             data: {
               type: 'object',
+              additionalProperties: true,
               properties: {
                 userId: { type: 'string' },
                 email: { type: 'string' },
@@ -88,13 +92,15 @@ const authRoutes: FastifyPluginAsync = async (fastify) => {
       response: {
         200: {
           type: 'object',
+          additionalProperties: true,
           properties: {
             success: { type: 'boolean' },
             data: {
               type: 'object',
+              additionalProperties: true,
               properties: {
                 accessToken: { type: 'string' },
-                user: { type: 'object' },
+                user: { type: 'object', additionalProperties: true },
               },
             },
           },
@@ -167,13 +173,15 @@ const authRoutes: FastifyPluginAsync = async (fastify) => {
       response: {
         200: {
           type: 'object',
+          additionalProperties: true,
           properties: {
             success: { type: 'boolean' },
             data: {
               type: 'object',
+              additionalProperties: true,
               properties: {
                 accessToken: { type: 'string' },
-                user: { type: 'object' },
+                user: { type: 'object', additionalProperties: true },
               },
             },
           },
@@ -235,10 +243,12 @@ const authRoutes: FastifyPluginAsync = async (fastify) => {
         response: {
           200: {
             type: 'object',
+            additionalProperties: true,
             properties: {
               success: { type: 'boolean' },
               data: {
                 type: 'object',
+                additionalProperties: true,
                 properties: {
                   message: { type: 'string' },
                 },
@@ -289,10 +299,12 @@ const authRoutes: FastifyPluginAsync = async (fastify) => {
         response: {
           200: {
             type: 'object',
+            additionalProperties: true,
             properties: {
               success: { type: 'boolean' },
               data: {
                 type: 'object',
+                additionalProperties: true,
                 properties: {
                   message: { type: 'string' },
                 },
@@ -331,9 +343,10 @@ const authRoutes: FastifyPluginAsync = async (fastify) => {
         response: {
           200: {
             type: 'object',
+            additionalProperties: true,
             properties: {
               success: { type: 'boolean' },
-              data: { type: 'object' },
+              data: { type: 'object', additionalProperties: true },
             },
           },
         },
@@ -371,10 +384,12 @@ const authRoutes: FastifyPluginAsync = async (fastify) => {
         response: {
           200: {
             type: 'object',
+            additionalProperties: true,
             properties: {
               success: { type: 'boolean' },
               data: {
                 type: 'object',
+                additionalProperties: true,
                 properties: {
                   accessToken: { type: 'string' },
                   message: { type: 'string' },
@@ -414,12 +429,14 @@ const authRoutes: FastifyPluginAsync = async (fastify) => {
         response: {
           200: {
             type: 'object',
+            additionalProperties: true,
             properties: {
               success: { type: 'boolean' },
               data: {
                 type: 'array',
                 items: {
                   type: 'object',
+                  additionalProperties: true,
                   properties: {
                     id: { type: 'string' },
                     ipAddress: { type: 'string', nullable: true },
@@ -463,10 +480,12 @@ const authRoutes: FastifyPluginAsync = async (fastify) => {
         response: {
           200: {
             type: 'object',
+            additionalProperties: true,
             properties: {
               success: { type: 'boolean' },
               data: {
                 type: 'object',
+                additionalProperties: true,
                 properties: {
                   message: { type: 'string' },
                 },
