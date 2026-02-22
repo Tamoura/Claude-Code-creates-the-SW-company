@@ -4,6 +4,7 @@ import metricsPlugin from '../src/plugins/metrics';
 import accessLogPlugin from '../src/plugins/access-log';
 import rateLimiterPlugin from '../src/plugins/rate-limiter';
 import redisPlugin from '../src/plugins/redis';
+import requestIdPlugin from '../src/plugins/request-id';
 import errorHandlerPlugin from '../src/plugins/error-handler';
 import {
   ValidationError,
@@ -328,6 +329,114 @@ describe('redis plugin (production validation)', () => {
 
     process.env.NODE_ENV = prev;
     if (prevRedis) process.env.REDIS_URL = prevRedis;
+  });
+});
+
+// ---------------------------------------------------------------------------
+// request-id.ts (RISK-006)
+// ---------------------------------------------------------------------------
+
+describe('request-id plugin', () => {
+  let app: FastifyInstance;
+
+  beforeAll(async () => {
+    app = await buildIsolated(async (a) => {
+      await a.register(requestIdPlugin);
+      a.get('/echo', async (req) => ({
+        requestId: req.id,
+      }));
+    });
+  });
+
+  afterAll(() => app.close());
+
+  it('assigns a UUID when no x-request-id header is sent', async () => {
+    const res = await app.inject({ method: 'GET', url: '/echo' });
+    const header = res.headers['x-request-id'] as string;
+    expect(header).toBeDefined();
+    expect(header).toMatch(
+      /^[0-9a-f]{8}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{12}$/i
+    );
+  });
+
+  it('echoes a valid UUID x-request-id header', async () => {
+    const validId = '12345678-1234-1234-1234-123456789abc';
+    const res = await app.inject({
+      method: 'GET',
+      url: '/echo',
+      headers: { 'x-request-id': validId },
+    });
+    expect(res.headers['x-request-id']).toBe(validId);
+  });
+
+  it('rejects invalid x-request-id with a new UUID', async () => {
+    const res = await app.inject({
+      method: 'GET',
+      url: '/echo',
+      headers: { 'x-request-id': 'not-a-uuid' },
+    });
+    const header = res.headers['x-request-id'] as string;
+    expect(header).not.toBe('not-a-uuid');
+    expect(header).toMatch(
+      /^[0-9a-f]{8}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{12}$/i
+    );
+  });
+
+  it('rejects oversized x-request-id header', async () => {
+    const res = await app.inject({
+      method: 'GET',
+      url: '/echo',
+      headers: { 'x-request-id': 'a'.repeat(100) },
+    });
+    const header = res.headers['x-request-id'] as string;
+    expect(header).toMatch(
+      /^[0-9a-f]{8}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{12}$/i
+    );
+  });
+});
+
+// ---------------------------------------------------------------------------
+// access-log.ts — additional coverage (RISK-006)
+// ---------------------------------------------------------------------------
+
+describe('access-log plugin — userId logging', () => {
+  let app: FastifyInstance;
+  let logInfoSpy: jest.SpyInstance;
+
+  beforeAll(async () => {
+    app = Fastify({ logger: true });
+    await app.register(accessLogPlugin);
+    // Simulate an authenticated route by setting request.user
+    app.addHook('onRequest', async (request) => {
+      (request as any).user = { sub: 'user-123' };
+    });
+    app.get('/authed', async () => ({ ok: true }));
+    await app.ready();
+    logInfoSpy = jest.spyOn(app.log, 'info');
+  });
+
+  afterAll(() => app.close());
+
+  it('log contains userId when user is authenticated', async () => {
+    logInfoSpy.mockClear();
+    await app.inject({ method: 'GET', url: '/authed' });
+    const call = logInfoSpy.mock.calls[0][0];
+    expect(call.userId).toBe('user-123');
+  });
+
+  it('log contains "anonymous" when user is not set', async () => {
+    // Build a separate app without the user hook
+    const anonApp = Fastify({ logger: true });
+    await anonApp.register(accessLogPlugin);
+    anonApp.get('/anon', async () => ({ ok: true }));
+    await anonApp.ready();
+
+    const spy = jest.spyOn(anonApp.log, 'info');
+    await anonApp.inject({ method: 'GET', url: '/anon' });
+    const call = spy.mock.calls[0][0] as Record<string, unknown>;
+    expect(call.userId).toBe('anonymous');
+
+    await anonApp.close();
   });
 });
 
