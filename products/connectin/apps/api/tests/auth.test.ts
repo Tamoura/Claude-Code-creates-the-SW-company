@@ -4,6 +4,7 @@ import {
   cleanDatabase,
   getPrisma,
   authHeaders,
+  createTestUser,
 } from './helpers';
 
 beforeEach(async () => {
@@ -647,6 +648,160 @@ describe('Auth Module', () => {
       });
     }
   );
+
+  describe('GET /api/v1/auth/export (GDPR DSAR)', () => {
+    it('exports all user data including jobs, messages, and notifications', async () => {
+      const app = await getApp();
+      const db = getPrisma();
+      const user = await createTestUser(app);
+
+      // Create a post
+      await app.inject({
+        method: 'POST',
+        url: '/api/v1/feed/posts',
+        headers: authHeaders(user.accessToken),
+        payload: { content: 'My exported post' },
+      });
+
+      // Grant consent
+      await app.inject({
+        method: 'POST',
+        url: '/api/v1/consent',
+        headers: authHeaders(user.accessToken),
+        payload: { type: 'PRIVACY_POLICY', granted: true, version: '1.0' },
+      });
+
+      // Create a job application (need a recruiter + job first)
+      const recruiter = await db.user.create({
+        data: {
+          email: 'recruiter-export@test.com',
+          displayName: 'Recruiter',
+          passwordHash: 'hash',
+          role: 'RECRUITER',
+          profile: { create: { completenessScore: 0 } },
+        },
+      });
+      const job = await db.job.create({
+        data: {
+          recruiterId: recruiter.id,
+          title: 'Test Job',
+          company: 'Test Co',
+          description: 'A job',
+        },
+      });
+      await db.jobApplication.create({
+        data: {
+          jobId: job.id,
+          applicantId: user.id,
+          coverNote: 'Hire me!',
+        },
+      });
+      await db.savedJob.create({
+        data: { jobId: job.id, userId: user.id },
+      });
+
+      // Create a notification
+      await db.notification.create({
+        data: {
+          userId: user.id,
+          type: 'SYSTEM',
+          title: 'Welcome!',
+          message: 'Welcome to ConnectIn',
+        },
+      });
+
+      const res = await app.inject({
+        method: 'GET',
+        url: '/api/v1/auth/export',
+        headers: authHeaders(user.accessToken),
+      });
+
+      expect(res.statusCode).toBe(200);
+      const body = JSON.parse(res.body);
+      expect(body.data.exportedAt).toBeDefined();
+      expect(body.data.user.email).toBe(user.email);
+      // Sensitive fields must be stripped
+      expect(body.data.user.passwordHash).toBeUndefined();
+      expect(body.data.user.verificationToken).toBeUndefined();
+      expect(body.data.user.resetToken).toBeUndefined();
+      // Must include jobs data
+      expect(body.data.user.applications).toBeDefined();
+      expect(body.data.user.applications).toHaveLength(1);
+      expect(body.data.user.applications[0].coverNote).toBe('Hire me!');
+      // Must include saved jobs
+      expect(body.data.user.savedJobs).toBeDefined();
+      expect(body.data.user.savedJobs).toHaveLength(1);
+      // Must include notifications
+      expect(body.data.user.notifications).toBeDefined();
+      expect(body.data.user.notifications).toHaveLength(1);
+      // Must include consents
+      expect(body.data.user.consents).toBeDefined();
+      expect(body.data.user.consents.length).toBeGreaterThanOrEqual(1);
+      // Must include posts
+      expect(body.data.user.posts).toBeDefined();
+      expect(body.data.user.posts.length).toBeGreaterThanOrEqual(1);
+    });
+
+    it('requires authentication', async () => {
+      const app = await getApp();
+      const res = await app.inject({
+        method: 'GET',
+        url: '/api/v1/auth/export',
+      });
+      expect(res.statusCode).toBe(401);
+    });
+
+    it('includes retention policy metadata', async () => {
+      const app = await getApp();
+      const user = await createTestUser(app);
+
+      const res = await app.inject({
+        method: 'GET',
+        url: '/api/v1/auth/export',
+        headers: authHeaders(user.accessToken),
+      });
+
+      expect(res.statusCode).toBe(200);
+      const body = JSON.parse(res.body);
+      expect(body.data.retentionPolicy).toBeDefined();
+      expect(body.data.retentionPolicy.sessions).toBeDefined();
+      expect(body.data.retentionPolicy.notifications).toBeDefined();
+      expect(body.data.retentionPolicy.account).toBeDefined();
+    });
+  });
+
+  describe('DELETE /api/v1/auth/account (GDPR erasure)', () => {
+    it('deletes account and all associated data', async () => {
+      const app = await getApp();
+      const db = getPrisma();
+      const user = await createTestUser(app);
+
+      // Create some data
+      await app.inject({
+        method: 'POST',
+        url: '/api/v1/feed/posts',
+        headers: authHeaders(user.accessToken),
+        payload: { content: 'Will be deleted' },
+      });
+
+      const res = await app.inject({
+        method: 'DELETE',
+        url: '/api/v1/auth/account',
+        headers: authHeaders(user.accessToken),
+      });
+
+      expect(res.statusCode).toBe(200);
+
+      // User should be marked DELETED with PII cleared
+      const deletedUser = await db.user.findUnique({
+        where: { id: user.id },
+      });
+      expect(deletedUser!.status).toBe('DELETED');
+      expect(deletedUser!.email).toContain('deleted-');
+      expect(deletedUser!.displayName).toBe('Deleted User');
+      expect(deletedUser!.passwordHash).toBeNull();
+    });
+  });
 
   describe('Refresh token blacklist (RISK-008)', () => {
     it('old refresh token is rejected after rotation', async () => {

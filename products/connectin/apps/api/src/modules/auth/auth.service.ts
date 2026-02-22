@@ -428,6 +428,34 @@ export class AuthService {
             createdAt: true,
           },
         },
+        applications: {
+          include: {
+            job: { select: { id: true, title: true, company: true } },
+          },
+        },
+        savedJobs: {
+          include: {
+            job: { select: { id: true, title: true, company: true } },
+          },
+        },
+        sentMessages: {
+          select: {
+            id: true,
+            content: true,
+            conversationId: true,
+            createdAt: true,
+          },
+        },
+        notifications: {
+          select: {
+            id: true,
+            type: true,
+            title: true,
+            message: true,
+            isRead: true,
+            createdAt: true,
+          },
+        },
       },
     });
 
@@ -446,6 +474,14 @@ export class AuthService {
     } = user;
     return {
       exportedAt: new Date().toISOString(),
+      retentionPolicy: {
+        sessions: '30 days from last activity (auto-cleaned hourly)',
+        notifications: '90 days (auto-cleaned)',
+        account: 'Until user-initiated deletion (GDPR Art. 17)',
+        posts: 'Until user-initiated deletion',
+        messages: 'Until user-initiated deletion',
+        consents: 'Retained for audit trail per regulatory requirement',
+      },
       user: safeUser,
     };
   }
