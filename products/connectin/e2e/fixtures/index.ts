@@ -14,8 +14,9 @@ export const API_URL = process.env.API_URL || 'http://localhost:5007';
  */
 export async function loginAs(page: Page, email: string, password: string) {
   await page.goto('/login');
-  // Wait for React hydration — CSP was blocking Next.js 16 Turbopack inline
-  // scripts; with 'unsafe-inline' added to dev CSP, networkidle is sufficient.
+  // Wait for React hydration — Next.js App Router injects inline RSC scripts
+  // that require 'unsafe-inline' in CSP (now set for both dev and production).
+  // networkidle is sufficient once CSP allows these scripts to run.
   await page.waitForLoadState('networkidle');
   // Use stable ID selectors: SSR renders Arabic (fallbackLng: 'ar') which
   // fails /email/i matching. The inputs have deterministic IDs.
