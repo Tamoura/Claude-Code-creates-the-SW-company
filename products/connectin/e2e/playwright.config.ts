@@ -11,9 +11,21 @@ export default defineConfig({
   reporter: [['html', { outputFolder: 'playwright-report' }], ['list']],
   use: {
     baseURL: process.env.BASE_URL || 'http://localhost:3111',
-    // No global storageState — authenticated tests use the `authenticatedPage` fixture,
-    // which does a direct API login per test to get a fresh session. This avoids
-    // stale-token failures when multiple tests share the same refreshToken.
+    // Pre-accept the cookie consent banner so it never blocks test clicks.
+    // Authenticated tests call loginAs() which overwrites the page session with
+    // a fresh login — the consent key persists because it is in localStorage,
+    // not in auth cookies, so it survives the navigation.
+    storageState: {
+      cookies: [],
+      origins: [
+        {
+          origin: process.env.BASE_URL || 'http://localhost:3111',
+          localStorage: [
+            { name: 'connectin-cookie-consent', value: 'accepted' },
+          ],
+        },
+      ],
+    },
     trace: 'on-first-retry',
     screenshot: 'only-on-failure',
     video: 'on-first-retry',
