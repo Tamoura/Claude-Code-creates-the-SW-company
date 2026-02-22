@@ -8,13 +8,17 @@ export default defineConfig({
   workers: 1,
   forbidOnly: !!process.env.CI,
   retries: process.env.CI ? 2 : 0,
+  // Give CI more time — cold container, production Next.js startup, DB seed
+  timeout: process.env.CI ? 90_000 : 30_000,
   reporter: [['html', { outputFolder: 'playwright-report' }], ['list']],
   use: {
     baseURL: process.env.BASE_URL || 'http://localhost:3111',
-    // Pre-accept the cookie consent banner so it never blocks test clicks.
-    // Authenticated tests call loginAs() which overwrites the page session with
-    // a fresh login — the consent key persists because it is in localStorage,
-    // not in auth cookies, so it survives the navigation.
+    // Force English locale so i18next doesn't fall back to Arabic (fallbackLng)
+    // in CI where headless Chromium has no system locale configured.
+    locale: 'en-US',
+    // Pre-accept cookie consent and force English language on every test page.
+    // The 'connectin-lang' key is read by i18next-browser-languagedetector
+    // before navigator.language, ensuring English labels in all tests.
     storageState: {
       cookies: [],
       origins: [
@@ -22,6 +26,7 @@ export default defineConfig({
           origin: process.env.BASE_URL || 'http://localhost:3111',
           localStorage: [
             { name: 'connectin-cookie-consent', value: 'accepted' },
+            { name: 'connectin-lang', value: 'en' },
           ],
         },
       ],

@@ -12,7 +12,24 @@ const USER_PASSWORD = 'Test1234!';
  */
 async function globalSetup(_config: FullConfig) {
   const browser = await chromium.launch();
-  const context = await browser.newContext();
+  // Set locale and language to English so i18next-browser-languagedetector
+  // picks 'en' instead of falling back to Arabic (fallbackLng: 'ar') in CI
+  // where headless Chromium has no system locale configured.
+  const context = await browser.newContext({
+    locale: 'en-US',
+    storageState: {
+      cookies: [],
+      origins: [
+        {
+          origin: BASE_URL,
+          localStorage: [
+            { name: 'connectin-lang', value: 'en' },
+            { name: 'connectin-cookie-consent', value: 'accepted' },
+          ],
+        },
+      ],
+    },
+  });
   const page = await context.newPage();
 
   try {
