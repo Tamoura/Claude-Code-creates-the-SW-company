@@ -16,12 +16,17 @@ jest.mock("@/lib/api", () => ({
   },
 }));
 
+// Mock data matches the raw API shape: { connectionId, user, connectedSince }
+// useConnections.ts transforms this into the Connection type on the client.
 const mockConnection = {
-  userId: "user-2",
-  displayName: "Bob Jones",
-  avatarUrl: undefined,
-  headline: "Product Manager",
-  status: "connected" as const,
+  connectionId: "conn-0",
+  user: {
+    id: "user-2",
+    displayName: "Bob Jones",
+    avatarUrl: undefined,
+    headlineEn: "Product Manager",
+  },
+  connectedSince: new Date().toISOString(),
 };
 
 const mockPendingRequest = {
