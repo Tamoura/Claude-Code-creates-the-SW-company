@@ -27,7 +27,7 @@ export function LanguageToggle({ className }: LanguageToggleProps) {
       className={cn(
         "inline-flex items-center gap-1.5 px-3 py-1.5",
         "text-sm font-medium rounded-full",
-        "text-[#475569] dark:text-[#94A3B8]",
+        "text-[#475569] dark:text-[#CBD5E1]",
         "hover:bg-[#F1F5F9] dark:hover:bg-[#334155]",
         "transition-colors duration-100",
         "focus:outline-none focus:ring-2 focus:ring-[#57BBCE] focus:ring-offset-2",
