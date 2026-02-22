@@ -647,4 +647,47 @@ describe('Auth Module', () => {
       });
     }
   );
+
+  describe('Refresh token blacklist (RISK-008)', () => {
+    it('old refresh token is rejected after rotation', async () => {
+      const app = await getApp();
+      const email = 'blacklist@test.com';
+
+      // Register and login
+      await app.inject({
+        method: 'POST',
+        url: '/api/v1/auth/register',
+        payload: {
+          email,
+          password: 'StrongP@ss1!',
+          displayName: 'Blacklist',
+          acceptTerms: true,
+        },
+      });
+      const loginRes = await app.inject({
+        method: 'POST',
+        url: '/api/v1/auth/login',
+        payload: { email, password: 'StrongP@ss1!' },
+      });
+      const oldRefresh = loginRes.cookies.find(
+        (c: { name: string }) => c.name === 'refreshToken'
+      )!.value;
+
+      // Rotate: use the old refresh token to get a new one
+      const rotateRes = await app.inject({
+        method: 'POST',
+        url: '/api/v1/auth/refresh',
+        payload: { refreshToken: oldRefresh },
+      });
+      expect(rotateRes.statusCode).toBe(200);
+
+      // Attempt to reuse the old refresh token — should fail
+      const replayRes = await app.inject({
+        method: 'POST',
+        url: '/api/v1/auth/refresh',
+        payload: { refreshToken: oldRefresh },
+      });
+      expect(replayRes.statusCode).toBe(401);
+    });
+  });
 });

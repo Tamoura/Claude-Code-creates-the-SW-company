@@ -211,4 +211,87 @@ describe('Profile Module', () => {
       expect(body.data[0].nameEn).toBeDefined();
     });
   });
+
+  describe('Deleted user profiles (RISK-004)', () => {
+    it('returns 404 for deactivated user profile', async () => {
+      const app = await getApp();
+      const db = getPrisma();
+      const viewer = await createTestUser(app, { email: 'viewer@test.com' });
+      const target = await createTestUser(app, { email: 'deactivated@test.com' });
+
+      // Deactivate the target user
+      await db.user.update({
+        where: { id: target.id },
+        data: { status: 'DEACTIVATED' },
+      });
+
+      const res = await app.inject({
+        method: 'GET',
+        url: `/api/v1/profiles/${target.id}`,
+        headers: authHeaders(viewer.accessToken),
+      });
+
+      expect(res.statusCode).toBe(404);
+    });
+
+    it('returns 404 for suspended user profile', async () => {
+      const app = await getApp();
+      const db = getPrisma();
+      const viewer = await createTestUser(app, { email: 'viewer2@test.com' });
+      const target = await createTestUser(app, { email: 'suspended@test.com' });
+
+      await db.user.update({
+        where: { id: target.id },
+        data: { status: 'SUSPENDED' },
+      });
+
+      const res = await app.inject({
+        method: 'GET',
+        url: `/api/v1/profiles/${target.id}`,
+        headers: authHeaders(viewer.accessToken),
+      });
+
+      expect(res.statusCode).toBe(404);
+    });
+
+    it('owner can still view their own deactivated profile', async () => {
+      const app = await getApp();
+      const db = getPrisma();
+      const user = await createTestUser(app, { email: 'self-deact@test.com' });
+
+      await db.user.update({
+        where: { id: user.id },
+        data: { status: 'DEACTIVATED' },
+      });
+
+      const res = await app.inject({
+        method: 'GET',
+        url: `/api/v1/profiles/${user.id}`,
+        headers: authHeaders(user.accessToken),
+      });
+
+      expect(res.statusCode).toBe(200);
+    });
+  });
+
+  describe('HTML sanitization (RISK-002/006)', () => {
+    it('strips HTML tags from profile headline', async () => {
+      const app = await getApp();
+      const user = await createTestUser(app, { email: 'xss-profile@test.com' });
+
+      const res = await app.inject({
+        method: 'PUT',
+        url: '/api/v1/profiles/me',
+        headers: authHeaders(user.accessToken),
+        payload: {
+          headlineEn: '<script>alert("xss")</script>Senior Developer',
+        },
+      });
+
+      expect(res.statusCode).toBe(200);
+      const body = JSON.parse(res.body);
+      expect(body.data.headlineEn).not.toContain('<script>');
+      expect(body.data.headlineEn).toContain('Senior Developer');
+    });
+  });
 });

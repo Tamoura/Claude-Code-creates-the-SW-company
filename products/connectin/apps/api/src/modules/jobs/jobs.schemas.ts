@@ -1,18 +1,29 @@
 import { z } from 'zod';
+import sanitizeHtml from 'sanitize-html';
+
+function stripHtml(str: string): string {
+  return sanitizeHtml(str, {
+    allowedTags: [],
+    allowedAttributes: {},
+  });
+}
 
 export const createJobSchema = z
   .object({
     title: z
       .string()
       .min(1, 'Title is required')
-      .max(200, 'Title must be 200 characters or fewer'),
+      .max(200, 'Title must be 200 characters or fewer')
+      .transform(stripHtml),
     company: z
       .string()
       .min(1, 'Company is required')
-      .max(200, 'Company must be 200 characters or fewer'),
+      .max(200, 'Company must be 200 characters or fewer')
+      .transform(stripHtml),
     location: z
       .string()
       .max(200, 'Location must be 200 characters or fewer')
+      .transform(stripHtml)
       .optional(),
     workType: z
       .enum(['ONSITE', 'HYBRID', 'REMOTE'])
@@ -22,8 +33,9 @@ export const createJobSchema = z
       .default('MID'),
     description: z
       .string()
-      .min(1, 'Description is required'),
-    requirements: z.string().optional(),
+      .min(1, 'Description is required')
+      .transform(stripHtml),
+    requirements: z.string().transform(stripHtml).optional(),
     salaryMin: z.number().positive().optional(),
     salaryMax: z.number().positive().optional(),
     salaryCurrency: z
@@ -55,17 +67,18 @@ export const updateJobSchema = z
       .string()
       .min(1)
       .max(200)
+      .transform(stripHtml)
       .optional(),
-    company: z.string().min(1).max(200).optional(),
-    location: z.string().max(200).optional(),
+    company: z.string().min(1).max(200).transform(stripHtml).optional(),
+    location: z.string().max(200).transform(stripHtml).optional(),
     workType: z
       .enum(['ONSITE', 'HYBRID', 'REMOTE'])
       .optional(),
     experienceLevel: z
       .enum(['ENTRY', 'MID', 'SENIOR', 'LEAD', 'EXECUTIVE'])
       .optional(),
-    description: z.string().min(1).optional(),
-    requirements: z.string().optional(),
+    description: z.string().min(1).transform(stripHtml).optional(),
+    requirements: z.string().transform(stripHtml).optional(),
     salaryMin: z.number().positive().optional(),
     salaryMax: z.number().positive().optional(),
     salaryCurrency: z.string().max(10).optional(),
@@ -92,6 +105,7 @@ export const applyJobSchema = z.object({
   coverNote: z
     .string()
     .max(500, 'Cover note must be 500 characters or fewer')
+    .transform(stripHtml)
     .optional(),
 });
 

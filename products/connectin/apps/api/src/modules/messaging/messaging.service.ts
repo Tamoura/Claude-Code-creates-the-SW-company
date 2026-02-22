@@ -1,6 +1,11 @@
 import { PrismaClient } from '@prisma/client';
+import sanitizeHtml from 'sanitize-html';
 import { NotFoundError, ForbiddenError, BadRequestError } from '../../lib/errors';
 import { encodeCursor, decodeCursor, CursorPaginationMeta } from '../../lib/pagination';
+
+function stripHtml(str: string): string {
+  return sanitizeHtml(str, { allowedTags: [], allowedAttributes: {} });
+}
 
 export class MessagingService {
   constructor(private readonly prisma: PrismaClient) {}
@@ -208,8 +213,9 @@ export class MessagingService {
 
   /** Send a message */
   async sendMessage(senderId: string, input: { conversationId: string; content: string }) {
-    if (!input.content.trim()) throw new BadRequestError('Message cannot be empty');
-    if (input.content.length > 5000) throw new BadRequestError('Message too long (max 5000 chars)');
+    const sanitized = stripHtml(input.content).trim();
+    if (!sanitized) throw new BadRequestError('Message cannot be empty');
+    if (sanitized.length > 5000) throw new BadRequestError('Message too long (max 5000 chars)');
 
     // Verify membership
     const member = await this.prisma.conversationMember.findUnique({
@@ -222,7 +228,7 @@ export class MessagingService {
         data: {
           conversationId: input.conversationId,
           senderId,
-          content: input.content.trim(),
+          content: sanitized,
         },
         include: {
           sender: {

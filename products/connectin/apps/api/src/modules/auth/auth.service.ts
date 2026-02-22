@@ -172,6 +172,12 @@ export class AuthService {
   ): Promise<RefreshResponse> {
     const tokenHash = this.hashToken(refreshToken);
 
+    // Reject blacklisted (already-rotated) refresh tokens (RISK-008)
+    const blacklisted = await this.app.redis.get(`refresh-blacklist:${tokenHash}`);
+    if (blacklisted) {
+      throw new UnauthorizedError('Invalid or expired refresh token');
+    }
+
     const session = await this.prisma.session.findFirst({
       where: {
         refreshTokenHash: tokenHash,
@@ -190,7 +196,7 @@ export class AuthService {
       session.user.role
     );
 
-    // Rotate refresh token
+    // Rotate refresh token — blacklist old token to prevent reuse (RISK-008)
     const newTokenHash = this.hashToken(tokens.refreshToken);
     await this.prisma.session.update({
       where: { id: session.id },
@@ -201,6 +207,12 @@ export class AuthService {
         ),
       },
     });
+    // Blacklist old refresh token hash for 24h so it cannot be replayed
+    await this.app.redis.set(
+      `refresh-blacklist:${tokenHash}`,
+      '1',
+      { EX: 86400 }
+    );
 
     return {
       accessToken: tokens.accessToken,

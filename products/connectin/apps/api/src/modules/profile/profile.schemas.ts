@@ -1,14 +1,14 @@
 import { z } from 'zod';
+import sanitizeHtml from 'sanitize-html';
+
 /**
- * Strip HTML tags from a string to prevent XSS via stored HTML.
+ * Strip HTML tags using sanitize-html (consistent with feed module).
  */
 function stripHtml(str: string): string {
-  return str
-    .replace(/<[^>]*>/g, '')
-    .replace(/&lt;/g, '<')
-    .replace(/&gt;/g, '>')
-    .replace(/&amp;/g, '&')
-    .trim();
+  return sanitizeHtml(str, {
+    allowedTags: [],
+    allowedAttributes: {},
+  });
 }
 
 

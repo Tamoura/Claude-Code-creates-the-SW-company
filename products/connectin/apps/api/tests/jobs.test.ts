@@ -1030,4 +1030,78 @@ describe('Jobs Module', () => {
       expect(res.statusCode).toBe(403);
     });
   });
+
+  describe('HTML sanitization (RISK-002)', () => {
+    it('strips HTML tags from job title and description', async () => {
+      const app = await getApp();
+      const recruiter = await createTestUser(app, {
+        email: 'xss-recruiter@test.com',
+      });
+      const token = await makeRecruiter(
+        recruiter.id,
+        'xss-recruiter@test.com',
+        app
+      );
+
+      const res = await app.inject({
+        method: 'POST',
+        url: '/api/v1/jobs',
+        headers: authHeaders(token),
+        payload: {
+          title: '<script>alert("xss")</script>Engineer',
+          company: '<img onerror=alert(1) src=x>Acme',
+          description: '<b>Bold</b> and <script>evil</script>good',
+        },
+      });
+
+      expect(res.statusCode).toBe(201);
+      const body = JSON.parse(res.body);
+      expect(body.data.title).not.toContain('<script>');
+      expect(body.data.title).toContain('Engineer');
+      expect(body.data.company).not.toContain('<img');
+      expect(body.data.company).toContain('Acme');
+      expect(body.data.description).not.toContain('<script>');
+    });
+
+    it('strips HTML from cover note on job application', async () => {
+      const app = await getApp();
+      const recruiter = await createTestUser(app, {
+        email: 'xss-rec2@test.com',
+      });
+      const token = await makeRecruiter(
+        recruiter.id,
+        'xss-rec2@test.com',
+        app
+      );
+      const applicant = await createTestUser(app, {
+        email: 'xss-applicant@test.com',
+      });
+
+      const jobRes = await app.inject({
+        method: 'POST',
+        url: '/api/v1/jobs',
+        headers: authHeaders(token),
+        payload: {
+          title: 'Engineer',
+          company: 'Acme',
+          description: 'Build things',
+        },
+      });
+      const jobId = JSON.parse(jobRes.body).data.id;
+
+      const res = await app.inject({
+        method: 'POST',
+        url: `/api/v1/jobs/${jobId}/apply`,
+        headers: authHeaders(applicant.accessToken),
+        payload: {
+          coverNote: '<script>steal()</script>I am qualified',
+        },
+      });
+
+      expect(res.statusCode).toBe(201);
+      const body = JSON.parse(res.body);
+      expect(body.data.coverNote).not.toContain('<script>');
+      expect(body.data.coverNote).toContain('I am qualified');
+    });
+  });
 });
