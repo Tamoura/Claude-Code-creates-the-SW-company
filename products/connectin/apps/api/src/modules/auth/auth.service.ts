@@ -20,12 +20,17 @@ import {
   ForgotPasswordInput,
   ResetPasswordInput,
 } from './auth.schemas';
+import { SecurityEventLogger } from '../../lib/security-events';
 
 export class AuthService {
+  private readonly secLog: SecurityEventLogger;
+
   constructor(
     private readonly prisma: PrismaClient,
     private readonly app: FastifyInstance
-  ) {}
+  ) {
+    this.secLog = new SecurityEventLogger(app.log);
+  }
 
   async register(input: RegisterInput): Promise<RegisterResponse> {
     const existing = await this.prisma.user.findUnique({
@@ -69,6 +74,12 @@ export class AuthService {
       },
     });
 
+    this.secLog.log({
+      event: 'auth.register',
+      userId: user.id,
+      email: user.email,
+    });
+
     // Token should only be sent via email, never in API response
     return {
       userId: user.id,
@@ -87,11 +98,23 @@ export class AuthService {
     });
 
     if (!user || !user.passwordHash) {
+      this.secLog.log({
+        event: 'auth.login.failed',
+        email: input.email,
+        ip: meta?.ip,
+        reason: 'user_not_found',
+      });
       throw new UnauthorizedError('Invalid email or password');
     }
 
     // Unified error message for all non-active statuses to prevent enumeration
     if (user.status !== 'ACTIVE') {
+      this.secLog.log({
+        event: 'auth.login.failed',
+        userId: user.id,
+        ip: meta?.ip,
+        reason: 'inactive_account',
+      });
       throw new UnauthorizedError('Invalid email or password');
     }
 
@@ -100,6 +123,12 @@ export class AuthService {
       const minutesLeft = Math.ceil(
         (user.lockedUntil.getTime() - Date.now()) / 60000
       );
+      this.secLog.log({
+        event: 'auth.login.locked',
+        userId: user.id,
+        ip: meta?.ip,
+        reason: 'account_locked',
+      });
       throw new UnauthorizedError(
         `Account is locked. Try again in ${minutesLeft} minute(s).`
       );
@@ -125,7 +154,19 @@ export class AuthService {
             lockedUntil: new Date(Date.now() + 15 * 60 * 1000),
           },
         });
+        this.secLog.log({
+          event: 'auth.account.locked',
+          userId: user.id,
+          ip: meta?.ip,
+          reason: 'max_failed_attempts',
+        });
       }
+      this.secLog.log({
+        event: 'auth.login.failed',
+        userId: user.id,
+        ip: meta?.ip,
+        reason: 'invalid_password',
+      });
       throw new UnauthorizedError('Invalid email or password');
     }
 
@@ -149,6 +190,12 @@ export class AuthService {
         failedLoginAttempts: 0,
         lockedUntil: null,
       },
+    });
+
+    this.secLog.log({
+      event: 'auth.login.success',
+      userId: user.id,
+      ip: meta?.ip,
     });
 
     return {
@@ -175,6 +222,10 @@ export class AuthService {
     // Reject blacklisted (already-rotated) refresh tokens (RISK-008)
     const blacklisted = await this.app.redis.get(`refresh-blacklist:${tokenHash}`);
     if (blacklisted) {
+      this.secLog.log({
+        event: 'auth.token.replay',
+        reason: 'blacklisted_refresh_token',
+      });
       throw new UnauthorizedError('Invalid or expired refresh token');
     }
 
@@ -214,6 +265,11 @@ export class AuthService {
       { EX: 86400 }
     );
 
+    this.secLog.log({
+      event: 'auth.token.refresh',
+      userId: session.user.id,
+    });
+
     return {
       accessToken: tokens.accessToken,
       refreshToken: tokens.refreshToken,
@@ -230,10 +286,14 @@ export class AuthService {
     };
   }
 
-  async logout(refreshToken: string): Promise<void> {
+  async logout(refreshToken: string, userId?: string): Promise<void> {
     const tokenHash = this.hashToken(refreshToken);
     await this.prisma.session.deleteMany({
       where: { refreshTokenHash: tokenHash },
+    });
+    this.secLog.log({
+      event: 'auth.logout',
+      userId,
     });
   }
 
@@ -270,6 +330,11 @@ export class AuthService {
     );
 
     await this.createSession(user.id, tokens.refreshToken);
+
+    this.secLog.log({
+      event: 'auth.email.verified',
+      userId: user.id,
+    });
 
     return {
       accessToken: tokens.accessToken,
@@ -340,6 +405,11 @@ export class AuthService {
       },
     });
 
+    this.secLog.log({
+      event: 'auth.password.reset_requested',
+      userId: user.id,
+    });
+
     // In production, send the rawToken via email.
     // Token is NOT returned in the API response.
     return { message: successMessage };
@@ -382,6 +452,11 @@ export class AuthService {
         where: { userId: user.id },
       }),
     ]);
+
+    this.secLog.log({
+      event: 'auth.password.reset_completed',
+      userId: user.id,
+    });
 
     return { message: 'Password has been reset successfully.' };
   }
@@ -543,6 +618,11 @@ export class AuthService {
         },
       }),
     ]);
+
+    this.secLog.log({
+      event: 'auth.account.deleted',
+      userId,
+    });
   }
 
   async listSessions(

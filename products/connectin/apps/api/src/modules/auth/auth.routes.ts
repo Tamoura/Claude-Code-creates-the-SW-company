@@ -275,7 +275,7 @@ const authRoutes: FastifyPluginAsync = async (fastify) => {
         )?.refreshToken;
 
       if (refreshToken) {
-        await authService.logout(refreshToken);
+        await authService.logout(refreshToken, request.user.sub);
       }
 
       // Blacklist the current access token so it cannot be reused
