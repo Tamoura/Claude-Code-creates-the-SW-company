@@ -45,7 +45,7 @@ export function Sidebar() {
   return (
     <aside
       className={cn(
-        "hidden lg:flex flex-col w-[280px] shrink-0",
+        "hidden lg:flex flex-col w-60 shrink-0",
         "h-[calc(100vh-64px)] sticky top-16 overflow-y-auto",
         "bg-white dark:bg-[#1C1C1E]",
         "border-e border-[#E2E8F0] dark:border-white/8"

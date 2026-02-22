@@ -148,11 +148,18 @@
     "remote": "Remote",
     "hybrid": "Hybrid",
     "onsite": "On-site",
+    "entry": "Entry Level",
+    "mid": "Mid Level",
+    "senior": "Senior",
+    "lead": "Lead",
     "applied": "Applied",
     "apply": "Apply",
     "save": "Save",
     "unsave": "Unsave",
-    "applicants": "applicants"
+    "applicants": "applicants",
+    "description": "Description",
+    "requirements": "Requirements",
+    "postJob": "Post Job"
   },
   "settings": {
     "account": "Account",

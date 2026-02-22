@@ -18,12 +18,12 @@ function TopBarSkeleton() {
 
 /**
  * Skeleton shown while Sidebar JS bundle loads.
- * Matches the 280px width of the real Sidebar to prevent layout shift.
+ * Matches the 240px (w-60) width of the real Sidebar to prevent layout shift.
  */
 function SidebarSkeleton() {
   return (
     <div
-      className="hidden h-[calc(100vh-64px)] w-[280px] shrink-0 animate-pulse rounded-[18px] bg-neutral-100 dark:bg-[#1C1C1E] lg:block"
+      className="hidden h-[calc(100vh-64px)] w-60 shrink-0 animate-pulse rounded-[18px] bg-neutral-100 dark:bg-[#1C1C1E] lg:block"
       aria-hidden="true"
     />
   );
