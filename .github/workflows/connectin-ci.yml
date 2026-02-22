@@ -156,7 +156,7 @@ jobs:
 
       - name: Upload coverage report
         if: always() && steps.check.outputs.exists == 'true'
-        uses: actions/upload-artifact@v4
+        uses: actions/upload-artifact@v6
         with:
           name: api-coverage
           path: products/connectin/apps/api/coverage/
@@ -188,7 +188,7 @@ jobs:
 
       - name: Upload coverage report
         if: always()
-        uses: actions/upload-artifact@v4
+        uses: actions/upload-artifact@v6
         with:
           name: web-coverage
           path: products/connectin/apps/web/coverage/
@@ -360,7 +360,7 @@ jobs:
 
       - name: Upload Playwright report
         if: always() && steps.check.outputs.exists == 'true'
-        uses: actions/upload-artifact@v4
+        uses: actions/upload-artifact@v6
         with:
           name: playwright-report
           path: products/connectin/e2e/playwright-report/
