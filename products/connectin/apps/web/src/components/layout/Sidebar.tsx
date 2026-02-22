@@ -62,12 +62,12 @@ export function Sidebar() {
             <p className="text-sm font-semibold text-[#0F172A] dark:text-[#F1F5F9] truncate">
               {user?.displayName || "User"}
             </p>
-            <p className="text-xs text-[#64748B] dark:text-[#94A3B8] truncate">
+            <p className="text-xs text-[#64748B] dark:text-[#CBD5E1] truncate">
               {t("nav.roleLabel")}
             </p>
           </div>
         </Link>
-        <div className="mt-2 flex items-center gap-4 text-xs text-[#64748B] dark:text-[#94A3B8]">
+        <div className="mt-2 flex items-center gap-4 text-xs text-[#64748B] dark:text-[#CBD5E1]">
           <span>0 {t("profile.connections")}</span>
         </div>
       </div>
@@ -85,7 +85,7 @@ export function Sidebar() {
                 "text-sm transition-all duration-[180ms]",
                 isActive
                   ? "bg-[#E6F4F8] text-[#086577] font-medium"
-                  : "text-[#475569] dark:text-[#94A3B8] hover:bg-[#F8FAFC] dark:hover:bg-white/5 hover:text-[#0C9AB8] hover:ps-5",
+                  : "text-[#475569] dark:text-[#CBD5E1] hover:bg-[#F8FAFC] dark:hover:bg-white/5 hover:text-[#0C9AB8] hover:ps-5",
                 "focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-[#57BBCE]"
               )}
               aria-current={isActive ? "page" : undefined}
@@ -138,7 +138,7 @@ export function Sidebar() {
           <span>{t("nav.signOut")}</span>
         </button>
 
-        <div className="text-xs text-[#94A3B8] dark:text-[#64748B] space-y-1">
+        <div className="text-xs text-[#94A3B8] dark:text-[#CBD5E1] space-y-1">
           <div className="flex gap-2">
             <Link href="/about" className="hover:underline">
               {t("landing.footer.about")}

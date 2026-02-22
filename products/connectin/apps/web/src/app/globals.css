@@ -102,7 +102,7 @@
   --background: var(--neutral-950);
   --foreground: var(--neutral-50);
   --muted: var(--neutral-800);
-  --muted-foreground: var(--neutral-400);
+  --muted-foreground: var(--neutral-300);
   --border: rgba(255,255,255,0.10);
   --ring: var(--primary-400);
 

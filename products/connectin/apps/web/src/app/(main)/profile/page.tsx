@@ -122,14 +122,14 @@ export default function ProfilePage() {
                 {isEditing ? (
                   <div className="mt-2 flex flex-col gap-3">
                     <div>
-                      <label className="text-xs font-medium text-neutral-500 mb-1 block">
+                      <label htmlFor="profile-headline" className="text-xs font-medium text-neutral-500 mb-1 block">
                         {t("profile.editHeadline")}
                       </label>
                       <input
+                        id="profile-headline"
                         type="text"
                         value={headlineValue}
                         onChange={(e) => setHeadlineValue(e.target.value)}
-                        aria-label={t("profile.editHeadline")}
                         placeholder={t("profile.headlinePlaceholder")}
                         autoFocus
                         maxLength={200}
@@ -137,27 +137,27 @@ export default function ProfilePage() {
                       />
                     </div>
                     <div>
-                      <label className="text-xs font-medium text-neutral-500 mb-1 block">
+                      <label htmlFor="profile-location" className="text-xs font-medium text-neutral-500 mb-1 block">
                         Location
                       </label>
                       <input
+                        id="profile-location"
                         type="text"
                         value={locationValue}
                         onChange={(e) => setLocationValue(e.target.value)}
-                        aria-label="Location"
                         placeholder="e.g. Dubai, UAE"
                         maxLength={100}
                         className="rounded-[10px] border-0 bg-[#F1F5F9] dark:bg-white/5 px-3 py-2 text-sm text-neutral-900 dark:text-neutral-100 placeholder:text-neutral-600 focus:bg-white dark:focus:bg-white/10 focus:outline-none focus:ring-2 focus:ring-primary-500/30 transition-all duration-[180ms] w-full max-w-80"
                       />
                     </div>
                     <div>
-                      <label className="text-xs font-medium text-neutral-500 mb-1 block">
+                      <label htmlFor="profile-summary" className="text-xs font-medium text-neutral-500 mb-1 block">
                         Summary
                       </label>
                       <textarea
+                        id="profile-summary"
                         value={summaryValue}
                         onChange={(e) => setSummaryValue(e.target.value)}
-                        aria-label="Summary"
                         placeholder="Tell us about yourself..."
                         maxLength={2000}
                         rows={3}
