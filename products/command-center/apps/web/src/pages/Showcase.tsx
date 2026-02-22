@@ -18,6 +18,7 @@ interface Product {
   phase: string;
   hasApi: boolean;
   hasWeb: boolean;
+  hasPitchDeck: boolean;
   description: string;
   fileCount: number;
   showcase: ShowcaseInfo | null;
@@ -136,14 +137,11 @@ function ProductCard({ product }: { product: Product }) {
   const accentColor = sc?.color ?? '#3B82F6';
 
   return (
-    <Link
-      to={`/showcase/${product.name}`}
-      className="group bg-gray-900 border border-gray-800 rounded-xl overflow-hidden hover:border-gray-700 hover:shadow-lg transition-all"
-    >
+    <div className="group bg-gray-900 border border-gray-800 rounded-xl overflow-hidden hover:border-gray-700 hover:shadow-lg transition-all">
       {/* Accent color strip */}
       <div className="h-1" style={{ backgroundColor: accentColor }} />
 
-      <div className="p-5">
+      <Link to={`/showcase/${product.name}`} className="block p-5">
         <div className="flex items-start justify-between mb-2">
           <h3 className="text-lg font-semibold text-white group-hover:text-blue-400 transition-colors">
             {product.displayName}
@@ -187,7 +185,26 @@ function ProductCard({ product }: { product: Product }) {
             )}
           </div>
         )}
-      </div>
-    </Link>
+      </Link>
+
+      {/* Pitch button */}
+      {product.hasPitchDeck && (
+        <div className="px-5 pb-4">
+          <Link
+            to={`/showcase/${product.name}/pitch`}
+            className="inline-flex items-center gap-1.5 text-xs font-medium px-3 py-1.5 rounded-lg transition-colors"
+            style={{
+              backgroundColor: `${accentColor}15`,
+              color: accentColor,
+            }}
+          >
+            <svg className="w-3.5 h-3.5" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+              <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M7 4v16l13-8L7 4z" />
+            </svg>
+            Pitch Deck
+          </Link>
+        </div>
+      )}
+    </div>
   );
 }

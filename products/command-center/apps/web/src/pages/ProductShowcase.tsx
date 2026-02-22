@@ -17,6 +17,7 @@ interface Product {
   phase: string;
   hasApi: boolean;
   hasWeb: boolean;
+  hasPitchDeck: boolean;
   description: string;
   fileCount: number;
   docs: string[];
@@ -126,6 +127,22 @@ export default function ProductShowcase() {
                 </span>
               ))}
             </div>
+          )}
+
+          {product.hasPitchDeck && (
+            <Link
+              to={`/showcase/${product.name}/pitch`}
+              className="inline-flex items-center gap-2 mt-5 px-5 py-2.5 rounded-lg text-sm font-semibold transition-colors"
+              style={{
+                backgroundColor: accentColor,
+                color: '#fff',
+              }}
+            >
+              <svg className="w-4 h-4" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M7 4v16l13-8L7 4z" />
+              </svg>
+              View Pitch Deck
+            </Link>
           )}
         </div>
         <div

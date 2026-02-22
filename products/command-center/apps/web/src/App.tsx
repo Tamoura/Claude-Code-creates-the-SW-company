@@ -24,6 +24,7 @@ import Settings from './pages/Settings.js';
 import Simulate from './pages/Simulate.js';
 import Showcase from './pages/Showcase.js';
 import ProductShowcase from './pages/ProductShowcase.js';
+import PitchDeck from './pages/PitchDeck.js';
 
 export default function App() {
   return (
@@ -35,6 +36,7 @@ export default function App() {
         <Route path="products/:name" element={<ProductDetail />} />
         <Route path="showcase" element={<Showcase />} />
         <Route path="showcase/:name" element={<ProductShowcase />} />
+        <Route path="showcase/:name/pitch" element={<PitchDeck />} />
         <Route path="agents" element={<Agents />} />
         <Route path="agents/:id" element={<AgentDetail />} />
         <Route path="workflows" element={<Workflows />} />
