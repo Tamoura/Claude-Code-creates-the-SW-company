@@ -27,6 +27,7 @@ export interface Product {
   hasWeb: boolean;
   hasDocker: boolean;
   hasCi: boolean;
+  hasPitchDeck: boolean;
   apiPort: number | null;
   webPort: number | null;
   description: string;
@@ -226,6 +227,9 @@ function buildProductInfo(name: string): Product {
   // Read showcase metadata if present
   const showcase = readShowcase(dir);
 
+  // Check for pitch deck
+  const hasPitchDeck = existsSync(join(dir, 'pitch-deck.json'));
+
   return {
     name,
     displayName: name.split('-').map((s) => s.charAt(0).toUpperCase() + s.slice(1)).join(' '),
@@ -234,6 +238,7 @@ function buildProductInfo(name: string): Product {
     hasWeb,
     hasDocker,
     hasCi,
+    hasPitchDeck,
     apiPort,
     webPort,
     description,
@@ -364,5 +369,16 @@ function getLastModified(dir: string): string {
     return statSync(dir).mtime.toISOString();
   } catch {
     return new Date().toISOString();
+  }
+}
+
+/** Read pitch deck JSON for a product */
+export function getPitchDeck(productName: string): Record<string, unknown> | null {
+  const deckPath = repoPath('products', productName, 'pitch-deck.json');
+  if (!existsSync(deckPath)) return null;
+  try {
+    return JSON.parse(readFileSync(deckPath, 'utf-8'));
+  } catch {
+    return null;
   }
 }
