@@ -10,6 +10,15 @@ export interface DocInfo {
   lastModified: string;
 }
 
+export interface ShowcaseInfo {
+  tagline: string;
+  audiences: string[];
+  category: string;
+  highlights: string[];
+  metrics: Record<string, number>;
+  color: string;
+}
+
 export interface Product {
   name: string;
   displayName: string;
@@ -24,6 +33,7 @@ export interface Product {
   lastModified: string;
   fileCount: number;
   docs: string[];
+  showcase: ShowcaseInfo | null;
 }
 
 /** Cache for listProducts — expires after 30 seconds */
@@ -213,6 +223,9 @@ function buildProductInfo(name: string): Product {
   // Last modified
   const lastModified = getLastModified(dir);
 
+  // Read showcase metadata if present
+  const showcase = readShowcase(dir);
+
   return {
     name,
     displayName: name.split('-').map((s) => s.charAt(0).toUpperCase() + s.slice(1)).join(' '),
@@ -227,6 +240,7 @@ function buildProductInfo(name: string): Product {
     lastModified,
     fileCount,
     docs,
+    showcase,
   };
 }
 
@@ -326,6 +340,24 @@ function collectDocPaths(currentDir: string, result: string[]): void {
   } catch { /* ignore */ }
 }
 
+
+function readShowcase(dir: string): ShowcaseInfo | null {
+  const showcasePath = join(dir, 'showcase.json');
+  if (!existsSync(showcasePath)) return null;
+  try {
+    const raw = JSON.parse(readFileSync(showcasePath, 'utf-8'));
+    return {
+      tagline: raw.tagline ?? '',
+      audiences: Array.isArray(raw.audiences) ? raw.audiences : [],
+      category: raw.category ?? '',
+      highlights: Array.isArray(raw.highlights) ? raw.highlights : [],
+      metrics: typeof raw.metrics === 'object' && raw.metrics !== null ? raw.metrics : {},
+      color: raw.color ?? '#3B82F6',
+    };
+  } catch {
+    return null;
+  }
+}
 
 function getLastModified(dir: string): string {
   try {

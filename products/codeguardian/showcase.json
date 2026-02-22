@@ -1,0 +1,14 @@
+{
+  "tagline": "Multi-model AI code review with 0-100 quality scoring",
+  "audiences": ["founders", "investors"],
+  "category": "Developer Tools",
+  "highlights": [
+    "Multi-model ensemble routing",
+    "GitHub-native PR reviews",
+    "0-100 quality score",
+    "Security + logic + perf checks",
+    "One-click Marketplace install"
+  ],
+  "metrics": {},
+  "color": "#10B981"
+}

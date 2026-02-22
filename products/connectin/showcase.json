@@ -1,0 +1,14 @@
+{
+  "tagline": "Professional networking built Arabic-first, powered by AI",
+  "audiences": ["founders", "investors", "consumers"],
+  "category": "Social Platform",
+  "highlights": [
+    "RTL-first design system",
+    "AI profile optimization",
+    "Bilingual content generation",
+    "AI-powered job matching",
+    "GDPR compliant"
+  ],
+  "metrics": { "e2eTests": 26 },
+  "color": "#0C9AB8"
+}

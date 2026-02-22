@@ -1,0 +1,14 @@
+{
+  "tagline": "Enterprise architecture from months to minutes with AI",
+  "audiences": ["founders", "investors"],
+  "category": "Enterprise Architecture AI",
+  "highlights": [
+    "NL-to-diagram generation",
+    "TOGAF/ArchiMate/C4 support",
+    "Multi-format export",
+    "Interactive visual editor",
+    "Template library"
+  ],
+  "metrics": {},
+  "color": "#6366F1"
+}
