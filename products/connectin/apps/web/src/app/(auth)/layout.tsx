@@ -14,7 +14,7 @@ export default function AuthLayout({
         <Logo size="md" />
         <LanguageToggle />
       </header>
-      <main className="flex flex-1 items-center justify-center px-4 py-8">
+      <main id="main-content" className="flex flex-1 items-center justify-center px-4 py-8">
         <div className="w-full max-w-md">{children}</div>
       </main>
     </div>
