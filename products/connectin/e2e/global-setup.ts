@@ -44,7 +44,11 @@ async function globalSetup(_config: FullConfig) {
     await page.locator('#password').fill(USER_PASSWORD);
     await page.locator('button[type="submit"]').click();
 
-    await page.waitForURL(/\/(feed|dashboard|home|profile|network|jobs)/, { timeout: 30_000 });
+    // In CI cold containers the production Next.js startup + DB seed can make
+    // the first login slower; use the CI-aware timeout so the global setup
+    // does not time out before the tests even run.
+    const loginTimeout = process.env.CI ? 60_000 : 30_000;
+    await page.waitForURL(/\/(feed|dashboard|home|profile|network|jobs)/, { timeout: loginTimeout });
 
     // Save the full browser state (cookies + localStorage)
     await context.storageState({ path: 'e2e/auth-state.json' });

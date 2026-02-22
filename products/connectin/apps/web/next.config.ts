@@ -38,12 +38,15 @@ const nextConfig: NextConfig = {
           key: "Content-Security-Policy",
           value: [
             "default-src 'self'",
-            // Next.js 16 Turbopack injects inline <script> tags for React RSC
-            // hydration bootstrapping in dev mode — 'unsafe-inline' is required.
-            // Production builds use hash/nonce-based CSP via a nonce middleware.
+            // Next.js App Router injects inline <script> tags for RSC hydration
+            // payloads in both dev and production builds. 'unsafe-inline' is
+            // required for React hydration to work. 'unsafe-eval' is only needed
+            // in dev mode for React DevTools and Turbopack hot module replacement.
+            // TODO: replace 'unsafe-inline' with nonce-based CSP once the
+            // nonce middleware is implemented.
             process.env.NODE_ENV === "development"
               ? "script-src 'self' 'unsafe-eval' 'unsafe-inline'"
-              : "script-src 'self'",
+              : "script-src 'self' 'unsafe-inline'",
             // Next.js requires 'unsafe-inline' for styles because it injects
             // CSS via <style> tags for Tailwind and CSS-in-JS. This is a known
             // Next.js limitation; nonce-based style-src is not yet supported
