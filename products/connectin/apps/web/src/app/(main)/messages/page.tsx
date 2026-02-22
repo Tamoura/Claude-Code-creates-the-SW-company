@@ -43,9 +43,12 @@ export default function MessagesPage() {
   };
 
   return (
-    <div className="flex h-[calc(100vh-80px)] gap-4">
+    <div className="flex flex-col lg:flex-row h-[calc(100vh-80px)] gap-4">
       {/* Conversation List */}
-      <div className="w-[320px] shrink-0 rounded-[18px] bg-white dark:bg-[#1C1C1E] shadow-apple-md flex flex-col overflow-hidden">
+      <div className={cn(
+        "rounded-[18px] bg-white dark:bg-[#1C1C1E] shadow-apple-md flex flex-col overflow-hidden",
+        activeConvId ? "hidden lg:flex lg:w-[320px] lg:shrink-0" : "w-full lg:w-[320px] lg:shrink-0 flex-1 lg:flex-initial"
+      )}>
         {/* Header */}
         <div className="p-4 border-b border-[#E2E8F0] dark:border-white/8">
           <h1 className="text-lg font-semibold text-neutral-900 dark:text-neutral-100">
@@ -57,7 +60,7 @@ export default function MessagesPage() {
             value={search}
             onChange={(e) => setSearch(e.target.value)}
             placeholder={t("messages.search")}
-            className="mt-3 w-full rounded-[10px] border-0 bg-[#F1F5F9] dark:bg-white/5 px-3 py-2 text-sm text-neutral-900 dark:text-neutral-100 placeholder:text-neutral-500 focus:outline-none focus:ring-2 focus:ring-primary-500/30 transition-all duration-[180ms]"
+            className="mt-3 w-full rounded-[10px] border-0 bg-[#F1F5F9] dark:bg-white/5 px-3 py-2 text-sm text-neutral-900 dark:text-neutral-100 placeholder:text-neutral-600 focus:outline-none focus:ring-2 focus:ring-primary-500/30 transition-all duration-[180ms]"
           />
         </div>
 
@@ -87,11 +90,22 @@ export default function MessagesPage() {
       </div>
 
       {/* Message Thread */}
-      <div className="flex-1 rounded-[18px] bg-white dark:bg-[#1C1C1E] shadow-apple-md flex flex-col overflow-hidden">
+      <div className={cn(
+        "flex-1 rounded-[18px] bg-white dark:bg-[#1C1C1E] shadow-apple-md flex flex-col overflow-hidden",
+        !activeConvId && "hidden lg:flex"
+      )}>
         {activeConv ? (
           <>
             {/* Thread Header */}
             <div className="px-5 py-4 border-b border-[#E2E8F0] dark:border-white/8 flex items-center gap-3">
+              <button
+                type="button"
+                onClick={() => setActiveConvId(null)}
+                aria-label={t("actions.back")}
+                className="lg:hidden mr-1 text-neutral-600 hover:text-neutral-900"
+              >
+                ←
+              </button>
               <div>
                 <p className="font-semibold text-neutral-900 dark:text-neutral-100">
                   {activeConv.contact.displayName}
@@ -139,7 +153,7 @@ export default function MessagesPage() {
                   placeholder={t("messages.typeMessage")}
                   aria-label={t("messages.typeMessage")}
                   disabled={isSending}
-                  className="flex-1 rounded-[10px] border-0 bg-[#F1F5F9] dark:bg-white/5 px-4 py-2.5 text-sm text-neutral-900 dark:text-neutral-100 placeholder:text-neutral-500 focus:outline-none focus:ring-2 focus:ring-primary-500/30 transition-all disabled:opacity-50"
+                  className="flex-1 rounded-[10px] border-0 bg-[#F1F5F9] dark:bg-white/5 px-4 py-2.5 text-sm text-neutral-900 dark:text-neutral-100 placeholder:text-neutral-600 focus:outline-none focus:ring-2 focus:ring-primary-500/30 transition-all disabled:opacity-50"
                 />
                 <button
                   type="button"
@@ -149,7 +163,8 @@ export default function MessagesPage() {
                   className={cn(
                     "w-10 h-10 rounded-full flex items-center justify-center transition-all",
                     "bg-[#57BBCE] text-white hover:bg-[#4AAEC1]",
-                    "disabled:opacity-40 disabled:cursor-not-allowed"
+                    "disabled:opacity-40 disabled:cursor-not-allowed",
+                    "focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-primary-500 focus-visible:ring-offset-2"
                   )}
                 >
                   <Send className="h-4 w-4" />

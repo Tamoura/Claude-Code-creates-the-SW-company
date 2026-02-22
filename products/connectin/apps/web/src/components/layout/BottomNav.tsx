@@ -28,7 +28,7 @@ export function BottomNav() {
       className={cn(
         "fixed inset-x-0 bottom-0 z-20 lg:hidden",
         "flex items-center justify-around",
-        "h-14 glass-light dark:glass-dark",
+        "h-14 border-t border-neutral-200 dark:border-neutral-700 bg-white/95 dark:bg-[#1C1C1E]/95 backdrop-blur-xl",
         "safe-area-pb"
       )}
       aria-label="Mobile navigation"

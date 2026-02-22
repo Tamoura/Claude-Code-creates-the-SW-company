@@ -71,8 +71,8 @@ export default function ProfilePage() {
 
         <div className="p-6 -mt-10">
           {/* Avatar + name row */}
-          <div className="mb-4 flex items-start justify-between">
-            <div className="flex items-end gap-4">
+          <div className="mb-4 flex flex-col sm:flex-row sm:items-start sm:justify-between gap-4">
+            <div className="flex flex-col sm:flex-row items-center sm:items-end gap-4">
               <div className="h-20 w-20 rounded-full ring-4 ring-white dark:ring-[#1C1C1E] bg-primary-100 flex items-center justify-center text-2xl font-bold text-primary-700">
                 {user?.displayName?.charAt(0) || "U"}
               </div>
@@ -90,7 +90,7 @@ export default function ProfilePage() {
                       placeholder={t("profile.headlinePlaceholder")}
                       autoFocus
                       maxLength={200}
-                      className="rounded-[10px] border-0 bg-[#F1F5F9] dark:bg-white/5 px-3 py-2 text-sm text-neutral-900 dark:text-neutral-100 placeholder:text-neutral-500 focus:bg-white dark:focus:bg-white/10 focus:outline-none focus:ring-2 focus:ring-primary-500/30 transition-all duration-[180ms] w-64"
+                      className="rounded-[10px] border-0 bg-[#F1F5F9] dark:bg-white/5 px-3 py-2 text-sm text-neutral-900 dark:text-neutral-100 placeholder:text-neutral-600 focus:bg-white dark:focus:bg-white/10 focus:outline-none focus:ring-2 focus:ring-primary-500/30 transition-all duration-[180ms] w-full max-w-64"
                     />
                     {saveError && (
                       <p className="text-xs text-red-700">{saveError}</p>

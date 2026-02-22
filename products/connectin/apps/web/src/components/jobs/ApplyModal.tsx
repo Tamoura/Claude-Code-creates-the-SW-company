@@ -110,7 +110,7 @@ export function ApplyModal({
             onChange={(e) => setCoverNote(e.target.value.slice(0, MAX_COVER_NOTE))}
             rows={4}
             placeholder="Tell the recruiter why you're a great fit..."
-            className="w-full rounded-[10px] border-0 bg-[#F1F5F9] dark:bg-white/5 px-3 py-2.5 text-sm text-neutral-900 dark:text-neutral-100 placeholder:text-neutral-500 focus:bg-white dark:focus:bg-white/10 focus:outline-none focus:ring-2 focus:ring-primary-500/30 transition-all duration-[180ms] resize-none"
+            className="w-full rounded-[10px] border-0 bg-[#F1F5F9] dark:bg-white/5 px-3 py-2.5 text-sm text-neutral-900 dark:text-neutral-100 placeholder:text-neutral-600 focus:bg-white dark:focus:bg-white/10 focus:outline-none focus:ring-2 focus:ring-primary-500/30 transition-all duration-[180ms] resize-none"
           />
           <p aria-live="polite" className="mt-1 text-right text-xs text-neutral-400">
             {coverNote.length} / {MAX_COVER_NOTE}
