@@ -178,11 +178,11 @@ const profileRoutes: FastifyPluginAsync = async (fastify) => {
       security: [{ bearerAuth: [] }],
       body: {
         type: 'object',
-        required: ['skills'],
+        required: ['skillIds'],
         properties: {
-          skills: {
+          skillIds: {
             type: 'array',
-            items: { type: 'string', maxLength: 100 },
+            items: { type: 'string', format: 'uuid' },
             minItems: 1,
             maxItems: 50,
           },
