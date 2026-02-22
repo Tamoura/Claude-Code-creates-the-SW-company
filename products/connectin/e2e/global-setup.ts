@@ -36,8 +36,12 @@ async function globalSetup(_config: FullConfig) {
     await page.goto(`${BASE_URL}/login`);
     await page.waitForLoadState('networkidle');
 
-    await page.getByLabel(/email/i).fill(USER_EMAIL);
-    await page.getByLabel(/password/i).fill(USER_PASSWORD);
+    // Use stable ID selectors instead of label text — the login page is
+    // bilingual (Arabic/English) and SSR may render Arabic even when the
+    // browser has 'connectin-lang: en' set, causing a hydration mismatch
+    // that prevents label-based selectors from working reliably in CI.
+    await page.locator('#email').fill(USER_EMAIL);
+    await page.locator('#password').fill(USER_PASSWORD);
     await page.locator('button[type="submit"]').click();
 
     await page.waitForURL(/\/(feed|dashboard|home|profile|network|jobs)/, { timeout: 30_000 });

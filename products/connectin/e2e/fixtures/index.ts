@@ -17,8 +17,10 @@ export async function loginAs(page: Page, email: string, password: string) {
   // Wait for React hydration — CSP was blocking Next.js 16 Turbopack inline
   // scripts; with 'unsafe-inline' added to dev CSP, networkidle is sufficient.
   await page.waitForLoadState('networkidle');
-  await page.getByLabel(/email/i).fill(email);
-  await page.getByLabel(/password/i).fill(password);
+  // Use stable ID selectors: SSR renders Arabic (fallbackLng: 'ar') which
+  // fails /email/i matching. The inputs have deterministic IDs.
+  await page.locator('#email').fill(email);
+  await page.locator('#password').fill(password);
   await page.locator('button[type="submit"]').click();
   await page.waitForURL(/\/(feed|dashboard|home|profile|network|jobs)/, { timeout: 30_000 });
 }

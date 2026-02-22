@@ -11,8 +11,10 @@ export class LoginPage {
   }
 
   async login(email: string, password: string) {
-    await this.page.getByLabel(/email/i).fill(email);
-    await this.page.getByLabel(/password/i).fill(password);
+    // Use stable ID selectors: SSR renders Arabic (fallbackLng: 'ar') which
+    // would fail /email/i matching. The inputs have deterministic IDs.
+    await this.page.locator('#email').fill(email);
+    await this.page.locator('#password').fill(password);
     await this.page.locator('button[type="submit"]').click();
   }
 
@@ -34,16 +36,12 @@ export class RegisterPage {
   }
 
   async register(displayName: string, email: string, password: string) {
-    // Fill name field
-    await this.page.getByLabel(/name|الاسم/i).fill(displayName);
-    await this.page.getByLabel(/email/i).fill(email);
-    // Get password fields — use index if there are two
-    const passwordFields = this.page.getByLabel(/password/i);
-    await passwordFields.first().fill(password);
-    const count = await passwordFields.count();
-    if (count > 1) {
-      await passwordFields.nth(1).fill(password);
-    }
+    // Use stable ID selectors: SSR renders Arabic (fallbackLng: 'ar') which
+    // fails label-text matching. The inputs have deterministic IDs.
+    await this.page.locator('#displayName').fill(displayName);
+    await this.page.locator('#email').fill(email);
+    await this.page.locator('#password').fill(password);
+    await this.page.locator('#confirmPassword').fill(password);
     await this.page.locator('button[type="submit"]').click();
   }
 }

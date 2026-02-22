@@ -8,8 +8,10 @@ test.describe('Login', () => {
   test('shows login form', async ({ page }) => {
     const loginPage = new LoginPage(page);
     await loginPage.goto();
-    await expect(page.getByLabel(/email/i)).toBeVisible();
-    await expect(page.getByLabel(/password/i)).toBeVisible();
+    // Use stable ID selectors: the page is bilingual (AR/EN) and SSR may
+    // render Arabic labels, so getByLabel(/email/i) is unreliable in CI.
+    await expect(page.locator('#email')).toBeVisible();
+    await expect(page.locator('#password')).toBeVisible();
     await expect(page.locator('button[type="submit"]')).toBeVisible();
   });
 
