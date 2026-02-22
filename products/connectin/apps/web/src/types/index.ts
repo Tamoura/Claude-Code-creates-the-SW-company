@@ -153,3 +153,24 @@ export interface Conversation {
   };
   unreadCount: number;
 }
+
+export type NotificationType =
+  | "CONNECTION_REQUEST"
+  | "CONNECTION_ACCEPTED"
+  | "MESSAGE"
+  | "POST_LIKE"
+  | "POST_COMMENT"
+  | "JOB_APPLICATION"
+  | "SYSTEM";
+
+export interface Notification {
+  id: string;
+  type: NotificationType;
+  title: string;
+  message: string | null;
+  referenceId: string | null;
+  referenceType: string | null;
+  isRead: boolean;
+  readAt: string | null;
+  createdAt: string;
+}

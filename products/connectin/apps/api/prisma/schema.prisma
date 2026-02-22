@@ -73,6 +73,10 @@ model User {
   jobs                Job[]
   applications        JobApplication[]
   savedJobs           SavedJob[]
+  conversationMemberships ConversationMember[]
+  sentMessages            Message[]
+  notifications           Notification[]
+  notificationPreference  NotificationPreference?
 
   @@index([status, createdAt])
   @@index([verificationToken])
@@ -366,4 +370,101 @@ model SavedJob {
   @@unique([jobId, userId])
   @@index([userId])
   @@map("saved_jobs")
+}
+
+// ─── Messaging ────────────────────────────────────────────────
+
+model Conversation {
+  id            String    @id @default(uuid())
+  lastMessageAt DateTime? @map("last_message_at")
+  createdAt     DateTime  @default(now()) @map("created_at")
+
+  members  ConversationMember[]
+  messages Message[]
+
+  @@map("conversations")
+}
+
+model ConversationMember {
+  id             String    @id @default(uuid())
+  conversationId String    @map("conversation_id")
+  userId         String    @map("user_id")
+  lastReadAt     DateTime? @map("last_read_at")
+  createdAt      DateTime  @default(now()) @map("created_at")
+
+  conversation Conversation @relation(fields: [conversationId], references: [id], onDelete: Cascade)
+  user         User         @relation(fields: [userId], references: [id], onDelete: Cascade)
+
+  @@unique([conversationId, userId])
+  @@index([userId])
+  @@map("conversation_members")
+}
+
+model Message {
+  id             String    @id @default(uuid())
+  conversationId String    @map("conversation_id")
+  senderId       String    @map("sender_id")
+  content        String    @db.Text
+  isDeleted      Boolean   @default(false) @map("is_deleted")
+  readAt         DateTime? @map("read_at")
+  createdAt      DateTime  @default(now()) @map("created_at")
+
+  conversation Conversation @relation(fields: [conversationId], references: [id], onDelete: Cascade)
+  sender       User         @relation(fields: [senderId], references: [id], onDelete: Cascade)
+
+  @@index([conversationId, createdAt(sort: Desc)])
+  @@index([senderId])
+  @@map("messages")
+}
+
+// ─── Notifications ────────────────────────────────────────────
+
+enum NotificationType {
+  CONNECTION_REQUEST
+  CONNECTION_ACCEPTED
+  MESSAGE
+  POST_LIKE
+  POST_COMMENT
+  JOB_APPLICATION
+  SYSTEM
+}
+
+enum EmailDigestFrequency {
+  OFF
+  DAILY
+  WEEKLY
+}
+
+model Notification {
+  id            String           @id @default(uuid())
+  userId        String           @map("user_id")
+  type          NotificationType
+  title         String           @db.VarChar(200)
+  message       String?          @db.Text
+  referenceId   String?          @map("reference_id")
+  referenceType String?          @map("reference_type") @db.VarChar(50)
+  isRead        Boolean          @default(false) @map("is_read")
+  readAt        DateTime?        @map("read_at")
+  createdAt     DateTime         @default(now()) @map("created_at")
+
+  user User @relation(fields: [userId], references: [id], onDelete: Cascade)
+
+  @@index([userId, isRead, createdAt(sort: Desc)])
+  @@map("notifications")
+}
+
+model NotificationPreference {
+  id                 String               @id @default(uuid())
+  userId             String               @unique @map("user_id")
+  connectionRequests Boolean              @default(true) @map("connection_requests")
+  messages           Boolean              @default(true)
+  postLikes          Boolean              @default(true) @map("post_likes")
+  postComments       Boolean              @default(true) @map("post_comments")
+  jobRecommendations Boolean              @default(true) @map("job_recommendations")
+  emailDigest        EmailDigestFrequency @default(WEEKLY) @map("email_digest")
+  updatedAt          DateTime             @updatedAt @map("updated_at")
+
+  user User @relation(fields: [userId], references: [id], onDelete: Cascade)
+
+  @@map("notification_preferences")
 }
