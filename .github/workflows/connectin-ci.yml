@@ -32,7 +32,7 @@ jobs:
       run:
         working-directory: ${{ matrix.app.path }}
     steps:
-      - uses: actions/checkout@v4
+      - uses: actions/checkout@v6
 
       - name: Check if app exists
         id: check
@@ -107,7 +107,7 @@ jobs:
       NODE_ENV: test
       PORT: 5007
     steps:
-      - uses: actions/checkout@v4
+      - uses: actions/checkout@v6
 
       - name: Check if API app exists
         id: check
@@ -171,7 +171,7 @@ jobs:
       run:
         working-directory: products/connectin/apps/web
     steps:
-      - uses: actions/checkout@v4
+      - uses: actions/checkout@v6
 
       - name: Setup Node.js
         uses: actions/setup-node@v4
@@ -207,7 +207,7 @@ jobs:
       run:
         working-directory: ${{ matrix.app }}
     steps:
-      - uses: actions/checkout@v4
+      - uses: actions/checkout@v6
 
       - name: Check if app exists
         id: check
@@ -266,7 +266,7 @@ jobs:
       FRONTEND_URL: http://localhost:3111
       API_URL: http://localhost:5007
     steps:
-      - uses: actions/checkout@v4
+      - uses: actions/checkout@v6
 
       - name: Check if e2e tests exist
         id: check
@@ -372,7 +372,7 @@ jobs:
     needs: [test-api, test-web]
     if: always()
     steps:
-      - uses: actions/checkout@v4
+      - uses: actions/checkout@v6
 
       - name: Build Docker images
         run: |
