@@ -271,6 +271,265 @@ describe('Auth Module', () => {
     });
   });
 
+  describe('POST /api/v1/auth/forgot-password', () => {
+    it('returns success for existing email', async () => {
+      const app = await getApp();
+      await app.inject({
+        method: 'POST',
+        url: '/api/v1/auth/register',
+        payload: {
+          email: 'forgot@example.com',
+          password: 'SecureP@ss1',
+          displayName: 'Forgot User',
+        },
+      });
+
+      const res = await app.inject({
+        method: 'POST',
+        url: '/api/v1/auth/forgot-password',
+        payload: { email: 'forgot@example.com' },
+      });
+
+      expect(res.statusCode).toBe(200);
+      const body = JSON.parse(res.body);
+      expect(body.data.message).toContain('reset');
+    });
+
+    it('returns same success for unknown email (anti-enumeration)', async () => {
+      const app = await getApp();
+
+      const res = await app.inject({
+        method: 'POST',
+        url: '/api/v1/auth/forgot-password',
+        payload: { email: 'nobody@example.com' },
+      });
+
+      expect(res.statusCode).toBe(200);
+      const body = JSON.parse(res.body);
+      expect(body.data.message).toContain('reset');
+    });
+  });
+
+  describe('POST /api/v1/auth/reset-password', () => {
+    async function setupResetToken(_app: Awaited<ReturnType<typeof getApp>>) {
+      const crypto = await import('crypto');
+      const bcrypt = await import('bcrypt');
+      const db = getPrisma();
+
+      const rawToken = crypto.randomBytes(32).toString('hex');
+      const tokenHash = crypto
+        .createHash('sha256')
+        .update(rawToken)
+        .digest('hex');
+      const passwordHash = await bcrypt.hash('OldP@ss123', 10);
+
+      const user = await db.user.create({
+        data: {
+          email: 'reset@example.com',
+          passwordHash,
+          displayName: 'Reset User',
+          resetToken: tokenHash,
+          resetTokenExpires: new Date(Date.now() + 3600000),
+          profile: { create: { completenessScore: 0 } },
+        },
+      });
+
+      return { rawToken, user };
+    }
+
+    it('resets password with valid token', async () => {
+      const app = await getApp();
+      const { rawToken } = await setupResetToken(app);
+
+      const res = await app.inject({
+        method: 'POST',
+        url: '/api/v1/auth/reset-password',
+        payload: {
+          token: rawToken,
+          newPassword: 'NewSecureP@ss1',
+        },
+      });
+
+      expect(res.statusCode).toBe(200);
+      const body = JSON.parse(res.body);
+      expect(body.data.message).toContain('reset');
+    });
+
+    it('rejects expired token', async () => {
+      const app = await getApp();
+      const crypto = await import('crypto');
+      const bcrypt = await import('bcrypt');
+      const db = getPrisma();
+
+      const rawToken = crypto.randomBytes(32).toString('hex');
+      const tokenHash = crypto
+        .createHash('sha256')
+        .update(rawToken)
+        .digest('hex');
+      const passwordHash = await bcrypt.hash('OldP@ss123', 10);
+
+      await db.user.create({
+        data: {
+          email: 'expired-reset@example.com',
+          passwordHash,
+          displayName: 'Expired Reset',
+          resetToken: tokenHash,
+          resetTokenExpires: new Date(Date.now() - 1000),
+          profile: { create: { completenessScore: 0 } },
+        },
+      });
+
+      const res = await app.inject({
+        method: 'POST',
+        url: '/api/v1/auth/reset-password',
+        payload: {
+          token: rawToken,
+          newPassword: 'NewSecureP@ss1',
+        },
+      });
+
+      expect(res.statusCode).toBe(400);
+    });
+
+    it('rejects invalid token', async () => {
+      const app = await getApp();
+
+      const res = await app.inject({
+        method: 'POST',
+        url: '/api/v1/auth/reset-password',
+        payload: {
+          token: 'totally-invalid-token',
+          newPassword: 'NewSecureP@ss1',
+        },
+      });
+
+      expect(res.statusCode).toBe(400);
+    });
+
+    it('rejects weak new password', async () => {
+      const app = await getApp();
+      const { rawToken } = await setupResetToken(app);
+
+      const res = await app.inject({
+        method: 'POST',
+        url: '/api/v1/auth/reset-password',
+        payload: {
+          token: rawToken,
+          newPassword: 'weak',
+        },
+      });
+
+      expect(res.statusCode).toBe(422);
+    });
+
+    it('token is single-use (cannot reuse)', async () => {
+      const app = await getApp();
+      const { rawToken } = await setupResetToken(app);
+
+      // First use
+      await app.inject({
+        method: 'POST',
+        url: '/api/v1/auth/reset-password',
+        payload: {
+          token: rawToken,
+          newPassword: 'NewSecureP@ss1',
+        },
+      });
+
+      // Second use should fail
+      const res = await app.inject({
+        method: 'POST',
+        url: '/api/v1/auth/reset-password',
+        payload: {
+          token: rawToken,
+          newPassword: 'AnotherP@ss1',
+        },
+      });
+
+      expect(res.statusCode).toBe(400);
+    });
+
+    it('old password is invalid after reset', async () => {
+      const app = await getApp();
+      const { rawToken } = await setupResetToken(app);
+
+      await app.inject({
+        method: 'POST',
+        url: '/api/v1/auth/reset-password',
+        payload: {
+          token: rawToken,
+          newPassword: 'NewSecureP@ss1',
+        },
+      });
+
+      const loginRes = await app.inject({
+        method: 'POST',
+        url: '/api/v1/auth/login',
+        payload: {
+          email: 'reset@example.com',
+          password: 'OldP@ss123',
+        },
+      });
+
+      expect(loginRes.statusCode).toBe(401);
+    });
+
+    it('new password works after reset', async () => {
+      const app = await getApp();
+      const { rawToken } = await setupResetToken(app);
+
+      await app.inject({
+        method: 'POST',
+        url: '/api/v1/auth/reset-password',
+        payload: {
+          token: rawToken,
+          newPassword: 'NewSecureP@ss1',
+        },
+      });
+
+      const loginRes = await app.inject({
+        method: 'POST',
+        url: '/api/v1/auth/login',
+        payload: {
+          email: 'reset@example.com',
+          password: 'NewSecureP@ss1',
+        },
+      });
+
+      expect(loginRes.statusCode).toBe(200);
+    });
+
+    it('invalidates all sessions after reset', async () => {
+      const app = await getApp();
+      const { rawToken, user } = await setupResetToken(app);
+      const db = getPrisma();
+
+      // Create a session for this user
+      await db.session.create({
+        data: {
+          userId: user.id,
+          refreshTokenHash: 'fake-hash',
+          expiresAt: new Date(Date.now() + 86400000),
+        },
+      });
+
+      await app.inject({
+        method: 'POST',
+        url: '/api/v1/auth/reset-password',
+        payload: {
+          token: rawToken,
+          newPassword: 'NewSecureP@ss1',
+        },
+      });
+
+      const sessions = await db.session.findMany({
+        where: { userId: user.id },
+      });
+
+      expect(sessions).toHaveLength(0);
+    });
+  });
+
   describe('GET /api/v1/auth/verify-email/:token',
     () => {
       it('verifies email with valid token', async () => {

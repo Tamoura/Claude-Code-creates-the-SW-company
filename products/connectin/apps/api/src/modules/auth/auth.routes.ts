@@ -1,6 +1,11 @@
 import { FastifyPluginAsync } from 'fastify';
 import { AuthService } from './auth.service';
-import { registerSchema, loginSchema } from './auth.schemas';
+import {
+  registerSchema,
+  loginSchema,
+  forgotPasswordSchema,
+  resetPasswordSchema,
+} from './auth.schemas';
 import { sendSuccess, sendError } from '../../lib/response';
 import { ValidationError } from '../../lib/errors';
 import { zodToDetails } from '../../lib/validation';
@@ -368,6 +373,105 @@ const authRoutes: FastifyPluginAsync = async (fastify) => {
       return sendSuccess(reply, data);
     }
   );
+
+  // POST /api/v1/auth/forgot-password
+  fastify.post('/forgot-password', {
+    schema: {
+      description: 'Request a password reset link',
+      tags: ['Auth'],
+      body: {
+        type: 'object',
+        additionalProperties: false,
+        required: ['email'],
+        properties: {
+          email: { type: 'string', format: 'email' },
+        },
+      },
+      response: {
+        200: {
+          type: 'object',
+          additionalProperties: true,
+          properties: {
+            success: { type: 'boolean' },
+            data: {
+              type: 'object',
+              additionalProperties: true,
+              properties: {
+                message: { type: 'string' },
+              },
+            },
+          },
+        },
+      },
+    },
+    config: {
+      rateLimit: {
+        max: 3,
+        timeWindow: '1 minute',
+      },
+    },
+  }, async (request, reply) => {
+    const result = forgotPasswordSchema.safeParse(request.body);
+    if (!result.success) {
+      throw new ValidationError(
+        'Validation failed',
+        zodToDetails(result.error)
+      );
+    }
+
+    const data = await authService.forgotPassword(result.data);
+    return sendSuccess(reply, data);
+  });
+
+  // POST /api/v1/auth/reset-password
+  fastify.post('/reset-password', {
+    schema: {
+      description: 'Reset password using the token from the reset email',
+      tags: ['Auth'],
+      body: {
+        type: 'object',
+        additionalProperties: false,
+        required: ['token', 'newPassword'],
+        properties: {
+          token: { type: 'string' },
+          newPassword: { type: 'string', minLength: 8 },
+        },
+      },
+      response: {
+        200: {
+          type: 'object',
+          additionalProperties: true,
+          properties: {
+            success: { type: 'boolean' },
+            data: {
+              type: 'object',
+              additionalProperties: true,
+              properties: {
+                message: { type: 'string' },
+              },
+            },
+          },
+        },
+      },
+    },
+    config: {
+      rateLimit: {
+        max: 5,
+        timeWindow: '1 minute',
+      },
+    },
+  }, async (request, reply) => {
+    const result = resetPasswordSchema.safeParse(request.body);
+    if (!result.success) {
+      throw new ValidationError(
+        'Validation failed',
+        zodToDetails(result.error)
+      );
+    }
+
+    const data = await authService.resetPassword(result.data);
+    return sendSuccess(reply, data);
+  });
 
   // GET /api/v1/auth/verify-email/:token
   fastify.get<{ Params: { token: string } }>(

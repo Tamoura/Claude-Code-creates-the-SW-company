@@ -14,7 +14,12 @@ import {
   LoginResponse,
   RefreshResponse,
 } from './auth.types';
-import { RegisterInput, LoginInput } from './auth.schemas';
+import {
+  RegisterInput,
+  LoginInput,
+  ForgotPasswordInput,
+  ResetPasswordInput,
+} from './auth.schemas';
 
 export class AuthService {
   constructor(
@@ -296,6 +301,77 @@ export class AuthService {
         ),
       },
     });
+  }
+
+  async forgotPassword(input: ForgotPasswordInput): Promise<{ message: string }> {
+    const user = await this.prisma.user.findUnique({
+      where: { email: input.email.toLowerCase() },
+    });
+
+    // Always return success to prevent email enumeration
+    const successMessage =
+      'If an account with that email exists, a password reset link has been sent.';
+
+    if (!user) {
+      return { message: successMessage };
+    }
+
+    const rawToken = crypto.randomBytes(32).toString('hex');
+    const tokenHash = this.hashToken(rawToken);
+    const expires = new Date(Date.now() + 60 * 60 * 1000); // 1 hour
+
+    await this.prisma.user.update({
+      where: { id: user.id },
+      data: {
+        resetToken: tokenHash,
+        resetTokenExpires: expires,
+      },
+    });
+
+    // In production, send the rawToken via email.
+    // Token is NOT returned in the API response.
+    return { message: successMessage };
+  }
+
+  async resetPassword(input: ResetPasswordInput): Promise<{ message: string }> {
+    const tokenHash = this.hashToken(input.token);
+
+    const user = await this.prisma.user.findFirst({
+      where: {
+        resetToken: tokenHash,
+        resetTokenExpires: { gt: new Date() },
+      },
+    });
+
+    if (!user) {
+      throw new BadRequestError('Invalid or expired reset token');
+    }
+
+    const config = getConfig();
+    const passwordHash = await bcrypt.hash(
+      input.newPassword,
+      config.BCRYPT_ROUNDS
+    );
+
+    await this.prisma.$transaction([
+      // Update password and clear reset token
+      this.prisma.user.update({
+        where: { id: user.id },
+        data: {
+          passwordHash,
+          resetToken: null,
+          resetTokenExpires: null,
+          failedLoginAttempts: 0,
+          lockedUntil: null,
+        },
+      }),
+      // Invalidate all sessions
+      this.prisma.session.deleteMany({
+        where: { userId: user.id },
+      }),
+    ]);
+
+    return { message: 'Password has been reset successfully.' };
   }
 
   async exportUserData(userId: string) {
