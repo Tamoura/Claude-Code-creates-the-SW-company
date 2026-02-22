@@ -128,13 +128,19 @@
     "pendingSent": "في الانتظار"
   },
   "messages": {
-    "inbox": "صندوق الرسائل",
-    "search": "البحث في الرسائل...",
+    "inbox": "الرسائل",
+    "search": "البحث في المحادثات",
+    "noConversations": "لا توجد محادثات",
+    "startConversation": "ابدأ محادثة",
     "typeMessage": "اكتب رسالة...",
     "send": "إرسال",
-    "read": "تمت القراءة",
-    "sent": "تم الإرسال",
-    "delivered": "تم التسليم"
+    "markRead": "تحديد كمقروء",
+    "today": "اليوم",
+    "yesterday": "أمس",
+    "you": "أنت",
+    "emptyThread": "ابدأ المحادثة",
+    "failedToSend": "فشل الإرسال",
+    "errorLoading": "خطأ في تحميل الرسائل"
   },
   "jobs": {
     "search": "البحث عن وظائف...",
@@ -167,5 +173,18 @@
   },
   "loading": "جارٍ التحميل...",
   "error": "حدث خطأ",
-  "noResults": "لا توجد نتائج"
+  "noResults": "لا توجد نتائج",
+  "notifications": {
+    "title": "الإشعارات",
+    "markAllRead": "تحديد الكل كمقروء",
+    "noNotifications": "لا توجد إشعارات",
+    "viewAll": "عرض الكل",
+    "connectionRequest": "طلب تواصل",
+    "connectionAccepted": "تم قبول التواصل",
+    "newMessage": "رسالة جديدة",
+    "postLiked": "إعجاب بمنشورك",
+    "postComment": "تعليق جديد",
+    "jobApplication": "طلب توظيف جديد",
+    "system": "إشعار النظام"
+  }
 }

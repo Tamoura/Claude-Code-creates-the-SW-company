@@ -129,12 +129,18 @@
   },
   "messages": {
     "inbox": "Messages",
-    "search": "Search messages...",
+    "search": "Search conversations",
+    "noConversations": "No conversations yet",
+    "startConversation": "Start a conversation",
     "typeMessage": "Type a message...",
     "send": "Send",
-    "read": "Read",
-    "sent": "Sent",
-    "delivered": "Delivered"
+    "markRead": "Mark as read",
+    "today": "Today",
+    "yesterday": "Yesterday",
+    "you": "You",
+    "emptyThread": "Start the conversation",
+    "failedToSend": "Failed to send",
+    "errorLoading": "Error loading messages"
   },
   "jobs": {
     "search": "Search jobs...",
@@ -167,5 +173,18 @@
   },
   "loading": "Loading...",
   "error": "An error occurred",
-  "noResults": "No results found"
+  "noResults": "No results found",
+  "notifications": {
+    "title": "Notifications",
+    "markAllRead": "Mark all as read",
+    "noNotifications": "No notifications yet",
+    "viewAll": "View all",
+    "connectionRequest": "Connection Request",
+    "connectionAccepted": "Connection Accepted",
+    "newMessage": "New Message",
+    "postLiked": "Post Liked",
+    "postComment": "New Comment",
+    "jobApplication": "New Application",
+    "system": "System Notification"
+  }
 }
