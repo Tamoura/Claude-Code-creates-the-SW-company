@@ -10,6 +10,7 @@ import { sendSuccess } from '../../lib/response';
 import {
   ValidationError,
   ForbiddenError,
+  NotFoundError,
 } from '../../lib/errors';
 import { zodToDetails } from '../../lib/validation';
 
@@ -25,6 +26,13 @@ const jobsRoutes: FastifyPluginAsync = async (fastify) => {
         description: 'List all jobs saved by the current user',
         tags: ['Jobs'],
         security: [{ bearerAuth: [] }],
+        querystring: {
+          type: 'object',
+          properties: {
+            cursor: { type: 'string' },
+            limit: { type: 'string' },
+          },
+        },
         response: {
           200: {
             type: 'object',
@@ -42,10 +50,20 @@ const jobsRoutes: FastifyPluginAsync = async (fastify) => {
       preHandler: fastify.authenticate,
     },
     async (request, reply) => {
-      const data = await jobsService.listSavedJobs(
-        request.user.sub
+      const query = request.query as {
+        cursor?: string;
+        limit?: string;
+      };
+
+      const limit = query.limit
+        ? Math.min(50, Math.max(1, parseInt(query.limit, 10) || 20))
+        : 20;
+
+      const result = await jobsService.listSavedJobs(
+        request.user.sub,
+        { cursor: query.cursor, limit }
       );
-      return sendSuccess(reply, data);
+      return sendSuccess(reply, result.data, 200, result.meta);
     }
   );
 
@@ -59,6 +77,7 @@ const jobsRoutes: FastifyPluginAsync = async (fastify) => {
         security: [{ bearerAuth: [] }],
         body: {
           type: 'object',
+          additionalProperties: false,
           required: ['title', 'company', 'description'],
           properties: {
             title: { type: 'string', maxLength: 200 },
@@ -66,9 +85,12 @@ const jobsRoutes: FastifyPluginAsync = async (fastify) => {
             location: { type: 'string', maxLength: 200 },
             description: { type: 'string' },
             requirements: { type: 'string' },
-            salary: { type: 'string' },
-            type: { type: 'string' },
-            remote: { type: 'boolean' },
+            workType: { type: 'string' },
+            experienceLevel: { type: 'string' },
+            salaryMin: { type: 'number' },
+            salaryMax: { type: 'number' },
+            salaryCurrency: { type: 'string' },
+            language: { type: 'string' },
           },
         },
         response: {
@@ -139,6 +161,12 @@ const jobsRoutes: FastifyPluginAsync = async (fastify) => {
         },
       },
     },
+    config: {
+      rateLimit: {
+        max: 60,
+        timeWindow: '1 minute',
+      },
+    },
   }, async (request, reply) => {
     const queryResult = jobQuerySchema.safeParse(request.query);
     if (!queryResult.success) {
@@ -179,6 +207,12 @@ const jobsRoutes: FastifyPluginAsync = async (fastify) => {
           },
         },
       },
+      config: {
+        rateLimit: {
+          max: 60,
+          timeWindow: '1 minute',
+        },
+      },
     },
     async (request, reply) => {
       const data = await jobsService.getJobById(
@@ -205,14 +239,20 @@ const jobsRoutes: FastifyPluginAsync = async (fastify) => {
         },
         body: {
           type: 'object',
+          additionalProperties: false,
           properties: {
             title: { type: 'string', maxLength: 200 },
+            company: { type: 'string', maxLength: 200 },
+            location: { type: 'string', maxLength: 200 },
             description: { type: 'string' },
             requirements: { type: 'string' },
-            location: { type: 'string', maxLength: 200 },
-            salary: { type: 'string' },
-            type: { type: 'string' },
-            remote: { type: 'boolean' },
+            workType: { type: 'string' },
+            experienceLevel: { type: 'string' },
+            salaryMin: { type: 'number' },
+            salaryMax: { type: 'number' },
+            salaryCurrency: { type: 'string' },
+            language: { type: 'string' },
+            status: { type: 'string' },
           },
         },
         response: {
@@ -314,9 +354,9 @@ const jobsRoutes: FastifyPluginAsync = async (fastify) => {
         },
         body: {
           type: 'object',
+          additionalProperties: false,
           properties: {
-            coverLetter: { type: 'string', maxLength: 5000 },
-            resumeUrl: { type: 'string', format: 'uri' },
+            coverNote: { type: 'string', maxLength: 500 },
           },
         },
         response: {
@@ -382,6 +422,32 @@ const jobsRoutes: FastifyPluginAsync = async (fastify) => {
       preHandler: fastify.authenticate,
     },
     async (request, reply) => {
+      const role = request.user.role;
+
+      // Only recruiters and admins can view applications
+      if (role !== 'RECRUITER' && role !== 'ADMIN') {
+        throw new ForbiddenError(
+          'Only recruiters can view job applications'
+        );
+      }
+
+      // Ownership check: verify the job exists and belongs to the
+      // current user (or the user is an admin) before calling the service
+      const job = await fastify.prisma.job.findUnique({
+        where: { id: request.params.id },
+        select: { id: true, recruiterId: true },
+      });
+
+      if (!job) {
+        throw new NotFoundError('Job not found');
+      }
+
+      if (role !== 'ADMIN' && job.recruiterId !== request.user.sub) {
+        throw new ForbiddenError(
+          'You do not own this job listing'
+        );
+      }
+
       const data = await jobsService.listApplications(
         request.params.id,
         request.user.sub

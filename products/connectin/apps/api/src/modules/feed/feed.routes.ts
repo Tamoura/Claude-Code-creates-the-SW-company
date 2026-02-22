@@ -22,6 +22,7 @@ const feedRoutes: FastifyPluginAsync = async (fastify) => {
       security: [{ bearerAuth: [] }],
       body: {
         type: 'object',
+        additionalProperties: false,
         required: ['content'],
         properties: {
           content: { type: 'string', minLength: 1, maxLength: 3000 },
@@ -97,6 +98,12 @@ const feedRoutes: FastifyPluginAsync = async (fastify) => {
             },
           },
         },
+      },
+    },
+    config: {
+      rateLimit: {
+        max: 60,
+        timeWindow: '1 minute',
       },
     },
   }, async (request, reply) => {
@@ -211,6 +218,7 @@ const feedRoutes: FastifyPluginAsync = async (fastify) => {
         },
         body: {
           type: 'object',
+          additionalProperties: false,
           required: ['content'],
           properties: {
             content: { type: 'string', minLength: 1, maxLength: 1000 },

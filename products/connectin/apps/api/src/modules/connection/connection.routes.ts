@@ -23,6 +23,7 @@ const connectionRoutes: FastifyPluginAsync = async (
       security: [{ bearerAuth: [] }],
       body: {
         type: 'object',
+        additionalProperties: false,
         required: ['receiverId'],
         properties: {
           receiverId: { type: 'string', format: 'uuid' },
@@ -173,6 +174,12 @@ const connectionRoutes: FastifyPluginAsync = async (
         },
       },
     },
+    config: {
+      rateLimit: {
+        max: 60,
+        timeWindow: '1 minute',
+      },
+    },
   }, async (request, reply) => {
     const result = await connectionService.listConnections(
       request.user.sub,
@@ -203,6 +210,12 @@ const connectionRoutes: FastifyPluginAsync = async (
             data: { type: 'object', additionalProperties: true },
           },
         },
+      },
+    },
+    config: {
+      rateLimit: {
+        max: 60,
+        timeWindow: '1 minute',
       },
     },
   }, async (request, reply) => {

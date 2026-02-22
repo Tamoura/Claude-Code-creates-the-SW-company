@@ -47,11 +47,14 @@ const profileRoutes: FastifyPluginAsync = async (fastify) => {
       security: [{ bearerAuth: [] }],
       body: {
         type: 'object',
+        additionalProperties: false,
         properties: {
-          headline: { type: 'string', maxLength: 220 },
-          bio: { type: 'string', maxLength: 2600 },
+          headlineEn: { type: 'string', maxLength: 220 },
+          headlineAr: { type: 'string', maxLength: 220 },
+          summaryEn: { type: 'string' },
+          summaryAr: { type: 'string' },
           location: { type: 'string', maxLength: 100 },
-          website: { type: 'string', format: 'uri' },
+          website: { type: 'string' },
           avatarUrl: { type: 'string', format: 'uri' },
         },
       },
@@ -112,6 +115,12 @@ const profileRoutes: FastifyPluginAsync = async (fastify) => {
           },
         },
       },
+      config: {
+        rateLimit: {
+          max: 60,
+          timeWindow: '1 minute',
+        },
+      },
     },
     async (request, reply) => {
       const profile = await profileService.getProfileById(
@@ -130,6 +139,7 @@ const profileRoutes: FastifyPluginAsync = async (fastify) => {
       security: [{ bearerAuth: [] }],
       body: {
         type: 'object',
+        additionalProperties: false,
         required: ['title', 'company'],
         properties: {
           title: { type: 'string', maxLength: 100 },
@@ -137,7 +147,7 @@ const profileRoutes: FastifyPluginAsync = async (fastify) => {
           location: { type: 'string', maxLength: 100 },
           startDate: { type: 'string', format: 'date' },
           endDate: { type: 'string', format: 'date' },
-          current: { type: 'boolean' },
+          isCurrent: { type: 'boolean' },
           description: { type: 'string', maxLength: 2000 },
         },
       },
@@ -178,6 +188,7 @@ const profileRoutes: FastifyPluginAsync = async (fastify) => {
       security: [{ bearerAuth: [] }],
       body: {
         type: 'object',
+        additionalProperties: false,
         required: ['skillIds'],
         properties: {
           skillIds: {

@@ -1,5 +1,14 @@
 import { FastifyPluginAsync } from 'fastify';
 import fp from 'fastify-plugin';
+import { createHash } from 'crypto';
+
+const LOG_SALT = process.env.LOG_SALT ?? 'connectin-log-salt';
+
+const hashIp = (ip: string): string =>
+  createHash('sha256')
+    .update(ip + LOG_SALT)
+    .digest('hex')
+    .slice(0, 16);
 
 const accessLogPlugin: FastifyPluginAsync = async (fastify) => {
   fastify.addHook('onResponse', async (request, reply) => {
@@ -13,8 +22,9 @@ const accessLogPlugin: FastifyPluginAsync = async (fastify) => {
       duration: Math.round(duration),
       userId,
       requestId: request.id,
-      ip: request.ip,
-      userAgent: request.headers['user-agent'],
+      ip: process.env.NODE_ENV === 'production'
+        ? hashIp(request.ip)
+        : request.ip,
     });
   });
 };
