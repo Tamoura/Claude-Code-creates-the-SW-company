@@ -1,3 +1,5 @@
+import Link from "next/link";
+
 /**
  * Custom 404 page (Server Component — no providers needed).
  * Next.js prerenders this at build time; it renders inside the root layout
@@ -16,12 +18,12 @@ export default function NotFound() {
       <p className="mb-8 max-w-md text-slate-500 dark:text-slate-400">
         The page you are looking for does not exist or has been moved.
       </p>
-      <a
+      <Link
         href="/"
         className="rounded-lg bg-[#0B6E7F] px-6 py-2.5 text-sm font-medium text-white transition-colors hover:bg-[#086577]"
       >
         Go home
-      </a>
+      </Link>
     </div>
   );
 }
