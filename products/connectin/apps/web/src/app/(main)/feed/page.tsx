@@ -50,6 +50,8 @@ export default function FeedPage() {
         />
         <div className="mt-3 flex items-center justify-between">
           <span
+            aria-live="polite"
+            aria-atomic="true"
             className={[
               "text-xs tabular-nums",
               isOverLimit

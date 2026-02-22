@@ -49,7 +49,7 @@ export function CookieConsent() {
   return (
     <div
       role="dialog"
-      aria-modal="false"
+      aria-modal="true"
       aria-label={t("consent.title")}
       aria-describedby="cookie-consent-desc"
       className={cn(

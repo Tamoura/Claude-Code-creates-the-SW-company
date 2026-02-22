@@ -14,7 +14,10 @@
     "saved": "Saved",
     "notifications": "Notifications",
     "search": "Search professionals, jobs, and posts",
-    "admin": "Admin Dashboard"
+    "admin": "Admin Dashboard",
+    "roleLabel": "Professional",
+    "signOut": "Sign Out",
+    "register": "Register"
   },
   "actions": {
     "connect": "Connect",
@@ -32,6 +35,7 @@
     "confirm": "Confirm",
     "accept": "Accept",
     "reject": "Reject",
+    "decline": "Decline",
     "withdraw": "Withdraw",
     "dismiss": "Dismiss",
     "viewAll": "View All",
@@ -40,7 +44,10 @@
     "back": "Back",
     "next": "Next",
     "submit": "Submit",
-    "remove": "Remove"
+    "remove": "Remove",
+    "saving": "Saving...",
+    "posting": "Posting...",
+    "loading": "Loading..."
   },
   "landing": {
     "hero": {
@@ -100,7 +107,11 @@
     "noExperience": "No experience added yet.",
     "noEducation": "No education added yet.",
     "noSkills": "No skills added yet.",
-    "professional": "Professional"
+    "professional": "Professional",
+    "addHeadline": "Add a headline",
+    "editHeadline": "Edit headline",
+    "headlinePlaceholder": "e.g. Senior Software Engineer at Acme",
+    "notFound": "Profile not found."
   },
   "network": {
     "myNetwork": "My Network",
@@ -110,7 +121,11 @@
     "searchConnections": "Search connections...",
     "noPendingRequests": "No pending requests.",
     "noSuggestions": "No suggestions right now.",
-    "noConnections": "No connections yet."
+    "noConnections": "No connections yet.",
+    "noSearchResults": "No connections match your search.",
+    "connect": "Connect",
+    "connected": "Connected",
+    "pendingSent": "Pending"
   },
   "messages": {
     "inbox": "Messages",
@@ -128,6 +143,9 @@
     "hybrid": "Hybrid",
     "onsite": "On-site",
     "applied": "Applied",
+    "apply": "Apply",
+    "save": "Save",
+    "unsave": "Unsave",
     "applicants": "applicants"
   },
   "settings": {

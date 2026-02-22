@@ -14,7 +14,10 @@
     "saved": "المحفوظات",
     "notifications": "الإشعارات",
     "search": "البحث عن محترفين ووظائف ومنشورات",
-    "admin": "لوحة التحكم"
+    "admin": "لوحة التحكم",
+    "roleLabel": "محترف",
+    "signOut": "تسجيل الخروج",
+    "register": "إنشاء حساب"
   },
   "actions": {
     "connect": "تواصل",
@@ -32,6 +35,7 @@
     "confirm": "تأكيد",
     "accept": "قبول",
     "reject": "رفض",
+    "decline": "رفض",
     "withdraw": "سحب",
     "dismiss": "تجاهل",
     "viewAll": "عرض الكل",
@@ -40,7 +44,10 @@
     "back": "رجوع",
     "next": "التالي",
     "submit": "إرسال",
-    "remove": "إزالة"
+    "remove": "إزالة",
+    "saving": "جارٍ الحفظ...",
+    "posting": "جارٍ النشر...",
+    "loading": "جارٍ التحميل..."
   },
   "landing": {
     "hero": {
@@ -100,7 +107,11 @@
     "noExperience": "لم تتم إضافة خبرة بعد.",
     "noEducation": "لم تتم إضافة تعليم بعد.",
     "noSkills": "لم تتم إضافة مهارات بعد.",
-    "professional": "متخصص"
+    "professional": "متخصص",
+    "addHeadline": "أضف عنوانًا",
+    "editHeadline": "تعديل العنوان",
+    "headlinePlaceholder": "مثال: مهندس برمجيات أول في أكمي",
+    "notFound": "الملف الشخصي غير موجود."
   },
   "network": {
     "myNetwork": "شبكتي",
@@ -110,7 +121,11 @@
     "searchConnections": "البحث في الاتصالات...",
     "noPendingRequests": "لا توجد طلبات معلقة.",
     "noSuggestions": "لا توجد اقتراحات حاليًا.",
-    "noConnections": "لا توجد اتصالات بعد."
+    "noConnections": "لا توجد اتصالات بعد.",
+    "noSearchResults": "لا توجد اتصالات تطابق بحثك.",
+    "connect": "تواصل",
+    "connected": "متواصل",
+    "pendingSent": "في الانتظار"
   },
   "messages": {
     "inbox": "صندوق الرسائل",
@@ -127,7 +142,10 @@
     "remote": "عن بعد",
     "hybrid": "هجين",
     "onsite": "في الموقع",
-    "applied": "تم التقديم",
+    "applied": "تقدمت",
+    "apply": "تقدم",
+    "save": "حفظ",
+    "unsave": "إلغاء الحفظ",
     "applicants": "متقدم"
   },
   "settings": {
@@ -147,7 +165,7 @@
     "accept": "قبول",
     "decline": "رفض"
   },
-  "loading": "جار التحميل...",
+  "loading": "جارٍ التحميل...",
   "error": "حدث خطأ",
   "noResults": "لا توجد نتائج"
 }
