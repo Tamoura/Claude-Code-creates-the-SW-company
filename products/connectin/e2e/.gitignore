@@ -3,4 +3,3 @@ playwright-report/
 test-results/
 e2e/
 auth-state.json
-package-lock.json
