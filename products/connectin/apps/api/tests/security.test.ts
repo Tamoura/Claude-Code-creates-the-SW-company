@@ -329,4 +329,25 @@ describe('Security Tests', () => {
       expect(res.headers['x-ratelimit-limit']).toBe('60');
     });
   });
+
+  describe('Body Size Limit', () => {
+    it('rejects request body exceeding 1 MB', async () => {
+      const app = await getApp();
+      const user = await createTestUser(app, {
+        email: 'body-limit@test.com',
+      });
+
+      // 1.5 MB payload
+      const largeBody = { content: 'x'.repeat(1_500_000) };
+
+      const res = await app.inject({
+        method: 'POST',
+        url: '/api/v1/feed/posts',
+        headers: authHeaders(user.accessToken),
+        payload: largeBody,
+      });
+
+      expect(res.statusCode).toBe(413);
+    });
+  });
 });

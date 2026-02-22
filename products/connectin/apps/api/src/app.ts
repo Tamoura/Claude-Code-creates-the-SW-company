@@ -41,6 +41,7 @@ export async function buildApp(
   const isTest = process.env.NODE_ENV === 'test';
   const isProd = process.env.NODE_ENV === 'production';
   const app = Fastify({
+    bodyLimit: 1_048_576, // 1 MB — explicit limit prevents unbounded payloads
     logger: isTest
       ? false
       : isProd
