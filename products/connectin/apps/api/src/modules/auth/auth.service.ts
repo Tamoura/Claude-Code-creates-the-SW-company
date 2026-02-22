@@ -541,6 +541,13 @@ export class AuthService {
     });
   }
 
+  async cleanupExpiredSessions(): Promise<number> {
+    const result = await this.prisma.session.deleteMany({
+      where: { expiresAt: { lt: new Date() } },
+    });
+    return result.count;
+  }
+
   private hashToken(token: string): string {
     return crypto
       .createHash('sha256')

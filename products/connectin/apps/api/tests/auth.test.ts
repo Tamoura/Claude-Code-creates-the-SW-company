@@ -530,6 +530,67 @@ describe('Auth Module', () => {
     });
   });
 
+  describe('Session cleanup (RISK-017)', () => {
+    it('cleanupExpiredSessions deletes expired sessions', async () => {
+      const app = await getApp();
+      const db = getPrisma();
+      const { AuthService } = await import(
+        '../src/modules/auth/auth.service'
+      );
+      const authService = new AuthService(db, app);
+
+      // Create a user
+      const user = await db.user.create({
+        data: {
+          email: 'cleanup@example.com',
+          displayName: 'Cleanup User',
+          passwordHash: 'hash',
+          profile: { create: { completenessScore: 0 } },
+        },
+      });
+
+      // Create an expired session
+      await db.session.create({
+        data: {
+          userId: user.id,
+          refreshTokenHash: 'expired-hash',
+          expiresAt: new Date(Date.now() - 1000),
+        },
+      });
+
+      // Create a valid session
+      await db.session.create({
+        data: {
+          userId: user.id,
+          refreshTokenHash: 'valid-hash',
+          expiresAt: new Date(Date.now() + 86400000),
+        },
+      });
+
+      const count = await authService.cleanupExpiredSessions();
+
+      expect(count).toBe(1);
+
+      const remaining = await db.session.findMany({
+        where: { userId: user.id },
+      });
+      expect(remaining).toHaveLength(1);
+      expect(remaining[0].refreshTokenHash).toBe('valid-hash');
+    });
+
+    it('cleanupExpiredSessions returns 0 when no expired sessions', async () => {
+      const app = await getApp();
+      const db = getPrisma();
+      const { AuthService } = await import(
+        '../src/modules/auth/auth.service'
+      );
+      const authService = new AuthService(db, app);
+
+      const count = await authService.cleanupExpiredSessions();
+      expect(count).toBe(0);
+    });
+  });
+
   describe('GET /api/v1/auth/verify-email/:token',
     () => {
       it('verifies email with valid token', async () => {

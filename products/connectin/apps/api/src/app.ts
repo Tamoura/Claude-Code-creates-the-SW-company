@@ -14,6 +14,9 @@ import swaggerPlugin from './plugins/swagger';
 import csrfPlugin from './plugins/csrf';
 import metricsPlugin from './plugins/metrics';
 
+// Services
+import { AuthService } from './modules/auth/auth.service';
+
 // Routes
 import healthRoutes from './modules/health/health.routes';
 import authRoutes from './modules/auth/auth.routes';
@@ -100,6 +103,30 @@ export async function buildApp(
   await app.register(notificationsRoutes, {
     prefix: '/api/v1/notifications',
   });
+
+  // Session cleanup — run hourly in non-test environments
+  /* istanbul ignore next */
+  if (!isTest) {
+    let cleanupInterval: ReturnType<typeof setInterval>;
+
+    app.addHook('onReady', async () => {
+      const authService = new AuthService(app.prisma, app);
+      cleanupInterval = setInterval(async () => {
+        try {
+          const count = await authService.cleanupExpiredSessions();
+          if (count > 0) {
+            app.log.info({ msg: 'session-cleanup', deleted: count });
+          }
+        } catch (err) {
+          app.log.error({ msg: 'session-cleanup-error', error: err });
+        }
+      }, 60 * 60 * 1000); // 1 hour
+    });
+
+    app.addHook('onClose', async () => {
+      if (cleanupInterval) clearInterval(cleanupInterval);
+    });
+  }
 
   return app;
 }
