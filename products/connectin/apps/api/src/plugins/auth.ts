@@ -31,6 +31,16 @@ const authPlugin: FastifyPluginAsync = async (fastify) => {
       } catch {
         throw new UnauthorizedError('Invalid or expired token');
       }
+
+      // Check token blacklist (populated on logout or session revocation).
+      // Uses the jti (JWT ID) claim included in every access token.
+      const jti = (request.user as { jti?: string }).jti;
+      if (jti) {
+        const revoked = await fastify.redis.get(`blacklist:${jti}`);
+        if (revoked) {
+          throw new UnauthorizedError('Token has been revoked');
+        }
+      }
     }
   );
 

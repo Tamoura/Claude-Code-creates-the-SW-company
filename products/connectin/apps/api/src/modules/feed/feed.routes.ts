@@ -16,6 +16,36 @@ const feedRoutes: FastifyPluginAsync = async (fastify) => {
 
   // POST /api/v1/feed/posts
   fastify.post('/posts', {
+    schema: {
+      description: 'Create a new feed post',
+      tags: ['Feed'],
+      security: [{ bearerAuth: [] }],
+      body: {
+        type: 'object',
+        required: ['content'],
+        properties: {
+          content: { type: 'string', minLength: 1, maxLength: 3000 },
+          mediaUrl: { type: 'string', format: 'uri' },
+        },
+      },
+      response: {
+        201: {
+          type: 'object',
+          properties: {
+            success: { type: 'boolean' },
+            data: {
+              type: 'object',
+              properties: {
+                id: { type: 'string' },
+                content: { type: 'string' },
+                authorId: { type: 'string' },
+                createdAt: { type: 'string', format: 'date-time' },
+              },
+            },
+          },
+        },
+      },
+    },
     config: {
       rateLimit: {
         max: 10,
@@ -41,7 +71,32 @@ const feedRoutes: FastifyPluginAsync = async (fastify) => {
   });
 
   // GET /api/v1/feed
-  fastify.get('/', async (request, reply) => {
+  fastify.get('/', {
+    schema: {
+      description: 'Retrieve the paginated activity feed for the current user',
+      tags: ['Feed'],
+      security: [{ bearerAuth: [] }],
+      querystring: {
+        type: 'object',
+        properties: {
+          cursor: { type: 'string' },
+          limit: { type: 'string' },
+        },
+      },
+      response: {
+        200: {
+          type: 'object',
+          properties: {
+            success: { type: 'boolean' },
+            data: {
+              type: 'array',
+              items: { type: 'object' },
+            },
+          },
+        },
+      },
+    },
+  }, async (request, reply) => {
     const result = await feedService.getFeed(
       request.user.sub,
       request.query as {
@@ -56,6 +111,27 @@ const feedRoutes: FastifyPluginAsync = async (fastify) => {
   fastify.post<{ Params: { id: string } }>(
     '/posts/:id/like',
     {
+      schema: {
+        description: 'Like a post',
+        tags: ['Feed'],
+        security: [{ bearerAuth: [] }],
+        params: {
+          type: 'object',
+          required: ['id'],
+          properties: {
+            id: { type: 'string', format: 'uuid' },
+          },
+        },
+        response: {
+          200: {
+            type: 'object',
+            properties: {
+              success: { type: 'boolean' },
+              data: { type: 'object' },
+            },
+          },
+        },
+      },
       config: {
         rateLimit: {
           max: 30,
@@ -76,6 +152,27 @@ const feedRoutes: FastifyPluginAsync = async (fastify) => {
   fastify.delete<{ Params: { id: string } }>(
     '/posts/:id/like',
     {
+      schema: {
+        description: 'Unlike a post',
+        tags: ['Feed'],
+        security: [{ bearerAuth: [] }],
+        params: {
+          type: 'object',
+          required: ['id'],
+          properties: {
+            id: { type: 'string', format: 'uuid' },
+          },
+        },
+        response: {
+          200: {
+            type: 'object',
+            properties: {
+              success: { type: 'boolean' },
+              data: { type: 'object' },
+            },
+          },
+        },
+      },
       config: {
         rateLimit: {
           max: 30,
@@ -95,6 +192,36 @@ const feedRoutes: FastifyPluginAsync = async (fastify) => {
   // POST /api/v1/feed/posts/:id/comment
   fastify.post<{ Params: { id: string } }>(
     '/posts/:id/comment',
+    {
+      schema: {
+        description: 'Add a comment to a post',
+        tags: ['Feed'],
+        security: [{ bearerAuth: [] }],
+        params: {
+          type: 'object',
+          required: ['id'],
+          properties: {
+            id: { type: 'string', format: 'uuid' },
+          },
+        },
+        body: {
+          type: 'object',
+          required: ['content'],
+          properties: {
+            content: { type: 'string', minLength: 1, maxLength: 1000 },
+          },
+        },
+        response: {
+          201: {
+            type: 'object',
+            properties: {
+              success: { type: 'boolean' },
+              data: { type: 'object' },
+            },
+          },
+        },
+      },
+    },
     async (request, reply) => {
       const result = createCommentSchema.safeParse(
         request.body

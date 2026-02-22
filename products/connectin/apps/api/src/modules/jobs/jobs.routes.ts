@@ -21,6 +21,23 @@ const jobsRoutes: FastifyPluginAsync = async (fastify) => {
   fastify.get(
     '/saved',
     {
+      schema: {
+        description: 'List all jobs saved by the current user',
+        tags: ['Jobs'],
+        security: [{ bearerAuth: [] }],
+        response: {
+          200: {
+            type: 'object',
+            properties: {
+              success: { type: 'boolean' },
+              data: {
+                type: 'array',
+                items: { type: 'object' },
+              },
+            },
+          },
+        },
+      },
       preHandler: fastify.authenticate,
     },
     async (request, reply) => {
@@ -35,6 +52,34 @@ const jobsRoutes: FastifyPluginAsync = async (fastify) => {
   fastify.post(
     '/',
     {
+      schema: {
+        description: 'Create a new job listing (Recruiter or Admin only)',
+        tags: ['Jobs'],
+        security: [{ bearerAuth: [] }],
+        body: {
+          type: 'object',
+          required: ['title', 'company', 'description'],
+          properties: {
+            title: { type: 'string', maxLength: 200 },
+            company: { type: 'string', maxLength: 200 },
+            location: { type: 'string', maxLength: 200 },
+            description: { type: 'string' },
+            requirements: { type: 'string' },
+            salary: { type: 'string' },
+            type: { type: 'string' },
+            remote: { type: 'boolean' },
+          },
+        },
+        response: {
+          201: {
+            type: 'object',
+            properties: {
+              success: { type: 'boolean' },
+              data: { type: 'object' },
+            },
+          },
+        },
+      },
       preHandler: fastify.authenticate,
     },
     async (request, reply) => {
@@ -63,7 +108,35 @@ const jobsRoutes: FastifyPluginAsync = async (fastify) => {
   );
 
   // ─── GET /api/v1/jobs ───────────────────────────────────────
-  fastify.get('/', async (request, reply) => {
+  fastify.get('/', {
+    schema: {
+      description: 'Search and list job postings with optional filters',
+      tags: ['Jobs'],
+      querystring: {
+        type: 'object',
+        properties: {
+          q: { type: 'string' },
+          location: { type: 'string' },
+          type: { type: 'string' },
+          remote: { type: 'string' },
+          page: { type: 'string' },
+          limit: { type: 'string' },
+        },
+      },
+      response: {
+        200: {
+          type: 'object',
+          properties: {
+            success: { type: 'boolean' },
+            data: {
+              type: 'array',
+              items: { type: 'object' },
+            },
+          },
+        },
+      },
+    },
+  }, async (request, reply) => {
     const queryResult = jobQuerySchema.safeParse(request.query);
     if (!queryResult.success) {
       throw new ValidationError(
@@ -81,6 +154,28 @@ const jobsRoutes: FastifyPluginAsync = async (fastify) => {
   // ─── GET /api/v1/jobs/:id ───────────────────────────────────
   fastify.get<{ Params: { id: string } }>(
     '/:id',
+    {
+      schema: {
+        description: 'Get a single job posting by ID',
+        tags: ['Jobs'],
+        params: {
+          type: 'object',
+          required: ['id'],
+          properties: {
+            id: { type: 'string', format: 'uuid' },
+          },
+        },
+        response: {
+          200: {
+            type: 'object',
+            properties: {
+              success: { type: 'boolean' },
+              data: { type: 'object' },
+            },
+          },
+        },
+      },
+    },
     async (request, reply) => {
       const data = await jobsService.getJobById(
         request.params.id
@@ -93,6 +188,39 @@ const jobsRoutes: FastifyPluginAsync = async (fastify) => {
   fastify.patch<{ Params: { id: string } }>(
     '/:id',
     {
+      schema: {
+        description: 'Update a job listing (owner Recruiter or Admin only)',
+        tags: ['Jobs'],
+        security: [{ bearerAuth: [] }],
+        params: {
+          type: 'object',
+          required: ['id'],
+          properties: {
+            id: { type: 'string', format: 'uuid' },
+          },
+        },
+        body: {
+          type: 'object',
+          properties: {
+            title: { type: 'string', maxLength: 200 },
+            description: { type: 'string' },
+            requirements: { type: 'string' },
+            location: { type: 'string', maxLength: 200 },
+            salary: { type: 'string' },
+            type: { type: 'string' },
+            remote: { type: 'boolean' },
+          },
+        },
+        response: {
+          200: {
+            type: 'object',
+            properties: {
+              success: { type: 'boolean' },
+              data: { type: 'object' },
+            },
+          },
+        },
+      },
       preHandler: fastify.authenticate,
     },
     async (request, reply) => {
@@ -124,6 +252,27 @@ const jobsRoutes: FastifyPluginAsync = async (fastify) => {
   fastify.delete<{ Params: { id: string } }>(
     '/:id',
     {
+      schema: {
+        description: 'Archive a job listing (owner Recruiter or Admin only)',
+        tags: ['Jobs'],
+        security: [{ bearerAuth: [] }],
+        params: {
+          type: 'object',
+          required: ['id'],
+          properties: {
+            id: { type: 'string', format: 'uuid' },
+          },
+        },
+        response: {
+          200: {
+            type: 'object',
+            properties: {
+              success: { type: 'boolean' },
+              data: { type: 'object' },
+            },
+          },
+        },
+      },
       preHandler: fastify.authenticate,
     },
     async (request, reply) => {
@@ -146,6 +295,34 @@ const jobsRoutes: FastifyPluginAsync = async (fastify) => {
   fastify.post<{ Params: { id: string } }>(
     '/:id/apply',
     {
+      schema: {
+        description: 'Apply to a job listing',
+        tags: ['Jobs'],
+        security: [{ bearerAuth: [] }],
+        params: {
+          type: 'object',
+          required: ['id'],
+          properties: {
+            id: { type: 'string', format: 'uuid' },
+          },
+        },
+        body: {
+          type: 'object',
+          properties: {
+            coverLetter: { type: 'string', maxLength: 5000 },
+            resumeUrl: { type: 'string', format: 'uri' },
+          },
+        },
+        response: {
+          201: {
+            type: 'object',
+            properties: {
+              success: { type: 'boolean' },
+              data: { type: 'object' },
+            },
+          },
+        },
+      },
       preHandler: fastify.authenticate,
     },
     async (request, reply) => {
@@ -170,6 +347,30 @@ const jobsRoutes: FastifyPluginAsync = async (fastify) => {
   fastify.get<{ Params: { id: string } }>(
     '/:id/applications',
     {
+      schema: {
+        description: 'List applications for a job (job owner only)',
+        tags: ['Jobs'],
+        security: [{ bearerAuth: [] }],
+        params: {
+          type: 'object',
+          required: ['id'],
+          properties: {
+            id: { type: 'string', format: 'uuid' },
+          },
+        },
+        response: {
+          200: {
+            type: 'object',
+            properties: {
+              success: { type: 'boolean' },
+              data: {
+                type: 'array',
+                items: { type: 'object' },
+              },
+            },
+          },
+        },
+      },
       preHandler: fastify.authenticate,
     },
     async (request, reply) => {
@@ -187,6 +388,28 @@ const jobsRoutes: FastifyPluginAsync = async (fastify) => {
   }>(
     '/:jobId/applications/:appId',
     {
+      schema: {
+        description: 'Withdraw an application (applicant only)',
+        tags: ['Jobs'],
+        security: [{ bearerAuth: [] }],
+        params: {
+          type: 'object',
+          required: ['jobId', 'appId'],
+          properties: {
+            jobId: { type: 'string', format: 'uuid' },
+            appId: { type: 'string', format: 'uuid' },
+          },
+        },
+        response: {
+          200: {
+            type: 'object',
+            properties: {
+              success: { type: 'boolean' },
+              data: { type: 'object' },
+            },
+          },
+        },
+      },
       preHandler: fastify.authenticate,
     },
     async (request, reply) => {
@@ -203,6 +426,34 @@ const jobsRoutes: FastifyPluginAsync = async (fastify) => {
   fastify.post<{ Params: { id: string } }>(
     '/:id/save',
     {
+      schema: {
+        description: 'Save a job to the current user\'s saved jobs list',
+        tags: ['Jobs'],
+        security: [{ bearerAuth: [] }],
+        params: {
+          type: 'object',
+          required: ['id'],
+          properties: {
+            id: { type: 'string', format: 'uuid' },
+          },
+        },
+        response: {
+          200: {
+            type: 'object',
+            properties: {
+              success: { type: 'boolean' },
+              data: { type: 'object' },
+            },
+          },
+          201: {
+            type: 'object',
+            properties: {
+              success: { type: 'boolean' },
+              data: { type: 'object' },
+            },
+          },
+        },
+      },
       preHandler: fastify.authenticate,
     },
     async (request, reply) => {
@@ -220,6 +471,27 @@ const jobsRoutes: FastifyPluginAsync = async (fastify) => {
   fastify.delete<{ Params: { id: string } }>(
     '/:id/save',
     {
+      schema: {
+        description: 'Remove a job from the current user\'s saved jobs list',
+        tags: ['Jobs'],
+        security: [{ bearerAuth: [] }],
+        params: {
+          type: 'object',
+          required: ['id'],
+          properties: {
+            id: { type: 'string', format: 'uuid' },
+          },
+        },
+        response: {
+          200: {
+            type: 'object',
+            properties: {
+              success: { type: 'boolean' },
+              data: { type: 'object' },
+            },
+          },
+        },
+      },
       preHandler: fastify.authenticate,
     },
     async (request, reply) => {

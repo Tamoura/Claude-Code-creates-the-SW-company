@@ -24,6 +24,35 @@ const authRoutes: FastifyPluginAsync = async (fastify) => {
 
   // POST /api/v1/auth/register
   fastify.post('/register', {
+    schema: {
+      description: 'Register a new user account',
+      tags: ['Auth'],
+      body: {
+        type: 'object',
+        required: ['email', 'password', 'displayName'],
+        properties: {
+          email: { type: 'string', format: 'email' },
+          password: { type: 'string', minLength: 8 },
+          displayName: { type: 'string', minLength: 2, maxLength: 100 },
+        },
+      },
+      response: {
+        201: {
+          type: 'object',
+          properties: {
+            success: { type: 'boolean' },
+            data: {
+              type: 'object',
+              properties: {
+                userId: { type: 'string' },
+                email: { type: 'string' },
+                message: { type: 'string' },
+              },
+            },
+          },
+        },
+      },
+    },
     config: {
       rateLimit: {
         max: 3,
@@ -45,6 +74,33 @@ const authRoutes: FastifyPluginAsync = async (fastify) => {
 
   // POST /api/v1/auth/login
   fastify.post('/login', {
+    schema: {
+      description: 'Authenticate with email and password',
+      tags: ['Auth'],
+      body: {
+        type: 'object',
+        required: ['email', 'password'],
+        properties: {
+          email: { type: 'string', format: 'email' },
+          password: { type: 'string' },
+        },
+      },
+      response: {
+        200: {
+          type: 'object',
+          properties: {
+            success: { type: 'boolean' },
+            data: {
+              type: 'object',
+              properties: {
+                accessToken: { type: 'string' },
+                user: { type: 'object' },
+              },
+            },
+          },
+        },
+      },
+    },
     config: {
       rateLimit: {
         // Higher limit in dev/test to allow E2E test suites (each test does a fresh login)
@@ -102,9 +158,26 @@ const authRoutes: FastifyPluginAsync = async (fastify) => {
     },
     // Allow empty or missing body — the refresh token comes from the httpOnly cookie
     schema: {
+      description: 'Refresh the access token using the httpOnly refresh token cookie',
+      tags: ['Auth'],
       body: {
         type: 'object',
         additionalProperties: true,
+      },
+      response: {
+        200: {
+          type: 'object',
+          properties: {
+            success: { type: 'boolean' },
+            data: {
+              type: 'object',
+              properties: {
+                accessToken: { type: 'string' },
+                user: { type: 'object' },
+              },
+            },
+          },
+        },
       },
     },
   }, async (request, reply) => {
@@ -154,7 +227,28 @@ const authRoutes: FastifyPluginAsync = async (fastify) => {
   // POST /api/v1/auth/logout
   fastify.post(
     '/logout',
-    { preHandler: [fastify.authenticate] },
+    {
+      schema: {
+        description: 'Logout and revoke the current access token immediately',
+        tags: ['Auth'],
+        security: [{ bearerAuth: [] }],
+        response: {
+          200: {
+            type: 'object',
+            properties: {
+              success: { type: 'boolean' },
+              data: {
+                type: 'object',
+                properties: {
+                  message: { type: 'string' },
+                },
+              },
+            },
+          },
+        },
+      },
+      preHandler: [fastify.authenticate],
+    },
     async (request, reply) => {
       const refreshToken =
         (request.cookies as Record<string, string | undefined>)
@@ -165,6 +259,14 @@ const authRoutes: FastifyPluginAsync = async (fastify) => {
 
       if (refreshToken) {
         await authService.logout(refreshToken);
+      }
+
+      // Blacklist the current access token so it cannot be reused
+      // during the remainder of its 15-minute lifetime.
+      const jti = (request.user as { jti?: string }).jti;
+      if (jti) {
+        // TTL matches the access token max lifetime (15 minutes = 900 s).
+        await fastify.redis.set(`blacklist:${jti}`, '1', { EX: 900 });
       }
 
       reply.clearCookie('refreshToken', { path: '/' });
@@ -180,6 +282,25 @@ const authRoutes: FastifyPluginAsync = async (fastify) => {
   fastify.delete(
     '/account',
     {
+      schema: {
+        description: 'Permanently delete the current user account and all data (GDPR)',
+        tags: ['Auth'],
+        security: [{ bearerAuth: [] }],
+        response: {
+          200: {
+            type: 'object',
+            properties: {
+              success: { type: 'boolean' },
+              data: {
+                type: 'object',
+                properties: {
+                  message: { type: 'string' },
+                },
+              },
+            },
+          },
+        },
+      },
       preHandler: [fastify.authenticate],
       config: {
         rateLimit: {
@@ -203,6 +324,20 @@ const authRoutes: FastifyPluginAsync = async (fastify) => {
   fastify.get(
     '/export',
     {
+      schema: {
+        description: 'Export all personal data for the current user (GDPR Article 20)',
+        tags: ['Auth'],
+        security: [{ bearerAuth: [] }],
+        response: {
+          200: {
+            type: 'object',
+            properties: {
+              success: { type: 'boolean' },
+              data: { type: 'object' },
+            },
+          },
+        },
+      },
       preHandler: [fastify.authenticate],
       config: {
         rateLimit: {
@@ -223,6 +358,33 @@ const authRoutes: FastifyPluginAsync = async (fastify) => {
   fastify.get<{ Params: { token: string } }>(
     '/verify-email/:token',
     {
+      schema: {
+        description: 'Verify email address via token sent in the verification email',
+        tags: ['Auth'],
+        params: {
+          type: 'object',
+          required: ['token'],
+          properties: {
+            token: { type: 'string' },
+          },
+        },
+        response: {
+          200: {
+            type: 'object',
+            properties: {
+              success: { type: 'boolean' },
+              data: {
+                type: 'object',
+                properties: {
+                  accessToken: { type: 'string' },
+                  message: { type: 'string' },
+                  redirectTo: { type: 'string' },
+                },
+              },
+            },
+          },
+        },
+      },
       config: {
         rateLimit: {
           max: 5,
