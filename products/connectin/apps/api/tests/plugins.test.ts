@@ -260,13 +260,15 @@ describe('rate-limiter plugin', () => {
 });
 
 // ---------------------------------------------------------------------------
-// redis.ts (in-memory stub)
+// redis.ts — dual-mode (RISK-002)
 // ---------------------------------------------------------------------------
 
-describe('redis plugin (in-memory stub)', () => {
+describe('redis plugin (in-memory fallback)', () => {
   let app: FastifyInstance;
 
   beforeAll(async () => {
+    // No REDIS_URL → falls back to in-memory
+    delete process.env.REDIS_URL;
     app = await buildIsolated(async (a) => {
       await a.register(redisPlugin);
     });
@@ -289,15 +291,44 @@ describe('redis plugin (in-memory stub)', () => {
     expect(val).toBe('1');
   });
 
+  it('set() overwrites existing key', async () => {
+    await app.redis.set('overwrite-key', 'first');
+    await app.redis.set('overwrite-key', 'second');
+    const val = await app.redis.get('overwrite-key');
+    expect(val).toBe('second');
+  });
+
   it('get() returns null for an expired key', async () => {
     await app.redis.set('expiring', '1', { EX: 1 });
-
-    // Advance real time past the 1-second TTL
     await new Promise((resolve) => setTimeout(resolve, 1100));
-
     const val = await app.redis.get('expiring');
     expect(val).toBeNull();
   }, 5000);
+
+  it('uses default TTL when EX is not specified', async () => {
+    await app.redis.set('default-ttl', '1');
+    // Should still exist immediately
+    const val = await app.redis.get('default-ttl');
+    expect(val).toBe('1');
+  });
+});
+
+describe('redis plugin (production validation)', () => {
+  it('throws if NODE_ENV=production and no REDIS_URL', async () => {
+    const prev = process.env.NODE_ENV;
+    const prevRedis = process.env.REDIS_URL;
+    process.env.NODE_ENV = 'production';
+    delete process.env.REDIS_URL;
+
+    await expect(
+      buildIsolated(async (a) => {
+        await a.register(redisPlugin);
+      })
+    ).rejects.toThrow(/REDIS_URL/);
+
+    process.env.NODE_ENV = prev;
+    if (prevRedis) process.env.REDIS_URL = prevRedis;
+  });
 });
 
 // ---------------------------------------------------------------------------
