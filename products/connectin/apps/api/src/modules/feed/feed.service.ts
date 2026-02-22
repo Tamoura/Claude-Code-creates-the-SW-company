@@ -184,9 +184,14 @@ export class FeedService {
       }),
     ]);
 
+    const updated = await this.prisma.post.findUnique({
+      where: { id: postId },
+      select: { likeCount: true },
+    });
+
     return {
       liked: true,
-      likeCount: post.likeCount + 1,
+      likeCount: updated!.likeCount,
     };
   }
 
@@ -225,9 +230,14 @@ export class FeedService {
       }),
     ]);
 
+    const updated = await this.prisma.post.findUnique({
+      where: { id: postId },
+      select: { likeCount: true },
+    });
+
     return {
       liked: false,
-      likeCount: Math.max(0, post.likeCount - 1),
+      likeCount: Math.max(0, updated!.likeCount),
     };
   }
 
