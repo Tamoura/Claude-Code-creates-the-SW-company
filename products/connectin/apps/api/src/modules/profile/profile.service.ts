@@ -40,13 +40,15 @@ export class ProfileService {
    *
    * Visibility: profiles are publicly viewable by any authenticated
    * user (by design -- this is a professional networking platform,
-   * similar to LinkedIn). Sensitive fields such as email are stripped
-   * when the requester is not the profile owner.
+   * similar to LinkedIn). Sensitive fields such as email are only
+   * fetched from the DB when the requester is the profile owner.
    */
   async getProfileById(
     profileUserId: string,
     requesterId: string
   ) {
+    const isOwner = profileUserId === requesterId;
+
     const profile = await this.prisma.profile.findUnique({
       where: { userId: profileUserId },
       include: {
@@ -62,7 +64,8 @@ export class ProfileService {
         user: {
           select: {
             displayName: true,
-            email: true,
+            // Only fetch PII fields when the requester is the owner
+            ...(isOwner && { email: true }),
           },
         },
       },
@@ -74,8 +77,6 @@ export class ProfileService {
 
     const formatted = this.formatProfile(profile);
 
-    // Strip sensitive fields for non-owners
-    const isOwner = profileUserId === requesterId;
     if (!isOwner) {
       return {
         ...formatted,
@@ -86,7 +87,7 @@ export class ProfileService {
 
     return {
       ...formatted,
-      email: profile.user.email,
+      email: (profile.user as { displayName: string; email?: string }).email,
     };
   }
 

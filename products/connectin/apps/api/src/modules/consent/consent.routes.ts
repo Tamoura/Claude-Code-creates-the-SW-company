@@ -19,6 +19,7 @@ const consentRoutes: FastifyPluginAsync = async (fastify) => {
       security: [{ bearerAuth: [] }],
       body: {
         type: 'object',
+        additionalProperties: false,
         required: ['type', 'granted'],
         properties: {
           type: { type: 'string' },
@@ -59,12 +60,19 @@ const consentRoutes: FastifyPluginAsync = async (fastify) => {
     return sendSuccess(reply, data, 201);
   });
 
-  // GET /api/v1/consent — list user consents
+  // GET /api/v1/consent — list user consents (cursor-paginated)
   fastify.get('/', {
     schema: {
       description: 'List all consent records for the current user',
       tags: ['Consent'],
       security: [{ bearerAuth: [] }],
+      querystring: {
+        type: 'object',
+        properties: {
+          cursor: { type: 'string' },
+          limit: { type: 'string' },
+        },
+      },
       response: {
         200: {
           type: 'object',
@@ -89,11 +97,27 @@ const consentRoutes: FastifyPluginAsync = async (fastify) => {
         },
       },
     },
+    config: {
+      rateLimit: {
+        max: 60,
+        timeWindow: '1 minute',
+      },
+    },
   }, async (request, reply) => {
-    const data = await consentService.listConsents(
-      request.user.sub
+    const query = request.query as {
+      cursor?: string;
+      limit?: string;
+    };
+
+    const limit = query.limit
+      ? Math.min(50, Math.max(1, parseInt(query.limit, 10) || 20))
+      : 20;
+
+    const result = await consentService.listConsents(
+      request.user.sub,
+      { cursor: query.cursor, limit }
     );
-    return sendSuccess(reply, data);
+    return sendSuccess(reply, result.data, 200, result.meta);
   });
 };
 

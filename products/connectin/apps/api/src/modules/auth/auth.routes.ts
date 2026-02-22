@@ -31,6 +31,7 @@ const authRoutes: FastifyPluginAsync = async (fastify) => {
       tags: ['Auth'],
       body: {
         type: 'object',
+        additionalProperties: false,
         required: ['email', 'password', 'displayName'],
         properties: {
           email: { type: 'string', format: 'email' },
@@ -83,6 +84,7 @@ const authRoutes: FastifyPluginAsync = async (fastify) => {
       tags: ['Auth'],
       body: {
         type: 'object',
+        additionalProperties: false,
         required: ['email', 'password'],
         properties: {
           email: { type: 'string', format: 'email' },

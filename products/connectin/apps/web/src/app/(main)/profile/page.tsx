@@ -49,7 +49,12 @@ export default function ProfilePage() {
 
   if (isLoading) {
     return (
-      <div className="flex items-center justify-center py-16">
+      <div
+        role="status"
+        aria-busy="true"
+        aria-label={t("loading")}
+        className="flex items-center justify-center py-16"
+      >
         <div className="h-8 w-8 animate-spin rounded-full border-4 border-primary-600 border-t-transparent" />
       </div>
     );
@@ -139,9 +144,16 @@ export default function ProfilePage() {
                   {profile.completenessScore}%
                 </span>
               </div>
-              <div className="h-2 w-full overflow-hidden rounded-full bg-neutral-200">
+              <div
+                role="progressbar"
+                aria-valuenow={profile.completenessScore}
+                aria-valuemin={0}
+                aria-valuemax={100}
+                aria-label={t("profile.completeness")}
+                className="h-2 w-full overflow-hidden rounded-full bg-neutral-200 dark:bg-neutral-700"
+              >
                 <div
-                  className="h-full rounded-full bg-primary-600 transition-all"
+                  className="h-full bg-[#0B6E7F] transition-all duration-300"
                   style={{ width: `${profile.completenessScore}%` }}
                 />
               </div>

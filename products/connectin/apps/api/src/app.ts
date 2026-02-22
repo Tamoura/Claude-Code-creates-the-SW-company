@@ -33,13 +33,20 @@ export async function buildApp(
   loadConfig();
 
   /* istanbul ignore next */
+  const isTest = process.env.NODE_ENV === 'test';
+  const isProd = process.env.NODE_ENV === 'production';
   const app = Fastify({
-    logger:
-      process.env.NODE_ENV === 'test'
-        ? false
+    logger: isTest
+      ? false
+      : isProd
+        ? {
+            // pino outputs structured JSON by default — no transport needed
+            level: 'info',
+          }
         : {
-            level:
-              process.env.LOG_LEVEL || 'info',
+            // Development: human-readable output via pino-pretty if available,
+            // otherwise fall back to plain JSON at the configured level.
+            level: process.env.LOG_LEVEL ?? 'info',
           },
   });
 

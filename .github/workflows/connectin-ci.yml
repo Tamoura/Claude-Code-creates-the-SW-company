@@ -415,12 +415,13 @@ jobs:
 
           FAILED=false
 
-          # All core jobs must pass or be skipped — E2E is now a required gate
+          # All core jobs must pass or be skipped — E2E and security are required gates
           for job_result in \
             "${{ needs.lint-and-typecheck.result }}" \
             "${{ needs.test-api.result }}" \
             "${{ needs.test-web.result }}" \
             "${{ needs.test-e2e.result }}" \
+            "${{ needs.security.result }}" \
             "${{ needs.build.result }}"; do
             if [ "$job_result" != "success" ] && [ "$job_result" != "skipped" ]; then
               FAILED=true
@@ -430,10 +431,6 @@ jobs:
           if [ "$FAILED" = "true" ]; then
             echo "Quality gate FAILED: one or more core jobs did not succeed"
             exit 1
-          fi
-
-          if [ "${{ needs.security.result }}" != "success" ]; then
-            echo "::warning::Security audit reported issues - review recommended"
           fi
 
           echo "All quality gates passed for ConnectIn (unit + E2E + lint + security + build)"

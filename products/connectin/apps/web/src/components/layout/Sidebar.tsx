@@ -63,7 +63,7 @@ export function Sidebar() {
               {user?.displayName || "User"}
             </p>
             <p className="text-xs text-[#64748B] dark:text-[#94A3B8] truncate">
-              Professional
+              {t("nav.roleLabel")}
             </p>
           </div>
         </Link>
@@ -135,7 +135,7 @@ export function Sidebar() {
           )}
         >
           <LogOut className="h-5 w-5" aria-hidden="true" />
-          <span>Sign Out</span>
+          <span>{t("nav.signOut")}</span>
         </button>
 
         <div className="text-xs text-[#94A3B8] dark:text-[#64748B] space-y-1">

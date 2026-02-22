@@ -410,21 +410,62 @@ export class JobsService {
     return { saved: false };
   }
 
-  // ─── List Saved Jobs ───────────────────────────────────────
+  // ─── List Saved Jobs (paginated) ───────────────────────────
 
-  async listSavedJobs(userId: string) {
+  async listSavedJobs(
+    userId: string,
+    options?: { cursor?: string; limit?: number }
+  ) {
+    const limit = Math.min(
+      50,
+      Math.max(1, options?.limit ?? 20)
+    );
+
+    const cursorData = options?.cursor
+      ? decodeCursor(options.cursor)
+      : null;
+
+    const where: {
+      userId: string;
+      savedAt?: { lt: Date };
+    } = { userId };
+
+    if (cursorData) {
+      where.savedAt = { lt: cursorData.createdAt };
+    }
+
     const saved = await this.prisma.savedJob.findMany({
-      where: { userId },
+      where,
+      take: limit + 1,
       include: {
         job: true,
       },
-      orderBy: { savedAt: 'desc' },
+      orderBy: [{ savedAt: 'desc' }, { id: 'desc' }],
     });
 
-    return saved.map((s) => ({
-      savedAt: s.savedAt,
-      job: this.formatJob(s.job),
-    }));
+    const hasMore = saved.length > limit;
+    const resultSaved = hasMore ? saved.slice(0, limit) : saved;
+
+    const lastItem =
+      resultSaved.length > 0
+        ? resultSaved[resultSaved.length - 1]
+        : null;
+
+    const meta: CursorPaginationMeta = {
+      cursor: lastItem
+        ? encodeCursor(lastItem.savedAt, lastItem.id)
+        : null,
+      hasMore,
+      count: resultSaved.length,
+    };
+
+    return {
+      data: resultSaved.map((s) => ({
+        savedAt: s.savedAt,
+        job: this.formatJob(s.job),
+      })),
+      meta,
+    };
   }
 
   // ─── Format Helper ─────────────────────────────────────────

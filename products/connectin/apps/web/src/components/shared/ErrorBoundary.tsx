@@ -29,7 +29,7 @@ export class ErrorBoundary extends Component<Props, State> {
       }
       return (
         <div className="flex min-h-[400px] items-center justify-center">
-          <div className="rounded-xl bg-white p-8 text-center shadow-sm">
+          <div role="alert" className="rounded-xl bg-white p-8 text-center shadow-sm">
             <h2 className="text-lg font-semibold text-neutral-900">
               Something went wrong
             </h2>

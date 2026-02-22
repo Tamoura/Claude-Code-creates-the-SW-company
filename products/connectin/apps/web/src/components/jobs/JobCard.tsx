@@ -1,5 +1,6 @@
 "use client";
 
+import { useTranslation } from "react-i18next";
 import type { Job } from "@/types";
 
 interface JobCardProps {
@@ -30,6 +31,7 @@ const EXPERIENCE_LABELS: Record<Job["experienceLevel"], string> = {
  *   <JobCard job={job} onApply={(id) => openApplyModal(id)} onSave={(id, saved) => ...} />
  */
 export function JobCard({ job, onApply, onSave }: JobCardProps) {
+  const { t } = useTranslation("common");
   const {
     id,
     title,
@@ -105,7 +107,7 @@ export function JobCard({ job, onApply, onSave }: JobCardProps) {
       <div className="mt-4 flex items-center gap-2">
         {isApplied ? (
           <span className="rounded-full bg-green-50 dark:bg-green-900/30 px-3 py-1 text-xs font-medium text-green-700 dark:text-green-400">
-            Applied
+            {t("jobs.applied")}
           </span>
         ) : (
           <button
@@ -115,9 +117,9 @@ export function JobCard({ job, onApply, onSave }: JobCardProps) {
               onApply(id);
             }}
             className="rounded-full bg-primary-600 px-4 py-1.5 text-xs font-medium text-white hover:-translate-y-0.5 hover:shadow-apple-md active:scale-[0.97] transition-all duration-[180ms]"
-            aria-label={`Apply to ${title}`}
+            aria-label={`${t("jobs.apply")} ${title}`}
           >
-            Apply
+            {t("jobs.apply")}
           </button>
         )}
 
@@ -129,9 +131,9 @@ export function JobCard({ job, onApply, onSave }: JobCardProps) {
               onSave(id, true);
             }}
             className="rounded-full border border-neutral-300 dark:border-neutral-600 px-4 py-1.5 text-xs font-medium text-neutral-600 dark:text-neutral-300 hover:-translate-y-0.5 transition-all duration-[180ms]"
-            aria-label={`Unsave ${title}`}
+            aria-label={`${t("jobs.unsave")} ${title}`}
           >
-            Unsave
+            {t("jobs.unsave")}
           </button>
         ) : (
           <button
@@ -141,9 +143,9 @@ export function JobCard({ job, onApply, onSave }: JobCardProps) {
               onSave(id, false);
             }}
             className="rounded-full border border-neutral-300 dark:border-neutral-600 px-4 py-1.5 text-xs font-medium text-neutral-600 dark:text-neutral-300 hover:-translate-y-0.5 transition-all duration-[180ms]"
-            aria-label={`Save ${title}`}
+            aria-label={`${t("jobs.save")} ${title}`}
           >
-            Save
+            {t("jobs.save")}
           </button>
         )}
       </div>

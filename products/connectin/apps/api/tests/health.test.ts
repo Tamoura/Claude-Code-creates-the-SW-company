@@ -21,6 +21,7 @@ describe('Health Check', () => {
     expect(typeof body.data.uptime).toBe('number');
     expect(body.data.uptime).toBeGreaterThanOrEqual(0);
     expect(body.data.version).toBeDefined();
-    expect(body.data.redis).toBe('not_configured');
+    // Redis now returns real connection status: 'ok' when connected, 'error: ...' when unavailable
+    expect(body.data.redis).toMatch(/^(ok|error:.+)$/);
   });
 });

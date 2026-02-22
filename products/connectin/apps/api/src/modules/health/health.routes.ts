@@ -63,11 +63,19 @@ const healthRoutes: FastifyPluginAsync = async (fastify) => {
         dbStatus = 'error';
       }
 
+      let redisStatus = 'ok';
+      try {
+        await fastify.redis.get('__ping__');
+      } catch (err) {
+        const message = err instanceof Error ? err.message : String(err);
+        redisStatus = `error: ${message}`;
+      }
+
       const uptimeSeconds = Math.floor(
         (Date.now() - startTime) / 1000
       );
 
-      const isHealthy = dbStatus === 'connected';
+      const isHealthy = dbStatus === 'connected' && redisStatus === 'ok';
       const statusCode = isHealthy ? 200 : 503;
 
       return sendSuccess(reply, {
@@ -76,7 +84,7 @@ const healthRoutes: FastifyPluginAsync = async (fastify) => {
         uptime: uptimeSeconds,
         version: process.env.npm_package_version || '0.1.0',
         database: dbStatus,
-        redis: 'not_configured',
+        redis: redisStatus,
       }, statusCode);
     }
   );

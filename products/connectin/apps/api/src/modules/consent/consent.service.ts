@@ -1,5 +1,10 @@
 import { PrismaClient, ConsentType } from '@prisma/client';
 import { GrantConsentInput } from './consent.schemas';
+import {
+  decodeCursor,
+  encodeCursor,
+  CursorPaginationMeta,
+} from '../../lib/pagination';
 
 export class ConsentService {
   constructor(private readonly prisma: PrismaClient) {}
@@ -46,10 +51,29 @@ export class ConsentService {
     };
   }
 
-  async listConsents(userId: string) {
+  async listConsents(
+    userId: string,
+    options?: { cursor?: string; limit?: number }
+  ) {
+    const limit = Math.min(
+      50,
+      Math.max(1, options?.limit ?? 20)
+    );
+
+    const cursorData = options?.cursor
+      ? decodeCursor(options.cursor)
+      : null;
+
+    const where: { userId: string; createdAt?: { lt: Date } } = { userId };
+
+    if (cursorData) {
+      where.createdAt = { lt: cursorData.createdAt };
+    }
+
     const consents = await this.prisma.consent.findMany({
-      where: { userId },
-      orderBy: { createdAt: 'asc' },
+      where,
+      take: limit + 1,
+      orderBy: [{ createdAt: 'asc' }, { id: 'asc' }],
       select: {
         id: true,
         type: true,
@@ -61,6 +85,24 @@ export class ConsentService {
       },
     });
 
-    return consents;
+    const hasMore = consents.length > limit;
+    const resultConsents = hasMore
+      ? consents.slice(0, limit)
+      : consents;
+
+    const lastItem =
+      resultConsents.length > 0
+        ? resultConsents[resultConsents.length - 1]
+        : null;
+
+    const meta: CursorPaginationMeta = {
+      cursor: lastItem
+        ? encodeCursor(lastItem.createdAt, lastItem.id)
+        : null,
+      hasMore,
+      count: resultConsents.length,
+    };
+
+    return { data: resultConsents, meta };
   }
 }
