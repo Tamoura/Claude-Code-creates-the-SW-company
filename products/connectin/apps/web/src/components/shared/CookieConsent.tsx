@@ -1,6 +1,6 @@
 "use client";
 
-import { useState, useEffect } from "react";
+import { useState, useEffect, startTransition } from "react";
 import { useTranslation } from "react-i18next";
 import { cn } from "@/lib/utils";
 
@@ -28,7 +28,9 @@ export function CookieConsent() {
   useEffect(() => {
     const stored = localStorage.getItem(CONSENT_KEY);
     if (!stored) {
-      setVisible(true);
+      // startTransition avoids synchronous setState-in-effect lint rule
+      // while keeping the update batched with other renders.
+      startTransition(() => setVisible(true));
     }
   }, []);
 

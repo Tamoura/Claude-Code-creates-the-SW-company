@@ -406,7 +406,7 @@ describe("useFeed", () => {
         await result.current.toggleLike("post-1", false);
       });
 
-      expect(mockPost).toHaveBeenCalledWith("/feed/posts/post-1/like");
+      expect(mockPost).toHaveBeenCalledWith("/feed/posts/post-1/like", {});
     });
 
     it("calls DELETE /feed/posts/:id/like when unliking", async () => {
