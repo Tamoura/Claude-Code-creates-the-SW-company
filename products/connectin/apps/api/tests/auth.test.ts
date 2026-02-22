@@ -803,6 +803,228 @@ describe('Auth Module', () => {
     });
   });
 
+  describe('GDPR Right to Restrict Processing (Art 18)', () => {
+    it('POST /restrict-processing sets restricted flag and timestamp', async () => {
+      const app = await getApp();
+      const db = getPrisma();
+      const user = await createTestUser(app);
+
+      const res = await app.inject({
+        method: 'POST',
+        url: '/api/v1/auth/restrict-processing',
+        headers: authHeaders(user.accessToken),
+      });
+
+      expect(res.statusCode).toBe(200);
+      const body = JSON.parse(res.body);
+      expect(body.data.restricted).toBe(true);
+      expect(body.data.timestamp).toBeDefined();
+
+      const dbUser = await db.user.findUnique({ where: { id: user.id } });
+      expect(dbUser!.processingRestricted).toBe(true);
+      expect(dbUser!.processingRestrictedAt).not.toBeNull();
+    });
+
+    it('DELETE /restrict-processing clears restricted flag', async () => {
+      const app = await getApp();
+      const db = getPrisma();
+      const user = await createTestUser(app);
+
+      // First restrict
+      await app.inject({
+        method: 'POST',
+        url: '/api/v1/auth/restrict-processing',
+        headers: authHeaders(user.accessToken),
+      });
+
+      // Then lift
+      const res = await app.inject({
+        method: 'DELETE',
+        url: '/api/v1/auth/restrict-processing',
+        headers: authHeaders(user.accessToken),
+      });
+
+      expect(res.statusCode).toBe(200);
+      const body = JSON.parse(res.body);
+      expect(body.data.restricted).toBe(false);
+
+      const dbUser = await db.user.findUnique({ where: { id: user.id } });
+      expect(dbUser!.processingRestricted).toBe(false);
+      expect(dbUser!.processingRestrictedAt).toBeNull();
+    });
+
+    it('POST /restrict-processing rejects if already restricted', async () => {
+      const app = await getApp();
+      const user = await createTestUser(app);
+
+      await app.inject({
+        method: 'POST',
+        url: '/api/v1/auth/restrict-processing',
+        headers: authHeaders(user.accessToken),
+      });
+
+      const res = await app.inject({
+        method: 'POST',
+        url: '/api/v1/auth/restrict-processing',
+        headers: authHeaders(user.accessToken),
+      });
+
+      expect(res.statusCode).toBe(409);
+    });
+
+    it('DELETE /restrict-processing rejects if not restricted', async () => {
+      const app = await getApp();
+      const user = await createTestUser(app);
+
+      const res = await app.inject({
+        method: 'DELETE',
+        url: '/api/v1/auth/restrict-processing',
+        headers: authHeaders(user.accessToken),
+      });
+
+      expect(res.statusCode).toBe(409);
+    });
+
+    it('POST /restrict-processing requires authentication', async () => {
+      const app = await getApp();
+      const res = await app.inject({
+        method: 'POST',
+        url: '/api/v1/auth/restrict-processing',
+      });
+      expect(res.statusCode).toBe(401);
+    });
+
+    it('logs security event for restrict/lift actions', async () => {
+      const app = await getApp();
+      const user = await createTestUser(app);
+
+      // Restrict — should not throw (security event logged internally)
+      const restrictRes = await app.inject({
+        method: 'POST',
+        url: '/api/v1/auth/restrict-processing',
+        headers: authHeaders(user.accessToken),
+      });
+      expect(restrictRes.statusCode).toBe(200);
+
+      // Lift — should not throw
+      const liftRes = await app.inject({
+        method: 'DELETE',
+        url: '/api/v1/auth/restrict-processing',
+        headers: authHeaders(user.accessToken),
+      });
+      expect(liftRes.statusCode).toBe(200);
+    });
+  });
+
+  describe('GDPR Right to Object (Art 21)', () => {
+    it('POST /object-to-processing sets objection flag and timestamp', async () => {
+      const app = await getApp();
+      const db = getPrisma();
+      const user = await createTestUser(app);
+
+      const res = await app.inject({
+        method: 'POST',
+        url: '/api/v1/auth/object-to-processing',
+        headers: authHeaders(user.accessToken),
+      });
+
+      expect(res.statusCode).toBe(200);
+      const body = JSON.parse(res.body);
+      expect(body.data.objection).toBe(true);
+      expect(body.data.timestamp).toBeDefined();
+
+      const dbUser = await db.user.findUnique({ where: { id: user.id } });
+      expect(dbUser!.objectionRegistered).toBe(true);
+      expect(dbUser!.objectionRegisteredAt).not.toBeNull();
+    });
+
+    it('DELETE /object-to-processing clears objection flag', async () => {
+      const app = await getApp();
+      const db = getPrisma();
+      const user = await createTestUser(app);
+
+      await app.inject({
+        method: 'POST',
+        url: '/api/v1/auth/object-to-processing',
+        headers: authHeaders(user.accessToken),
+      });
+
+      const res = await app.inject({
+        method: 'DELETE',
+        url: '/api/v1/auth/object-to-processing',
+        headers: authHeaders(user.accessToken),
+      });
+
+      expect(res.statusCode).toBe(200);
+      const body = JSON.parse(res.body);
+      expect(body.data.objection).toBe(false);
+
+      const dbUser = await db.user.findUnique({ where: { id: user.id } });
+      expect(dbUser!.objectionRegistered).toBe(false);
+      expect(dbUser!.objectionRegisteredAt).toBeNull();
+    });
+
+    it('POST /object-to-processing rejects if already registered', async () => {
+      const app = await getApp();
+      const user = await createTestUser(app);
+
+      await app.inject({
+        method: 'POST',
+        url: '/api/v1/auth/object-to-processing',
+        headers: authHeaders(user.accessToken),
+      });
+
+      const res = await app.inject({
+        method: 'POST',
+        url: '/api/v1/auth/object-to-processing',
+        headers: authHeaders(user.accessToken),
+      });
+
+      expect(res.statusCode).toBe(409);
+    });
+
+    it('DELETE /object-to-processing rejects if not registered', async () => {
+      const app = await getApp();
+      const user = await createTestUser(app);
+
+      const res = await app.inject({
+        method: 'DELETE',
+        url: '/api/v1/auth/object-to-processing',
+        headers: authHeaders(user.accessToken),
+      });
+
+      expect(res.statusCode).toBe(409);
+    });
+
+    it('POST /object-to-processing requires authentication', async () => {
+      const app = await getApp();
+      const res = await app.inject({
+        method: 'POST',
+        url: '/api/v1/auth/object-to-processing',
+      });
+      expect(res.statusCode).toBe(401);
+    });
+
+    it('logs security event for objection/withdrawal actions', async () => {
+      const app = await getApp();
+      const user = await createTestUser(app);
+
+      const objRes = await app.inject({
+        method: 'POST',
+        url: '/api/v1/auth/object-to-processing',
+        headers: authHeaders(user.accessToken),
+      });
+      expect(objRes.statusCode).toBe(200);
+
+      const withdrawRes = await app.inject({
+        method: 'DELETE',
+        url: '/api/v1/auth/object-to-processing',
+        headers: authHeaders(user.accessToken),
+      });
+      expect(withdrawRes.statusCode).toBe(200);
+    });
+  });
+
   describe('Refresh token blacklist (RISK-008)', () => {
     it('old refresh token is rejected after rotation', async () => {
       const app = await getApp();

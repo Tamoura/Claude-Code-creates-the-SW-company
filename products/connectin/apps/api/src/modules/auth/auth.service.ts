@@ -7,6 +7,7 @@ import {
   NotFoundError,
   UnauthorizedError,
   BadRequestError,
+  ConflictError,
 } from '../../lib/errors';
 import {
   AuthTokens,
@@ -623,6 +624,72 @@ export class AuthService {
       event: 'auth.account.deleted',
       userId,
     });
+  }
+
+  async restrictProcessing(userId: string) {
+    const user = await this.prisma.user.findUnique({ where: { id: userId } });
+    if (!user) throw new BadRequestError('User not found');
+    if (user.processingRestricted) {
+      throw new ConflictError('Processing is already restricted');
+    }
+
+    const now = new Date();
+    await this.prisma.user.update({
+      where: { id: userId },
+      data: { processingRestricted: true, processingRestrictedAt: now },
+    });
+
+    this.secLog.log({ event: 'auth.gdpr.processing_restricted', userId });
+    return { restricted: true, timestamp: now.toISOString() };
+  }
+
+  async liftRestriction(userId: string) {
+    const user = await this.prisma.user.findUnique({ where: { id: userId } });
+    if (!user) throw new BadRequestError('User not found');
+    if (!user.processingRestricted) {
+      throw new ConflictError('Processing is not currently restricted');
+    }
+
+    await this.prisma.user.update({
+      where: { id: userId },
+      data: { processingRestricted: false, processingRestrictedAt: null },
+    });
+
+    this.secLog.log({ event: 'auth.gdpr.processing_restriction_lifted', userId });
+    return { restricted: false, timestamp: null };
+  }
+
+  async registerObjection(userId: string) {
+    const user = await this.prisma.user.findUnique({ where: { id: userId } });
+    if (!user) throw new BadRequestError('User not found');
+    if (user.objectionRegistered) {
+      throw new ConflictError('Objection is already registered');
+    }
+
+    const now = new Date();
+    await this.prisma.user.update({
+      where: { id: userId },
+      data: { objectionRegistered: true, objectionRegisteredAt: now },
+    });
+
+    this.secLog.log({ event: 'auth.gdpr.objection_registered', userId });
+    return { objection: true, timestamp: now.toISOString() };
+  }
+
+  async withdrawObjection(userId: string) {
+    const user = await this.prisma.user.findUnique({ where: { id: userId } });
+    if (!user) throw new BadRequestError('User not found');
+    if (!user.objectionRegistered) {
+      throw new ConflictError('No objection is currently registered');
+    }
+
+    await this.prisma.user.update({
+      where: { id: userId },
+      data: { objectionRegistered: false, objectionRegisteredAt: null },
+    });
+
+    this.secLog.log({ event: 'auth.gdpr.objection_withdrawn', userId });
+    return { objection: false, timestamp: null };
   }
 
   async listSessions(
