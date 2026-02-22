@@ -76,6 +76,118 @@ async function createJob(
   return body.data;
 }
 
+describe('Salary Decimal (RISK-019)', () => {
+  it('creates a job with decimal salary values', async () => {
+    const app = await getApp();
+    const recruiter = await createRecruiter(app);
+
+    const res = await app.inject({
+      method: 'POST',
+      url: '/api/v1/jobs',
+      headers: authHeaders(recruiter.accessToken),
+      payload: {
+        title: 'Decimal Salary Job',
+        company: 'Corp',
+        workType: 'REMOTE',
+        experienceLevel: 'MID',
+        description: 'Test decimal salary.',
+        language: 'en',
+        salaryMin: 15000.50,
+        salaryMax: 25000.75,
+        salaryCurrency: 'SAR',
+      },
+    });
+
+    expect(res.statusCode).toBe(201);
+    const body = JSON.parse(res.body);
+    expect(body.data.salaryMin).toBe(15000.50);
+    expect(body.data.salaryMax).toBe(25000.75);
+  });
+
+  it('returns salary as number (not Decimal object)', async () => {
+    const app = await getApp();
+    const recruiter = await createRecruiter(app);
+
+    const res = await app.inject({
+      method: 'POST',
+      url: '/api/v1/jobs',
+      headers: authHeaders(recruiter.accessToken),
+      payload: {
+        title: 'Number Type Salary',
+        company: 'Corp',
+        workType: 'ONSITE',
+        experienceLevel: 'SENIOR',
+        description: 'Verify number return type.',
+        language: 'en',
+        salaryMin: 10000,
+        salaryMax: 20000,
+      },
+    });
+
+    expect(res.statusCode).toBe(201);
+    const body = JSON.parse(res.body);
+    expect(typeof body.data.salaryMin).toBe('number');
+    expect(typeof body.data.salaryMax).toBe('number');
+  });
+
+  it('handles null salary fields', async () => {
+    const app = await getApp();
+    const recruiter = await createRecruiter(app);
+
+    const res = await app.inject({
+      method: 'POST',
+      url: '/api/v1/jobs',
+      headers: authHeaders(recruiter.accessToken),
+      payload: {
+        title: 'No Salary Job',
+        company: 'Corp',
+        workType: 'HYBRID',
+        experienceLevel: 'ENTRY',
+        description: 'No salary specified.',
+        language: 'en',
+      },
+    });
+
+    expect(res.statusCode).toBe(201);
+    const body = JSON.parse(res.body);
+    expect(body.data.salaryMin).toBeNull();
+    expect(body.data.salaryMax).toBeNull();
+  });
+
+  it('returns decimal salary through GET endpoint', async () => {
+    const app = await getApp();
+    const recruiter = await createRecruiter(app);
+
+    const createRes = await app.inject({
+      method: 'POST',
+      url: '/api/v1/jobs',
+      headers: authHeaders(recruiter.accessToken),
+      payload: {
+        title: 'GET Decimal Salary',
+        company: 'Corp',
+        workType: 'REMOTE',
+        experienceLevel: 'MID',
+        description: 'Get endpoint decimal test.',
+        language: 'en',
+        salaryMin: 12500.25,
+        salaryMax: 18750.50,
+      },
+    });
+
+    const jobId = JSON.parse(createRes.body).data.id;
+
+    const res = await app.inject({
+      method: 'GET',
+      url: `/api/v1/jobs/${jobId}`,
+    });
+
+    expect(res.statusCode).toBe(200);
+    const body = JSON.parse(res.body);
+    expect(typeof body.data.salaryMin).toBe('number');
+    expect(typeof body.data.salaryMax).toBe('number');
+  });
+});
+
 describe('Jobs Module', () => {
   // ─── T031: Job CRUD ────────────────────────────────────────────────
 

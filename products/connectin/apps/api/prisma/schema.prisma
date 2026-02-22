@@ -320,8 +320,8 @@ model Job {
   experienceLevel  ExperienceLevel @default(MID) @map("experience_level")
   description      String          @db.Text
   requirements     String?         @db.Text
-  salaryMin        Int?            @map("salary_min")
-  salaryMax        Int?            @map("salary_max")
+  salaryMin        Decimal?        @map("salary_min") @db.Decimal(12, 2)
+  salaryMax        Decimal?        @map("salary_max") @db.Decimal(12, 2)
   salaryCurrency   String?         @default("USD") @map("salary_currency") @db.VarChar(10)
   language         String          @default("en") @db.VarChar(5)
   status           JobStatus       @default(OPEN)

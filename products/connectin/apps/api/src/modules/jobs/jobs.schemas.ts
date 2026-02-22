@@ -24,8 +24,8 @@ export const createJobSchema = z
       .string()
       .min(1, 'Description is required'),
     requirements: z.string().optional(),
-    salaryMin: z.number().int().positive().optional(),
-    salaryMax: z.number().int().positive().optional(),
+    salaryMin: z.number().positive().optional(),
+    salaryMax: z.number().positive().optional(),
     salaryCurrency: z
       .string()
       .max(10)
@@ -66,8 +66,8 @@ export const updateJobSchema = z
       .optional(),
     description: z.string().min(1).optional(),
     requirements: z.string().optional(),
-    salaryMin: z.number().int().positive().optional(),
-    salaryMax: z.number().int().positive().optional(),
+    salaryMin: z.number().positive().optional(),
+    salaryMax: z.number().positive().optional(),
     salaryCurrency: z.string().max(10).optional(),
     language: z.string().max(5).optional(),
     status: z.enum(['OPEN', 'CLOSED']).optional(),
