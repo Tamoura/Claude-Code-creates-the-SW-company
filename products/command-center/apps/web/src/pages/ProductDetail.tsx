@@ -70,6 +70,35 @@ function sortDocsByImportance(docs: DocInfo[]): DocInfo[] {
   });
 }
 
+interface Slide {
+  heading: string;
+  content: string;
+}
+
+/** Split markdown into slides by ## headings. First slide gets the doc title. */
+function splitIntoSlides(markdown: string, docTitle: string): Slide[] {
+  const parts = markdown.split(/^(?=## )/m);
+  const slides: Slide[] = [];
+
+  for (const part of parts) {
+    const trimmed = part.trim();
+    if (!trimmed) continue;
+
+    const headingMatch = trimmed.match(/^## (.+)/);
+    if (headingMatch) {
+      slides.push({
+        heading: headingMatch[1].trim(),
+        content: trimmed.replace(/^## .+\n?/, '').trim(),
+      });
+    } else {
+      // Content before the first ## heading — use doc title
+      slides.push({ heading: docTitle, content: trimmed });
+    }
+  }
+
+  return slides.length > 0 ? slides : [{ heading: docTitle, content: markdown }];
+}
+
 export default function ProductDetail() {
   const { name } = useParams<{ name: string }>();
   const [selectedDoc, setSelectedDoc] = useState<string | null>(null);
@@ -78,14 +107,35 @@ export default function ProductDetail() {
   const [fullscreen, setFullscreen] = useState(false);
   const [docTheme, setDocTheme] = useState<'light' | 'dark'>('light');
   const [collapsedCategories, setCollapsedCategories] = useState<Set<string>>(new Set());
+  const [presentationMode, setPresentationMode] = useState(false);
+  const [slideIndex, setSlideIndex] = useState(0);
 
   const { data: docsData, loading: docsLoading } = useApi<ProductDocsResponse>(`/products/${name}/docs`);
   const { data: productData } = useApi<{ product: ProductOverview }>(`/products/${name}`);
 
-  // Escape key exits fullscreen
+  // Split content by ## headings into slides
+  const slides = docContent
+    ? splitIntoSlides(docContent.content, docContent.title)
+    : [];
+
   const handleKeyDown = useCallback((e: KeyboardEvent) => {
+    if (presentationMode) {
+      if (e.key === 'Escape') {
+        setPresentationMode(false);
+        return;
+      }
+      if (e.key === 'ArrowRight' || e.key === 'ArrowDown') {
+        setSlideIndex((i) => Math.min(i + 1, slides.length - 1));
+        return;
+      }
+      if (e.key === 'ArrowLeft' || e.key === 'ArrowUp') {
+        setSlideIndex((i) => Math.max(i - 1, 0));
+        return;
+      }
+      return;
+    }
     if (e.key === 'Escape' && fullscreen) setFullscreen(false);
-  }, [fullscreen]);
+  }, [fullscreen, presentationMode, slides.length]);
 
   useEffect(() => {
     document.addEventListener('keydown', handleKeyDown);
@@ -168,6 +218,97 @@ export default function ProductDetail() {
 
   const isLight = docTheme === 'light';
 
+  const enterPresentation = () => {
+    setSlideIndex(0);
+    setPresentationMode(true);
+  };
+
+  // --- Presentation mode ---
+  if (presentationMode && docContent && slides.length > 0) {
+    const slide = slides[slideIndex];
+    return (
+      <div className="fixed inset-0 z-50 bg-gray-950 flex flex-col">
+        {/* Presentation toolbar */}
+        <div className="flex items-center justify-between px-6 py-3 border-b border-gray-800 bg-gray-950/95 backdrop-blur">
+          <div className="flex items-center gap-3">
+            <button
+              onClick={() => setPresentationMode(false)}
+              className="text-gray-400 hover:text-white transition-colors"
+              title="Exit presentation (Esc)"
+            >
+              <svg className="w-5 h-5" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M6 18L18 6M6 6l12 12" />
+              </svg>
+            </button>
+            <span className="text-sm text-gray-400 truncate">{docContent.title}</span>
+          </div>
+          <div className="flex items-center gap-4">
+            <span className="text-sm text-gray-500">
+              {slideIndex + 1} / {slides.length}
+            </span>
+            <span className="text-xs text-gray-600">Arrow keys to navigate</span>
+          </div>
+        </div>
+
+        {/* Slide content */}
+        <div className="flex-1 flex items-center justify-center px-8 py-12 overflow-y-auto">
+          <div className="max-w-4xl w-full">
+            <h1 className="text-4xl font-bold text-white mb-8">{slide.heading}</h1>
+            <div className="text-lg">
+              <MarkdownRenderer content={slide.content} theme="dark" />
+            </div>
+          </div>
+        </div>
+
+        {/* Navigation buttons */}
+        <div className="flex items-center justify-between px-6 py-3 border-t border-gray-800">
+          <button
+            onClick={() => setSlideIndex((i) => Math.max(i - 1, 0))}
+            disabled={slideIndex === 0}
+            className={`flex items-center gap-2 px-4 py-2 rounded-lg text-sm font-medium transition-colors ${
+              slideIndex === 0
+                ? 'text-gray-600 cursor-not-allowed'
+                : 'text-gray-300 hover:bg-gray-800'
+            }`}
+          >
+            <svg className="w-4 h-4" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+              <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M15 19l-7-7 7-7" />
+            </svg>
+            Previous
+          </button>
+
+          {/* Slide indicator dots */}
+          <div className="flex gap-1.5">
+            {slides.map((_, i) => (
+              <button
+                key={i}
+                onClick={() => setSlideIndex(i)}
+                className={`w-2 h-2 rounded-full transition-colors ${
+                  i === slideIndex ? 'bg-blue-500' : 'bg-gray-700 hover:bg-gray-600'
+                }`}
+              />
+            ))}
+          </div>
+
+          <button
+            onClick={() => setSlideIndex((i) => Math.min(i + 1, slides.length - 1))}
+            disabled={slideIndex === slides.length - 1}
+            className={`flex items-center gap-2 px-4 py-2 rounded-lg text-sm font-medium transition-colors ${
+              slideIndex === slides.length - 1
+                ? 'text-gray-600 cursor-not-allowed'
+                : 'text-gray-300 hover:bg-gray-800'
+            }`}
+          >
+            Next
+            <svg className="w-4 h-4" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+              <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M9 5l7 7-7 7" />
+            </svg>
+          </button>
+        </div>
+      </div>
+    );
+  }
+
   // --- Fullscreen document view ---
   if (fullscreen && selectedDoc && docContent) {
     return (
@@ -200,6 +341,16 @@ export default function ProductDetail() {
               theme={docTheme}
               compact
             />
+            {/* Present */}
+            <button
+              onClick={() => { setFullscreen(false); enterPresentation(); }}
+              className={`p-1.5 rounded-lg transition-colors ${isLight ? 'text-gray-500 hover:text-gray-900 hover:bg-gray-100' : 'text-gray-400 hover:text-white hover:bg-gray-800'}`}
+              title="Present"
+            >
+              <svg className="w-5 h-5" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M5.25 5.653c0-.856.917-1.398 1.667-.986l11.54 6.347a1.125 1.125 0 010 1.972l-11.54 6.347a1.125 1.125 0 01-1.667-.986V5.653z" />
+              </svg>
+            </button>
             {/* Theme toggle */}
             <button
               onClick={() => setDocTheme(isLight ? 'dark' : 'light')}
@@ -447,6 +598,16 @@ export default function ProductDetail() {
                                 <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M12 3v1m0 16v1m9-9h-1M4 12H3m15.364 6.364l-.707-.707M6.343 6.343l-.707-.707m12.728 0l-.707.707M6.343 17.657l-.707.707M16 12a4 4 0 11-8 0 4 4 0 018 0z" />
                               </svg>
                             )}
+                          </button>
+                          {/* Present */}
+                          <button
+                            onClick={enterPresentation}
+                            className={`transition-colors p-1.5 rounded-lg ${isLight ? 'text-gray-500 hover:text-gray-900 hover:bg-gray-100' : 'text-gray-400 hover:text-white hover:bg-gray-800'}`}
+                            title="Present"
+                          >
+                            <svg className="w-5 h-5" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                              <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M5.25 5.653c0-.856.917-1.398 1.667-.986l11.54 6.347a1.125 1.125 0 010 1.972l-11.54 6.347a1.125 1.125 0 01-1.667-.986V5.653z" />
+                            </svg>
                           </button>
                           {/* Fullscreen */}
                           <button
