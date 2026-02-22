@@ -1,0 +1,117 @@
+{
+  "product": "muaththir",
+  "subtitle": "Holistic child development tracking across 6 dimensions",
+  "slides": [
+    {
+      "layout": "title",
+      "title": "Mu'aththir",
+      "subtitle": "Holistic child development tracking across 6 dimensions",
+      "tagline": "Raise intentional children. Track what matters.",
+      "audiences": ["consumers", "customers", "investors", "founders"]
+    },
+    {
+      "layout": "problem",
+      "heading": "The Problem",
+      "statement": "Parents track grades but miss the whole child",
+      "points": [
+        "School report cards only measure academics — missing 5 other critical dimensions",
+        "No unified platform tracks social-emotional, behavioral, spiritual, and physical growth together",
+        "Muslim parents lack tools that integrate Islamic development alongside academic progress",
+        "Child development apps are fragmented — one for health, one for school, one for habits"
+      ],
+      "audiences": ["investors", "founders", "consumers"]
+    },
+    {
+      "layout": "solution",
+      "heading": "The Solution",
+      "statement": "One platform to track and nurture children across 6 interconnected dimensions",
+      "points": [
+        "6-dimension model — Academic, Social-Emotional, Behavioral, Aspirational, Islamic, Physical",
+        "Radar chart dashboard — see developmental balance at a glance",
+        "Age-appropriate milestones — benchmarks for ages 3-16",
+        "AI-powered recommendations — personalized learning paths per dimension"
+      ],
+      "audiences": ["investors", "founders", "consumers"]
+    },
+    {
+      "layout": "market",
+      "heading": "Market Opportunity",
+      "tam": { "value": "$26.5B", "label": "Parenting Apps Market (2030)" },
+      "sam": { "value": "$3.2B", "label": "Muslim Family + Faith-Based Parenting" },
+      "som": { "value": "$8M", "label": "Year 3 Target" },
+      "audiences": ["investors", "founders"]
+    },
+    {
+      "layout": "feature-grid",
+      "heading": "Product Features",
+      "features": [
+        { "icon": "hexagon", "title": "6 Dimensions", "description": "Academic, Social, Behavioral, Aspirational, Islamic, Physical" },
+        { "icon": "pie-chart", "title": "Radar Dashboard", "description": "Visual developmental overview at a glance" },
+        { "icon": "trending-up", "title": "Milestone Tracking", "description": "Age-appropriate benchmarks for ages 3-16" },
+        { "icon": "brain", "title": "AI Recommendations", "description": "Personalized learning paths per dimension" },
+        { "icon": "globe", "title": "Bilingual", "description": "Full Arabic and English support" },
+        { "icon": "users", "title": "Family Profiles", "description": "Track multiple children per family" }
+      ],
+      "audiences": ["consumers", "customers", "investors", "founders"]
+    },
+    {
+      "layout": "traction",
+      "heading": "Traction & Progress",
+      "timeline": [
+        { "date": "Q1 2026", "milestone": "6-dimension model designed and validated with parenting experts" },
+        { "date": "Q2 2026", "milestone": "MVP — dashboard, milestone tracking, observation logging" },
+        { "date": "Q3 2026", "milestone": "Beta — 200 families testing in GCC" },
+        { "date": "Q4 2026", "milestone": "Public launch — 1,000 registered families" }
+      ],
+      "audiences": ["investors", "founders"]
+    },
+    {
+      "layout": "business-model",
+      "heading": "Business Model",
+      "model": "Freemium + Family Subscriptions",
+      "tiers": [
+        { "name": "Free", "price": "$0/mo", "features": ["1 child", "Basic tracking", "2 dimensions"] },
+        { "name": "Family", "price": "$7.99/mo", "features": ["Up to 5 children", "All 6 dimensions", "AI recommendations"] },
+        { "name": "Premium", "price": "$14.99/mo", "features": ["Unlimited children", "Expert insights", "Export reports", "Priority support"] }
+      ],
+      "audiences": ["investors", "founders"]
+    },
+    {
+      "layout": "competitive",
+      "heading": "Competitive Landscape",
+      "axes": { "x": "Holistic Development Focus", "y": "Islamic Values Integration" },
+      "competitors": [
+        { "name": "ClassDojo", "position": "mid-x low-y", "note": "Behavioral only, school-focused" },
+        { "name": "Brightwheel", "position": "low-x low-y", "note": "Daycare management, not development" },
+        { "name": "FamilyAlbum", "position": "low-x low-y", "note": "Photo sharing, no tracking" },
+        { "name": "Mu'aththir", "position": "high-x high-y", "note": "6 dimensions + Islamic integration" }
+      ],
+      "audiences": ["investors", "founders"]
+    },
+    {
+      "layout": "metrics",
+      "heading": "Key Metrics",
+      "metrics": [
+        { "value": "6", "label": "Development Dimensions", "trend": "stable" },
+        { "value": "1.8B", "label": "Muslims Worldwide", "trend": "up" },
+        { "value": "40%", "label": "Target Monthly Active Rate", "trend": "up" },
+        { "value": "8%", "label": "Free-to-Paid Conversion Target", "trend": "up" },
+        { "value": "$3K", "label": "MRR Target (Month 6)", "trend": "up" },
+        { "value": "3-16", "label": "Age Range (years)", "trend": "stable" }
+      ],
+      "audiences": ["investors", "founders"]
+    },
+    {
+      "layout": "vision",
+      "heading": "Vision",
+      "statement": "Empower every parent to raise well-rounded, intentional children",
+      "milestones": [
+        "2026: Launch in GCC — 1,000 families, $3K MRR",
+        "2027: Expand to UK, US, Canada — 10,000 families",
+        "2028: AI developmental advisor + school partnerships — 50,000 families",
+        "2030: The global platform for intentional parenting — 500K+ families"
+      ],
+      "audiences": ["investors", "founders", "consumers"]
+    }
+  ]
+}

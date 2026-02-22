@@ -1,0 +1,117 @@
+{
+  "product": "quantum-computing-usecases",
+  "subtitle": "Practical quantum computing use cases for business leaders",
+  "slides": [
+    {
+      "layout": "title",
+      "title": "Quantum Use Cases",
+      "subtitle": "Practical quantum computing use cases for business leaders",
+      "tagline": "Quantum computing. Demystified. Actionable.",
+      "audiences": ["consumers", "customers", "investors", "founders"]
+    },
+    {
+      "layout": "problem",
+      "heading": "The Problem",
+      "statement": "Business leaders can't evaluate quantum computing for their organizations",
+      "points": [
+        "Quantum computing research is locked in academic papers — inaccessible to decision-makers",
+        "Vendor hype makes it impossible to separate real applications from marketing",
+        "No platform organizes use cases by industry, maturity, and business impact",
+        "Technical complexity prevents strategic planning for quantum readiness"
+      ],
+      "audiences": ["investors", "founders"]
+    },
+    {
+      "layout": "solution",
+      "heading": "The Solution",
+      "statement": "A curated platform that translates quantum research into actionable business intelligence",
+      "points": [
+        "10 cataloged use cases organized by industry, problem type, and maturity level",
+        "Side-by-side comparison of up to 3 use cases for strategic evaluation",
+        "Progressive learning paths — 3 stages from beginner to advanced",
+        "Bilingual EN/AR — including Quantum Sovereignty in the Arab World editorial"
+      ],
+      "audiences": ["investors", "founders", "consumers"]
+    },
+    {
+      "layout": "market",
+      "heading": "Market Opportunity",
+      "tam": { "value": "$65B", "label": "Quantum Computing Market (2030)" },
+      "sam": { "value": "$8.5B", "label": "Quantum Education & Consulting" },
+      "som": { "value": "$4M", "label": "Year 3 Target" },
+      "audiences": ["investors", "founders"]
+    },
+    {
+      "layout": "feature-grid",
+      "heading": "Product Features",
+      "features": [
+        { "icon": "box", "title": "10 Use Cases", "description": "Cataloged by industry, maturity, and impact" },
+        { "icon": "columns", "title": "Side-by-Side Compare", "description": "Compare up to 3 use cases simultaneously" },
+        { "icon": "book-open", "title": "Learning Paths", "description": "3-stage progression from beginner to advanced" },
+        { "icon": "globe", "title": "Bilingual EN/AR", "description": "Full Arabic support with RTL layout" },
+        { "icon": "award", "title": "Maturity Badges", "description": "Research, prototype, production-ready ratings" },
+        { "icon": "zap", "title": "Zero Backend", "description": "Static JSON, Zod-validated, instant load" }
+      ],
+      "audiences": ["consumers", "customers", "investors", "founders"]
+    },
+    {
+      "layout": "traction",
+      "heading": "Traction & Progress",
+      "timeline": [
+        { "date": "Q4 2025", "milestone": "Platform launched — 10 use cases, comparison tool, learning paths" },
+        { "date": "Q1 2026", "milestone": "Quantum Sovereignty editorial — Arab world perspective" },
+        { "date": "Q2 2026", "milestone": "Expanded to 25 use cases with industry partnerships" },
+        { "date": "Q3 2026", "milestone": "Enterprise assessment tool — quantum readiness scoring" }
+      ],
+      "audiences": ["investors", "founders"]
+    },
+    {
+      "layout": "business-model",
+      "heading": "Business Model",
+      "model": "Freemium + Enterprise Consulting",
+      "tiers": [
+        { "name": "Free", "price": "$0", "features": ["All 10 use cases", "Comparison tool", "Learning paths"] },
+        { "name": "Pro", "price": "$29/mo", "features": ["Advanced analysis", "Custom reports", "Industry filters"] },
+        { "name": "Enterprise", "price": "Custom", "features": ["Quantum readiness assessment", "Strategic consulting", "Custom research"] }
+      ],
+      "audiences": ["investors", "founders"]
+    },
+    {
+      "layout": "competitive",
+      "heading": "Competitive Landscape",
+      "axes": { "x": "Business Accessibility", "y": "Technical Depth" },
+      "competitors": [
+        { "name": "IBM Quantum", "position": "low-x high-y", "note": "Developer-focused, not business" },
+        { "name": "McKinsey Reports", "position": "high-x low-y", "note": "High-level, not actionable" },
+        { "name": "AWS Braket", "position": "low-x mid-y", "note": "SDK, not education" },
+        { "name": "Quantum Use Cases", "position": "high-x high-y", "note": "Business + technical depth" }
+      ],
+      "audiences": ["investors", "founders"]
+    },
+    {
+      "layout": "metrics",
+      "heading": "Key Metrics",
+      "metrics": [
+        { "value": "10", "label": "Use Cases Cataloged", "trend": "up" },
+        { "value": "3", "label": "Learning Path Stages", "trend": "stable" },
+        { "value": "<2s", "label": "Page Load on 3G", "trend": "stable" },
+        { "value": "<300KB", "label": "JS Bundle Size", "trend": "stable" },
+        { "value": "2", "label": "Languages (EN/AR)", "trend": "stable" },
+        { "value": "$65B", "label": "Quantum Market (2030)", "trend": "up" }
+      ],
+      "audiences": ["investors", "founders"]
+    },
+    {
+      "layout": "vision",
+      "heading": "Vision",
+      "statement": "Become the definitive resource for quantum computing business strategy",
+      "milestones": [
+        "2026: 25 use cases + enterprise assessment tool — 5,000 users",
+        "2027: Quantum readiness consulting partnerships — 500 enterprises",
+        "2028: Arab quantum computing initiative — regional leadership",
+        "2030: The standard platform for quantum strategy — 50,000+ users"
+      ],
+      "audiences": ["investors", "founders", "consumers"]
+    }
+  ]
+}

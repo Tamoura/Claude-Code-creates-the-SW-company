@@ -1,0 +1,118 @@
+{
+  "product": "connectgrc",
+  "subtitle": "The first AI-native talent platform for GRC professionals",
+  "slides": [
+    {
+      "layout": "title",
+      "title": "ConnectGRC",
+      "subtitle": "The first AI-native talent platform for GRC professionals",
+      "tagline": "Where governance, risk, and compliance careers are built.",
+      "audiences": ["consumers", "customers", "investors", "founders"]
+    },
+    {
+      "layout": "problem",
+      "heading": "The Problem",
+      "statement": "GRC talent acquisition is broken",
+      "points": [
+        "No platform specializes in GRC — recruiters use generic job boards that don't understand domain expertise",
+        "GRC professionals lack objective skill validation — certifications alone don't prove competency",
+        "Career pathing in GRC is opaque — practitioners don't know which skills to develop next",
+        "Employers can't verify GRC depth — résumés don't distinguish CISO-ready from entry-level"
+      ],
+      "audiences": ["investors", "founders"]
+    },
+    {
+      "layout": "solution",
+      "heading": "The Solution",
+      "statement": "An AI-powered platform that objectively assesses, develops, and connects GRC talent",
+      "points": [
+        "6-domain GRC assessments — 25 questions per domain, AI-scored against golden answers",
+        "Tier placements — Foundation, Developing, Proficient, Expert across all GRC domains",
+        "AI Career Simulator — skill gap analysis, certification ROI, personalized learning paths",
+        "Intelligent job matching — domain scores matched to employer requirements"
+      ],
+      "audiences": ["investors", "founders", "consumers"]
+    },
+    {
+      "layout": "market",
+      "heading": "Market Opportunity",
+      "tam": { "value": "$32B", "label": "GRC Software Market (2028)" },
+      "sam": { "value": "$4.8B", "label": "GRC Talent & Assessment" },
+      "som": { "value": "$24M", "label": "Year 3 Target" },
+      "audiences": ["investors", "founders"]
+    },
+    {
+      "layout": "feature-grid",
+      "heading": "Product Features",
+      "features": [
+        { "icon": "clipboard", "title": "6-Domain Assessments", "description": "Governance, Risk, Compliance, Audit, Privacy, Security" },
+        { "icon": "brain", "title": "AI Career Simulator", "description": "Skill gap analysis and certification ROI calculator" },
+        { "icon": "target", "title": "Intelligent Matching", "description": "Domain scores matched to employer needs" },
+        { "icon": "book", "title": "Knowledge Ecosystem", "description": "100+ curated GRC resources and learning paths" },
+        { "icon": "users", "title": "Multi-Journey Platform", "description": "Aspirants, Professionals, Vanguards, Recruiters" },
+        { "icon": "bar-chart", "title": "Admin Analytics", "description": "Platform-wide insights and question management" }
+      ],
+      "audiences": ["consumers", "customers", "investors", "founders"]
+    },
+    {
+      "layout": "traction",
+      "heading": "Traction & Progress",
+      "timeline": [
+        { "date": "Q4 2025", "milestone": "706/706 tests passing — 100% test coverage" },
+        { "date": "Q1 2026", "milestone": "Aspirant journey 98% complete (4 of 6 journeys)" },
+        { "date": "Q1 2026", "milestone": "Professional registration + assessment foundation built" },
+        { "date": "Q2 2026", "milestone": "Professional profile creation + CV parsing (AI-powered)" }
+      ],
+      "audiences": ["investors", "founders"]
+    },
+    {
+      "layout": "business-model",
+      "heading": "Business Model",
+      "model": "Freemium + B2B Subscriptions",
+      "tiers": [
+        { "name": "Free", "price": "$0/mo", "features": ["Basic assessment", "Career profile", "Job browsing"] },
+        { "name": "Professional", "price": "$29/mo", "features": ["Full 6-domain assessment", "AI Career Simulator", "Priority matching"] },
+        { "name": "Recruiter", "price": "$199/mo", "features": ["Candidate search", "Assessment results", "Shortlist management"] },
+        { "name": "Enterprise", "price": "Custom", "features": ["Team assessments", "Custom domains", "API access", "Dedicated support"] }
+      ],
+      "audiences": ["investors", "founders"]
+    },
+    {
+      "layout": "competitive",
+      "heading": "Competitive Landscape",
+      "axes": { "x": "GRC Domain Depth", "y": "AI Integration" },
+      "competitors": [
+        { "name": "LinkedIn", "position": "low-x mid-y", "note": "Generic professional network" },
+        { "name": "ISACA/ISC²", "position": "high-x low-y", "note": "Certifications only, no matching" },
+        { "name": "Indeed/Glassdoor", "position": "low-x low-y", "note": "Generic job boards" },
+        { "name": "ConnectGRC", "position": "high-x high-y", "note": "AI-native + GRC-specific" }
+      ],
+      "audiences": ["investors", "founders"]
+    },
+    {
+      "layout": "metrics",
+      "heading": "Key Metrics",
+      "metrics": [
+        { "value": "706", "label": "Tests Passing", "trend": "up" },
+        { "value": "100%", "label": "Test Coverage", "trend": "stable" },
+        { "value": "40%", "label": "Platform Complete", "trend": "up" },
+        { "value": "6", "label": "GRC Domains Covered", "trend": "stable" },
+        { "value": "4/6", "label": "User Journeys Built", "trend": "up" },
+        { "value": "25", "label": "Questions per Domain", "trend": "stable" }
+      ],
+      "audiences": ["investors", "founders"]
+    },
+    {
+      "layout": "vision",
+      "heading": "Vision",
+      "statement": "Become the global standard for GRC career development and talent matching",
+      "milestones": [
+        "2026: Launch with 6 GRC domains — 5K registered professionals",
+        "2027: Add AI mentoring + team assessments — 25K users",
+        "2028: Enterprise partnerships with Big 4 + GRC vendors — 100K users",
+        "2030: The definitive GRC career platform — 500K+ professionals worldwide"
+      ],
+      "audiences": ["investors", "founders", "consumers"]
+    }
+  ]
+}

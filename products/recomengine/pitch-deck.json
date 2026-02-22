@@ -1,0 +1,118 @@
+{
+  "product": "recomengine",
+  "subtitle": "Enterprise recommendation power at mid-market pricing",
+  "slides": [
+    {
+      "layout": "title",
+      "title": "RecomEngine",
+      "subtitle": "Enterprise recommendation power at mid-market pricing",
+      "tagline": "Personalized recommendations. Plug-and-play. A/B tested.",
+      "audiences": ["consumers", "customers", "investors", "founders"]
+    },
+    {
+      "layout": "problem",
+      "heading": "The Problem",
+      "statement": "Mid-market e-commerce can't afford enterprise recommendation engines",
+      "points": [
+        "Amazon-grade recommendations cost $50K+/month — only accessible to large enterprises",
+        "Building in-house requires ML expertise most mid-market teams don't have",
+        "Generic 'popular items' lists leave 10-30% revenue on the table",
+        "No out-of-the-box solution combines multiple algorithms with built-in A/B testing"
+      ],
+      "audiences": ["investors", "founders"]
+    },
+    {
+      "layout": "solution",
+      "heading": "The Solution",
+      "statement": "A multi-algorithm recommendation platform with built-in experimentation",
+      "points": [
+        "4 algorithm types — collaborative filtering, content-based, trending, frequently bought together",
+        "Built-in A/B testing framework with statistical significance detection",
+        "Embeddable JavaScript SDK — under 10KB gzipped, integrate in minutes",
+        "Real-time event ingestion — >10,000 events/second per tenant"
+      ],
+      "audiences": ["investors", "founders", "consumers"]
+    },
+    {
+      "layout": "market",
+      "heading": "Market Opportunity",
+      "tam": { "value": "$12B", "label": "Product Recommendation Market (2028)" },
+      "sam": { "value": "$2.4B", "label": "Mid-Market E-commerce Recs" },
+      "som": { "value": "$12M", "label": "Year 3 Target" },
+      "audiences": ["investors", "founders"]
+    },
+    {
+      "layout": "feature-grid",
+      "heading": "Product Features",
+      "features": [
+        { "icon": "cpu", "title": "4 Algorithms", "description": "Collaborative, content-based, trending, bought-together" },
+        { "icon": "shuffle", "title": "A/B Testing", "description": "Built-in experimentation with significance detection" },
+        { "icon": "code", "title": "JS SDK (<10KB)", "description": "Embeddable widget, integrate in minutes" },
+        { "icon": "zap", "title": "Real-Time Events", "description": ">10K events/second per tenant ingestion" },
+        { "icon": "users", "title": "Multi-Tenant", "description": "Isolated data per merchant, shared infrastructure" },
+        { "icon": "bar-chart", "title": "Analytics Dashboard", "description": "Click-through rates, revenue impact, algorithm performance" }
+      ],
+      "audiences": ["consumers", "customers", "investors", "founders"]
+    },
+    {
+      "layout": "traction",
+      "heading": "Traction & Progress",
+      "timeline": [
+        { "date": "Q4 2025", "milestone": "Architecture complete — multi-tenant engine designed" },
+        { "date": "Q1 2026", "milestone": "Core engine — 4 algorithms + event ingestion pipeline" },
+        { "date": "Q2 2026", "milestone": "Beta — 20 merchants, A/B testing framework live" },
+        { "date": "Q3 2026", "milestone": "Public launch — 50 tenants, 100M+ events/month" }
+      ],
+      "audiences": ["investors", "founders"]
+    },
+    {
+      "layout": "business-model",
+      "heading": "Business Model",
+      "model": "Usage-Based SaaS",
+      "tiers": [
+        { "name": "Starter", "price": "$99/mo", "features": ["Up to 50K events/mo", "2 algorithms", "Basic widget"] },
+        { "name": "Growth", "price": "$499/mo", "features": ["Up to 5M events/mo", "All 4 algorithms", "A/B testing"] },
+        { "name": "Scale", "price": "$1,499/mo", "features": ["Up to 50M events/mo", "Custom models", "Dedicated support"] },
+        { "name": "Enterprise", "price": "Custom", "features": ["Unlimited events", "Custom algorithms", "SLA + on-prem option"] }
+      ],
+      "audiences": ["investors", "founders"]
+    },
+    {
+      "layout": "competitive",
+      "heading": "Competitive Landscape",
+      "axes": { "x": "Ease of Integration", "y": "Algorithm Sophistication" },
+      "competitors": [
+        { "name": "Amazon Personalize", "position": "low-x high-y", "note": "Powerful but complex + expensive" },
+        { "name": "Algolia Recommend", "position": "high-x mid-y", "note": "Easy but limited algorithms" },
+        { "name": "Recombee", "position": "mid-x mid-y", "note": "Good mid-range, no A/B testing" },
+        { "name": "RecomEngine", "position": "high-x high-y", "note": "4 algorithms + A/B + easy SDK" }
+      ],
+      "audiences": ["investors", "founders"]
+    },
+    {
+      "layout": "metrics",
+      "heading": "Key Metrics",
+      "metrics": [
+        { "value": "4", "label": "Algorithm Types", "trend": "up" },
+        { "value": "<10KB", "label": "SDK Size (gzipped)", "trend": "stable" },
+        { "value": "10K+", "label": "Events/sec per Tenant", "trend": "up" },
+        { "value": "<100ms", "label": "Recommendation Latency (p95)", "trend": "stable" },
+        { "value": "$25K", "label": "MRR Target (Month 6)", "trend": "up" },
+        { "value": "85%+", "label": "90-Day Retention Target", "trend": "up" }
+      ],
+      "audiences": ["investors", "founders"]
+    },
+    {
+      "layout": "vision",
+      "heading": "Vision",
+      "statement": "Make enterprise-grade recommendations accessible to every online store",
+      "milestones": [
+        "2026: Launch with 4 algorithms — 50 tenants, $25K MRR",
+        "2027: Add deep learning models + marketplace integrations — 500 tenants",
+        "2028: Shopify/WooCommerce apps — 2,000 tenants",
+        "2030: The recommendation engine for mid-market — 10,000+ merchants"
+      ],
+      "audiences": ["investors", "founders", "consumers"]
+    }
+  ]
+}

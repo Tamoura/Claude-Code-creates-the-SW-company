@@ -1,0 +1,117 @@
+{
+  "product": "stablecoin-gateway",
+  "subtitle": "Stablecoin payments with Stripe simplicity and 0.5% fees",
+  "slides": [
+    {
+      "layout": "title",
+      "title": "Stablecoin Gateway",
+      "subtitle": "Stablecoin payments with Stripe simplicity and 0.5% fees",
+      "tagline": "Accept crypto. Pay less. Settle instantly.",
+      "audiences": ["consumers", "customers", "investors", "founders"]
+    },
+    {
+      "layout": "problem",
+      "heading": "The Problem",
+      "statement": "Payment processing fees are eating merchant margins",
+      "points": [
+        "Credit card processors charge 2.9% + $0.30 per transaction — devastating for low-margin businesses",
+        "International payments take 3-5 days to settle and add foreign exchange fees",
+        "Crypto payments exist but are too complex — merchants need SDKs, wallets, and blockchain expertise",
+        "Existing crypto gateways are custodial — merchants lose control of funds"
+      ],
+      "audiences": ["investors", "founders"]
+    },
+    {
+      "layout": "solution",
+      "heading": "The Solution",
+      "statement": "A developer-friendly, non-custodial stablecoin payment platform",
+      "points": [
+        "0.5% transaction fees — 83% cheaper than credit cards",
+        "Instant settlement — blockchain confirmation in under 2 minutes",
+        "Stripe-quality API + JavaScript SDK — integrate in under 10 minutes",
+        "Non-custodial — funds go directly to merchant wallets, never held by us"
+      ],
+      "audiences": ["investors", "founders", "consumers"]
+    },
+    {
+      "layout": "market",
+      "heading": "Market Opportunity",
+      "tam": { "value": "$2.2T", "label": "Global Digital Payments (2025)" },
+      "sam": { "value": "$185B", "label": "Online Merchant Payments" },
+      "som": { "value": "$12M", "label": "Year 3 Target" },
+      "audiences": ["investors", "founders"]
+    },
+    {
+      "layout": "feature-grid",
+      "heading": "Product Features",
+      "features": [
+        { "icon": "dollar-sign", "title": "0.5% Fees", "description": "83% cheaper than traditional card processing" },
+        { "icon": "zap", "title": "Instant Settlement", "description": "Blockchain confirmation in under 2 minutes" },
+        { "icon": "code", "title": "Developer SDK", "description": "JavaScript SDK under 10KB, integrate in minutes" },
+        { "icon": "shield", "title": "Non-Custodial", "description": "Funds go directly to merchant wallets" },
+        { "icon": "globe", "title": "Multi-Network", "description": "Ethereum mainnet and Polygon support" },
+        { "icon": "bell", "title": "Real-Time Events", "description": "SSE + webhooks with automatic retries" }
+      ],
+      "audiences": ["consumers", "customers", "investors", "founders"]
+    },
+    {
+      "layout": "traction",
+      "heading": "Traction & Progress",
+      "timeline": [
+        { "date": "Q4 2025", "milestone": "546 tests passing — full API and SDK coverage" },
+        { "date": "Q1 2026", "milestone": "Deployed on AWS ECS Fargate — production infrastructure" },
+        { "date": "Q2 2026", "milestone": "Beta launch — 20 merchants processing USDC/USDT" },
+        { "date": "Q3 2026", "milestone": "Public launch — 100 merchants, $1M+ processed" }
+      ],
+      "audiences": ["investors", "founders"]
+    },
+    {
+      "layout": "business-model",
+      "heading": "Business Model",
+      "model": "Transaction Fee + Volume Tiers",
+      "tiers": [
+        { "name": "Starter", "price": "0.5%", "features": ["Up to $50K/mo volume", "USDC/USDT", "Email support"] },
+        { "name": "Growth", "price": "0.4%", "features": ["Up to $500K/mo volume", "Priority support", "Custom webhooks"] },
+        { "name": "Enterprise", "price": "0.3%", "features": ["Unlimited volume", "Dedicated account manager", "SLA guarantee"] }
+      ],
+      "audiences": ["investors", "founders"]
+    },
+    {
+      "layout": "competitive",
+      "heading": "Competitive Landscape",
+      "axes": { "x": "Developer Experience", "y": "Fee Competitiveness" },
+      "competitors": [
+        { "name": "Stripe", "position": "high-x low-y", "note": "Great DX, 2.9% fees" },
+        { "name": "BitPay", "position": "mid-x mid-y", "note": "Crypto-native, custodial, 1% fee" },
+        { "name": "Coinbase Commerce", "position": "mid-x mid-y", "note": "Brand trust, limited customization" },
+        { "name": "Stablecoin Gateway", "position": "high-x high-y", "note": "Stripe DX + 0.5% fees + non-custodial" }
+      ],
+      "audiences": ["investors", "founders"]
+    },
+    {
+      "layout": "metrics",
+      "heading": "Key Metrics",
+      "metrics": [
+        { "value": "546", "label": "Tests Passing", "trend": "up" },
+        { "value": "0.5%", "label": "Transaction Fee", "trend": "stable" },
+        { "value": "<2min", "label": "Settlement Time", "trend": "stable" },
+        { "value": "<10KB", "label": "SDK Size (gzipped)", "trend": "stable" },
+        { "value": "95%+", "label": "Payment Success Rate", "trend": "up" },
+        { "value": "2", "label": "Networks (ETH + Polygon)", "trend": "up" }
+      ],
+      "audiences": ["investors", "founders"]
+    },
+    {
+      "layout": "vision",
+      "heading": "Vision",
+      "statement": "Make stablecoin payments the default for online commerce",
+      "milestones": [
+        "2026: Launch with USDC/USDT on Ethereum + Polygon — 100 merchants",
+        "2027: Add Solana, Base, Arbitrum — 1,000 merchants, $50M processed",
+        "2028: Fiat off-ramps + invoicing — 5,000 merchants",
+        "2030: The Stripe of crypto — powering 50,000+ merchants globally"
+      ],
+      "audiences": ["investors", "founders", "consumers"]
+    }
+  ]
+}
