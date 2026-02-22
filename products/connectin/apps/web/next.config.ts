@@ -2,6 +2,13 @@ import type { NextConfig } from "next";
 
 const nextConfig: NextConfig = {
   output: "standalone",
+  // Prevent i18n packages from being bundled into the server-side prerender
+  // of special pages (/_global-error, /_not-found). These packages use
+  // i18next-browser-languagedetector which accesses browser APIs at module
+  // init time and causes React context errors during Next.js static prerender.
+  serverExternalPackages: [
+    "i18next-browser-languagedetector",
+  ],
   // Port 3111 as assigned in PORT-REGISTRY.md
   headers: async () => [
     {
