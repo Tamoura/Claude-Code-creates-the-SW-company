@@ -14,9 +14,13 @@ jest.mock("@/lib/api", () => ({
 // Mock auth utilities
 const mockSetAccessToken = jest.fn();
 const mockClearAccessToken = jest.fn();
+const mockGetAccessToken = jest.fn(() => null);
 jest.mock("@/lib/auth", () => ({
   setAccessToken: (...args: unknown[]) => mockSetAccessToken(...args),
   clearAccessToken: () => mockClearAccessToken(),
+  getAccessToken: () => mockGetAccessToken(),
+  // Pass-through in tests: no singleton deduplication needed for unit tests
+  getOrStartRefresh: (doRefresh: () => Promise<unknown>) => doRefresh(),
 }));
 
 const mockUser = {
@@ -33,6 +37,9 @@ const mockUser = {
 describe("useAuth", () => {
   beforeEach(() => {
     jest.clearAllMocks();
+    // Clear the session flag cookie so the auto-refresh useEffect doesn't
+    // interfere between tests (JSDOM persists document.cookie).
+    document.cookie = "session=; max-age=0; path=/";
   });
 
   describe("initial state", () => {
@@ -61,6 +68,16 @@ describe("useAuth", () => {
       expect(typeof result.current.login).toBe("function");
       expect(typeof result.current.register).toBe("function");
       expect(typeof result.current.logout).toBe("function");
+    });
+
+    it("resolves isInitializing to false quickly when no session cookie", async () => {
+      // JSDOM does not set session=1, so the effect immediately sets isInitializing=false
+      const { result } = renderHook(() => useAuth());
+      await act(async () => {
+        // Let useEffect flush
+        await Promise.resolve();
+      });
+      expect(result.current.isInitializing).toBe(false);
     });
   });
 
@@ -336,7 +353,7 @@ describe("useAuth", () => {
         await result.current.logout();
       });
 
-      expect(mockPost).toHaveBeenCalledWith("/auth/logout");
+      expect(mockPost).toHaveBeenCalledWith("/auth/logout", {});
     });
 
     it("clears user even when logout API call fails", async () => {

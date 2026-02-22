@@ -4,7 +4,8 @@ import rateLimit from '@fastify/rate-limit';
 
 const rateLimiterPlugin: FastifyPluginAsync = async (fastify) => {
   await fastify.register(rateLimit, {
-    max: 100,
+    // Higher limit in dev/test to accommodate E2E test suites
+    max: process.env.NODE_ENV === 'production' ? 100 : 1000,
     timeWindow: '1 minute',
     errorResponseBuilder: () => ({
       success: false,

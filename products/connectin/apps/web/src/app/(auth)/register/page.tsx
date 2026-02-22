@@ -17,6 +17,7 @@ export default function RegisterPage() {
   const [confirmPassword, setConfirmPassword] = useState("");
   const [errors, setErrors] = useState<Record<string, string>>({});
   const [submitError, setSubmitError] = useState<string | null>(null);
+  const [registered, setRegistered] = useState(false);
 
   function validate(): boolean {
     const newErrors: Record<string, string> = {};
@@ -59,10 +60,35 @@ export default function RegisterPage() {
 
     const success = await register(displayName, email, password);
     if (success) {
-      router.push("/feed");
+      // The register endpoint always returns a success response to prevent
+      // email enumeration (real and duplicate emails both return 200).
+      // Show a verification prompt instead of navigating to /feed with no
+      // access token (the server never returns one from /auth/register).
+      setRegistered(true);
     } else {
-      setSubmitError("Registration failed");
+      setSubmitError("Registration failed. Please try again.");
     }
+  }
+
+  if (registered) {
+    return (
+      <div className="rounded-[18px] glass-light dark:glass-dark p-8 shadow-apple-lg text-center">
+        <div className="mb-4 text-4xl">✉️</div>
+        <h1 className="text-2xl font-bold text-neutral-900 tracking-[-0.02em] mb-2">
+          Check your email
+        </h1>
+        <p className="text-neutral-500">
+          We&apos;ve sent a verification link to <strong>{email}</strong>.
+          Please check your inbox and click the link to activate your account.
+        </p>
+        <p className="mt-4 text-sm text-neutral-400">
+          Already have an account?{" "}
+          <Link href="/login" className="font-medium text-primary-600 hover:text-primary-700">
+            Log in
+          </Link>
+        </p>
+      </div>
+    );
   }
 
   return (
@@ -96,7 +122,7 @@ export default function RegisterPage() {
             aria-invalid={!!errors.displayName}
             value={displayName}
             onChange={(e) => setDisplayName(e.target.value)}
-            className="w-full rounded-[10px] border-0 bg-[#F1F5F9] px-3 py-2.5 text-neutral-900 placeholder:text-neutral-400 focus:bg-white focus:outline-none focus:ring-2 focus:ring-primary-500/30 transition-all duration-[180ms]"
+            className="w-full rounded-[10px] border-0 bg-[#F1F5F9] px-3 py-2.5 text-neutral-900 placeholder:text-neutral-500 focus:bg-white focus:outline-none focus:ring-2 focus:ring-primary-500/30 transition-all duration-[180ms]"
           />
           {errors.displayName && (
             <p id="displayName-error" role="alert" className="mt-1 text-sm text-error-700">
@@ -120,7 +146,7 @@ export default function RegisterPage() {
             aria-invalid={!!errors.email}
             value={email}
             onChange={(e) => setEmail(e.target.value)}
-            className="w-full rounded-[10px] border-0 bg-[#F1F5F9] px-3 py-2.5 text-neutral-900 placeholder:text-neutral-400 focus:bg-white focus:outline-none focus:ring-2 focus:ring-primary-500/30 transition-all duration-[180ms]"
+            className="w-full rounded-[10px] border-0 bg-[#F1F5F9] px-3 py-2.5 text-neutral-900 placeholder:text-neutral-500 focus:bg-white focus:outline-none focus:ring-2 focus:ring-primary-500/30 transition-all duration-[180ms]"
             placeholder="name@example.com"
           />
           {errors.email && (
@@ -143,7 +169,7 @@ export default function RegisterPage() {
             aria-invalid={!!errors.password}
             value={password}
             onChange={(e) => setPassword(e.target.value)}
-            className="w-full rounded-[10px] border-0 bg-[#F1F5F9] px-3 py-2.5 text-neutral-900 placeholder:text-neutral-400 focus:bg-white focus:outline-none focus:ring-2 focus:ring-primary-500/30 transition-all duration-[180ms]"
+            className="w-full rounded-[10px] border-0 bg-[#F1F5F9] px-3 py-2.5 text-neutral-900 placeholder:text-neutral-500 focus:bg-white focus:outline-none focus:ring-2 focus:ring-primary-500/30 transition-all duration-[180ms]"
           />
           <p id="password-hint" className="mt-1 text-xs text-neutral-400">
             {t("passwordHint")}
@@ -168,7 +194,7 @@ export default function RegisterPage() {
             aria-invalid={!!errors.confirmPassword}
             value={confirmPassword}
             onChange={(e) => setConfirmPassword(e.target.value)}
-            className="w-full rounded-[10px] border-0 bg-[#F1F5F9] px-3 py-2.5 text-neutral-900 placeholder:text-neutral-400 focus:bg-white focus:outline-none focus:ring-2 focus:ring-primary-500/30 transition-all duration-[180ms]"
+            className="w-full rounded-[10px] border-0 bg-[#F1F5F9] px-3 py-2.5 text-neutral-900 placeholder:text-neutral-500 focus:bg-white focus:outline-none focus:ring-2 focus:ring-primary-500/30 transition-all duration-[180ms]"
           />
           {errors.confirmPassword && (
             <p id="confirmPassword-error" role="alert" className="mt-1 text-sm text-error-700">

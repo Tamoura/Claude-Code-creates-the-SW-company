@@ -90,6 +90,7 @@ export default function JobsPage() {
 
   return (
     <div className="space-y-4">
+      <h1 className="sr-only">{t("nav.jobs") || "Jobs"}</h1>
       {/* Search */}
       <div className="rounded-[18px] bg-white dark:bg-[#1C1C1E] p-4 shadow-apple-md flex items-center gap-3">
         <input
@@ -98,7 +99,7 @@ export default function JobsPage() {
           defaultValue={filters.q}
           onChange={(e) => handleSearchChange(e.target.value)}
           placeholder={t("jobs.search")}
-          className="flex-1 rounded-[10px] border-0 bg-[#F1F5F9] dark:bg-white/5 px-3 py-2.5 text-neutral-900 dark:text-neutral-100 placeholder:text-neutral-400 focus:bg-white dark:focus:bg-white/10 focus:outline-none focus:ring-2 focus:ring-primary-500/30 transition-all duration-[180ms]"
+          className="flex-1 rounded-[10px] border-0 bg-[#F1F5F9] dark:bg-white/5 px-3 py-2.5 text-neutral-900 dark:text-neutral-100 placeholder:text-neutral-500 focus:bg-white dark:focus:bg-white/10 focus:outline-none focus:ring-2 focus:ring-primary-500/30 transition-all duration-[180ms]"
         />
         {isRecruiter && (
           <button
@@ -163,7 +164,7 @@ export default function JobsPage() {
         </div>
       ) : error ? (
         <div className="rounded-[18px] bg-white dark:bg-[#1C1C1E] p-8 text-center shadow-apple-md">
-          <p className="text-red-500">{error}</p>
+          <p className="text-red-700">{error}</p>
         </div>
       ) : jobs.length === 0 ? (
         <div className="rounded-[18px] bg-white dark:bg-[#1C1C1E] p-8 text-center shadow-apple-md">

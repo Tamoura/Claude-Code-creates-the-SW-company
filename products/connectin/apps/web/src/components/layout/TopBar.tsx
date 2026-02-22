@@ -94,7 +94,7 @@ export function TopBar({ variant = "authenticated" }: TopBarProps) {
               "bg-[#F1F5F9] dark:bg-[#334155]",
               "border border-transparent rounded-full",
               "text-sm text-[#0F172A] dark:text-[#F1F5F9]",
-              "placeholder:text-[#94A3B8]",
+              "placeholder:text-[#64748B]",
               "focus:border-[#0C9AB8] focus:bg-white dark:focus:bg-[#1E293B]",
               "focus:outline-none transition-colors duration-100"
             )}

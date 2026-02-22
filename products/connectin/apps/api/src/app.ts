@@ -4,6 +4,7 @@ import { loadConfig } from './config';
 // Plugins
 import prismaPlugin from './plugins/prisma';
 import corsPlugin from './plugins/cors';
+import redisPlugin from './plugins/redis';
 import authPlugin from './plugins/auth';
 import errorHandlerPlugin from './plugins/error-handler';
 import rateLimiterPlugin from './plugins/rate-limiter';
@@ -47,6 +48,7 @@ export async function buildApp(
   await app.register(errorHandlerPlugin);
   await app.register(prismaPlugin);
   await app.register(corsPlugin);
+  await app.register(redisPlugin); // Must register before authPlugin (blacklist check)
   await app.register(authPlugin);
 
   /* istanbul ignore next */

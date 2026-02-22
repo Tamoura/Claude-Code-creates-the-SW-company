@@ -125,7 +125,7 @@ export function useFeed() {
       if (isLiked) {
         response = await apiClient.delete(`/feed/posts/${postId}/like`);
       } else {
-        response = await apiClient.post(`/feed/posts/${postId}/like`);
+        response = await apiClient.post(`/feed/posts/${postId}/like`, {});
       }
 
       if (!response.success) {

@@ -10,6 +10,8 @@ export interface UserResponse {
   role: string;
   emailVerified: boolean;
   languagePreference: string;
+  status: string;
+  createdAt: string;
 }
 
 export interface RegisterResponse {
@@ -19,6 +21,12 @@ export interface RegisterResponse {
 }
 
 export interface LoginResponse {
+  accessToken: string;
+  refreshToken: string;
+  user: UserResponse;
+}
+
+export interface RefreshResponse {
   accessToken: string;
   refreshToken: string;
   user: UserResponse;

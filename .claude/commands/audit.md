@@ -29,6 +29,39 @@ The report is both technically rigorous (file:line references, exploit scenarios
 
 ## Execution Steps
 
+### Step 0: E2E Gate (MANDATORY — block audit if E2E fails)
+
+Before performing any audit analysis, verify E2E tests exist and pass.
+
+```bash
+# Check E2E tests exist
+if [ ! -f "products/$ARGUMENTS/e2e/package.json" ]; then
+  echo "AUDIT BLOCKED: No E2E tests found in products/$ARGUMENTS/e2e/"
+  echo "E2E tests are required before audit. Add Playwright tests first."
+  exit 1
+fi
+
+# Run E2E tests (assumes API + web are already running)
+cd products/$ARGUMENTS/e2e && npm test 2>&1
+E2E_STATUS=$?
+
+if [ $E2E_STATUS -ne 0 ]; then
+  echo "AUDIT BLOCKED: E2E tests failed (exit code $E2E_STATUS)"
+  echo "Fix all E2E test failures before running the audit."
+  exit 1
+fi
+
+echo "E2E Gate: PASS — proceeding with audit"
+```
+
+**If E2E Gate fails:** Stop immediately. Report to Orchestrator:
+> AUDIT BLOCKED — E2E tests must pass before audit can proceed. Route to QA Engineer to fix failing tests.
+
+**If services are not running:** Report to CEO:
+> Audit requires the platform to be running. Start with `npm run dev` in `products/$ARGUMENTS/`, then re-run `/audit $ARGUMENTS`.
+
+---
+
 ### Step 1: Load Agent Context
 
 Read the Code Reviewer agent instructions:

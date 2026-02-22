@@ -85,10 +85,10 @@ export default function ProfilePage() {
                       placeholder={t("profile.headlinePlaceholder")}
                       autoFocus
                       maxLength={200}
-                      className="rounded-[10px] border-0 bg-[#F1F5F9] dark:bg-white/5 px-3 py-2 text-sm text-neutral-900 dark:text-neutral-100 placeholder:text-neutral-400 focus:bg-white dark:focus:bg-white/10 focus:outline-none focus:ring-2 focus:ring-primary-500/30 transition-all duration-[180ms] w-64"
+                      className="rounded-[10px] border-0 bg-[#F1F5F9] dark:bg-white/5 px-3 py-2 text-sm text-neutral-900 dark:text-neutral-100 placeholder:text-neutral-500 focus:bg-white dark:focus:bg-white/10 focus:outline-none focus:ring-2 focus:ring-primary-500/30 transition-all duration-[180ms] w-64"
                     />
                     {saveError && (
-                      <p className="text-xs text-red-500">{saveError}</p>
+                      <p className="text-xs text-red-700">{saveError}</p>
                     )}
                     <div className="flex gap-2">
                       <button

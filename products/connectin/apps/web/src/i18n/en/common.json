@@ -140,6 +140,13 @@
     "switchTo": "العربية",
     "label": "Switch language"
   },
+  "consent": {
+    "title": "Cookie Preferences",
+    "message": "We use essential cookies to keep you signed in and improve your experience. See our",
+    "privacyLink": "Privacy Policy",
+    "accept": "Accept",
+    "decline": "Decline"
+  },
   "loading": "Loading...",
   "error": "An error occurred",
   "noResults": "No results found"

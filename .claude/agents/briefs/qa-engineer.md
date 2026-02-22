@@ -85,10 +85,21 @@ Before reporting PASS on any Testing Gate, verify these additional checks:
 
 ## Quality Gate
 - All unit tests passing.
-- All E2E tests passing.
+- All E2E tests passing — **E2E is REQUIRED before any checkpoint or audit. No exceptions.**
 - All interactive elements covered by E2E tests.
 - Smoke tests pass (health endpoints, critical user flows).
 - Visual verification confirms UI matches design.
 - Requirement coverage matrix included in test report.
 - Every acceptance criterion has at least one test.
 - All test names reference [US-XX][AC-X] IDs.
+
+## E2E Enforcement Rules (CEO MANDATE)
+1. **No E2E tests = FAIL.** If `e2e/package.json` is missing or the `e2e/tests/` directory is empty, Testing Gate is an automatic FAIL. Create the Playwright suite before proceeding.
+2. **E2E must run against real services.** Never mock the backend in E2E tests. Use a seeded test database.
+3. **Every critical user journey requires an E2E test:**
+   - Authentication (login, register, logout)
+   - Primary data creation (post, job listing, etc.)
+   - Navigation between all main pages
+   - Any form submission that writes to the database
+4. **E2E must be run before `/audit`.** The audit command gates on E2E passing. If E2E fails, the audit will not proceed.
+5. **E2E runs in CI as a required quality gate.** A PR cannot be merged if E2E fails.

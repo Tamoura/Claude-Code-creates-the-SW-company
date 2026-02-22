@@ -12,6 +12,7 @@ import {
   AuthTokens,
   RegisterResponse,
   LoginResponse,
+  RefreshResponse,
 } from './auth.types';
 import { RegisterInput, LoginInput } from './auth.schemas';
 
@@ -152,16 +153,18 @@ export class AuthService {
         id: user.id,
         email: user.email,
         displayName: user.displayName,
-        role: user.role,
+        role: user.role.toLowerCase(),
         emailVerified: user.emailVerified,
-        languagePreference: user.languagePreference,
+        languagePreference: user.languagePreference.toLowerCase(),
+        status: user.status.toLowerCase(),
+        createdAt: user.createdAt.toISOString(),
       },
     };
   }
 
   async refresh(
     refreshToken: string
-  ): Promise<{ accessToken: string }> {
+  ): Promise<RefreshResponse> {
     const tokenHash = this.hashToken(refreshToken);
 
     const session = await this.prisma.session.findFirst({
@@ -194,7 +197,20 @@ export class AuthService {
       },
     });
 
-    return { accessToken: tokens.accessToken };
+    return {
+      accessToken: tokens.accessToken,
+      refreshToken: tokens.refreshToken,
+      user: {
+        id: session.user.id,
+        email: session.user.email,
+        displayName: session.user.displayName,
+        role: session.user.role.toLowerCase(),
+        emailVerified: session.user.emailVerified,
+        languagePreference: session.user.languagePreference.toLowerCase(),
+        status: session.user.status.toLowerCase(),
+        createdAt: session.user.createdAt.toISOString(),
+      },
+    };
   }
 
   async logout(refreshToken: string): Promise<void> {

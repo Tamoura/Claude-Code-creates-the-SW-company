@@ -17,6 +17,39 @@ const connectionRoutes: FastifyPluginAsync = async (
 
   // POST /api/v1/connections/request
   fastify.post('/request', {
+    schema: {
+      description: 'Send a connection request to another user',
+      tags: ['Connections'],
+      security: [{ bearerAuth: [] }],
+      body: {
+        type: 'object',
+        required: ['receiverId'],
+        properties: {
+          receiverId: { type: 'string', format: 'uuid' },
+          message: { type: 'string', maxLength: 300 },
+        },
+      },
+      response: {
+        201: {
+          type: 'object',
+          additionalProperties: true,
+          properties: {
+            success: { type: 'boolean' },
+            data: {
+              type: 'object',
+              additionalProperties: true,
+              properties: {
+                id: { type: 'string' },
+                status: { type: 'string' },
+                senderId: { type: 'string' },
+                receiverId: { type: 'string' },
+                createdAt: { type: 'string', format: 'date-time' },
+              },
+            },
+          },
+        },
+      },
+    },
     config: {
       rateLimit: {
         max: 20,
@@ -44,6 +77,30 @@ const connectionRoutes: FastifyPluginAsync = async (
   // PUT /api/v1/connections/:id/accept
   fastify.put<{ Params: { id: string } }>(
     '/:id/accept',
+    {
+      schema: {
+        description: 'Accept an incoming connection request',
+        tags: ['Connections'],
+        security: [{ bearerAuth: [] }],
+        params: {
+          type: 'object',
+          required: ['id'],
+          properties: {
+            id: { type: 'string', format: 'uuid' },
+          },
+        },
+        response: {
+          200: {
+            type: 'object',
+            additionalProperties: true,
+            properties: {
+              success: { type: 'boolean' },
+              data: { type: 'object', additionalProperties: true },
+            },
+          },
+        },
+      },
+    },
     async (request, reply) => {
       const data = await connectionService.acceptRequest(
         request.params.id,
@@ -56,6 +113,30 @@ const connectionRoutes: FastifyPluginAsync = async (
   // PUT /api/v1/connections/:id/reject
   fastify.put<{ Params: { id: string } }>(
     '/:id/reject',
+    {
+      schema: {
+        description: 'Reject an incoming connection request',
+        tags: ['Connections'],
+        security: [{ bearerAuth: [] }],
+        params: {
+          type: 'object',
+          required: ['id'],
+          properties: {
+            id: { type: 'string', format: 'uuid' },
+          },
+        },
+        response: {
+          200: {
+            type: 'object',
+            additionalProperties: true,
+            properties: {
+              success: { type: 'boolean' },
+              data: { type: 'object', additionalProperties: true },
+            },
+          },
+        },
+      },
+    },
     async (request, reply) => {
       const data = await connectionService.rejectRequest(
         request.params.id,
@@ -66,7 +147,33 @@ const connectionRoutes: FastifyPluginAsync = async (
   );
 
   // GET /api/v1/connections
-  fastify.get('/', async (request, reply) => {
+  fastify.get('/', {
+    schema: {
+      description: 'List all accepted connections for the current user',
+      tags: ['Connections'],
+      security: [{ bearerAuth: [] }],
+      querystring: {
+        type: 'object',
+        properties: {
+          page: { type: 'string' },
+          limit: { type: 'string' },
+        },
+      },
+      response: {
+        200: {
+          type: 'object',
+          additionalProperties: true,
+          properties: {
+            success: { type: 'boolean' },
+            data: {
+              type: 'array',
+              items: { type: 'object', additionalProperties: true },
+            },
+          },
+        },
+      },
+    },
+  }, async (request, reply) => {
     const result = await connectionService.listConnections(
       request.user.sub,
       request.query as { page?: string; limit?: string }
@@ -75,7 +182,30 @@ const connectionRoutes: FastifyPluginAsync = async (
   });
 
   // GET /api/v1/connections/pending
-  fastify.get('/pending', async (request, reply) => {
+  fastify.get('/pending', {
+    schema: {
+      description: 'List pending incoming and outgoing connection requests',
+      tags: ['Connections'],
+      security: [{ bearerAuth: [] }],
+      querystring: {
+        type: 'object',
+        properties: {
+          page: { type: 'string' },
+          limit: { type: 'string' },
+        },
+      },
+      response: {
+        200: {
+          type: 'object',
+          additionalProperties: true,
+          properties: {
+            success: { type: 'boolean' },
+            data: { type: 'object', additionalProperties: true },
+          },
+        },
+      },
+    },
+  }, async (request, reply) => {
     const data = await connectionService.listPending(
       request.user.sub,
       request.query as { page?: string; limit?: string }

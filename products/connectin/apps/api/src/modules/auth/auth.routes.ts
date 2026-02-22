@@ -7,10 +7,12 @@ import { zodToDetails } from '../../lib/validation';
 
 const errorResponseSchema = {
   type: 'object',
+  additionalProperties: true,
   properties: {
     success: { type: 'boolean' },
     error: {
       type: 'object',
+      additionalProperties: true,
       properties: {
         code: { type: 'string' },
         message: { type: 'string' },
@@ -24,6 +26,37 @@ const authRoutes: FastifyPluginAsync = async (fastify) => {
 
   // POST /api/v1/auth/register
   fastify.post('/register', {
+    schema: {
+      description: 'Register a new user account',
+      tags: ['Auth'],
+      body: {
+        type: 'object',
+        required: ['email', 'password', 'displayName'],
+        properties: {
+          email: { type: 'string', format: 'email' },
+          password: { type: 'string', minLength: 8 },
+          displayName: { type: 'string', minLength: 2, maxLength: 100 },
+        },
+      },
+      response: {
+        201: {
+          type: 'object',
+          additionalProperties: true,
+          properties: {
+            success: { type: 'boolean' },
+            data: {
+              type: 'object',
+              additionalProperties: true,
+              properties: {
+                userId: { type: 'string' },
+                email: { type: 'string' },
+                message: { type: 'string' },
+              },
+            },
+          },
+        },
+      },
+    },
     config: {
       rateLimit: {
         max: 3,
@@ -45,9 +78,39 @@ const authRoutes: FastifyPluginAsync = async (fastify) => {
 
   // POST /api/v1/auth/login
   fastify.post('/login', {
+    schema: {
+      description: 'Authenticate with email and password',
+      tags: ['Auth'],
+      body: {
+        type: 'object',
+        required: ['email', 'password'],
+        properties: {
+          email: { type: 'string', format: 'email' },
+          password: { type: 'string' },
+        },
+      },
+      response: {
+        200: {
+          type: 'object',
+          additionalProperties: true,
+          properties: {
+            success: { type: 'boolean' },
+            data: {
+              type: 'object',
+              additionalProperties: true,
+              properties: {
+                accessToken: { type: 'string' },
+                user: { type: 'object', additionalProperties: true },
+              },
+            },
+          },
+        },
+      },
+    },
     config: {
       rateLimit: {
-        max: 5,
+        // Higher limit in dev/test to allow E2E test suites (each test does a fresh login)
+        max: process.env.NODE_ENV === 'production' ? 5 : 100,
         timeWindow: '1 minute',
       },
     },
@@ -70,8 +133,19 @@ const authRoutes: FastifyPluginAsync = async (fastify) => {
       httpOnly: true,
       secure: process.env.NODE_ENV === 'production',
       sameSite: 'strict',
-      path: '/api/v1/auth',
+      path: '/', // Path=/ so Next.js middleware can read it for auth checks
       maxAge: 30 * 24 * 60 * 60, // 30 days
+    });
+
+    // Set lightweight session flag (non-httpOnly) so the Next.js middleware and
+    // the client-side useAuth hook can detect an active session without needing
+    // to read the httpOnly refreshToken cookie.
+    reply.setCookie('session', '1', {
+      httpOnly: false,
+      secure: process.env.NODE_ENV === 'production',
+      sameSite: 'strict',
+      path: '/',
+      maxAge: 30 * 24 * 60 * 60,
     });
 
     // Return accessToken + user in body; refreshToken is in httpOnly cookie only
@@ -83,8 +157,35 @@ const authRoutes: FastifyPluginAsync = async (fastify) => {
   fastify.post('/refresh', {
     config: {
       rateLimit: {
-        max: 10,
+        // Higher limit in dev/test — E2E tests trigger a refresh on every page navigation
+        max: process.env.NODE_ENV === 'production' ? 10 : 200,
         timeWindow: '1 minute',
+      },
+    },
+    // Allow empty or missing body — the refresh token comes from the httpOnly cookie
+    schema: {
+      description: 'Refresh the access token using the httpOnly refresh token cookie',
+      tags: ['Auth'],
+      body: {
+        type: 'object',
+        additionalProperties: true,
+      },
+      response: {
+        200: {
+          type: 'object',
+          additionalProperties: true,
+          properties: {
+            success: { type: 'boolean' },
+            data: {
+              type: 'object',
+              additionalProperties: true,
+              properties: {
+                accessToken: { type: 'string' },
+                user: { type: 'object', additionalProperties: true },
+              },
+            },
+          },
+        },
       },
     },
   }, async (request, reply) => {
@@ -105,13 +206,59 @@ const authRoutes: FastifyPluginAsync = async (fastify) => {
     }
 
     const data = await authService.refresh(refreshToken);
-    return sendSuccess(reply, data);
+
+    // Rotate the refresh token cookie — the new token was generated and
+    // stored in the DB; send it to the client so subsequent refreshes work.
+    reply.setCookie('refreshToken', data.refreshToken, {
+      httpOnly: true,
+      secure: process.env.NODE_ENV === 'production',
+      sameSite: 'strict',
+      path: '/',
+      maxAge: 30 * 24 * 60 * 60, // 30 days
+    });
+
+    // Keep the session flag fresh so the client knows the session is alive.
+    reply.setCookie('session', '1', {
+      httpOnly: false,
+      secure: process.env.NODE_ENV === 'production',
+      sameSite: 'strict',
+      path: '/',
+      maxAge: 30 * 24 * 60 * 60,
+    });
+
+    // Strip the raw refreshToken from the response body — it lives in the
+    // httpOnly cookie only.
+    const { refreshToken: _rt, ...responseData } = data;
+    return sendSuccess(reply, responseData);
   });
 
   // POST /api/v1/auth/logout
   fastify.post(
     '/logout',
-    { preHandler: [fastify.authenticate] },
+    {
+      schema: {
+        description: 'Logout and revoke the current access token immediately',
+        tags: ['Auth'],
+        security: [{ bearerAuth: [] }],
+        response: {
+          200: {
+            type: 'object',
+            additionalProperties: true,
+            properties: {
+              success: { type: 'boolean' },
+              data: {
+                type: 'object',
+                additionalProperties: true,
+                properties: {
+                  message: { type: 'string' },
+                },
+              },
+            },
+          },
+        },
+      },
+      preHandler: [fastify.authenticate],
+    },
     async (request, reply) => {
       const refreshToken =
         (request.cookies as Record<string, string | undefined>)
@@ -124,9 +271,16 @@ const authRoutes: FastifyPluginAsync = async (fastify) => {
         await authService.logout(refreshToken);
       }
 
-      reply.clearCookie('refreshToken', {
-        path: '/api/v1/auth',
-      });
+      // Blacklist the current access token so it cannot be reused
+      // during the remainder of its 15-minute lifetime.
+      const jti = (request.user as { jti?: string }).jti;
+      if (jti) {
+        // TTL matches the access token max lifetime (15 minutes = 900 s).
+        await fastify.redis.set(`blacklist:${jti}`, '1', { EX: 900 });
+      }
+
+      reply.clearCookie('refreshToken', { path: '/' });
+      reply.clearCookie('session', { path: '/' });
 
       return sendSuccess(reply, {
         message: 'Logged out successfully',
@@ -138,6 +292,27 @@ const authRoutes: FastifyPluginAsync = async (fastify) => {
   fastify.delete(
     '/account',
     {
+      schema: {
+        description: 'Permanently delete the current user account and all data (GDPR)',
+        tags: ['Auth'],
+        security: [{ bearerAuth: [] }],
+        response: {
+          200: {
+            type: 'object',
+            additionalProperties: true,
+            properties: {
+              success: { type: 'boolean' },
+              data: {
+                type: 'object',
+                additionalProperties: true,
+                properties: {
+                  message: { type: 'string' },
+                },
+              },
+            },
+          },
+        },
+      },
       preHandler: [fastify.authenticate],
       config: {
         rateLimit: {
@@ -149,9 +324,7 @@ const authRoutes: FastifyPluginAsync = async (fastify) => {
     async (request, reply) => {
       await authService.deleteAccount(request.user.sub);
 
-      reply.clearCookie('refreshToken', {
-        path: '/api/v1/auth',
-      });
+      reply.clearCookie('refreshToken', { path: '/' });
 
       return sendSuccess(reply, {
         message: 'Account deleted successfully',
@@ -163,6 +336,21 @@ const authRoutes: FastifyPluginAsync = async (fastify) => {
   fastify.get(
     '/export',
     {
+      schema: {
+        description: 'Export all personal data for the current user (GDPR Article 20)',
+        tags: ['Auth'],
+        security: [{ bearerAuth: [] }],
+        response: {
+          200: {
+            type: 'object',
+            additionalProperties: true,
+            properties: {
+              success: { type: 'boolean' },
+              data: { type: 'object', additionalProperties: true },
+            },
+          },
+        },
+      },
       preHandler: [fastify.authenticate],
       config: {
         rateLimit: {
@@ -183,6 +371,35 @@ const authRoutes: FastifyPluginAsync = async (fastify) => {
   fastify.get<{ Params: { token: string } }>(
     '/verify-email/:token',
     {
+      schema: {
+        description: 'Verify email address via token sent in the verification email',
+        tags: ['Auth'],
+        params: {
+          type: 'object',
+          required: ['token'],
+          properties: {
+            token: { type: 'string' },
+          },
+        },
+        response: {
+          200: {
+            type: 'object',
+            additionalProperties: true,
+            properties: {
+              success: { type: 'boolean' },
+              data: {
+                type: 'object',
+                additionalProperties: true,
+                properties: {
+                  accessToken: { type: 'string' },
+                  message: { type: 'string' },
+                  redirectTo: { type: 'string' },
+                },
+              },
+            },
+          },
+        },
+      },
       config: {
         rateLimit: {
           max: 5,
@@ -212,12 +429,14 @@ const authRoutes: FastifyPluginAsync = async (fastify) => {
         response: {
           200: {
             type: 'object',
+            additionalProperties: true,
             properties: {
               success: { type: 'boolean' },
               data: {
                 type: 'array',
                 items: {
                   type: 'object',
+                  additionalProperties: true,
                   properties: {
                     id: { type: 'string' },
                     ipAddress: { type: 'string', nullable: true },
@@ -261,10 +480,12 @@ const authRoutes: FastifyPluginAsync = async (fastify) => {
         response: {
           200: {
             type: 'object',
+            additionalProperties: true,
             properties: {
               success: { type: 'boolean' },
               data: {
                 type: 'object',
+                additionalProperties: true,
                 properties: {
                   message: { type: 'string' },
                 },

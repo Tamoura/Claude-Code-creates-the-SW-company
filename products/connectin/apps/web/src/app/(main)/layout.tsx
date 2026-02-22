@@ -1,6 +1,7 @@
 "use client";
 
 import dynamic from "next/dynamic";
+import { AuthGate } from "@/components/layout/AuthGate";
 
 /**
  * Skeleton shown while TopBar JS bundle loads.
@@ -75,7 +76,9 @@ export default function MainLayout({
         <aside className="hidden w-60 shrink-0 lg:block">
           <Sidebar />
         </aside>
-        <main className="min-w-0 flex-1" style={{ animation: "fadeUp 0.5s ease-out both" }}>{children}</main>
+        <main className="min-w-0 flex-1" style={{ animation: "fadeUp 0.5s ease-out both" }}>
+          <AuthGate>{children}</AuthGate>
+        </main>
       </div>
       <BottomNav />
     </div>

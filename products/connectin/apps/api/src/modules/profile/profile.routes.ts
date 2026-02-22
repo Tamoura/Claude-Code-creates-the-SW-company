@@ -16,7 +16,23 @@ const profileRoutes: FastifyPluginAsync = async (fastify) => {
   fastify.addHook('preHandler', fastify.authenticate);
 
   // GET /api/v1/profiles/me
-  fastify.get('/me', async (request, reply) => {
+  fastify.get('/me', {
+    schema: {
+      description: 'Get the authenticated user\'s own profile',
+      tags: ['Profile'],
+      security: [{ bearerAuth: [] }],
+      response: {
+        200: {
+          type: 'object',
+          additionalProperties: true,
+          properties: {
+            success: { type: 'boolean' },
+            data: { type: 'object', additionalProperties: true },
+          },
+        },
+      },
+    },
+  }, async (request, reply) => {
     const profile = await profileService.getMyProfile(
       request.user.sub
     );
@@ -24,7 +40,33 @@ const profileRoutes: FastifyPluginAsync = async (fastify) => {
   });
 
   // PUT /api/v1/profiles/me
-  fastify.put('/me', async (request, reply) => {
+  fastify.put('/me', {
+    schema: {
+      description: 'Update the authenticated user\'s profile',
+      tags: ['Profile'],
+      security: [{ bearerAuth: [] }],
+      body: {
+        type: 'object',
+        properties: {
+          headline: { type: 'string', maxLength: 220 },
+          bio: { type: 'string', maxLength: 2600 },
+          location: { type: 'string', maxLength: 100 },
+          website: { type: 'string', format: 'uri' },
+          avatarUrl: { type: 'string', format: 'uri' },
+        },
+      },
+      response: {
+        200: {
+          type: 'object',
+          additionalProperties: true,
+          properties: {
+            success: { type: 'boolean' },
+            data: { type: 'object', additionalProperties: true },
+          },
+        },
+      },
+    },
+  }, async (request, reply) => {
     const result = updateProfileSchema.safeParse(
       request.body
     );
@@ -47,6 +89,30 @@ const profileRoutes: FastifyPluginAsync = async (fastify) => {
   // Sensitive fields (email, website) are stripped for non-owners in the service layer.
   fastify.get<{ Params: { id: string } }>(
     '/:id',
+    {
+      schema: {
+        description: 'Get a user profile by ID. Sensitive fields are stripped for non-owners.',
+        tags: ['Profile'],
+        security: [{ bearerAuth: [] }],
+        params: {
+          type: 'object',
+          required: ['id'],
+          properties: {
+            id: { type: 'string', format: 'uuid' },
+          },
+        },
+        response: {
+          200: {
+            type: 'object',
+            additionalProperties: true,
+            properties: {
+              success: { type: 'boolean' },
+              data: { type: 'object', additionalProperties: true },
+            },
+          },
+        },
+      },
+    },
     async (request, reply) => {
       const profile = await profileService.getProfileById(
         request.params.id,
@@ -57,7 +123,36 @@ const profileRoutes: FastifyPluginAsync = async (fastify) => {
   );
 
   // POST /api/v1/profiles/me/experience
-  fastify.post('/me/experience', async (request, reply) => {
+  fastify.post('/me/experience', {
+    schema: {
+      description: 'Add a work experience entry to the current user\'s profile',
+      tags: ['Profile'],
+      security: [{ bearerAuth: [] }],
+      body: {
+        type: 'object',
+        required: ['title', 'company'],
+        properties: {
+          title: { type: 'string', maxLength: 100 },
+          company: { type: 'string', maxLength: 100 },
+          location: { type: 'string', maxLength: 100 },
+          startDate: { type: 'string', format: 'date' },
+          endDate: { type: 'string', format: 'date' },
+          current: { type: 'boolean' },
+          description: { type: 'string', maxLength: 2000 },
+        },
+      },
+      response: {
+        201: {
+          type: 'object',
+          additionalProperties: true,
+          properties: {
+            success: { type: 'boolean' },
+            data: { type: 'object', additionalProperties: true },
+          },
+        },
+      },
+    },
+  }, async (request, reply) => {
     const result = addExperienceSchema.safeParse(
       request.body
     );
@@ -76,7 +171,38 @@ const profileRoutes: FastifyPluginAsync = async (fastify) => {
   });
 
   // POST /api/v1/profiles/me/skills
-  fastify.post('/me/skills', async (request, reply) => {
+  fastify.post('/me/skills', {
+    schema: {
+      description: 'Add skills to the current user\'s profile',
+      tags: ['Profile'],
+      security: [{ bearerAuth: [] }],
+      body: {
+        type: 'object',
+        required: ['skillIds'],
+        properties: {
+          skillIds: {
+            type: 'array',
+            items: { type: 'string', format: 'uuid' },
+            minItems: 1,
+            maxItems: 50,
+          },
+        },
+      },
+      response: {
+        200: {
+          type: 'object',
+          additionalProperties: true,
+          properties: {
+            success: { type: 'boolean' },
+            data: {
+              type: 'array',
+              items: { type: 'object', additionalProperties: true },
+            },
+          },
+        },
+      },
+    },
+  }, async (request, reply) => {
     const result = addSkillsSchema.safeParse(request.body);
     if (!result.success) {
       throw new ValidationError(

@@ -12,7 +12,32 @@ const consentRoutes: FastifyPluginAsync = async (fastify) => {
   fastify.addHook('preHandler', fastify.authenticate);
 
   // POST /api/v1/consent — grant or revoke consent
-  fastify.post('/', async (request, reply) => {
+  fastify.post('/', {
+    schema: {
+      description: 'Grant or revoke a consent type for the current user',
+      tags: ['Consent'],
+      security: [{ bearerAuth: [] }],
+      body: {
+        type: 'object',
+        required: ['type', 'granted'],
+        properties: {
+          type: { type: 'string' },
+          granted: { type: 'boolean' },
+          version: { type: 'string' },
+        },
+      },
+      response: {
+        201: {
+          type: 'object',
+          additionalProperties: true,
+          properties: {
+            success: { type: 'boolean' },
+            data: { type: 'object', additionalProperties: true },
+          },
+        },
+      },
+    },
+  }, async (request, reply) => {
     const result = grantConsentSchema.safeParse(
       request.body
     );
@@ -35,7 +60,36 @@ const consentRoutes: FastifyPluginAsync = async (fastify) => {
   });
 
   // GET /api/v1/consent — list user consents
-  fastify.get('/', async (request, reply) => {
+  fastify.get('/', {
+    schema: {
+      description: 'List all consent records for the current user',
+      tags: ['Consent'],
+      security: [{ bearerAuth: [] }],
+      response: {
+        200: {
+          type: 'object',
+          additionalProperties: true,
+          properties: {
+            success: { type: 'boolean' },
+            data: {
+              type: 'array',
+              items: {
+                type: 'object',
+                additionalProperties: true,
+                properties: {
+                  type: { type: 'string' },
+                  granted: { type: 'boolean' },
+                  version: { type: 'string', nullable: true },
+                  grantedAt: { type: 'string', format: 'date-time', nullable: true },
+                  revokedAt: { type: 'string', format: 'date-time', nullable: true },
+                },
+              },
+            },
+          },
+        },
+      },
+    },
+  }, async (request, reply) => {
     const data = await consentService.listConsents(
       request.user.sub
     );

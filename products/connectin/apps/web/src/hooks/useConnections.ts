@@ -31,7 +31,21 @@ export function useConnections() {
       ]);
 
       if (connectionsRes.success && connectionsRes.data) {
-        setConnections(connectionsRes.data);
+        // Transform API response shape {connectionId, user, connectedSince}
+        // to the Connection type {userId, displayName, avatarUrl, headline, ...}
+        const raw = connectionsRes.data as unknown as Array<{
+          connectionId: string;
+          user: { id: string; displayName: string; avatarUrl?: string; headlineEn?: string };
+          connectedSince: string;
+        }>;
+        setConnections(raw.map((c) => ({
+          userId: c.user.id,
+          displayName: c.user.displayName,
+          avatarUrl: c.user.avatarUrl,
+          headline: c.user.headlineEn ?? undefined,
+          status: 'connected' as const,
+          connectedSince: c.connectedSince,
+        })));
       } else if (!connectionsRes.success) {
         setError(
           connectionsRes.error?.message || "Failed to load connections"

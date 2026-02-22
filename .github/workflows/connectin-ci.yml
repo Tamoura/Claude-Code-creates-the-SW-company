@@ -2,7 +2,7 @@ name: ConnectIn CI
 
 on:
   push:
-    branches: [main, 'foundation/connectin', 'feature/connectin/**']
+    branches: [main, 'foundation/connectin', 'feature/connectin/**', 'fix/connectin/**', 'chore/connectin/**']
     paths:
       - 'products/connectin/**'
       - '.github/workflows/connectin-ci.yml'
@@ -136,9 +136,19 @@ jobs:
         if: steps.check.outputs.exists == 'true'
         run: npx prisma generate
 
-      - name: Push database schema
+      - name: Reset and push schema (test isolation — production uses prisma migrate deploy)
         if: steps.check.outputs.exists == 'true'
         run: npx prisma db push --force-reset
+
+      - name: Verify migration is up to date
+        if: steps.check.outputs.exists == 'true'
+        working-directory: products/connectin/apps/api
+        run: |
+          # Generate a migration dry-run to ensure schema and migrations are in sync
+          # In production, use: npx prisma migrate deploy
+          npx prisma migrate status || echo "Note: No migrations directory yet — using schema push for now"
+        env:
+          DATABASE_URL: ${{ env.DATABASE_URL }}
 
       - name: Run tests with coverage
         if: steps.check.outputs.exists == 'true'
@@ -224,8 +234,137 @@ jobs:
 
       - name: Run security audit
         if: steps.check.outputs.exists == 'true'
-        run: npm audit --audit-level=critical --omit=dev || echo "::warning::Security vulnerabilities found - review npm audit output"
-        continue-on-error: true
+        run: npm audit --audit-level=critical --omit=dev
+
+  test-e2e:
+    name: E2E Tests (Playwright)
+    runs-on: ubuntu-latest
+    needs: [test-api, test-web]
+    if: always()
+    services:
+      postgres:
+        image: postgres:15-alpine
+        env:
+          POSTGRES_DB: connectin_e2e
+          POSTGRES_USER: postgres
+          POSTGRES_PASSWORD: postgres
+        ports:
+          - 5432:5432
+        options: >-
+          --health-cmd pg_isready
+          --health-interval 10s
+          --health-timeout 5s
+          --health-retries 5
+    env:
+      DATABASE_URL: postgresql://postgres:postgres@localhost:5432/connectin_e2e
+      JWT_SECRET: ci-e2e-secret-not-for-production-use
+      JWT_REFRESH_SECRET: ci-e2e-refresh-secret-not-for-production
+      JWT_ACCESS_EXPIRY: 15m
+      JWT_REFRESH_EXPIRY: 30d
+      NODE_ENV: development
+      PORT: 5007
+      FRONTEND_URL: http://localhost:3111
+      API_URL: http://localhost:5007
+    steps:
+      - uses: actions/checkout@v4
+
+      - name: Check if e2e tests exist
+        id: check
+        run: |
+          if [ -f "products/connectin/e2e/package.json" ]; then
+            echo "exists=true" >> $GITHUB_OUTPUT
+          else
+            echo "exists=false" >> $GITHUB_OUTPUT
+            echo "::notice::E2E tests not found — skipping"
+          fi
+
+      - name: Setup Node.js
+        if: steps.check.outputs.exists == 'true'
+        uses: actions/setup-node@v4
+        with:
+          node-version: ${{ env.NODE_VERSION }}
+
+      - name: Install API dependencies
+        if: steps.check.outputs.exists == 'true'
+        working-directory: products/connectin/apps/api
+        run: npm ci
+
+      - name: Generate Prisma client & push schema
+        if: steps.check.outputs.exists == 'true'
+        working-directory: products/connectin/apps/api
+        run: |
+          npx prisma generate
+          npx prisma db push --force-reset
+
+      - name: Seed database
+        if: steps.check.outputs.exists == 'true'
+        working-directory: products/connectin/apps/api
+        run: npm run db:seed
+
+      - name: Start API server
+        if: steps.check.outputs.exists == 'true'
+        working-directory: products/connectin/apps/api
+        run: npm run dev &
+        env:
+          DATABASE_URL: postgresql://postgres:postgres@localhost:5432/connectin_e2e
+
+      - name: Install web dependencies
+        if: steps.check.outputs.exists == 'true'
+        working-directory: products/connectin/apps/web
+        run: npm ci
+
+      - name: Build and start web app
+        if: steps.check.outputs.exists == 'true'
+        working-directory: products/connectin/apps/web
+        run: |
+          npm run build
+          npm start -- -p 3111 &
+        env:
+          PORT: 3111
+          NEXT_PUBLIC_API_URL: http://localhost:5007/api/v1
+          # next build must run in production mode; the job-level NODE_ENV=development
+          # is intentionally overridden here so static prerendering works correctly.
+          NODE_ENV: production
+
+      - name: Wait for services
+        if: steps.check.outputs.exists == 'true'
+        run: |
+          echo "Waiting for API..."
+          for i in $(seq 1 30); do
+            curl -sf http://localhost:5007/health && break
+            sleep 2
+          done
+          echo "Waiting for web..."
+          for i in $(seq 1 30); do
+            curl -sf http://localhost:3111 && break
+            sleep 2
+          done
+
+      - name: Install E2E dependencies
+        if: steps.check.outputs.exists == 'true'
+        working-directory: products/connectin/e2e
+        run: npm ci
+
+      - name: Install Playwright browsers
+        if: steps.check.outputs.exists == 'true'
+        working-directory: products/connectin/e2e
+        run: npx playwright install --with-deps chromium
+
+      - name: Run E2E tests
+        if: steps.check.outputs.exists == 'true'
+        working-directory: products/connectin/e2e
+        run: npm test
+        env:
+          BASE_URL: http://localhost:3111
+          CI: true
+
+      - name: Upload Playwright report
+        if: always() && steps.check.outputs.exists == 'true'
+        uses: actions/upload-artifact@v4
+        with:
+          name: playwright-report
+          path: products/connectin/e2e/playwright-report/
+          retention-days: 14
 
   build:
     name: Docker Build
@@ -260,7 +399,7 @@ jobs:
 
   quality-gate:
     name: Quality Gate
-    needs: [test-api, test-web, lint-and-typecheck, security, build]
+    needs: [test-api, test-web, test-e2e, lint-and-typecheck, security, build]
     runs-on: ubuntu-latest
     if: always()
     steps:
@@ -270,16 +409,18 @@ jobs:
           echo "  lint-and-typecheck: ${{ needs.lint-and-typecheck.result }}"
           echo "  test-api:          ${{ needs.test-api.result }}"
           echo "  test-web:          ${{ needs.test-web.result }}"
+          echo "  test-e2e:          ${{ needs.test-e2e.result }}"
           echo "  security:          ${{ needs.security.result }}"
           echo "  build:             ${{ needs.build.result }}"
 
           FAILED=false
 
-          # Each core job must pass or be successfully skipped
+          # All core jobs must pass or be skipped — E2E is now a required gate
           for job_result in \
             "${{ needs.lint-and-typecheck.result }}" \
             "${{ needs.test-api.result }}" \
             "${{ needs.test-web.result }}" \
+            "${{ needs.test-e2e.result }}" \
             "${{ needs.build.result }}"; do
             if [ "$job_result" != "success" ] && [ "$job_result" != "skipped" ]; then
               FAILED=true
@@ -295,4 +436,4 @@ jobs:
             echo "::warning::Security audit reported issues - review recommended"
           fi
 
-          echo "All quality gates passed for ConnectIn"
+          echo "All quality gates passed for ConnectIn (unit + E2E + lint + security + build)"
