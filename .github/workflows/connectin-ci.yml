@@ -322,6 +322,9 @@ jobs:
         env:
           PORT: 3111
           NEXT_PUBLIC_API_URL: http://localhost:5007/api/v1
+          # next build must run in production mode; the job-level NODE_ENV=development
+          # is intentionally overridden here so static prerendering works correctly.
+          NODE_ENV: production
 
       - name: Wait for services
         if: steps.check.outputs.exists == 'true'
