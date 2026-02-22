@@ -2,6 +2,7 @@ import type { Metadata } from "next";
 import { IBM_Plex_Sans_Arabic, Inter } from "next/font/google";
 import "./globals.css";
 import { Providers } from "./providers";
+import { CookieConsent } from "@/components/shared/CookieConsent";
 
 // Primary font: Arabic-first, covers Arabic + Latin glyphs
 const ibmPlexSansArabic = IBM_Plex_Sans_Arabic({
@@ -49,6 +50,7 @@ export default function RootLayout({
         </a>
         <Providers>
           <div id="main-content">{children}</div>
+          <CookieConsent />
         </Providers>
       </body>
     </html>

@@ -353,7 +353,7 @@ describe("useAuth", () => {
         await result.current.logout();
       });
 
-      expect(mockPost).toHaveBeenCalledWith("/auth/logout");
+      expect(mockPost).toHaveBeenCalledWith("/auth/logout", {});
     });
 
     it("clears user even when logout API call fails", async () => {

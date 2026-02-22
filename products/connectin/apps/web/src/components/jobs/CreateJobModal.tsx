@@ -3,6 +3,7 @@
 import { useState, useEffect } from "react";
 import { apiClient } from "@/lib/api";
 import type { Job } from "@/types";
+import { useFocusTrap } from "@/hooks/useFocusTrap";
 
 interface CreateJobModalProps {
   onSuccess: () => void;
@@ -55,6 +56,7 @@ export function CreateJobModal({ onSuccess, onClose }: CreateJobModalProps) {
   const [form, setForm] = useState<FormState>(INITIAL_FORM);
   const [isSubmitting, setIsSubmitting] = useState(false);
   const [error, setError] = useState<string | null>(null);
+  const dialogRef = useFocusTrap(true);
 
   // ESC to close
   useEffect(() => {
@@ -114,7 +116,7 @@ export function CreateJobModal({ onSuccess, onClose }: CreateJobModalProps) {
   };
 
   const inputCls =
-    "w-full rounded-[10px] border-0 bg-[#F1F5F9] dark:bg-white/5 px-3 py-2.5 text-sm text-neutral-900 dark:text-neutral-100 placeholder:text-neutral-400 focus:bg-white dark:focus:bg-white/10 focus:outline-none focus:ring-2 focus:ring-primary-500/30 transition-all duration-[180ms]";
+    "w-full rounded-[10px] border-0 bg-[#F1F5F9] dark:bg-white/5 px-3 py-2.5 text-sm text-neutral-900 dark:text-neutral-100 placeholder:text-neutral-500 focus:bg-white dark:focus:bg-white/10 focus:outline-none focus:ring-2 focus:ring-primary-500/30 transition-all duration-[180ms]";
 
   return (
     <div
@@ -124,6 +126,7 @@ export function CreateJobModal({ onSuccess, onClose }: CreateJobModalProps) {
       }}
     >
       <div
+        ref={dialogRef}
         role="dialog"
         aria-modal="true"
         aria-labelledby="create-job-title"

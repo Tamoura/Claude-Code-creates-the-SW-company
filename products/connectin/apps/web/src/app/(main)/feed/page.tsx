@@ -45,7 +45,7 @@ export default function FeedPage() {
           onChange={(e) => setPostContent(e.target.value)}
           placeholder={t("feed.composer")}
           disabled={isSubmitting}
-          className="w-full resize-none rounded-[10px] border-0 bg-[#F1F5F9] dark:bg-white/5 px-3 py-2.5 text-neutral-900 dark:text-neutral-100 placeholder:text-neutral-400 focus:bg-white dark:focus:bg-white/10 focus:outline-none focus:ring-2 focus:ring-primary-500/30 transition-all duration-[180ms] disabled:opacity-60"
+          className="w-full resize-none rounded-[10px] border-0 bg-[#F1F5F9] dark:bg-white/5 px-3 py-2.5 text-neutral-900 dark:text-neutral-100 placeholder:text-neutral-500 focus:bg-white dark:focus:bg-white/10 focus:outline-none focus:ring-2 focus:ring-primary-500/30 transition-all duration-[180ms] disabled:opacity-60"
           rows={3}
         />
         <div className="mt-3 flex items-center justify-between">

@@ -33,7 +33,7 @@ export function useConnections() {
       if (connectionsRes.success && connectionsRes.data) {
         // Transform API response shape {connectionId, user, connectedSince}
         // to the Connection type {userId, displayName, avatarUrl, headline, ...}
-        const raw = connectionsRes.data as Array<{
+        const raw = connectionsRes.data as unknown as Array<{
           connectionId: string;
           user: { id: string; displayName: string; avatarUrl?: string; headlineEn?: string };
           connectedSince: string;
