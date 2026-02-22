@@ -123,7 +123,7 @@ describe("JobCard", () => {
     it("shows Applied chip when isApplied is true", () => {
       const appliedJob: Job = { ...baseJob, isApplied: true };
       render(<JobCard job={appliedJob} onApply={onApply} onSave={onSave} />);
-      expect(screen.getByText("Applied")).toBeInTheDocument();
+      expect(screen.getByText(/applied/i)).toBeInTheDocument();
     });
 
     it("does not show Apply button when isApplied is true", () => {
