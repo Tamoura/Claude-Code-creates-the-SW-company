@@ -573,4 +573,58 @@ describe('error-handler plugin', () => {
     await devApp.close();
     process.env.NODE_ENV = prev;
   });
+
+  it('error response includes requestId for traceability', async () => {
+    const traceApp = await buildIsolated(async (a) => {
+      await a.register(requestIdPlugin);
+      await a.register(errorHandlerPlugin);
+      a.get('/trace-error', async () => {
+        throw new NotFoundError('Missing resource');
+      });
+    });
+
+    const res = await traceApp.inject({ method: 'GET', url: '/trace-error' });
+    const body = JSON.parse(res.body);
+    expect(body.error.requestId).toBeDefined();
+    expect(body.error.requestId).toMatch(
+      /^[0-9a-f]{8}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{12}$/i
+    );
+
+    await traceApp.close();
+  });
+});
+
+// ---------------------------------------------------------------------------
+// metrics.ts — security counters
+// ---------------------------------------------------------------------------
+
+describe('metrics plugin — security counters', () => {
+  let app: FastifyInstance;
+
+  beforeAll(async () => {
+    app = await buildIsolated(async (a) => {
+      await a.register(metricsPlugin);
+      // Simulate auth routes
+      a.post('/api/v1/auth/login', async (_req, reply) => {
+        reply.status(200).send({ ok: true });
+      });
+      a.post('/api/v1/auth/register', async (_req, reply) => {
+        reply.status(201).send({ ok: true });
+      });
+    });
+  });
+
+  afterAll(() => app.close());
+
+  it('includes auth_events_total counter in metrics output', async () => {
+    await app.inject({ method: 'POST', url: '/api/v1/auth/login' });
+
+    const res = await app.inject({ method: 'GET', url: '/metrics' });
+    expect(res.payload).toContain('auth_events_total');
+  });
+
+  it('includes auth_failures_total counter in metrics output', async () => {
+    const res = await app.inject({ method: 'GET', url: '/metrics' });
+    expect(res.payload).toContain('auth_failures_total');
+  });
 });

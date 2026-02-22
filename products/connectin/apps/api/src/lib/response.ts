@@ -16,6 +16,7 @@ interface ErrorResponse {
     type: string;
     code: string;
     message: string;
+    requestId?: string;
     details?: Array<{ field: string; message: string }>;
   };
 }
@@ -38,13 +39,17 @@ export function sendError(
   statusCode: number,
   code: string,
   message: string,
-  details?: Array<{ field: string; message: string }>
+  details?: Array<{ field: string; message: string }>,
+  requestId?: string
 ): FastifyReply {
   const errorType = `https://connectin.dev/errors/${code.toLowerCase()}`;
   const body: ErrorResponse = {
     success: false,
     error: { type: errorType, code, message },
   };
+  if (requestId) {
+    body.error.requestId = requestId;
+  }
   if (details && details.length > 0) {
     body.error.details = details;
   }

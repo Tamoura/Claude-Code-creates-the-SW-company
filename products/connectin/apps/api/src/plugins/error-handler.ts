@@ -4,11 +4,14 @@ import { AppError, ValidationError } from '../lib/errors';
 import { sendError } from '../lib/response';
 
 const errorHandlerPlugin: FastifyPluginAsync = async (fastify) => {
-  fastify.setErrorHandler((rawError: unknown, _request, reply) => {
+  fastify.setErrorHandler((rawError: unknown, request, reply) => {
     // Cast once for type-safe property access
     const error = rawError as FastifyError & {
       validation?: Array<{ params?: { missingProperty?: string }; message?: string }>;
     };
+
+    // Include requestId in all error responses for traceability
+    const reqId = request.id as string | undefined;
 
     if (rawError instanceof ValidationError) {
       return sendError(
@@ -16,7 +19,8 @@ const errorHandlerPlugin: FastifyPluginAsync = async (fastify) => {
         rawError.statusCode,
         rawError.code,
         rawError.message,
-        rawError.details
+        rawError.details,
+        reqId
       );
     }
 
@@ -25,7 +29,9 @@ const errorHandlerPlugin: FastifyPluginAsync = async (fastify) => {
         reply,
         rawError.statusCode,
         rawError.code,
-        rawError.message
+        rawError.message,
+        undefined,
+        reqId
       );
     }
 
@@ -40,7 +46,8 @@ const errorHandlerPlugin: FastifyPluginAsync = async (fastify) => {
         422,
         'VALIDATION_ERROR',
         'Validation failed',
-        details
+        details,
+        reqId
       );
     }
 
@@ -54,13 +61,15 @@ const errorHandlerPlugin: FastifyPluginAsync = async (fastify) => {
         reply,
         401,
         'UNAUTHORIZED',
-        'Invalid or expired token'
+        'Invalid or expired token',
+        undefined,
+        reqId
       );
     }
 
     // Body too large
     if (error.code === 'FST_ERR_CTP_BODY_TOO_LARGE') {
-      return sendError(reply, 413, 'BODY_TOO_LARGE', 'Request body too large');
+      return sendError(reply, 413, 'BODY_TOO_LARGE', 'Request body too large', undefined, reqId);
     }
 
     // Rate-limit errors: @fastify/rate-limit v9+ throws the errorResponseBuilder
@@ -89,7 +98,9 @@ const errorHandlerPlugin: FastifyPluginAsync = async (fastify) => {
       'INTERNAL_ERROR',
       process.env.NODE_ENV === 'production'
         ? 'An unexpected error occurred'
-        : msg
+        : msg,
+      undefined,
+      reqId
     );
   });
 };
