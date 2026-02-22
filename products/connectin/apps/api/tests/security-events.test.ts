@@ -39,11 +39,12 @@ describe('SecurityEventLogger', () => {
     expect(call.msg).toBe('security');
     expect(call.event).toBe('auth.login.success');
     expect(call.userId).toBe('u-1');
-    expect(call.ip).toBe('127.0.0.1');
+    // IP is hashed (16-char hex), not plaintext
+    expect(call.ip).toMatch(/^[0-9a-f]{16}$/);
     expect(call.timestamp).toBeDefined();
   });
 
-  it('logs a login failed event with reason', () => {
+  it('masks email addresses in log output', () => {
     secLog.log({
       event: 'auth.login.failed',
       email: 'bad@example.com',
@@ -53,8 +54,23 @@ describe('SecurityEventLogger', () => {
 
     const call = logger.info.mock.calls[0][0];
     expect(call.event).toBe('auth.login.failed');
-    expect(call.email).toBe('bad@example.com');
+    // Email must be masked: first char + *** + @domain
+    expect(call.email).toBe('b***@example.com');
+    expect(call.email).not.toBe('bad@example.com');
     expect(call.reason).toBe('invalid_password');
+  });
+
+  it('hashes IP addresses in log output', () => {
+    secLog.log({
+      event: 'auth.login.success',
+      userId: 'u-1',
+      ip: '192.168.1.100',
+    });
+
+    const call = logger.info.mock.calls[0][0];
+    // IP must be hashed (16-char hex string), not plaintext
+    expect(call.ip).not.toBe('192.168.1.100');
+    expect(call.ip).toMatch(/^[0-9a-f]{16}$/);
   });
 
   it('logs account locked event', () => {

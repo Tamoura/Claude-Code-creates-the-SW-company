@@ -1,4 +1,22 @@
 import { FastifyBaseLogger } from 'fastify';
+import { createHash } from 'crypto';
+
+const LOG_SALT = process.env.LOG_SALT ?? 'connectin-log-salt';
+
+/** Mask email: "user@example.com" → "u***@example.com" */
+function maskEmail(email: string): string {
+  const atIdx = email.indexOf('@');
+  if (atIdx <= 0) return '***';
+  return email[0] + '***' + email.slice(atIdx);
+}
+
+/** Hash IP to 16-char hex for pseudonymization */
+function hashIp(ip: string): string {
+  return createHash('sha256')
+    .update(ip + LOG_SALT)
+    .digest('hex')
+    .slice(0, 16);
+}
 
 export type SecurityEventType =
   | 'auth.login.success'
@@ -41,8 +59,8 @@ export class SecurityEventLogger {
     };
 
     if (input.userId !== undefined) payload.userId = input.userId;
-    if (input.email !== undefined) payload.email = input.email;
-    if (input.ip !== undefined) payload.ip = input.ip;
+    if (input.email !== undefined) payload.email = maskEmail(input.email);
+    if (input.ip !== undefined) payload.ip = hashIp(input.ip);
     if (input.userAgent !== undefined) payload.userAgent = input.userAgent;
     if (input.reason !== undefined) payload.reason = input.reason;
     if (input.requestId !== undefined) payload.requestId = input.requestId;
