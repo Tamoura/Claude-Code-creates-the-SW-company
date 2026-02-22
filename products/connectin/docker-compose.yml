@@ -114,6 +114,40 @@ services:
     networks:
       - connectin
 
+  prometheus:
+    image: prom/prometheus:v2.51.0
+    container_name: connectin_prometheus
+    volumes:
+      - ./monitoring/prometheus.yml:/etc/prometheus/prometheus.yml:ro
+      - connectin_prometheusdata:/prometheus
+    ports:
+      - "9091:9090"
+    command:
+      - '--config.file=/etc/prometheus/prometheus.yml'
+      - '--storage.tsdb.retention.time=7d'
+    depends_on:
+      - api
+    restart: unless-stopped
+    networks:
+      - connectin
+
+  grafana:
+    image: grafana/grafana:10.3.1
+    container_name: connectin_grafana
+    environment:
+      - GF_SECURITY_ADMIN_PASSWORD=connectin_dev
+      - GF_USERS_ALLOW_SIGN_UP=false
+    volumes:
+      - connectin_grafanadata:/var/lib/grafana
+      - ./monitoring/grafana/provisioning:/etc/grafana/provisioning:ro
+    ports:
+      - "3112:3000"
+    depends_on:
+      - prometheus
+    restart: unless-stopped
+    networks:
+      - connectin
+
 networks:
   connectin:
     driver: bridge
@@ -121,3 +155,5 @@ networks:
 volumes:
   connectin_pgdata:
   connectin_redisdata:
+  connectin_prometheusdata:
+  connectin_grafanadata:

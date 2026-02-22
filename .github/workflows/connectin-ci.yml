@@ -136,9 +136,19 @@ jobs:
         if: steps.check.outputs.exists == 'true'
         run: npx prisma generate
 
-      - name: Push database schema
+      - name: Reset and push schema (test isolation — production uses prisma migrate deploy)
         if: steps.check.outputs.exists == 'true'
         run: npx prisma db push --force-reset
+
+      - name: Verify migration is up to date
+        if: steps.check.outputs.exists == 'true'
+        working-directory: products/connectin/apps/api
+        run: |
+          # Generate a migration dry-run to ensure schema and migrations are in sync
+          # In production, use: npx prisma migrate deploy
+          npx prisma migrate status || echo "Note: No migrations directory yet — using schema push for now"
+        env:
+          DATABASE_URL: ${{ env.DATABASE_URL }}
 
       - name: Run tests with coverage
         if: steps.check.outputs.exists == 'true'

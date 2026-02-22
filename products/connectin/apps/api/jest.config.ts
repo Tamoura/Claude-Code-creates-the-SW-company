@@ -12,6 +12,11 @@ const config: Config = {
   testTimeout: 30000,
   verbose: true,
   maxWorkers: 1,
+  collectCoverageFrom: [
+    'src/**/*.ts',
+    '!src/**/*.d.ts',
+    '!src/index.ts',
+  ],
   coveragePathIgnorePatterns: [
     '/node_modules/',
     // Error class definitions use default parameters whose alternate branches
