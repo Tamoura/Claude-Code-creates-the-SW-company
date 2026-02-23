@@ -1,5 +1,5 @@
 import type { FastifyInstance } from 'fastify';
-import { listProducts, getProduct, productExists, listProductDocs, getProductDoc } from '../../services/products.service.js';
+import { listProducts, getProduct, productExists, listProductDocs, getProductDoc, getPitchDeck } from '../../services/products.service.js';
 import { generatePdfFromMarkdown } from '../../services/pdf.service.js';
 
 export async function productRoutes(fastify: FastifyInstance) {
@@ -13,6 +13,21 @@ export async function productRoutes(fastify: FastifyInstance) {
       return reply.status(404).send({ error: 'Product not found' });
     }
     return { product };
+  });
+
+  // GET /products/:name/pitch-deck - get pitch deck JSON
+  fastify.get<{ Params: { name: string } }>('/products/:name/pitch-deck', async (request, reply) => {
+    const { name } = request.params;
+    if (!productExists(name)) {
+      return reply.status(404).send({ error: 'Product not found' });
+    }
+
+    const deck = getPitchDeck(name);
+    if (!deck) {
+      return reply.status(404).send({ error: 'Pitch deck not found' });
+    }
+
+    return deck;
   });
 
   // GET /products/:name/docs - list all docs for a product

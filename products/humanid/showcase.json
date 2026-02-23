@@ -1,0 +1,14 @@
+{
+  "tagline": "8 billion people. One identity standard. Zero central control.",
+  "audiences": ["founders", "investors"],
+  "category": "Decentralized Identity",
+  "highlights": [
+    "W3C DID compliant",
+    "Verifiable credentials",
+    "Zero-knowledge proofs",
+    "Blockchain anchoring",
+    "FIDO2/WebAuthn biometrics"
+  ],
+  "metrics": {},
+  "color": "#F59E0B"
+}

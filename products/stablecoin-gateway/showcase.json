@@ -1,0 +1,14 @@
+{
+  "tagline": "Stablecoin payments with Stripe simplicity and 0.5% fees",
+  "audiences": ["founders", "investors", "consumers"],
+  "category": "Fintech / Blockchain",
+  "highlights": [
+    "0.5% transaction fees",
+    "Instant settlement",
+    "Non-custodial design",
+    "Stripe-quality API",
+    "Multi-network support"
+  ],
+  "metrics": { "tests": 546 },
+  "color": "#14B8A6"
+}

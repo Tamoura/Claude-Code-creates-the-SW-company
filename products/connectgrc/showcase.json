@@ -1,0 +1,14 @@
+{
+  "tagline": "The first AI-native talent platform for GRC professionals",
+  "audiences": ["founders", "investors", "consumers"],
+  "category": "Talent Platform",
+  "highlights": [
+    "6-domain GRC assessments",
+    "AI career simulator",
+    "Intelligent job matching",
+    "Tiered credentialing",
+    "706 tests passing"
+  ],
+  "metrics": { "tests": 706 },
+  "color": "#8B5CF6"
+}

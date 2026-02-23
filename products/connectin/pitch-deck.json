@@ -1,0 +1,118 @@
+{
+  "product": "connectin",
+  "subtitle": "Professional networking built Arabic-first, powered by AI",
+  "slides": [
+    {
+      "layout": "title",
+      "title": "ConnectIn",
+      "subtitle": "Professional networking built Arabic-first, powered by AI",
+      "tagline": "300M+ underserved professionals. One platform.",
+      "audiences": ["consumers", "customers", "investors", "founders"]
+    },
+    {
+      "layout": "problem",
+      "heading": "The Problem",
+      "statement": "LinkedIn wasn't built for Arabic-speaking professionals",
+      "points": [
+        "RTL rendering is an afterthought — Arabic text breaks in posts, profiles, and messages",
+        "AI features don't understand Arabic nuance — recommendations and search fail in Arabic",
+        "300M+ Arabic speakers forced onto an English-first platform with 74M MENA users underserved",
+        "Arabic content generates 31% higher engagement yet gets zero platform optimization"
+      ],
+      "audiences": ["investors", "founders"]
+    },
+    {
+      "layout": "solution",
+      "heading": "The Solution",
+      "statement": "An Arabic-first professional network with AI built into the architecture",
+      "points": [
+        "RTL-native design system — every component built right-to-left from day one",
+        "AI profile optimization using Claude — understands Arabic professional context",
+        "Bilingual content generation — Arabic primary, English secondary",
+        "AI-powered job matching tuned for MENA market dynamics"
+      ],
+      "audiences": ["investors", "founders", "consumers"]
+    },
+    {
+      "layout": "market",
+      "heading": "Market Opportunity",
+      "tam": { "value": "$65.6B", "label": "Global Professional Networking" },
+      "sam": { "value": "$4.5B", "label": "MENA + Arabic Diaspora" },
+      "som": { "value": "$45M", "label": "Year 3 Target" },
+      "audiences": ["investors", "founders"]
+    },
+    {
+      "layout": "feature-grid",
+      "heading": "Product Features",
+      "features": [
+        { "icon": "globe", "title": "RTL-First Design", "description": "Every component rendered right-to-left natively" },
+        { "icon": "brain", "title": "AI Profile Optimization", "description": "Claude-powered profile enhancement in Arabic" },
+        { "icon": "edit", "title": "Bilingual Content", "description": "Generate professional posts in Arabic and English" },
+        { "icon": "briefcase", "title": "Smart Job Matching", "description": "AI matching tuned for MENA market" },
+        { "icon": "shield", "title": "GDPR Compliant", "description": "Privacy-first architecture from day one" },
+        { "icon": "zap", "title": "Vector Search", "description": "pgvector-powered semantic search across profiles" }
+      ],
+      "audiences": ["consumers", "customers", "investors", "founders"]
+    },
+    {
+      "layout": "traction",
+      "heading": "Traction & Progress",
+      "timeline": [
+        { "date": "Q1 2026", "milestone": "Foundation complete — auth, profiles, feed, jobs, network" },
+        { "date": "Q2 2026", "milestone": "26/26 E2E tests passing, security audit score 7.2/10" },
+        { "date": "Q3 2026", "milestone": "Beta launch — 1,000 early adopters in GCC" },
+        { "date": "Q4 2026", "milestone": "Public launch — MENA + diaspora markets" }
+      ],
+      "audiences": ["investors", "founders"]
+    },
+    {
+      "layout": "business-model",
+      "heading": "Business Model",
+      "model": "Freemium + Premium Subscriptions",
+      "tiers": [
+        { "name": "Free", "price": "$0/mo", "features": ["Basic profile", "Feed access", "5 connections/week"] },
+        { "name": "Professional", "price": "$15/mo", "features": ["AI profile optimization", "Unlimited connections", "Advanced analytics"] },
+        { "name": "Recruiter", "price": "$99/mo", "features": ["Candidate search", "Bulk messaging", "ATS integration"] },
+        { "name": "Enterprise", "price": "Custom", "features": ["Team accounts", "API access", "Dedicated support"] }
+      ],
+      "audiences": ["investors", "founders"]
+    },
+    {
+      "layout": "competitive",
+      "heading": "Competitive Landscape",
+      "axes": { "x": "Arabic Language Support", "y": "AI Integration Depth" },
+      "competitors": [
+        { "name": "LinkedIn", "position": "low-x high-y", "note": "Global leader, poor Arabic support" },
+        { "name": "Bayt.com", "position": "mid-x low-y", "note": "MENA job board, limited networking" },
+        { "name": "Drjobpro", "position": "mid-x low-y", "note": "Regional job platform" },
+        { "name": "ConnectIn", "position": "high-x high-y", "note": "Arabic-first + AI-native" }
+      ],
+      "audiences": ["investors", "founders"]
+    },
+    {
+      "layout": "metrics",
+      "heading": "Key Metrics",
+      "metrics": [
+        { "value": "26/26", "label": "E2E Tests Passing", "trend": "up" },
+        { "value": "7.2", "label": "Security Audit Score", "trend": "up" },
+        { "value": "74M", "label": "LinkedIn MENA Users (TAM)", "trend": "up" },
+        { "value": "31%", "label": "Higher Arabic Engagement", "trend": "up" },
+        { "value": "<2s", "label": "Page Load Time", "trend": "stable" },
+        { "value": "100%", "label": "RTL Coverage", "trend": "stable" }
+      ],
+      "audiences": ["investors", "founders"]
+    },
+    {
+      "layout": "vision",
+      "heading": "Vision",
+      "statement": "Become the definitive professional platform for the Arabic-speaking world",
+      "milestones": [
+        "2026: Launch in GCC + Levant — 50K users",
+        "2027: Expand to North Africa + diaspora — 500K users",
+        "2028: AI career coach + recruitment marketplace — 2M users",
+        "2030: The LinkedIn of the Arabic world — 10M+ professionals connected"
+      ],
+      "audiences": ["investors", "founders", "consumers"]
+    }
+  ]
+}

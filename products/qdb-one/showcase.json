@@ -1,0 +1,14 @@
+{
+  "tagline": "One login. Every relationship. Unified dashboard.",
+  "audiences": ["founders", "investors"],
+  "category": "Enterprise Integration",
+  "highlights": [
+    "Master Person Index",
+    "SAML 2.0/OIDC auth",
+    "Event-driven Kafka integration",
+    "GraphQL Federation",
+    "Module Federation UI"
+  ],
+  "metrics": {},
+  "color": "#059669"
+}

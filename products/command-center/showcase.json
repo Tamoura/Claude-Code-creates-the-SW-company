@@ -1,0 +1,14 @@
+{
+  "tagline": "One dashboard to run an AI software company",
+  "audiences": ["founders", "investors"],
+  "category": "Company Operations",
+  "highlights": [
+    "Executive KPI overview",
+    "Product catalog with health",
+    "Agent performance monitoring",
+    "Git analytics + CI/CD status",
+    "Command terminal"
+  ],
+  "metrics": {},
+  "color": "#3B82F6"
+}

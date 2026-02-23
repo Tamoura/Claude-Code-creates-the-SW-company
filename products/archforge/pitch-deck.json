@@ -1,0 +1,118 @@
+{
+  "product": "archforge",
+  "subtitle": "Enterprise architecture from months to minutes with AI",
+  "slides": [
+    {
+      "layout": "title",
+      "title": "ArchForge",
+      "subtitle": "Enterprise architecture from months to minutes with AI",
+      "tagline": "Say it in English. Get it in TOGAF.",
+      "audiences": ["consumers", "customers", "investors", "founders"]
+    },
+    {
+      "layout": "problem",
+      "heading": "The Problem",
+      "statement": "Enterprise architecture documentation takes months and costs millions",
+      "points": [
+        "Creating TOGAF-compliant architecture artifacts takes 3-6 months with specialized consultants",
+        "EA tools like Sparx and Archi have steep learning curves — weeks to become productive",
+        "Architecture docs become stale before they're finished — constant change invalidates work",
+        "Small and mid-size enterprises are priced out — EA consulting starts at $200K+"
+      ],
+      "audiences": ["investors", "founders"]
+    },
+    {
+      "layout": "solution",
+      "heading": "The Solution",
+      "statement": "Describe your architecture in plain English — get standards-compliant artifacts in minutes",
+      "points": [
+        "Natural language to diagram — describe systems, get TOGAF/ArchiMate/C4 diagrams instantly",
+        "Multi-format export — SVG, PNG, PDF, PlantUML, ArchiMate XML",
+        "Interactive visual editor — ReactFlow canvas for refinement",
+        "Framework compliance validator — ensures outputs meet TOGAF standards"
+      ],
+      "audiences": ["investors", "founders", "consumers"]
+    },
+    {
+      "layout": "market",
+      "heading": "Market Opportunity",
+      "tam": { "value": "$1.6B", "label": "EA Tools Market (2030)" },
+      "sam": { "value": "$480M", "label": "AI-Assisted EA Tools" },
+      "som": { "value": "$15M", "label": "Year 3 Target" },
+      "audiences": ["investors", "founders"]
+    },
+    {
+      "layout": "feature-grid",
+      "heading": "Product Features",
+      "features": [
+        { "icon": "message-square", "title": "Natural Language Input", "description": "Describe architecture in plain English or Arabic" },
+        { "icon": "layers", "title": "Multi-Framework", "description": "TOGAF, ArchiMate, C4 diagram standards" },
+        { "icon": "download", "title": "Multi-Format Export", "description": "SVG, PNG, PDF, PlantUML, ArchiMate XML" },
+        { "icon": "edit", "title": "Visual Editor", "description": "Interactive ReactFlow canvas for refinement" },
+        { "icon": "check-circle", "title": "Compliance Validator", "description": "Ensures outputs meet framework standards" },
+        { "icon": "users", "title": "Collaboration", "description": "Share, comment, and version control" }
+      ],
+      "audiences": ["consumers", "customers", "investors", "founders"]
+    },
+    {
+      "layout": "traction",
+      "heading": "Traction & Progress",
+      "timeline": [
+        { "date": "Q1 2026", "milestone": "Architecture and PRD complete — NL-to-diagram engine designed" },
+        { "date": "Q2 2026", "milestone": "Core engine built — TOGAF + C4 generation working" },
+        { "date": "Q3 2026", "milestone": "Beta launch — 100 enterprise architects testing" },
+        { "date": "Q4 2026", "milestone": "Public launch — ArchiMate + collaboration features" }
+      ],
+      "audiences": ["investors", "founders"]
+    },
+    {
+      "layout": "business-model",
+      "heading": "Business Model",
+      "model": "SaaS Subscriptions",
+      "tiers": [
+        { "name": "Starter", "price": "$49/mo", "features": ["10 diagrams/mo", "C4 + basic TOGAF", "PNG/SVG export"] },
+        { "name": "Professional", "price": "$149/mo", "features": ["Unlimited diagrams", "All frameworks", "All export formats"] },
+        { "name": "Team", "price": "$99/seat/mo", "features": ["Collaboration", "Version history", "Template library"] },
+        { "name": "Enterprise", "price": "Custom", "features": ["SSO/SAML", "Custom frameworks", "API access", "On-prem option"] }
+      ],
+      "audiences": ["investors", "founders"]
+    },
+    {
+      "layout": "competitive",
+      "heading": "Competitive Landscape",
+      "axes": { "x": "Ease of Use", "y": "Framework Compliance" },
+      "competitors": [
+        { "name": "Sparx EA", "position": "low-x high-y", "note": "Powerful but steep learning curve" },
+        { "name": "Archi", "position": "mid-x mid-y", "note": "Free, ArchiMate only" },
+        { "name": "Miro/Lucidchart", "position": "high-x low-y", "note": "Easy diagramming, no compliance" },
+        { "name": "ArchForge", "position": "high-x high-y", "note": "NL input + full framework compliance" }
+      ],
+      "audiences": ["investors", "founders"]
+    },
+    {
+      "layout": "metrics",
+      "heading": "Key Metrics",
+      "metrics": [
+        { "value": "<5min", "label": "Time to First Artifact", "trend": "stable" },
+        { "value": "3", "label": "Framework Standards", "trend": "up" },
+        { "value": "6", "label": "Export Formats", "trend": "up" },
+        { "value": "$1.6B", "label": "Market Size (2030)", "trend": "up" },
+        { "value": "6%", "label": "Market CAGR", "trend": "stable" },
+        { "value": "99%", "label": "Compliance Accuracy Target", "trend": "up" }
+      ],
+      "audiences": ["investors", "founders"]
+    },
+    {
+      "layout": "vision",
+      "heading": "Vision",
+      "statement": "Democratize enterprise architecture for every organization",
+      "milestones": [
+        "2026: Launch with TOGAF + C4 — 500 users",
+        "2027: Add ArchiMate XML import/export — 2,000 users",
+        "2028: AI architecture advisor + migration planning — 10,000 users",
+        "2030: The standard EA platform for AI-first organizations"
+      ],
+      "audiences": ["investors", "founders", "consumers"]
+    }
+  ]
+}

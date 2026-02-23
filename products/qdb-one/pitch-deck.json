@@ -1,0 +1,117 @@
+{
+  "product": "qdb-one",
+  "subtitle": "One login. Every relationship. Unified dashboard.",
+  "slides": [
+    {
+      "layout": "title",
+      "title": "QDB One",
+      "subtitle": "One login. Every relationship. Unified dashboard.",
+      "tagline": "Unifying Qatar Development Bank's digital experience.",
+      "audiences": ["customers", "investors", "founders"]
+    },
+    {
+      "layout": "problem",
+      "heading": "The Problem",
+      "statement": "QDB's three portals create a fragmented customer experience",
+      "points": [
+        "Three separate logins — Direct Financing, Advisory Services, Guarantees each have their own portal",
+        "No cross-portal visibility — customers can't see all their QDB relationships in one place",
+        "Identity duplication — same person exists as different records across portals",
+        "Support tickets spike around login/access issues — 40% of customer support volume"
+      ],
+      "audiences": ["investors", "founders", "customers"]
+    },
+    {
+      "layout": "solution",
+      "heading": "The Solution",
+      "statement": "A unified platform that merges three portals into one seamless experience",
+      "points": [
+        "Master Person Index — resolves identities across all three portals with 98%+ accuracy",
+        "NAS-backed single sign-on — one login via Qatar's National Authentication System",
+        "Unified dashboard — all financing, advisory, and guarantee relationships in one view",
+        "Module Federation UI — seamless navigation across portals without iframes"
+      ],
+      "audiences": ["investors", "founders", "customers"]
+    },
+    {
+      "layout": "market",
+      "heading": "Market Opportunity",
+      "tam": { "value": "$2.4B", "label": "Government Digital Services (GCC)" },
+      "sam": { "value": "$180M", "label": "Qatar E-Government Platforms" },
+      "som": { "value": "$2.5M", "label": "QDB Contract Value" },
+      "audiences": ["investors", "founders"]
+    },
+    {
+      "layout": "feature-grid",
+      "heading": "Product Features",
+      "features": [
+        { "icon": "users", "title": "Master Person Index", "description": "Cross-portal identity resolution with 98%+ accuracy" },
+        { "icon": "key", "title": "NAS Single Sign-On", "description": "SAML 2.0 / OIDC via National Authentication System" },
+        { "icon": "activity", "title": "Event-Driven Sync", "description": "Kafka-based cross-portal communication" },
+        { "icon": "grid", "title": "Module Federation", "description": "Seamless cross-portal UI without iframes" },
+        { "icon": "shield", "title": "OpenFGA Auth", "description": "Relationship-based fine-grained authorization" },
+        { "icon": "database", "title": "CQRS Views", "description": "Materialized cross-portal read store" }
+      ],
+      "audiences": ["customers", "investors", "founders"]
+    },
+    {
+      "layout": "traction",
+      "heading": "Traction & Progress",
+      "timeline": [
+        { "date": "Q1 2026", "milestone": "Architecture complete — MPI, Module Federation, CQRS designed" },
+        { "date": "Q2 2026", "milestone": "NAS integration + Master Person Index operational" },
+        { "date": "Q3 2026", "milestone": "Beta — unified dashboard with 500 pilot customers" },
+        { "date": "Q4 2026", "milestone": "Full launch — all QDB customers migrated" }
+      ],
+      "audiences": ["investors", "founders"]
+    },
+    {
+      "layout": "business-model",
+      "heading": "Business Model",
+      "model": "Enterprise Contract + Ongoing Support",
+      "tiers": [
+        { "name": "Implementation", "price": "$1.5M", "features": ["Full platform build", "NAS integration", "Data migration"] },
+        { "name": "Annual Support", "price": "$300K/yr", "features": ["24/7 support", "Feature updates", "Infrastructure management"] },
+        { "name": "Phase 2", "price": "$800K", "features": ["Legacy decommission", "Advanced analytics", "Mobile app"] }
+      ],
+      "audiences": ["investors", "founders"]
+    },
+    {
+      "layout": "competitive",
+      "heading": "Competitive Landscape",
+      "axes": { "x": "Government Integration Depth", "y": "Portal Unification" },
+      "competitors": [
+        { "name": "Oracle CX", "position": "mid-x mid-y", "note": "Enterprise but not GCC-native" },
+        { "name": "SAP Portal", "position": "mid-x mid-y", "note": "Portal framework, heavy customization" },
+        { "name": "Custom Build", "position": "low-x low-y", "note": "Expensive, slow, risky" },
+        { "name": "QDB One", "position": "high-x high-y", "note": "NAS-native + MPI + Module Federation" }
+      ],
+      "audiences": ["investors", "founders"]
+    },
+    {
+      "layout": "metrics",
+      "heading": "Key Metrics",
+      "metrics": [
+        { "value": "95%", "label": "SSO Adoption Target (6mo)", "trend": "up" },
+        { "value": "<3s", "label": "Dashboard Load (p95)", "trend": "stable" },
+        { "value": "98%+", "label": "Identity Match Accuracy", "trend": "up" },
+        { "value": "40%", "label": "Support Ticket Reduction", "trend": "up" },
+        { "value": "3→1", "label": "Portals Unified", "trend": "stable" },
+        { "value": "18mo", "label": "Legacy Decommission Timeline", "trend": "stable" }
+      ],
+      "audiences": ["investors", "founders"]
+    },
+    {
+      "layout": "vision",
+      "heading": "Vision",
+      "statement": "Set the standard for unified government digital services in the GCC",
+      "milestones": [
+        "2026: Launch QDB unified platform — 95% SSO adoption",
+        "2027: Decommission legacy portals — full migration complete",
+        "2028: Replicate framework for other Qatar government entities",
+        "2030: GCC-wide government portal unification framework"
+      ],
+      "audiences": ["investors", "founders"]
+    }
+  ]
+}

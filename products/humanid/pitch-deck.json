@@ -1,0 +1,117 @@
+{
+  "product": "humanid",
+  "subtitle": "8 billion people. One identity standard. Zero central control.",
+  "slides": [
+    {
+      "layout": "title",
+      "title": "HumanID",
+      "subtitle": "8 billion people. One identity standard. Zero central control.",
+      "tagline": "Your identity. Your control. Verified everywhere.",
+      "audiences": ["consumers", "customers", "investors", "founders"]
+    },
+    {
+      "layout": "problem",
+      "heading": "The Problem",
+      "statement": "Digital identity is broken — centralized, insecure, and exclusionary",
+      "points": [
+        "1.1 billion people worldwide have no legal identity — locked out of financial and social systems",
+        "Data breaches exposed 22 billion records in 2023 — centralized identity stores are honeypots",
+        "Users create 100+ accounts with passwords — identity fragmented across every service",
+        "KYC costs businesses $500M+ annually — repetitive verification is expensive and slow"
+      ],
+      "audiences": ["investors", "founders"]
+    },
+    {
+      "layout": "solution",
+      "heading": "The Solution",
+      "statement": "A universal, self-sovereign digital identity anchored on blockchain",
+      "points": [
+        "W3C DID compliant — open standard Decentralized Identifiers",
+        "Zero-knowledge proofs — prove facts without revealing data (age > 18 without sharing DOB)",
+        "Blockchain anchoring on Polygon L2 — tamper-proof, gas-efficient",
+        "FIDO2/WebAuthn biometrics — passwordless authentication"
+      ],
+      "audiences": ["investors", "founders", "consumers"]
+    },
+    {
+      "layout": "market",
+      "heading": "Market Opportunity",
+      "tam": { "value": "$83.2B", "label": "Digital Identity Market (2030)" },
+      "sam": { "value": "$12.5B", "label": "Decentralized Identity Segment" },
+      "som": { "value": "$50M", "label": "Year 3 Target" },
+      "audiences": ["investors", "founders"]
+    },
+    {
+      "layout": "feature-grid",
+      "heading": "Product Features",
+      "features": [
+        { "icon": "fingerprint", "title": "Biometric Auth", "description": "FIDO2/WebAuthn passwordless login" },
+        { "icon": "lock", "title": "Zero-Knowledge Proofs", "description": "Selective disclosure with snarkjs/Groth16" },
+        { "icon": "link", "title": "Blockchain Anchored", "description": "Polygon L2 for tamper-proof records" },
+        { "icon": "file-check", "title": "Verifiable Credentials", "description": "Cryptographically signed, W3C standard" },
+        { "icon": "code", "title": "37 API Endpoints", "description": "Full REST API for integrators" },
+        { "icon": "database", "title": "14-Table Schema", "description": "5 identity domains in PostgreSQL" }
+      ],
+      "audiences": ["consumers", "customers", "investors", "founders"]
+    },
+    {
+      "layout": "traction",
+      "heading": "Traction & Progress",
+      "timeline": [
+        { "date": "Q1 2026", "milestone": "Architecture complete — W3C DID + ZKP engine designed" },
+        { "date": "Q2 2026", "milestone": "Core API — 37 endpoints, 14-table schema operational" },
+        { "date": "Q3 2026", "milestone": "Beta — biometric onboarding + credential issuance" },
+        { "date": "Q4 2026", "milestone": "Pilot with government/NGO partner" }
+      ],
+      "audiences": ["investors", "founders"]
+    },
+    {
+      "layout": "business-model",
+      "heading": "Business Model",
+      "model": "B2B API + Verification Fees",
+      "tiers": [
+        { "name": "Developer", "price": "$0/mo", "features": ["100 verifications/mo", "Testnet access", "Community support"] },
+        { "name": "Business", "price": "$499/mo", "features": ["10K verifications/mo", "Mainnet access", "Email support"] },
+        { "name": "Enterprise", "price": "Custom", "features": ["Unlimited verifications", "Custom credential schemas", "SLA + dedicated support"] }
+      ],
+      "audiences": ["investors", "founders"]
+    },
+    {
+      "layout": "competitive",
+      "heading": "Competitive Landscape",
+      "axes": { "x": "Decentralization", "y": "Usability" },
+      "competitors": [
+        { "name": "Okta/Auth0", "position": "low-x high-y", "note": "Centralized, great UX" },
+        { "name": "Civic", "position": "mid-x mid-y", "note": "Blockchain identity, limited reach" },
+        { "name": "Worldcoin", "position": "mid-x low-y", "note": "Biometric, controversial privacy" },
+        { "name": "HumanID", "position": "high-x high-y", "note": "W3C DID + ZKP + biometrics" }
+      ],
+      "audiences": ["investors", "founders"]
+    },
+    {
+      "layout": "metrics",
+      "heading": "Key Metrics",
+      "metrics": [
+        { "value": "37", "label": "API Endpoints", "trend": "up" },
+        { "value": "14", "label": "Database Tables", "trend": "stable" },
+        { "value": "5", "label": "Identity Domains", "trend": "stable" },
+        { "value": "88.7%", "label": "Segment CAGR", "trend": "up" },
+        { "value": "$83.2B", "label": "Market Size (2030)", "trend": "up" },
+        { "value": "1.1B", "label": "People Without ID", "trend": "down" }
+      ],
+      "audiences": ["investors", "founders"]
+    },
+    {
+      "layout": "vision",
+      "heading": "Vision",
+      "statement": "Give every human a secure, verifiable digital identity they own and control",
+      "milestones": [
+        "2026: Launch with W3C DID + biometrics — 10K identities issued",
+        "2027: Government pilot partnerships — 100K identities",
+        "2028: Cross-border credential recognition — 1M identities",
+        "2030: Universal identity infrastructure — 100M+ humans verified"
+      ],
+      "audiences": ["investors", "founders", "consumers"]
+    }
+  ]
+}

@@ -10,6 +10,15 @@ export interface DocInfo {
   lastModified: string;
 }
 
+export interface ShowcaseInfo {
+  tagline: string;
+  audiences: string[];
+  category: string;
+  highlights: string[];
+  metrics: Record<string, number>;
+  color: string;
+}
+
 export interface Product {
   name: string;
   displayName: string;
@@ -18,12 +27,14 @@ export interface Product {
   hasWeb: boolean;
   hasDocker: boolean;
   hasCi: boolean;
+  hasPitchDeck: boolean;
   apiPort: number | null;
   webPort: number | null;
   description: string;
   lastModified: string;
   fileCount: number;
   docs: string[];
+  showcase: ShowcaseInfo | null;
 }
 
 /** Cache for listProducts — expires after 30 seconds */
@@ -213,6 +224,12 @@ function buildProductInfo(name: string): Product {
   // Last modified
   const lastModified = getLastModified(dir);
 
+  // Read showcase metadata if present
+  const showcase = readShowcase(dir);
+
+  // Check for pitch deck
+  const hasPitchDeck = existsSync(join(dir, 'pitch-deck.json'));
+
   return {
     name,
     displayName: name.split('-').map((s) => s.charAt(0).toUpperCase() + s.slice(1)).join(' '),
@@ -221,12 +238,14 @@ function buildProductInfo(name: string): Product {
     hasWeb,
     hasDocker,
     hasCi,
+    hasPitchDeck,
     apiPort,
     webPort,
     description,
     lastModified,
     fileCount,
     docs,
+    showcase,
   };
 }
 
@@ -327,10 +346,39 @@ function collectDocPaths(currentDir: string, result: string[]): void {
 }
 
 
+function readShowcase(dir: string): ShowcaseInfo | null {
+  const showcasePath = join(dir, 'showcase.json');
+  if (!existsSync(showcasePath)) return null;
+  try {
+    const raw = JSON.parse(readFileSync(showcasePath, 'utf-8'));
+    return {
+      tagline: raw.tagline ?? '',
+      audiences: Array.isArray(raw.audiences) ? raw.audiences : [],
+      category: raw.category ?? '',
+      highlights: Array.isArray(raw.highlights) ? raw.highlights : [],
+      metrics: typeof raw.metrics === 'object' && raw.metrics !== null ? raw.metrics : {},
+      color: raw.color ?? '#3B82F6',
+    };
+  } catch {
+    return null;
+  }
+}
+
 function getLastModified(dir: string): string {
   try {
     return statSync(dir).mtime.toISOString();
   } catch {
     return new Date().toISOString();
+  }
+}
+
+/** Read pitch deck JSON for a product */
+export function getPitchDeck(productName: string): Record<string, unknown> | null {
+  const deckPath = repoPath('products', productName, 'pitch-deck.json');
+  if (!existsSync(deckPath)) return null;
+  try {
+    return JSON.parse(readFileSync(deckPath, 'utf-8'));
+  } catch {
+    return null;
   }
 }

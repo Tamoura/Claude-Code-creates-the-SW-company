@@ -1,0 +1,116 @@
+{
+  "product": "command-center",
+  "subtitle": "One dashboard to run an AI software company",
+  "slides": [
+    {
+      "layout": "title",
+      "title": "Command Center",
+      "subtitle": "One dashboard to run an AI software company",
+      "tagline": "12 products. 16 agents. One pane of glass.",
+      "audiences": ["consumers", "customers", "investors", "founders"]
+    },
+    {
+      "layout": "problem",
+      "heading": "The Problem",
+      "statement": "Running an AI-agent software company has no dashboard",
+      "points": [
+        "AI agent orchestration across 16 specialist agents requires constant context-switching",
+        "Product portfolio visibility is scattered across repos, docs, and CI pipelines",
+        "No single view shows health, progress, and status across 12+ simultaneous products",
+        "CEO decision-making requires assembling data from git, GitHub, docs, and agent logs manually"
+      ],
+      "audiences": ["investors", "founders"]
+    },
+    {
+      "layout": "solution",
+      "heading": "The Solution",
+      "statement": "A real-time company operations dashboard that reads directly from the monorepo",
+      "points": [
+        "Zero-database architecture — reads from filesystem and git CLI for always-fresh data",
+        "Product catalog — status, ports, CI pipelines, docs, health for all 12 products",
+        "Agent Hub — 16 agents with capabilities, performance, and invocation history",
+        "Built-in document viewer with Mermaid rendering and PDF export"
+      ],
+      "audiences": ["investors", "founders"]
+    },
+    {
+      "layout": "market",
+      "heading": "Market Opportunity",
+      "tam": { "value": "$15.7B", "label": "DevOps Dashboard Market (2028)" },
+      "sam": { "value": "$2.1B", "label": "AI-Ops & Agent Management" },
+      "som": { "value": "$0", "label": "Internal Tool (Not for Sale)" },
+      "audiences": ["investors", "founders"]
+    },
+    {
+      "layout": "feature-grid",
+      "heading": "Product Features",
+      "features": [
+        { "icon": "layout", "title": "Executive Overview", "description": "KPIs, product health, and recent activity" },
+        { "icon": "package", "title": "Product Catalog", "description": "12 products with status, ports, and CI state" },
+        { "icon": "cpu", "title": "Agent Hub", "description": "16 AI agents with capabilities and metrics" },
+        { "icon": "book", "title": "Doc Viewer", "description": "Mermaid diagrams, markdown, and PDF export" },
+        { "icon": "git-branch", "title": "Git Analytics", "description": "Commit history, branch status, CI results" },
+        { "icon": "terminal", "title": "Command Terminal", "description": "Invoke Orchestrator commands from the UI" }
+      ],
+      "audiences": ["consumers", "customers", "investors", "founders"]
+    },
+    {
+      "layout": "traction",
+      "heading": "Traction & Progress",
+      "timeline": [
+        { "date": "Q4 2025", "milestone": "Foundation — overview dashboard, product catalog, agent hub" },
+        { "date": "Q1 2026", "milestone": "Doc viewer with Mermaid + PDF export, git analytics" },
+        { "date": "Q1 2026", "milestone": "Showcase mode with presentation view and audience filtering" },
+        { "date": "Q1 2026", "milestone": "Pitch deck presentation mode for all 12 products" }
+      ],
+      "audiences": ["investors", "founders"]
+    },
+    {
+      "layout": "business-model",
+      "heading": "Business Model",
+      "model": "Internal Tool — Strategic Value",
+      "tiers": [
+        { "name": "Internal Use", "price": "$0", "features": ["Full dashboard", "All 12 products", "All 16 agents"] },
+        { "name": "Strategic Value", "price": "Priceless", "features": ["CEO decision support", "Investor demos", "Portfolio visibility"] }
+      ],
+      "audiences": ["investors", "founders"]
+    },
+    {
+      "layout": "competitive",
+      "heading": "Competitive Landscape",
+      "axes": { "x": "AI Agent Management", "y": "Developer Dashboard" },
+      "competitors": [
+        { "name": "Backstage", "position": "low-x high-y", "note": "Developer portal, no AI agents" },
+        { "name": "Datadog", "position": "low-x high-y", "note": "Monitoring, no agent orchestration" },
+        { "name": "LangSmith", "position": "high-x low-y", "note": "LLM tracing, not company ops" },
+        { "name": "Command Center", "position": "high-x high-y", "note": "Full AI company operations" }
+      ],
+      "audiences": ["investors", "founders"]
+    },
+    {
+      "layout": "metrics",
+      "heading": "Key Metrics",
+      "metrics": [
+        { "value": "12", "label": "Products Monitored", "trend": "up" },
+        { "value": "16", "label": "AI Agents Tracked", "trend": "stable" },
+        { "value": "<2s", "label": "Dashboard Load Time", "trend": "stable" },
+        { "value": "<500ms", "label": "API Response Time", "trend": "stable" },
+        { "value": "30s", "label": "Data Freshness TTL", "trend": "stable" },
+        { "value": "0", "label": "Database Tables (Zero-DB)", "trend": "stable" }
+      ],
+      "audiences": ["investors", "founders"]
+    },
+    {
+      "layout": "vision",
+      "heading": "Vision",
+      "statement": "The operating system for AI-first software companies",
+      "milestones": [
+        "2026: Full company visibility — products, agents, docs, git, CI",
+        "2027: AI-powered insights — anomaly detection, velocity forecasts",
+        "2028: Open-source the framework for other AI-agent companies",
+        "2030: The standard dashboard for AI-orchestrated development"
+      ],
+      "audiences": ["investors", "founders"]
+    }
+  ]
+}

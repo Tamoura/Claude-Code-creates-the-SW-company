@@ -1,0 +1,14 @@
+{
+  "tagline": "Enterprise recommendation power at mid-market pricing",
+  "audiences": ["founders", "investors"],
+  "category": "E-commerce AI",
+  "highlights": [
+    "Multi-tenant architecture",
+    "4 algorithm types",
+    "Built-in A/B testing",
+    "Embeddable JS SDK",
+    "Real-time event ingestion"
+  ],
+  "metrics": {},
+  "color": "#F97316"
+}

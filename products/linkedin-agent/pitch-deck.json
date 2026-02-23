@@ -1,0 +1,117 @@
+{
+  "product": "linkedin-agent",
+  "subtitle": "Trend-aware LinkedIn content generation for Arab professionals",
+  "slides": [
+    {
+      "layout": "title",
+      "title": "LinkedIn Agent",
+      "subtitle": "Trend-aware LinkedIn content generation for Arab professionals",
+      "tagline": "Write once. Trend always. Engage in Arabic.",
+      "audiences": ["consumers", "customers", "investors", "founders"]
+    },
+    {
+      "layout": "problem",
+      "heading": "The Problem",
+      "statement": "Arab professionals struggle to create engaging LinkedIn content",
+      "points": [
+        "AI writing tools produce generic English content — Arabic output is awkward and unnatural",
+        "Staying on top of industry trends requires hours of daily reading and synthesis",
+        "Creating carousel and visual content is time-consuming without design skills",
+        "Arab tech professionals default to English — missing the 31% higher engagement Arabic gets"
+      ],
+      "audiences": ["investors", "founders"]
+    },
+    {
+      "layout": "solution",
+      "heading": "The Solution",
+      "statement": "AI-powered content assistant that knows your industry trends and speaks Arabic natively",
+      "points": [
+        "Trend analysis — paste articles, AI extracts trending topics for your niche",
+        "Arabic-first generation — Claude via OpenRouter for natural Arabic quality",
+        "Format recommendation — text, carousel, infographic, poll based on content type",
+        "Multi-model routing — Gemini for long-context analysis, Claude for Arabic generation"
+      ],
+      "audiences": ["investors", "founders", "consumers"]
+    },
+    {
+      "layout": "market",
+      "heading": "Market Opportunity",
+      "tam": { "value": "$5.5B", "label": "AI Content Generation (2028)" },
+      "sam": { "value": "$660M", "label": "Professional Social Content" },
+      "som": { "value": "$6.6M", "label": "Year 3 Target" },
+      "audiences": ["investors", "founders"]
+    },
+    {
+      "layout": "feature-grid",
+      "heading": "Product Features",
+      "features": [
+        { "icon": "trending-up", "title": "Trend Analysis", "description": "Extract trending topics from articles and posts" },
+        { "icon": "edit", "title": "Arabic-First Content", "description": "Natural Arabic generation via Claude" },
+        { "icon": "image", "title": "Carousel Generator", "description": "Slide-by-slide content with image prompts" },
+        { "icon": "bar-chart", "title": "Format Advisor", "description": "Best format for your content type" },
+        { "icon": "cpu", "title": "Multi-Model AI", "description": "Gemini + Claude via OpenRouter" },
+        { "icon": "globe", "title": "Bilingual Output", "description": "Arabic primary, English secondary" }
+      ],
+      "audiences": ["consumers", "customers", "investors", "founders"]
+    },
+    {
+      "layout": "traction",
+      "heading": "Traction & Progress",
+      "timeline": [
+        { "date": "Q1 2026", "milestone": "Core engine — trend analysis + Arabic post generation" },
+        { "date": "Q2 2026", "milestone": "Carousel generator + format recommendation engine" },
+        { "date": "Q3 2026", "milestone": "Beta — 200 Arab tech professionals testing" },
+        { "date": "Q4 2026", "milestone": "Public launch — Chrome extension + web app" }
+      ],
+      "audiences": ["investors", "founders"]
+    },
+    {
+      "layout": "business-model",
+      "heading": "Business Model",
+      "model": "Freemium + Pro Subscriptions",
+      "tiers": [
+        { "name": "Free", "price": "$0/mo", "features": ["5 posts/mo", "Text-only", "Basic trends"] },
+        { "name": "Creator", "price": "$19/mo", "features": ["30 posts/mo", "Carousels", "Advanced trends"] },
+        { "name": "Influencer", "price": "$49/mo", "features": ["Unlimited posts", "All formats", "Analytics", "Priority generation"] }
+      ],
+      "audiences": ["investors", "founders"]
+    },
+    {
+      "layout": "competitive",
+      "heading": "Competitive Landscape",
+      "axes": { "x": "Arabic Quality", "y": "LinkedIn Specialization" },
+      "competitors": [
+        { "name": "ChatGPT", "position": "low-x low-y", "note": "General purpose, poor Arabic" },
+        { "name": "Jasper", "position": "low-x mid-y", "note": "Marketing copy, English-first" },
+        { "name": "Taplio", "position": "low-x high-y", "note": "LinkedIn-specific, English only" },
+        { "name": "LinkedIn Agent", "position": "high-x high-y", "note": "Arabic-first + LinkedIn-native" }
+      ],
+      "audiences": ["investors", "founders"]
+    },
+    {
+      "layout": "metrics",
+      "heading": "Key Metrics",
+      "metrics": [
+        { "value": "31%", "label": "Higher Arabic Engagement", "trend": "up" },
+        { "value": "2", "label": "AI Models (Claude + Gemini)", "trend": "stable" },
+        { "value": "4", "label": "Content Formats", "trend": "up" },
+        { "value": "25-45", "label": "Target Age Range", "trend": "stable" },
+        { "value": "<30s", "label": "Post Generation Time", "trend": "stable" },
+        { "value": "74M", "label": "LinkedIn MENA Users", "trend": "up" }
+      ],
+      "audiences": ["investors", "founders"]
+    },
+    {
+      "layout": "vision",
+      "heading": "Vision",
+      "statement": "Make every Arab professional a thought leader on LinkedIn",
+      "milestones": [
+        "2026: Launch web app + Chrome extension — 1,000 users",
+        "2027: Add scheduling + analytics — 10,000 users",
+        "2028: Expand to X (Twitter) + Medium — 50,000 users",
+        "2030: The content engine for Arab professionals — 200K+ users"
+      ],
+      "audiences": ["investors", "founders", "consumers"]
+    }
+  ]
+}

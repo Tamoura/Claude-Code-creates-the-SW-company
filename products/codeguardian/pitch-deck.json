@@ -1,0 +1,118 @@
+{
+  "product": "codeguardian",
+  "subtitle": "Multi-model AI code review with 0-100 quality scoring",
+  "slides": [
+    {
+      "layout": "title",
+      "title": "CodeGuardian",
+      "subtitle": "Multi-model AI code review with 0-100 quality scoring",
+      "tagline": "Every PR reviewed. Every vulnerability caught. Zero human bottleneck.",
+      "audiences": ["consumers", "customers", "investors", "founders"]
+    },
+    {
+      "layout": "problem",
+      "heading": "The Problem",
+      "statement": "Code review is the biggest bottleneck in software delivery",
+      "points": [
+        "Senior engineers spend 6+ hours/week reviewing code — time not spent building",
+        "Review quality is inconsistent — fatigue, context-switching, and bias affect results",
+        "Security vulnerabilities slip through — no reviewer catches everything every time",
+        "Single-model AI tools miss nuance — one model can't excel at logic, security, and style"
+      ],
+      "audiences": ["investors", "founders"]
+    },
+    {
+      "layout": "solution",
+      "heading": "The Solution",
+      "statement": "Route each review check to the best AI model for that specific task",
+      "points": [
+        "Multi-model ensemble — Claude Opus for logic, GPT-4o for security, Gemini for patterns",
+        "GitHub-native reviews — inline comments that look and feel like human reviews",
+        "0-100 quality score — transparent breakdown across security, logic, performance, style",
+        "One-click GitHub Marketplace install — working in 60 seconds"
+      ],
+      "audiences": ["investors", "founders", "consumers"]
+    },
+    {
+      "layout": "market",
+      "heading": "Market Opportunity",
+      "tam": { "value": "$7.2B", "label": "DevSecOps Market (2025)" },
+      "sam": { "value": "$1.8B", "label": "AI Code Review Tools" },
+      "som": { "value": "$18M", "label": "Year 3 Target" },
+      "audiences": ["investors", "founders"]
+    },
+    {
+      "layout": "feature-grid",
+      "heading": "Product Features",
+      "features": [
+        { "icon": "layers", "title": "Multi-Model Ensemble", "description": "Best AI model routed per check type" },
+        { "icon": "github", "title": "GitHub Native", "description": "Inline PR comments, native look and feel" },
+        { "icon": "bar-chart", "title": "Quality Score", "description": "0-100 score with transparent breakdown" },
+        { "icon": "shield", "title": "Security Scanning", "description": "OWASP Top 10 + dependency vulnerabilities" },
+        { "icon": "zap", "title": "60-Second Reviews", "description": "Mean review time under 60s for <500-line diffs" },
+        { "icon": "credit-card", "title": "Stripe Billing", "description": "Subscription management with usage tracking" }
+      ],
+      "audiences": ["consumers", "customers", "investors", "founders"]
+    },
+    {
+      "layout": "traction",
+      "heading": "Traction & Progress",
+      "timeline": [
+        { "date": "Q4 2025", "milestone": "Architecture complete — multi-model routing engine built" },
+        { "date": "Q1 2026", "milestone": "GitHub App + quality scoring pipeline operational" },
+        { "date": "Q2 2026", "milestone": "Beta launch on GitHub Marketplace — 500 installs" },
+        { "date": "Q3 2026", "milestone": "Public launch — 5,000 installs, 500 reviews/day" }
+      ],
+      "audiences": ["investors", "founders"]
+    },
+    {
+      "layout": "business-model",
+      "heading": "Business Model",
+      "model": "Freemium + Per-Seat Subscriptions",
+      "tiers": [
+        { "name": "Open Source", "price": "$0/mo", "features": ["5 repos", "100 reviews/mo", "Basic scoring"] },
+        { "name": "Pro", "price": "$19/seat/mo", "features": ["Unlimited repos", "Unlimited reviews", "Full scoring + security"] },
+        { "name": "Team", "price": "$39/seat/mo", "features": ["Team analytics", "Custom rules", "Priority support"] },
+        { "name": "Enterprise", "price": "Custom", "features": ["Self-hosted option", "SSO/SAML", "SLA", "Dedicated support"] }
+      ],
+      "audiences": ["investors", "founders"]
+    },
+    {
+      "layout": "competitive",
+      "heading": "Competitive Landscape",
+      "axes": { "x": "Review Depth", "y": "AI Sophistication" },
+      "competitors": [
+        { "name": "GitHub Copilot", "position": "low-x high-y", "note": "Code generation, not review" },
+        { "name": "SonarQube", "position": "high-x low-y", "note": "Static analysis, rule-based" },
+        { "name": "Codacy", "position": "mid-x low-y", "note": "Automated checks, no AI" },
+        { "name": "CodeGuardian", "position": "high-x high-y", "note": "Multi-model AI + deep review" }
+      ],
+      "audiences": ["investors", "founders"]
+    },
+    {
+      "layout": "metrics",
+      "heading": "Key Metrics",
+      "metrics": [
+        { "value": "<60s", "label": "Mean Review Time", "trend": "stable" },
+        { "value": "3", "label": "AI Models in Ensemble", "trend": "up" },
+        { "value": "0-100", "label": "Quality Score Range", "trend": "stable" },
+        { "value": "28%", "label": "Market CAGR", "trend": "up" },
+        { "value": "$50K", "label": "MRR Target (6mo)", "trend": "up" },
+        { "value": "1.8M", "label": "Copilot Users (Market Signal)", "trend": "up" }
+      ],
+      "audiences": ["investors", "founders"]
+    },
+    {
+      "layout": "vision",
+      "heading": "Vision",
+      "statement": "Make every line of code reviewed by the best AI for the job",
+      "milestones": [
+        "2026: GitHub Marketplace launch — 5,000 installs, $50K MRR",
+        "2027: GitLab + Bitbucket support — 20,000 installs",
+        "2028: Self-hosted enterprise + custom model fine-tuning",
+        "2030: The standard AI code reviewer — 100K+ teams worldwide"
+      ],
+      "audiences": ["investors", "founders", "consumers"]
+    }
+  ]
+}
