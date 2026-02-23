@@ -74,7 +74,7 @@ export function JobCard({ job, onApply, onSave }: JobCardProps) {
             {company}
           </p>
           {location && (
-            <p className="text-xs text-neutral-400 dark:text-neutral-500 mt-0.5 truncate">
+            <p className="text-xs text-neutral-500 dark:text-neutral-500 mt-0.5 truncate">
               {location}
             </p>
           )}
@@ -113,7 +113,7 @@ export function JobCard({ job, onApply, onSave }: JobCardProps) {
       )}
 
       {/* Applicant count */}
-      <p className="mt-1 text-xs text-neutral-400 dark:text-neutral-500">
+      <p className="mt-1 text-xs text-neutral-500 dark:text-neutral-500">
         {applicantCount} applicant{applicantCount !== 1 ? "s" : ""}
       </p>
 

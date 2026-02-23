@@ -118,7 +118,7 @@ export function PostCard({ post, currentUserId, onToggleLike, onEdit, onDelete }
           {author.headline && (
             <p className="truncate text-xs text-neutral-500 leading-snug">{author.headline}</p>
           )}
-          <p className="text-xs text-neutral-400 mt-0.5">{formatRelativeTime(createdAt)}</p>
+          <p className="text-xs text-neutral-500 mt-0.5">{formatRelativeTime(createdAt)}</p>
         </div>
 
         {/* Owner actions */}
@@ -258,9 +258,9 @@ export function PostCard({ post, currentUserId, onToggleLike, onEdit, onDelete }
       {showComments && (
         <div className="mt-3 border-t border-neutral-100 dark:border-white/5 pt-3 space-y-3">
           {commentsLoading ? (
-            <p className="text-xs text-neutral-400">{t("actions.loading")}</p>
+            <p className="text-xs text-neutral-500">{t("actions.loading")}</p>
           ) : comments.length === 0 ? (
-            <p className="text-xs text-neutral-400">{t("feed.noComments")}</p>
+            <p className="text-xs text-neutral-500">{t("feed.noComments")}</p>
           ) : (
             <div className="space-y-2">
               {comments.map((c) => (
@@ -273,7 +273,7 @@ export function PostCard({ post, currentUserId, onToggleLike, onEdit, onDelete }
                     <p className="text-xs text-neutral-700 dark:text-neutral-300 mt-0.5">
                       {c.content}
                     </p>
-                    <p className="text-[10px] text-neutral-400 mt-1">
+                    <p className="text-[10px] text-neutral-500 mt-1">
                       {formatRelativeTime(c.createdAt)}
                     </p>
                   </div>

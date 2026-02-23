@@ -68,7 +68,7 @@ export function UserAvatar({
         <div
           className={cn(
             "rounded-full flex items-center justify-center",
-            "bg-[#BDE3EC] text-[#086577] font-semibold",
+            "bg-[#086577] text-white font-semibold",
             sizeMap[size]
           )}
           aria-label={displayName}

@@ -7,7 +7,7 @@
     "build": "next build",
     "start": "next start -p 3111",
     "lint": "eslint",
-    "test": "jest",
+    "test": "jest --forceExit",
     "test:watch": "jest --watch",
     "typecheck": "tsc --noEmit"
   },

@@ -62,7 +62,7 @@ export default function FeedPage() {
                 ? "text-red-700 font-medium"
                 : charsLeft < 100
                   ? "text-amber-500"
-                  : "text-neutral-400",
+                  : "text-neutral-500",
             ].join(" ")}
           >
             {charsLeft}

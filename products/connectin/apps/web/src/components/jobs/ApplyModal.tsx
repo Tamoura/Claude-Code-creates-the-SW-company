@@ -105,7 +105,7 @@ export function ApplyModal({
             className="block text-sm font-medium text-neutral-700 dark:text-neutral-300 mb-1.5"
           >
             Cover note{" "}
-            <span className="font-normal text-neutral-400">(optional)</span>
+            <span className="font-normal text-neutral-500">(optional)</span>
           </label>
           <textarea
             id="cover-note"
@@ -117,7 +117,7 @@ export function ApplyModal({
             placeholder="Tell the recruiter why you're a great fit..."
             className="w-full rounded-[10px] border-0 bg-[#F1F5F9] dark:bg-white/5 px-3 py-2.5 text-sm text-neutral-900 dark:text-neutral-100 placeholder:text-neutral-600 focus:bg-white dark:focus:bg-white/10 focus:outline-none focus:ring-2 focus:ring-primary-500/30 transition-all duration-[180ms] resize-none"
           />
-          <p aria-live="polite" className="mt-1 text-right text-xs text-neutral-400">
+          <p aria-live="polite" className="mt-1 text-right text-xs text-neutral-500">
             {coverNote.length} / {MAX_COVER_NOTE}
           </p>
         </div>

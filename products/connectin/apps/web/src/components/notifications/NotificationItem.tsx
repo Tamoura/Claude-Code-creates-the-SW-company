@@ -62,7 +62,7 @@ export function NotificationItem({ notification, onMarkRead }: NotificationItemP
             {notification.message}
           </p>
         )}
-        <p className="text-[11px] text-neutral-400 mt-1">
+        <p className="text-[11px] text-neutral-500 mt-1">
           {timeAgo(notification.createdAt)}
         </p>
       </div>
