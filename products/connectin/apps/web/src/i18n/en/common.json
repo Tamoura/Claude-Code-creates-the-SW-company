@@ -159,7 +159,15 @@
     "applicants": "applicants",
     "description": "Description",
     "requirements": "Requirements",
-    "postJob": "Post Job"
+    "postJob": "Post Job",
+    "myApplications": "My Applications",
+    "noApplications": "You haven't applied to any jobs yet.",
+    "appliedOn": "Applied {{date}}",
+    "statusPending": "Pending",
+    "statusReviewed": "Reviewed",
+    "statusShortlisted": "Shortlisted",
+    "statusRejected": "Rejected",
+    "statusWithdrawn": "Withdrawn"
   },
   "settings": {
     "account": "Account",

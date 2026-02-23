@@ -159,7 +159,15 @@
     "applicants": "متقدم",
     "description": "الوصف",
     "requirements": "المتطلبات",
-    "postJob": "نشر وظيفة"
+    "postJob": "نشر وظيفة",
+    "myApplications": "طلباتي",
+    "noApplications": "لم تتقدم لأي وظيفة بعد.",
+    "appliedOn": "تقدمت {{date}}",
+    "statusPending": "قيد الانتظار",
+    "statusReviewed": "تمت المراجعة",
+    "statusShortlisted": "في القائمة المختصرة",
+    "statusRejected": "مرفوض",
+    "statusWithdrawn": "تم السحب"
   },
   "settings": {
     "account": "الحساب",
