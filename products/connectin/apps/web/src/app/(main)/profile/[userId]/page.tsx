@@ -214,7 +214,7 @@ export default function UserProfilePage({ params }: UserProfilePageProps) {
                     key={skill.id}
                     className="rounded-full bg-primary-50 px-3 py-1 text-sm font-medium text-primary-700"
                   >
-                    {skill.name}
+                    {skill.nameEn || skill.nameAr}
                   </span>
                 ))}
               </div>
