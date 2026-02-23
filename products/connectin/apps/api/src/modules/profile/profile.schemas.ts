@@ -76,6 +76,71 @@ export const addSkillsSchema = z.object({
     .max(50, 'Maximum 50 skills'),
 });
 
+export const addEducationSchema = z.object({
+  institution: z
+    .string()
+    .min(1, 'Institution is required')
+    .max(200, 'Institution must be 200 characters or fewer'),
+  degree: z
+    .string()
+    .min(1, 'Degree is required')
+    .max(200, 'Degree must be 200 characters or fewer'),
+  fieldOfStudy: z
+    .string()
+    .max(200, 'Field of study must be 200 characters or fewer')
+    .optional(),
+  description: z.string().optional(),
+  startYear: z
+    .number()
+    .int()
+    .min(1950, 'Start year must be 1950 or later')
+    .max(2030, 'Start year must be 2030 or earlier'),
+  endYear: z
+    .number()
+    .int()
+    .min(1950, 'End year must be 1950 or later')
+    .max(2030, 'End year must be 2030 or earlier')
+    .optional(),
+}).refine(
+  (data) =>
+    !data.endYear || data.endYear >= data.startYear,
+  {
+    message: 'End year must be greater than or equal to start year',
+    path: ['endYear'],
+  }
+);
+
+export const updateEducationSchema = z.object({
+  institution: z
+    .string()
+    .min(1, 'Institution is required')
+    .max(200, 'Institution must be 200 characters or fewer')
+    .optional(),
+  degree: z
+    .string()
+    .min(1, 'Degree is required')
+    .max(200, 'Degree must be 200 characters or fewer')
+    .optional(),
+  fieldOfStudy: z
+    .string()
+    .max(200, 'Field of study must be 200 characters or fewer')
+    .optional(),
+  description: z.string().optional(),
+  startYear: z
+    .number()
+    .int()
+    .min(1950, 'Start year must be 1950 or later')
+    .max(2030, 'Start year must be 2030 or earlier')
+    .optional(),
+  endYear: z
+    .number()
+    .int()
+    .min(1950, 'End year must be 1950 or later')
+    .max(2030, 'End year must be 2030 or earlier')
+    .nullable()
+    .optional(),
+});
+
 export type UpdateProfileInput = z.infer<
   typeof updateProfileSchema
 >;
@@ -83,3 +148,9 @@ export type AddExperienceInput = z.infer<
   typeof addExperienceSchema
 >;
 export type AddSkillsInput = z.infer<typeof addSkillsSchema>;
+export type AddEducationInput = z.infer<
+  typeof addEducationSchema
+>;
+export type UpdateEducationInput = z.infer<
+  typeof updateEducationSchema
+>;

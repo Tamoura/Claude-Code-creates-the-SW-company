@@ -4,6 +4,8 @@ import {
   updateProfileSchema,
   addExperienceSchema,
   addSkillsSchema,
+  addEducationSchema,
+  updateEducationSchema,
 } from './profile.schemas';
 import { sendSuccess } from '../../lib/response';
 import { ValidationError } from '../../lib/errors';
@@ -252,6 +254,167 @@ const profileRoutes: FastifyPluginAsync = async (fastify) => {
     );
     return sendSuccess(reply, skills);
   });
+
+  // POST /api/v1/profiles/me/education
+  fastify.post('/me/education', {
+    schema: {
+      description: 'Add an education entry to the current user\'s profile',
+      tags: ['Profile'],
+      security: [{ bearerAuth: [] }],
+      body: {
+        type: 'object',
+        additionalProperties: false,
+        required: ['institution', 'degree', 'startYear'],
+        properties: {
+          institution: { type: 'string', maxLength: 200 },
+          degree: { type: 'string', maxLength: 200 },
+          fieldOfStudy: { type: 'string', maxLength: 200 },
+          description: { type: 'string' },
+          startYear: { type: 'integer', minimum: 1950, maximum: 2030 },
+          endYear: { type: 'integer', minimum: 1950, maximum: 2030 },
+        },
+      },
+      response: {
+        201: {
+          type: 'object',
+          additionalProperties: true,
+          properties: {
+            success: { type: 'boolean' },
+            data: { type: 'object', additionalProperties: true },
+          },
+        },
+      },
+    },
+    config: {
+      rateLimit: {
+        max: 60,
+        timeWindow: '1 minute',
+      },
+    },
+  }, async (request, reply) => {
+    const result = addEducationSchema.safeParse(
+      request.body
+    );
+    if (!result.success) {
+      throw new ValidationError(
+        'Validation failed',
+        zodToDetails(result.error)
+      );
+    }
+
+    const education = await profileService.addEducation(
+      request.user.sub,
+      result.data
+    );
+    return sendSuccess(reply, education, 201);
+  });
+
+  // PUT /api/v1/profiles/me/education/:id
+  fastify.put<{ Params: { id: string } }>(
+    '/me/education/:id',
+    {
+      schema: {
+        description: 'Update an education entry',
+        tags: ['Profile'],
+        security: [{ bearerAuth: [] }],
+        params: {
+          type: 'object',
+          required: ['id'],
+          properties: {
+            id: { type: 'string', format: 'uuid' },
+          },
+        },
+        body: {
+          type: 'object',
+          additionalProperties: false,
+          properties: {
+            institution: { type: 'string', maxLength: 200 },
+            degree: { type: 'string', maxLength: 200 },
+            fieldOfStudy: { type: 'string', maxLength: 200 },
+            description: { type: 'string' },
+            startYear: { type: 'integer', minimum: 1950, maximum: 2030 },
+            endYear: { type: 'integer', minimum: 1950, maximum: 2030 },
+          },
+        },
+        response: {
+          200: {
+            type: 'object',
+            additionalProperties: true,
+            properties: {
+              success: { type: 'boolean' },
+              data: { type: 'object', additionalProperties: true },
+            },
+          },
+        },
+      },
+      config: {
+        rateLimit: {
+          max: 60,
+          timeWindow: '1 minute',
+        },
+      },
+    },
+    async (request, reply) => {
+      const result = updateEducationSchema.safeParse(
+        request.body
+      );
+      if (!result.success) {
+        throw new ValidationError(
+          'Validation failed',
+          zodToDetails(result.error)
+        );
+      }
+
+      const education = await profileService.updateEducation(
+        request.user.sub,
+        request.params.id,
+        result.data
+      );
+      return sendSuccess(reply, education);
+    }
+  );
+
+  // DELETE /api/v1/profiles/me/education/:id
+  fastify.delete<{ Params: { id: string } }>(
+    '/me/education/:id',
+    {
+      schema: {
+        description: 'Delete an education entry',
+        tags: ['Profile'],
+        security: [{ bearerAuth: [] }],
+        params: {
+          type: 'object',
+          required: ['id'],
+          properties: {
+            id: { type: 'string', format: 'uuid' },
+          },
+        },
+        response: {
+          200: {
+            type: 'object',
+            additionalProperties: true,
+            properties: {
+              success: { type: 'boolean' },
+              data: { type: 'object', additionalProperties: true },
+            },
+          },
+        },
+      },
+      config: {
+        rateLimit: {
+          max: 60,
+          timeWindow: '1 minute',
+        },
+      },
+    },
+    async (request, reply) => {
+      const result = await profileService.deleteEducation(
+        request.user.sub,
+        request.params.id
+      );
+      return sendSuccess(reply, result);
+    }
+  );
 };
 
 export default profileRoutes;
