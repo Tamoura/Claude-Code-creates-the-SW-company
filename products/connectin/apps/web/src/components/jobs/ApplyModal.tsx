@@ -57,8 +57,9 @@ export function ApplyModal({
       } else {
         setError("Failed to submit application. Please try again.");
       }
-    } catch {
-      setError("Something went wrong. Please try again.");
+    } catch (err) {
+      const message = err instanceof Error ? err.message : "Something went wrong";
+      setError(message);
     } finally {
       setIsSubmitting(false);
     }

@@ -1,6 +1,7 @@
 "use client";
 
 import { useState, useCallback } from "react";
+import Link from "next/link";
 import { useTranslation } from "react-i18next";
 import { useJobs } from "@/hooks/useJobs";
 import { useAuthContext } from "@/providers/AuthProvider";
@@ -101,6 +102,14 @@ export default function JobsPage() {
           placeholder={t("jobs.search")}
           className="flex-1 rounded-[10px] border-0 bg-[#F1F5F9] dark:bg-white/5 px-3 py-2.5 text-neutral-900 dark:text-neutral-100 placeholder:text-neutral-600 focus:bg-white dark:focus:bg-white/10 focus:outline-none focus:ring-2 focus:ring-primary-500/30 transition-all duration-[180ms]"
         />
+        {user && (
+          <Link
+            href="/jobs/applications"
+            className="rounded-full border border-primary-600 px-4 py-2 text-sm font-medium text-primary-600 hover:-translate-y-0.5 hover:shadow-apple-md active:scale-[0.97] transition-all duration-[180ms] shrink-0"
+          >
+            {t("jobs.myApplications")}
+          </Link>
+        )}
         {isRecruiter && (
           <button
             type="button"

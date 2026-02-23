@@ -154,6 +154,41 @@ export interface Conversation {
   unreadCount: number;
 }
 
+export interface SearchPersonResult {
+  id: string;
+  displayName: string;
+  headlineEn: string | null;
+  headlineAr: string | null;
+  avatarUrl: string | null;
+}
+
+export interface SearchPostResult {
+  id: string;
+  content: string;
+  authorId: string;
+  authorName: string;
+  createdAt: string;
+}
+
+export interface SearchJobResult {
+  id: string;
+  title: string;
+  company: string;
+  location: string | null;
+  workType: string;
+  experienceLevel: string;
+  createdAt: string;
+}
+
+export interface SearchResults {
+  query: string;
+  people: SearchPersonResult[];
+  posts: SearchPostResult[];
+  jobs: SearchJobResult[];
+}
+
+export type SearchType = "people" | "posts" | "jobs";
+
 export type NotificationType =
   | "CONNECTION_REQUEST"
   | "CONNECTION_ACCEPTED"

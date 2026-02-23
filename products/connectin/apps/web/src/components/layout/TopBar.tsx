@@ -1,7 +1,9 @@
 "use client";
 
+import { useState, useCallback } from "react";
 import { useTranslation } from "react-i18next";
 import Link from "next/link";
+import { useRouter } from "next/navigation";
 import {
   Search,
   Home,
@@ -80,6 +82,20 @@ export function TopBar({ variant = "authenticated" }: TopBarProps) {
     );
   }
 
+  const router = useRouter();
+  const [searchValue, setSearchValue] = useState("");
+
+  const handleSearchSubmit = useCallback(
+    (e: React.FormEvent) => {
+      e.preventDefault();
+      const trimmed = searchValue.trim();
+      if (trimmed) {
+        router.push(`/search?q=${encodeURIComponent(trimmed)}`);
+      }
+    },
+    [searchValue, router]
+  );
+
   const navItems = [
     { href: "/feed", icon: Home, label: t("nav.home") },
     { href: "/network", icon: Users, label: t("nav.network") },
@@ -95,13 +111,19 @@ export function TopBar({ variant = "authenticated" }: TopBarProps) {
         </Link>
 
         {/* Search bar */}
-        <div className="relative flex-1 max-w-[360px] hidden sm:block">
+        <form
+          onSubmit={handleSearchSubmit}
+          className="relative flex-1 max-w-[360px] hidden sm:block"
+          role="search"
+        >
           <Search
             className="absolute inset-y-0 start-0 flex items-center ps-3 h-full w-4 text-[#94A3B8] pointer-events-none"
             aria-hidden="true"
           />
           <input
             type="search"
+            value={searchValue}
+            onChange={(e) => setSearchValue(e.target.value)}
             placeholder={t("nav.search")}
             className={cn(
               "w-full h-10 ps-10 pe-4",
@@ -114,7 +136,7 @@ export function TopBar({ variant = "authenticated" }: TopBarProps) {
             )}
             aria-label={t("nav.search")}
           />
-        </div>
+        </form>
 
         {/* Nav icons - desktop */}
         <nav

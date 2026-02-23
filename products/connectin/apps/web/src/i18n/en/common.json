@@ -159,7 +159,15 @@
     "applicants": "applicants",
     "description": "Description",
     "requirements": "Requirements",
-    "postJob": "Post Job"
+    "postJob": "Post Job",
+    "myApplications": "My Applications",
+    "noApplications": "You haven't applied to any jobs yet.",
+    "appliedOn": "Applied {{date}}",
+    "statusPending": "Pending",
+    "statusReviewed": "Reviewed",
+    "statusShortlisted": "Shortlisted",
+    "statusRejected": "Rejected",
+    "statusWithdrawn": "Withdrawn"
   },
   "settings": {
     "account": "Account",
@@ -177,6 +185,14 @@
     "privacyLink": "Privacy Policy",
     "accept": "Accept",
     "decline": "Decline"
+  },
+  "search": {
+    "title": "Search",
+    "all": "All",
+    "people": "People",
+    "posts": "Posts",
+    "jobs": "Jobs",
+    "filterByType": "Filter by type"
   },
   "loading": "Loading...",
   "error": "An error occurred",

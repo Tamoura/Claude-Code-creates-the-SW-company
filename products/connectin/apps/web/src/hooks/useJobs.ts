@@ -25,7 +25,7 @@ interface JobsResponse {
 }
 
 interface ApplyResponse {
-  applicationId: string;
+  id: string;
   appliedAt: string;
 }
 
@@ -179,15 +179,16 @@ export function useJobs() {
           setJobs((prev) =>
             prev.map((j) =>
               j.id === jobId
-                ? { ...j, isApplied: true, applicationId: response.data!.applicationId }
+                ? { ...j, isApplied: true, applicationId: response.data!.id }
                 : j
             )
           );
-          return response.data.applicationId;
+          return response.data.id;
         }
-        return undefined;
-      } catch {
-        return undefined;
+        // Surface the backend error message
+        throw new Error(response.error?.message || "Application failed");
+      } catch (err) {
+        throw err instanceof Error ? err : new Error("Network error");
       }
     },
     []

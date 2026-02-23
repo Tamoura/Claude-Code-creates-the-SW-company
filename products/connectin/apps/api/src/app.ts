@@ -27,6 +27,7 @@ import consentRoutes from './modules/consent/consent.routes';
 import jobsRoutes from './modules/jobs/jobs.routes';
 import messagingRoutes from './modules/messaging/messaging.routes';
 import notificationsRoutes from './modules/notifications/notifications.routes';
+import searchRoutes from './modules/search/search.routes';
 
 export interface BuildAppOptions {
   skipRateLimit?: boolean;
@@ -103,6 +104,9 @@ export async function buildApp(
   });
   await app.register(notificationsRoutes, {
     prefix: '/api/v1/notifications',
+  });
+  await app.register(searchRoutes, {
+    prefix: '/api/v1/search',
   });
 
   // Session cleanup — run hourly in non-test environments

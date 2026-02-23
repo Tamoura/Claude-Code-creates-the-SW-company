@@ -1031,6 +1031,176 @@ describe('Jobs Module', () => {
     });
   });
 
+  // ─── My Applications ─────────────────────────────────────────────
+
+  describe('GET /api/v1/jobs/my-applications', () => {
+    it('requires authentication (401)', async () => {
+      const app = await getApp();
+
+      const res = await app.inject({
+        method: 'GET',
+        url: '/api/v1/jobs/my-applications',
+      });
+
+      expect(res.statusCode).toBe(401);
+    });
+
+    it('returns empty array when user has no applications', async () => {
+      const app = await getApp();
+      const user = await createTestUser(app);
+
+      const res = await app.inject({
+        method: 'GET',
+        url: '/api/v1/jobs/my-applications',
+        headers: authHeaders(user.accessToken),
+      });
+
+      expect(res.statusCode).toBe(200);
+      const body = JSON.parse(res.body);
+      expect(body.success).toBe(true);
+      expect(body.data).toHaveLength(0);
+      expect(body.meta.hasMore).toBe(false);
+    });
+
+    it('returns applied jobs with details', async () => {
+      const app = await getApp();
+      const recruiter = await createRecruiter(app);
+      const applicant = await createTestUser(app);
+
+      const job = await createJob(app, recruiter.accessToken, {
+        title: 'My Applied Job',
+        company: 'TestCorp',
+      });
+
+      await app.inject({
+        method: 'POST',
+        url: `/api/v1/jobs/${job.id}/apply`,
+        headers: authHeaders(applicant.accessToken),
+        payload: { coverNote: 'Eager to join' },
+      });
+
+      const res = await app.inject({
+        method: 'GET',
+        url: '/api/v1/jobs/my-applications',
+        headers: authHeaders(applicant.accessToken),
+      });
+
+      expect(res.statusCode).toBe(200);
+      const body = JSON.parse(res.body);
+      expect(body.data).toHaveLength(1);
+      expect(body.data[0].status).toBe('PENDING');
+      expect(body.data[0].coverNote).toBe('Eager to join');
+      expect(body.data[0].job).toBeDefined();
+      expect(body.data[0].job.title).toBe('My Applied Job');
+      expect(body.data[0].job.company).toBe('TestCorp');
+      expect(body.data[0].appliedAt).toBeDefined();
+    });
+
+    it('only returns current user applications', async () => {
+      const app = await getApp();
+      const recruiter = await createRecruiter(app);
+      const user1 = await createTestUser(app);
+      const user2 = await createTestUser(app);
+
+      const job = await createJob(app, recruiter.accessToken, {
+        title: 'Shared Job',
+      });
+
+      await app.inject({
+        method: 'POST',
+        url: `/api/v1/jobs/${job.id}/apply`,
+        headers: authHeaders(user1.accessToken),
+        payload: {},
+      });
+
+      const res = await app.inject({
+        method: 'GET',
+        url: '/api/v1/jobs/my-applications',
+        headers: authHeaders(user2.accessToken),
+      });
+
+      expect(res.statusCode).toBe(200);
+      const body = JSON.parse(res.body);
+      expect(body.data).toHaveLength(0);
+    });
+
+    it('supports cursor-based pagination', async () => {
+      const app = await getApp();
+      const recruiter = await createRecruiter(app);
+      const applicant = await createTestUser(app);
+
+      for (let i = 0; i < 5; i++) {
+        const job = await createJob(app, recruiter.accessToken, {
+          title: `Paginated Job ${i + 1}`,
+        });
+        await app.inject({
+          method: 'POST',
+          url: `/api/v1/jobs/${job.id}/apply`,
+          headers: authHeaders(applicant.accessToken),
+          payload: {},
+        });
+      }
+
+      const page1 = await app.inject({
+        method: 'GET',
+        url: '/api/v1/jobs/my-applications?limit=3',
+        headers: authHeaders(applicant.accessToken),
+      });
+
+      const page1Body = JSON.parse(page1.body);
+      expect(page1Body.data).toHaveLength(3);
+      expect(page1Body.meta.hasMore).toBe(true);
+      expect(page1Body.meta.cursor).toBeDefined();
+
+      const page2 = await app.inject({
+        method: 'GET',
+        url: `/api/v1/jobs/my-applications?limit=3&cursor=${page1Body.meta.cursor}`,
+        headers: authHeaders(applicant.accessToken),
+      });
+
+      const page2Body = JSON.parse(page2.body);
+      expect(page2Body.data).toHaveLength(2);
+      expect(page2Body.meta.hasMore).toBe(false);
+    });
+
+    it('orders by most recent first', async () => {
+      const app = await getApp();
+      const recruiter = await createRecruiter(app);
+      const applicant = await createTestUser(app);
+
+      const job1 = await createJob(app, recruiter.accessToken, {
+        title: 'First Applied',
+      });
+      const job2 = await createJob(app, recruiter.accessToken, {
+        title: 'Second Applied',
+      });
+
+      await app.inject({
+        method: 'POST',
+        url: `/api/v1/jobs/${job1.id}/apply`,
+        headers: authHeaders(applicant.accessToken),
+        payload: {},
+      });
+      await app.inject({
+        method: 'POST',
+        url: `/api/v1/jobs/${job2.id}/apply`,
+        headers: authHeaders(applicant.accessToken),
+        payload: {},
+      });
+
+      const res = await app.inject({
+        method: 'GET',
+        url: '/api/v1/jobs/my-applications',
+        headers: authHeaders(applicant.accessToken),
+      });
+
+      const body = JSON.parse(res.body);
+      expect(body.data).toHaveLength(2);
+      expect(body.data[0].job.title).toBe('Second Applied');
+      expect(body.data[1].job.title).toBe('First Applied');
+    });
+  });
+
   describe('HTML sanitization (RISK-002)', () => {
     it('strips HTML tags from job title and description', async () => {
       const app = await getApp();
