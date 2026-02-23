@@ -58,13 +58,17 @@ export function CreateJobModal({ onSuccess, onClose }: CreateJobModalProps) {
   const [error, setError] = useState<string | null>(null);
   const dialogRef = useFocusTrap(true);
 
-  // ESC to close
+  // ESC to close + body scroll lock
   useEffect(() => {
     const handleKeyDown = (e: KeyboardEvent) => {
       if (e.key === "Escape") onClose();
     };
     document.addEventListener("keydown", handleKeyDown);
-    return () => document.removeEventListener("keydown", handleKeyDown);
+    document.body.style.overflow = "hidden";
+    return () => {
+      document.removeEventListener("keydown", handleKeyDown);
+      document.body.style.overflow = "";
+    };
   }, [onClose]);
 
   const handleChange = (

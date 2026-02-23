@@ -30,7 +30,7 @@ export function LanguageToggle({ className }: LanguageToggleProps) {
         "text-[#475569] dark:text-[#CBD5E1]",
         "hover:bg-[#F1F5F9] dark:hover:bg-[#334155]",
         "transition-colors duration-100",
-        "focus:outline-none focus:ring-2 focus:ring-[#57BBCE] focus:ring-offset-2",
+        "focus:outline-none focus:ring-2 focus:ring-[#57BBCE] focus:ring-offset-2 dark:focus:ring-offset-[#1C1C1E]",
         className
       )}
       aria-label={t("language.label")}

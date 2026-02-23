@@ -1,9 +1,10 @@
 "use client";
 
-import { useEffect, useRef } from "react";
+import { useEffect } from "react";
 import { useTranslation } from "react-i18next";
 import { X } from "lucide-react";
 import { NotificationItem } from "./NotificationItem";
+import { useFocusTrap } from "@/hooks/useFocusTrap";
 import type { Notification } from "@/types";
 
 interface NotificationsPanelProps {
@@ -24,7 +25,7 @@ export function NotificationsPanel({
   onMarkAllRead,
 }: NotificationsPanelProps) {
   const { t } = useTranslation("common");
-  const panelRef = useRef<HTMLDivElement>(null);
+  const panelRef = useFocusTrap(true);
 
   // Close on outside click
   useEffect(() => {
@@ -35,7 +36,7 @@ export function NotificationsPanel({
     }
     document.addEventListener("mousedown", handleClickOutside);
     return () => document.removeEventListener("mousedown", handleClickOutside);
-  }, [onClose]);
+  }, [onClose, panelRef]);
 
   // Close on Escape
   useEffect(() => {

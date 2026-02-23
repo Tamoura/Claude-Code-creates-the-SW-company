@@ -778,6 +778,216 @@ const authRoutes: FastifyPluginAsync = async (fastify) => {
       });
     }
   );
+  // ─── GDPR Art 18: Right to Restrict Processing ──────────────
+
+  // POST /api/v1/auth/restrict
+  fastify.post(
+    '/restrict',
+    {
+      schema: {
+        description: 'Restrict processing of personal data (GDPR Article 18)',
+        tags: ['Auth', 'GDPR'],
+        security: [{ bearerAuth: [] }],
+        response: {
+          200: {
+            type: 'object',
+            additionalProperties: true,
+            properties: {
+              success: { type: 'boolean' },
+              data: {
+                type: 'object',
+                additionalProperties: true,
+                properties: {
+                  message: { type: 'string' },
+                },
+              },
+            },
+          },
+        },
+      },
+      preHandler: [fastify.authenticate],
+    },
+    async (request, reply) => {
+      await authService.restrictProcessing(request.user.sub);
+      return sendSuccess(reply, {
+        message: 'Processing has been restricted for your account',
+      });
+    }
+  );
+
+  // DELETE /api/v1/auth/restrict
+  fastify.delete(
+    '/restrict',
+    {
+      schema: {
+        description: 'Lift restriction on processing of personal data (GDPR Article 18)',
+        tags: ['Auth', 'GDPR'],
+        security: [{ bearerAuth: [] }],
+        response: {
+          200: {
+            type: 'object',
+            additionalProperties: true,
+            properties: {
+              success: { type: 'boolean' },
+              data: {
+                type: 'object',
+                additionalProperties: true,
+                properties: {
+                  message: { type: 'string' },
+                },
+              },
+            },
+          },
+        },
+      },
+      preHandler: [fastify.authenticate],
+    },
+    async (request, reply) => {
+      await authService.liftRestriction(request.user.sub);
+      return sendSuccess(reply, {
+        message: 'Processing restriction has been lifted',
+      });
+    }
+  );
+
+  // ─── GDPR Art 21: Right to Object ──────────────────────────
+
+  const VALID_OBJECTION_TYPES = ['PROFILING', 'MARKETING', 'ANALYTICS'];
+
+  // POST /api/v1/auth/object
+  fastify.post(
+    '/object',
+    {
+      schema: {
+        description: 'Register an objection to data processing (GDPR Article 21)',
+        tags: ['Auth', 'GDPR'],
+        security: [{ bearerAuth: [] }],
+        body: {
+          type: 'object',
+          required: ['type'],
+          properties: {
+            type: { type: 'string', enum: VALID_OBJECTION_TYPES },
+            reason: { type: 'string', maxLength: 500 },
+          },
+        },
+        response: {
+          201: {
+            type: 'object',
+            additionalProperties: true,
+            properties: {
+              success: { type: 'boolean' },
+              data: {
+                type: 'object',
+                additionalProperties: true,
+              },
+            },
+          },
+        },
+      },
+      preHandler: [fastify.authenticate],
+    },
+    async (request, reply) => {
+      const { type, reason } = request.body as {
+        type: string;
+        reason?: string;
+      };
+
+      if (!VALID_OBJECTION_TYPES.includes(type)) {
+        throw new ValidationError('Invalid objection type', [
+          { field: 'type', message: `Must be one of: ${VALID_OBJECTION_TYPES.join(', ')}` },
+        ]);
+      }
+
+      const objection = await authService.registerObjection(
+        request.user.sub,
+        type,
+        reason,
+        { ip: request.ip, userAgent: request.headers['user-agent'] }
+      );
+
+      return sendSuccess(reply, objection, 201);
+    }
+  );
+
+  // DELETE /api/v1/auth/object/:type
+  fastify.delete<{ Params: { type: string } }>(
+    '/object/:type',
+    {
+      schema: {
+        description: 'Withdraw an objection to data processing (GDPR Article 21)',
+        tags: ['Auth', 'GDPR'],
+        security: [{ bearerAuth: [] }],
+        params: {
+          type: 'object',
+          required: ['type'],
+          properties: {
+            type: { type: 'string', enum: VALID_OBJECTION_TYPES },
+          },
+        },
+        response: {
+          200: {
+            type: 'object',
+            additionalProperties: true,
+            properties: {
+              success: { type: 'boolean' },
+              data: {
+                type: 'object',
+                additionalProperties: true,
+                properties: {
+                  message: { type: 'string' },
+                },
+              },
+            },
+          },
+        },
+      },
+      preHandler: [fastify.authenticate],
+    },
+    async (request, reply) => {
+      await authService.withdrawObjection(
+        request.user.sub,
+        request.params.type
+      );
+      return sendSuccess(reply, {
+        message: 'Objection has been withdrawn',
+      });
+    }
+  );
+
+  // GET /api/v1/auth/objections
+  fastify.get(
+    '/objections',
+    {
+      schema: {
+        description: 'List active processing objections (GDPR Article 21)',
+        tags: ['Auth', 'GDPR'],
+        security: [{ bearerAuth: [] }],
+        response: {
+          200: {
+            type: 'object',
+            additionalProperties: true,
+            properties: {
+              success: { type: 'boolean' },
+              data: {
+                type: 'array',
+                items: {
+                  type: 'object',
+                  additionalProperties: true,
+                },
+              },
+            },
+          },
+        },
+      },
+      preHandler: [fastify.authenticate],
+    },
+    async (request, reply) => {
+      const objections = await authService.listObjections(
+        request.user.sub
+      );
+      return sendSuccess(reply, objections);
+    }
+  );
 };
 
 export default authRoutes;

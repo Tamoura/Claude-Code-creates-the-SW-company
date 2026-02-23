@@ -84,7 +84,7 @@ export function Sidebar() {
                 "flex items-center gap-3 px-4 py-2.5 mx-2 rounded-xl",
                 "text-sm transition-all duration-[180ms]",
                 isActive
-                  ? "bg-[#E6F4F8] text-[#086577] font-medium"
+                  ? "bg-[#E6F4F8] dark:bg-[#0B6E7F]/20 text-[#086577] dark:text-[#5DD4E8] font-medium"
                   : "text-[#475569] dark:text-[#CBD5E1] hover:bg-[#F8FAFC] dark:hover:bg-white/5 hover:text-[#0C9AB8] hover:ps-5",
                 "focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-[#57BBCE]"
               )}
@@ -94,8 +94,8 @@ export function Sidebar() {
                 className={cn(
                   "h-5 w-5",
                   isActive
-                    ? "text-[#0B6E7F]"
-                    : "text-[#94A3B8]"
+                    ? "text-[#0B6E7F] dark:text-[#5DD4E8]"
+                    : "text-[#64748B] dark:text-[#94A3B8]"
                 )}
                 aria-hidden="true"
               />

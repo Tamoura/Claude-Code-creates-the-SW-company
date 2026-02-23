@@ -532,6 +532,16 @@ export class AuthService {
             createdAt: true,
           },
         },
+        processingObjections: {
+          select: {
+            id: true,
+            type: true,
+            reason: true,
+            objectedAt: true,
+            withdrawnAt: true,
+            createdAt: true,
+          },
+        },
       },
     });
 
@@ -733,6 +743,123 @@ export class AuthService {
 
     await this.prisma.session.delete({
       where: { id: sessionId },
+    });
+  }
+
+  // ─── GDPR Art 18: Right to Restrict Processing ─────────────
+
+  async restrictProcessing(userId: string): Promise<void> {
+    await this.prisma.user.update({
+      where: { id: userId },
+      data: {
+        isRestricted: true,
+        restrictedAt: new Date(),
+      },
+    });
+
+    this.secLog.log({
+      event: 'gdpr.processing.restricted',
+      userId,
+    });
+  }
+
+  async liftRestriction(userId: string): Promise<void> {
+    await this.prisma.user.update({
+      where: { id: userId },
+      data: {
+        isRestricted: false,
+        restrictedAt: null,
+      },
+    });
+
+    this.secLog.log({
+      event: 'gdpr.processing.restriction_lifted',
+      userId,
+    });
+  }
+
+  // ─── GDPR Art 21: Right to Object ─────────────────────────
+
+  async registerObjection(
+    userId: string,
+    type: string,
+    reason?: string,
+    meta?: { ip?: string; userAgent?: string }
+  ) {
+    const objection = await this.prisma.processingObjection.upsert({
+      where: {
+        userId_type: {
+          userId,
+          type: type as any,
+        },
+      },
+      update: {
+        reason: reason ?? null,
+        ipAddress: meta?.ip ?? null,
+        userAgent: meta?.userAgent ?? null,
+        objectedAt: new Date(),
+        withdrawnAt: null,
+      },
+      create: {
+        userId,
+        type: type as any,
+        reason: reason ?? null,
+        ipAddress: meta?.ip ?? null,
+        userAgent: meta?.userAgent ?? null,
+      },
+    });
+
+    this.secLog.log({
+      event: 'gdpr.objection.registered',
+      userId,
+      objectionType: type,
+    });
+
+    return objection;
+  }
+
+  async withdrawObjection(
+    userId: string,
+    type: string
+  ): Promise<void> {
+    const objection = await this.prisma.processingObjection.findUnique({
+      where: {
+        userId_type: {
+          userId,
+          type: type as any,
+        },
+      },
+    });
+
+    if (!objection || objection.withdrawnAt) {
+      throw new NotFoundError('Objection not found');
+    }
+
+    await this.prisma.processingObjection.update({
+      where: { id: objection.id },
+      data: { withdrawnAt: new Date() },
+    });
+
+    this.secLog.log({
+      event: 'gdpr.objection.withdrawn',
+      userId,
+      objectionType: type,
+    });
+  }
+
+  async listObjections(userId: string) {
+    return this.prisma.processingObjection.findMany({
+      where: {
+        userId,
+        withdrawnAt: null,
+      },
+      select: {
+        id: true,
+        type: true,
+        reason: true,
+        objectedAt: true,
+      },
+      orderBy: { objectedAt: 'desc' },
     });
   }
 

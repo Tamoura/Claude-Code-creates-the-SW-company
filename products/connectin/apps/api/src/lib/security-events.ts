@@ -55,6 +55,7 @@ export interface SecurityEvent {
   userAgent?: string;
   reason?: string;
   requestId?: string;
+  objectionType?: string;
 }
 
 export class SecurityEventLogger {
@@ -74,6 +75,7 @@ export class SecurityEventLogger {
     if (input.userAgent !== undefined) payload.userAgent = input.userAgent;
     if (input.reason !== undefined) payload.reason = input.reason;
     if (input.requestId !== undefined) payload.requestId = input.requestId;
+    if (input.objectionType !== undefined) payload.objectionType = input.objectionType;
 
     if (WARN_EVENTS.has(input.event)) {
       payload.severity = 'high';

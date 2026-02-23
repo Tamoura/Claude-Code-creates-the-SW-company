@@ -13,6 +13,7 @@ import accessLogPlugin from './plugins/access-log';
 import swaggerPlugin from './plugins/swagger';
 import csrfPlugin from './plugins/csrf';
 import metricsPlugin from './plugins/metrics';
+import sentryPlugin from './plugins/sentry';
 
 // Services
 import { AuthService } from './modules/auth/auth.service';
@@ -77,6 +78,7 @@ export async function buildApp(
     await app.register(accessLogPlugin);
     await app.register(swaggerPlugin);
     await app.register(metricsPlugin);
+    await app.register(sentryPlugin);
   }
 
   // Routes

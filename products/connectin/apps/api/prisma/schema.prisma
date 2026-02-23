@@ -62,6 +62,8 @@ model User {
   status              UserStatus          @default(ACTIVE)
   failedLoginAttempts Int                 @default(0) @map("failed_login_attempts")
   lockedUntil         DateTime?           @map("locked_until")
+  isRestricted        Boolean             @default(false) @map("is_restricted")
+  restrictedAt        DateTime?           @map("restricted_at")
   lastLoginAt         DateTime?           @map("last_login_at")
   createdAt           DateTime            @default(now()) @map("created_at")
   updatedAt           DateTime            @updatedAt @map("updated_at")
@@ -81,10 +83,37 @@ model User {
   sentMessages            Message[]
   notifications           Notification[]
   notificationPreference  NotificationPreference?
+  processingObjections    ProcessingObjection[]
 
   @@index([status, createdAt])
   @@index([verificationToken])
   @@map("users")
+}
+
+// ─── Processing Objections (GDPR Art 21) ─────────────────────
+
+enum ObjectionType {
+  PROFILING
+  MARKETING
+  ANALYTICS
+}
+
+model ProcessingObjection {
+  id          String        @id @default(uuid())
+  userId      String        @map("user_id")
+  type        ObjectionType
+  reason      String?       @db.VarChar(500)
+  ipAddress   String?       @map("ip_address")
+  userAgent   String?       @map("user_agent")
+  objectedAt  DateTime      @default(now()) @map("objected_at")
+  withdrawnAt DateTime?     @map("withdrawn_at")
+  createdAt   DateTime      @default(now()) @map("created_at")
+
+  user        User          @relation(fields: [userId], references: [id], onDelete: Cascade)
+
+  @@unique([userId, type])
+  @@index([userId])
+  @@map("processing_objections")
 }
 
 // ─── Profiles ───────────────────────────────────────────────
