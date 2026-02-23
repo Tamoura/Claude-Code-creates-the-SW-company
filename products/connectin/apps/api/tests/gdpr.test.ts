@@ -17,61 +17,61 @@ afterAll(async () => {
 });
 
 describe('GDPR Art 18 — Right to Restrict Processing', () => {
-  describe('POST /api/v1/auth/restrict', () => {
+  describe('POST /api/v1/auth/restrict-processing', () => {
     it('restricts processing for authenticated user', async () => {
       const app = await getApp();
       const user = await createTestUser(app);
 
       const res = await app.inject({
         method: 'POST',
-        url: '/api/v1/auth/restrict',
+        url: '/api/v1/auth/restrict-processing',
         headers: authHeaders(user.accessToken),
       });
 
       expect(res.statusCode).toBe(200);
       const body = JSON.parse(res.body);
       expect(body.success).toBe(true);
-      expect(body.data.message).toContain('restricted');
+      expect(body.data.restricted).toBe(true);
 
       // Verify in DB
       const db = getPrisma();
       const dbUser = await db.user.findUnique({
         where: { id: user.id },
       });
-      expect(dbUser!.isRestricted).toBe(true);
-      expect(dbUser!.restrictedAt).toBeDefined();
+      expect(dbUser!.processingRestricted).toBe(true);
+      expect(dbUser!.processingRestrictedAt).toBeDefined();
     });
 
     it('requires authentication', async () => {
       const app = await getApp();
       const res = await app.inject({
         method: 'POST',
-        url: '/api/v1/auth/restrict',
+        url: '/api/v1/auth/restrict-processing',
       });
       expect(res.statusCode).toBe(401);
     });
 
-    it('is idempotent — restricting twice returns success', async () => {
+    it('returns 409 when already restricted', async () => {
       const app = await getApp();
       const user = await createTestUser(app);
 
       await app.inject({
         method: 'POST',
-        url: '/api/v1/auth/restrict',
+        url: '/api/v1/auth/restrict-processing',
         headers: authHeaders(user.accessToken),
       });
 
       const res = await app.inject({
         method: 'POST',
-        url: '/api/v1/auth/restrict',
+        url: '/api/v1/auth/restrict-processing',
         headers: authHeaders(user.accessToken),
       });
 
-      expect(res.statusCode).toBe(200);
+      expect(res.statusCode).toBe(409);
     });
   });
 
-  describe('DELETE /api/v1/auth/restrict', () => {
+  describe('DELETE /api/v1/auth/restrict-processing', () => {
     it('lifts restriction for authenticated user', async () => {
       const app = await getApp();
       const user = await createTestUser(app);
@@ -79,34 +79,34 @@ describe('GDPR Art 18 — Right to Restrict Processing', () => {
       // Restrict first
       await app.inject({
         method: 'POST',
-        url: '/api/v1/auth/restrict',
+        url: '/api/v1/auth/restrict-processing',
         headers: authHeaders(user.accessToken),
       });
 
       // Then lift
       const res = await app.inject({
         method: 'DELETE',
-        url: '/api/v1/auth/restrict',
+        url: '/api/v1/auth/restrict-processing',
         headers: authHeaders(user.accessToken),
       });
 
       expect(res.statusCode).toBe(200);
       const body = JSON.parse(res.body);
-      expect(body.data.message).toContain('lifted');
+      expect(body.data.restricted).toBe(false);
 
       const db = getPrisma();
       const dbUser = await db.user.findUnique({
         where: { id: user.id },
       });
-      expect(dbUser!.isRestricted).toBe(false);
-      expect(dbUser!.restrictedAt).toBeNull();
+      expect(dbUser!.processingRestricted).toBe(false);
+      expect(dbUser!.processingRestrictedAt).toBeNull();
     });
 
     it('requires authentication', async () => {
       const app = await getApp();
       const res = await app.inject({
         method: 'DELETE',
-        url: '/api/v1/auth/restrict',
+        url: '/api/v1/auth/restrict-processing',
       });
       expect(res.statusCode).toBe(401);
     });
@@ -120,7 +120,7 @@ describe('GDPR Art 18 — Right to Restrict Processing', () => {
       // Restrict
       await app.inject({
         method: 'POST',
-        url: '/api/v1/auth/restrict',
+        url: '/api/v1/auth/restrict-processing',
         headers: authHeaders(user.accessToken),
       });
 
@@ -132,8 +132,8 @@ describe('GDPR Art 18 — Right to Restrict Processing', () => {
 
       expect(res.statusCode).toBe(200);
       const body = JSON.parse(res.body);
-      expect(body.data.user.isRestricted).toBe(true);
-      expect(body.data.user.restrictedAt).toBeDefined();
+      expect(body.data.user.processingRestricted).toBe(true);
+      expect(body.data.user.processingRestrictedAt).toBeDefined();
     });
   });
 });

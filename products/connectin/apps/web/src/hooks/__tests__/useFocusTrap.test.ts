@@ -79,6 +79,7 @@ describe("useFocusTrap", () => {
 
     const { result } = renderHook(() => useFocusTrap(true));
     // Simulate ref assignment
+    // eslint-disable-next-line @typescript-eslint/no-explicit-any
     (result.current as any).current = container;
 
     // Re-render with active=true to trigger the effect

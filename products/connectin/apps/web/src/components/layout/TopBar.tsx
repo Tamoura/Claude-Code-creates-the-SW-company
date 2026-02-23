@@ -33,7 +33,9 @@ export function TopBar({ variant = "authenticated" }: TopBarProps) {
   const { t } = useTranslation();
   const { user } = useAuthContext();
 
-  // Hook must be called unconditionally (Rules of Hooks)
+  // All hooks must be called unconditionally (Rules of Hooks)
+  const router = useRouter();
+  const [searchValue, setSearchValue] = useState("");
   const {
     notifications,
     unreadCount,
@@ -44,6 +46,17 @@ export function TopBar({ variant = "authenticated" }: TopBarProps) {
     markRead,
     markAllRead,
   } = useNotifications();
+
+  const handleSearchSubmit = useCallback(
+    (e: React.FormEvent) => {
+      e.preventDefault();
+      const trimmed = searchValue.trim();
+      if (trimmed) {
+        router.push(`/search?q=${encodeURIComponent(trimmed)}`);
+      }
+    },
+    [searchValue, router]
+  );
 
   if (variant === "unauthenticated") {
     return (
@@ -81,20 +94,6 @@ export function TopBar({ variant = "authenticated" }: TopBarProps) {
       </header>
     );
   }
-
-  const router = useRouter();
-  const [searchValue, setSearchValue] = useState("");
-
-  const handleSearchSubmit = useCallback(
-    (e: React.FormEvent) => {
-      e.preventDefault();
-      const trimmed = searchValue.trim();
-      if (trimmed) {
-        router.push(`/search?q=${encodeURIComponent(trimmed)}`);
-      }
-    },
-    [searchValue, router]
-  );
 
   const navItems = [
     { href: "/feed", icon: Home, label: t("nav.home") },

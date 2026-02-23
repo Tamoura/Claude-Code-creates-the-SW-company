@@ -1,5 +1,3 @@
-"use client";
-
 import { renderHook, act, waitFor } from "@testing-library/react";
 import { useJobs } from "../useJobs";
 
@@ -437,7 +435,7 @@ describe("useJobs", () => {
       expect(result.current.jobs[0].isApplied).toBe(true);
     });
 
-    it("returns applicationId on success", async () => {
+    it("returns application id on success", async () => {
       mockGet.mockResolvedValueOnce({
         success: true,
         data: [job1],
@@ -445,7 +443,7 @@ describe("useJobs", () => {
       });
       mockPost.mockResolvedValueOnce({
         success: true,
-        data: { applicationId: "app-42", appliedAt: new Date().toISOString() },
+        data: { id: "app-42", appliedAt: new Date().toISOString() },
       });
 
       const { result } = renderHook(() => useJobs());
@@ -483,7 +481,7 @@ describe("useJobs", () => {
       );
     });
 
-    it("returns undefined and does not set isApplied when API fails", async () => {
+    it("throws and does not set isApplied when API fails", async () => {
       mockGet.mockResolvedValueOnce({
         success: true,
         data: [job1],
@@ -497,12 +495,12 @@ describe("useJobs", () => {
       const { result } = renderHook(() => useJobs());
       await waitFor(() => expect(result.current.isLoading).toBe(false));
 
-      let applicationId: string | undefined;
-      await act(async () => {
-        applicationId = await result.current.applyToJob("job-1");
-      });
+      await expect(
+        act(async () => {
+          await result.current.applyToJob("job-1");
+        })
+      ).rejects.toThrow("Failed to apply");
 
-      expect(applicationId).toBeUndefined();
       expect(result.current.jobs[0].isApplied).toBe(false);
     });
   });

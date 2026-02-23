@@ -778,79 +778,7 @@ const authRoutes: FastifyPluginAsync = async (fastify) => {
       });
     }
   );
-  // ─── GDPR Art 18: Right to Restrict Processing ──────────────
-
-  // POST /api/v1/auth/restrict
-  fastify.post(
-    '/restrict',
-    {
-      schema: {
-        description: 'Restrict processing of personal data (GDPR Article 18)',
-        tags: ['Auth', 'GDPR'],
-        security: [{ bearerAuth: [] }],
-        response: {
-          200: {
-            type: 'object',
-            additionalProperties: true,
-            properties: {
-              success: { type: 'boolean' },
-              data: {
-                type: 'object',
-                additionalProperties: true,
-                properties: {
-                  message: { type: 'string' },
-                },
-              },
-            },
-          },
-        },
-      },
-      preHandler: [fastify.authenticate],
-    },
-    async (request, reply) => {
-      await authService.restrictProcessing(request.user.sub);
-      return sendSuccess(reply, {
-        message: 'Processing has been restricted for your account',
-      });
-    }
-  );
-
-  // DELETE /api/v1/auth/restrict
-  fastify.delete(
-    '/restrict',
-    {
-      schema: {
-        description: 'Lift restriction on processing of personal data (GDPR Article 18)',
-        tags: ['Auth', 'GDPR'],
-        security: [{ bearerAuth: [] }],
-        response: {
-          200: {
-            type: 'object',
-            additionalProperties: true,
-            properties: {
-              success: { type: 'boolean' },
-              data: {
-                type: 'object',
-                additionalProperties: true,
-                properties: {
-                  message: { type: 'string' },
-                },
-              },
-            },
-          },
-        },
-      },
-      preHandler: [fastify.authenticate],
-    },
-    async (request, reply) => {
-      await authService.liftRestriction(request.user.sub);
-      return sendSuccess(reply, {
-        message: 'Processing restriction has been lifted',
-      });
-    }
-  );
-
-  // ─── GDPR Art 21: Right to Object ──────────────────────────
+  // ─── GDPR Art 21: Right to Object (typed objections) ────────
 
   const VALID_OBJECTION_TYPES = ['PROFILING', 'MARKETING', 'ANALYTICS'];
 
@@ -898,7 +826,7 @@ const authRoutes: FastifyPluginAsync = async (fastify) => {
         ]);
       }
 
-      const objection = await authService.registerObjection(
+      const objection = await authService.registerTypedObjection(
         request.user.sub,
         type,
         reason,
@@ -944,7 +872,7 @@ const authRoutes: FastifyPluginAsync = async (fastify) => {
       preHandler: [fastify.authenticate],
     },
     async (request, reply) => {
-      await authService.withdrawObjection(
+      await authService.withdrawTypedObjection(
         request.user.sub,
         request.params.type
       );

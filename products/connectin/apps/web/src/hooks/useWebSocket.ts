@@ -26,6 +26,7 @@ export function useWebSocket() {
   const wsRef = useRef<WebSocket | null>(null);
   const handlersRef = useRef<Set<MessageHandler>>(new Set());
   const reconnectTimerRef = useRef<ReturnType<typeof setTimeout> | null>(null);
+  const connectRef = useRef<() => void>(() => {});
   const [isConnected, setIsConnected] = useState(false);
 
   const connect = useCallback(() => {
@@ -45,7 +46,7 @@ export function useWebSocket() {
 
     ws.onmessage = (event) => {
       try {
-        const msg: WsMessage = JSON.parse(event.data);
+        const msg: WsMessage = JSON.parse(event.data as string);
         for (const handler of handlersRef.current) {
           handler(msg);
         }
@@ -57,7 +58,7 @@ export function useWebSocket() {
     ws.onclose = () => {
       setIsConnected(false);
       if (getAccessToken()) {
-        reconnectTimerRef.current = setTimeout(connect, 3000);
+        reconnectTimerRef.current = setTimeout(() => connectRef.current(), 3000);
       }
     };
 
@@ -65,6 +66,11 @@ export function useWebSocket() {
       // Will trigger onclose
     };
   }, []);
+
+  // Keep ref in sync so the onclose callback always calls the latest connect
+  useEffect(() => {
+    connectRef.current = connect;
+  });
 
   useEffect(() => {
     if (isAuthenticated) {

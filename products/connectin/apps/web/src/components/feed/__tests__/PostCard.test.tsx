@@ -4,6 +4,38 @@ import userEvent from "@testing-library/user-event";
 import { PostCard } from "../PostCard";
 import type { Post } from "@/types";
 
+// Mock react-i18next
+jest.mock("react-i18next", () => ({
+  useTranslation: () => ({
+    t: (key: string) => {
+      const translations: Record<string, string> = {
+        "actions.comment": "Comment",
+        "actions.save": "Save",
+        "actions.saving": "Saving...",
+        "actions.cancel": "Cancel",
+        "actions.delete": "Delete",
+        "actions.loading": "Loading...",
+        "actions.submit": "Submit",
+        "feed.editPost": "Edit post",
+        "feed.deletePost": "Delete post",
+        "feed.confirmDeletePost": "Are you sure you want to delete this post?",
+        "feed.writeComment": "Write a comment...",
+        "feed.noComments": "No comments yet.",
+      };
+      return translations[key] || key;
+    },
+    i18n: { language: "en", changeLanguage: jest.fn() },
+  }),
+}));
+
+// Mock apiClient for comments
+jest.mock("@/lib/api", () => ({
+  apiClient: {
+    get: jest.fn().mockResolvedValue({ success: true, data: [] }),
+    post: jest.fn().mockResolvedValue({ success: true, data: {} }),
+  },
+}));
+
 // formatRelativeTime uses Intl — stub it so output is deterministic in CI
 jest.mock("@/lib/utils", () => ({
   ...jest.requireActual("@/lib/utils"),

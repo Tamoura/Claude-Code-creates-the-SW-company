@@ -746,41 +746,9 @@ export class AuthService {
     });
   }
 
-  // ─── GDPR Art 18: Right to Restrict Processing ─────────────
+  // ─── GDPR Art 21: Right to Object (typed objections) ──────
 
-  async restrictProcessing(userId: string): Promise<void> {
-    await this.prisma.user.update({
-      where: { id: userId },
-      data: {
-        isRestricted: true,
-        restrictedAt: new Date(),
-      },
-    });
-
-    this.secLog.log({
-      event: 'gdpr.processing.restricted',
-      userId,
-    });
-  }
-
-  async liftRestriction(userId: string): Promise<void> {
-    await this.prisma.user.update({
-      where: { id: userId },
-      data: {
-        isRestricted: false,
-        restrictedAt: null,
-      },
-    });
-
-    this.secLog.log({
-      event: 'gdpr.processing.restriction_lifted',
-      userId,
-    });
-  }
-
-  // ─── GDPR Art 21: Right to Object ─────────────────────────
-
-  async registerObjection(
+  async registerTypedObjection(
     userId: string,
     type: string,
     reason?: string,
@@ -810,7 +778,7 @@ export class AuthService {
     });
 
     this.secLog.log({
-      event: 'gdpr.objection.registered',
+      event: 'auth.gdpr.objection_registered',
       userId,
       objectionType: type,
     });
@@ -818,7 +786,7 @@ export class AuthService {
     return objection;
   }
 
-  async withdrawObjection(
+  async withdrawTypedObjection(
     userId: string,
     type: string
   ): Promise<void> {
@@ -841,7 +809,7 @@ export class AuthService {
     });
 
     this.secLog.log({
-      event: 'gdpr.objection.withdrawn',
+      event: 'auth.gdpr.objection_withdrawn',
       userId,
       objectionType: type,
     });

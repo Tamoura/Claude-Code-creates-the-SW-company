@@ -80,7 +80,7 @@ const mockProfile = {
     },
   ],
   education: [],
-  skills: [{ id: "skill-1", name: "TypeScript" }],
+  skills: [{ id: "skill-1", nameEn: "TypeScript" }],
 };
 
 import UserProfilePage from "../page";

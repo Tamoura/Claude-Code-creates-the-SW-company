@@ -19,10 +19,20 @@ jest.mock("react-i18next", () => ({
         "actions.posting": "Posting...",
         "actions.loading": "Loading...",
         "actions.loadMore": "Load more",
+        "actions.comment": "Comment",
+        "nav.home": "Feed",
       };
       return translations[key] || key;
     },
     i18n: { language: "en", changeLanguage: jest.fn() },
+  }),
+}));
+
+// Mock AuthProvider
+jest.mock("@/providers/AuthProvider", () => ({
+  useAuthContext: () => ({
+    user: { id: "current-user-1", displayName: "Current User" },
+    isAuthenticated: true,
   }),
 }));
 
@@ -37,6 +47,8 @@ let mockFeedState = {
   createPost: jest.fn().mockResolvedValue(true),
   loadMore: jest.fn(),
   toggleLike: jest.fn(),
+  editPost: jest.fn().mockResolvedValue(true),
+  deletePost: jest.fn().mockResolvedValue(true),
   refetch: jest.fn(),
 };
 
@@ -86,6 +98,8 @@ describe("FeedPage", () => {
       createPost: jest.fn().mockResolvedValue(true),
       loadMore: jest.fn(),
       toggleLike: jest.fn(),
+      editPost: jest.fn().mockResolvedValue(true),
+      deletePost: jest.fn().mockResolvedValue(true),
       refetch: jest.fn(),
     };
   });
