@@ -185,9 +185,10 @@ export function useJobs() {
           );
           return response.data.id;
         }
-        return undefined;
-      } catch {
-        return undefined;
+        // Surface the backend error message
+        throw new Error(response.error?.message || "Application failed");
+      } catch (err) {
+        throw err instanceof Error ? err : new Error("Network error");
       }
     },
     []
