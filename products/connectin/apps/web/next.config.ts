@@ -1,4 +1,5 @@
 import type { NextConfig } from "next";
+import { withSentryConfig } from "@sentry/nextjs";
 
 const nextConfig: NextConfig = {
   output: "standalone",
@@ -57,7 +58,7 @@ const nextConfig: NextConfig = {
             // Use the API origin only (no path) — CSP path-matching without a
             // trailing slash matches ONLY that exact path, not sub-paths.
             // e.g. http://localhost:5007/api/v1 would block /api/v1/auth/login.
-            `connect-src 'self' ${new URL(process.env.NEXT_PUBLIC_API_URL || "http://localhost:5007").origin}`,
+            `connect-src 'self' ${new URL(process.env.NEXT_PUBLIC_API_URL || "http://localhost:5007").origin} https://*.ingest.sentry.io`,
             "frame-ancestors 'none'",
             "base-uri 'self'",
             "form-action 'self'",
@@ -75,4 +76,11 @@ const nextConfig: NextConfig = {
   },
 };
 
-export default nextConfig;
+export default withSentryConfig(nextConfig, {
+  // Suppress noisy build logs
+  silent: true,
+  // Disable source map upload in dev (requires SENTRY_AUTH_TOKEN)
+  sourcemaps: {
+    disable: !process.env.SENTRY_AUTH_TOKEN,
+  },
+});
