@@ -22,6 +22,7 @@ interface ConversationItemProps {
     lastMessageAt?: string | null;
   };
   isActive: boolean;
+  isOnline?: boolean;
   onClick: () => void;
 }
 
@@ -39,6 +40,7 @@ function timeAgo(iso: string): string {
 export function ConversationItem({
   conversation,
   isActive,
+  isOnline,
   onClick,
 }: ConversationItemProps) {
   const { contact, lastMessage, unreadCount, lastMessageAt } = conversation;
@@ -60,6 +62,12 @@ export function ConversationItem({
           avatarUrl={contact.avatarUrl || undefined}
           size="md"
         />
+        {isOnline && (
+          <span
+            className="absolute bottom-0 end-0 h-3 w-3 rounded-full border-2 border-white dark:border-[#1C1C1E] bg-green-500"
+            aria-label="Online"
+          />
+        )}
         {unreadCount > 0 && (
           <span
             className="absolute -top-1 -end-1 h-4 w-4 rounded-full bg-[#57BBCE] text-white text-[10px] font-bold flex items-center justify-center"

@@ -14,6 +14,7 @@ import swaggerPlugin from './plugins/swagger';
 import csrfPlugin from './plugins/csrf';
 import metricsPlugin from './plugins/metrics';
 import sentryPlugin from './plugins/sentry';
+import websocketPlugin from './plugins/websocket';
 
 // Services
 import { AuthService } from './modules/auth/auth.service';
@@ -29,6 +30,7 @@ import jobsRoutes from './modules/jobs/jobs.routes';
 import messagingRoutes from './modules/messaging/messaging.routes';
 import notificationsRoutes from './modules/notifications/notifications.routes';
 import searchRoutes from './modules/search/search.routes';
+import presenceRoutes from './modules/presence/presence.routes';
 
 export interface BuildAppOptions {
   skipRateLimit?: boolean;
@@ -71,6 +73,7 @@ export async function buildApp(
     await app.register(rateLimiterPlugin);
   }
 
+  await app.register(websocketPlugin);
   await app.register(csrfPlugin);
 
   /* istanbul ignore next */
@@ -109,6 +112,9 @@ export async function buildApp(
   });
   await app.register(searchRoutes, {
     prefix: '/api/v1/search',
+  });
+  await app.register(presenceRoutes, {
+    prefix: '/api/v1/presence',
   });
 
   // Session cleanup — run hourly in non-test environments

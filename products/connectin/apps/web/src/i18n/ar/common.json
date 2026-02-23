@@ -180,7 +180,9 @@
     "you": "أنت",
     "emptyThread": "ابدأ المحادثة",
     "failedToSend": "فشل الإرسال",
-    "errorLoading": "خطأ في تحميل الرسائل"
+    "errorLoading": "خطأ في تحميل الرسائل",
+    "typing": "يكتب",
+    "online": "متصل"
   },
   "jobs": {
     "search": "البحث عن وظائف...",

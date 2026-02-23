@@ -1,6 +1,8 @@
 import { FastifyPluginAsync } from 'fastify';
 import { MessagingService } from './messaging.service';
 import { sendSuccess } from '../../lib/response';
+import { connectionManager } from '../../ws/connection-manager';
+import { ForbiddenError } from '../../lib/errors';
 
 const messagingRoutes: FastifyPluginAsync = async (fastify) => {
   const svc = new MessagingService(fastify.prisma);
@@ -110,6 +112,19 @@ const messagingRoutes: FastifyPluginAsync = async (fastify) => {
   }, async (request, reply) => {
     const body = request.body as { conversationId: string; content: string };
     const data = await svc.sendMessage(request.user.sub, body);
+
+    // Broadcast new message to conversation members via WebSocket
+    const members = await fastify.prisma.conversationMember.findMany({
+      where: { conversationId: body.conversationId },
+      select: { userId: true },
+    });
+    const memberIds = members.map((m) => m.userId);
+    connectionManager.broadcastToConversation(
+      memberIds,
+      request.user.sub,
+      { type: 'message:new', payload: data as unknown as Record<string, unknown> }
+    );
+
     return sendSuccess(reply, data, 201);
   });
 
@@ -129,7 +144,67 @@ const messagingRoutes: FastifyPluginAsync = async (fastify) => {
     config: { rateLimit: { max: 60, timeWindow: '1 minute' } },
   }, async (request, reply) => {
     const data = await svc.markMessageRead(request.params.id, request.user.sub);
+
+    // Broadcast read receipt via WebSocket
+    if (data.conversationId) {
+      const members = await fastify.prisma.conversationMember.findMany({
+        where: { conversationId: data.conversationId },
+        select: { userId: true },
+      });
+      const memberIds = members.map((m) => m.userId);
+      connectionManager.broadcastToConversation(
+        memberIds,
+        request.user.sub,
+        { type: 'message:read', payload: { messageId: data.id, readAt: data.readAt } }
+      );
+    }
+
     return sendSuccess(reply, data);
+  });
+
+  // POST /api/v1/conversations/:id/typing — signal typing
+  fastify.post<{ Params: { id: string } }>('/:id/typing', {
+    schema: {
+      description: 'Signal typing indicator to conversation members',
+      tags: ['Messaging'],
+      security: [{ bearerAuth: [] }],
+      params: {
+        type: 'object',
+        required: ['id'],
+        properties: { id: { type: 'string', format: 'uuid' } },
+      },
+      body: {
+        type: 'object',
+        additionalProperties: true,
+      },
+      response: { 200: { type: 'object', additionalProperties: true } },
+    },
+    config: { rateLimit: { max: 120, timeWindow: '1 minute' } },
+  }, async (request, reply) => {
+    const conversationId = request.params.id;
+    const userId = request.user.sub;
+
+    // Verify membership
+    const member = await fastify.prisma.conversationMember.findUnique({
+      where: { conversationId_userId: { conversationId, userId } },
+    });
+    if (!member) {
+      throw new ForbiddenError('Not a member of this conversation');
+    }
+
+    // Broadcast typing indicator to other members
+    const members = await fastify.prisma.conversationMember.findMany({
+      where: { conversationId },
+      select: { userId: true },
+    });
+    const memberIds = members.map((m) => m.userId);
+    connectionManager.broadcastToConversation(
+      memberIds,
+      userId,
+      { type: 'typing:start', payload: { conversationId, userId } }
+    );
+
+    return sendSuccess(reply, { typing: true });
   });
 };
 
