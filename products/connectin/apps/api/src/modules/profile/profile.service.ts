@@ -3,6 +3,7 @@ import { NotFoundError } from '../../lib/errors';
 import {
   UpdateProfileInput,
   AddExperienceInput,
+  UpdateExperienceInput,
   AddSkillsInput,
 } from './profile.schemas';
 
@@ -159,6 +160,83 @@ export class ProfileService {
     await this.recalculateCompleteness(profile.id);
 
     return experience;
+  }
+
+  async updateExperience(
+    userId: string,
+    experienceId: string,
+    input: UpdateExperienceInput
+  ) {
+    const profile = await this.prisma.profile.findUnique({
+      where: { userId },
+    });
+
+    if (!profile) {
+      throw new NotFoundError('Profile not found');
+    }
+
+    // Find experience and verify ownership
+    const experience = await this.prisma.experience.findUnique(
+      { where: { id: experienceId } }
+    );
+
+    if (!experience || experience.profileId !== profile.id) {
+      throw new NotFoundError('Experience not found');
+    }
+
+    const data: Record<string, unknown> = {};
+    if (input.company !== undefined) data.company = input.company;
+    if (input.title !== undefined) data.title = input.title;
+    if (input.location !== undefined)
+      data.location = input.location;
+    if (input.description !== undefined)
+      data.description = input.description;
+    if (input.startDate !== undefined)
+      data.startDate = new Date(input.startDate);
+    if (input.endDate !== undefined)
+      data.endDate = input.endDate
+        ? new Date(input.endDate)
+        : null;
+    if (input.isCurrent !== undefined)
+      data.isCurrent = input.isCurrent;
+
+    const updated = await this.prisma.experience.update({
+      where: { id: experienceId },
+      data,
+    });
+
+    return updated;
+  }
+
+  async deleteExperience(
+    userId: string,
+    experienceId: string
+  ) {
+    const profile = await this.prisma.profile.findUnique({
+      where: { userId },
+    });
+
+    if (!profile) {
+      throw new NotFoundError('Profile not found');
+    }
+
+    // Find experience and verify ownership
+    const experience = await this.prisma.experience.findUnique(
+      { where: { id: experienceId } }
+    );
+
+    if (!experience || experience.profileId !== profile.id) {
+      throw new NotFoundError('Experience not found');
+    }
+
+    await this.prisma.experience.delete({
+      where: { id: experienceId },
+    });
+
+    // Recalculate completeness after deletion
+    await this.recalculateCompleteness(profile.id);
+
+    return { success: true };
   }
 
   async addSkills(userId: string, input: AddSkillsInput) {
