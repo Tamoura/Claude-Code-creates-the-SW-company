@@ -186,6 +186,23 @@ describe('access-log plugin', () => {
   });
 });
 
+describe('access-log plugin — LOG_SALT production validation', () => {
+  it('throws if NODE_ENV=production and LOG_SALT is missing', async () => {
+    const prevEnv = process.env.NODE_ENV;
+    const prevSalt = process.env.LOG_SALT;
+    process.env.NODE_ENV = 'production';
+    delete process.env.LOG_SALT;
+
+    const testApp = Fastify({ logger: false });
+    await expect(testApp.register(accessLogPlugin).ready()).rejects.toThrow(
+      'LOG_SALT environment variable is required in production'
+    );
+
+    process.env.NODE_ENV = prevEnv;
+    if (prevSalt !== undefined) process.env.LOG_SALT = prevSalt;
+  });
+});
+
 // ---------------------------------------------------------------------------
 // rate-limiter.ts
 //
