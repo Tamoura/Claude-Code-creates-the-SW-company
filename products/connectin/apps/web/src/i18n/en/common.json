@@ -178,6 +178,14 @@
     "accept": "Accept",
     "decline": "Decline"
   },
+  "search": {
+    "title": "Search",
+    "all": "All",
+    "people": "People",
+    "posts": "Posts",
+    "jobs": "Jobs",
+    "filterByType": "Filter by type"
+  },
   "loading": "Loading...",
   "error": "An error occurred",
   "noResults": "No results found",
