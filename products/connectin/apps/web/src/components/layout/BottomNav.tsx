@@ -49,7 +49,7 @@ export function BottomNav() {
               "active:scale-90",
               isActive
                 ? "text-[#0B6E7F] font-medium"
-                : "text-[#64748B] dark:text-[#94A3B8]",
+                : "text-[#64748B] dark:text-[#CBD5E1]",
               "focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-[#57BBCE]"
             )}
             aria-current={isActive ? "page" : undefined}

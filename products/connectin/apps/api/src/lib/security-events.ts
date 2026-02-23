@@ -1,7 +1,13 @@
 import { FastifyBaseLogger } from 'fastify';
 import { createHash } from 'crypto';
 
-const LOG_SALT = process.env.LOG_SALT ?? 'connectin-log-salt';
+const LOG_SALT = (() => {
+  const salt = process.env.LOG_SALT;
+  if (!salt && process.env.NODE_ENV === 'production') {
+    throw new Error('LOG_SALT environment variable is required in production');
+  }
+  return salt ?? 'connectin-log-salt';
+})();
 
 /** Mask email: "user@example.com" → "u***@example.com" */
 function maskEmail(email: string): string {
@@ -30,7 +36,11 @@ export type SecurityEventType =
   | 'auth.password.reset_completed'
   | 'auth.email.verified'
   | 'auth.account.deleted'
-  | 'auth.account.locked';
+  | 'auth.account.locked'
+  | 'auth.gdpr.processing_restricted'
+  | 'auth.gdpr.processing_restriction_lifted'
+  | 'auth.gdpr.objection_registered'
+  | 'auth.gdpr.objection_withdrawn';
 
 /** Events logged at warn level (suspicious activity). */
 const WARN_EVENTS = new Set<SecurityEventType>([

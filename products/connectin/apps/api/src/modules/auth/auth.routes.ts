@@ -524,6 +524,170 @@ const authRoutes: FastifyPluginAsync = async (fastify) => {
     }
   );
 
+  // POST /api/v1/auth/restrict-processing — GDPR Art 18
+  fastify.post(
+    '/restrict-processing',
+    {
+      schema: {
+        description: 'Request restriction of processing (GDPR Article 18)',
+        tags: ['Auth', 'GDPR'],
+        security: [{ bearerAuth: [] }],
+        response: {
+          200: {
+            type: 'object',
+            additionalProperties: true,
+            properties: {
+              success: { type: 'boolean' },
+              data: {
+                type: 'object',
+                additionalProperties: true,
+                properties: {
+                  restricted: { type: 'boolean' },
+                  timestamp: { type: 'string', nullable: true },
+                },
+              },
+            },
+          },
+          409: errorResponseSchema,
+        },
+      },
+      preHandler: [fastify.authenticate],
+      config: {
+        rateLimit: {
+          max: 5,
+          timeWindow: '1 hour',
+        },
+      },
+    },
+    async (request, reply) => {
+      const data = await authService.restrictProcessing(request.user.sub);
+      return sendSuccess(reply, data);
+    }
+  );
+
+  // DELETE /api/v1/auth/restrict-processing — lift restriction
+  fastify.delete(
+    '/restrict-processing',
+    {
+      schema: {
+        description: 'Lift restriction of processing (GDPR Article 18)',
+        tags: ['Auth', 'GDPR'],
+        security: [{ bearerAuth: [] }],
+        response: {
+          200: {
+            type: 'object',
+            additionalProperties: true,
+            properties: {
+              success: { type: 'boolean' },
+              data: {
+                type: 'object',
+                additionalProperties: true,
+                properties: {
+                  restricted: { type: 'boolean' },
+                  timestamp: { type: 'string', nullable: true },
+                },
+              },
+            },
+          },
+          409: errorResponseSchema,
+        },
+      },
+      preHandler: [fastify.authenticate],
+      config: {
+        rateLimit: {
+          max: 5,
+          timeWindow: '1 hour',
+        },
+      },
+    },
+    async (request, reply) => {
+      const data = await authService.liftRestriction(request.user.sub);
+      return sendSuccess(reply, data);
+    }
+  );
+
+  // POST /api/v1/auth/object-to-processing — GDPR Art 21
+  fastify.post(
+    '/object-to-processing',
+    {
+      schema: {
+        description: 'Register objection to processing (GDPR Article 21)',
+        tags: ['Auth', 'GDPR'],
+        security: [{ bearerAuth: [] }],
+        response: {
+          200: {
+            type: 'object',
+            additionalProperties: true,
+            properties: {
+              success: { type: 'boolean' },
+              data: {
+                type: 'object',
+                additionalProperties: true,
+                properties: {
+                  objection: { type: 'boolean' },
+                  timestamp: { type: 'string', nullable: true },
+                },
+              },
+            },
+          },
+          409: errorResponseSchema,
+        },
+      },
+      preHandler: [fastify.authenticate],
+      config: {
+        rateLimit: {
+          max: 5,
+          timeWindow: '1 hour',
+        },
+      },
+    },
+    async (request, reply) => {
+      const data = await authService.registerObjection(request.user.sub);
+      return sendSuccess(reply, data);
+    }
+  );
+
+  // DELETE /api/v1/auth/object-to-processing — withdraw objection
+  fastify.delete(
+    '/object-to-processing',
+    {
+      schema: {
+        description: 'Withdraw objection to processing (GDPR Article 21)',
+        tags: ['Auth', 'GDPR'],
+        security: [{ bearerAuth: [] }],
+        response: {
+          200: {
+            type: 'object',
+            additionalProperties: true,
+            properties: {
+              success: { type: 'boolean' },
+              data: {
+                type: 'object',
+                additionalProperties: true,
+                properties: {
+                  objection: { type: 'boolean' },
+                  timestamp: { type: 'string', nullable: true },
+                },
+              },
+            },
+          },
+          409: errorResponseSchema,
+        },
+      },
+      preHandler: [fastify.authenticate],
+      config: {
+        rateLimit: {
+          max: 5,
+          timeWindow: '1 hour',
+        },
+      },
+    },
+    async (request, reply) => {
+      const data = await authService.withdrawObjection(request.user.sub);
+      return sendSuccess(reply, data);
+    }
+  );
+
   // GET /api/v1/auth/sessions -- List active sessions
   fastify.get(
     '/sessions',
