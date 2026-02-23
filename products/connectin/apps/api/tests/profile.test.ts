@@ -294,4 +294,191 @@ describe('Profile Module', () => {
       expect(body.data.headlineEn).toContain('Senior Developer');
     });
   });
+
+  describe('Experience Update & Delete', () => {
+    /** Helper: create a user and add an experience entry, returning both. */
+    async function createUserWithExperience(
+      emailOverride?: string
+    ) {
+      const app = await getApp();
+      const user = await createTestUser(app, {
+        email: emailOverride || 'exp-user@test.com',
+      });
+
+      const addRes = await app.inject({
+        method: 'POST',
+        url: '/api/v1/profiles/me/experience',
+        headers: authHeaders(user.accessToken),
+        payload: {
+          company: 'Acme Corp',
+          title: 'Engineer',
+          startDate: '2023-01-01',
+          isCurrent: true,
+        },
+      });
+
+      const experience = JSON.parse(addRes.body).data;
+      return { app, user, experience };
+    }
+
+    // --- PUT /api/v1/profiles/me/experience/:id ---
+
+    it('PUT /experience/:id - rejects unauthenticated request', async () => {
+      const { app, experience } = await createUserWithExperience(
+        'put-auth@test.com'
+      );
+
+      const res = await app.inject({
+        method: 'PUT',
+        url: `/api/v1/profiles/me/experience/${experience.id}`,
+        payload: { title: 'Senior Engineer' },
+      });
+
+      expect(res.statusCode).toBe(401);
+    });
+
+    it('PUT /experience/:id - updates experience entry', async () => {
+      const { app, user, experience } =
+        await createUserWithExperience('put-ok@test.com');
+
+      const res = await app.inject({
+        method: 'PUT',
+        url: `/api/v1/profiles/me/experience/${experience.id}`,
+        headers: authHeaders(user.accessToken),
+        payload: {
+          title: 'Senior Engineer',
+          company: 'New Corp',
+        },
+      });
+
+      expect(res.statusCode).toBe(200);
+      const body = JSON.parse(res.body);
+      expect(body.success).toBe(true);
+      expect(body.data.title).toBe('Senior Engineer');
+      expect(body.data.company).toBe('New Corp');
+      // unchanged fields preserved
+      expect(body.data.isCurrent).toBe(true);
+    });
+
+    it('PUT /experience/:id - returns 404 for non-owned entry', async () => {
+      const { app, experience } =
+        await createUserWithExperience('put-owner@test.com');
+
+      // Create a second user who does NOT own the experience
+      const otherUser = await createTestUser(app, {
+        email: 'put-other@test.com',
+      });
+
+      const res = await app.inject({
+        method: 'PUT',
+        url: `/api/v1/profiles/me/experience/${experience.id}`,
+        headers: authHeaders(otherUser.accessToken),
+        payload: { title: 'Hacker' },
+      });
+
+      expect(res.statusCode).toBe(404);
+    });
+
+    it('PUT /experience/:id - returns 422 for invalid date', async () => {
+      const { app, user, experience } =
+        await createUserWithExperience('put-val@test.com');
+
+      const res = await app.inject({
+        method: 'PUT',
+        url: `/api/v1/profiles/me/experience/${experience.id}`,
+        headers: authHeaders(user.accessToken),
+        payload: { startDate: 'not-a-date' },
+      });
+
+      expect(res.statusCode).toBe(422);
+    });
+
+    // --- DELETE /api/v1/profiles/me/experience/:id ---
+
+    it('DELETE /experience/:id - rejects unauthenticated request', async () => {
+      const { app, experience } = await createUserWithExperience(
+        'del-auth@test.com'
+      );
+
+      const res = await app.inject({
+        method: 'DELETE',
+        url: `/api/v1/profiles/me/experience/${experience.id}`,
+      });
+
+      expect(res.statusCode).toBe(401);
+    });
+
+    it('DELETE /experience/:id - deletes experience entry', async () => {
+      const { app, user, experience } =
+        await createUserWithExperience('del-ok@test.com');
+
+      const res = await app.inject({
+        method: 'DELETE',
+        url: `/api/v1/profiles/me/experience/${experience.id}`,
+        headers: authHeaders(user.accessToken),
+      });
+
+      expect(res.statusCode).toBe(200);
+      const body = JSON.parse(res.body);
+      expect(body.success).toBe(true);
+
+      // Verify the experience is gone from the profile
+      const profileRes = await app.inject({
+        method: 'GET',
+        url: '/api/v1/profiles/me',
+        headers: authHeaders(user.accessToken),
+      });
+      const profileBody = JSON.parse(profileRes.body);
+      expect(profileBody.data.experiences).toHaveLength(0);
+    });
+
+    it('DELETE /experience/:id - returns 404 for non-owned entry', async () => {
+      const { app, experience } =
+        await createUserWithExperience('del-owner@test.com');
+
+      const otherUser = await createTestUser(app, {
+        email: 'del-other@test.com',
+      });
+
+      const res = await app.inject({
+        method: 'DELETE',
+        url: `/api/v1/profiles/me/experience/${experience.id}`,
+        headers: authHeaders(otherUser.accessToken),
+      });
+
+      expect(res.statusCode).toBe(404);
+    });
+
+    it('DELETE /experience/:id - recalculates completeness score', async () => {
+      const { app, user, experience } =
+        await createUserWithExperience('del-score@test.com');
+
+      // Verify score includes experience points before delete
+      const beforeRes = await app.inject({
+        method: 'GET',
+        url: '/api/v1/profiles/me',
+        headers: authHeaders(user.accessToken),
+      });
+      const scoreBefore = JSON.parse(beforeRes.body).data
+        .completenessScore;
+      expect(scoreBefore).toBeGreaterThan(0);
+
+      // Delete the experience
+      await app.inject({
+        method: 'DELETE',
+        url: `/api/v1/profiles/me/experience/${experience.id}`,
+        headers: authHeaders(user.accessToken),
+      });
+
+      // Verify score dropped after deleting experience
+      const afterRes = await app.inject({
+        method: 'GET',
+        url: '/api/v1/profiles/me',
+        headers: authHeaders(user.accessToken),
+      });
+      const scoreAfter = JSON.parse(afterRes.body).data
+        .completenessScore;
+      expect(scoreAfter).toBeLessThan(scoreBefore);
+    });
+  });
 });
