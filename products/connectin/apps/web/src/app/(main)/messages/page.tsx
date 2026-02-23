@@ -1,11 +1,12 @@
 "use client";
 
-import { useState } from "react";
+import { useState, useRef, useCallback } from "react";
 import { useTranslation } from "react-i18next";
 import { Send } from "lucide-react";
 import { useMessages } from "@/hooks/useMessages";
 import { ConversationItem } from "@/components/messages/ConversationItem";
 import { MessageBubble } from "@/components/messages/MessageBubble";
+import { TypingIndicator } from "@/components/messages/TypingIndicator";
 import { cn } from "@/lib/utils";
 
 export default function MessagesPage() {
@@ -20,14 +21,33 @@ export default function MessagesPage() {
     isLoadingConversations,
     isLoadingMessages,
     isSending,
+    typingUsers,
+    isConnected,
     sendMessage,
+    sendTyping,
   } = useMessages(activeConvId);
+
+  // Typing signal throttle
+  const lastTypingRef = useRef(0);
+  const handleTyping = useCallback(() => {
+    if (!activeConvId) return;
+    const now = Date.now();
+    if (now - lastTypingRef.current > 2000) {
+      lastTypingRef.current = now;
+      sendTyping(activeConvId);
+    }
+  }, [activeConvId, sendTyping]);
 
   const filtered = conversations.filter((c) =>
     c.contact.displayName.toLowerCase().includes(search.toLowerCase())
   );
 
   const activeConv = conversations.find((c) => c.id === activeConvId);
+
+  // Resolve typing user names from active conversation contact
+  const typingDisplayNames = activeConv && typingUsers.size > 0
+    ? Array.from(typingUsers).map(() => activeConv.contact.displayName)
+    : [];
 
   const handleSend = async () => {
     if (!activeConvId || !inputValue.trim()) return;
@@ -107,9 +127,14 @@ export default function MessagesPage() {
                 ←
               </button>
               <div>
-                <p className="font-semibold text-neutral-900 dark:text-neutral-100">
-                  {activeConv.contact.displayName}
-                </p>
+                <div className="flex items-center gap-2">
+                  <p className="font-semibold text-neutral-900 dark:text-neutral-100">
+                    {activeConv.contact.displayName}
+                  </p>
+                  {isConnected && (
+                    <span className="h-2 w-2 rounded-full bg-green-500" title="Live" />
+                  )}
+                </div>
                 {activeConv.contact.headline && (
                   <p className="text-xs text-neutral-400">{activeConv.contact.headline}</p>
                 )}
@@ -140,6 +165,7 @@ export default function MessagesPage() {
                   <MessageBubble key={msg.id} message={msg} />
                 ))
               )}
+              <TypingIndicator displayNames={typingDisplayNames} />
             </div>
 
             {/* Input */}
@@ -148,7 +174,10 @@ export default function MessagesPage() {
                 <input
                   type="text"
                   value={inputValue}
-                  onChange={(e) => setInputValue(e.target.value)}
+                  onChange={(e) => {
+                    setInputValue(e.target.value);
+                    handleTyping();
+                  }}
                   onKeyDown={handleKeyDown}
                   placeholder={t("messages.typeMessage")}
                   aria-label={t("messages.typeMessage")}

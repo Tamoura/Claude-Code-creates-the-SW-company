@@ -180,7 +180,9 @@
     "you": "You",
     "emptyThread": "Start the conversation",
     "failedToSend": "Failed to send",
-    "errorLoading": "Error loading messages"
+    "errorLoading": "Error loading messages",
+    "typing": "typing",
+    "online": "Online"
   },
   "jobs": {
     "search": "Search jobs...",
