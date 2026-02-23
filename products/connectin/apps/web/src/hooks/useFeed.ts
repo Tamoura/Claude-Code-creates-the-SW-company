@@ -158,6 +158,45 @@ export function useFeed() {
     }
   }, []);
 
+  const editPost = useCallback(
+    async (postId: string, content: string): Promise<boolean> => {
+      try {
+        const response = await apiClient.put<Post>(`/feed/posts/${postId}`, {
+          content,
+        });
+
+        if (response.success && response.data) {
+          setPosts((prev) =>
+            prev.map((p) =>
+              p.id === postId ? { ...p, content: (response.data as Post).content } : p
+            )
+          );
+          return true;
+        }
+        return false;
+      } catch {
+        return false;
+      }
+    },
+    []
+  );
+
+  const deletePost = useCallback(
+    async (postId: string): Promise<boolean> => {
+      try {
+        const response = await apiClient.delete(`/feed/posts/${postId}`);
+        if (response.success) {
+          setPosts((prev) => prev.filter((p) => p.id !== postId));
+          return true;
+        }
+        return false;
+      } catch {
+        return false;
+      }
+    },
+    []
+  );
+
   useEffect(() => {
     fetchFeed();
   }, [fetchFeed]);
@@ -171,6 +210,8 @@ export function useFeed() {
     hasMore,
     loadMore,
     createPost,
+    editPost,
+    deletePost,
     toggleLike,
     refetch: () => fetchFeed(),
   };

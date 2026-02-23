@@ -3,6 +3,7 @@
 import { useState } from "react";
 import { useTranslation } from "react-i18next";
 import { useFeed } from "@/hooks/useFeed";
+import { useAuthContext } from "@/providers/AuthProvider";
 import { PostCard } from "@/components/feed/PostCard";
 import { PostCardSkeleton } from "@/components/shared/LoadingSkeleton";
 
@@ -10,6 +11,7 @@ const MAX_CHARS = 3000;
 
 export default function FeedPage() {
   const { t } = useTranslation("common");
+  const { user } = useAuthContext();
   const {
     posts,
     isLoading,
@@ -19,6 +21,8 @@ export default function FeedPage() {
     createPost,
     loadMore,
     toggleLike,
+    editPost,
+    deletePost,
   } = useFeed();
   const [postContent, setPostContent] = useState("");
 
@@ -89,7 +93,14 @@ export default function FeedPage() {
         <>
           <div className="space-y-4">
             {posts.map((post) => (
-              <PostCard key={post.id} post={post} onToggleLike={toggleLike} />
+              <PostCard
+                key={post.id}
+                post={post}
+                currentUserId={user?.id}
+                onToggleLike={toggleLike}
+                onEdit={editPost}
+                onDelete={deletePost}
+              />
             ))}
           </div>
 
