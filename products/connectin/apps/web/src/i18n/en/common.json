@@ -90,7 +90,16 @@
     "composer": "Start a post...",
     "empty": "No posts yet. Be the first to share!",
     "trending": "Trending Topics",
-    "suggestions": "People You May Know"
+    "suggestions": "People You May Know",
+    "editPost": "Edit post",
+    "deletePost": "Delete post",
+    "confirmDeletePost": "Are you sure you want to delete this post?",
+    "postDeleted": "Post deleted",
+    "postEdited": "Post updated",
+    "comments": "Comments",
+    "writeComment": "Write a comment...",
+    "noComments": "No comments yet. Be the first to comment!",
+    "viewComments": "View comments"
   },
   "profile": {
     "completeness": "Profile Completeness",

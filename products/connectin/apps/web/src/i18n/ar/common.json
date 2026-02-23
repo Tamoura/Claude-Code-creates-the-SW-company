@@ -90,7 +90,16 @@
     "composer": "ابدأ منشورًا...",
     "empty": "لا توجد منشورات بعد. كن أول من ينشر!",
     "trending": "المواضيع الرائجة",
-    "suggestions": "أشخاص قد تعرفهم"
+    "suggestions": "أشخاص قد تعرفهم",
+    "editPost": "تعديل المنشور",
+    "deletePost": "حذف المنشور",
+    "confirmDeletePost": "هل أنت متأكد من حذف هذا المنشور؟",
+    "postDeleted": "تم حذف المنشور",
+    "postEdited": "تم تحديث المنشور",
+    "comments": "التعليقات",
+    "writeComment": "اكتب تعليقًا...",
+    "noComments": "لا توجد تعليقات بعد. كن أول من يعلق!",
+    "viewComments": "عرض التعليقات"
   },
   "profile": {
     "completeness": "اكتمال الملف الشخصي",

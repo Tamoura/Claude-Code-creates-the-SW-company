@@ -2,6 +2,7 @@ import { PrismaClient, TextDirection } from '@prisma/client';
 import { NotFoundError } from '../../lib/errors';
 import {
   CreatePostInput,
+  UpdatePostInput,
   CreateCommentInput,
 } from './feed.schemas';
 import {
@@ -235,6 +236,139 @@ export class FeedService {
       liked: false,
       likeCount: Math.max(0, updatedPost.likeCount),
     };
+  }
+
+  async editPost(
+    postId: string,
+    userId: string,
+    input: UpdatePostInput
+  ) {
+    const post = await this.prisma.post.findUnique({
+      where: { id: postId },
+      select: {
+        id: true,
+        authorId: true,
+        isDeleted: true,
+      },
+    });
+
+    if (!post || post.isDeleted || post.authorId !== userId) {
+      throw new NotFoundError('Post not found');
+    }
+
+    const updated = await this.prisma.post.update({
+      where: { id: postId },
+      data: {
+        content: input.content,
+        ...(input.textDirection && {
+          textDirection:
+            input.textDirection as import('@prisma/client').TextDirection,
+        }),
+      },
+      include: {
+        author: {
+          select: {
+            id: true,
+            displayName: true,
+            profile: {
+              select: {
+                avatarUrl: true,
+                headlineEn: true,
+              },
+            },
+          },
+        },
+        likes: {
+          where: { userId },
+          select: { id: true },
+        },
+      },
+    });
+
+    return {
+      id: updated.id,
+      author: {
+        id: updated.author.id,
+        displayName: updated.author.displayName,
+        avatarUrl:
+          updated.author.profile?.avatarUrl ?? null,
+        headlineEn:
+          updated.author.profile?.headlineEn ?? null,
+      },
+      content: updated.content,
+      textDirection: updated.textDirection,
+      likeCount: updated.likeCount,
+      commentCount: updated.commentCount,
+      isLikedByMe: updated.likes.length > 0,
+      createdAt: updated.createdAt,
+    };
+  }
+
+  async deletePost(postId: string, userId: string) {
+    const post = await this.prisma.post.findUnique({
+      where: { id: postId },
+      select: {
+        id: true,
+        authorId: true,
+        isDeleted: true,
+      },
+    });
+
+    if (!post || post.isDeleted || post.authorId !== userId) {
+      throw new NotFoundError('Post not found');
+    }
+
+    await this.prisma.post.update({
+      where: { id: postId },
+      data: { isDeleted: true },
+    });
+
+    return { deleted: true };
+  }
+
+  async getComments(postId: string) {
+    const post = await this.prisma.post.findUnique({
+      where: { id: postId },
+      select: { id: true, isDeleted: true },
+    });
+
+    if (!post || post.isDeleted) {
+      throw new NotFoundError('Post not found');
+    }
+
+    const comments = await this.prisma.comment.findMany(
+      {
+        where: {
+          postId,
+          isDeleted: false,
+        },
+        orderBy: { createdAt: 'asc' },
+        include: {
+          author: {
+            select: {
+              id: true,
+              displayName: true,
+              profile: {
+                select: {
+                  avatarUrl: true,
+                },
+              },
+            },
+          },
+        },
+      }
+    );
+
+    return comments.map((c) => ({
+      id: c.id,
+      postId: c.postId,
+      authorId: c.authorId,
+      authorName: c.author.displayName,
+      avatarUrl: c.author.profile?.avatarUrl ?? null,
+      content: c.content,
+      textDirection: c.textDirection,
+      createdAt: c.createdAt,
+    }));
   }
 
   async addComment(

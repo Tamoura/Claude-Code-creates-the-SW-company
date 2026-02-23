@@ -399,4 +399,299 @@ describe('Feed Module', () => {
       );
     }
   );
+
+  describe('PUT /api/v1/feed/posts/:id (Edit Post)', () => {
+    it('rejects unauthenticated request', async () => {
+      const app = await getApp();
+      const user = await createTestUser(app);
+
+      const postRes = await app.inject({
+        method: 'POST',
+        url: '/api/v1/feed/posts',
+        headers: authHeaders(user.accessToken),
+        payload: { content: 'Original content' },
+      });
+      const postId = JSON.parse(postRes.body).data.id;
+
+      const res = await app.inject({
+        method: 'PUT',
+        url: `/api/v1/feed/posts/${postId}`,
+        payload: { content: 'Edited content' },
+      });
+
+      expect(res.statusCode).toBe(401);
+    });
+
+    it('edits own post', async () => {
+      const app = await getApp();
+      const user = await createTestUser(app);
+
+      const postRes = await app.inject({
+        method: 'POST',
+        url: '/api/v1/feed/posts',
+        headers: authHeaders(user.accessToken),
+        payload: { content: 'Before edit' },
+      });
+      const postId = JSON.parse(postRes.body).data.id;
+
+      const res = await app.inject({
+        method: 'PUT',
+        url: `/api/v1/feed/posts/${postId}`,
+        headers: authHeaders(user.accessToken),
+        payload: { content: 'After edit' },
+      });
+
+      expect(res.statusCode).toBe(200);
+      const body = JSON.parse(res.body);
+      expect(body.success).toBe(true);
+      expect(body.data.content).toBe('After edit');
+      expect(body.data.id).toBe(postId);
+    });
+
+    it('returns 404 when editing another user post', async () => {
+      const app = await getApp();
+      const owner = await createTestUser(app, { email: 'post-owner@test.com' });
+      const other = await createTestUser(app, { email: 'post-other@test.com' });
+
+      const postRes = await app.inject({
+        method: 'POST',
+        url: '/api/v1/feed/posts',
+        headers: authHeaders(owner.accessToken),
+        payload: { content: 'Owner post' },
+      });
+      const postId = JSON.parse(postRes.body).data.id;
+
+      const res = await app.inject({
+        method: 'PUT',
+        url: `/api/v1/feed/posts/${postId}`,
+        headers: authHeaders(other.accessToken),
+        payload: { content: 'Hijacked!' },
+      });
+
+      expect(res.statusCode).toBe(404);
+    });
+
+    it('validates content length on edit', async () => {
+      const app = await getApp();
+      const user = await createTestUser(app);
+
+      const postRes = await app.inject({
+        method: 'POST',
+        url: '/api/v1/feed/posts',
+        headers: authHeaders(user.accessToken),
+        payload: { content: 'Short post' },
+      });
+      const postId = JSON.parse(postRes.body).data.id;
+
+      const res = await app.inject({
+        method: 'PUT',
+        url: `/api/v1/feed/posts/${postId}`,
+        headers: authHeaders(user.accessToken),
+        payload: { content: 'a'.repeat(3001) },
+      });
+
+      expect(res.statusCode).toBe(422);
+    });
+
+    it('rejects empty content on edit', async () => {
+      const app = await getApp();
+      const user = await createTestUser(app);
+
+      const postRes = await app.inject({
+        method: 'POST',
+        url: '/api/v1/feed/posts',
+        headers: authHeaders(user.accessToken),
+        payload: { content: 'Non-empty' },
+      });
+      const postId = JSON.parse(postRes.body).data.id;
+
+      const res = await app.inject({
+        method: 'PUT',
+        url: `/api/v1/feed/posts/${postId}`,
+        headers: authHeaders(user.accessToken),
+        payload: { content: '' },
+      });
+
+      expect(res.statusCode).toBe(422);
+    });
+  });
+
+  describe('DELETE /api/v1/feed/posts/:id (Delete Post)', () => {
+    it('rejects unauthenticated request', async () => {
+      const app = await getApp();
+      const user = await createTestUser(app);
+
+      const postRes = await app.inject({
+        method: 'POST',
+        url: '/api/v1/feed/posts',
+        headers: authHeaders(user.accessToken),
+        payload: { content: 'Deletable post' },
+      });
+      const postId = JSON.parse(postRes.body).data.id;
+
+      const res = await app.inject({
+        method: 'DELETE',
+        url: `/api/v1/feed/posts/${postId}`,
+      });
+
+      expect(res.statusCode).toBe(401);
+    });
+
+    it('deletes own post (soft-delete)', async () => {
+      const app = await getApp();
+      const user = await createTestUser(app);
+      const db = getPrisma();
+
+      const postRes = await app.inject({
+        method: 'POST',
+        url: '/api/v1/feed/posts',
+        headers: authHeaders(user.accessToken),
+        payload: { content: 'Will be deleted' },
+      });
+      const postId = JSON.parse(postRes.body).data.id;
+
+      const res = await app.inject({
+        method: 'DELETE',
+        url: `/api/v1/feed/posts/${postId}`,
+        headers: authHeaders(user.accessToken),
+      });
+
+      expect(res.statusCode).toBe(200);
+      const body = JSON.parse(res.body);
+      expect(body.success).toBe(true);
+
+      // Verify soft-delete in DB
+      const dbPost = await db.post.findUnique({ where: { id: postId } });
+      expect(dbPost!.isDeleted).toBe(true);
+    });
+
+    it('deleted post disappears from feed', async () => {
+      const app = await getApp();
+      const user = await createTestUser(app);
+
+      // Create 2 posts
+      await app.inject({
+        method: 'POST',
+        url: '/api/v1/feed/posts',
+        headers: authHeaders(user.accessToken),
+        payload: { content: 'Keeper post' },
+      });
+      const postRes = await app.inject({
+        method: 'POST',
+        url: '/api/v1/feed/posts',
+        headers: authHeaders(user.accessToken),
+        payload: { content: 'Doomed post' },
+      });
+      const doomedId = JSON.parse(postRes.body).data.id;
+
+      // Delete one
+      await app.inject({
+        method: 'DELETE',
+        url: `/api/v1/feed/posts/${doomedId}`,
+        headers: authHeaders(user.accessToken),
+      });
+
+      // Feed should only show 1 post
+      const feedRes = await app.inject({
+        method: 'GET',
+        url: '/api/v1/feed',
+        headers: authHeaders(user.accessToken),
+      });
+      const feedBody = JSON.parse(feedRes.body);
+      expect(feedBody.data).toHaveLength(1);
+      expect(feedBody.data[0].content).toBe('Keeper post');
+    });
+
+    it('returns 404 when deleting another user post', async () => {
+      const app = await getApp();
+      const owner = await createTestUser(app, { email: 'del-post-owner@test.com' });
+      const other = await createTestUser(app, { email: 'del-post-other@test.com' });
+
+      const postRes = await app.inject({
+        method: 'POST',
+        url: '/api/v1/feed/posts',
+        headers: authHeaders(owner.accessToken),
+        payload: { content: 'Protected post' },
+      });
+      const postId = JSON.parse(postRes.body).data.id;
+
+      const res = await app.inject({
+        method: 'DELETE',
+        url: `/api/v1/feed/posts/${postId}`,
+        headers: authHeaders(other.accessToken),
+      });
+
+      expect(res.statusCode).toBe(404);
+    });
+
+    it('cannot edit a deleted post', async () => {
+      const app = await getApp();
+      const user = await createTestUser(app);
+
+      const postRes = await app.inject({
+        method: 'POST',
+        url: '/api/v1/feed/posts',
+        headers: authHeaders(user.accessToken),
+        payload: { content: 'Soon deleted' },
+      });
+      const postId = JSON.parse(postRes.body).data.id;
+
+      // Delete it
+      await app.inject({
+        method: 'DELETE',
+        url: `/api/v1/feed/posts/${postId}`,
+        headers: authHeaders(user.accessToken),
+      });
+
+      // Try to edit
+      const res = await app.inject({
+        method: 'PUT',
+        url: `/api/v1/feed/posts/${postId}`,
+        headers: authHeaders(user.accessToken),
+        payload: { content: 'Zombie edit' },
+      });
+
+      expect(res.statusCode).toBe(404);
+    });
+
+    it('GET /api/v1/feed/posts/:id/comments returns comments for a post', async () => {
+      const app = await getApp();
+      const user = await createTestUser(app);
+
+      const postRes = await app.inject({
+        method: 'POST',
+        url: '/api/v1/feed/posts',
+        headers: authHeaders(user.accessToken),
+        payload: { content: 'Post with comments' },
+      });
+      const postId = JSON.parse(postRes.body).data.id;
+
+      // Add 2 comments
+      await app.inject({
+        method: 'POST',
+        url: `/api/v1/feed/posts/${postId}/comment`,
+        headers: authHeaders(user.accessToken),
+        payload: { content: 'First comment' },
+      });
+      await app.inject({
+        method: 'POST',
+        url: `/api/v1/feed/posts/${postId}/comment`,
+        headers: authHeaders(user.accessToken),
+        payload: { content: 'Second comment' },
+      });
+
+      const res = await app.inject({
+        method: 'GET',
+        url: `/api/v1/feed/posts/${postId}/comments`,
+        headers: authHeaders(user.accessToken),
+      });
+
+      expect(res.statusCode).toBe(200);
+      const body = JSON.parse(res.body);
+      expect(body.success).toBe(true);
+      expect(body.data).toHaveLength(2);
+      expect(body.data[0].content).toBe('First comment');
+      expect(body.data[1].content).toBe('Second comment');
+    });
+  });
 });
