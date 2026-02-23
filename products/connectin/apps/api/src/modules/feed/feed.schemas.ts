@@ -30,8 +30,22 @@ export const createCommentSchema = z.object({
     .default('AUTO'),
 });
 
+export const updatePostSchema = z.object({
+  content: z
+    .string()
+    .min(1, 'Content is required')
+    .max(3000, 'Content must be 3000 characters or fewer')
+    .transform(stripHtml),
+  textDirection: z
+    .enum(['RTL', 'LTR', 'AUTO'])
+    .optional(),
+});
+
 export type CreatePostInput = z.infer<
   typeof createPostSchema
+>;
+export type UpdatePostInput = z.infer<
+  typeof updatePostSchema
 >;
 export type CreateCommentInput = z.infer<
   typeof createCommentSchema

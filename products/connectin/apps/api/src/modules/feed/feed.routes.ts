@@ -2,6 +2,7 @@ import { FastifyPluginAsync } from 'fastify';
 import { FeedService } from './feed.service';
 import {
   createPostSchema,
+  updatePostSchema,
   createCommentSchema,
 } from './feed.schemas';
 import { sendSuccess } from '../../lib/response';
@@ -196,6 +197,136 @@ const feedRoutes: FastifyPluginAsync = async (fastify) => {
       const data = await feedService.unlikePost(
         request.params.id,
         request.user.sub
+      );
+      return sendSuccess(reply, data);
+    }
+  );
+
+  // PUT /api/v1/feed/posts/:id
+  fastify.put<{ Params: { id: string } }>(
+    '/posts/:id',
+    {
+      schema: {
+        description: 'Edit a post (owner only)',
+        tags: ['Feed'],
+        security: [{ bearerAuth: [] }],
+        params: {
+          type: 'object',
+          required: ['id'],
+          properties: {
+            id: { type: 'string', format: 'uuid' },
+          },
+        },
+        body: {
+          type: 'object',
+          additionalProperties: false,
+          required: ['content'],
+          properties: {
+            content: { type: 'string', minLength: 1, maxLength: 3000 },
+            textDirection: { type: 'string', enum: ['RTL', 'LTR', 'AUTO'] },
+          },
+        },
+        response: {
+          200: {
+            type: 'object',
+            additionalProperties: true,
+            properties: {
+              success: { type: 'boolean' },
+              data: { type: 'object', additionalProperties: true },
+            },
+          },
+        },
+      },
+    },
+    async (request, reply) => {
+      const result = updatePostSchema.safeParse(
+        request.body
+      );
+      if (!result.success) {
+        throw new ValidationError(
+          'Validation failed',
+          zodToDetails(result.error)
+        );
+      }
+
+      const data = await feedService.editPost(
+        request.params.id,
+        request.user.sub,
+        result.data
+      );
+      return sendSuccess(reply, data);
+    }
+  );
+
+  // DELETE /api/v1/feed/posts/:id
+  fastify.delete<{ Params: { id: string } }>(
+    '/posts/:id',
+    {
+      schema: {
+        description: 'Delete a post (soft-delete, owner only)',
+        tags: ['Feed'],
+        security: [{ bearerAuth: [] }],
+        params: {
+          type: 'object',
+          required: ['id'],
+          properties: {
+            id: { type: 'string', format: 'uuid' },
+          },
+        },
+        response: {
+          200: {
+            type: 'object',
+            additionalProperties: true,
+            properties: {
+              success: { type: 'boolean' },
+              data: { type: 'object', additionalProperties: true },
+            },
+          },
+        },
+      },
+    },
+    async (request, reply) => {
+      const data = await feedService.deletePost(
+        request.params.id,
+        request.user.sub
+      );
+      return sendSuccess(reply, data);
+    }
+  );
+
+  // GET /api/v1/feed/posts/:id/comments
+  fastify.get<{ Params: { id: string } }>(
+    '/posts/:id/comments',
+    {
+      schema: {
+        description: 'Get comments for a post',
+        tags: ['Feed'],
+        security: [{ bearerAuth: [] }],
+        params: {
+          type: 'object',
+          required: ['id'],
+          properties: {
+            id: { type: 'string', format: 'uuid' },
+          },
+        },
+        response: {
+          200: {
+            type: 'object',
+            additionalProperties: true,
+            properties: {
+              success: { type: 'boolean' },
+              data: {
+                type: 'array',
+                items: { type: 'object', additionalProperties: true },
+              },
+            },
+          },
+        },
+      },
+    },
+    async (request, reply) => {
+      const data = await feedService.getComments(
+        request.params.id
       );
       return sendSuccess(reply, data);
     }
