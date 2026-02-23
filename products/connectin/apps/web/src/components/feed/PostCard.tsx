@@ -128,7 +128,7 @@ export function PostCard({ post, currentUserId, onToggleLike, onEdit, onDelete }
               type="button"
               onClick={() => { setEditContent(content); setIsEditing(true); }}
               aria-label={t("feed.editPost")}
-              className="rounded-full p-1.5 text-neutral-400 hover:text-primary-600 hover:bg-primary-50 dark:hover:bg-primary-900/20 transition-colors"
+              className="rounded-full p-1.5 text-neutral-500 hover:text-primary-600 hover:bg-primary-50 dark:hover:bg-primary-900/20 transition-colors"
             >
               <Pencil className="h-4 w-4" />
             </button>
@@ -136,7 +136,7 @@ export function PostCard({ post, currentUserId, onToggleLike, onEdit, onDelete }
               type="button"
               onClick={() => setShowDeleteConfirm(true)}
               aria-label={t("feed.deletePost")}
-              className="rounded-full p-1.5 text-neutral-400 hover:text-red-600 hover:bg-red-50 dark:hover:bg-red-900/20 transition-colors"
+              className="rounded-full p-1.5 text-neutral-500 hover:text-red-600 hover:bg-red-50 dark:hover:bg-red-900/20 transition-colors"
             >
               <Trash2 className="h-4 w-4" />
             </button>

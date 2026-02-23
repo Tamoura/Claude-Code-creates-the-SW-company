@@ -91,7 +91,7 @@ export default function LandingPage() {
             <span>{t("landing.footer.terms")}</span>
             <span>{t("landing.footer.contact")}</span>
           </div>
-          <p className="text-sm text-neutral-400">
+          <p className="text-sm text-neutral-500">
             &copy; 2026 {t("landing.footer.copyright")}
           </p>
         </div>

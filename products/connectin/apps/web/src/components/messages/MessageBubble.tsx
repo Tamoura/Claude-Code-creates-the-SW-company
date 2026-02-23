@@ -44,7 +44,7 @@ export function MessageBubble({ message }: MessageBubbleProps) {
         <div
           className={cn(
             "text-[10px] mt-1",
-            isMine ? "text-white/70 text-right" : "text-neutral-400"
+            isMine ? "text-white/70 text-right" : "text-neutral-500"
           )}
         >
           {formatTime(message.createdAt)}

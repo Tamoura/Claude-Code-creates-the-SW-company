@@ -79,7 +79,7 @@ export function NotificationsPanel({
             type="button"
             onClick={onClose}
             aria-label="Close notifications"
-            className="p-1 rounded-lg text-neutral-400 hover:text-neutral-700 hover:bg-[#F1F5F9] dark:hover:bg-white/5 transition-colors"
+            className="p-1 rounded-lg text-neutral-500 hover:text-neutral-700 hover:bg-[#F1F5F9] dark:hover:bg-white/5 transition-colors"
           >
             <X className="h-4 w-4" />
           </button>
@@ -102,7 +102,7 @@ export function NotificationsPanel({
           </div>
         ) : notifications.length === 0 ? (
           <div className="flex items-center justify-center h-40">
-            <p className="text-sm text-neutral-400">{t("notifications.noNotifications")}</p>
+            <p className="text-sm text-neutral-500">{t("notifications.noNotifications")}</p>
           </div>
         ) : (
           <div className="divide-y divide-[#E2E8F0] dark:divide-white/8" role="list">

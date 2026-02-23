@@ -80,9 +80,9 @@ export function JobCard({ job, onApply, onSave }: JobCardProps) {
           )}
         </div>
         {expanded ? (
-          <ChevronUp className="h-5 w-5 text-neutral-400 shrink-0" aria-hidden="true" />
+          <ChevronUp className="h-5 w-5 text-neutral-500 shrink-0" aria-hidden="true" />
         ) : (
-          <ChevronDown className="h-5 w-5 text-neutral-400 shrink-0" aria-hidden="true" />
+          <ChevronDown className="h-5 w-5 text-neutral-500 shrink-0" aria-hidden="true" />
         )}
       </div>
 

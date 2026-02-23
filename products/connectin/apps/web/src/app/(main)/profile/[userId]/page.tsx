@@ -153,7 +153,7 @@ export default function UserProfilePage({ params }: UserProfilePageProps) {
                     <span className="text-sm text-neutral-500">
                       {exp.company}
                     </span>
-                    <span className="text-xs text-neutral-400">
+                    <span className="text-xs text-neutral-500">
                       {exp.startDate}
                       {exp.isCurrent
                         ? ` — ${t("profile.present")}`
@@ -165,7 +165,7 @@ export default function UserProfilePage({ params }: UserProfilePageProps) {
                 ))}
               </ul>
             ) : (
-              <p className="text-sm text-neutral-400">No experience added yet.</p>
+              <p className="text-sm text-neutral-500">No experience added yet.</p>
             )}
           </section>
 
@@ -187,7 +187,7 @@ export default function UserProfilePage({ params }: UserProfilePageProps) {
                     <span className="text-sm text-neutral-500">
                       {edu.institution}
                     </span>
-                    <span className="text-xs text-neutral-400">
+                    <span className="text-xs text-neutral-500">
                       {edu.startYear}
                       {edu.endYear ? ` — ${edu.endYear}` : ""}
                     </span>
@@ -195,7 +195,7 @@ export default function UserProfilePage({ params }: UserProfilePageProps) {
                 ))}
               </ul>
             ) : (
-              <p className="text-sm text-neutral-400">No education added yet.</p>
+              <p className="text-sm text-neutral-500">No education added yet.</p>
             )}
           </section>
 
@@ -219,7 +219,7 @@ export default function UserProfilePage({ params }: UserProfilePageProps) {
                 ))}
               </div>
             ) : (
-              <p className="text-sm text-neutral-400">No skills added yet.</p>
+              <p className="text-sm text-neutral-500">No skills added yet.</p>
             )}
           </section>
         </div>

@@ -202,7 +202,7 @@ export default function SearchPage() {
                     <p className="mt-1 text-neutral-900 dark:text-neutral-100 line-clamp-3">
                       {post.content}
                     </p>
-                    <p className="mt-2 text-xs text-neutral-400">
+                    <p className="mt-2 text-xs text-neutral-500">
                       {new Date(post.createdAt).toLocaleDateString()}
                     </p>
                   </div>

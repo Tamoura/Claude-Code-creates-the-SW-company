@@ -257,7 +257,7 @@ export default function ProfilePage() {
                       {headline || t("profile.addHeadline")}
                     </p>
                     {profile?.location && (
-                      <p className="text-xs text-neutral-400 mt-0.5">{profile.location}</p>
+                      <p className="text-xs text-neutral-500 mt-0.5">{profile.location}</p>
                     )}
                   </>
                 )}
@@ -357,7 +357,7 @@ export default function ProfilePage() {
                       <div className="flex flex-col min-w-0">
                         <span className="font-medium text-neutral-800 dark:text-neutral-200">{exp.title}</span>
                         <span className="text-sm text-neutral-500">{exp.company}{exp.location ? ` · ${exp.location}` : ""}</span>
-                        <span className="text-xs text-neutral-400">
+                        <span className="text-xs text-neutral-500">
                           {formatDate(exp.startDate)}
                           {exp.isCurrent ? ` — ${t("profile.present")}` : exp.endDate ? ` — ${formatDate(exp.endDate)}` : ""}
                         </span>
@@ -370,7 +370,7 @@ export default function ProfilePage() {
                           type="button"
                           onClick={() => { setEditingExp(exp); setShowExpForm(true); }}
                           aria-label={t("profile.editExperience")}
-                          className="p-1.5 rounded-lg hover:bg-neutral-200 dark:hover:bg-white/10 text-neutral-400 hover:text-neutral-600"
+                          className="p-1.5 rounded-lg hover:bg-neutral-200 dark:hover:bg-white/10 text-neutral-500 hover:text-neutral-600"
                         >
                           <Pencil className="h-3.5 w-3.5" />
                         </button>
@@ -396,7 +396,7 @@ export default function ProfilePage() {
                             type="button"
                             onClick={() => setDeletingExpId(exp.id)}
                             aria-label={t("profile.deleteExperience")}
-                            className="p-1.5 rounded-lg hover:bg-red-50 dark:hover:bg-red-900/20 text-neutral-400 hover:text-red-500"
+                            className="p-1.5 rounded-lg hover:bg-red-50 dark:hover:bg-red-900/20 text-neutral-500 hover:text-red-500"
                           >
                             <Trash2 className="h-3.5 w-3.5" />
                           </button>
@@ -406,7 +406,7 @@ export default function ProfilePage() {
                   ))}
                 </ul>
               ) : (
-                <p className="text-sm text-neutral-400">{t("profile.noExperience")}</p>
+                <p className="text-sm text-neutral-500">{t("profile.noExperience")}</p>
               )}
             </section>
 
@@ -435,7 +435,7 @@ export default function ProfilePage() {
                         <span className="text-sm text-neutral-500">
                           {edu.institution}{edu.fieldOfStudy ? ` · ${edu.fieldOfStudy}` : ""}
                         </span>
-                        <span className="text-xs text-neutral-400">
+                        <span className="text-xs text-neutral-500">
                           {edu.startYear}{edu.endYear ? ` — ${edu.endYear}` : ` — ${t("profile.present")}`}
                         </span>
                         {edu.description && (
@@ -447,7 +447,7 @@ export default function ProfilePage() {
                           type="button"
                           onClick={() => { setEditingEdu(edu); setShowEduForm(true); }}
                           aria-label={t("profile.editEducation")}
-                          className="p-1.5 rounded-lg hover:bg-neutral-200 dark:hover:bg-white/10 text-neutral-400 hover:text-neutral-600"
+                          className="p-1.5 rounded-lg hover:bg-neutral-200 dark:hover:bg-white/10 text-neutral-500 hover:text-neutral-600"
                         >
                           <Pencil className="h-3.5 w-3.5" />
                         </button>
@@ -473,7 +473,7 @@ export default function ProfilePage() {
                             type="button"
                             onClick={() => setDeletingEduId(edu.id)}
                             aria-label={t("profile.deleteEducation")}
-                            className="p-1.5 rounded-lg hover:bg-red-50 dark:hover:bg-red-900/20 text-neutral-400 hover:text-red-500"
+                            className="p-1.5 rounded-lg hover:bg-red-50 dark:hover:bg-red-900/20 text-neutral-500 hover:text-red-500"
                           >
                             <Trash2 className="h-3.5 w-3.5" />
                           </button>
@@ -483,7 +483,7 @@ export default function ProfilePage() {
                   ))}
                 </ul>
               ) : (
-                <p className="text-sm text-neutral-400">{t("profile.noEducation")}</p>
+                <p className="text-sm text-neutral-500">{t("profile.noEducation")}</p>
               )}
             </section>
 
@@ -504,7 +504,7 @@ export default function ProfilePage() {
                   ))}
                 </div>
               ) : (
-                <p className="text-sm text-neutral-400">{t("profile.noSkills")}</p>
+                <p className="text-sm text-neutral-500">{t("profile.noSkills")}</p>
               )}
             </section>
           </div>
@@ -515,13 +515,13 @@ export default function ProfilePage() {
                 <div className="h-6 w-6 animate-spin rounded-full border-2 border-primary-600 border-t-transparent" />
               </div>
             ) : myPosts.length === 0 ? (
-              <p className="text-center text-sm text-neutral-400 py-8">{t("feed.empty")}</p>
+              <p className="text-center text-sm text-neutral-500 py-8">{t("feed.empty")}</p>
             ) : (
               <div className="space-y-4">
                 {myPosts.map((post) => (
                   <div key={post.id} className="rounded-xl border border-neutral-200 dark:border-neutral-700 p-4">
                     <p className="text-sm text-neutral-800 dark:text-neutral-200 whitespace-pre-line">{post.content}</p>
-                    <div className="mt-2 flex items-center gap-4 text-xs text-neutral-400">
+                    <div className="mt-2 flex items-center gap-4 text-xs text-neutral-500">
                       <span>{new Date(post.createdAt).toLocaleDateString()}</span>
                       <span>{post.likeCount} {t("actions.like").toLowerCase()}s</span>
                       <span>{post.commentCount} {t("actions.comment").toLowerCase()}s</span>

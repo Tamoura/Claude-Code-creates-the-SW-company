@@ -84,7 +84,7 @@ export function ConversationItem({
             {contact.displayName}
           </span>
           {lastMessageAt && (
-            <span className="text-[11px] text-neutral-400 shrink-0 ms-2">
+            <span className="text-[11px] text-neutral-500 shrink-0 ms-2">
               {timeAgo(lastMessageAt)}
             </span>
           )}
@@ -102,7 +102,7 @@ export function ConversationItem({
           </p>
         )}
         {contact.headline && !lastMessage && (
-          <p className="text-xs text-neutral-400 truncate mt-0.5">
+          <p className="text-xs text-neutral-500 truncate mt-0.5">
             {contact.headline}
           </p>
         )}

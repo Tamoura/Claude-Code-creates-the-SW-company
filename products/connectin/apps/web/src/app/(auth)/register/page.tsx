@@ -81,7 +81,7 @@ export default function RegisterPage() {
           We&apos;ve sent a verification link to <strong>{email}</strong>.
           Please check your inbox and click the link to activate your account.
         </p>
-        <p className="mt-4 text-sm text-neutral-400">
+        <p className="mt-4 text-sm text-neutral-500">
           Already have an account?{" "}
           <Link href="/login" className="font-medium text-primary-600 hover:text-primary-700">
             Log in

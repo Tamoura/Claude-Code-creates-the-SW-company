@@ -94,7 +94,7 @@ export default function MessagesPage() {
             </div>
           ) : filtered.length === 0 ? (
             <div className="flex items-center justify-center h-40">
-              <p className="text-sm text-neutral-400">{t("messages.noConversations")}</p>
+              <p className="text-sm text-neutral-500">{t("messages.noConversations")}</p>
             </div>
           ) : (
             filtered.map((conv) => (
@@ -136,7 +136,7 @@ export default function MessagesPage() {
                   )}
                 </div>
                 {activeConv.contact.headline && (
-                  <p className="text-xs text-neutral-400">{activeConv.contact.headline}</p>
+                  <p className="text-xs text-neutral-500">{activeConv.contact.headline}</p>
                 )}
               </div>
             </div>
@@ -158,7 +158,7 @@ export default function MessagesPage() {
                 </div>
               ) : messages.length === 0 ? (
                 <div className="flex items-center justify-center h-full">
-                  <p className="text-sm text-neutral-400">{t("messages.emptyThread")}</p>
+                  <p className="text-sm text-neutral-500">{t("messages.emptyThread")}</p>
                 </div>
               ) : (
                 messages.map((msg) => (
@@ -203,7 +203,7 @@ export default function MessagesPage() {
           </>
         ) : (
           <div className="flex items-center justify-center h-full">
-            <p className="text-neutral-400">{t("messages.startConversation")}</p>
+            <p className="text-neutral-500">{t("messages.startConversation")}</p>
           </div>
         )}
       </div>
