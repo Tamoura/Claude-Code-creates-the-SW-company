@@ -48,8 +48,8 @@ export function BottomNav() {
               "text-xs transition-all duration-[180ms]",
               "active:scale-90",
               isActive
-                ? "text-[#0B6E7F] font-medium"
-                : "text-[#64748B] dark:text-[#CBD5E1]",
+                ? "text-[#0B6E7F] dark:text-[#5DD4E8] font-medium"
+                : "text-[#64748B] dark:text-[#94A3B8]",
               "focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-[#57BBCE]"
             )}
             aria-current={isActive ? "page" : undefined}
@@ -61,7 +61,9 @@ export function BottomNav() {
             <item.icon
               className={cn(
                 "h-5 w-5",
-                isActive ? "text-[#0B6E7F]" : "text-[#94A3B8]"
+                isActive
+                  ? "text-[#0B6E7F] dark:text-[#5DD4E8]"
+                  : "text-[#64748B] dark:text-[#94A3B8]"
               )}
               aria-hidden="true"
             />
