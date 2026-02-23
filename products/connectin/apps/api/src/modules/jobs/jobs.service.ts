@@ -468,6 +468,66 @@ export class JobsService {
     };
   }
 
+  // ─── List My Applications (applicant) ─────────────────────
+
+  async listMyApplications(
+    userId: string,
+    options?: { cursor?: string; limit?: number }
+  ) {
+    const limit = Math.min(
+      50,
+      Math.max(1, options?.limit ?? 20)
+    );
+
+    const cursorData = options?.cursor
+      ? decodeCursor(options.cursor)
+      : null;
+
+    const where: {
+      applicantId: string;
+      appliedAt?: { lt: Date };
+    } = { applicantId: userId };
+
+    if (cursorData) {
+      where.appliedAt = { lt: cursorData.createdAt };
+    }
+
+    const applications =
+      await this.prisma.jobApplication.findMany({
+        where,
+        take: limit + 1,
+        include: { job: true },
+        orderBy: [{ appliedAt: 'desc' }, { id: 'desc' }],
+      });
+
+    const hasMore = applications.length > limit;
+    const result = hasMore
+      ? applications.slice(0, limit)
+      : applications;
+
+    const lastItem =
+      result.length > 0 ? result[result.length - 1] : null;
+
+    const meta: CursorPaginationMeta = {
+      cursor: lastItem
+        ? encodeCursor(lastItem.appliedAt, lastItem.id)
+        : null,
+      hasMore,
+      count: result.length,
+    };
+
+    return {
+      data: result.map((app) => ({
+        id: app.id,
+        status: app.status,
+        coverNote: app.coverNote,
+        appliedAt: app.appliedAt,
+        job: this.formatJob(app.job),
+      })),
+      meta,
+    };
+  }
+
   // ─── Format Helper ─────────────────────────────────────────
 
   private formatJob(job: {

@@ -67,6 +67,56 @@ const jobsRoutes: FastifyPluginAsync = async (fastify) => {
     }
   );
 
+  // ─── GET /api/v1/jobs/my-applications ───────────────────────
+  // Must be registered BEFORE /:id routes to avoid conflict
+  fastify.get(
+    '/my-applications',
+    {
+      schema: {
+        description: 'List all jobs the current user has applied to',
+        tags: ['Jobs'],
+        security: [{ bearerAuth: [] }],
+        querystring: {
+          type: 'object',
+          properties: {
+            cursor: { type: 'string' },
+            limit: { type: 'string' },
+          },
+        },
+        response: {
+          200: {
+            type: 'object',
+            additionalProperties: true,
+            properties: {
+              success: { type: 'boolean' },
+              data: {
+                type: 'array',
+                items: { type: 'object', additionalProperties: true },
+              },
+            },
+          },
+        },
+      },
+      preHandler: fastify.authenticate,
+    },
+    async (request, reply) => {
+      const query = request.query as {
+        cursor?: string;
+        limit?: string;
+      };
+
+      const limit = query.limit
+        ? Math.min(50, Math.max(1, parseInt(query.limit, 10) || 20))
+        : 20;
+
+      const result = await jobsService.listMyApplications(
+        request.user.sub,
+        { cursor: query.cursor, limit }
+      );
+      return sendSuccess(reply, result.data, 200, result.meta);
+    }
+  );
+
   // ─── POST /api/v1/jobs ──────────────────────────────────────
   fastify.post(
     '/',
