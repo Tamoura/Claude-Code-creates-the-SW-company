@@ -294,4 +294,449 @@ describe('Profile Module', () => {
       expect(body.data.headlineEn).toContain('Senior Developer');
     });
   });
+
+  describe('Education CRUD', () => {
+    describe('POST /api/v1/profiles/me/education', () => {
+      it('rejects unauthenticated request', async () => {
+        const app = await getApp();
+        const res = await app.inject({
+          method: 'POST',
+          url: '/api/v1/profiles/me/education',
+          payload: {
+            institution: 'MIT',
+            degree: 'BSc Computer Science',
+            startYear: 2018,
+          },
+        });
+
+        expect(res.statusCode).toBe(401);
+      });
+
+      it('adds education entry successfully', async () => {
+        const app = await getApp();
+        const user = await createTestUser(app);
+
+        const res = await app.inject({
+          method: 'POST',
+          url: '/api/v1/profiles/me/education',
+          headers: authHeaders(user.accessToken),
+          payload: {
+            institution: 'King Saud University',
+            degree: 'BSc Computer Science',
+            fieldOfStudy: 'Artificial Intelligence',
+            description: 'Graduated with honors',
+            startYear: 2015,
+            endYear: 2019,
+          },
+        });
+
+        expect(res.statusCode).toBe(201);
+        const body = JSON.parse(res.body);
+        expect(body.success).toBe(true);
+        expect(body.data.institution).toBe('King Saud University');
+        expect(body.data.degree).toBe('BSc Computer Science');
+        expect(body.data.fieldOfStudy).toBe('Artificial Intelligence');
+        expect(body.data.description).toBe('Graduated with honors');
+        expect(body.data.startYear).toBe(2015);
+        expect(body.data.endYear).toBe(2019);
+      });
+
+      it('validates required fields', async () => {
+        const app = await getApp();
+        const user = await createTestUser(app);
+
+        const res = await app.inject({
+          method: 'POST',
+          url: '/api/v1/profiles/me/education',
+          headers: authHeaders(user.accessToken),
+          payload: {
+            // missing institution, degree, startYear
+            fieldOfStudy: 'Computer Science',
+          },
+        });
+
+        expect(res.statusCode).toBe(422);
+      });
+
+      it('validates startYear range', async () => {
+        const app = await getApp();
+        const user = await createTestUser(app);
+
+        const res = await app.inject({
+          method: 'POST',
+          url: '/api/v1/profiles/me/education',
+          headers: authHeaders(user.accessToken),
+          payload: {
+            institution: 'MIT',
+            degree: 'BSc',
+            startYear: 1900, // below 1950 minimum
+          },
+        });
+
+        expect(res.statusCode).toBe(422);
+      });
+    });
+
+    describe('PUT /api/v1/profiles/me/education/:id', () => {
+      it('updates education entry', async () => {
+        const app = await getApp();
+        const user = await createTestUser(app);
+
+        // Create education first
+        const createRes = await app.inject({
+          method: 'POST',
+          url: '/api/v1/profiles/me/education',
+          headers: authHeaders(user.accessToken),
+          payload: {
+            institution: 'King Saud University',
+            degree: 'BSc Computer Science',
+            startYear: 2015,
+          },
+        });
+
+        const created = JSON.parse(createRes.body);
+        const educationId = created.data.id;
+
+        const res = await app.inject({
+          method: 'PUT',
+          url: `/api/v1/profiles/me/education/${educationId}`,
+          headers: authHeaders(user.accessToken),
+          payload: {
+            degree: 'MSc Computer Science',
+            endYear: 2021,
+          },
+        });
+
+        expect(res.statusCode).toBe(200);
+        const body = JSON.parse(res.body);
+        expect(body.success).toBe(true);
+        expect(body.data.degree).toBe('MSc Computer Science');
+        expect(body.data.endYear).toBe(2021);
+        // institution should remain unchanged
+        expect(body.data.institution).toBe('King Saud University');
+      });
+
+      it('returns 404 for non-owned entry', async () => {
+        const app = await getApp();
+        const user1 = await createTestUser(app, {
+          email: 'edu-owner@test.com',
+        });
+        const user2 = await createTestUser(app, {
+          email: 'edu-other@test.com',
+        });
+
+        // user1 creates education
+        const createRes = await app.inject({
+          method: 'POST',
+          url: '/api/v1/profiles/me/education',
+          headers: authHeaders(user1.accessToken),
+          payload: {
+            institution: 'Harvard',
+            degree: 'MBA',
+            startYear: 2020,
+          },
+        });
+
+        const created = JSON.parse(createRes.body);
+        const educationId = created.data.id;
+
+        // user2 tries to update it
+        const res = await app.inject({
+          method: 'PUT',
+          url: `/api/v1/profiles/me/education/${educationId}`,
+          headers: authHeaders(user2.accessToken),
+          payload: {
+            degree: 'PhD',
+          },
+        });
+
+        expect(res.statusCode).toBe(404);
+      });
+    });
+
+    describe('DELETE /api/v1/profiles/me/education/:id', () => {
+      it('deletes education entry', async () => {
+        const app = await getApp();
+        const user = await createTestUser(app);
+
+        // Create education first
+        const createRes = await app.inject({
+          method: 'POST',
+          url: '/api/v1/profiles/me/education',
+          headers: authHeaders(user.accessToken),
+          payload: {
+            institution: 'Stanford',
+            degree: 'PhD AI',
+            startYear: 2019,
+          },
+        });
+
+        const created = JSON.parse(createRes.body);
+        const educationId = created.data.id;
+
+        const res = await app.inject({
+          method: 'DELETE',
+          url: `/api/v1/profiles/me/education/${educationId}`,
+          headers: authHeaders(user.accessToken),
+        });
+
+        expect(res.statusCode).toBe(200);
+        const body = JSON.parse(res.body);
+        expect(body.success).toBe(true);
+      });
+
+      it('returns 404 for non-owned entry', async () => {
+        const app = await getApp();
+        const user1 = await createTestUser(app, {
+          email: 'del-owner@test.com',
+        });
+        const user2 = await createTestUser(app, {
+          email: 'del-other@test.com',
+        });
+
+        // user1 creates education
+        const createRes = await app.inject({
+          method: 'POST',
+          url: '/api/v1/profiles/me/education',
+          headers: authHeaders(user1.accessToken),
+          payload: {
+            institution: 'Oxford',
+            degree: 'MA History',
+            startYear: 2017,
+          },
+        });
+
+        const created = JSON.parse(createRes.body);
+        const educationId = created.data.id;
+
+        // user2 tries to delete it
+        const res = await app.inject({
+          method: 'DELETE',
+          url: `/api/v1/profiles/me/education/${educationId}`,
+          headers: authHeaders(user2.accessToken),
+        });
+
+        expect(res.statusCode).toBe(404);
+      });
+    });
+
+    describe('GET /api/v1/profiles/me (includes education)', () => {
+      it('includes education entries in profile response', async () => {
+        const app = await getApp();
+        const user = await createTestUser(app);
+
+        // Add education
+        await app.inject({
+          method: 'POST',
+          url: '/api/v1/profiles/me/education',
+          headers: authHeaders(user.accessToken),
+          payload: {
+            institution: 'KFUPM',
+            degree: 'BSc Engineering',
+            startYear: 2014,
+            endYear: 2018,
+          },
+        });
+
+        const res = await app.inject({
+          method: 'GET',
+          url: '/api/v1/profiles/me',
+          headers: authHeaders(user.accessToken),
+        });
+
+        expect(res.statusCode).toBe(200);
+        const body = JSON.parse(res.body);
+        expect(body.data.education).toHaveLength(1);
+        expect(body.data.education[0].institution).toBe('KFUPM');
+        expect(body.data.education[0].degree).toBe('BSc Engineering');
+      });
+    });
+  });
+
+  describe('Experience Update & Delete', () => {
+    /** Helper: create a user and add an experience entry, returning both. */
+    async function createUserWithExperience(
+      emailOverride?: string
+    ) {
+      const app = await getApp();
+      const user = await createTestUser(app, {
+        email: emailOverride || 'exp-user@test.com',
+      });
+
+      const addRes = await app.inject({
+        method: 'POST',
+        url: '/api/v1/profiles/me/experience',
+        headers: authHeaders(user.accessToken),
+        payload: {
+          company: 'Acme Corp',
+          title: 'Engineer',
+          startDate: '2023-01-01',
+          isCurrent: true,
+        },
+      });
+
+      const experience = JSON.parse(addRes.body).data;
+      return { app, user, experience };
+    }
+
+    // --- PUT /api/v1/profiles/me/experience/:id ---
+
+    it('PUT /experience/:id - rejects unauthenticated request', async () => {
+      const { app, experience } = await createUserWithExperience(
+        'put-auth@test.com'
+      );
+
+      const res = await app.inject({
+        method: 'PUT',
+        url: `/api/v1/profiles/me/experience/${experience.id}`,
+        payload: { title: 'Senior Engineer' },
+      });
+
+      expect(res.statusCode).toBe(401);
+    });
+
+    it('PUT /experience/:id - updates experience entry', async () => {
+      const { app, user, experience } =
+        await createUserWithExperience('put-ok@test.com');
+
+      const res = await app.inject({
+        method: 'PUT',
+        url: `/api/v1/profiles/me/experience/${experience.id}`,
+        headers: authHeaders(user.accessToken),
+        payload: {
+          title: 'Senior Engineer',
+          company: 'New Corp',
+        },
+      });
+
+      expect(res.statusCode).toBe(200);
+      const body = JSON.parse(res.body);
+      expect(body.success).toBe(true);
+      expect(body.data.title).toBe('Senior Engineer');
+      expect(body.data.company).toBe('New Corp');
+      // unchanged fields preserved
+      expect(body.data.isCurrent).toBe(true);
+    });
+
+    it('PUT /experience/:id - returns 404 for non-owned entry', async () => {
+      const { app, experience } =
+        await createUserWithExperience('put-owner@test.com');
+
+      // Create a second user who does NOT own the experience
+      const otherUser = await createTestUser(app, {
+        email: 'put-other@test.com',
+      });
+
+      const res = await app.inject({
+        method: 'PUT',
+        url: `/api/v1/profiles/me/experience/${experience.id}`,
+        headers: authHeaders(otherUser.accessToken),
+        payload: { title: 'Hacker' },
+      });
+
+      expect(res.statusCode).toBe(404);
+    });
+
+    it('PUT /experience/:id - returns 422 for invalid date', async () => {
+      const { app, user, experience } =
+        await createUserWithExperience('put-val@test.com');
+
+      const res = await app.inject({
+        method: 'PUT',
+        url: `/api/v1/profiles/me/experience/${experience.id}`,
+        headers: authHeaders(user.accessToken),
+        payload: { startDate: 'not-a-date' },
+      });
+
+      expect(res.statusCode).toBe(422);
+    });
+
+    // --- DELETE /api/v1/profiles/me/experience/:id ---
+
+    it('DELETE /experience/:id - rejects unauthenticated request', async () => {
+      const { app, experience } = await createUserWithExperience(
+        'del-auth@test.com'
+      );
+
+      const res = await app.inject({
+        method: 'DELETE',
+        url: `/api/v1/profiles/me/experience/${experience.id}`,
+      });
+
+      expect(res.statusCode).toBe(401);
+    });
+
+    it('DELETE /experience/:id - deletes experience entry', async () => {
+      const { app, user, experience } =
+        await createUserWithExperience('del-ok@test.com');
+
+      const res = await app.inject({
+        method: 'DELETE',
+        url: `/api/v1/profiles/me/experience/${experience.id}`,
+        headers: authHeaders(user.accessToken),
+      });
+
+      expect(res.statusCode).toBe(200);
+      const body = JSON.parse(res.body);
+      expect(body.success).toBe(true);
+
+      // Verify the experience is gone from the profile
+      const profileRes = await app.inject({
+        method: 'GET',
+        url: '/api/v1/profiles/me',
+        headers: authHeaders(user.accessToken),
+      });
+      const profileBody = JSON.parse(profileRes.body);
+      expect(profileBody.data.experiences).toHaveLength(0);
+    });
+
+    it('DELETE /experience/:id - returns 404 for non-owned entry', async () => {
+      const { app, experience } =
+        await createUserWithExperience('del-owner@test.com');
+
+      const otherUser = await createTestUser(app, {
+        email: 'del-other@test.com',
+      });
+
+      const res = await app.inject({
+        method: 'DELETE',
+        url: `/api/v1/profiles/me/experience/${experience.id}`,
+        headers: authHeaders(otherUser.accessToken),
+      });
+
+      expect(res.statusCode).toBe(404);
+    });
+
+    it('DELETE /experience/:id - recalculates completeness score', async () => {
+      const { app, user, experience } =
+        await createUserWithExperience('del-score@test.com');
+
+      // Verify score includes experience points before delete
+      const beforeRes = await app.inject({
+        method: 'GET',
+        url: '/api/v1/profiles/me',
+        headers: authHeaders(user.accessToken),
+      });
+      const scoreBefore = JSON.parse(beforeRes.body).data
+        .completenessScore;
+      expect(scoreBefore).toBeGreaterThan(0);
+
+      // Delete the experience
+      await app.inject({
+        method: 'DELETE',
+        url: `/api/v1/profiles/me/experience/${experience.id}`,
+        headers: authHeaders(user.accessToken),
+      });
+
+      // Verify score dropped after deleting experience
+      const afterRes = await app.inject({
+        method: 'GET',
+        url: '/api/v1/profiles/me',
+        headers: authHeaders(user.accessToken),
+      });
+      const scoreAfter = JSON.parse(afterRes.body).data
+        .completenessScore;
+      expect(scoreAfter).toBeLessThan(scoreBefore);
+    });
+  });
 });

@@ -3,7 +3,10 @@ import { NotFoundError } from '../../lib/errors';
 import {
   UpdateProfileInput,
   AddExperienceInput,
+  UpdateExperienceInput,
   AddSkillsInput,
+  AddEducationInput,
+  UpdateEducationInput,
 } from './profile.schemas';
 
 export class ProfileService {
@@ -18,6 +21,9 @@ export class ProfileService {
             { isCurrent: 'desc' },
             { startDate: 'desc' },
           ],
+        },
+        educations: {
+          orderBy: { startYear: 'desc' },
         },
         profileSkills: {
           include: { skill: true },
@@ -68,6 +74,9 @@ export class ProfileService {
             { isCurrent: 'desc' },
             { startDate: 'desc' },
           ],
+        },
+        educations: {
+          orderBy: { startYear: 'desc' },
         },
         profileSkills: {
           include: { skill: true },
@@ -161,6 +170,83 @@ export class ProfileService {
     return experience;
   }
 
+  async updateExperience(
+    userId: string,
+    experienceId: string,
+    input: UpdateExperienceInput
+  ) {
+    const profile = await this.prisma.profile.findUnique({
+      where: { userId },
+    });
+
+    if (!profile) {
+      throw new NotFoundError('Profile not found');
+    }
+
+    // Find experience and verify ownership
+    const experience = await this.prisma.experience.findUnique(
+      { where: { id: experienceId } }
+    );
+
+    if (!experience || experience.profileId !== profile.id) {
+      throw new NotFoundError('Experience not found');
+    }
+
+    const data: Record<string, unknown> = {};
+    if (input.company !== undefined) data.company = input.company;
+    if (input.title !== undefined) data.title = input.title;
+    if (input.location !== undefined)
+      data.location = input.location;
+    if (input.description !== undefined)
+      data.description = input.description;
+    if (input.startDate !== undefined)
+      data.startDate = new Date(input.startDate);
+    if (input.endDate !== undefined)
+      data.endDate = input.endDate
+        ? new Date(input.endDate)
+        : null;
+    if (input.isCurrent !== undefined)
+      data.isCurrent = input.isCurrent;
+
+    const updated = await this.prisma.experience.update({
+      where: { id: experienceId },
+      data,
+    });
+
+    return updated;
+  }
+
+  async deleteExperience(
+    userId: string,
+    experienceId: string
+  ) {
+    const profile = await this.prisma.profile.findUnique({
+      where: { userId },
+    });
+
+    if (!profile) {
+      throw new NotFoundError('Profile not found');
+    }
+
+    // Find experience and verify ownership
+    const experience = await this.prisma.experience.findUnique(
+      { where: { id: experienceId } }
+    );
+
+    if (!experience || experience.profileId !== profile.id) {
+      throw new NotFoundError('Experience not found');
+    }
+
+    await this.prisma.experience.delete({
+      where: { id: experienceId },
+    });
+
+    // Recalculate completeness after deletion
+    await this.recalculateCompleteness(profile.id);
+
+    return { success: true };
+  }
+
   async addSkills(userId: string, input: AddSkillsInput) {
     const profile = await this.prisma.profile.findUnique({
       where: { userId },
@@ -200,6 +286,112 @@ export class ProfileService {
       nameAr: ps.skill.nameAr,
       endorsementCount: ps.endorsementCount,
     }));
+  }
+
+  async addEducation(
+    userId: string,
+    input: AddEducationInput
+  ) {
+    const profile = await this.prisma.profile.findUnique({
+      where: { userId },
+    });
+
+    if (!profile) {
+      throw new NotFoundError('Profile not found');
+    }
+
+    const education = await this.prisma.education.create({
+      data: {
+        profileId: profile.id,
+        institution: input.institution,
+        degree: input.degree,
+        fieldOfStudy: input.fieldOfStudy,
+        description: input.description,
+        startYear: input.startYear,
+        endYear: input.endYear,
+      },
+    });
+
+    await this.recalculateCompleteness(profile.id);
+
+    return education;
+  }
+
+  async updateEducation(
+    userId: string,
+    educationId: string,
+    input: UpdateEducationInput
+  ) {
+    const profile = await this.prisma.profile.findUnique({
+      where: { userId },
+    });
+
+    if (!profile) {
+      throw new NotFoundError('Profile not found');
+    }
+
+    const education = await this.prisma.education.findUnique({
+      where: { id: educationId },
+    });
+
+    if (!education || education.profileId !== profile.id) {
+      throw new NotFoundError('Education entry not found');
+    }
+
+    const updated = await this.prisma.education.update({
+      where: { id: educationId },
+      data: {
+        ...(input.institution !== undefined && {
+          institution: input.institution,
+        }),
+        ...(input.degree !== undefined && {
+          degree: input.degree,
+        }),
+        ...(input.fieldOfStudy !== undefined && {
+          fieldOfStudy: input.fieldOfStudy,
+        }),
+        ...(input.description !== undefined && {
+          description: input.description,
+        }),
+        ...(input.startYear !== undefined && {
+          startYear: input.startYear,
+        }),
+        ...(input.endYear !== undefined && {
+          endYear: input.endYear,
+        }),
+      },
+    });
+
+    return updated;
+  }
+
+  async deleteEducation(
+    userId: string,
+    educationId: string
+  ) {
+    const profile = await this.prisma.profile.findUnique({
+      where: { userId },
+    });
+
+    if (!profile) {
+      throw new NotFoundError('Profile not found');
+    }
+
+    const education = await this.prisma.education.findUnique({
+      where: { id: educationId },
+    });
+
+    if (!education || education.profileId !== profile.id) {
+      throw new NotFoundError('Education entry not found');
+    }
+
+    await this.prisma.education.delete({
+      where: { id: educationId },
+    });
+
+    await this.recalculateCompleteness(profile.id);
+
+    return { deleted: true };
   }
 
   private calculateCompleteness(profile: {
@@ -242,6 +434,7 @@ export class ProfileService {
       where: { id: profileId },
       include: {
         experiences: true,
+        educations: true,
         profileSkills: true,
       },
     });
@@ -252,6 +445,11 @@ export class ProfileService {
 
     // Add points for experiences
     if (profile.experiences.length > 0) {
+      score += 15;
+    }
+
+    // Add points for education
+    if (profile.educations.length > 0) {
       score += 15;
     }
 
@@ -292,6 +490,16 @@ export class ProfileService {
       endDate: Date | null;
       isCurrent: boolean;
     }>;
+    educations: Array<{
+      id: string;
+      institution: string;
+      degree: string;
+      fieldOfStudy: string | null;
+      description: string | null;
+      startYear: number;
+      endYear: number | null;
+      sortOrder: number;
+    }>;
     profileSkills: Array<{
       endorsementCount: number;
       skill: {
@@ -322,6 +530,16 @@ export class ProfileService {
         startDate: e.startDate,
         endDate: e.endDate,
         isCurrent: e.isCurrent,
+      })),
+      education: profile.educations.map((ed) => ({
+        id: ed.id,
+        institution: ed.institution,
+        degree: ed.degree,
+        fieldOfStudy: ed.fieldOfStudy,
+        description: ed.description,
+        startYear: ed.startYear,
+        endYear: ed.endYear,
+        sortOrder: ed.sortOrder,
       })),
       skills: profile.profileSkills.map((ps) => ({
         id: ps.skill.id,

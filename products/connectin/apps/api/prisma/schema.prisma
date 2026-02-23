@@ -134,6 +134,7 @@ model Profile {
 
   user              User            @relation(fields: [userId], references: [id], onDelete: Cascade)
   experiences       Experience[]
+  educations        Education[]
   profileSkills     ProfileSkill[]
 
   @@map("profiles")
@@ -158,6 +159,26 @@ model Experience {
 
   @@index([profileId])
   @@map("experiences")
+}
+
+// ─── Education ──────────────────────────────────────────────
+
+model Education {
+  id           String    @id @default(uuid())
+  profileId    String    @map("profile_id")
+  institution  String    @db.VarChar(200)
+  degree       String    @db.VarChar(200)
+  fieldOfStudy String?   @map("field_of_study") @db.VarChar(200)
+  description  String?
+  startYear    Int       @map("start_year")
+  endYear      Int?      @map("end_year")
+  sortOrder    Int       @default(0) @map("sort_order")
+  createdAt    DateTime  @default(now()) @map("created_at")
+
+  profile      Profile   @relation(fields: [profileId], references: [id], onDelete: Cascade)
+
+  @@index([profileId])
+  @@map("educations")
 }
 
 // ─── Skills ─────────────────────────────────────────────────
