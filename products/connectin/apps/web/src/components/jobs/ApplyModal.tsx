@@ -36,7 +36,7 @@ export function ApplyModal({
   const cancelRef = useRef<HTMLButtonElement>(null);
   const dialogRef = useFocusTrap(true);
 
-  // ESC key handler
+  // ESC key handler + body scroll lock
   useEffect(() => {
     const handleKeyDown = (e: KeyboardEvent) => {
       if (e.key === "Escape") {
@@ -44,7 +44,11 @@ export function ApplyModal({
       }
     };
     document.addEventListener("keydown", handleKeyDown);
-    return () => document.removeEventListener("keydown", handleKeyDown);
+    document.body.style.overflow = "hidden";
+    return () => {
+      document.removeEventListener("keydown", handleKeyDown);
+      document.body.style.overflow = "";
+    };
   }, [onClose]);
 
   const handleSubmit = async () => {
