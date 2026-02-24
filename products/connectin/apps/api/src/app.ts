@@ -47,6 +47,7 @@ import salaryInsightsRoutes from './modules/salary/salary-insights.routes';
 import organizationRoutes from './modules/organization/organization.routes';
 import groupRoutes from './modules/group/group.routes';
 import eventRoutes from './modules/event/event.routes';
+import articleRoutes from './modules/article/article.routes';
 
 export interface BuildAppOptions {
   skipRateLimit?: boolean;
@@ -186,6 +187,9 @@ export async function buildApp(
   });
   await app.register(eventRoutes, {
     prefix: '/api/v1/events',
+  });
+  await app.register(articleRoutes, {
+    prefix: '/api/v1/articles',
   });
 
   // Session cleanup — run hourly in non-test environments
