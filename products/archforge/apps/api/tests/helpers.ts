@@ -87,6 +87,14 @@ export async function createTestUser(
     throw new Error(`Registration failed: ${registerRes.body}`);
   }
 
+  // Activate user (bypass email verification for tests)
+  const prisma = getPrisma();
+  const registerBody = registerRes.json();
+  await prisma.user.update({
+    where: { id: registerBody.userId },
+    data: { status: 'active', emailVerified: true },
+  });
+
   const loginRes = await testApp.inject({
     method: 'POST',
     url: '/api/v1/auth/login',
