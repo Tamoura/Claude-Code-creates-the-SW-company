@@ -22,6 +22,7 @@ The Orchestrator handles everything else.
 ```
 CEO
  └── Orchestrator (routes all work)
+      ├── Business Analyst (requirements elicitation, stakeholder analysis, gap analysis)
       ├── Product Manager (specs, requirements)
       ├── Product Strategist (market analysis, roadmap)
       ├── Architect (system design)
@@ -204,10 +205,18 @@ ConnectSW uses [GitHub's spec-kit](https://github.com/github/spec-kit) methodolo
 - `products/[product]/docs/plan.md` — Implementation plans
 - `products/[product]/docs/tasks.md` — Task lists
 
-**Workflow:**
+**Workflow (New Products):**
 ```
-CEO brief → /speckit.specify → /speckit.clarify → /speckit.plan → /speckit.tasks → /speckit.analyze → Implementation
+CEO brief → BA analysis → /speckit.specify → /speckit.clarify → PRD → Architecture
+→ /speckit.plan → /speckit.tasks → Implementation → /speckit.analyze → CEO Review
 ```
+
+**Workflow (New Features):**
+```
+CEO brief → /speckit.specify → Design → Implementation → /speckit.analyze → CEO Review
+```
+
+**Enforcement:** Spec-kit tasks (BA-01, SPEC-01, CLARIFY-01, ANALYZE-01) are mandatory for new products. SPEC-{ID} and ANALYZE-{ID} are mandatory for new features. The orchestrator MUST NOT skip them.
 
 ## Directory Structure
 

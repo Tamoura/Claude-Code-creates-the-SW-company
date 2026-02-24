@@ -255,9 +255,10 @@ Pause and report to CEO at these points:
 | Product Strategist | `.claude/agents/product-strategist.md` | Market research, product portfolio strategy, long-term roadmaps, competitive analysis |
 | Innovation Specialist | `.claude/agents/innovation-specialist.md` | Technology exploration, rapid prototypes, innovation opportunities, experimental features |
 
-### Product & Design Layer
+### Analysis & Product Layer
 | Agent | File | Use For |
 |-------|------|---------|
+| Business Analyst | `.claude/agents/business-analyst.md` | Business analysis, requirements elicitation, stakeholder mapping, gap analysis, feasibility |
 | Product Manager | `.claude/agents/product-manager.md` | PRDs, requirements, user stories, feature prioritization |
 | UI/UX Designer | `.claude/agents/ui-ux-designer.md` | User research, wireframes, mockups, design systems, usability testing |
 
@@ -281,6 +282,18 @@ Pause and report to CEO at these points:
 |-------|------|---------|
 | Technical Writer | `.claude/agents/technical-writer.md` | Documentation, API docs, user guides |
 | Support Engineer | `.claude/agents/support-engineer.md` | Bug triage, issues, customer support |
+
+## Spec-Kit Commands
+
+| Command | Agent | Purpose |
+|---------|-------|---------|
+| `/speckit.specify` | Product Manager | Create structured feature specification from CEO brief |
+| `/speckit.clarify` | Product Manager | Resolve specification ambiguities (max 5 questions) |
+| `/speckit.plan` | Architect | Create traceable implementation plan from spec |
+| `/speckit.tasks` | Orchestrator | Generate dependency-ordered task list from plan |
+| `/speckit.analyze` | QA Engineer | Validate spec/plan/tasks consistency (quality gate) |
+
+**Pipeline**: CEO brief → BA analysis → `/speckit.specify` → `/speckit.clarify` → PRD → Architecture → `/speckit.plan` → `/speckit.tasks` → Implementation → `/speckit.analyze` → CEO Review
 
 ## Utility Scripts
 

@@ -115,6 +115,21 @@ cat .claude/orchestrator/state.yml 2>/dev/null || echo "No state file"
 | "Ship/deploy [X]" | release | `.claude/workflows/templates/release-tasks.yml` |
 | "Status update" | status-report | (no template, compile from state) |
 
+**Agent Routing Table** (used when spawning sub-agents):
+
+| Agent Role | Brief File | Use For |
+|-----------|-----------|---------|
+| business-analyst | `.claude/agents/briefs/business-analyst.md` | Market research, stakeholder analysis, gap analysis, feasibility assessment |
+| product-manager | `.claude/agents/briefs/product-manager.md` | PRDs, specs, user stories, feature prioritization |
+| architect | `.claude/agents/briefs/architect.md` | System design, ADRs, API contracts |
+| backend-engineer | `.claude/agents/briefs/backend-engineer.md` | APIs, database, server logic |
+| frontend-engineer | `.claude/agents/briefs/frontend-engineer.md` | UI, components, pages |
+| qa-engineer | `.claude/agents/briefs/qa-engineer.md` | E2E tests, testing gate, spec analysis |
+| devops-engineer | `.claude/agents/briefs/devops-engineer.md` | CI/CD, deployment, infrastructure |
+| technical-writer | `.claude/agents/briefs/technical-writer.md` | Documentation, API docs |
+| security-engineer | `.claude/agents/briefs/security-engineer.md` | Security reviews, compliance |
+| code-reviewer | `.claude/agents/briefs/code-reviewer.md` | Code audits, security assessment |
+
 ### Step 2.5: Task Complexity Classification (Fast Track)
 
 Before loading a task graph, classify the CEO request complexity to skip unnecessary overhead:
@@ -156,6 +171,19 @@ For new work (not status update):
 
 3. Save instantiated graph to:
    `products/{PRODUCT}/.claude/task-graph.yml`
+
+3b. **Spec-Kit Tasks Are Mandatory** (NEVER skip):
+   - For `new-product` workflows: BA-01, SPEC-01, CLARIFY-01, and ANALYZE-01
+     are mandatory tasks. The orchestrator MUST NOT skip them even for
+     "simple" products. Business analysis ensures quality from inception.
+   - For `new-feature` workflows: SPEC-{ID} and ANALYZE-{ID} are mandatory.
+     Every feature must have a specification before design begins.
+   - For spec-kit tasks, instruct sub-agents to read the relevant
+     `.specify/templates/commands/*.md` template and follow it exactly.
+   - BA-01: Load `.claude/agents/briefs/business-analyst.md` as inline brief
+   - SPEC-01: Include instruction to execute /speckit.specify methodology
+   - CLARIFY-01: Include instruction to execute /speckit.clarify methodology
+   - ANALYZE-01/ANALYZE-{ID}: Include instruction to execute /speckit.analyze
 
 4. Validate graph:
    - No circular dependencies
@@ -540,7 +568,16 @@ E. UPDATE TASK GRAPH + BACKLOG
 
 F. CHECK FOR CHECKPOINT
    If completed task has checkpoint = true:
-     - **Browser Verification (FIRST — HIGHEST PRIORITY GATE)**:
+     - **Gate 0: Spec Consistency Gate (MANDATORY — runs FIRST for all checkpoints)**:
+       Verify that `/speckit.analyze` has been run and produced a PASS result.
+       - Check: `products/{PRODUCT}/docs/quality-reports/spec-consistency.md` exists
+       - Check: Report contains "Overall: PASS"
+       - If no report exists or report shows FAIL:
+         Route to QA Engineer to run `/speckit.analyze`
+         Do NOT proceed to any other gate until spec consistency PASSES
+       - This gate ensures spec/plan/tasks alignment before any CEO review
+       - Constitution Article X makes this non-negotiable
+     - **Gate 1: Browser Verification (HIGHEST PRIORITY RUNTIME GATE)**:
        Browser verification is the first and highest-priority gate.
        If the browser gate fails, do NOT proceed to testing gate or audit gate.
        Nothing else matters if the product doesn't work in the browser.
@@ -580,7 +617,7 @@ F. CHECK FOR CHECKPOINT
        - Warns on sections > 500 words without diagrams
        - HARD BLOCK: must PASS before CEO checkpoint
        - If FAIL: Route to Technical Writer or original agent to add diagrams
-     - **All pass condition**: smoke test PASS + no placeholders + E2E tests exist and pass + testing gate PASS + traceability gate PASS + documentation gate PASS + all audit scores >= 8/10
+     - **All pass condition**: spec consistency PASS + smoke test PASS + no placeholders + E2E tests exist and pass + testing gate PASS + traceability gate PASS + documentation gate PASS + all audit scores >= 8/10
      - Once all pass:
        - PAUSE execution loop
        - Generate CEO report with audit scores + smoke test report
