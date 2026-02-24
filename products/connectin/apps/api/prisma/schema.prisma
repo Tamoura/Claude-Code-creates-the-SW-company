@@ -125,6 +125,8 @@ model User {
   recommendationsGiven    Recommendation[] @relation("RecommendationsGiven")
   recommendationsReceived Recommendation[] @relation("RecommendationsReceived")
   jobAlerts               JobAlert[]
+  orgMemberships          OrgMember[]
+  orgFollows              OrgFollower[]
 
   @@index([status, createdAt])
   @@index([verificationToken])
@@ -455,7 +457,10 @@ model Job {
   createdAt        DateTime        @default(now()) @map("created_at")
   updatedAt        DateTime        @updatedAt @map("updated_at")
 
+  organizationId   String?         @map("organization_id")
+
   recruiter        User            @relation(fields: [recruiterId], references: [id], onDelete: Cascade)
+  organization     Organization?   @relation(fields: [organizationId], references: [id])
   applications     JobApplication[]
   savedBy          SavedJob[]
   bookmarks        Bookmark[]
@@ -464,6 +469,7 @@ model Job {
   @@index([status, createdAt])
   @@index([workType])
   @@index([experienceLevel])
+  @@index([organizationId])
   @@map("jobs")
 }
 
@@ -1001,4 +1007,71 @@ model JobAlert {
 
   @@index([userId, isActive])
   @@map("job_alerts")
+}
+
+// ─── Organizations (Company Pages) ──────────────────────────
+
+enum OrganizationSize {
+  STARTUP
+  SMALL
+  MEDIUM
+  LARGE
+  ENTERPRISE
+}
+
+enum OrgMemberRole {
+  ADMIN
+  EDITOR
+  MEMBER
+}
+
+model Organization {
+  id          String            @id @default(uuid())
+  name        String            @db.VarChar(200)
+  slug        String            @unique @db.VarChar(100)
+  description String?           @db.Text
+  industry    String?           @db.VarChar(100)
+  size        OrganizationSize?
+  headquarters String?          @db.VarChar(200)
+  website     String?           @db.VarChar(500)
+  logoUrl     String?           @map("logo_url") @db.VarChar(1000)
+  bannerUrl   String?           @map("banner_url") @db.VarChar(1000)
+  foundedYear Int?              @map("founded_year")
+  createdAt   DateTime          @default(now()) @map("created_at")
+  updatedAt   DateTime          @updatedAt @map("updated_at")
+
+  members     OrgMember[]
+  followers   OrgFollower[]
+  jobs        Job[]
+
+  @@map("organizations")
+}
+
+model OrgMember {
+  id             String        @id @default(uuid())
+  organizationId String        @map("organization_id")
+  userId         String        @map("user_id")
+  role           OrgMemberRole @default(MEMBER)
+  createdAt      DateTime      @default(now()) @map("created_at")
+
+  organization Organization @relation(fields: [organizationId], references: [id], onDelete: Cascade)
+  user         User         @relation(fields: [userId], references: [id], onDelete: Cascade)
+
+  @@unique([organizationId, userId])
+  @@index([userId])
+  @@map("org_members")
+}
+
+model OrgFollower {
+  id             String   @id @default(uuid())
+  organizationId String   @map("organization_id")
+  userId         String   @map("user_id")
+  createdAt      DateTime @default(now()) @map("created_at")
+
+  organization Organization @relation(fields: [organizationId], references: [id], onDelete: Cascade)
+  user         User         @relation(fields: [userId], references: [id], onDelete: Cascade)
+
+  @@unique([organizationId, userId])
+  @@index([userId])
+  @@map("org_followers")
 }
