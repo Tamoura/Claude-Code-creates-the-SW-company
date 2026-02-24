@@ -56,6 +56,7 @@ tasks:
       - name: "Requirement Index"
         type: "index"
         description: "US-XX and FR-XXX IDs defined in PRD, used by all downstream tasks"
+    context_output: ""
     parallel_ok: false
     checkpoint: true
     priority: "critical"
@@ -116,6 +117,7 @@ tasks:
       - name: "Traceability Matrix"
         type: "section"
         description: "US-XX → FR-XXX → endpoint → table mapping in architecture.md"
+    context_output: ""
     parallel_ok: false
     checkpoint: true
     priority: "critical"
@@ -163,6 +165,7 @@ tasks:
       - name: "Docker Compose"
         type: "file"
         path: "products/{PRODUCT}/docker-compose.yml"
+    context_output: ""
     parallel_ok: true
     checkpoint: false
     priority: "high"
@@ -209,6 +212,7 @@ tasks:
       - name: "Unit Tests"
         type: "directory"
         path: "products/{PRODUCT}/apps/api/tests"
+    context_output: ""
     parallel_ok: true
     checkpoint: false
     priority: "high"
@@ -256,6 +260,7 @@ tasks:
       - name: "Unit Tests"
         type: "directory"
         path: "products/{PRODUCT}/apps/web/tests"
+    context_output: ""
     parallel_ok: true
     checkpoint: false
     priority: "high"
@@ -311,6 +316,7 @@ tasks:
       - name: "Story-Based Tests"
         type: "directory"
         path: "products/{PRODUCT}/e2e/tests/stories"
+    context_output: ""
     parallel_ok: false
     checkpoint: false
     priority: "high"
@@ -351,6 +357,7 @@ tasks:
       - name: "Test Report"
         type: "document"
         path: "products/{PRODUCT}/docs/test-reports/foundation.md"
+    context_output: ""
     parallel_ok: false
     checkpoint: false
     priority: "critical"
@@ -396,6 +403,7 @@ tasks:
       - name: "Development Guide"
         type: "file"
         path: "products/{PRODUCT}/docs/DEVELOPMENT.md"
+    context_output: ""
     parallel_ok: true
     checkpoint: false
     priority: "normal"

@@ -49,6 +49,7 @@ tasks:
       - name: "GitHub Issue"
         type: "url"
         path: "#{ISSUE_ID}"
+    context_output: ""
     parallel_ok: false
     checkpoint: false
     priority: "high"
@@ -93,6 +94,7 @@ tasks:
       - name: "Test Plan with User Stories"
         type: "document"
         path: "products/{PRODUCT}/docs/TEST-PLAN-{ISSUE_ID}.md"
+    context_output: ""
     parallel_ok: false
     checkpoint: false
     priority: "high"
@@ -142,6 +144,7 @@ tasks:
       - name: "Fix Branch"
         type: "branch"
         path: "fix/{PRODUCT}/{ISSUE_ID}"
+    context_output: ""
     parallel_ok: false
     checkpoint: false
     priority: "critical"
@@ -180,6 +183,7 @@ tasks:
       - name: "Bug Fix Code"
         type: "file"
         path: "products/{PRODUCT}/apps/{APP}/src/{COMPONENT}"
+    context_output: ""
     parallel_ok: false
     checkpoint: false
     priority: "critical"
@@ -216,6 +220,7 @@ tasks:
       - name: "QA Verification Report"
         type: "document"
         path: "products/{PRODUCT}/docs/bugs/{ISSUE_ID}-verification.md"
+    context_output: ""
     parallel_ok: false
     checkpoint: false
     priority: "high"
@@ -251,6 +256,7 @@ tasks:
       - name: "Pull Request"
         type: "pr"
         path: "#{PR_NUMBER}"
+    context_output: ""
     parallel_ok: false
     checkpoint: false
     priority: "high"

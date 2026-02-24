@@ -350,6 +350,23 @@ C. INVOKE AGENTS (PARALLEL-AWARE)
    ## Relevant Patterns (pre-filtered from company knowledge)
    {PRE_FILTERED_PATTERNS from Step 3.5}
 
+   ## Product Coding Conventions
+   Scan existing code in `products/{PRODUCT}/apps/` and match these conventions:
+   - **Error handling**: Find the AppError/error class used and follow the same pattern
+   - **Service layer**: Match the existing service class structure (constructor injection, etc.)
+   - **Test helpers**: Use the same buildApp()/test setup pattern found in existing tests
+   - **Import style**: Match existing import ordering and path conventions
+   - **Validation**: Use the same validation library/pattern (Zod, Joi, etc.) found in codebase
+   If no existing code exists yet (greenfield), follow company patterns from above.
+
+   ## Context from Prior Tasks
+   {CONTEXT_CHAIN — conventions and decisions from all completed upstream tasks in the
+   dependency chain, capped at 500 words. Example entries:
+   - "Error handling uses AppError with toJSON() — see src/types/index.ts"
+   - "Auth tokens are hashed with SHA-256 before DB storage"
+   - "All routes use /v1/ prefix with Fastify route schemas"
+   If no upstream tasks have completed yet, omit this section.}
+
    ## Your Current Task
    Task ID: {TASK_ID}
    Product: {PRODUCT}
@@ -377,6 +394,13 @@ C. INVOKE AGENTS (PARALLEL-AWARE)
    Report: status (success/failure/blocked), summary, files changed,
    tests added/passing, time spent, learned patterns, blockers,
    story_ids implemented, requirement_ids addressed.
+
+   **conventions_established** (REQUIRED — for downstream agent context):
+   List any conventions you established or followed. Examples:
+   - "Error handling: AppError with toJSON() — see src/types/index.ts"
+   - "Token storage: SHA-256 hash before DB write — see services/auth.ts"
+   - "Route pattern: /v1/{resource} with Fastify JSON schemas"
+   These are passed to downstream agents so they maintain consistency.
 
    Then run:
    .claude/scripts/post-task-update.sh {AGENT} {TASK_ID} {PRODUCT} {STATUS} {MINUTES} "{SUMMARY}" "{PATTERN}"
@@ -408,6 +432,10 @@ E. UPDATE TASK GRAPH + BACKLOG
      - Update task.status = "completed"
      - Record task.completed_at
      - Save artifacts to task.result
+     - **Store context_output**: Extract `conventions_established` from agent report
+       and save as `task.context_output`. When spawning downstream agents, concatenate
+       all `context_output` from upstream completed tasks (following depends_on chain)
+       into the `{CONTEXT_CHAIN}` placeholder in the sub-agent prompt.
      - Update agent memory (add to task_history)
      - Update performance metrics
      - If agent suggests learned pattern, add to memory

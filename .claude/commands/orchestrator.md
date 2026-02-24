@@ -95,6 +95,19 @@ Read: `products/{PRODUCT}/.claude/addendum.md`
 ## Your Past Experience
 {AGENT_EXPERIENCE — common_mistakes and preferred_approaches from agent experience file}
 
+## Product Coding Conventions
+Scan existing code in `products/{PRODUCT}/apps/` and match these conventions:
+- **Error handling**: Find the AppError/error class used and follow the same pattern
+- **Service layer**: Match the existing service class structure (constructor injection, etc.)
+- **Test helpers**: Use the same buildApp()/test setup pattern found in existing tests
+- **Import style**: Match existing import ordering and path conventions
+- **Validation**: Use the same validation library/pattern (Zod, Joi, etc.) found in codebase
+If no existing code exists yet (greenfield), follow company patterns from above.
+
+## Context from Prior Tasks
+{CONTEXT_CHAIN — conventions and decisions from all completed upstream tasks in the
+dependency chain, capped at 500 words. If no upstream tasks completed yet, omit this section.}
+
 ## Your Current Task
 **Task ID**: {TASK-ID}
 **Product**: {PRODUCT}
@@ -123,6 +136,9 @@ Report your results:
 - **Time Spent**: Minutes
 - **Learned Patterns**: Any new patterns discovered
 - **Blockers**: What's preventing completion (if any)
+- **Conventions Established**: List conventions you set or followed (error patterns,
+  service layer structure, test setup, import style). These are passed to downstream
+  agents to maintain consistency across the codebase.
 
 Then run the mandatory post-task update:
 ```bash

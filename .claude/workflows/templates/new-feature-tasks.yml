@@ -52,6 +52,7 @@ tasks:
       - name: "Feature Design"
         type: "document"
         path: "products/{PRODUCT}/docs/features/{FEATURE_ID}-{FEATURE}.md"
+    context_output: ""
     parallel_ok: false
     checkpoint: true
     priority: "high"
@@ -94,6 +95,7 @@ tasks:
       - name: "Backend Tests"
         type: "directory"
         path: "products/{PRODUCT}/apps/api/tests"
+    context_output: ""
     parallel_ok: true
     checkpoint: false
     priority: "high"
@@ -132,6 +134,7 @@ tasks:
       - name: "Frontend Tests"
         type: "directory"
         path: "products/{PRODUCT}/apps/web/tests"
+    context_output: ""
     parallel_ok: true
     checkpoint: false
     priority: "high"
@@ -177,6 +180,7 @@ tasks:
       - name: "Test Report"
         type: "document"
         path: "products/{PRODUCT}/docs/test-reports/{FEATURE_ID}-{FEATURE}.md"
+    context_output: ""
     parallel_ok: false
     checkpoint: false
     priority: "critical"
@@ -203,6 +207,7 @@ tasks:
       - name: "Updated Docs"
         type: "document"
         path: "products/{PRODUCT}/docs/API.md"
+    context_output: ""
     parallel_ok: true
     checkpoint: false
     priority: "normal"
@@ -229,6 +234,7 @@ tasks:
       - name: "Testing Gate Report"
         type: "document"
         path: "products/{PRODUCT}/docs/quality-reports/testing-gate-{FEATURE_ID}.md"
+    context_output: ""
     parallel_ok: false
     checkpoint: false
     priority: "critical"
