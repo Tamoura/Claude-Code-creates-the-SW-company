@@ -27,6 +27,8 @@ import { projectRoutes } from './modules/projects/index.js';
 import { artifactRoutes } from './modules/artifacts/index.js';
 import { templateRoutes } from './modules/templates/index.js';
 import { exportRoutes } from './modules/exports/index.js';
+import { documentRoutes } from './modules/documents/index.js';
+import { validationRoutes } from './modules/validation/index.js';
 
 // Utils
 import { logger } from './utils/logger.js';
@@ -234,6 +236,8 @@ export async function buildApp(options?: BuildAppOptions): Promise<FastifyInstan
   await fastify.register(artifactRoutes, { prefix: '/api/v1/projects' });
   await fastify.register(templateRoutes, { prefix: '/api/v1/templates' });
   await fastify.register(exportRoutes, { prefix: '/api/v1/projects' });
+  await fastify.register(documentRoutes, { prefix: '/api/v1/projects' });
+  await fastify.register(validationRoutes, { prefix: '/api/v1/projects' });
 
   // Validate :id path parameters
   const SAFE_ID_RE = /^[a-zA-Z0-9_-]{1,128}$/;
