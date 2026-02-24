@@ -110,7 +110,6 @@ export function ApplyModal({
           <textarea
             id="cover-note"
             ref={textareaRef}
-            aria-label="Cover note"
             value={coverNote}
             onChange={(e) => setCoverNote(e.target.value.slice(0, MAX_COVER_NOTE))}
             rows={4}
