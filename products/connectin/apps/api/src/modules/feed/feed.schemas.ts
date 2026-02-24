@@ -41,6 +41,20 @@ export const updatePostSchema = z.object({
     .optional(),
 });
 
+export const reactToPostSchema = z.object({
+  type: z.enum([
+    'LIKE',
+    'CELEBRATE',
+    'SUPPORT',
+    'LOVE',
+    'INSIGHTFUL',
+    'FUNNY',
+  ]),
+});
+
+export type ReactToPostInput = z.infer<
+  typeof reactToPostSchema
+>;
 export type CreatePostInput = z.infer<
   typeof createPostSchema
 >;

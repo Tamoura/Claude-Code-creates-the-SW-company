@@ -75,6 +75,21 @@ export class ProfileService {
   ) {
     const isOwner = profileUserId === requesterId;
 
+    // Block check: hide profiles when either user has blocked the other
+    if (!isOwner) {
+      const blockRecord = await this.prisma.block.findFirst({
+        where: {
+          OR: [
+            { blockerId: requesterId, blockedId: profileUserId },
+            { blockerId: profileUserId, blockedId: requesterId },
+          ],
+        },
+      });
+      if (blockRecord) {
+        throw new NotFoundError('Profile not found');
+      }
+    }
+
     // Block access to profiles of deleted/suspended users (RISK-004)
     if (!isOwner) {
       const user = await this.prisma.user.findUnique({
