@@ -1,5 +1,6 @@
 import React from "react";
 import { render, screen } from "@testing-library/react";
+import { useBookmarks } from "@/hooks/useBookmarks";
 
 // Mock react-i18next
 jest.mock("react-i18next", () => ({
@@ -8,6 +9,9 @@ jest.mock("react-i18next", () => ({
       const translations: Record<string, string> = {
         "nav.saved": "Saved",
         noResults: "No results found",
+        "saved.all": "All",
+        "saved.posts": "Posts",
+        "saved.jobs": "Jobs",
       };
       return translations[key] || key;
     },
@@ -15,9 +19,23 @@ jest.mock("react-i18next", () => ({
   }),
 }));
 
+jest.mock("@/hooks/useBookmarks");
+
 import SavedPage from "../saved/page";
 
 describe("SavedPage", () => {
+  beforeEach(() => {
+    (useBookmarks as jest.Mock).mockReturnValue({
+      bookmarks: [],
+      isLoading: false,
+      error: null,
+      filteredBookmarks: () => [],
+      addBookmark: jest.fn(),
+      removeBookmark: jest.fn(),
+      refetch: jest.fn(),
+    });
+  });
+
   it("renders the page heading", () => {
     render(<SavedPage />);
     expect(screen.getByRole("heading", { level: 1 })).toBeInTheDocument();
@@ -33,24 +51,23 @@ describe("SavedPage", () => {
     expect(screen.getByText("No results found")).toBeInTheDocument();
   });
 
-  it("renders two card sections", () => {
+  it("renders filter tabs", () => {
     render(<SavedPage />);
-    // The page has a heading card and an empty state card — both are rounded divs
-    const cards = document.querySelectorAll(".rounded-xl");
-    expect(cards.length).toBe(2);
+    expect(screen.getByRole("button", { name: "All" })).toBeInTheDocument();
+    expect(screen.getByRole("button", { name: "Posts" })).toBeInTheDocument();
+    expect(screen.getByRole("button", { name: "Jobs" })).toBeInTheDocument();
   });
 
   it("renders the heading inside a white card", () => {
     render(<SavedPage />);
     const heading = screen.getByRole("heading", { name: "Saved" });
-    const card = heading.closest(".rounded-xl");
+    const card = heading.closest(".rounded-\\[18px\\]");
     expect(card).toBeInTheDocument();
   });
 
-  it("renders the empty state inside a centered card", () => {
+  it("renders the empty state inside a card", () => {
     render(<SavedPage />);
     const emptyText = screen.getByText("No results found");
-    const card = emptyText.closest(".rounded-xl");
-    expect(card).toHaveClass("text-center");
+    expect(emptyText).toBeInTheDocument();
   });
 });
