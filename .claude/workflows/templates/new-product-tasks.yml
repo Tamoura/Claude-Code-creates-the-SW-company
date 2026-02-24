@@ -11,7 +11,7 @@
 
 metadata:
   product: "{PRODUCT}"
-  version: "2.0.0"
+  version: "3.0.0"
   workflow_type: "new-product"
   created_at: "{TIMESTAMP}"
   updated_at: "{TIMESTAMP}"
@@ -21,6 +21,131 @@ metadata:
     sprint: "Sprint 0 — Foundation"
 
 tasks:
+  # ============================================================================
+  # PHASE 0: BUSINESS ANALYSIS & SPECIFICATION
+  # ============================================================================
+
+  - id: "BA-01"
+    name: "Conduct Business Analysis"
+    description: |
+      Analyze CEO brief: {DESCRIPTION}
+      Conduct comprehensive business analysis:
+      - Market research and competitive landscape
+      - Stakeholder identification and analysis
+      - Process modeling (as-is and to-be flows)
+      - Gap analysis (current vs. desired capabilities)
+      - Feasibility assessment (technical, market, resource)
+      - Define quantified success metrics and KPIs
+      - Create risk register with mitigations
+      - Map business needs (BN-XXX) to suggested user stories
+
+      Output: Business Analysis Report with stakeholder map, process flows,
+      gap analysis, competitive analysis, and feasibility assessment.
+    agent: "business-analyst"
+    depends_on: []
+    story_ids: []
+    requirement_ids: []
+    epic: "EP-{PRODUCT}-INCEPTION"
+    produces:
+      - name: "Business Analysis Report"
+        type: "document"
+        path: "products/{PRODUCT}/docs/business-analysis.md"
+    context_output: ""
+    parallel_ok: false
+    checkpoint: false
+    priority: "critical"
+    estimated_time_minutes: 90
+    acceptance_criteria:
+      - "Stakeholder map included (Mermaid mindmap)"
+      - "As-is and to-be process flows included (Mermaid flowcharts)"
+      - "Gap analysis matrix with priorities and effort estimates"
+      - "Competitive analysis covers at least 3 competitors (or justifies greenfield)"
+      - "Feasibility assessed across technical, market, and resource dimensions"
+      - "Success metrics are quantified and measurable"
+      - "Risk register has at least 3 risks with mitigations"
+      - "Business needs mapped to suggested user stories (BN-XXX → US-XX)"
+    status: "pending"
+
+  - id: "SPEC-01"
+    name: "Create Structured Specification"
+    description: |
+      Using the Business Analysis Report, create a structured feature specification
+      via /speckit.specify methodology:
+      - Follow the spec template at .specify/templates/spec-template.md
+      - Incorporate business needs, stakeholder analysis, and gap analysis from BA-01
+      - Define user stories (US-XX) with Given/When/Then acceptance criteria
+      - Include C4 context diagram and ER diagram
+      - Include edge cases table (minimum 5 entries)
+      - Fill Component Reuse Check table from .claude/COMPONENT-REGISTRY.md
+      - Mark uncertain areas with [NEEDS CLARIFICATION] tags
+
+      Read and follow: .specify/templates/commands/specify.md
+      Read constitution: .specify/memory/constitution.md
+    agent: "product-manager"
+    depends_on: ["BA-01"]
+    story_ids: []
+    requirement_ids: []
+    epic: "EP-{PRODUCT}-INCEPTION"
+    consumes:
+      - name: "Business Analysis Report"
+        required_from_task: "BA-01"
+    produces:
+      - name: "Feature Specification"
+        type: "document"
+        path: "products/{PRODUCT}/docs/specs/{PRODUCT}-foundation.md"
+    context_output: ""
+    parallel_ok: false
+    checkpoint: false
+    priority: "critical"
+    estimated_time_minutes: 60
+    acceptance_criteria:
+      - "Follows spec-template.md structure completely"
+      - "All sections filled (no empty placeholders)"
+      - "C4 context diagram included (Mermaid)"
+      - "ER diagram included (Mermaid)"
+      - "User stories have unique IDs (US-XX) with Given/When/Then"
+      - "Edge cases table has at least 5 entries"
+      - "Component Reuse Check table filled"
+      - "Uncertain areas marked with [NEEDS CLARIFICATION]"
+    status: "pending"
+
+  - id: "CLARIFY-01"
+    name: "Resolve Specification Ambiguities"
+    description: |
+      Review the specification from SPEC-01 and resolve all ambiguities:
+      - Scan for all [NEEDS CLARIFICATION] tags
+      - Generate up to 5 targeted clarification questions
+      - For each question, provide 2-3 options with trade-off analysis
+      - Resolve ambiguities with CEO input or documented assumptions
+      - Update the specification file with resolved answers
+      - Maximum 3 [NEEDS CLARIFICATION] tags may remain (documented as assumptions)
+
+      Read and follow: .specify/templates/commands/clarify.md
+      Read constitution: .specify/memory/constitution.md
+    agent: "product-manager"
+    depends_on: ["SPEC-01"]
+    story_ids: []
+    requirement_ids: []
+    epic: "EP-{PRODUCT}-INCEPTION"
+    consumes:
+      - name: "Feature Specification"
+        required_from_task: "SPEC-01"
+    produces:
+      - name: "Clarified Specification"
+        type: "document"
+        path: "products/{PRODUCT}/docs/specs/{PRODUCT}-foundation.md"
+    context_output: ""
+    parallel_ok: false
+    checkpoint: false
+    priority: "critical"
+    estimated_time_minutes: 30
+    acceptance_criteria:
+      - "All [NEEDS CLARIFICATION] tags reviewed"
+      - "Maximum 3 remaining (documented as assumptions with risk-if-wrong)"
+      - "Resolved answers written back into the spec file"
+      - "Clarification questions had concrete options (not open-ended)"
+    status: "pending"
+
   # ============================================================================
   # PHASE 1: INCEPTION & PLANNING
   # ============================================================================
@@ -42,10 +167,15 @@ tasks:
       must have a unique ID (US-XX) and every requirement must have a unique
       ID (FR-XXX / NFR-XXX). These IDs are used by ALL downstream tasks.
     agent: "product-manager"
-    depends_on: []
+    depends_on: ["CLARIFY-01"]
     story_ids: []
     requirement_ids: []
     epic: "EP-{PRODUCT}-INCEPTION"
+    consumes:
+      - name: "Business Analysis Report"
+        required_from_task: "BA-01"
+      - name: "Clarified Specification"
+        required_from_task: "CLARIFY-01"
     produces:
       - name: "PRD"
         type: "document"
@@ -421,22 +551,156 @@ tasks:
     status: "pending"
 
   # ============================================================================
+  # PHASE 5: SECURITY GATE & CODE REVIEW
+  # ============================================================================
+
+  - id: "GATE-SECURITY-01"
+    name: "Run Security Gate - Foundation"
+    description: |
+      Run security checks before CEO review:
+      - npm audit for backend and frontend (no HIGH/CRITICAL vulnerabilities)
+      - Secret scanning (no hardcoded keys, tokens, passwords)
+      - Dependency vulnerability check
+      - OWASP Top 10 review of implemented endpoints
+      - Input validation coverage check
+
+      Command: .claude/quality-gates/executor.sh security {PRODUCT}
+    agent: "security-engineer"
+    depends_on: ["BACKEND-01", "FRONTEND-01"]
+    story_ids: []
+    requirement_ids: ["NFR-SECURITY"]
+    epic: "EP-{PRODUCT}-FOUNDATION"
+    consumes:
+      - name: "Backend App"
+        required_from_task: "BACKEND-01"
+      - name: "Frontend App"
+        required_from_task: "FRONTEND-01"
+    produces:
+      - name: "Security Report"
+        type: "document"
+        path: "products/{PRODUCT}/docs/quality-reports/security-foundation.md"
+    context_output: ""
+    parallel_ok: true
+    checkpoint: false
+    priority: "critical"
+    estimated_time_minutes: 30
+    acceptance_criteria:
+      - "No HIGH or CRITICAL npm vulnerabilities"
+      - "No hardcoded secrets in codebase"
+      - "Input validation on all endpoints"
+      - "Auth endpoints follow OWASP guidelines"
+    status: "pending"
+
+  - id: "CODE-REVIEW-01"
+    name: "Code Review - Foundation"
+    description: |
+      Comprehensive code review of foundation implementation:
+      - Architecture compliance (matches ARCH-01 design)
+      - Code quality (TypeScript strict mode, no any types)
+      - Security review (OWASP Top 10, CWE patterns)
+      - Performance review (N+1 queries, bundle size)
+      - Test quality review (real DB, no mocks, coverage)
+      - Tech debt assessment
+      - Constitution compliance (Articles III-VI)
+    agent: "code-reviewer"
+    depends_on: ["BACKEND-01", "FRONTEND-01"]
+    story_ids: ["{ALL_MVP_STORY_IDS}"]
+    requirement_ids: ["{ALL_MVP_REQUIREMENT_IDS}"]
+    epic: "EP-{PRODUCT}-FOUNDATION"
+    consumes:
+      - name: "Backend App"
+        required_from_task: "BACKEND-01"
+      - name: "Frontend App"
+        required_from_task: "FRONTEND-01"
+      - name: "Architecture Document"
+        required_from_task: "ARCH-01"
+    produces:
+      - name: "Code Review Report"
+        type: "document"
+        path: "products/{PRODUCT}/docs/quality-reports/code-review-foundation.md"
+    context_output: ""
+    parallel_ok: true
+    checkpoint: false
+    priority: "high"
+    estimated_time_minutes: 45
+    acceptance_criteria:
+      - "No critical code quality issues"
+      - "Architecture compliance verified"
+      - "Security patterns followed (OWASP)"
+      - "Test quality acceptable (real DB, no mocks)"
+      - "Tech debt items catalogued"
+    status: "pending"
+
+  # ============================================================================
+  # PHASE 6: SPEC CONSISTENCY GATE
+  # ============================================================================
+
+  - id: "ANALYZE-01"
+    name: "Run Spec Consistency Gate"
+    description: |
+      Validate consistency across all documentation and implementation:
+      - Spec-to-Plan alignment: every US-XX and FR-XXX has implementation
+      - Plan-to-Tasks alignment: every plan section maps to tasks
+      - Requirement coverage: every acceptance criterion has tests (>= 90%)
+      - Traceability chain: BN-XXX → US-XX → FR-XXX → Tasks → Tests
+      - Constitution compliance: Articles I, III, VI, IX verified
+      - No orphaned requirements (defined but never implemented)
+
+      Read and follow: .specify/templates/commands/analyze.md
+      Read constitution: .specify/memory/constitution.md
+
+      Output: Consistency Report with traceability matrix and recommendations.
+    agent: "qa-engineer"
+    depends_on: ["QA-02", "DOCS-01", "GATE-SECURITY-01", "CODE-REVIEW-01"]
+    story_ids: ["{ALL_MVP_STORY_IDS}"]
+    requirement_ids: ["{ALL_MVP_REQUIREMENT_IDS}"]
+    epic: "EP-{PRODUCT}-FOUNDATION"
+    consumes:
+      - name: "PRD"
+        required_from_task: "PRD-01"
+      - name: "Architecture Document"
+        required_from_task: "ARCH-01"
+      - name: "Feature Specification"
+        required_from_task: "SPEC-01"
+      - name: "Test Report"
+        required_from_task: "QA-02"
+    produces:
+      - name: "Spec Consistency Report"
+        type: "document"
+        path: "products/{PRODUCT}/docs/quality-reports/spec-consistency.md"
+    context_output: ""
+    parallel_ok: false
+    checkpoint: false
+    priority: "critical"
+    estimated_time_minutes: 30
+    acceptance_criteria:
+      - "Spec/plan/tasks alignment verified: PASS"
+      - "Requirement coverage >= 90%"
+      - "No orphaned requirements"
+      - "Traceability matrix complete (BN → US → FR → Task → Test)"
+      - "Constitution compliance verified (Articles I, III, VI, IX)"
+    status: "pending"
+
+  # ============================================================================
   # CHECKPOINT: FOUNDATION COMPLETE
   # ============================================================================
 
   - id: "CHECKPOINT-FOUNDATION"
     name: "Foundation Complete - CEO Review"
     description: |
-      Foundation is complete and tested. Ready for CEO to review:
+      Foundation is complete, tested, and spec-consistency verified. Ready for CEO to review:
+      - Business analysis complete
+      - Specification created and clarified
       - Product structure in place
       - Backend API running
       - Frontend app running
       - All tests passing
       - Documentation complete
+      - Spec consistency gate PASSED
 
       CEO can now test the foundation before feature development begins.
     agent: "orchestrator"
-    depends_on: ["QA-02", "DOCS-01"]
+    depends_on: ["ANALYZE-01"]
     parallel_ok: false
     checkpoint: true
     priority: "critical"

@@ -286,25 +286,67 @@ echo "┌───────────────────────�
 echo "│ Phase 6: Test Coverage                                       │"
 echo "└──────────────────────────────────────────────────────────────┘"
 
-# Try to get coverage
-if npm run test -- --coverage > /tmp/coverage.txt 2>&1; then
-  COVERAGE=$(grep -E "All files|Statements" /tmp/coverage.txt | grep -oE "[0-9]+\.[0-9]+" | head -1 || echo "0")
-  if [ -n "$COVERAGE" ]; then
-    COVERAGE_INT=${COVERAGE%.*}
-    if [ "$COVERAGE_INT" -ge 80 ]; then
-      printf "Checking: %-50s" "Coverage >= 80%..."
-      echo "✅ PASS ($COVERAGE%)"
+# Measure coverage per-app for monorepo products, then aggregate
+COVERAGE_RESULTS=""
+COVERAGE_PASS=true
+
+run_coverage_for_app() {
+  local app_dir="$1"
+  local app_name="$2"
+  cd "$app_dir"
+  if npm run test -- --coverage --passWithNoTests > /tmp/coverage-${app_name}.txt 2>&1; then
+    local cov=$(grep -E "All files|Statements" /tmp/coverage-${app_name}.txt | grep -oE "[0-9]+\.[0-9]+" | head -1 || echo "0")
+    if [ -n "$cov" ] && [ "$cov" != "0" ]; then
+      local cov_int=${cov%.*}
+      COVERAGE_RESULTS="$COVERAGE_RESULTS ${app_name}:${cov}%"
+      if [ "$cov_int" -lt 80 ]; then
+        COVERAGE_PASS=false
+      fi
+      echo "  ${app_name}: ${cov}%"
+    fi
+  fi
+  cd "$PRODUCT_DIR"
+}
+
+if [ "$HAS_API" = true ] || [ "$HAS_WEB" = true ]; then
+  echo "  Measuring coverage per app..."
+  [ "$HAS_API" = true ] && run_coverage_for_app "$PRODUCT_DIR/apps/api" "api"
+  [ "$HAS_WEB" = true ] && run_coverage_for_app "$PRODUCT_DIR/apps/web" "web"
+
+  if [ -n "$COVERAGE_RESULTS" ]; then
+    if [ "$COVERAGE_PASS" = true ]; then
+      printf "Checking: %-50s" "Coverage >= 80% (all apps)..."
+      echo "✅ PASS ($COVERAGE_RESULTS)"
       ((PASSED++))
     else
-      printf "Checking: %-50s" "Coverage >= 80%..."
-      echo "❌ FAIL ($COVERAGE%)"
+      printf "Checking: %-50s" "Coverage >= 80% (all apps)..."
+      echo "❌ FAIL ($COVERAGE_RESULTS)"
       ((FAILED++))
     fi
   else
-    warn "Coverage" "Could not parse coverage"
+    warn "Coverage" "Could not parse coverage from any app"
   fi
 else
-  warn "Coverage" "Could not run coverage report"
+  # Non-monorepo: run from product root
+  if npm run test -- --coverage > /tmp/coverage.txt 2>&1; then
+    COVERAGE=$(grep -E "All files|Statements" /tmp/coverage.txt | grep -oE "[0-9]+\.[0-9]+" | head -1 || echo "0")
+    if [ -n "$COVERAGE" ]; then
+      COVERAGE_INT=${COVERAGE%.*}
+      if [ "$COVERAGE_INT" -ge 80 ]; then
+        printf "Checking: %-50s" "Coverage >= 80%..."
+        echo "✅ PASS ($COVERAGE%)"
+        ((PASSED++))
+      else
+        printf "Checking: %-50s" "Coverage >= 80%..."
+        echo "❌ FAIL ($COVERAGE%)"
+        ((FAILED++))
+      fi
+    else
+      warn "Coverage" "Could not parse coverage"
+    fi
+  else
+    warn "Coverage" "Could not run coverage report"
+  fi
 fi
 
 echo ""

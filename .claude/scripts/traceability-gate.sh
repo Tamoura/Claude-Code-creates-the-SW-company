@@ -227,4 +227,53 @@ fi
 REPORT_DIR="$PRODUCT_DIR/docs/quality-reports"
 mkdir -p "$REPORT_DIR"
 REPORT_FILE="$REPORT_DIR/traceability-gate-$(date +%Y%m%d).md"
+
+if [ "$FAIL_COUNT" -gt 0 ]; then
+  GATE_RESULT="FAIL"
+else
+  GATE_RESULT="PASS"
+fi
+
+cat > "$REPORT_FILE" << REPORTEOF
+# Traceability Gate Report: $PRODUCT
+
+**Date**: $(date -u +"%Y-%m-%dT%H:%M:%SZ")
+**Product**: $PRODUCT
+**Branch**: $BRANCH
+**Result**: $GATE_RESULT
+
+## Summary
+
+| Metric | Value |
+|--------|-------|
+| Passed | $PASS_COUNT |
+| Failed | $FAIL_COUNT |
+| Warnings | $WARN_COUNT |
+
+## Checks
+
+### Check 1: PRD Requirement IDs
+- User Story IDs (US-XX): ${US_COUNT:-N/A}
+- Functional Requirement IDs (FR-XXX): ${FR_COUNT:-N/A}
+
+### Check 2: Commit Traceability
+- Traced commits: ${TRACED_COMMITS:-N/A}/${TOTAL:-N/A}
+- Untraced commits: ${UNTRACED_COMMITS:-N/A}
+
+### Check 3: Test Name Traceability
+- Tests with IDs: ${TRACED_TESTS:-N/A}/${TOTAL_TESTS:-N/A}
+
+### Check 4: E2E Test Organization
+- Story directories: ${STORY_DIRS:-N/A}
+
+### Check 5: Architecture Traceability Matrix
+- Architecture document: $([ -f "$ARCH_FILE" ] && echo "Found" || echo "Not found")
+
+## Constitution Reference
+- Article VI: Specification Traceability
+- All commits must reference US-XX or FR-XXX
+- All test names must include acceptance criteria IDs
+- E2E tests organized by story ID
+REPORTEOF
+
 echo "GATE_REPORT_FILE=$REPORT_FILE"

@@ -1,8 +1,8 @@
 # ConnectSW Constitution
 
-**Version**: 1.1.0
+**Version**: 1.2.0
 **Ratified**: 2026-02-11
-**Last Amended**: 2026-02-18
+**Last Amended**: 2026-02-24
 
 ## Preamble
 
@@ -12,16 +12,19 @@ This constitution governs all specification-to-implementation workflows at Conne
 
 ## Article I: Specification-First Development
 
-All product work MUST begin with a structured specification before implementation. Specifications define the "what" and "why" — code serves the specification, not the reverse.
+All product work MUST begin with structured analysis and specification before implementation. Specifications define the "what" and "why" — code serves the specification, not the reverse.
 
 **Rules:**
-- Every new product MUST have a specification (via `/speckit.specify`) before architecture begins
-- Every new feature MUST have a feature spec before implementation starts
+- Every new product MUST go through Business Analysis (BA-01) before specification begins. The Business Analyst produces a Business Analysis Report with stakeholder mapping, gap analysis, competitive analysis, and feasibility assessment. This ensures the product is grounded in market reality before requirements are written.
+- Every new product MUST have a specification (via `/speckit.specify`) that consumes the BA report
+- Every new feature MUST have a feature spec (via `/speckit.specify`) before design begins
 - Specifications MUST focus on user outcomes, not implementation details
 - Requirements MUST use `[NEEDS CLARIFICATION]` markers for any uncertain areas
+- Specifications MUST be clarified (via `/speckit.clarify`) before handoff to Architecture
 - Specifications MUST be technology-agnostic; tech decisions belong in the plan phase
+- Spec consistency (via `/speckit.analyze`) is a mandatory gate before CEO checkpoints
 
-**Rationale:** ConnectSW agents previously jumped from CEO briefs directly to implementation, causing rework when requirements were ambiguous. Spec-first ensures all agents share the same understanding before code is written.
+**Rationale:** ConnectSW agents previously jumped from CEO briefs directly to implementation, causing rework when requirements were ambiguous. Business analysis ensures market and stakeholder grounding. Spec-first ensures all agents share the same understanding before code is written. Mandatory consistency gates prevent drift between specification and implementation.
 
 ---
 
@@ -36,7 +39,7 @@ Before building ANY backend plugin, service, utility, frontend hook, component, 
 - If building something new and generic: add it to the registry
 - Spec plans MUST reference existing components they will reuse
 
-**Rationale:** ConnectSW has 60+ production-tested components across 7 products. Rebuilding wastes time and introduces inconsistency.
+**Rationale:** ConnectSW maintains a growing library of production-tested components across products (see `.claude/COMPONENT-REGISTRY.md` for current count). Rebuilding wastes time and introduces inconsistency.
 
 ---
 

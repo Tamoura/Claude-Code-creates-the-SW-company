@@ -9,7 +9,11 @@ metadata:
   severity: "{SEVERITY}"
   workflow_type: "hotfix"
   fast_track: true
-  skip_steps: ["3.3", "3.5", "3.7"]
+  skip_steps: ["3.3", "3.7"]
+  # Note: Step 3.5 (memory injection) is intentionally NOT skipped.
+  # Hotfixes benefit most from institutional knowledge (known pitfalls,
+  # past failures, anti-patterns). Step 3.3 (backlog) and 3.7 (estimates)
+  # are skipped for speed.
   created_at: "{TIMESTAMP}"
   updated_at: "{TIMESTAMP}"
 

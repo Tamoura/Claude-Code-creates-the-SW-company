@@ -113,7 +113,31 @@ cat .claude/orchestrator/state.yml 2>/dev/null || echo "No state file"
 | "Add feature: [X]" | new-feature | `.claude/workflows/templates/new-feature-tasks.yml` |
 | "Fix bug: [X]" | bug-fix | `.claude/workflows/templates/bug-fix-tasks.yml` |
 | "Ship/deploy [X]" | release | `.claude/workflows/templates/release-tasks.yml` |
+| "Prototype: [idea]" | prototype-first | `.claude/workflows/templates/prototype-first-tasks.yml` |
+| "Hotfix: [issue]" | hotfix | `.claude/workflows/templates/hotfix-tasks.yml` |
 | "Status update" | status-report | (no template, compile from state) |
+
+**Agent Routing Table** (used when spawning sub-agents):
+
+| Agent Role | Brief File | Use For |
+|-----------|-----------|---------|
+| business-analyst | `.claude/agents/briefs/business-analyst.md` | Market research, stakeholder analysis, gap analysis, feasibility assessment |
+| product-manager | `.claude/agents/briefs/product-manager.md` | PRDs, specs, user stories, feature prioritization |
+| product-strategist | `.claude/agents/briefs/product-strategist.md` | Market research, product portfolio strategy, long-term roadmaps |
+| architect | `.claude/agents/briefs/architect.md` | System design, ADRs, API contracts |
+| backend-engineer | `.claude/agents/briefs/backend-engineer.md` | APIs, database, server logic |
+| frontend-engineer | `.claude/agents/briefs/frontend-engineer.md` | UI, components, pages |
+| mobile-developer | `.claude/agents/briefs/mobile-developer.md` | iOS/Android apps, React Native, Expo |
+| data-engineer | `.claude/agents/briefs/data-engineer.md` | Database schemas, migrations, data pipelines |
+| performance-engineer | `.claude/agents/briefs/performance-engineer.md` | Optimization, load testing, benchmarks |
+| qa-engineer | `.claude/agents/briefs/qa-engineer.md` | E2E tests, testing gate, spec analysis |
+| security-engineer | `.claude/agents/briefs/security-engineer.md` | Security reviews, compliance, AppSec |
+| devops-engineer | `.claude/agents/briefs/devops-engineer.md` | CI/CD, deployment, infrastructure |
+| ui-ux-designer | `.claude/agents/briefs/ui-ux-designer.md` | User research, wireframes, design systems, accessibility |
+| technical-writer | `.claude/agents/briefs/technical-writer.md` | Documentation, API docs, user guides |
+| support-engineer | `.claude/agents/briefs/support-engineer.md` | Bug triage, issues, customer support |
+| innovation-specialist | `.claude/agents/briefs/innovation-specialist.md` | R&D, emerging tech, rapid prototypes |
+| code-reviewer | `.claude/agents/briefs/code-reviewer.md` | Code audits, security assessment, tech debt |
 
 ### Step 2.5: Task Complexity Classification (Fast Track)
 
@@ -138,6 +162,12 @@ Fast Track benefits:
 - Trivial/Simple: skip 30-50% of setup overhead
 - Quality gates are NEVER skipped regardless of complexity
 - CEO checkpoints are NEVER skipped regardless of complexity
+
+**Backlog Management (Step 3.3) — When to use:**
+- **REQUIRED for**: new-product, new-feature (Standard/Complex) — provides story tracking, sprint planning
+- **SKIPPED for**: bug-fix, hotfix, Trivial, Simple — the task graph itself tracks all work; adding backlog items for a single fix creates overhead without value
+- Templates with `fast_track: true` + `skip_steps` including "3.3" automatically skip backlog
+- If in doubt: skip backlog for anything that fits in a single task graph execution
 ```
 
 ### Step 3: Load & Instantiate Task Graph
@@ -156,6 +186,19 @@ For new work (not status update):
 
 3. Save instantiated graph to:
    `products/{PRODUCT}/.claude/task-graph.yml`
+
+3b. **Spec-Kit Tasks Are Mandatory** (NEVER skip):
+   - For `new-product` workflows: BA-01, SPEC-01, CLARIFY-01, and ANALYZE-01
+     are mandatory tasks. The orchestrator MUST NOT skip them even for
+     "simple" products. Business analysis ensures quality from inception.
+   - For `new-feature` workflows: SPEC-{ID} and ANALYZE-{ID} are mandatory.
+     Every feature must have a specification before design begins.
+   - For spec-kit tasks, instruct sub-agents to read the relevant
+     `.specify/templates/commands/*.md` template and follow it exactly.
+   - BA-01: Load `.claude/agents/briefs/business-analyst.md` as inline brief
+   - SPEC-01: Include instruction to execute /speckit.specify methodology
+   - CLARIFY-01: Include instruction to execute /speckit.clarify methodology
+   - ANALYZE-01/ANALYZE-{ID}: Include instruction to execute /speckit.analyze
 
 4. Validate graph:
    - No circular dependencies
@@ -481,13 +524,23 @@ D. RECEIVE AGENT MESSAGES & DETECT OVERRUNS
    2. Extract task_id from metadata
    3. Extract status from payload
    4. Extract artifacts, context, metrics
-   5. **TDD Verification**: If the task was an implementation task (BACKEND-*, FRONTEND-*),
-      check for `tdd_evidence` in the agent's report:
-      - Verify test commits exist and precede implementation commits in git log
-      - If `tdd_evidence` is missing or test commits don't precede impl commits:
-        Log WARNING to audit trail: "TDD violation on {TASK_ID} by {AGENT}"
-      - Mode: WARNING initially (logged but not blocking)
-      - After 3 validated sprints with no violations, switch to HARD BLOCK mode
+   5. **TDD Verification (HARD GATE — Constitution Article III)**:
+      If the task was an implementation task (BACKEND-IMPL-*, FRONTEND-IMPL-*),
+      independently verify TDD compliance — do NOT rely solely on agent self-report:
+
+      a. Check `tdd_evidence` exists in the agent's report (array of
+         `{test_commit, impl_commit, test_file, impl_file}` entries)
+      b. **Independent git verification**: For each TDD cycle in the evidence:
+         - Run `git log --oneline` and confirm `test_commit` SHA precedes `impl_commit` SHA
+         - Confirm test commit message starts with `test(` and impl commit starts with `feat(`
+      c. **If tdd_evidence is missing**: BLOCK — mark task as "failed", require redo
+         Log to audit trail: "TDD BLOCK: {TASK_ID} — no tdd_evidence provided by {AGENT}"
+      d. **If test commits do NOT precede impl commits**: BLOCK — mark task as "failed"
+         Log: "TDD BLOCK: {TASK_ID} — test commit {SHA} does not precede impl commit {SHA}"
+      e. **If verification passes**: Log to audit trail: "TDD PASS: {TASK_ID}"
+
+      This is a HARD GATE, not a warning. Constitution Article III mandates TDD.
+      An implementation task without verified TDD evidence cannot be marked "completed".
    6. **Overrun Detection**: Compare `metrics.time_spent_minutes` against
       `task.estimation_range[high]` (from Step 3.7):
       - If actual > range[high]: log overrun alert, flag for estimation recalibration
@@ -521,6 +574,7 @@ E. UPDATE TASK GRAPH + BACKLOG
        - Adjust approach for retry
      - Else:
        - Update task.status = "failed"
+       - **Trigger Rollback Protocol** (see below)
        - Escalate to CEO checkpoint
 
    If status = "blocked":
@@ -531,6 +585,35 @@ E. UPDATE TASK GRAPH + BACKLOG
      - Else:
        - Route to appropriate agent/resource
 
+   **Rollback Protocol (when a task fails after 3 retries)**:
+
+   When a task exhausts its retries, downstream tasks that depend on it cannot proceed.
+   The orchestrator MUST take corrective action to prevent a stalled pipeline:
+
+   1. **Identify blast radius**: Find all tasks with `depends_on` including the failed task
+      (direct dependents) and their transitive dependents (tasks depending on those).
+   2. **Mark downstream tasks**: Set all identified downstream tasks to `status: "blocked"`,
+      `blocked_reason: "upstream_failure: {FAILED_TASK_ID}"`.
+   3. **Preserve completed work**: Tasks already completed are NEVER reverted.
+      Their artifacts remain valid. Only pending/in-progress downstream tasks are blocked.
+   4. **Create rollback branch**: If the failed task produced partial code changes:
+      ```bash
+      git stash  # or git diff > /tmp/partial-{TASK_ID}.patch
+      git checkout -- .  # revert uncommitted changes from the failed task only
+      ```
+      Do NOT revert committed work from previously completed tasks.
+   5. **Generate recovery plan**: Create a CEO checkpoint with:
+      - What failed and why (error_details from all 3 attempts)
+      - Blast radius: list of blocked downstream tasks
+      - Options: (a) retry with different approach, (b) skip task and unblock dependents
+        with reduced scope, (c) reassign to different agent, (d) remove from pipeline
+   6. **On CEO decision**: Execute the chosen recovery option:
+      - **(a) Retry**: Reset retry_count to 0, update approach notes, re-queue task
+      - **(b) Skip**: Mark task as `skipped`, unblock dependents with a `reduced_scope` flag
+        so downstream agents know upstream work was incomplete
+      - **(c) Reassign**: Change task agent, reset retry_count, re-queue
+      - **(d) Remove**: Mark task and all exclusive dependents as `cancelled`
+
    **Post-Parallel Reconciliation** (after collecting all parallel task results):
    - Check for `shared_files_modified` overlaps between parallel agents
    - If multiple agents modified the same shared file:
@@ -540,7 +623,15 @@ E. UPDATE TASK GRAPH + BACKLOG
 
 F. CHECK FOR CHECKPOINT
    If completed task has checkpoint = true:
-     - **Browser Verification (FIRST — HIGHEST PRIORITY GATE)**:
+     - **Gate 0: Spec Consistency Gate (MANDATORY — runs FIRST for all checkpoints)**:
+       Run: `.claude/scripts/spec-consistency-gate.sh {PRODUCT}`
+       This performs deterministic checks (report existence, PASS status, artifact
+       presence, requirement coverage) complementing the LLM-based `/speckit.analyze`.
+       - If no spec consistency report exists: route to QA Engineer to run `/speckit.analyze` first
+       - If gate reports FAIL: do NOT proceed to any other gate
+       - This gate ensures spec/plan/tasks alignment before any CEO review
+       - Constitution Article X makes this non-negotiable
+     - **Gate 1: Browser Verification (HIGHEST PRIORITY RUNTIME GATE)**:
        Browser verification is the first and highest-priority gate.
        If the browser gate fails, do NOT proceed to testing gate or audit gate.
        Nothing else matters if the product doesn't work in the browser.
@@ -580,7 +671,7 @@ F. CHECK FOR CHECKPOINT
        - Warns on sections > 500 words without diagrams
        - HARD BLOCK: must PASS before CEO checkpoint
        - If FAIL: Route to Technical Writer or original agent to add diagrams
-     - **All pass condition**: smoke test PASS + no placeholders + E2E tests exist and pass + testing gate PASS + traceability gate PASS + documentation gate PASS + all audit scores >= 8/10
+     - **All pass condition**: spec consistency PASS + smoke test PASS + no placeholders + E2E tests exist and pass + testing gate PASS + traceability gate PASS + documentation gate PASS + all audit scores >= 8/10
      - Once all pass:
        - PAUSE execution loop
        - Generate CEO report with audit scores + smoke test report
@@ -842,8 +933,9 @@ Orchestrator:
 
 ## Migration Path
 
-1. **Phase 1** (Current): Task graphs, AgentMessage, Memory ✅
-2. **Phase 2** (Next): Multi-gate quality, resource management, dashboard
-3. **Phase 3** (Future): Smart checkpointing, agent-specific tools, advanced features
+1. **Phase 1** (Complete): Task graphs, AgentMessage, Memory ✅
+2. **Phase 2** (Complete): Multi-gate quality system (spec consistency, browser, testing, traceability, documentation, security, performance gates), TDD hard enforcement, rollback protocol ✅
+3. **Phase 3** (Current): Spec-kit pipeline integration, Business Analyst agent, deterministic audit scoring ✅
+4. **Phase 4** (Future): Agent-specific MCP tools (see `.claude/mcp-tools/agent-tools.yml` for roadmap), smart checkpointing, resource management dashboard
 
 All existing products continue to work. New products automatically use enhanced system.

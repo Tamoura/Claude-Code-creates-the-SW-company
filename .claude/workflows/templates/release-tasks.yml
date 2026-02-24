@@ -41,7 +41,7 @@ tasks:
     status: "pending"
 
   # ============================================================================
-  # PHASE 2: QUALITY GATES (Sequential - must all pass)
+  # PHASE 2: QUALITY GATES (Parallel - independent checks)
   # ============================================================================
 
   - id: "GATE-SECURITY-{VERSION}"
@@ -51,7 +51,7 @@ tasks:
       - npm audit (backend and frontend)
       - Secret scanning
       - Dependency vulnerability check
-      
+
       Command: .claude/quality-gates/executor.sh security {PRODUCT}
     agent: "backend-engineer"
     depends_on: ["RELEASE-PREP-{VERSION}"]
@@ -59,7 +59,7 @@ tasks:
       - name: "Security Report"
         type: "document"
         path: "products/{PRODUCT}/docs/quality-reports/security-{VERSION}.md"
-    parallel_ok: false
+    parallel_ok: true
     checkpoint: false
     priority: "critical"
     estimated_time_minutes: 20
@@ -76,15 +76,15 @@ tasks:
       - Lighthouse audit
       - Bundle size analysis
       - API response time benchmarks
-      
+
       Command: .claude/quality-gates/executor.sh performance {PRODUCT}
     agent: "devops-engineer"
-    depends_on: ["GATE-SECURITY-{VERSION}"]
+    depends_on: ["RELEASE-PREP-{VERSION}"]
     produces:
       - name: "Performance Report"
         type: "document"
         path: "products/{PRODUCT}/docs/quality-reports/performance-{VERSION}.md"
-    parallel_ok: false
+    parallel_ok: true
     checkpoint: false
     priority: "critical"
     estimated_time_minutes: 30
@@ -103,15 +103,15 @@ tasks:
       - All integration tests
       - All E2E tests
       - Coverage verification
-      
+
       Command: .claude/scripts/testing-gate-checklist.sh {PRODUCT}
     agent: "qa-engineer"
-    depends_on: ["GATE-PERFORMANCE-{VERSION}"]
+    depends_on: ["RELEASE-PREP-{VERSION}"]
     produces:
       - name: "Testing Report"
         type: "document"
         path: "products/{PRODUCT}/docs/quality-reports/testing-{VERSION}.md"
-    parallel_ok: false
+    parallel_ok: true
     checkpoint: false
     priority: "critical"
     estimated_time_minutes: 45
@@ -135,7 +135,7 @@ tasks:
       - Verify deployment success
       - Run smoke tests on staging
     agent: "devops-engineer"
-    depends_on: ["GATE-TESTING-{VERSION}"]
+    depends_on: ["GATE-SECURITY-{VERSION}", "GATE-PERFORMANCE-{VERSION}", "GATE-TESTING-{VERSION}"]
     produces:
       - name: "Staging Deployment"
         type: "decision"

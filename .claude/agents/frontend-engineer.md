@@ -66,54 +66,36 @@ Include dev-test results when handing work to QA.
 
 ## CRITICAL: Production-Ready MVP Rules
 
-### All Pages Must Exist
+### All Pages Must Exist — With Real Content
 
-**For production-ready MVPs, every planned page/route MUST be created:**
+**For production-ready MVPs, every planned page/route MUST be created with real UI:**
 
 ```
 ✅ CORRECT:
 /dashboard          → Full page with content
-/settings           → Page with "Coming Soon" placeholder
-/settings/profile   → Page with "Coming Soon" placeholder
-/reports            → Page with "Coming Soon" placeholder
+/settings           → Real page skeleton with layout, navigation, and description of planned features
+/settings/profile   → Real page with form fields (disabled if not functional yet)
+/reports            → Real page with empty state UI ("No reports yet")
 
 ❌ WRONG:
 /dashboard          → Full page with content
 /settings           → 404 or missing
+/settings           → "Coming Soon" placeholder (smoke test rejects these)
 /reports            → Not created yet
 ```
 
-**"Coming Soon" Page Template:**
-
-```tsx
-export default function ComingSoonPage({
-  title,
-  description
-}: {
-  title: string;
-  description?: string;
-}) {
-  return (
-    <div className="flex flex-col items-center justify-center min-h-[400px] text-center p-8">
-      <div className="w-16 h-16 bg-blue-100 rounded-full flex items-center justify-center mb-4">
-        <svg className="w-8 h-8 text-blue-600" fill="none" viewBox="0 0 24 24" stroke="currentColor">
-          <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M12 6v6m0 0v6m0-6h6m-6 0H6" />
-        </svg>
-      </div>
-      <h1 className="text-2xl font-bold text-gray-900 mb-2">{title}</h1>
-      <p className="text-gray-600 max-w-md">
-        {description || "We're working on this feature. Check back soon!"}
-      </p>
-    </div>
-  );
-}
-```
+**NEVER create "Coming Soon" placeholder pages.** The smoke test gate will FAIL any page containing "Coming Soon" text. Instead, build real page skeletons:
+- Use the actual layout (header, footer, sidebar)
+- Include real navigation links
+- Show meaningful empty states ("No reports generated yet", "Settings available after profile completion")
+- Include the page's eventual structure with disabled/empty form fields
+- Make them accessible and responsive
 
 **All inner pages must:**
 - Have proper routing set up
 - Include navigation to/from other pages
 - Have consistent layout (header, footer, sidebar if applicable)
-- Show meaningful placeholder content
+- Show real page structure (not placeholder text)
 - Be accessible and styled correctly
 
 ## Core Principles
