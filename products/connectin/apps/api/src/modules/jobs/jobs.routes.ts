@@ -1,5 +1,6 @@
 import { FastifyPluginAsync } from 'fastify';
 import { JobsService } from './jobs.service';
+import { EasyApplyService } from './easy-apply.service';
 import {
   createJobSchema,
   updateJobSchema,
@@ -16,6 +17,7 @@ import { zodToDetails } from '../../lib/validation';
 
 const jobsRoutes: FastifyPluginAsync = async (fastify) => {
   const jobsService = new JobsService(fastify.prisma);
+  const easyApplyService = new EasyApplyService(fastify.prisma);
 
   // ─── GET /api/v1/jobs/saved ─────────────────────────────────
   // Must be registered BEFORE /:id routes to avoid conflict
@@ -628,6 +630,43 @@ const jobsRoutes: FastifyPluginAsync = async (fastify) => {
         request.user.sub
       );
       return sendSuccess(reply, data);
+    }
+  );
+
+  // ─── POST /api/v1/jobs/:id/easy-apply ────────────────────
+  fastify.post<{ Params: { id: string } }>(
+    '/:id/easy-apply',
+    {
+      schema: {
+        description: 'One-click apply to a job using your profile',
+        tags: ['Jobs'],
+        security: [{ bearerAuth: [] }],
+        params: {
+          type: 'object',
+          required: ['id'],
+          properties: {
+            id: { type: 'string', format: 'uuid' },
+          },
+        },
+        response: {
+          201: {
+            type: 'object',
+            additionalProperties: true,
+            properties: {
+              success: { type: 'boolean' },
+              data: { type: 'object', additionalProperties: true },
+            },
+          },
+        },
+      },
+      preHandler: fastify.authenticate,
+    },
+    async (request, reply) => {
+      const data = await easyApplyService.easyApply(
+        request.params.id,
+        request.user.sub
+      );
+      return sendSuccess(reply, data, 201);
     }
   );
 };

@@ -1,5 +1,7 @@
 import { FastifyPluginAsync } from 'fastify';
 import { ProfileService } from './profile.service';
+import { SlugService } from './slug.service';
+import { ProfileViewsService } from './profile-views.service';
 import {
   updateProfileSchema,
   addExperienceSchema,
@@ -18,6 +20,8 @@ import { getStorage } from '../../lib/storage';
 const profileRoutes: FastifyPluginAsync = async (fastify) => {
   const profileService = new ProfileService(fastify.prisma);
   const mediaService = new MediaService(fastify.prisma, getStorage());
+  const slugService = new SlugService(fastify.prisma);
+  const profileViewsService = new ProfileViewsService(fastify.prisma);
 
   // All profile routes require authentication
   fastify.addHook('preHandler', fastify.authenticate);
@@ -189,6 +193,114 @@ const profileRoutes: FastifyPluginAsync = async (fastify) => {
     return sendSuccess(reply, data);
   });
 
+  // PUT /api/v1/profiles/me/slug
+  fastify.put('/me/slug', {
+    schema: {
+      description: 'Set or update your vanity URL slug',
+      tags: ['Profile'],
+      security: [{ bearerAuth: [] }],
+      body: {
+        type: 'object',
+        additionalProperties: false,
+        required: ['slug'],
+        properties: {
+          slug: { type: 'string', maxLength: 50 },
+        },
+      },
+      response: {
+        200: {
+          type: 'object',
+          additionalProperties: true,
+          properties: {
+            success: { type: 'boolean' },
+            data: { type: 'object', additionalProperties: true },
+          },
+        },
+      },
+    },
+  }, async (request, reply) => {
+    const { slug } = request.body as { slug: string };
+    const data = await slugService.setSlug(request.user.sub, slug);
+    return sendSuccess(reply, data);
+  });
+
+  // GET /api/v1/profiles/me/views
+  fastify.get('/me/views', {
+    schema: {
+      description: 'List users who viewed your profile',
+      tags: ['Profile'],
+      security: [{ bearerAuth: [] }],
+      response: {
+        200: {
+          type: 'object',
+          additionalProperties: true,
+          properties: {
+            success: { type: 'boolean' },
+            data: { type: 'array', items: { type: 'object', additionalProperties: true } },
+          },
+        },
+      },
+    },
+  }, async (request, reply) => {
+    const data = await profileViewsService.getViewers(request.user.sub);
+    return sendSuccess(reply, data);
+  });
+
+  // GET /api/v1/profiles/me/views/count
+  fastify.get('/me/views/count', {
+    schema: {
+      description: 'Get count of profile views',
+      tags: ['Profile'],
+      security: [{ bearerAuth: [] }],
+      response: {
+        200: {
+          type: 'object',
+          additionalProperties: true,
+          properties: {
+            success: { type: 'boolean' },
+            data: { type: 'object', additionalProperties: true },
+          },
+        },
+      },
+    },
+  }, async (request, reply) => {
+    const data = await profileViewsService.getViewCount(request.user.sub);
+    return sendSuccess(reply, data);
+  });
+
+  // GET /api/v1/profiles/by-slug/:slug
+  fastify.get<{ Params: { slug: string } }>(
+    '/by-slug/:slug',
+    {
+      schema: {
+        description: 'Resolve a profile by vanity slug',
+        tags: ['Profile'],
+        security: [{ bearerAuth: [] }],
+        params: {
+          type: 'object',
+          required: ['slug'],
+          properties: {
+            slug: { type: 'string' },
+          },
+        },
+        response: {
+          200: {
+            type: 'object',
+            additionalProperties: true,
+            properties: {
+              success: { type: 'boolean' },
+              data: { type: 'object', additionalProperties: true },
+            },
+          },
+        },
+      },
+    },
+    async (request, reply) => {
+      const data = await slugService.getProfileBySlug(request.params.slug);
+      return sendSuccess(reply, data);
+    }
+  );
+
   // GET /api/v1/profiles/:id
   // Intentionally public to authenticated users (professional networking).
   // Sensitive fields (email, website) are stripped for non-owners in the service layer.
@@ -229,6 +341,8 @@ const profileRoutes: FastifyPluginAsync = async (fastify) => {
         request.params.id,
         request.user.sub
       );
+      // Record profile view asynchronously (fire-and-forget)
+      profileViewsService.recordView(request.user.sub, request.params.id).catch(() => {});
       return sendSuccess(reply, profile);
     }
   );
