@@ -8,6 +8,7 @@ import { useProfile } from "@/hooks/useProfile";
 import { apiClient } from "@/lib/api";
 import { ExperienceForm } from "@/components/profile/ExperienceForm";
 import { EducationForm } from "@/components/profile/EducationForm";
+import { ProfileViewsSection } from "@/components/profile/ProfileViewsSection";
 import type { ExperienceFormData } from "@/components/profile/ExperienceForm";
 import type { EducationFormData } from "@/components/profile/EducationForm";
 import type { Post, Experience, Education } from "@/types";
@@ -533,6 +534,9 @@ export default function ProfilePage() {
           </div>
         )}
       </div>
+
+      {/* Who viewed your profile */}
+      <ProfileViewsSection />
 
       {/* Modals */}
       {showExpForm && (
