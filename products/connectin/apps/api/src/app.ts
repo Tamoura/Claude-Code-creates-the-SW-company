@@ -37,6 +37,7 @@ import endorsementRoutes from './modules/endorsement/endorsement.routes';
 import hashtagRoutes from './modules/hashtag/hashtag.routes';
 import mediaRoutes from './modules/media/media.routes';
 import bookmarkRoutes from './modules/bookmark/bookmark.routes';
+import pollRoutes from './modules/poll/poll.routes';
 
 export interface BuildAppOptions {
   skipRateLimit?: boolean;
@@ -146,6 +147,9 @@ export async function buildApp(
   });
   await app.register(bookmarkRoutes, {
     prefix: '/api/v1/bookmarks',
+  });
+  await app.register(pollRoutes, {
+    prefix: '/api/v1/polls',
   });
 
   // Session cleanup — run hourly in non-test environments

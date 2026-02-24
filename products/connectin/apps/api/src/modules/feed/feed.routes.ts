@@ -1,5 +1,7 @@
 import { FastifyPluginAsync } from 'fastify';
 import { FeedService } from './feed.service';
+import { ContentAnalyticsService } from './content-analytics.service';
+import { PollService } from '../poll/poll.service';
 import {
   createPostSchema,
   updatePostSchema,
@@ -12,6 +14,8 @@ import { zodToDetails } from '../../lib/validation';
 
 const feedRoutes: FastifyPluginAsync = async (fastify) => {
   const feedService = new FeedService(fastify.prisma);
+  const analyticsService = new ContentAnalyticsService(fastify.prisma);
+  const pollService = new PollService(fastify.prisma);
 
   // All feed routes require authentication
   fastify.addHook('preHandler', fastify.authenticate);
@@ -33,6 +37,15 @@ const feedRoutes: FastifyPluginAsync = async (fastify) => {
             type: 'array',
             items: { type: 'string', format: 'uuid' },
             maxItems: 4,
+          },
+          poll: {
+            type: 'object',
+            additionalProperties: false,
+            properties: {
+              question: { type: 'string', maxLength: 300 },
+              options: { type: 'array', items: { type: 'string' }, minItems: 2, maxItems: 4 },
+              durationDays: { type: 'integer', minimum: 1, maximum: 14 },
+            },
           },
         },
       },
@@ -77,6 +90,13 @@ const feedRoutes: FastifyPluginAsync = async (fastify) => {
       request.user.sub,
       result.data
     );
+
+    // If poll data was provided, create the poll attached to this post
+    if (result.data.poll) {
+      const pollData = await pollService.createPoll(data.id, result.data.poll);
+      return sendSuccess(reply, { ...data, poll: pollData }, 201);
+    }
+
     return sendSuccess(reply, data, 201);
   });
 
@@ -613,6 +633,78 @@ const feedRoutes: FastifyPluginAsync = async (fastify) => {
     async (request, reply) => {
       const data = await feedService.getPostReactions(
         request.params.id
+      );
+      return sendSuccess(reply, data);
+    }
+  );
+
+  // POST /api/v1/feed/posts/:id/view
+  fastify.post<{ Params: { id: string } }>(
+    '/posts/:id/view',
+    {
+      schema: {
+        description: 'Record a view on a post',
+        tags: ['Feed'],
+        security: [{ bearerAuth: [] }],
+        params: {
+          type: 'object',
+          required: ['id'],
+          properties: {
+            id: { type: 'string', format: 'uuid' },
+          },
+        },
+        response: {
+          201: {
+            type: 'object',
+            additionalProperties: true,
+            properties: {
+              success: { type: 'boolean' },
+              data: { type: 'object', additionalProperties: true },
+            },
+          },
+        },
+      },
+    },
+    async (request, reply) => {
+      const data = await analyticsService.recordView(
+        request.params.id,
+        request.user.sub
+      );
+      return sendSuccess(reply, data, 201);
+    }
+  );
+
+  // GET /api/v1/feed/posts/:id/analytics
+  fastify.get<{ Params: { id: string } }>(
+    '/posts/:id/analytics',
+    {
+      schema: {
+        description: 'Get analytics for a post (author only)',
+        tags: ['Feed'],
+        security: [{ bearerAuth: [] }],
+        params: {
+          type: 'object',
+          required: ['id'],
+          properties: {
+            id: { type: 'string', format: 'uuid' },
+          },
+        },
+        response: {
+          200: {
+            type: 'object',
+            additionalProperties: true,
+            properties: {
+              success: { type: 'boolean' },
+              data: { type: 'object', additionalProperties: true },
+            },
+          },
+        },
+      },
+    },
+    async (request, reply) => {
+      const data = await analyticsService.getAnalytics(
+        request.params.id,
+        request.user.sub
       );
       return sendSuccess(reply, data);
     }
