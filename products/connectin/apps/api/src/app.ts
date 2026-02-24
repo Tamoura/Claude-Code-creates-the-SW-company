@@ -48,6 +48,7 @@ import organizationRoutes from './modules/organization/organization.routes';
 import groupRoutes from './modules/group/group.routes';
 import eventRoutes from './modules/event/event.routes';
 import articleRoutes from './modules/article/article.routes';
+import aiRoutes from './modules/ai/ai.routes';
 
 export interface BuildAppOptions {
   skipRateLimit?: boolean;
@@ -190,6 +191,9 @@ export async function buildApp(
   });
   await app.register(articleRoutes, {
     prefix: '/api/v1/articles',
+  });
+  await app.register(aiRoutes, {
+    prefix: '/api/v1/ai',
   });
 
   // Session cleanup — run hourly in non-test environments
