@@ -24,6 +24,7 @@ export interface Profile {
   avatarUrl?: string;
   location?: string;
   website?: string;
+  slug?: string;
   completenessScore: number;
   experiences: Experience[];
   education: Education[];
@@ -192,6 +193,24 @@ export interface SearchResults {
 }
 
 export type SearchType = "people" | "posts" | "jobs";
+
+export interface Bookmark {
+  id: string;
+  userId: string;
+  targetId: string;
+  targetType: "post" | "job";
+  createdAt: string;
+  target?: Post | Job;
+}
+
+export interface ProfileViewer {
+  id: string;
+  viewerId: string;
+  viewerName: string;
+  viewerAvatar?: string;
+  viewerHeadline?: string;
+  viewedAt: string;
+}
 
 export type NotificationType =
   | "CONNECTION_REQUEST"
