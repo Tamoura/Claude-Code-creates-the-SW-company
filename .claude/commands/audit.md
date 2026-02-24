@@ -533,6 +533,46 @@ Produce THREE score categories:
 
 **Technical Score** = average of all 11 dimension scores.
 
+#### Deterministic Score Anchoring (MANDATORY)
+
+To ensure audit scores are consistent and reproducible across runs, each dimension score
+MUST be anchored to at least 2 measurable data points. Do NOT assign scores based on
+"general impression" — every score must cite evidence.
+
+**Before assigning any score, collect these concrete measurements:**
+
+| Dimension | Required Measurements | How to Measure |
+|-----------|----------------------|----------------|
+| Security | npm audit HIGH/CRITICAL count; grep for hardcoded secrets | `cd apps/api && npm audit --audit-level=high 2>&1 | grep -c "high\|critical"`; `grep -r "password\|secret\|api_key" --include="*.ts" -l` |
+| Architecture | File count per directory; import depth | `find apps/ -name "*.ts" | wc -l`; check circular deps |
+| Test Coverage | Coverage % from Jest | `npm test -- --coverage` |
+| Code Quality | ESLint error/warning count; `any` type count | `npx eslint . --format json 2>/dev/null | grep -c "error"`; `grep -r ": any" --include="*.ts" | wc -l` |
+| Performance | Lighthouse score (if available); bundle size | Lighthouse CLI; `du -sk .next/static/chunks/` |
+| DevOps | CI workflow exists; Docker exists; .env.example exists | `ls .github/workflows/`; `ls Dockerfile`; `ls .env.example` |
+| Runability | Server starts; health check responds; frontend loads | `curl -s localhost:{PORT}/health`; `curl -s localhost:{FRONTEND_PORT}` |
+| Accessibility | Lighthouse Accessibility score | Lighthouse CLI `--only-categories=accessibility` |
+| Privacy | PII in logs check; deletion endpoint exists | `grep -r "email\|password" --include="*.ts" apps/api/src/ | grep -i "log"` |
+| Observability | Structured logger configured; health endpoint exists | `grep -r "pino\|winston" --include="*.ts"` |
+| API Design | Route count; schema validation count | `grep -r "route\|fastify\.\(get\|post\|put\|delete\)" --include="*.ts" | wc -l` |
+
+**Score consistency rules:**
+- If npm audit shows >= 1 CRITICAL vulnerability: Security score CANNOT exceed 4/10
+- If test coverage < 50%: Test Coverage score CANNOT exceed 4/10
+- If no CI workflow exists: DevOps score CANNOT exceed 3/10
+- If server doesn't start: Runability score CANNOT exceed 2/10
+- If Lighthouse Accessibility < 50: Accessibility score CANNOT exceed 3/10
+- These caps are non-negotiable and ensure score consistency across audit runs
+
+**In the report, for each dimension score, include:**
+```
+**[Dimension]: X/10**
+Evidence:
+- [Measurement 1]: [value]
+- [Measurement 2]: [value]
+- [Qualitative finding]: [description with file:line]
+Score justification: [1 sentence explaining why X and not X-1 or X+1]
+```
+
 #### B. Readiness Scores (0-10 scale)
 
 These translate technical findings into business decisions:

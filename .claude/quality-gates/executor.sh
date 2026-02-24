@@ -180,7 +180,41 @@ case $GATE_TYPE in
       cd - > /dev/null
     fi
     
-    # Bundle size enforcement
+    # Lighthouse performance audit (Constitution Article X: Lighthouse >= 90)
+    if [ -f "$PRODUCT_PATH/apps/web/package.json" ]; then
+      echo "### Lighthouse Performance Audit" >> "$REPORT_FILE"
+      if command -v npx &> /dev/null && npx lighthouse --version &> /dev/null 2>&1; then
+        # Determine frontend port from PORT-REGISTRY or default
+        FRONTEND_PORT=$(grep -A2 "$PRODUCT" "$REPO_ROOT/.claude/PORT-REGISTRY.md" 2>/dev/null | grep -oE '3[0-9]{3}' | head -1 || echo "3100")
+        LIGHTHOUSE_URL="http://localhost:${FRONTEND_PORT}"
+
+        # Run Lighthouse in headless mode if server is running
+        if curl -s --max-time 3 "$LIGHTHOUSE_URL" > /dev/null 2>&1; then
+          LIGHTHOUSE_JSON=$(npx lighthouse "$LIGHTHOUSE_URL" --output=json --chrome-flags="--headless --no-sandbox" --only-categories=performance 2>/dev/null || echo '{}')
+          LIGHTHOUSE_SCORE=$(echo "$LIGHTHOUSE_JSON" | grep -o '"performance":[0-9.]*' | grep -o '[0-9.]*' | head -1 || echo "0")
+          LIGHTHOUSE_PCT=$(echo "$LIGHTHOUSE_SCORE" | awk '{printf "%.0f", $1 * 100}' 2>/dev/null || echo "0")
+
+          echo "Lighthouse Performance Score: ${LIGHTHOUSE_PCT}/100" >> "$REPORT_FILE"
+          if [ "$LIGHTHOUSE_PCT" -ge 90 ]; then
+            echo "✅ PASS: Lighthouse score >= 90 (Constitution Article X)" >> "$REPORT_FILE"
+          elif [ "$LIGHTHOUSE_PCT" -ge 70 ]; then
+            echo "⚠️  WARN: Lighthouse score ${LIGHTHOUSE_PCT} — target >= 90" >> "$REPORT_FILE"
+          else
+            echo "❌ FAIL: Lighthouse score ${LIGHTHOUSE_PCT} — target >= 90" >> "$REPORT_FILE"
+            GATE_PASSED=false
+            GATE_FAILURES+=("Lighthouse score ${LIGHTHOUSE_PCT} < 90")
+          fi
+        else
+          echo "⚠️  INFO: Frontend server not running at $LIGHTHOUSE_URL — skipping Lighthouse" >> "$REPORT_FILE"
+          echo "  Start the dev server first: cd $PRODUCT_PATH/apps/web && npm run dev" >> "$REPORT_FILE"
+        fi
+      else
+        echo "⚠️  INFO: Lighthouse CLI not available — install with: npm i -g lighthouse" >> "$REPORT_FILE"
+      fi
+      echo "" >> "$REPORT_FILE"
+    fi
+
+    # Bundle size enforcement (Constitution: < 500KB gzipped initial load)
     if [ -f "$PRODUCT_PATH/apps/web/package.json" ]; then
       echo "### Bundle Size Check" >> "$REPORT_FILE"
       BUILD_DIR=""
@@ -188,14 +222,32 @@ case $GATE_TYPE in
         [ -d "$candidate" ] && BUILD_DIR="$candidate" && break
       done
       if [ -n "$BUILD_DIR" ]; then
-        BUNDLE_KB=$(du -sk "$BUILD_DIR" 2>/dev/null | cut -f1 || echo "0")
-        BUNDLE_MB=$((BUNDLE_KB / 1024))
-        echo "Build output: ${BUNDLE_MB}MB (${BUNDLE_KB}KB)" >> "$REPORT_FILE"
-        if [ "$BUNDLE_KB" -gt 51200 ]; then
-          echo "⚠️  WARN: Bundle exceeds 50MB — review for optimization" >> "$REPORT_FILE"
-          GATE_FAILURES+=("Bundle size ${BUNDLE_MB}MB exceeds 50MB")
+        # Measure gzipped JS bundle size (initial load chunks)
+        if [ -d "$BUILD_DIR/static/chunks" ]; then
+          GZIP_KB=0
+          for jsfile in "$BUILD_DIR/static/chunks"/*.js; do
+            [ -f "$jsfile" ] || continue
+            FILE_GZ_KB=$(gzip -c "$jsfile" 2>/dev/null | wc -c | awk '{printf "%.0f", $1/1024}')
+            GZIP_KB=$((GZIP_KB + FILE_GZ_KB))
+          done
+          echo "Gzipped JS bundle: ${GZIP_KB}KB" >> "$REPORT_FILE"
+          if [ "$GZIP_KB" -gt 500 ]; then
+            echo "❌ FAIL: Gzipped bundle ${GZIP_KB}KB exceeds 500KB limit" >> "$REPORT_FILE"
+            GATE_PASSED=false
+            GATE_FAILURES+=("Bundle size ${GZIP_KB}KB gzipped exceeds 500KB")
+          else
+            echo "✅ PASS: Gzipped bundle within 500KB limit" >> "$REPORT_FILE"
+          fi
         else
-          echo "✅ PASS: Bundle size within limits" >> "$REPORT_FILE"
+          # Fallback: measure total build directory
+          BUNDLE_KB=$(du -sk "$BUILD_DIR" 2>/dev/null | cut -f1 || echo "0")
+          BUNDLE_MB=$((BUNDLE_KB / 1024))
+          echo "Build output: ${BUNDLE_MB}MB (${BUNDLE_KB}KB raw)" >> "$REPORT_FILE"
+          if [ "$BUNDLE_KB" -gt 51200 ]; then
+            echo "⚠️  WARN: Build output exceeds 50MB — review for optimization" >> "$REPORT_FILE"
+          else
+            echo "✅ PASS: Build output size within limits" >> "$REPORT_FILE"
+          fi
         fi
       else
         echo "⚠️  INFO: No build output found (run build first)" >> "$REPORT_FILE"

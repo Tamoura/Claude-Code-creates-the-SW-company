@@ -238,15 +238,15 @@ In your PRD, include a **Site Map** section listing every page/route:
 |-------|--------|-------------|
 | / | MVP | Landing/home page |
 | /dashboard | MVP | Main user dashboard |
-| /settings | Coming Soon | User settings (placeholder) |
-| /settings/profile | Coming Soon | Profile settings (placeholder) |
-| /reports | Coming Soon | Reports page (placeholder) |
+| /settings | Deferred | User settings (page skeleton with empty state) |
+| /settings/profile | Deferred | Profile settings (page skeleton with disabled form) |
+| /reports | Deferred | Reports page (page skeleton with empty state) |
 | /help | MVP | Help/FAQ page |
 ```
 
 **Why this matters:**
 - Users expect all navigation links to work
-- "Coming Soon" pages are better than 404 errors
+- Real page skeletons with empty states are better than 404 errors (never use "Coming Soon" — smoke test rejects them)
 - Sets clear expectations for what's implemented vs planned
 - Frontend Engineer knows exactly what pages to create
 

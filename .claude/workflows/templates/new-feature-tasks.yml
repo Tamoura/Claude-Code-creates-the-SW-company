@@ -365,6 +365,68 @@ tasks:
       - "All checks green"
     status: "pending"
 
+  - id: "GATE-SECURITY-{FEATURE_ID}"
+    name: "Run Security Gate for {FEATURE}"
+    description: |
+      Run security checks on feature implementation:
+      - npm audit (no new HIGH/CRITICAL vulnerabilities)
+      - Secret scanning on changed files
+      - OWASP review of new/changed endpoints
+      - Input validation coverage
+
+      Command: .claude/quality-gates/executor.sh security {PRODUCT}
+    agent: "security-engineer"
+    depends_on: ["BACKEND-IMPL-{FEATURE_ID}", "FRONTEND-IMPL-{FEATURE_ID}"]
+    story_ids: ["{STORY_IDS}"]
+    requirement_ids: ["{REQUIREMENT_IDS}"]
+    epic: "{EPIC_ID}"
+    produces:
+      - name: "Security Report"
+        type: "document"
+        path: "products/{PRODUCT}/docs/quality-reports/security-{FEATURE_ID}.md"
+    context_output: ""
+    parallel_ok: true
+    checkpoint: false
+    priority: "critical"
+    estimated_time_minutes: 20
+    acceptance_criteria:
+      - "No new HIGH/CRITICAL vulnerabilities"
+      - "No hardcoded secrets in changed files"
+      - "New endpoints have input validation"
+    status: "pending"
+
+  - id: "CODE-REVIEW-{FEATURE_ID}"
+    name: "Code Review for {FEATURE}"
+    description: |
+      Review feature implementation:
+      - Architecture compliance with design
+      - Code quality and TypeScript strictness
+      - Security patterns (OWASP)
+      - Test quality (real DB, no mocks)
+      - Performance considerations
+    agent: "code-reviewer"
+    depends_on: ["BACKEND-IMPL-{FEATURE_ID}", "FRONTEND-IMPL-{FEATURE_ID}"]
+    story_ids: ["{STORY_IDS}"]
+    requirement_ids: ["{REQUIREMENT_IDS}"]
+    epic: "{EPIC_ID}"
+    consumes:
+      - name: "Feature Design"
+        required_from_task: "DESIGN-{FEATURE_ID}"
+    produces:
+      - name: "Code Review Report"
+        type: "document"
+        path: "products/{PRODUCT}/docs/quality-reports/code-review-{FEATURE_ID}.md"
+    context_output: ""
+    parallel_ok: true
+    checkpoint: false
+    priority: "high"
+    estimated_time_minutes: 30
+    acceptance_criteria:
+      - "No critical code quality issues"
+      - "Architecture compliance verified"
+      - "Security patterns followed"
+    status: "pending"
+
   - id: "ANALYZE-{FEATURE_ID}"
     name: "Run Spec Consistency Gate for {FEATURE}"
     description: |
@@ -377,7 +439,7 @@ tasks:
       Read and follow: .specify/templates/commands/analyze.md
       Read constitution: .specify/memory/constitution.md
     agent: "qa-engineer"
-    depends_on: ["GATE-TESTING-{FEATURE_ID}"]
+    depends_on: ["GATE-TESTING-{FEATURE_ID}", "GATE-SECURITY-{FEATURE_ID}", "CODE-REVIEW-{FEATURE_ID}"]
     story_ids: ["{STORY_IDS}"]
     requirement_ids: ["{REQUIREMENT_IDS}"]
     epic: "{EPIC_ID}"

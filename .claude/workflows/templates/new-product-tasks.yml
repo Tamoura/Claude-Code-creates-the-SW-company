@@ -551,7 +551,88 @@ tasks:
     status: "pending"
 
   # ============================================================================
-  # PHASE 5: SPEC CONSISTENCY GATE
+  # PHASE 5: SECURITY GATE & CODE REVIEW
+  # ============================================================================
+
+  - id: "GATE-SECURITY-01"
+    name: "Run Security Gate - Foundation"
+    description: |
+      Run security checks before CEO review:
+      - npm audit for backend and frontend (no HIGH/CRITICAL vulnerabilities)
+      - Secret scanning (no hardcoded keys, tokens, passwords)
+      - Dependency vulnerability check
+      - OWASP Top 10 review of implemented endpoints
+      - Input validation coverage check
+
+      Command: .claude/quality-gates/executor.sh security {PRODUCT}
+    agent: "security-engineer"
+    depends_on: ["BACKEND-01", "FRONTEND-01"]
+    story_ids: []
+    requirement_ids: ["NFR-SECURITY"]
+    epic: "EP-{PRODUCT}-FOUNDATION"
+    consumes:
+      - name: "Backend App"
+        required_from_task: "BACKEND-01"
+      - name: "Frontend App"
+        required_from_task: "FRONTEND-01"
+    produces:
+      - name: "Security Report"
+        type: "document"
+        path: "products/{PRODUCT}/docs/quality-reports/security-foundation.md"
+    context_output: ""
+    parallel_ok: true
+    checkpoint: false
+    priority: "critical"
+    estimated_time_minutes: 30
+    acceptance_criteria:
+      - "No HIGH or CRITICAL npm vulnerabilities"
+      - "No hardcoded secrets in codebase"
+      - "Input validation on all endpoints"
+      - "Auth endpoints follow OWASP guidelines"
+    status: "pending"
+
+  - id: "CODE-REVIEW-01"
+    name: "Code Review - Foundation"
+    description: |
+      Comprehensive code review of foundation implementation:
+      - Architecture compliance (matches ARCH-01 design)
+      - Code quality (TypeScript strict mode, no any types)
+      - Security review (OWASP Top 10, CWE patterns)
+      - Performance review (N+1 queries, bundle size)
+      - Test quality review (real DB, no mocks, coverage)
+      - Tech debt assessment
+      - Constitution compliance (Articles III-VI)
+    agent: "code-reviewer"
+    depends_on: ["BACKEND-01", "FRONTEND-01"]
+    story_ids: ["{ALL_MVP_STORY_IDS}"]
+    requirement_ids: ["{ALL_MVP_REQUIREMENT_IDS}"]
+    epic: "EP-{PRODUCT}-FOUNDATION"
+    consumes:
+      - name: "Backend App"
+        required_from_task: "BACKEND-01"
+      - name: "Frontend App"
+        required_from_task: "FRONTEND-01"
+      - name: "Architecture Document"
+        required_from_task: "ARCH-01"
+    produces:
+      - name: "Code Review Report"
+        type: "document"
+        path: "products/{PRODUCT}/docs/quality-reports/code-review-foundation.md"
+    context_output: ""
+    parallel_ok: true
+    checkpoint: false
+    priority: "high"
+    estimated_time_minutes: 45
+    acceptance_criteria:
+      - "No critical code quality issues"
+      - "Architecture compliance verified"
+      - "Security patterns followed (OWASP)"
+      - "Test quality acceptable (real DB, no mocks)"
+      - "Tech debt items catalogued"
+    status: "pending"
+
+  # ============================================================================
+  # PHASE 6: SPEC CONSISTENCY GATE
   # ============================================================================
 
   - id: "ANALYZE-01"
@@ -570,7 +651,7 @@ tasks:
 
       Output: Consistency Report with traceability matrix and recommendations.
     agent: "qa-engineer"
-    depends_on: ["QA-02", "DOCS-01"]
+    depends_on: ["QA-02", "DOCS-01", "GATE-SECURITY-01", "CODE-REVIEW-01"]
     story_ids: ["{ALL_MVP_STORY_IDS}"]
     requirement_ids: ["{ALL_MVP_REQUIREMENT_IDS}"]
     epic: "EP-{PRODUCT}-FOUNDATION"

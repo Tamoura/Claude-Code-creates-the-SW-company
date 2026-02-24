@@ -1,7 +1,7 @@
 {
-  "version": "1.0.0",
-  "updated_at": "2026-02-10T08:33:06Z",
-  "description": "Per-agent, per-task-type duration statistics. Used by orchestrator Step 3.7.",
+  "version": "1.1.0",
+  "updated_at": "2026-02-24T00:00:00Z",
+  "description": "Per-agent, per-task-type duration statistics. Used by orchestrator Step 3.7. Entries with is_baseline=true are seeded estimates — replace with actuals after first real execution.",
   "agents": {
     "architect": {
       "ARCH": {
@@ -14,6 +14,18 @@
         "p75": 120,
         "p90": 120,
         "stddev": 21.21
+      },
+      "DESIGN": {
+        "sample_count": 0,
+        "mean": 60,
+        "min": 60,
+        "max": 60,
+        "median": 60,
+        "p25": 60,
+        "p75": 60,
+        "p90": 60,
+        "stddev": 0,
+        "is_baseline": true
       }
     },
     "backend-engineer": {
@@ -38,6 +50,60 @@
         "p75": 75,
         "p90": 75,
         "stddev": 44.55
+      },
+      "BACKEND": {
+        "sample_count": 0,
+        "mean": 90,
+        "min": 90,
+        "max": 90,
+        "median": 90,
+        "p25": 90,
+        "p75": 90,
+        "p90": 90,
+        "stddev": 0,
+        "is_baseline": true
+      }
+    },
+    "business-analyst": {
+      "BA": {
+        "sample_count": 0,
+        "mean": 60,
+        "min": 60,
+        "max": 60,
+        "median": 60,
+        "p25": 60,
+        "p75": 60,
+        "p90": 60,
+        "stddev": 0,
+        "is_baseline": true
+      }
+    },
+    "code-reviewer": {
+      "CODE-REVIEW": {
+        "sample_count": 0,
+        "mean": 45,
+        "min": 45,
+        "max": 45,
+        "median": 45,
+        "p25": 45,
+        "p75": 45,
+        "p90": 45,
+        "stddev": 0,
+        "is_baseline": true
+      }
+    },
+    "data-engineer": {
+      "DATA": {
+        "sample_count": 0,
+        "mean": 60,
+        "min": 60,
+        "max": 60,
+        "median": 60,
+        "p25": 60,
+        "p75": 60,
+        "p90": 60,
+        "stddev": 0,
+        "is_baseline": true
       }
     },
     "devops-engineer": {
@@ -51,6 +117,18 @@
         "p75": 10,
         "p90": 10,
         "stddev": 0
+      },
+      "DEVOPS": {
+        "sample_count": 0,
+        "mean": 45,
+        "min": 45,
+        "max": 45,
+        "median": 45,
+        "p25": 45,
+        "p75": 45,
+        "p90": 45,
+        "stddev": 0,
+        "is_baseline": true
       }
     },
     "frontend-engineer": {
@@ -77,6 +155,48 @@
         "stddev": 0
       }
     },
+    "innovation-specialist": {
+      "RND": {
+        "sample_count": 0,
+        "mean": 90,
+        "min": 90,
+        "max": 90,
+        "median": 90,
+        "p25": 90,
+        "p75": 90,
+        "p90": 90,
+        "stddev": 0,
+        "is_baseline": true
+      }
+    },
+    "mobile-developer": {
+      "MOBILE": {
+        "sample_count": 0,
+        "mean": 90,
+        "min": 90,
+        "max": 90,
+        "median": 90,
+        "p25": 90,
+        "p75": 90,
+        "p90": 90,
+        "stddev": 0,
+        "is_baseline": true
+      }
+    },
+    "performance-engineer": {
+      "PERF": {
+        "sample_count": 0,
+        "mean": 60,
+        "min": 60,
+        "max": 60,
+        "median": 60,
+        "p25": 60,
+        "p75": 60,
+        "p90": 60,
+        "stddev": 0,
+        "is_baseline": true
+      }
+    },
     "product-manager": {
       "PRD": {
         "sample_count": 3,
@@ -88,6 +208,82 @@
         "p75": 45,
         "p90": 45,
         "stddev": 0
+      },
+      "SPEC": {
+        "sample_count": 0,
+        "mean": 30,
+        "min": 30,
+        "max": 30,
+        "median": 30,
+        "p25": 30,
+        "p75": 30,
+        "p90": 30,
+        "stddev": 0,
+        "is_baseline": true
+      },
+      "CLARIFY": {
+        "sample_count": 0,
+        "mean": 15,
+        "min": 15,
+        "max": 15,
+        "median": 15,
+        "p25": 15,
+        "p75": 15,
+        "p90": 15,
+        "stddev": 0,
+        "is_baseline": true
+      }
+    },
+    "product-strategist": {
+      "STRATEGY": {
+        "sample_count": 0,
+        "mean": 45,
+        "min": 45,
+        "max": 45,
+        "median": 45,
+        "p25": 45,
+        "p75": 45,
+        "p90": 45,
+        "stddev": 0,
+        "is_baseline": true
+      }
+    },
+    "qa-engineer": {
+      "QA": {
+        "sample_count": 0,
+        "mean": 60,
+        "min": 60,
+        "max": 60,
+        "median": 60,
+        "p25": 60,
+        "p75": 60,
+        "p90": 60,
+        "stddev": 0,
+        "is_baseline": true
+      },
+      "ANALYZE": {
+        "sample_count": 0,
+        "mean": 30,
+        "min": 30,
+        "max": 30,
+        "median": 30,
+        "p25": 30,
+        "p75": 30,
+        "p90": 30,
+        "stddev": 0,
+        "is_baseline": true
+      },
+      "GATE-SECURITY": {
+        "sample_count": 0,
+        "mean": 45,
+        "min": 45,
+        "max": 45,
+        "median": 45,
+        "p25": 45,
+        "p75": 45,
+        "p90": 45,
+        "stddev": 0,
+        "is_baseline": true
       }
     },
     "security-engineer": {
@@ -123,6 +319,48 @@
         "p75": 55,
         "p90": 55,
         "stddev": 0
+      }
+    },
+    "support-engineer": {
+      "SUPPORT": {
+        "sample_count": 0,
+        "mean": 30,
+        "min": 30,
+        "max": 30,
+        "median": 30,
+        "p25": 30,
+        "p75": 30,
+        "p90": 30,
+        "stddev": 0,
+        "is_baseline": true
+      }
+    },
+    "technical-writer": {
+      "DOCS": {
+        "sample_count": 0,
+        "mean": 45,
+        "min": 45,
+        "max": 45,
+        "median": 45,
+        "p25": 45,
+        "p75": 45,
+        "p90": 45,
+        "stddev": 0,
+        "is_baseline": true
+      }
+    },
+    "ui-ux-designer": {
+      "DESIGN": {
+        "sample_count": 0,
+        "mean": 60,
+        "min": 60,
+        "max": 60,
+        "median": 60,
+        "p25": 60,
+        "p75": 60,
+        "p90": 60,
+        "stddev": 0,
+        "is_baseline": true
       }
     }
   }
