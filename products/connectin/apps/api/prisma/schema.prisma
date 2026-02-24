@@ -122,6 +122,9 @@ model User {
   bookmarks               Bookmark[]
   profileViewsGiven       ProfileView[]   @relation("ProfileViewer")
   profileViewsReceived    ProfileView[]   @relation("ProfileViewed")
+  recommendationsGiven    Recommendation[] @relation("RecommendationsGiven")
+  recommendationsReceived Recommendation[] @relation("RecommendationsReceived")
+  jobAlerts               JobAlert[]
 
   @@index([status, createdAt])
   @@index([verificationToken])
@@ -176,6 +179,7 @@ model Profile {
   experiences       Experience[]
   educations        Education[]
   profileSkills     ProfileSkill[]
+  certifications    Certification[]
 
   @@map("profiles")
 }
@@ -499,6 +503,9 @@ model SavedJob {
 
 model Conversation {
   id            String    @id @default(uuid())
+  isGroup       Boolean   @default(false) @map("is_group")
+  name          String?   @db.VarChar(100)
+  adminId       String?   @map("admin_id")
   lastMessageAt DateTime? @map("last_message_at")
   createdAt     DateTime  @default(now()) @map("created_at")
 
@@ -926,4 +933,69 @@ model ProfileView {
   @@index([viewedUserId, viewedAt(sort: Desc)])
   @@index([viewerId])
   @@map("profile_views")
+}
+
+// ─── Certifications ──────────────────────────────────────────
+
+model Certification {
+  id            String    @id @default(uuid())
+  profileId     String    @map("profile_id")
+  name          String    @db.VarChar(200)
+  issuingOrg    String    @map("issuing_org") @db.VarChar(200)
+  credentialId  String?   @map("credential_id") @db.VarChar(100)
+  credentialUrl String?   @map("credential_url") @db.VarChar(500)
+  issueDate     DateTime  @map("issue_date") @db.Date
+  expiryDate    DateTime? @map("expiry_date") @db.Date
+  createdAt     DateTime  @default(now()) @map("created_at")
+
+  profile Profile @relation(fields: [profileId], references: [id], onDelete: Cascade)
+
+  @@index([profileId])
+  @@map("certifications")
+}
+
+// ─── Recommendations ─────────────────────────────────────────
+
+enum RecommendationStatus {
+  PENDING
+  ACCEPTED
+  DECLINED
+}
+
+model Recommendation {
+  id           String               @id @default(uuid())
+  authorId     String               @map("author_id")
+  recipientId  String               @map("recipient_id")
+  content      String               @db.VarChar(3000)
+  relationship String               @db.VarChar(200)
+  status       RecommendationStatus @default(PENDING)
+  createdAt    DateTime             @default(now()) @map("created_at")
+  updatedAt    DateTime             @updatedAt @map("updated_at")
+
+  author    User @relation("RecommendationsGiven", fields: [authorId], references: [id], onDelete: Cascade)
+  recipient User @relation("RecommendationsReceived", fields: [recipientId], references: [id], onDelete: Cascade)
+
+  @@unique([authorId, recipientId])
+  @@index([recipientId, status])
+  @@map("recommendations")
+}
+
+// ─── Job Alerts ──────────────────────────────────────────────
+
+model JobAlert {
+  id              String           @id @default(uuid())
+  userId          String           @map("user_id")
+  keywords        String?          @db.VarChar(500)
+  location        String?          @db.VarChar(200)
+  workType        WorkType?        @map("work_type")
+  experienceLevel ExperienceLevel? @map("experience_level")
+  isActive        Boolean          @default(true) @map("is_active")
+  lastNotifiedAt  DateTime?        @map("last_notified_at")
+  createdAt       DateTime         @default(now()) @map("created_at")
+  updatedAt       DateTime         @updatedAt @map("updated_at")
+
+  user User @relation(fields: [userId], references: [id], onDelete: Cascade)
+
+  @@index([userId, isActive])
+  @@map("job_alerts")
 }

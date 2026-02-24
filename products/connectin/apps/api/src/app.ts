@@ -38,6 +38,10 @@ import hashtagRoutes from './modules/hashtag/hashtag.routes';
 import mediaRoutes from './modules/media/media.routes';
 import bookmarkRoutes from './modules/bookmark/bookmark.routes';
 import pollRoutes from './modules/poll/poll.routes';
+import certificationRoutes from './modules/certification/certification.routes';
+import recommendationRoutes from './modules/recommendation/recommendation.routes';
+import jobAlertRoutes from './modules/job-alert/job-alert.routes';
+import groupMessagingRoutes from './modules/messaging/group-messaging.routes';
 
 export interface BuildAppOptions {
   skipRateLimit?: boolean;
@@ -150,6 +154,18 @@ export async function buildApp(
   });
   await app.register(pollRoutes, {
     prefix: '/api/v1/polls',
+  });
+  await app.register(certificationRoutes, {
+    prefix: '/api/v1/certifications',
+  });
+  await app.register(recommendationRoutes, {
+    prefix: '/api/v1/recommendations',
+  });
+  await app.register(jobAlertRoutes, {
+    prefix: '/api/v1/job-alerts',
+  });
+  await app.register(groupMessagingRoutes, {
+    prefix: '/api/v1/conversations/groups',
   });
 
   // Session cleanup — run hourly in non-test environments
