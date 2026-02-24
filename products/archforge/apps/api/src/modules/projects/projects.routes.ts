@@ -13,6 +13,7 @@ import {
   updateProjectSchema,
   deleteProjectSchema,
   listProjectsQuerySchema,
+  addMemberSchema,
 } from './projects.schemas.js';
 
 function handleValidationError(error: unknown) {
@@ -94,6 +95,34 @@ const projectRoutes: FastifyPluginAsync = async (fastify) => {
       const ua = (request.headers['user-agent'] as string) || '';
       await projectService.delete(user.id, projectId, body.confirmName, ip, ua);
       return reply.send({ message: 'Project deleted permanently.' });
+    } catch (error) {
+      handleValidationError(error);
+    }
+  });
+  // GET /projects/:projectId/members
+  fastify.get('/:projectId/members', async (request, reply) => {
+    try {
+      await fastify.authenticate(request);
+      const user = request.currentUser!;
+      const { projectId } = request.params as { projectId: string };
+      const result = await projectService.listMembers(user.id, projectId);
+      return reply.send(result);
+    } catch (error) {
+      handleValidationError(error);
+    }
+  });
+
+  // POST /projects/:projectId/members
+  fastify.post('/:projectId/members', async (request, reply) => {
+    try {
+      await fastify.authenticate(request);
+      const user = request.currentUser!;
+      const { projectId } = request.params as { projectId: string };
+      const body = addMemberSchema.parse(request.body);
+      const ip = request.ip;
+      const ua = (request.headers['user-agent'] as string) || '';
+      const result = await projectService.addMember(user.id, projectId, body.email, body.role, ip, ua);
+      return reply.code(201).send(result);
     } catch (error) {
       handleValidationError(error);
     }

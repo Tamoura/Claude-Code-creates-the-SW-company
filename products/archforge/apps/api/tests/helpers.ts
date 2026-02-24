@@ -45,6 +45,7 @@ export async function cleanDatabase(): Promise<void> {
     prisma.artifactVersion.deleteMany(),
     prisma.artifact.deleteMany(),
     prisma.template.deleteMany(),
+    prisma.projectMember.deleteMany(),
     prisma.project.deleteMany(),
     prisma.workspaceMember.deleteMany(),
     prisma.workspace.deleteMany(),

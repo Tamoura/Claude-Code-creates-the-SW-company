@@ -788,4 +788,151 @@ describe('Project endpoints', () => {
       expect(res.json().data).toHaveLength(0);
     });
   });
+
+  // ==================== MEMBERS ====================
+
+  describe('GET /api/v1/projects/:projectId/members', () => {
+    it('should list project members (owner auto-added)', async () => {
+      const user = await createTestUser(app);
+
+      const createRes = await app.inject({
+        method: 'POST',
+        url: '/api/v1/projects',
+        headers: authHeaders(user.accessToken),
+        payload: { name: 'Team Project' },
+      });
+      const projectId = createRes.json().id;
+
+      const res = await app.inject({
+        method: 'GET',
+        url: `/api/v1/projects/${projectId}/members`,
+        headers: authHeaders(user.accessToken),
+      });
+
+      expect(res.statusCode).toBe(200);
+      const body = res.json();
+      expect(body.data).toHaveLength(1);
+      expect(body.data[0].user.id).toBe(user.id);
+      expect(body.data[0].role).toBe('owner');
+    });
+
+    it('should return 404 for non-existent project', async () => {
+      const user = await createTestUser(app);
+
+      const res = await app.inject({
+        method: 'GET',
+        url: '/api/v1/projects/00000000-0000-0000-0000-000000000000/members',
+        headers: authHeaders(user.accessToken),
+      });
+
+      expect(res.statusCode).toBe(404);
+    });
+
+    it('should return 401 without authentication', async () => {
+      const res = await app.inject({
+        method: 'GET',
+        url: '/api/v1/projects/00000000-0000-0000-0000-000000000000/members',
+      });
+
+      expect(res.statusCode).toBe(401);
+    });
+  });
+
+  describe('POST /api/v1/projects/:projectId/members', () => {
+    it('should add a member to the project', async () => {
+      const owner = await createTestUser(app);
+      const member = await createTestUser(app);
+
+      const createRes = await app.inject({
+        method: 'POST',
+        url: '/api/v1/projects',
+        headers: authHeaders(owner.accessToken),
+        payload: { name: 'Collaborative Project' },
+      });
+      const projectId = createRes.json().id;
+
+      const res = await app.inject({
+        method: 'POST',
+        url: `/api/v1/projects/${projectId}/members`,
+        headers: authHeaders(owner.accessToken),
+        payload: { email: member.email, role: 'editor' },
+      });
+
+      expect(res.statusCode).toBe(201);
+      const body = res.json();
+      expect(body.user.id).toBe(member.id);
+      expect(body.role).toBe('editor');
+    });
+
+    it('should return 409 for duplicate member', async () => {
+      const owner = await createTestUser(app);
+      const member = await createTestUser(app);
+
+      const createRes = await app.inject({
+        method: 'POST',
+        url: '/api/v1/projects',
+        headers: authHeaders(owner.accessToken),
+        payload: { name: 'Dup Test' },
+      });
+      const projectId = createRes.json().id;
+
+      await app.inject({
+        method: 'POST',
+        url: `/api/v1/projects/${projectId}/members`,
+        headers: authHeaders(owner.accessToken),
+        payload: { email: member.email, role: 'editor' },
+      });
+
+      const res = await app.inject({
+        method: 'POST',
+        url: `/api/v1/projects/${projectId}/members`,
+        headers: authHeaders(owner.accessToken),
+        payload: { email: member.email, role: 'viewer' },
+      });
+
+      expect(res.statusCode).toBe(409);
+    });
+
+    it('should return 400 for invalid role', async () => {
+      const owner = await createTestUser(app);
+
+      const createRes = await app.inject({
+        method: 'POST',
+        url: '/api/v1/projects',
+        headers: authHeaders(owner.accessToken),
+        payload: { name: 'Role Test' },
+      });
+      const projectId = createRes.json().id;
+
+      const res = await app.inject({
+        method: 'POST',
+        url: `/api/v1/projects/${projectId}/members`,
+        headers: authHeaders(owner.accessToken),
+        payload: { email: 'someone@test.com', role: 'superadmin' },
+      });
+
+      expect(res.statusCode).toBe(400);
+    });
+
+    it('should return 404 for non-existent user email', async () => {
+      const owner = await createTestUser(app);
+
+      const createRes = await app.inject({
+        method: 'POST',
+        url: '/api/v1/projects',
+        headers: authHeaders(owner.accessToken),
+        payload: { name: 'Ghost Member Test' },
+      });
+      const projectId = createRes.json().id;
+
+      const res = await app.inject({
+        method: 'POST',
+        url: `/api/v1/projects/${projectId}/members`,
+        headers: authHeaders(owner.accessToken),
+        payload: { email: 'nonexistent@test.com', role: 'editor' },
+      });
+
+      expect(res.statusCode).toBe(404);
+    });
+  });
 });

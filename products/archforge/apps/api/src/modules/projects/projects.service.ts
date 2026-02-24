@@ -84,19 +84,31 @@ export class ProjectService {
   ): Promise<ProjectResponse> {
     const workspaceId = await this.getWorkspaceId(userId);
 
-    const project = await this.fastify.prisma.project.create({
-      data: {
-        workspaceId,
-        createdBy: userId,
-        name: data.name,
-        description: data.description || null,
-        frameworkPreference: data.frameworkPreference || 'auto',
-        status: 'active',
-      },
-      include: {
-        creator: true,
-        _count: { select: { artifacts: true } },
-      },
+    const project = await this.fastify.prisma.$transaction(async (tx) => {
+      const p = await tx.project.create({
+        data: {
+          workspaceId,
+          createdBy: userId,
+          name: data.name,
+          description: data.description || null,
+          frameworkPreference: data.frameworkPreference || 'auto',
+          status: 'active',
+        },
+        include: {
+          creator: true,
+          _count: { select: { artifacts: true } },
+        },
+      });
+
+      await tx.projectMember.create({
+        data: {
+          projectId: p.id,
+          userId,
+          role: 'owner',
+        },
+      });
+
+      return p;
     });
 
     logger.info('Project created', { projectId: project.id, userId });
@@ -271,5 +283,106 @@ export class ProjectService {
     await this.audit('project.delete', userId, projectId, ip, userAgent, {
       name: existing.name,
     });
+  }
+
+  async listMembers(
+    userId: string,
+    projectId: string,
+  ): Promise<{ data: Array<{ id: string; user: { id: string; email: string; fullName: string }; role: string; joinedAt: string }> }> {
+    const workspaceId = await this.getWorkspaceId(userId);
+
+    const project = await this.fastify.prisma.project.findFirst({
+      where: { id: projectId, workspaceId },
+    });
+
+    if (!project) {
+      throw new AppError(404, 'not-found', 'Project not found');
+    }
+
+    const members = await this.fastify.prisma.projectMember.findMany({
+      where: { projectId },
+      include: { user: true },
+      orderBy: { joinedAt: 'asc' },
+    });
+
+    return {
+      data: members.map((m) => ({
+        id: m.id,
+        user: {
+          id: m.user.id,
+          email: m.user.email,
+          fullName: m.user.fullName,
+        },
+        role: m.role,
+        joinedAt: m.joinedAt.toISOString(),
+      })),
+    };
+  }
+
+  async addMember(
+    userId: string,
+    projectId: string,
+    email: string,
+    role: string,
+    ip: string,
+    userAgent: string,
+  ): Promise<{ id: string; user: { id: string; email: string; fullName: string }; role: string; joinedAt: string }> {
+    const workspaceId = await this.getWorkspaceId(userId);
+
+    const project = await this.fastify.prisma.project.findFirst({
+      where: { id: projectId, workspaceId },
+    });
+
+    if (!project) {
+      throw new AppError(404, 'not-found', 'Project not found');
+    }
+
+    if (project.createdBy !== userId) {
+      throw new AppError(403, 'forbidden', 'Only the project owner can invite members');
+    }
+
+    const targetUser = await this.fastify.prisma.user.findUnique({
+      where: { email: email.toLowerCase().trim() },
+    });
+
+    if (!targetUser) {
+      throw new AppError(404, 'not-found', 'User not found with that email');
+    }
+
+    const existing = await this.fastify.prisma.projectMember.findUnique({
+      where: {
+        projectId_userId: { projectId, userId: targetUser.id },
+      },
+    });
+
+    if (existing) {
+      throw new AppError(409, 'conflict', 'User is already a member of this project');
+    }
+
+    const member = await this.fastify.prisma.projectMember.create({
+      data: {
+        projectId,
+        userId: targetUser.id,
+        role,
+      },
+      include: { user: true },
+    });
+
+    logger.info('Project member added', { projectId, memberId: targetUser.id, role });
+    await this.audit('project.member_add', userId, projectId, ip, userAgent, {
+      memberEmail: email,
+      role,
+    });
+
+    return {
+      id: member.id,
+      user: {
+        id: member.user.id,
+        email: member.user.email,
+        fullName: member.user.fullName,
+      },
+      role: member.role,
+      joinedAt: member.joinedAt.toISOString(),
+    };
   }
 }

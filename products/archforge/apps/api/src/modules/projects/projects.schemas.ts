@@ -38,3 +38,8 @@ export const listProjectsQuerySchema = z.object({
   cursor: z.string().uuid().optional(),
   pageSize: z.coerce.number().int().min(1).max(100).default(20),
 });
+
+export const addMemberSchema = z.object({
+  email: z.string().email('Invalid email format'),
+  role: z.enum(['admin', 'editor', 'viewer']),
+});

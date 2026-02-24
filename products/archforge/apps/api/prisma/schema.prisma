@@ -52,6 +52,7 @@ model User {
   ownedWorkspaces         Workspace[]
   workspaceMemberships    WorkspaceMember[]
   createdProjects         Project[]
+  projectMemberships      ProjectMember[]
   createdArtifacts        Artifact[]
   createdArtifactVersions ArtifactVersion[]
   createdTemplates        Template[]
@@ -161,12 +162,29 @@ model Project {
   archivedAt          DateTime? @map("archived_at") @db.Timestamptz()
 
   creator         User             @relation(fields: [createdBy], references: [id], onDelete: Restrict)
+  members         ProjectMember[]
   artifacts       Artifact[]
   documentUploads DocumentUpload[]
 
   @@index([workspaceId, status])
   @@index([createdBy])
   @@map("projects")
+}
+
+model ProjectMember {
+  id        String   @id @default(uuid()) @db.Uuid
+  projectId String   @map("project_id") @db.Uuid
+  userId    String   @map("user_id") @db.Uuid
+  role      String   @default("viewer") @db.VarChar(20)
+  joinedAt  DateTime @default(now()) @map("joined_at") @db.Timestamptz()
+
+  project Project @relation(fields: [projectId], references: [id], onDelete: Cascade)
+  user    User    @relation(fields: [userId], references: [id], onDelete: Cascade)
+
+  @@unique([projectId, userId])
+  @@index([projectId])
+  @@index([userId])
+  @@map("project_members")
 }
 
 model Artifact {
