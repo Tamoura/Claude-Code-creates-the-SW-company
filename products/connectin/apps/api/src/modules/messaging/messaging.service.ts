@@ -185,6 +185,17 @@ export class MessagingService {
             profile: { select: { avatarUrl: true } },
           },
         },
+        media: {
+          select: {
+            id: true,
+            type: true,
+            originalName: true,
+            mimeType: true,
+            size: true,
+            url: true,
+            thumbnailUrl: true,
+          },
+        },
       },
       orderBy: [{ createdAt: 'desc' }, { id: 'desc' }],
       take: limit + 1,
@@ -212,7 +223,7 @@ export class MessagingService {
   }
 
   /** Send a message */
-  async sendMessage(senderId: string, input: { conversationId: string; content: string }) {
+  async sendMessage(senderId: string, input: { conversationId: string; content: string; mediaId?: string }) {
     const sanitized = stripHtml(input.content).trim();
     if (!sanitized) throw new BadRequestError('Message cannot be empty');
     if (sanitized.length > 5000) throw new BadRequestError('Message too long (max 5000 chars)');
@@ -223,12 +234,19 @@ export class MessagingService {
     });
     if (!member) throw new ForbiddenError('Not a member of this conversation');
 
+    // Validate media attachment if provided
+    if (input.mediaId) {
+      const media = await this.prisma.media.findUnique({ where: { id: input.mediaId } });
+      if (!media) throw new NotFoundError('Media not found');
+    }
+
     const message = await this.prisma.$transaction(async (tx) => {
       const msg = await tx.message.create({
         data: {
           conversationId: input.conversationId,
           senderId,
           content: sanitized,
+          mediaId: input.mediaId || null,
         },
         include: {
           sender: {
@@ -238,6 +256,17 @@ export class MessagingService {
               profile: { select: { avatarUrl: true } },
             },
           },
+          media: input.mediaId ? {
+            select: {
+              id: true,
+              type: true,
+              originalName: true,
+              mimeType: true,
+              size: true,
+              url: true,
+              thumbnailUrl: true,
+            },
+          } : false,
         },
       });
 
@@ -331,6 +360,17 @@ export class MessagingService {
           }
         : undefined,
       content: msg.content,
+      ...(msg.media ? {
+        media: {
+          id: msg.media.id,
+          type: msg.media.type,
+          originalName: msg.media.originalName,
+          mimeType: msg.media.mimeType,
+          size: msg.media.size,
+          url: msg.media.url,
+          thumbnailUrl: msg.media.thumbnailUrl || null,
+        },
+      } : {}),
       createdAt: msg.createdAt.toISOString(),
       readAt: msg.readAt?.toISOString() || null,
     };
