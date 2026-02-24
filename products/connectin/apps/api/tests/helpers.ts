@@ -34,6 +34,8 @@ export async function closeApp(): Promise<void> {
 export async function cleanDatabase(): Promise<void> {
   const db = getPrisma();
   // Delete in correct order to respect foreign keys
+  await db.orgFollower.deleteMany();
+  await db.orgMember.deleteMany();
   await db.jobAlert.deleteMany();
   await db.recommendation.deleteMany();
   await db.pollVote.deleteMany();
@@ -74,6 +76,7 @@ export async function cleanDatabase(): Promise<void> {
   await db.savedJob.deleteMany();
   await db.jobApplication.deleteMany();
   await db.job.deleteMany();
+  await db.organization.deleteMany();
   await db.userPreference.deleteMany();
   await db.profile.deleteMany();
   await db.user.deleteMany();
