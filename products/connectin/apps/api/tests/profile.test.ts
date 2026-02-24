@@ -739,4 +739,294 @@ describe('Profile Module', () => {
       expect(scoreAfter).toBeLessThan(scoreBefore);
     });
   });
+
+  describe('Profile Strength Meter', () => {
+    describe('GET /api/v1/profiles/me/strength', () => {
+      it('returns 0 score for empty profile', async () => {
+        const app = await getApp();
+        const user = await createTestUser(app);
+
+        const res = await app.inject({
+          method: 'GET',
+          url: '/api/v1/profiles/me/strength',
+          headers: authHeaders(user.accessToken),
+        });
+
+        expect(res.statusCode).toBe(200);
+        const body = JSON.parse(res.body);
+        expect(body.success).toBe(true);
+        expect(body.data.score).toBe(0);
+        expect(body.data.maxScore).toBe(100);
+        expect(body.data.suggestions).toBeDefined();
+        expect(Array.isArray(body.data.suggestions)).toBe(true);
+        expect(body.data.suggestions.length).toBeGreaterThan(0);
+      });
+
+      it('increases score when profile has photo', async () => {
+        const app = await getApp();
+        const user = await createTestUser(app);
+
+        await app.inject({
+          method: 'PUT',
+          url: '/api/v1/profiles/me',
+          headers: authHeaders(user.accessToken),
+          payload: { avatarUrl: 'https://example.com/photo.jpg' },
+        });
+
+        const res = await app.inject({
+          method: 'GET',
+          url: '/api/v1/profiles/me/strength',
+          headers: authHeaders(user.accessToken),
+        });
+
+        const body = JSON.parse(res.body);
+        expect(body.data.score).toBe(15);
+      });
+
+      it('returns 100 for fully complete profile', async () => {
+        const app = await getApp();
+        const db = getPrisma();
+        const user = await createTestUser(app);
+
+        // Fill all profile fields
+        await app.inject({
+          method: 'PUT',
+          url: '/api/v1/profiles/me',
+          headers: authHeaders(user.accessToken),
+          payload: {
+            avatarUrl: 'https://example.com/photo.jpg',
+            headlineEn: 'Software Engineer',
+            headlineAr: 'مهندس برمجيات',
+            summaryEn: 'Experienced developer',
+            summaryAr: 'مطور ذو خبرة',
+            location: 'Riyadh',
+            website: 'https://example.com',
+          },
+        });
+
+        // Add experience
+        await app.inject({
+          method: 'POST',
+          url: '/api/v1/profiles/me/experience',
+          headers: authHeaders(user.accessToken),
+          payload: {
+            company: 'Tech Co',
+            title: 'Engineer',
+            startDate: '2020-01-01',
+            isCurrent: true,
+          },
+        });
+
+        // Add education
+        await app.inject({
+          method: 'POST',
+          url: '/api/v1/profiles/me/education',
+          headers: authHeaders(user.accessToken),
+          payload: {
+            institution: 'KSU',
+            degree: 'BSc CS',
+            startYear: 2015,
+          },
+        });
+
+        // Add skills
+        const skill = await db.skill.create({
+          data: { nameEn: 'TypeScript', category: 'Programming' },
+        });
+        await app.inject({
+          method: 'POST',
+          url: '/api/v1/profiles/me/skills',
+          headers: authHeaders(user.accessToken),
+          payload: { skillIds: [skill.id] },
+        });
+
+        const res = await app.inject({
+          method: 'GET',
+          url: '/api/v1/profiles/me/strength',
+          headers: authHeaders(user.accessToken),
+        });
+
+        const body = JSON.parse(res.body);
+        expect(body.data.score).toBe(100);
+        expect(body.data.suggestions).toHaveLength(0);
+      });
+
+      it('returns bilingual suggestions', async () => {
+        const app = await getApp();
+        const user = await createTestUser(app);
+
+        const res = await app.inject({
+          method: 'GET',
+          url: '/api/v1/profiles/me/strength',
+          headers: authHeaders(user.accessToken),
+        });
+
+        const body = JSON.parse(res.body);
+        // Each suggestion should have both en and ar text
+        for (const suggestion of body.data.suggestions) {
+          expect(suggestion.en).toBeDefined();
+          expect(suggestion.ar).toBeDefined();
+          expect(suggestion.field).toBeDefined();
+          expect(suggestion.weight).toBeDefined();
+        }
+      });
+
+      it('rejects unauthenticated request', async () => {
+        const app = await getApp();
+        const res = await app.inject({
+          method: 'GET',
+          url: '/api/v1/profiles/me/strength',
+        });
+
+        expect(res.statusCode).toBe(401);
+      });
+    });
+  });
+
+  describe('Open-to-Work Badge', () => {
+    describe('PUT /api/v1/profiles/me/open-to-work', () => {
+      it('enables open-to-work', async () => {
+        const app = await getApp();
+        const user = await createTestUser(app);
+
+        const res = await app.inject({
+          method: 'PUT',
+          url: '/api/v1/profiles/me/open-to-work',
+          headers: authHeaders(user.accessToken),
+          payload: {
+            openToWork: true,
+            visibility: 'PUBLIC',
+          },
+        });
+
+        expect(res.statusCode).toBe(200);
+        const body = JSON.parse(res.body);
+        expect(body.data.openToWork).toBe(true);
+        expect(body.data.visibility).toBe('PUBLIC');
+      });
+
+      it('disables open-to-work', async () => {
+        const app = await getApp();
+        const user = await createTestUser(app);
+
+        // Enable first
+        await app.inject({
+          method: 'PUT',
+          url: '/api/v1/profiles/me/open-to-work',
+          headers: authHeaders(user.accessToken),
+          payload: { openToWork: true, visibility: 'PUBLIC' },
+        });
+
+        // Disable
+        const res = await app.inject({
+          method: 'PUT',
+          url: '/api/v1/profiles/me/open-to-work',
+          headers: authHeaders(user.accessToken),
+          payload: { openToWork: false },
+        });
+
+        expect(res.statusCode).toBe(200);
+        const body = JSON.parse(res.body);
+        expect(body.data.openToWork).toBe(false);
+      });
+
+      it('defaults to RECRUITERS_ONLY visibility', async () => {
+        const app = await getApp();
+        const user = await createTestUser(app);
+
+        const res = await app.inject({
+          method: 'PUT',
+          url: '/api/v1/profiles/me/open-to-work',
+          headers: authHeaders(user.accessToken),
+          payload: { openToWork: true },
+        });
+
+        expect(res.statusCode).toBe(200);
+        const body = JSON.parse(res.body);
+        expect(body.data.visibility).toBe('RECRUITERS_ONLY');
+      });
+
+      it('includes open-to-work in profile response', async () => {
+        const app = await getApp();
+        const user = await createTestUser(app);
+
+        // Enable open-to-work
+        await app.inject({
+          method: 'PUT',
+          url: '/api/v1/profiles/me/open-to-work',
+          headers: authHeaders(user.accessToken),
+          payload: { openToWork: true, visibility: 'PUBLIC' },
+        });
+
+        // Check profile includes it
+        const res = await app.inject({
+          method: 'GET',
+          url: '/api/v1/profiles/me',
+          headers: authHeaders(user.accessToken),
+        });
+
+        const body = JSON.parse(res.body);
+        expect(body.data.openToWork).toBe(true);
+        expect(body.data.openToWorkVisibility).toBe('PUBLIC');
+      });
+
+      it('hides open-to-work from non-recruiters when RECRUITERS_ONLY', async () => {
+        const app = await getApp();
+        const owner = await createTestUser(app, { email: 'otw-owner@test.com' });
+        const viewer = await createTestUser(app, { email: 'otw-viewer@test.com' });
+
+        // Enable with RECRUITERS_ONLY
+        await app.inject({
+          method: 'PUT',
+          url: '/api/v1/profiles/me/open-to-work',
+          headers: authHeaders(owner.accessToken),
+          payload: { openToWork: true, visibility: 'RECRUITERS_ONLY' },
+        });
+
+        // Non-recruiter views profile - should NOT see open-to-work
+        const res = await app.inject({
+          method: 'GET',
+          url: `/api/v1/profiles/${owner.id}`,
+          headers: authHeaders(viewer.accessToken),
+        });
+
+        const body = JSON.parse(res.body);
+        expect(body.data.openToWork).toBeUndefined();
+      });
+
+      it('shows open-to-work to all when PUBLIC', async () => {
+        const app = await getApp();
+        const owner = await createTestUser(app, { email: 'otw-pub-owner@test.com' });
+        const viewer = await createTestUser(app, { email: 'otw-pub-viewer@test.com' });
+
+        // Enable with PUBLIC
+        await app.inject({
+          method: 'PUT',
+          url: '/api/v1/profiles/me/open-to-work',
+          headers: authHeaders(owner.accessToken),
+          payload: { openToWork: true, visibility: 'PUBLIC' },
+        });
+
+        const res = await app.inject({
+          method: 'GET',
+          url: `/api/v1/profiles/${owner.id}`,
+          headers: authHeaders(viewer.accessToken),
+        });
+
+        const body = JSON.parse(res.body);
+        expect(body.data.openToWork).toBe(true);
+      });
+
+      it('rejects unauthenticated request', async () => {
+        const app = await getApp();
+        const res = await app.inject({
+          method: 'PUT',
+          url: '/api/v1/profiles/me/open-to-work',
+          payload: { openToWork: true },
+        });
+
+        expect(res.statusCode).toBe(401);
+      });
+    });
+  });
 });

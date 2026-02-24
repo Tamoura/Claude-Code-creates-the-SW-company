@@ -4,6 +4,7 @@ import {
   createPostSchema,
   updatePostSchema,
   createCommentSchema,
+  reactToPostSchema,
 } from './feed.schemas';
 import { sendSuccess } from '../../lib/response';
 import { ValidationError } from '../../lib/errors';
@@ -384,6 +385,150 @@ const feedRoutes: FastifyPluginAsync = async (fastify) => {
         result.data
       );
       return sendSuccess(reply, data, 201);
+    }
+  );
+  // POST /api/v1/feed/posts/:id/react
+  fastify.post<{ Params: { id: string } }>(
+    '/posts/:id/react',
+    {
+      schema: {
+        description: 'React to a post',
+        tags: ['Feed'],
+        security: [{ bearerAuth: [] }],
+        params: {
+          type: 'object',
+          required: ['id'],
+          properties: {
+            id: { type: 'string', format: 'uuid' },
+          },
+        },
+        body: {
+          type: 'object',
+          additionalProperties: false,
+          required: ['type'],
+          properties: {
+            type: {
+              type: 'string',
+              enum: [
+                'LIKE',
+                'CELEBRATE',
+                'SUPPORT',
+                'LOVE',
+                'INSIGHTFUL',
+                'FUNNY',
+              ],
+            },
+          },
+        },
+        response: {
+          200: {
+            type: 'object',
+            additionalProperties: true,
+            properties: {
+              success: { type: 'boolean' },
+              data: {
+                type: 'object',
+                additionalProperties: true,
+              },
+            },
+          },
+        },
+      },
+    },
+    async (request, reply) => {
+      const result = reactToPostSchema.safeParse(
+        request.body
+      );
+      if (!result.success) {
+        throw new ValidationError(
+          'Validation failed',
+          zodToDetails(result.error)
+        );
+      }
+
+      const data = await feedService.reactToPost(
+        request.params.id,
+        request.user.sub,
+        result.data.type as import('@prisma/client').ReactionType
+      );
+      return sendSuccess(reply, data);
+    }
+  );
+
+  // DELETE /api/v1/feed/posts/:id/react
+  fastify.delete<{ Params: { id: string } }>(
+    '/posts/:id/react',
+    {
+      schema: {
+        description: 'Remove reaction from a post',
+        tags: ['Feed'],
+        security: [{ bearerAuth: [] }],
+        params: {
+          type: 'object',
+          required: ['id'],
+          properties: {
+            id: { type: 'string', format: 'uuid' },
+          },
+        },
+        response: {
+          200: {
+            type: 'object',
+            additionalProperties: true,
+            properties: {
+              success: { type: 'boolean' },
+              data: {
+                type: 'object',
+                additionalProperties: true,
+              },
+            },
+          },
+        },
+      },
+    },
+    async (request, reply) => {
+      const data = await feedService.unreactToPost(
+        request.params.id,
+        request.user.sub
+      );
+      return sendSuccess(reply, data);
+    }
+  );
+
+  // GET /api/v1/feed/posts/:id/reactions
+  fastify.get<{ Params: { id: string } }>(
+    '/posts/:id/reactions',
+    {
+      schema: {
+        description: 'Get reaction breakdown for a post',
+        tags: ['Feed'],
+        security: [{ bearerAuth: [] }],
+        params: {
+          type: 'object',
+          required: ['id'],
+          properties: {
+            id: { type: 'string', format: 'uuid' },
+          },
+        },
+        response: {
+          200: {
+            type: 'object',
+            additionalProperties: true,
+            properties: {
+              success: { type: 'boolean' },
+              data: {
+                type: 'object',
+                additionalProperties: true,
+              },
+            },
+          },
+        },
+      },
+    },
+    async (request, reply) => {
+      const data = await feedService.getPostReactions(
+        request.params.id
+      );
+      return sendSuccess(reply, data);
     }
   );
 };

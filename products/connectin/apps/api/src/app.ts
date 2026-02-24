@@ -31,6 +31,9 @@ import messagingRoutes from './modules/messaging/messaging.routes';
 import notificationsRoutes from './modules/notifications/notifications.routes';
 import searchRoutes from './modules/search/search.routes';
 import presenceRoutes from './modules/presence/presence.routes';
+import { blockRoutes, reportRoutes } from './modules/block/block.routes';
+import followRoutes from './modules/follow/follow.routes';
+import endorsementRoutes from './modules/endorsement/endorsement.routes';
 
 export interface BuildAppOptions {
   skipRateLimit?: boolean;
@@ -115,6 +118,18 @@ export async function buildApp(
   });
   await app.register(presenceRoutes, {
     prefix: '/api/v1/presence',
+  });
+  await app.register(blockRoutes, {
+    prefix: '/api/v1/blocks',
+  });
+  await app.register(reportRoutes, {
+    prefix: '/api/v1/reports',
+  });
+  await app.register(followRoutes, {
+    prefix: '/api/v1/follows',
+  });
+  await app.register(endorsementRoutes, {
+    prefix: '/api/v1/endorsements',
   });
 
   // Session cleanup — run hourly in non-test environments

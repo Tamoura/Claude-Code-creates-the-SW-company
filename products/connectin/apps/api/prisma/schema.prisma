@@ -41,6 +41,17 @@ enum TextDirection {
   AUTO
 }
 
+enum ThemePreference {
+  LIGHT
+  DARK
+  SYSTEM
+}
+
+enum OpenToWorkVisibility {
+  PUBLIC
+  RECRUITERS_ONLY
+}
+
 // ─── Users ──────────────────────────────────────────────────
 
 model User {
@@ -84,6 +95,14 @@ model User {
   notifications           Notification[]
   notificationPreference  NotificationPreference?
   processingObjections    ProcessingObjection[]
+  preference              UserPreference?
+  reactions               Reaction[]
+  blocksGiven             Block[]             @relation("BlocksGiven")
+  blocksReceived          Block[]             @relation("BlocksReceived")
+  reports                 Report[]
+  followsGiven            Follow[]            @relation("FollowsGiven")
+  followsReceived         Follow[]            @relation("FollowsReceived")
+  endorsements            Endorsement[]
 
   @@index([status, createdAt])
   @@index([verificationToken])
@@ -126,6 +145,7 @@ model Profile {
   summaryAr         String?         @map("summary_ar")
   summaryEn         String?         @map("summary_en")
   avatarUrl         String?         @map("avatar_url") @db.VarChar(500)
+  bannerUrl         String?         @map("banner_url") @db.VarChar(500)
   location          String?         @db.VarChar(100)
   website           String?         @db.VarChar(255)
   completenessScore Int             @default(0) @map("completeness_score")
@@ -138,6 +158,22 @@ model Profile {
   profileSkills     ProfileSkill[]
 
   @@map("profiles")
+}
+
+// ─── User Preferences ──────────────────────────────────────
+
+model UserPreference {
+  id                    String               @id @default(uuid())
+  userId                String               @unique @map("user_id")
+  theme                 ThemePreference      @default(SYSTEM)
+  openToWork            Boolean              @default(false) @map("open_to_work")
+  openToWorkVisibility  OpenToWorkVisibility @default(RECRUITERS_ONLY) @map("open_to_work_visibility")
+  createdAt             DateTime             @default(now()) @map("created_at")
+  updatedAt             DateTime             @updatedAt @map("updated_at")
+
+  user User @relation(fields: [userId], references: [id], onDelete: Cascade)
+
+  @@map("user_preferences")
 }
 
 // ─── Experiences ────────────────────────────────────────────
@@ -204,6 +240,7 @@ model ProfileSkill {
 
   profile          Profile  @relation(fields: [profileId], references: [id], onDelete: Cascade)
   skill            Skill    @relation(fields: [skillId], references: [id], onDelete: Cascade)
+  endorsements     Endorsement[]
 
   @@unique([profileId, skillId])
   @@map("profile_skills")
@@ -266,6 +303,7 @@ model Post {
   author        User          @relation(fields: [authorId], references: [id], onDelete: Cascade)
   comments      Comment[]
   likes         Like[]
+  reactions     Reaction[]
 
   @@index([authorId, createdAt(sort: Desc)])
   @@index([createdAt(sort: Desc)])
@@ -521,4 +559,122 @@ model NotificationPreference {
   user User @relation(fields: [userId], references: [id], onDelete: Cascade)
 
   @@map("notification_preferences")
+}
+
+// ─── Reactions (replaces Like for rich engagement) ──────────────
+
+enum ReactionType {
+  LIKE
+  CELEBRATE
+  SUPPORT
+  LOVE
+  INSIGHTFUL
+  FUNNY
+}
+
+model Reaction {
+  id        String       @id @default(uuid())
+  postId    String       @map("post_id")
+  userId    String       @map("user_id")
+  type      ReactionType
+  createdAt DateTime     @default(now()) @map("created_at")
+
+  post Post @relation(fields: [postId], references: [id], onDelete: Cascade)
+  user User @relation(fields: [userId], references: [id], onDelete: Cascade)
+
+  @@unique([postId, userId])
+  @@index([postId])
+  @@map("reactions")
+}
+
+// ─── Blocks ─────────────────────────────────────────────────────
+
+model Block {
+  id        String   @id @default(uuid())
+  blockerId String   @map("blocker_id")
+  blockedId String   @map("blocked_id")
+  createdAt DateTime @default(now()) @map("created_at")
+
+  blocker User @relation("BlocksGiven", fields: [blockerId], references: [id], onDelete: Cascade)
+  blocked User @relation("BlocksReceived", fields: [blockedId], references: [id], onDelete: Cascade)
+
+  @@unique([blockerId, blockedId])
+  @@index([blockerId])
+  @@index([blockedId])
+  @@map("blocks")
+}
+
+// ─── Reports ────────────────────────────────────────────────────
+
+enum ReportReason {
+  SPAM
+  HARASSMENT
+  HATE_SPEECH
+  MISINFORMATION
+  IMPERSONATION
+  OTHER
+}
+
+enum ReportStatus {
+  PENDING
+  REVIEWED
+  RESOLVED
+  DISMISSED
+}
+
+enum ReportTargetType {
+  USER
+  POST
+  COMMENT
+}
+
+model Report {
+  id          String           @id @default(uuid())
+  reporterId  String           @map("reporter_id")
+  targetType  ReportTargetType @map("target_type")
+  targetId    String           @map("target_id")
+  reason      ReportReason
+  description String?          @db.VarChar(1000)
+  status      ReportStatus     @default(PENDING)
+  createdAt   DateTime         @default(now()) @map("created_at")
+  updatedAt   DateTime         @updatedAt @map("updated_at")
+
+  reporter User @relation(fields: [reporterId], references: [id], onDelete: Cascade)
+
+  @@index([reporterId])
+  @@index([targetType, targetId])
+  @@map("reports")
+}
+
+// ─── Follows (non-connection) ───────────────────────────────────
+
+model Follow {
+  id         String   @id @default(uuid())
+  followerId String   @map("follower_id")
+  followingId String  @map("following_id")
+  createdAt  DateTime @default(now()) @map("created_at")
+
+  follower  User @relation("FollowsGiven", fields: [followerId], references: [id], onDelete: Cascade)
+  following User @relation("FollowsReceived", fields: [followingId], references: [id], onDelete: Cascade)
+
+  @@unique([followerId, followingId])
+  @@index([followerId])
+  @@index([followingId])
+  @@map("follows")
+}
+
+// ─── Endorsements ───────────────────────────────────────────────
+
+model Endorsement {
+  id             String       @id @default(uuid())
+  endorserId     String       @map("endorser_id")
+  profileSkillId String       @map("profile_skill_id")
+  createdAt      DateTime     @default(now()) @map("created_at")
+
+  endorser     User         @relation(fields: [endorserId], references: [id], onDelete: Cascade)
+  profileSkill ProfileSkill @relation(fields: [profileSkillId], references: [id], onDelete: Cascade)
+
+  @@unique([endorserId, profileSkillId])
+  @@index([profileSkillId])
+  @@map("endorsements")
 }

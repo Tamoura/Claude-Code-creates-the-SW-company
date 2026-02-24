@@ -1,9 +1,9 @@
 # ConnectIn -- Product Requirements Document
 
 > **Product Manager** | ConnectSW
-> **Version**: 1.0
-> **Date**: February 20, 2026
-> **Status**: Draft
+> **Version**: 1.1
+> **Date**: February 24, 2026
+> **Status**: In Progress
 > **Product**: ConnectIn -- Professional Networking Platform
 > **Frontend Port**: 3111 | **Backend Port**: 5007
 
@@ -202,6 +202,7 @@ graph LR
 | **EP-08** | Messaging & Communication | 1:1 direct messages, read receipts, typing indicators, message notifications, conversation list | MVP |
 | **EP-09** | Admin & Moderation | Admin dashboard, user management, content moderation queue, report handling, analytics overview | MVP (basic) / Phase 2 (full) |
 | **EP-10** | Analytics & Insights | Profile views, post analytics, connection growth, engagement metrics, recruiter pipeline metrics | Phase 2 |
+| **EP-11** | Social Engagement & Safety | Reactions (6 types), follow system, block/report system, skill endorsements | MVP (Sprint 2) -- **Implemented** |
 
 ### Epic Dependency Map
 
@@ -222,9 +223,14 @@ flowchart TD
     EP03 --> EP10
     EP04 --> EP10
 
+    EP01 --> EP11[EP-11<br/>Social Engagement<br/>& Safety]
+    EP02 --> EP11
+    EP03 --> EP11
+
     style EP01 fill:#E74C3C,color:#fff
     style EP06 fill:#9B59B6,color:#fff
     style EP05 fill:#3498DB,color:#fff
+    style EP11 fill:#27AE60,color:#fff
 ```
 
 ---
@@ -363,6 +369,8 @@ flowchart TD
 - **Given** an image exceeds 10MB, **When** I try to attach it, **Then** I see an error "Image must be under 10MB".
 
 #### US-15: Like a Post (EP-03) -- P0-MVP
+
+> **Note**: The binary "like" has been superseded by the rich Reactions system (US-43, Sprint 2). The original Like model is retained for backward compatibility, but new engagement uses the Reaction model with 6 types. See US-43 for the full specification.
 
 **As** Ahmed, **I want** to like a post **so that** I can show appreciation and signal engagement.
 
@@ -615,6 +623,62 @@ flowchart TD
 - **Given** I click "Connect" on a user's profile, **When** the connection request dialog opens, **Then** I see an "AI Suggest" button next to the message field.
 - **Given** I click "AI Suggest", **When** the AI generates an icebreaker, **Then** I see a message referencing shared interests, mutual connections, or complementary skills, which I can edit before sending.
 
+### EP-11: Social Engagement & Safety (Sprint 2 -- Implemented)
+
+#### US-43: React to a Post (EP-11) -- P0-MVP -- IMPLEMENTED
+
+**As** Ahmed (Arab Tech Professional), **I want** to react to posts with expressive reaction types (Like, Celebrate, Support, Love, Insightful, Funny) **so that** I can provide nuanced feedback beyond a simple "like".
+
+**Acceptance Criteria:**
+- **Given** I see a post in my feed, **When** I click the react button and select a reaction type (e.g., "Celebrate"), **Then** my reaction is recorded and the post's reaction breakdown updates to reflect my choice.
+- **Given** I have already reacted to a post with "Like", **When** I select a different reaction type (e.g., "Insightful"), **Then** my previous reaction is replaced with the new one (upsert behavior) -- only one reaction per user per post is allowed.
+- **Given** I have reacted to a post, **When** I click to remove my reaction, **Then** my reaction is deleted and the post's reaction counts update accordingly.
+- **Given** a post has multiple reactions from different users, **When** I view the post's reaction breakdown, **Then** I see a count per reaction type (e.g., 5 Like, 3 Celebrate, 1 Insightful).
+
+#### US-44: Block a User (EP-11) -- P0-MVP -- IMPLEMENTED
+
+**As** Sophia (Global Tech Professional), **I want** to block another user **so that** they can no longer view my profile or interact with me, and I am protected from unwanted contact.
+
+**Acceptance Criteria:**
+- **Given** I am viewing another user's profile, **When** I choose to block them, **Then** the block is recorded and any existing connection between us is severed immediately.
+- **Given** I have blocked a user, **When** that user tries to view my profile, **Then** they are prevented from seeing my profile information (bidirectional invisibility).
+- **Given** I have blocked a user, **When** I try to view their profile, **Then** I am also prevented from seeing their profile information (bidirectional).
+- **Given** I have blocked a user, **When** I choose to unblock them, **Then** the block is removed and normal visibility is restored. Unblocking is idempotent -- unblocking someone who is not blocked does not cause an error.
+- **Given** I want to review my blocked users, **When** I navigate to my blocked users list, **Then** I see all users I have currently blocked with their display names.
+
+#### US-45: Report Content (EP-11) -- P0-MVP -- IMPLEMENTED
+
+**As** Ahmed, **I want** to report inappropriate content (posts, comments, or user profiles) with a specific reason **so that** platform moderators can review and take action to keep the community safe.
+
+**Acceptance Criteria:**
+- **Given** I encounter inappropriate content, **When** I submit a report specifying the target type (USER, POST, or COMMENT), the target ID, and a reason (SPAM, HARASSMENT, HATE_SPEECH, MISINFORMATION, IMPERSONATION, or OTHER), **Then** the report is created with a PENDING status and an optional description (up to 1000 characters).
+- **Given** a report has been submitted, **When** a moderator reviews it, **Then** the report status progresses through a workflow: PENDING -> REVIEWED -> RESOLVED or DISMISSED.
+- **Given** I submit a report, **When** the system processes it, **Then** my identity (reporter ID) is recorded for accountability, but the reported user is not informed of who reported them.
+
+#### US-46: Follow a User (EP-11) -- P0-MVP -- IMPLEMENTED
+
+**As** Layla (Content Creator), **I want** to follow other users without sending a connection request **so that** I can see their public content in my feed without requiring a bidirectional relationship.
+
+**Acceptance Criteria:**
+- **Given** I am viewing another user's profile, **When** I click "Follow", **Then** a one-way follow relationship is created (I follow them; they do not automatically follow me).
+- **Given** I am following a user, **When** I click "Unfollow", **Then** the follow relationship is removed. Unfollowing someone I do not follow does not cause an error.
+- **Given** I want to see who follows me, **When** I navigate to my followers list, **Then** I see a paginated list of users who follow me (with configurable limit and offset).
+- **Given** I want to see who I follow, **When** I navigate to my following list, **Then** I see all users I currently follow.
+- **Given** I want to check whether I follow a specific user, **When** I query the follow status, **Then** I receive a boolean indicator of whether the follow relationship exists.
+- **Given** I want to see follow metrics for any user, **When** I query their follow counts, **Then** I see both their follower count and following count.
+
+#### US-47: Endorse a Skill (EP-11) -- P0-MVP -- IMPLEMENTED
+
+**As** Ahmed, **I want** to endorse skills listed on another professional's profile **so that** I can vouch for their expertise and increase the credibility of their listed skills.
+
+**Acceptance Criteria:**
+- **Given** I am viewing another user's profile and they have skills listed, **When** I click "Endorse" on a specific skill (identified by profileSkillId), **Then** my endorsement is recorded and the skill's endorsement count increments by 1.
+- **Given** I have already endorsed a skill, **When** I try to endorse the same skill again, **Then** the operation is idempotent -- no duplicate endorsement is created and no error occurs.
+- **Given** I have endorsed a skill, **When** I choose to remove my endorsement, **Then** my endorsement is deleted and the skill's endorsement count decrements by 1. Removing a non-existent endorsement is idempotent.
+- **Given** I try to endorse a skill on my own profile, **When** the system processes the request, **Then** it is rejected with an error -- self-endorsement is not allowed.
+- **Given** a skill has multiple endorsements, **When** I view the endorsers for that skill, **Then** I see a list of all users who endorsed it, with their display names and IDs.
+- **Given** I want to review all endorsements I have given, **When** I query my endorsements, **Then** I see a list of all skills I have endorsed across all profiles, including the skill name and profile owner.
+
 ---
 
 ## 5. MVP Feature Set (Phase 1)
@@ -678,6 +742,11 @@ mindmap
       Admin Dashboard
       Content Report & Moderation
       User Management
+    Social Engagement -- Sprint 2
+      Reactions -- 6 Types
+      Follow System -- One-Way
+      Block/Report System
+      Skill Endorsements
 ```
 
 ### 5.2 MVP Feature Prioritization
@@ -695,6 +764,10 @@ mindmap
 | Job Posting + Apply | P0 | Recruiter value proposition |
 | Admin Dashboard + Moderation | P0 | Platform health from launch |
 | Notification Preferences | P0 | User control prevents churn |
+| Rich Reactions (6 types) | P0 -- **Implemented** | Nuanced engagement replaces binary like; drives content quality signals |
+| Follow System (non-connection) | P0 -- **Implemented** | One-way following enables content creator audience building without mutual connection |
+| Block & Report System | P0 -- **Implemented** | User safety and trust; required for platform health from launch |
+| Skill Endorsements | P0 -- **Implemented** | Social proof of skills; professional credibility; differentiates from generic networking |
 
 ### 5.3 What MVP Does NOT Include
 
@@ -970,6 +1043,133 @@ sequenceDiagram
     WS->>S: Update message status to "Read"
 ```
 
+### 8.7 Block Effect Flow (Sprint 2)
+
+```mermaid
+sequenceDiagram
+    participant A as User A (Blocker)
+    participant FE as Frontend
+    participant API as Fastify API
+    participant DB as PostgreSQL
+
+    A->>FE: Click "Block" on User B's profile
+    FE->>API: POST /api/v1/blocks { userId: B }
+    API->>DB: Check if block already exists
+    DB-->>API: No existing block
+
+    API->>DB: Create block record (A -> B)
+    API->>DB: Check for existing connection (A <-> B)
+    DB-->>API: Connection found (ACCEPTED)
+    API->>DB: Delete connection record
+    Note over API,DB: Connection severed immediately
+
+    DB-->>API: Block created
+    API-->>FE: 201 { success: true, data: { blocked } }
+    FE-->>A: Profile shows "Blocked" state
+
+    Note over A,DB: After blocking, bidirectional invisibility applies
+
+    rect rgb(255, 230, 230)
+        Note over A,DB: User B attempts to view User A's profile
+        API->>DB: Query block table for (B, A) or (A, B)
+        DB-->>API: Block found
+        API-->>FE: 403 Forbidden — profile not accessible
+    end
+
+    rect rgb(230, 255, 230)
+        Note over A,DB: User A decides to unblock User B
+        A->>FE: Click "Unblock" on blocked users list
+        FE->>API: DELETE /api/v1/blocks/:userBId
+        API->>DB: Delete block record
+        DB-->>API: Block removed
+        API-->>FE: 200 { success: true }
+        Note over A,DB: Visibility restored, but connection is NOT restored
+    end
+```
+
+### 8.8 Reaction Flow (Sprint 2)
+
+```mermaid
+stateDiagram-v2
+    [*] --> NoReaction: User views post
+
+    NoReaction --> Reacted: POST /react { type: LIKE }
+    NoReaction --> Reacted: POST /react { type: CELEBRATE }
+    NoReaction --> Reacted: POST /react { type: SUPPORT }
+    NoReaction --> Reacted: POST /react { type: LOVE }
+    NoReaction --> Reacted: POST /react { type: INSIGHTFUL }
+    NoReaction --> Reacted: POST /react { type: FUNNY }
+
+    Reacted --> Reacted: POST /react { type: different }\n(upsert — changes reaction type)
+    Reacted --> NoReaction: DELETE /react\n(removes reaction)
+
+    state Reacted {
+        [*] --> ActiveReaction
+        ActiveReaction: One reaction per user per post\nType: LIKE | CELEBRATE | SUPPORT\nLOVE | INSIGHTFUL | FUNNY
+    }
+```
+
+### 8.9 Follow vs. Connection Model (Sprint 2)
+
+```mermaid
+flowchart LR
+    subgraph Connection["Connection (Bidirectional)"]
+        direction LR
+        CA[User A] <-->|"PENDING → ACCEPTED"| CB[User B]
+        note1["Requires mutual consent\nEnables messaging\nAppears in connection list"]
+    end
+
+    subgraph Follow["Follow (Unidirectional)"]
+        direction LR
+        FA[Follower] -->|"One-way"| FB[Following]
+        note2["No consent needed\nContent appears in feed\nDoes not enable messaging"]
+    end
+
+    subgraph Block["Block (Bidirectional Effect)"]
+        direction LR
+        BA[Blocker] -->|"Blocks"| BB[Blocked]
+        note3["Severs existing connection\nBidirectional invisibility\nPrevents all interaction"]
+    end
+
+    style Connection fill:#2ECC71,color:#fff
+    style Follow fill:#3498DB,color:#fff
+    style Block fill:#E74C3C,color:#fff
+```
+
+### 8.10 Endorsement Flow (Sprint 2)
+
+```mermaid
+sequenceDiagram
+    participant E as Endorser (Ahmed)
+    participant FE as Frontend
+    participant API as Fastify API
+    participant DB as PostgreSQL
+
+    E->>FE: View Sophia's profile, click "Endorse" on TypeScript skill
+    FE->>API: POST /api/v1/endorsements { profileSkillId: "ps-123" }
+    API->>DB: Lookup profileSkill ps-123
+    DB-->>API: ProfileSkill found (owner: Sophia)
+
+    API->>API: Check: Is endorser == profile owner?
+    Note over API: Self-endorsement check — REJECTED if same user
+
+    API->>DB: Upsert endorsement (endorserId: Ahmed, profileSkillId: ps-123)
+    API->>DB: Increment ProfileSkill.endorsementCount
+    DB-->>API: Endorsement created
+
+    API-->>FE: 201 { success: true, data: { endorsement } }
+    FE-->>E: Skill shows updated endorsement count
+
+    Note over E,DB: Later, Ahmed removes his endorsement
+
+    E->>FE: Click "Remove Endorsement" on TypeScript skill
+    FE->>API: DELETE /api/v1/endorsements/ps-123
+    API->>DB: Delete endorsement record
+    API->>DB: Decrement ProfileSkill.endorsementCount
+    DB-->>API: Endorsement removed
+    API-->>FE: 200 { success: true }
+```
+
 ---
 
 ## 9. Functional Requirements (FR-XXX)
@@ -1076,6 +1276,49 @@ sequenceDiagram
 | FR-903 | The admin dashboard shall display: total users, active users (24h), new registrations (7d), pending reports, flagged content count. | P0 | US-34 |
 | FR-904 | The moderation queue shall allow admins to: dismiss report, warn user, remove content, or ban user. | P0 | US-34 |
 
+### FR-1000: Reactions (Sprint 2 -- Implemented)
+
+| ID | Requirement | Priority | Story Ref |
+|----|-------------|----------|-----------|
+| FR-1001 | The system shall support 6 reaction types on posts: LIKE, CELEBRATE, SUPPORT, LOVE, INSIGHTFUL, FUNNY. | P0 | US-43 |
+| FR-1002 | The system shall enforce a maximum of one reaction per user per post via a unique constraint on (postId, userId). | P0 | US-43 |
+| FR-1003 | The system shall support upsert behavior: re-reacting to a post with a different type replaces the previous reaction. | P0 | US-43 |
+| FR-1004 | The system shall support unreacting: removing a reaction deletes the record entirely. | P0 | US-43 |
+| FR-1005 | The system shall provide a reaction breakdown endpoint that returns a count per reaction type for a given post. | P0 | US-43 |
+
+### FR-1100: Block & Report (Sprint 2 -- Implemented)
+
+| ID | Requirement | Priority | Story Ref |
+|----|-------------|----------|-----------|
+| FR-1101 | The system shall allow any user to block another user, creating a record in the blocks table with a unique constraint on (blockerId, blockedId). | P0 | US-44 |
+| FR-1102 | When a user blocks another, the system shall automatically sever any existing connection between them. | P0 | US-44 |
+| FR-1103 | The system shall enforce bidirectional invisibility for blocked pairs: neither user can view the other's profile. | P0 | US-44 |
+| FR-1104 | The system shall support idempotent unblocking: unblocking a user who is not blocked shall not cause an error. | P0 | US-44 |
+| FR-1105 | The system shall provide an endpoint to list all users the current user has blocked. | P0 | US-44 |
+| FR-1106 | The system shall allow users to report content (target types: USER, POST, COMMENT) with a reason enum (SPAM, HARASSMENT, HATE_SPEECH, MISINFORMATION, IMPERSONATION, OTHER) and an optional description (max 1000 chars). | P0 | US-45 |
+| FR-1107 | Reports shall follow a status workflow: PENDING -> REVIEWED -> RESOLVED or DISMISSED. | P0 | US-45 |
+
+### FR-1200: Follow System (Sprint 2 -- Implemented)
+
+| ID | Requirement | Priority | Story Ref |
+|----|-------------|----------|-----------|
+| FR-1201 | The system shall support one-way follow relationships via a follows table with a unique constraint on (followerId, followingId). | P0 | US-46 |
+| FR-1202 | The system shall support unfollowing, which deletes the follow record. Unfollowing a user who is not followed shall not cause an error. | P0 | US-46 |
+| FR-1203 | The system shall provide paginated follower and following lists with configurable limit and offset. | P0 | US-46 |
+| FR-1204 | The system shall provide a follow status check endpoint returning a boolean indicator. | P0 | US-46 |
+| FR-1205 | The system shall provide a follow counts endpoint returning both follower count and following count for any user. | P0 | US-46 |
+
+### FR-1300: Endorsements (Sprint 2 -- Implemented)
+
+| ID | Requirement | Priority | Story Ref |
+|----|-------------|----------|-----------|
+| FR-1301 | The system shall allow users to endorse a specific skill on another user's profile, identified by profileSkillId, with a unique constraint on (endorserId, profileSkillId). | P0 | US-47 |
+| FR-1302 | The system shall prevent self-endorsement: a user cannot endorse skills on their own profile. | P0 | US-47 |
+| FR-1303 | Endorsement operations shall be idempotent: endorsing an already-endorsed skill or removing a non-existent endorsement shall not cause errors. | P0 | US-47 |
+| FR-1304 | The system shall track endorsement count on the ProfileSkill model, incrementing on endorse and decrementing on removal. | P0 | US-47 |
+| FR-1305 | The system shall provide an endpoint to list all endorsers for a specific skill (by profileSkillId). | P0 | US-47 |
+| FR-1306 | The system shall provide an endpoint to list all endorsements made by the current user. | P0 | US-47 |
+
 ---
 
 ## 10. Non-Functional Requirements (NFR-XXX)
@@ -1163,6 +1406,7 @@ erDiagram
     USER ||--o{ POST : creates
     USER ||--o{ COMMENT : writes
     USER ||--o{ LIKE : gives
+    USER ||--o{ REACTION : reacts
     USER ||--o{ SHARE : makes
     USER ||--o{ MESSAGE : sends
     USER ||--o{ CONVERSATION_MEMBER : participates_in
@@ -1170,13 +1414,23 @@ erDiagram
     USER ||--o{ NOTIFICATION : receives
     USER ||--o{ CONTENT_REPORT : submits
     USER ||--o{ HASHTAG_FOLLOW : follows
+    USER ||--o{ BLOCK : blocks_given
+    USER ||--o{ BLOCK : blocks_received
+    USER ||--o{ REPORT : reports
+    USER ||--o{ FOLLOW : follows_given
+    USER ||--o{ FOLLOW : follows_received
+    USER ||--o{ ENDORSEMENT : endorses
 
     PROFILE ||--o{ EXPERIENCE : contains
     PROFILE ||--o{ EDUCATION : contains
-    PROFILE ||--o{ SKILL : lists
+    PROFILE ||--o{ PROFILE_SKILL : lists
+
+    PROFILE_SKILL }o--|| SKILL : references
+    PROFILE_SKILL ||--o{ ENDORSEMENT : endorsed_by
 
     POST ||--o{ COMMENT : has
     POST ||--o{ LIKE : has
+    POST ||--o{ REACTION : has
     POST ||--o{ SHARE : has
     POST ||--o{ POST_IMAGE : has
     POST ||--o{ POST_HASHTAG : tagged_with
@@ -1196,6 +1450,54 @@ erDiagram
 
     CONTENT_REPORT }o--|| POST : reports_post
     CONTENT_REPORT }o--o| COMMENT : reports_comment
+
+    REACTION {
+        UUID id PK
+        UUID postId FK
+        UUID userId FK
+        ReactionType type "LIKE|CELEBRATE|SUPPORT|LOVE|INSIGHTFUL|FUNNY"
+        TIMESTAMP createdAt
+    }
+
+    BLOCK {
+        UUID id PK
+        UUID blockerId FK
+        UUID blockedId FK
+        TIMESTAMP createdAt
+    }
+
+    REPORT {
+        UUID id PK
+        UUID reporterId FK
+        ReportTargetType targetType "USER|POST|COMMENT"
+        UUID targetId
+        ReportReason reason "SPAM|HARASSMENT|HATE_SPEECH|MISINFORMATION|IMPERSONATION|OTHER"
+        VARCHAR description
+        ReportStatus status "PENDING|REVIEWED|RESOLVED|DISMISSED"
+        TIMESTAMP createdAt
+    }
+
+    FOLLOW {
+        UUID id PK
+        UUID followerId FK
+        UUID followingId FK
+        TIMESTAMP createdAt
+    }
+
+    ENDORSEMENT {
+        UUID id PK
+        UUID endorserId FK
+        UUID profileSkillId FK
+        TIMESTAMP createdAt
+    }
+
+    PROFILE_SKILL {
+        UUID id PK
+        UUID profileId FK
+        UUID skillId FK
+        INT endorsementCount "Default 0"
+        TIMESTAMP createdAt
+    }
 ```
 
 ### 11.2 Core Entity Details
@@ -1299,6 +1601,77 @@ erDiagram
 | read_at | TIMESTAMP | NULLABLE |
 | created_at | TIMESTAMP | DEFAULT NOW() |
 
+#### Reaction (Sprint 2 -- Implemented)
+
+| Field | Type | Constraints |
+|-------|------|-------------|
+| id | UUID | PK, auto-generated |
+| post_id | UUID | FK -> Post, NOT NULL |
+| user_id | UUID | FK -> User, NOT NULL |
+| type | ENUM(LIKE, CELEBRATE, SUPPORT, LOVE, INSIGHTFUL, FUNNY) | NOT NULL |
+| created_at | TIMESTAMP | DEFAULT NOW() |
+| | | UNIQUE(post_id, user_id) |
+| | | INDEX(post_id) |
+
+#### Block (Sprint 2 -- Implemented)
+
+| Field | Type | Constraints |
+|-------|------|-------------|
+| id | UUID | PK, auto-generated |
+| blocker_id | UUID | FK -> User, NOT NULL |
+| blocked_id | UUID | FK -> User, NOT NULL |
+| created_at | TIMESTAMP | DEFAULT NOW() |
+| | | UNIQUE(blocker_id, blocked_id) |
+| | | INDEX(blocker_id), INDEX(blocked_id) |
+
+#### Report (Sprint 2 -- Implemented)
+
+| Field | Type | Constraints |
+|-------|------|-------------|
+| id | UUID | PK, auto-generated |
+| reporter_id | UUID | FK -> User, NOT NULL |
+| target_type | ENUM(USER, POST, COMMENT) | NOT NULL |
+| target_id | UUID | NOT NULL |
+| reason | ENUM(SPAM, HARASSMENT, HATE_SPEECH, MISINFORMATION, IMPERSONATION, OTHER) | NOT NULL |
+| description | VARCHAR(1000) | NULLABLE |
+| status | ENUM(PENDING, REVIEWED, RESOLVED, DISMISSED) | DEFAULT PENDING |
+| created_at | TIMESTAMP | DEFAULT NOW() |
+| updated_at | TIMESTAMP | AUTO-UPDATE |
+| | | INDEX(reporter_id), INDEX(target_type, target_id) |
+
+#### Follow (Sprint 2 -- Implemented)
+
+| Field | Type | Constraints |
+|-------|------|-------------|
+| id | UUID | PK, auto-generated |
+| follower_id | UUID | FK -> User, NOT NULL |
+| following_id | UUID | FK -> User, NOT NULL |
+| created_at | TIMESTAMP | DEFAULT NOW() |
+| | | UNIQUE(follower_id, following_id) |
+| | | INDEX(follower_id), INDEX(following_id) |
+
+#### Endorsement (Sprint 2 -- Implemented)
+
+| Field | Type | Constraints |
+|-------|------|-------------|
+| id | UUID | PK, auto-generated |
+| endorser_id | UUID | FK -> User, NOT NULL |
+| profile_skill_id | UUID | FK -> ProfileSkill, NOT NULL |
+| created_at | TIMESTAMP | DEFAULT NOW() |
+| | | UNIQUE(endorser_id, profile_skill_id) |
+| | | INDEX(profile_skill_id) |
+
+#### ProfileSkill (Updated for Endorsements)
+
+| Field | Type | Constraints |
+|-------|------|-------------|
+| id | UUID | PK, auto-generated |
+| profile_id | UUID | FK -> Profile, NOT NULL |
+| skill_id | UUID | FK -> Skill, NOT NULL |
+| endorsement_count | INTEGER | DEFAULT 0 |
+| created_at | TIMESTAMP | DEFAULT NOW() |
+| | | UNIQUE(profile_id, skill_id) |
+
 ---
 
 ## 12. API Contracts
@@ -1321,6 +1694,9 @@ graph TD
         MSG[Messaging Module<br/>/api/messages/*]
         ADMIN[Admin Module<br/>/api/admin/*]
         AI_MOD[AI Module<br/>/api/ai/*]
+        BLOCKS[Block/Report Module<br/>/api/v1/blocks/*<br/>/api/v1/reports/*]
+        FOLLOWS[Follow Module<br/>/api/v1/follows/*]
+        ENDORSE[Endorsement Module<br/>/api/v1/endorsements/*]
     end
 
     subgraph Data["Data Layer"]
@@ -1344,6 +1720,9 @@ graph TD
     WEB --> MSG
     WEB --> ADMIN
     WEB --> AI_MOD
+    WEB --> BLOCKS
+    WEB --> FOLLOWS
+    WEB --> ENDORSE
 
     AUTH --> DB
     AUTH --> REDIS
@@ -1361,6 +1740,9 @@ graph TD
     ADMIN --> DB
     AI_MOD --> DB
     AI_MOD --> CLAUDE
+    BLOCKS --> DB
+    FOLLOWS --> DB
+    ENDORSE --> DB
 
     style Client fill:#2ECC71,color:#fff
     style API fill:#3498DB,color:#fff
@@ -1474,6 +1856,48 @@ graph TD
 | POST | `/api/admin/reports/:id/action` | Take action on report | Admin |
 | GET | `/api/admin/users` | User management list | Admin |
 | PATCH | `/api/admin/users/:id` | Update user (suspend/ban) | Admin |
+
+#### Reactions (Sprint 2 -- Implemented)
+
+| Method | Endpoint | Description | Auth |
+|--------|----------|-------------|------|
+| POST | `/api/v1/feed/posts/:id/react` | React to a post (body: `{ type }`) | Authenticated |
+| DELETE | `/api/v1/feed/posts/:id/react` | Remove reaction from a post | Authenticated |
+| GET | `/api/v1/feed/posts/:id/reactions` | Get reaction breakdown for a post | Authenticated |
+
+#### Blocks (Sprint 2 -- Implemented)
+
+| Method | Endpoint | Description | Auth |
+|--------|----------|-------------|------|
+| POST | `/api/v1/blocks` | Block a user (body: `{ userId }`) | Authenticated |
+| DELETE | `/api/v1/blocks/:userId` | Unblock a user | Authenticated |
+| GET | `/api/v1/blocks` | List blocked users | Authenticated |
+
+#### Reports (Sprint 2 -- Implemented)
+
+| Method | Endpoint | Description | Auth |
+|--------|----------|-------------|------|
+| POST | `/api/v1/reports` | Report content (body: `{ targetType, targetId, reason, description? }`) | Authenticated |
+
+#### Follows (Sprint 2 -- Implemented)
+
+| Method | Endpoint | Description | Auth |
+|--------|----------|-------------|------|
+| POST | `/api/v1/follows` | Follow a user (body: `{ userId }`) | Authenticated |
+| DELETE | `/api/v1/follows/:userId` | Unfollow a user | Authenticated |
+| GET | `/api/v1/follows/followers` | List followers (query: `limit`, `offset`) | Authenticated |
+| GET | `/api/v1/follows/following` | List users I follow | Authenticated |
+| GET | `/api/v1/follows/:userId/status` | Check if I follow a user | Authenticated |
+| GET | `/api/v1/follows/:userId/counts` | Get follower/following counts | Authenticated |
+
+#### Endorsements (Sprint 2 -- Implemented)
+
+| Method | Endpoint | Description | Auth |
+|--------|----------|-------------|------|
+| POST | `/api/v1/endorsements` | Endorse a skill (body: `{ profileSkillId }`) | Authenticated |
+| DELETE | `/api/v1/endorsements/:profileSkillId` | Remove endorsement | Authenticated |
+| GET | `/api/v1/endorsements/skill/:profileSkillId` | List endorsers for a skill | Authenticated |
+| GET | `/api/v1/endorsements/by-me` | List my endorsements | Authenticated |
 
 ### 12.3 API Response Format
 
@@ -1673,6 +2097,10 @@ graph TD
 | **CRDT** | Conflict-free Replicated Data Type (for real-time collaboration) |
 | **ActivityPub** | W3C protocol for decentralized social networking |
 | **RBAC** | Role-Based Access Control |
+| **Reaction** | An expressive engagement on a post (one of 6 types: Like, Celebrate, Support, Love, Insightful, Funny); replaces binary Like |
+| **Endorsement** | A vouching action where one user validates another user's listed skill, incrementing the skill's endorsement count |
+| **Follow** | A one-way subscription relationship where a user can follow another to see their content without mutual consent |
+| **Block** | A safety mechanism where a user prevents bidirectional visibility and interaction with another user |
 
 ---
 
@@ -1681,3 +2109,4 @@ graph TD
 | Version | Date | Author | Changes |
 |---------|------|--------|---------|
 | 1.0 | 2026-02-20 | Product Manager (AI Agent) | Initial PRD creation |
+| 1.1 | 2026-02-24 | Product Manager (AI Agent) | Added Sprint 2 features: Reactions System (US-43, FR-1000), Block/Report System (US-44/45, FR-1100), Follow System (US-46, FR-1200), Endorsement System (US-47, FR-1300). Updated ER diagram, API contracts, C4 container diagram, epic dependency map, and feature prioritization table. Added sequence diagrams for block effect flow, reaction state machine, endorsement flow, and follow vs. connection comparison. |

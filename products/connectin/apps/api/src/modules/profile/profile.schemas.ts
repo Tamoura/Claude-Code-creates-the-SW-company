@@ -25,6 +25,11 @@ export const updateProfileSchema = z.object({
     .optional(),
   summaryAr: z.string().transform(stripHtml).optional(),
   summaryEn: z.string().transform(stripHtml).optional(),
+  avatarUrl: z
+    .string()
+    .max(500, 'Avatar URL must be 500 characters or fewer')
+    .url('Must be a valid URL')
+    .optional(),
   location: z
     .string()
     .max(100, 'Location must be 100 characters or fewer')
@@ -194,3 +199,13 @@ export type AddEducationInput = z.infer<
 export type UpdateEducationInput = z.infer<
   typeof updateEducationSchema
 >;
+
+export const openToWorkSchema = z.object({
+  openToWork: z.boolean(),
+  visibility: z
+    .enum(['PUBLIC', 'RECRUITERS_ONLY'])
+    .optional()
+    .default('RECRUITERS_ONLY'),
+});
+
+export type OpenToWorkInput = z.infer<typeof openToWorkSchema>;

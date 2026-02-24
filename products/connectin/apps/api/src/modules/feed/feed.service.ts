@@ -1,4 +1,8 @@
-import { PrismaClient, TextDirection } from '@prisma/client';
+import {
+  PrismaClient,
+  TextDirection,
+  ReactionType,
+} from '@prisma/client';
 import { NotFoundError } from '../../lib/errors';
 import {
   CreatePostInput,
@@ -414,5 +418,95 @@ export class FeedService {
       textDirection: comment.textDirection,
       createdAt: comment.createdAt,
     };
+  }
+
+  private emptyReactions() {
+    return {
+      LIKE: 0,
+      CELEBRATE: 0,
+      SUPPORT: 0,
+      LOVE: 0,
+      INSIGHTFUL: 0,
+      FUNNY: 0,
+    };
+  }
+
+  private async getReactionCounts(postId: string) {
+    const counts = await this.prisma.reaction.groupBy({
+      by: ['type'],
+      where: { postId },
+      _count: true,
+    });
+    const result = this.emptyReactions();
+    for (const c of counts) {
+      result[c.type] = c._count;
+    }
+    return result;
+  }
+
+  async reactToPost(
+    postId: string,
+    userId: string,
+    type: ReactionType
+  ) {
+    const post = await this.prisma.post.findUnique({
+      where: { id: postId },
+      select: { id: true, isDeleted: true },
+    });
+
+    if (!post || post.isDeleted) {
+      throw new NotFoundError('Post not found');
+    }
+
+    await this.prisma.reaction.upsert({
+      where: {
+        postId_userId: { postId, userId },
+      },
+      create: { postId, userId, type },
+      update: { type },
+    });
+
+    const reactions = await this.getReactionCounts(postId);
+
+    return {
+      reacted: true,
+      type,
+      reactions,
+    };
+  }
+
+  async unreactToPost(postId: string, userId: string) {
+    const post = await this.prisma.post.findUnique({
+      where: { id: postId },
+      select: { id: true, isDeleted: true },
+    });
+
+    if (!post || post.isDeleted) {
+      throw new NotFoundError('Post not found');
+    }
+
+    await this.prisma.reaction.deleteMany({
+      where: { postId, userId },
+    });
+
+    const reactions = await this.getReactionCounts(postId);
+
+    return {
+      reacted: false,
+      reactions,
+    };
+  }
+
+  async getPostReactions(postId: string) {
+    const post = await this.prisma.post.findUnique({
+      where: { id: postId },
+      select: { id: true, isDeleted: true },
+    });
+
+    if (!post || post.isDeleted) {
+      throw new NotFoundError('Post not found');
+    }
+
+    return this.getReactionCounts(postId);
   }
 }

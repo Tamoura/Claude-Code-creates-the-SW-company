@@ -694,4 +694,456 @@ describe('Feed Module', () => {
       expect(body.data[1].content).toBe('Second comment');
     });
   });
+
+  describe('POST /api/v1/feed/posts/:id/react (Reactions)', () => {
+    it('reacts to a post with default LIKE', async () => {
+      const app = await getApp();
+      const user = await createTestUser(app);
+
+      const postRes = await app.inject({
+        method: 'POST',
+        url: '/api/v1/feed/posts',
+        headers: authHeaders(user.accessToken),
+        payload: { content: 'React to me!' },
+      });
+      const postId = JSON.parse(postRes.body).data.id;
+
+      const res = await app.inject({
+        method: 'POST',
+        url: `/api/v1/feed/posts/${postId}/react`,
+        headers: authHeaders(user.accessToken),
+        payload: { type: 'LIKE' },
+      });
+
+      expect(res.statusCode).toBe(200);
+      const body = JSON.parse(res.body);
+      expect(body.success).toBe(true);
+      expect(body.data.reacted).toBe(true);
+      expect(body.data.type).toBe('LIKE');
+      expect(body.data.reactions.LIKE).toBe(1);
+    });
+
+    it('reacts with CELEBRATE type', async () => {
+      const app = await getApp();
+      const user = await createTestUser(app);
+
+      const postRes = await app.inject({
+        method: 'POST',
+        url: '/api/v1/feed/posts',
+        headers: authHeaders(user.accessToken),
+        payload: { content: 'Celebrate me!' },
+      });
+      const postId = JSON.parse(postRes.body).data.id;
+
+      const res = await app.inject({
+        method: 'POST',
+        url: `/api/v1/feed/posts/${postId}/react`,
+        headers: authHeaders(user.accessToken),
+        payload: { type: 'CELEBRATE' },
+      });
+
+      expect(res.statusCode).toBe(200);
+      const body = JSON.parse(res.body);
+      expect(body.data.reacted).toBe(true);
+      expect(body.data.type).toBe('CELEBRATE');
+      expect(body.data.reactions.CELEBRATE).toBe(1);
+      expect(body.data.reactions.LIKE).toBe(0);
+    });
+
+    it('reacts with SUPPORT type', async () => {
+      const app = await getApp();
+      const user = await createTestUser(app);
+
+      const postRes = await app.inject({
+        method: 'POST',
+        url: '/api/v1/feed/posts',
+        headers: authHeaders(user.accessToken),
+        payload: { content: 'Support me!' },
+      });
+      const postId = JSON.parse(postRes.body).data.id;
+
+      const res = await app.inject({
+        method: 'POST',
+        url: `/api/v1/feed/posts/${postId}/react`,
+        headers: authHeaders(user.accessToken),
+        payload: { type: 'SUPPORT' },
+      });
+
+      expect(res.statusCode).toBe(200);
+      const body = JSON.parse(res.body);
+      expect(body.data.type).toBe('SUPPORT');
+      expect(body.data.reactions.SUPPORT).toBe(1);
+    });
+
+    it('reacts with LOVE type', async () => {
+      const app = await getApp();
+      const user = await createTestUser(app);
+
+      const postRes = await app.inject({
+        method: 'POST',
+        url: '/api/v1/feed/posts',
+        headers: authHeaders(user.accessToken),
+        payload: { content: 'Love me!' },
+      });
+      const postId = JSON.parse(postRes.body).data.id;
+
+      const res = await app.inject({
+        method: 'POST',
+        url: `/api/v1/feed/posts/${postId}/react`,
+        headers: authHeaders(user.accessToken),
+        payload: { type: 'LOVE' },
+      });
+
+      expect(res.statusCode).toBe(200);
+      const body = JSON.parse(res.body);
+      expect(body.data.type).toBe('LOVE');
+      expect(body.data.reactions.LOVE).toBe(1);
+    });
+
+    it('reacts with INSIGHTFUL type', async () => {
+      const app = await getApp();
+      const user = await createTestUser(app);
+
+      const postRes = await app.inject({
+        method: 'POST',
+        url: '/api/v1/feed/posts',
+        headers: authHeaders(user.accessToken),
+        payload: { content: 'Insightful post!' },
+      });
+      const postId = JSON.parse(postRes.body).data.id;
+
+      const res = await app.inject({
+        method: 'POST',
+        url: `/api/v1/feed/posts/${postId}/react`,
+        headers: authHeaders(user.accessToken),
+        payload: { type: 'INSIGHTFUL' },
+      });
+
+      expect(res.statusCode).toBe(200);
+      const body = JSON.parse(res.body);
+      expect(body.data.type).toBe('INSIGHTFUL');
+      expect(body.data.reactions.INSIGHTFUL).toBe(1);
+    });
+
+    it('reacts with FUNNY type', async () => {
+      const app = await getApp();
+      const user = await createTestUser(app);
+
+      const postRes = await app.inject({
+        method: 'POST',
+        url: '/api/v1/feed/posts',
+        headers: authHeaders(user.accessToken),
+        payload: { content: 'Funny post!' },
+      });
+      const postId = JSON.parse(postRes.body).data.id;
+
+      const res = await app.inject({
+        method: 'POST',
+        url: `/api/v1/feed/posts/${postId}/react`,
+        headers: authHeaders(user.accessToken),
+        payload: { type: 'FUNNY' },
+      });
+
+      expect(res.statusCode).toBe(200);
+      const body = JSON.parse(res.body);
+      expect(body.data.type).toBe('FUNNY');
+      expect(body.data.reactions.FUNNY).toBe(1);
+    });
+
+    it('changes reaction type on re-react', async () => {
+      const app = await getApp();
+      const user = await createTestUser(app);
+
+      const postRes = await app.inject({
+        method: 'POST',
+        url: '/api/v1/feed/posts',
+        headers: authHeaders(user.accessToken),
+        payload: { content: 'Change reaction!' },
+      });
+      const postId = JSON.parse(postRes.body).data.id;
+
+      // React with LIKE first
+      await app.inject({
+        method: 'POST',
+        url: `/api/v1/feed/posts/${postId}/react`,
+        headers: authHeaders(user.accessToken),
+        payload: { type: 'LIKE' },
+      });
+
+      // Change to CELEBRATE
+      const res = await app.inject({
+        method: 'POST',
+        url: `/api/v1/feed/posts/${postId}/react`,
+        headers: authHeaders(user.accessToken),
+        payload: { type: 'CELEBRATE' },
+      });
+
+      expect(res.statusCode).toBe(200);
+      const body = JSON.parse(res.body);
+      expect(body.data.reacted).toBe(true);
+      expect(body.data.type).toBe('CELEBRATE');
+      expect(body.data.reactions.CELEBRATE).toBe(1);
+      expect(body.data.reactions.LIKE).toBe(0);
+    });
+
+    it('returns 404 for non-existent post', async () => {
+      const app = await getApp();
+      const user = await createTestUser(app);
+
+      const res = await app.inject({
+        method: 'POST',
+        url: '/api/v1/feed/posts/00000000-0000-0000-0000-000000000000/react',
+        headers: authHeaders(user.accessToken),
+        payload: { type: 'LIKE' },
+      });
+
+      expect(res.statusCode).toBe(404);
+    });
+
+    it('returns 401 for unauthenticated request', async () => {
+      const app = await getApp();
+      const user = await createTestUser(app);
+
+      const postRes = await app.inject({
+        method: 'POST',
+        url: '/api/v1/feed/posts',
+        headers: authHeaders(user.accessToken),
+        payload: { content: 'Auth test' },
+      });
+      const postId = JSON.parse(postRes.body).data.id;
+
+      const res = await app.inject({
+        method: 'POST',
+        url: `/api/v1/feed/posts/${postId}/react`,
+        payload: { type: 'LIKE' },
+      });
+
+      expect(res.statusCode).toBe(401);
+    });
+
+    it('returns 422 for invalid reaction type', async () => {
+      const app = await getApp();
+      const user = await createTestUser(app);
+
+      const postRes = await app.inject({
+        method: 'POST',
+        url: '/api/v1/feed/posts',
+        headers: authHeaders(user.accessToken),
+        payload: { content: 'Invalid reaction test' },
+      });
+      const postId = JSON.parse(postRes.body).data.id;
+
+      const res = await app.inject({
+        method: 'POST',
+        url: `/api/v1/feed/posts/${postId}/react`,
+        headers: authHeaders(user.accessToken),
+        payload: { type: 'INVALID_TYPE' },
+      });
+
+      expect(res.statusCode).toBe(422);
+    });
+  });
+
+  describe('DELETE /api/v1/feed/posts/:id/react (Unreact)', () => {
+    it('removes an existing reaction', async () => {
+      const app = await getApp();
+      const user = await createTestUser(app);
+
+      const postRes = await app.inject({
+        method: 'POST',
+        url: '/api/v1/feed/posts',
+        headers: authHeaders(user.accessToken),
+        payload: { content: 'Unreact me!' },
+      });
+      const postId = JSON.parse(postRes.body).data.id;
+
+      // React first
+      await app.inject({
+        method: 'POST',
+        url: `/api/v1/feed/posts/${postId}/react`,
+        headers: authHeaders(user.accessToken),
+        payload: { type: 'LIKE' },
+      });
+
+      // Unreact
+      const res = await app.inject({
+        method: 'DELETE',
+        url: `/api/v1/feed/posts/${postId}/react`,
+        headers: authHeaders(user.accessToken),
+      });
+
+      expect(res.statusCode).toBe(200);
+      const body = JSON.parse(res.body);
+      expect(body.success).toBe(true);
+      expect(body.data.reacted).toBe(false);
+      expect(body.data.reactions.LIKE).toBe(0);
+    });
+
+    it('is idempotent (unreact when no reaction exists)', async () => {
+      const app = await getApp();
+      const user = await createTestUser(app);
+
+      const postRes = await app.inject({
+        method: 'POST',
+        url: '/api/v1/feed/posts',
+        headers: authHeaders(user.accessToken),
+        payload: { content: 'No reaction here' },
+      });
+      const postId = JSON.parse(postRes.body).data.id;
+
+      const res = await app.inject({
+        method: 'DELETE',
+        url: `/api/v1/feed/posts/${postId}/react`,
+        headers: authHeaders(user.accessToken),
+      });
+
+      expect(res.statusCode).toBe(200);
+      const body = JSON.parse(res.body);
+      expect(body.data.reacted).toBe(false);
+    });
+
+    it('returns 404 for non-existent post', async () => {
+      const app = await getApp();
+      const user = await createTestUser(app);
+
+      const res = await app.inject({
+        method: 'DELETE',
+        url: '/api/v1/feed/posts/00000000-0000-0000-0000-000000000000/react',
+        headers: authHeaders(user.accessToken),
+      });
+
+      expect(res.statusCode).toBe(404);
+    });
+
+    it('returns 401 for unauthenticated request', async () => {
+      const app = await getApp();
+      const user = await createTestUser(app);
+
+      const postRes = await app.inject({
+        method: 'POST',
+        url: '/api/v1/feed/posts',
+        headers: authHeaders(user.accessToken),
+        payload: { content: 'Auth unreact test' },
+      });
+      const postId = JSON.parse(postRes.body).data.id;
+
+      const res = await app.inject({
+        method: 'DELETE',
+        url: `/api/v1/feed/posts/${postId}/react`,
+      });
+
+      expect(res.statusCode).toBe(401);
+    });
+  });
+
+  describe('GET /api/v1/feed/posts/:id/reactions', () => {
+    it('returns reaction breakdown for a post', async () => {
+      const app = await getApp();
+      const user1 = await createTestUser(app, {
+        email: 'react-user1@test.com',
+      });
+      const user2 = await createTestUser(app, {
+        email: 'react-user2@test.com',
+      });
+
+      const postRes = await app.inject({
+        method: 'POST',
+        url: '/api/v1/feed/posts',
+        headers: authHeaders(user1.accessToken),
+        payload: { content: 'Reaction breakdown!' },
+      });
+      const postId = JSON.parse(postRes.body).data.id;
+
+      // User1 reacts LIKE, User2 reacts CELEBRATE
+      await app.inject({
+        method: 'POST',
+        url: `/api/v1/feed/posts/${postId}/react`,
+        headers: authHeaders(user1.accessToken),
+        payload: { type: 'LIKE' },
+      });
+      await app.inject({
+        method: 'POST',
+        url: `/api/v1/feed/posts/${postId}/react`,
+        headers: authHeaders(user2.accessToken),
+        payload: { type: 'CELEBRATE' },
+      });
+
+      const res = await app.inject({
+        method: 'GET',
+        url: `/api/v1/feed/posts/${postId}/reactions`,
+        headers: authHeaders(user1.accessToken),
+      });
+
+      expect(res.statusCode).toBe(200);
+      const body = JSON.parse(res.body);
+      expect(body.success).toBe(true);
+      expect(body.data.LIKE).toBe(1);
+      expect(body.data.CELEBRATE).toBe(1);
+      expect(body.data.SUPPORT).toBe(0);
+      expect(body.data.LOVE).toBe(0);
+      expect(body.data.INSIGHTFUL).toBe(0);
+      expect(body.data.FUNNY).toBe(0);
+    });
+
+    it('returns all zeros for a post with no reactions', async () => {
+      const app = await getApp();
+      const user = await createTestUser(app);
+
+      const postRes = await app.inject({
+        method: 'POST',
+        url: '/api/v1/feed/posts',
+        headers: authHeaders(user.accessToken),
+        payload: { content: 'No reactions' },
+      });
+      const postId = JSON.parse(postRes.body).data.id;
+
+      const res = await app.inject({
+        method: 'GET',
+        url: `/api/v1/feed/posts/${postId}/reactions`,
+        headers: authHeaders(user.accessToken),
+      });
+
+      expect(res.statusCode).toBe(200);
+      const body = JSON.parse(res.body);
+      expect(body.data.LIKE).toBe(0);
+      expect(body.data.CELEBRATE).toBe(0);
+      expect(body.data.SUPPORT).toBe(0);
+      expect(body.data.LOVE).toBe(0);
+      expect(body.data.INSIGHTFUL).toBe(0);
+      expect(body.data.FUNNY).toBe(0);
+    });
+
+    it('returns 404 for non-existent post', async () => {
+      const app = await getApp();
+      const user = await createTestUser(app);
+
+      const res = await app.inject({
+        method: 'GET',
+        url: '/api/v1/feed/posts/00000000-0000-0000-0000-000000000000/reactions',
+        headers: authHeaders(user.accessToken),
+      });
+
+      expect(res.statusCode).toBe(404);
+    });
+
+    it('returns 401 for unauthenticated request', async () => {
+      const app = await getApp();
+      const user = await createTestUser(app);
+
+      const postRes = await app.inject({
+        method: 'POST',
+        url: '/api/v1/feed/posts',
+        headers: authHeaders(user.accessToken),
+        payload: { content: 'Auth reactions test' },
+      });
+      const postId = JSON.parse(postRes.body).data.id;
+
+      const res = await app.inject({
+        method: 'GET',
+        url: `/api/v1/feed/posts/${postId}/reactions`,
+      });
+
+      expect(res.statusCode).toBe(401);
+    });
+  });
 });
