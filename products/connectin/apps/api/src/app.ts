@@ -42,6 +42,8 @@ import certificationRoutes from './modules/certification/certification.routes';
 import recommendationRoutes from './modules/recommendation/recommendation.routes';
 import jobAlertRoutes from './modules/job-alert/job-alert.routes';
 import groupMessagingRoutes from './modules/messaging/group-messaging.routes';
+import advancedSearchRoutes from './modules/search/advanced-search.routes';
+import salaryInsightsRoutes from './modules/salary/salary-insights.routes';
 
 export interface BuildAppOptions {
   skipRateLimit?: boolean;
@@ -166,6 +168,12 @@ export async function buildApp(
   });
   await app.register(groupMessagingRoutes, {
     prefix: '/api/v1/conversations/groups',
+  });
+  await app.register(advancedSearchRoutes, {
+    prefix: '/api/v1/search/advanced',
+  });
+  await app.register(salaryInsightsRoutes, {
+    prefix: '/api/v1/salary-insights',
   });
 
   // Session cleanup — run hourly in non-test environments

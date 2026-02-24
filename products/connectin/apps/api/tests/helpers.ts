@@ -42,6 +42,9 @@ export async function cleanDatabase(): Promise<void> {
   await db.postView.deleteMany();
   await db.profileView.deleteMany();
   await db.bookmark.deleteMany();
+  await db.message.deleteMany();
+  await db.conversationMember.deleteMany();
+  await db.conversation.deleteMany();
   await db.postMedia.deleteMany();
   await db.media.deleteMany();
   await db.mention.deleteMany();
@@ -54,9 +57,6 @@ export async function cleanDatabase(): Promise<void> {
   await db.report.deleteMany();
   await db.follow.deleteMany();
   await db.block.deleteMany();
-  await db.message.deleteMany();
-  await db.conversationMember.deleteMany();
-  await db.conversation.deleteMany();
   await db.notification.deleteMany();
   await db.notificationPreference.deleteMany();
   await db.like.deleteMany();

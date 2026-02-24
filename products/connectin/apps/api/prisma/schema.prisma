@@ -535,12 +535,14 @@ model Message {
   conversationId String    @map("conversation_id")
   senderId       String    @map("sender_id")
   content        String    @db.Text
+  mediaId        String?   @map("media_id")
   isDeleted      Boolean   @default(false) @map("is_deleted")
   readAt         DateTime? @map("read_at")
   createdAt      DateTime  @default(now()) @map("created_at")
 
   conversation Conversation @relation(fields: [conversationId], references: [id], onDelete: Cascade)
   sender       User         @relation(fields: [senderId], references: [id], onDelete: Cascade)
+  media        Media?       @relation(fields: [mediaId], references: [id])
 
   @@index([conversationId, createdAt(sort: Desc)])
   @@index([senderId])
@@ -801,6 +803,7 @@ model Media {
 
   uploader      User        @relation(fields: [uploaderId], references: [id], onDelete: Cascade)
   postMedia     PostMedia[]
+  messages      Message[]
 
   @@index([uploaderId])
   @@index([status])

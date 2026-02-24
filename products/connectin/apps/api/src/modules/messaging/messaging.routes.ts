@@ -102,6 +102,7 @@ const messagingRoutes: FastifyPluginAsync = async (fastify) => {
         properties: {
           conversationId: { type: 'string', format: 'uuid' },
           content: { type: 'string', minLength: 1, maxLength: 5000 },
+          mediaId: { type: 'string', format: 'uuid' },
         },
       },
       response: {
@@ -110,7 +111,7 @@ const messagingRoutes: FastifyPluginAsync = async (fastify) => {
     },
     config: { rateLimit: { max: 60, timeWindow: '1 minute' } },
   }, async (request, reply) => {
-    const body = request.body as { conversationId: string; content: string };
+    const body = request.body as { conversationId: string; content: string; mediaId?: string };
     const data = await svc.sendMessage(request.user.sub, body);
 
     // Broadcast new message to conversation members via WebSocket
