@@ -26,8 +26,32 @@ function hashToken(token: string): string {
 export class AuthService {
   constructor(private fastify: FastifyInstance) {}
 
+  private async audit(
+    action: string,
+    userId: string | null,
+    ip: string,
+    userAgent: string,
+    metadata: Record<string, unknown> = {}
+  ): Promise<void> {
+    try {
+      await this.fastify.prisma.auditLog.create({
+        data: {
+          userId,
+          resourceType: 'user',
+          action,
+          metadata,
+          ipAddress: ip || null,
+          userAgent: userAgent || null,
+        },
+      });
+    } catch (err) {
+      logger.error('Failed to write audit log', err);
+    }
+  }
+
   async register(
-    email: string, password: string, fullName: string
+    email: string, password: string, fullName: string,
+    ip: string = '', userAgent: string = ''
   ): Promise<RegisterResponse> {
     const normalizedEmail = email.toLowerCase().trim();
 
@@ -54,6 +78,7 @@ export class AuthService {
     });
 
     logger.info('User registered', { userId: user.id, email: normalizedEmail });
+    await this.audit('register', user.id, ip, userAgent, { email: normalizedEmail });
 
     return {
       message: 'Account created. Please check your email to verify.',
@@ -98,6 +123,9 @@ export class AuthService {
         where: { id: user.id },
         data: updateData,
       });
+      await this.audit('login_failure', user.id, ip, userAgent, {
+        email: normalizedEmail, attempts,
+      });
       throw new AppError(401, 'invalid-credentials', 'Invalid email or password');
     }
 
@@ -140,6 +168,7 @@ export class AuthService {
     });
 
     logger.info('User logged in', { userId: user.id });
+    await this.audit('login_success', user.id, ip, userAgent, { email: normalizedEmail });
 
     return {
       accessToken,
@@ -206,7 +235,10 @@ export class AuthService {
     };
   }
 
-  async logout(userId: string, accessJti: string, refreshToken?: string): Promise<void> {
+  async logout(
+    userId: string, accessJti: string, refreshToken?: string,
+    ip: string = '', userAgent: string = ''
+  ): Promise<void> {
     // Blacklist access token JTI in Redis
     if (this.fastify.redis && accessJti) {
       await this.fastify.redis.set(
@@ -224,6 +256,7 @@ export class AuthService {
     }
 
     logger.info('User logged out', { userId });
+    await this.audit('logout', userId, ip, userAgent);
   }
 
   async getProfile(userId: string): Promise<UserProfile> {
@@ -249,7 +282,7 @@ export class AuthService {
     };
   }
 
-  async forgotPassword(email: string): Promise<void> {
+  async forgotPassword(email: string, ip: string = '', userAgent: string = ''): Promise<void> {
     const normalizedEmail = email.toLowerCase().trim();
     const user = await this.fastify.prisma.user.findUnique({
       where: { email: normalizedEmail },
@@ -268,10 +301,11 @@ export class AuthService {
     });
 
     logger.info('Password reset requested', { userId: user.id });
+    await this.audit('forgot_password', user.id, ip, userAgent, { email: normalizedEmail });
     // In production, send email with resetToken here
   }
 
-  async resetPassword(token: string, newPassword: string): Promise<void> {
+  async resetPassword(token: string, newPassword: string, ip: string = '', userAgent: string = ''): Promise<void> {
     const tokenHash = hashToken(token);
     const user = await this.fastify.prisma.user.findFirst({
       where: { resetToken: tokenHash },
@@ -305,6 +339,7 @@ export class AuthService {
     });
 
     logger.info('Password reset completed', { userId: user.id });
+    await this.audit('reset_password', user.id, ip, userAgent);
   }
 
   async verifyEmail(token: string): Promise<void> {

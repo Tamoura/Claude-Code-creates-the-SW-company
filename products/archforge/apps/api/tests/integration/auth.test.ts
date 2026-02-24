@@ -1113,4 +1113,273 @@ describe('Auth endpoints', () => {
       expect(res.statusCode).toBe(400);
     });
   });
+
+  // ==================== AUDIT LOGGING ====================
+
+  describe('Audit logging', () => {
+    it('should log register event', async () => {
+      await app.inject({
+        method: 'POST',
+        url: '/api/v1/auth/register',
+        payload: {
+          email: 'audit-reg@test.com',
+          password: 'Test123!@#',
+          fullName: 'Audit Reg',
+        },
+      });
+
+      const prisma = getPrisma();
+      const logs = await prisma.auditLog.findMany({
+        where: { action: 'register' },
+      });
+      expect(logs.length).toBeGreaterThan(0);
+      expect(logs[0].resourceType).toBe('user');
+    });
+
+    it('should log login success event', async () => {
+      await app.inject({
+        method: 'POST',
+        url: '/api/v1/auth/register',
+        payload: {
+          email: 'audit-login@test.com',
+          password: 'Test123!@#',
+          fullName: 'Audit Login',
+        },
+      });
+
+      await app.inject({
+        method: 'POST',
+        url: '/api/v1/auth/login',
+        payload: { email: 'audit-login@test.com', password: 'Test123!@#' },
+      });
+
+      const prisma = getPrisma();
+      const logs = await prisma.auditLog.findMany({
+        where: { action: 'login_success' },
+      });
+      expect(logs.length).toBeGreaterThan(0);
+    });
+
+    it('should log login failure event', async () => {
+      await app.inject({
+        method: 'POST',
+        url: '/api/v1/auth/register',
+        payload: {
+          email: 'audit-fail@test.com',
+          password: 'Test123!@#',
+          fullName: 'Audit Fail',
+        },
+      });
+
+      await app.inject({
+        method: 'POST',
+        url: '/api/v1/auth/login',
+        payload: { email: 'audit-fail@test.com', password: 'Wrong1!' },
+      });
+
+      const prisma = getPrisma();
+      const logs = await prisma.auditLog.findMany({
+        where: { action: 'login_failure' },
+      });
+      expect(logs.length).toBeGreaterThan(0);
+    });
+
+    it('should log logout event', async () => {
+      await app.inject({
+        method: 'POST',
+        url: '/api/v1/auth/register',
+        payload: {
+          email: 'audit-logout@test.com',
+          password: 'Test123!@#',
+          fullName: 'Audit Logout',
+        },
+      });
+
+      const loginRes = await app.inject({
+        method: 'POST',
+        url: '/api/v1/auth/login',
+        payload: { email: 'audit-logout@test.com', password: 'Test123!@#' },
+      });
+
+      const { accessToken } = loginRes.json();
+      const prisma = getPrisma();
+      await prisma.user.updateMany({
+        where: { email: 'audit-logout@test.com' },
+        data: { status: 'active' },
+      });
+
+      await app.inject({
+        method: 'POST',
+        url: '/api/v1/auth/logout',
+        headers: authHeaders(accessToken),
+      });
+
+      const logs = await prisma.auditLog.findMany({
+        where: { action: 'logout' },
+      });
+      expect(logs.length).toBeGreaterThan(0);
+    });
+
+    it('should log forgot-password event', async () => {
+      await app.inject({
+        method: 'POST',
+        url: '/api/v1/auth/register',
+        payload: {
+          email: 'audit-forgot@test.com',
+          password: 'Test123!@#',
+          fullName: 'Audit Forgot',
+        },
+      });
+
+      await app.inject({
+        method: 'POST',
+        url: '/api/v1/auth/forgot-password',
+        payload: { email: 'audit-forgot@test.com' },
+      });
+
+      const prisma = getPrisma();
+      const logs = await prisma.auditLog.findMany({
+        where: { action: 'forgot_password' },
+      });
+      expect(logs.length).toBeGreaterThan(0);
+    });
+
+    it('should log password reset event', async () => {
+      const crypto = await import('crypto');
+      const resetToken = crypto.randomBytes(32).toString('hex');
+      const tokenHash = crypto.createHash('sha256').update(resetToken).digest('hex');
+
+      await app.inject({
+        method: 'POST',
+        url: '/api/v1/auth/register',
+        payload: {
+          email: 'audit-reset@test.com',
+          password: 'Test123!@#',
+          fullName: 'Audit Reset',
+        },
+      });
+
+      const prisma = getPrisma();
+      await prisma.user.updateMany({
+        where: { email: 'audit-reset@test.com' },
+        data: {
+          resetToken: tokenHash,
+          resetTokenExpires: new Date(Date.now() + 60 * 60 * 1000),
+        },
+      });
+
+      await app.inject({
+        method: 'POST',
+        url: '/api/v1/auth/reset-password',
+        payload: { token: resetToken, password: 'NewPass123!@#' },
+      });
+
+      const logs = await prisma.auditLog.findMany({
+        where: { action: 'reset_password' },
+      });
+      expect(logs.length).toBeGreaterThan(0);
+    });
+
+    it('should not include PII in metadata', async () => {
+      await app.inject({
+        method: 'POST',
+        url: '/api/v1/auth/register',
+        payload: {
+          email: 'audit-pii@test.com',
+          password: 'Test123!@#',
+          fullName: 'Audit PII',
+        },
+      });
+
+      const prisma = getPrisma();
+      const logs = await prisma.auditLog.findMany({
+        where: { action: 'register' },
+        orderBy: { createdAt: 'desc' },
+        take: 1,
+      });
+
+      const metadata = logs[0].metadata as Record<string, unknown>;
+      const metadataStr = JSON.stringify(metadata);
+      expect(metadataStr).not.toContain('Test123');
+      expect(metadataStr).not.toContain('password');
+    });
+  });
+
+  // ==================== JTI BLACKLIST ====================
+
+  describe('JTI blacklist', () => {
+    it('should reject blacklisted access token after logout', async () => {
+      await app.inject({
+        method: 'POST',
+        url: '/api/v1/auth/register',
+        payload: {
+          email: 'blacklist@test.com',
+          password: 'Test123!@#',
+          fullName: 'Blacklist User',
+        },
+      });
+
+      const loginRes = await app.inject({
+        method: 'POST',
+        url: '/api/v1/auth/login',
+        payload: { email: 'blacklist@test.com', password: 'Test123!@#' },
+      });
+
+      const { accessToken } = loginRes.json();
+      const prisma = getPrisma();
+      await prisma.user.updateMany({
+        where: { email: 'blacklist@test.com' },
+        data: { status: 'active' },
+      });
+
+      // Logout (blacklists JTI)
+      await app.inject({
+        method: 'POST',
+        url: '/api/v1/auth/logout',
+        headers: authHeaders(accessToken),
+      });
+
+      // Try to use the same token
+      const res = await app.inject({
+        method: 'GET',
+        url: '/api/v1/auth/me',
+        headers: authHeaders(accessToken),
+      });
+
+      expect(res.statusCode).toBe(401);
+    });
+
+    it('should allow non-blacklisted tokens', async () => {
+      await app.inject({
+        method: 'POST',
+        url: '/api/v1/auth/register',
+        payload: {
+          email: 'nonblack@test.com',
+          password: 'Test123!@#',
+          fullName: 'Non Blacklist',
+        },
+      });
+
+      const loginRes = await app.inject({
+        method: 'POST',
+        url: '/api/v1/auth/login',
+        payload: { email: 'nonblack@test.com', password: 'Test123!@#' },
+      });
+
+      const { accessToken } = loginRes.json();
+      const prisma = getPrisma();
+      await prisma.user.updateMany({
+        where: { email: 'nonblack@test.com' },
+        data: { status: 'active' },
+      });
+
+      const res = await app.inject({
+        method: 'GET',
+        url: '/api/v1/auth/me',
+        headers: authHeaders(accessToken),
+      });
+
+      expect(res.statusCode).toBe(200);
+    });
+  });
 });

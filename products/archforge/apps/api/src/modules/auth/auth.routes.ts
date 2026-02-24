@@ -38,7 +38,9 @@ const authRoutes: FastifyPluginAsync = async (fastify) => {
   fastify.post('/register', async (request, reply) => {
     try {
       const body = registerSchema.parse(request.body);
-      const result = await authService.register(body.email, body.password, body.fullName);
+      const ip = request.ip;
+      const ua = (request.headers['user-agent'] as string) || '';
+      const result = await authService.register(body.email, body.password, body.fullName, ip, ua);
       return reply.code(201).send(result);
     } catch (error) {
       handleValidationError(error, request.id);
@@ -96,7 +98,9 @@ const authRoutes: FastifyPluginAsync = async (fastify) => {
       ) as { jti?: string } | null;
       const refreshToken = request.cookies?.refreshToken;
 
-      await authService.logout(user.id, decoded?.jti || '', refreshToken);
+      const logoutIp = request.ip;
+      const logoutUa = (request.headers['user-agent'] as string) || '';
+      await authService.logout(user.id, decoded?.jti || '', refreshToken, logoutIp, logoutUa);
 
       reply.clearCookie('refreshToken', {
         path: '/api/v1/auth',
@@ -123,7 +127,9 @@ const authRoutes: FastifyPluginAsync = async (fastify) => {
   fastify.post('/forgot-password', async (request, reply) => {
     try {
       const body = forgotPasswordSchema.parse(request.body);
-      await authService.forgotPassword(body.email);
+      const fpIp = request.ip;
+      const fpUa = (request.headers['user-agent'] as string) || '';
+      await authService.forgotPassword(body.email, fpIp, fpUa);
       return reply.send({
         message: 'If an account exists with that email, a reset link has been sent.',
       });
@@ -136,7 +142,9 @@ const authRoutes: FastifyPluginAsync = async (fastify) => {
   fastify.post('/reset-password', async (request, reply) => {
     try {
       const body = resetPasswordSchema.parse(request.body);
-      await authService.resetPassword(body.token, body.password);
+      const rpIp = request.ip;
+      const rpUa = (request.headers['user-agent'] as string) || '';
+      await authService.resetPassword(body.token, body.password, rpIp, rpUa);
       return reply.send({ message: 'Password reset successfully.' });
     } catch (error) {
       handleValidationError(error, request.id);

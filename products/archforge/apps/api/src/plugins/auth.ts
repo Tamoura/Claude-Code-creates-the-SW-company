@@ -35,10 +35,25 @@ const authPlugin: FastifyPluginAsync = async (fastify) => {
       // Try JWT first (for user sessions)
       try {
         const decoded = await request.jwtVerify();
-        const { userId: decodedUserId } = decoded as { userId?: string };
+        const { userId: decodedUserId, jti } = decoded as { userId?: string; jti?: string };
 
         if (!decodedUserId || typeof decodedUserId !== 'string') {
           throw new AppError(401, 'unauthorized', 'Invalid token payload');
+        }
+
+        // Check JTI blacklist in Redis
+        if (jti && fastify.redis) {
+          try {
+            const blacklisted = await fastify.redis.get(`blacklist:${jti}`);
+            if (blacklisted) {
+              throw new AppError(401, 'unauthorized', 'Token has been revoked');
+            }
+          } catch (err) {
+            if (err instanceof AppError) throw err;
+            logger.debug('Redis blacklist check failed, allowing token', {
+              error: err instanceof Error ? err.message : 'unknown',
+            });
+          }
         }
 
         const user = await fastify.prisma.user.findUnique({
