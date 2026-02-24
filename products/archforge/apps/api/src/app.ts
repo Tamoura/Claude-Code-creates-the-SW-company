@@ -22,7 +22,7 @@ import observabilityPlugin from './plugins/observability.js';
 import authPlugin from './plugins/auth.js';
 
 // Routes
-import authRoutes from './routes/v1/auth.js';
+import { authRoutes } from './modules/auth/index.js';
 
 // Utils
 import { logger } from './utils/logger.js';
