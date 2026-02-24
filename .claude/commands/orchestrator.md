@@ -119,12 +119,27 @@ dependency chain, capped at 500 words. If no upstream tasks completed yet, omit 
 **Acceptance Criteria**:
 {ACCEPTANCE_CRITERIA from task graph}
 
+## TDD Protocol (MANDATORY)
+Follow Red-Green-Refactor strictly for ALL implementation tasks:
+
+**RED**: Write a failing test first.
+- Run the test — it MUST fail. Commit: `test(scope): add failing test for [feature] [US-XX]`
+- Do NOT write implementation code in the RED phase.
+
+**GREEN**: Write the simplest code to make the test pass.
+- Run ALL tests — they MUST all pass. Commit: `feat(scope): implement [feature] [US-XX][FR-XXX]`
+- Do NOT modify tests in the GREEN phase.
+
+**REFACTOR**: Improve code quality while keeping tests green.
+- Run ALL tests — they MUST still pass. Commit: `refactor(scope): [description] [US-XX]`
+
+Include `tdd_evidence` in your completion report: `[{test_commit, impl_commit, test_file, impl_file}]`
+
 ## Constraints
 - Work in: `products/{PRODUCT}/`
 - Stage specific files only (never `git add .` or `git add -A`)
 - Verify staged files before commit (`git diff --cached --stat`)
 - Use conventional commit messages
-- Follow TDD: write tests first, make them pass, refactor
 
 ## When Complete
 

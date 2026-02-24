@@ -376,6 +376,27 @@ C. INVOKE AGENTS (PARALLEL-AWARE)
    ## Acceptance Criteria
    {ACCEPTANCE_CRITERIA from task graph}
 
+   ## TDD Protocol (MANDATORY)
+   Follow Red-Green-Refactor strictly for ALL implementation tasks:
+
+   **RED**: Write a failing test first.
+   - Run the test — it MUST fail.
+   - Commit: `test(scope): add failing test for [feature] [US-XX]`
+   - Do NOT write implementation code in the RED phase.
+
+   **GREEN**: Write the simplest code to make the test pass.
+   - Run ALL tests — they MUST all pass.
+   - Commit: `feat(scope): implement [feature] [US-XX][FR-XXX]`
+   - Do NOT modify tests in the GREEN phase.
+
+   **REFACTOR**: Improve code quality while keeping tests green.
+   - Run ALL tests — they MUST still pass.
+   - Commit: `refactor(scope): [description] [US-XX]`
+
+   Repeat for each piece of functionality. When complete, include
+   `tdd_evidence` in your report: an array of {test_commit, impl_commit,
+   test_file, impl_file} for each TDD cycle completed.
+
    ## Constraints
    - Work in: products/{PRODUCT}/
    - Stage specific files only (never git add . or git add -A)
@@ -418,7 +439,14 @@ D. RECEIVE AGENT MESSAGES & DETECT OVERRUNS
    2. Extract task_id from metadata
    3. Extract status from payload
    4. Extract artifacts, context, metrics
-   5. **Overrun Detection**: Compare `metrics.time_spent_minutes` against
+   5. **TDD Verification**: If the task was an implementation task (BACKEND-*, FRONTEND-*),
+      check for `tdd_evidence` in the agent's report:
+      - Verify test commits exist and precede implementation commits in git log
+      - If `tdd_evidence` is missing or test commits don't precede impl commits:
+        Log WARNING to audit trail: "TDD violation on {TASK_ID} by {AGENT}"
+      - Mode: WARNING initially (logged but not blocking)
+      - After 3 validated sprints with no violations, switch to HARD BLOCK mode
+   6. **Overrun Detection**: Compare `metrics.time_spent_minutes` against
       `task.estimation_range[high]` (from Step 3.7):
       - If actual > range[high]: log overrun alert, flag for estimation recalibration
       - If actual < range[low]: note as faster-than-expected (potential efficiency insight)
