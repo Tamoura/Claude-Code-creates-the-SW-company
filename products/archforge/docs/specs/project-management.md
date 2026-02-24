@@ -3,7 +3,7 @@
 **Product**: ArchForge
 **Feature Branch**: `feature/archforge/project-management`
 **Created**: 2026-02-24
-**Status**: Draft
+**Status**: Specified
 **Traces to**: PRD US-05 (AC-05.1 through AC-05.7)
 
 ## Business Context
@@ -427,6 +427,10 @@ sequenceDiagram
 | SC-005 | Delete cascade verified | Artifacts removed with project | Integration test: create project + artifacts, delete project, verify artifacts gone |
 | SC-006 | Authorization enforced | Non-owner/admin receives 403 | Integration tests with different user roles |
 
+## Prerequisites
+
+- **Workspace auto-creation**: The registration flow must create a "Personal Workspace" for each new user. Currently missing from the auth module — must be added as the first implementation task (add workspace + workspace_member INSERT to the signup transaction in `auth.service.ts`).
+
 ## Out of Scope
 
 - **Project member role management UI** (edit/remove members) — deferred to US-08 (Collaboration)
@@ -440,6 +444,6 @@ sequenceDiagram
 
 | # | Question | Impact if Unresolved | Owner | Status |
 |---|----------|---------------------|-------|--------|
-| 1 | Should workspace be auto-created at user registration or require explicit creation? | Blocks project creation flow — projects need a workspace_id | Architect | Resolved — auto-create "Personal Workspace" at registration (existing behavior from auth module) |
-| 2 | Should archived projects count toward workspace plan limits? | Affects future billing calculations | Product Manager | Open — assume NO for MVP (only active projects count) |
-| 3 | Should project names support Unicode (emoji, CJK characters)? | Affects validation and search behavior | Product Manager | Resolved — Yes, VARCHAR(255) supports UTF-8; Prisma handles encoding |
+| 1 | Should workspace be auto-created at user registration or require explicit creation? | Blocks project creation flow — projects need a workspace_id | Architect | Resolved — Auto-create "Personal Workspace" during registration. **Note**: auth module does NOT currently do this. Must be added as a prerequisite task: create workspace in the registration flow (INSERT workspace + workspace_member with role="owner" in same transaction as user creation). |
+| 2 | Should archived projects count toward workspace plan limits? | Affects future billing calculations | Product Manager | Resolved — NO for MVP. Only active projects count toward limits. Archived projects are "free" to retain. |
+| 3 | Should project names support Unicode (emoji, CJK characters)? | Affects validation and search behavior | Product Manager | Resolved — Yes, VARCHAR(255) supports UTF-8; Prisma handles encoding. Search uses PostgreSQL ILIKE for case-insensitive matching. |
