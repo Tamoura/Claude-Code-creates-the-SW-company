@@ -14,7 +14,7 @@ metadata:
   product: "{PRODUCT}"
   feature: "{FEATURE}"
   feature_id: "{FEATURE_ID}"
-  version: "2.0.0"
+  version: "3.0.0"
   workflow_type: "new-feature"
   created_at: "{TIMESTAMP}"
   updated_at: "{TIMESTAMP}"
@@ -28,6 +28,47 @@ metadata:
 
 tasks:
   # ============================================================================
+  # PHASE 0: SPECIFICATION
+  # ============================================================================
+
+  - id: "SPEC-{FEATURE_ID}"
+    name: "Create Feature Specification for {FEATURE}"
+    description: |
+      Create a structured feature specification for: {DESCRIPTION}
+
+      Using /speckit.specify methodology:
+      - Follow the spec template at .specify/templates/spec-template.md
+      - Define user stories (US-XX) with Given/When/Then acceptance criteria
+      - Include relevant diagrams (C4, ER, sequence as applicable)
+      - Include edge cases table
+      - Fill Component Reuse Check table from .claude/COMPONENT-REGISTRY.md
+      - Mark uncertain areas with [NEEDS CLARIFICATION] tags
+
+      Read and follow: .specify/templates/commands/specify.md
+      Read constitution: .specify/memory/constitution.md
+    agent: "product-manager"
+    depends_on: []
+    story_ids: ["{STORY_IDS}"]
+    requirement_ids: ["{REQUIREMENT_IDS}"]
+    epic: "{EPIC_ID}"
+    produces:
+      - name: "Feature Specification"
+        type: "document"
+        path: "products/{PRODUCT}/docs/specs/{FEATURE_ID}.md"
+    context_output: ""
+    parallel_ok: false
+    checkpoint: false
+    priority: "high"
+    estimated_time_minutes: 45
+    acceptance_criteria:
+      - "Follows spec-template.md structure"
+      - "User stories with Given/When/Then acceptance criteria"
+      - "Data model documented (if applicable)"
+      - "Edge cases identified"
+      - "Component Reuse Check filled"
+    status: "pending"
+
+  # ============================================================================
   # PHASE 1: DESIGN
   # ============================================================================
 
@@ -37,17 +78,21 @@ tasks:
       Review the feature request: {DESCRIPTION}
 
       Tasks:
+      - Review feature specification from SPEC-{FEATURE_ID}
       - Review existing PRD and architecture
       - Design API changes (if any)
       - Design UI changes (if any)
       - Identify affected components
-      - Create feature specification document
+      - Create feature design document
       - Map new/changed endpoints to requirement IDs
     agent: "architect"
-    depends_on: []
+    depends_on: ["SPEC-{FEATURE_ID}"]
     story_ids: ["{STORY_IDS}"]
     requirement_ids: ["{REQUIREMENT_IDS}"]
     epic: "{EPIC_ID}"
+    consumes:
+      - name: "Feature Specification"
+        required_from_task: "SPEC-{FEATURE_ID}"
     produces:
       - name: "Feature Design"
         type: "document"
@@ -320,20 +365,61 @@ tasks:
       - "All checks green"
     status: "pending"
 
+  - id: "ANALYZE-{FEATURE_ID}"
+    name: "Run Spec Consistency Gate for {FEATURE}"
+    description: |
+      Validate consistency across specification, design, and implementation:
+      - Spec-to-Design alignment: every US-XX and FR-XXX addressed in design
+      - Requirement coverage: every acceptance criterion has tests (>= 90%)
+      - Traceability chain: US-XX → FR-XXX → Tasks → Tests
+      - No orphaned requirements
+
+      Read and follow: .specify/templates/commands/analyze.md
+      Read constitution: .specify/memory/constitution.md
+    agent: "qa-engineer"
+    depends_on: ["GATE-TESTING-{FEATURE_ID}"]
+    story_ids: ["{STORY_IDS}"]
+    requirement_ids: ["{REQUIREMENT_IDS}"]
+    epic: "{EPIC_ID}"
+    consumes:
+      - name: "Feature Specification"
+        required_from_task: "SPEC-{FEATURE_ID}"
+      - name: "Feature Design"
+        required_from_task: "DESIGN-{FEATURE_ID}"
+      - name: "Testing Gate Report"
+        required_from_task: "GATE-TESTING-{FEATURE_ID}"
+    produces:
+      - name: "Spec Consistency Report"
+        type: "document"
+        path: "products/{PRODUCT}/docs/quality-reports/spec-consistency-{FEATURE_ID}.md"
+    context_output: ""
+    parallel_ok: false
+    checkpoint: false
+    priority: "critical"
+    estimated_time_minutes: 20
+    acceptance_criteria:
+      - "Spec/design/implementation alignment verified: PASS"
+      - "Requirement coverage >= 90%"
+      - "No orphaned requirements"
+      - "Traceability matrix complete"
+    status: "pending"
+
   - id: "CHECKPOINT-{FEATURE_ID}"
     name: "Feature Complete - CEO Review"
     description: |
-      {FEATURE} is complete and tested. Ready for CEO review:
-      
+      {FEATURE} is complete, tested, and spec-consistency verified. Ready for CEO review:
+
+      - Feature specification created
       - Backend implementation complete
       - Frontend implementation complete
       - All tests passing
       - Documentation updated
       - Testing Gate PASSED
-      
+      - Spec Consistency Gate PASSED
+
       CEO can now review and approve the feature.
     agent: "orchestrator"
-    depends_on: ["GATE-TESTING-{FEATURE_ID}"]
+    depends_on: ["ANALYZE-{FEATURE_ID}"]
     parallel_ok: false
     checkpoint: true
     priority: "critical"
