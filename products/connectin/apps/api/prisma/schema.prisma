@@ -119,6 +119,9 @@ model User {
   mentions                Mention[]        @relation("MentionTarget")
   hashtagFollows          HashtagFollow[]
   media                   Media[]
+  bookmarks               Bookmark[]
+  profileViewsGiven       ProfileView[]   @relation("ProfileViewer")
+  profileViewsReceived    ProfileView[]   @relation("ProfileViewed")
 
   @@index([status, createdAt])
   @@index([verificationToken])
@@ -162,6 +165,7 @@ model Profile {
   summaryEn         String?         @map("summary_en")
   avatarUrl         String?         @map("avatar_url") @db.VarChar(500)
   bannerUrl         String?         @map("banner_url") @db.VarChar(500)
+  slug              String?         @unique @db.VarChar(50)
   location          String?         @db.VarChar(100)
   website           String?         @db.VarChar(255)
   completenessScore Int             @default(0) @map("completeness_score")
@@ -326,6 +330,7 @@ model Post {
   postHashtags  PostHashtag[]
   mentions      Mention[]
   postMedia     PostMedia[]
+  bookmarks     Bookmark[]
 
   @@index([authorId, createdAt(sort: Desc)])
   @@index([createdAt(sort: Desc)])
@@ -447,6 +452,7 @@ model Job {
   recruiter        User            @relation(fields: [recruiterId], references: [id], onDelete: Cascade)
   applications     JobApplication[]
   savedBy          SavedJob[]
+  bookmarks        Bookmark[]
 
   @@index([recruiterId])
   @@index([status, createdAt])
@@ -821,4 +827,39 @@ model Endorsement {
   @@unique([endorserId, profileSkillId])
   @@index([profileSkillId])
   @@map("endorsements")
+}
+
+// ─── Bookmarks ──────────────────────────────────────────────────
+
+model Bookmark {
+  id        String   @id @default(uuid())
+  userId    String   @map("user_id")
+  postId    String?  @map("post_id")
+  jobId     String?  @map("job_id")
+  createdAt DateTime @default(now()) @map("created_at")
+
+  user      User     @relation(fields: [userId], references: [id], onDelete: Cascade)
+  post      Post?    @relation(fields: [postId], references: [id], onDelete: Cascade)
+  job       Job?     @relation(fields: [jobId], references: [id], onDelete: Cascade)
+
+  @@unique([userId, postId])
+  @@unique([userId, jobId])
+  @@index([userId, createdAt(sort: Desc)])
+  @@map("bookmarks")
+}
+
+// ─── Profile Views ──────────────────────────────────────────────
+
+model ProfileView {
+  id            String   @id @default(uuid())
+  viewerId      String   @map("viewer_id")
+  viewedUserId  String   @map("viewed_user_id")
+  viewedAt      DateTime @default(now()) @map("viewed_at")
+
+  viewer        User     @relation("ProfileViewer", fields: [viewerId], references: [id], onDelete: Cascade)
+  viewedUser    User     @relation("ProfileViewed", fields: [viewedUserId], references: [id], onDelete: Cascade)
+
+  @@index([viewedUserId, viewedAt(sort: Desc)])
+  @@index([viewerId])
+  @@map("profile_views")
 }
