@@ -146,10 +146,11 @@ export function CreateJobModal({ onSuccess, onClose }: CreateJobModalProps) {
         <form onSubmit={handleSubmit} className="space-y-4" noValidate>
           {/* Title */}
           <div>
-            <label className="block text-xs font-medium text-neutral-600 dark:text-neutral-400 mb-1">
+            <label htmlFor="job-title" className="block text-xs font-medium text-neutral-600 dark:text-neutral-400 mb-1">
               Job title <span className="text-red-500">*</span>
             </label>
             <input
+              id="job-title"
               name="title"
               value={form.title}
               onChange={handleChange}
@@ -161,10 +162,11 @@ export function CreateJobModal({ onSuccess, onClose }: CreateJobModalProps) {
 
           {/* Company */}
           <div>
-            <label className="block text-xs font-medium text-neutral-600 dark:text-neutral-400 mb-1">
+            <label htmlFor="job-company" className="block text-xs font-medium text-neutral-600 dark:text-neutral-400 mb-1">
               Company <span className="text-red-500">*</span>
             </label>
             <input
+              id="job-company"
               name="company"
               value={form.company}
               onChange={handleChange}
@@ -176,10 +178,11 @@ export function CreateJobModal({ onSuccess, onClose }: CreateJobModalProps) {
 
           {/* Location */}
           <div>
-            <label className="block text-xs font-medium text-neutral-600 dark:text-neutral-400 mb-1">
+            <label htmlFor="job-location" className="block text-xs font-medium text-neutral-600 dark:text-neutral-400 mb-1">
               Location
             </label>
             <input
+              id="job-location"
               name="location"
               value={form.location}
               onChange={handleChange}
@@ -191,10 +194,11 @@ export function CreateJobModal({ onSuccess, onClose }: CreateJobModalProps) {
           {/* Work type + Experience level side by side */}
           <div className="grid grid-cols-2 gap-3">
             <div>
-              <label className="block text-xs font-medium text-neutral-600 dark:text-neutral-400 mb-1">
+              <label htmlFor="job-work-type" className="block text-xs font-medium text-neutral-600 dark:text-neutral-400 mb-1">
                 Work type <span className="text-red-500">*</span>
               </label>
               <select
+                id="job-work-type"
                 name="workType"
                 value={form.workType}
                 onChange={handleChange}
@@ -210,10 +214,11 @@ export function CreateJobModal({ onSuccess, onClose }: CreateJobModalProps) {
               </select>
             </div>
             <div>
-              <label className="block text-xs font-medium text-neutral-600 dark:text-neutral-400 mb-1">
+              <label htmlFor="job-experience-level" className="block text-xs font-medium text-neutral-600 dark:text-neutral-400 mb-1">
                 Experience <span className="text-red-500">*</span>
               </label>
               <select
+                id="job-experience-level"
                 name="experienceLevel"
                 value={form.experienceLevel}
                 onChange={handleChange}
@@ -233,10 +238,11 @@ export function CreateJobModal({ onSuccess, onClose }: CreateJobModalProps) {
           {/* Salary range */}
           <div className="grid grid-cols-2 gap-3">
             <div>
-              <label className="block text-xs font-medium text-neutral-600 dark:text-neutral-400 mb-1">
+              <label htmlFor="job-salary-min" className="block text-xs font-medium text-neutral-600 dark:text-neutral-400 mb-1">
                 Salary min
               </label>
               <input
+                id="job-salary-min"
                 type="number"
                 name="salaryMin"
                 value={form.salaryMin}
@@ -247,10 +253,11 @@ export function CreateJobModal({ onSuccess, onClose }: CreateJobModalProps) {
               />
             </div>
             <div>
-              <label className="block text-xs font-medium text-neutral-600 dark:text-neutral-400 mb-1">
+              <label htmlFor="job-salary-max" className="block text-xs font-medium text-neutral-600 dark:text-neutral-400 mb-1">
                 Salary max
               </label>
               <input
+                id="job-salary-max"
                 type="number"
                 name="salaryMax"
                 value={form.salaryMax}
@@ -264,10 +271,11 @@ export function CreateJobModal({ onSuccess, onClose }: CreateJobModalProps) {
 
           {/* Description */}
           <div>
-            <label className="block text-xs font-medium text-neutral-600 dark:text-neutral-400 mb-1">
+            <label htmlFor="job-description" className="block text-xs font-medium text-neutral-600 dark:text-neutral-400 mb-1">
               Description <span className="text-red-500">*</span>
             </label>
             <textarea
+              id="job-description"
               name="description"
               value={form.description}
               onChange={handleChange}
@@ -280,10 +288,11 @@ export function CreateJobModal({ onSuccess, onClose }: CreateJobModalProps) {
 
           {/* Requirements */}
           <div>
-            <label className="block text-xs font-medium text-neutral-600 dark:text-neutral-400 mb-1">
+            <label htmlFor="job-requirements" className="block text-xs font-medium text-neutral-600 dark:text-neutral-400 mb-1">
               Requirements
             </label>
             <textarea
+              id="job-requirements"
               name="requirements"
               value={form.requirements}
               onChange={handleChange}

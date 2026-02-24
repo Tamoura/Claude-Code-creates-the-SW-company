@@ -25,7 +25,7 @@ export function LanguageToggle({ className }: LanguageToggleProps) {
       type="button"
       onClick={toggleLanguage}
       className={cn(
-        "inline-flex items-center gap-1.5 px-3 py-1.5",
+        "inline-flex items-center gap-1.5 px-3 min-h-[44px]",
         "text-sm font-medium rounded-full",
         "text-[#475569] dark:text-[#CBD5E1]",
         "hover:bg-[#F1F5F9] dark:hover:bg-[#334155]",

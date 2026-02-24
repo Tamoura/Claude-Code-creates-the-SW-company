@@ -314,7 +314,7 @@ describe('Auth Module', () => {
   describe('POST /api/v1/auth/reset-password', () => {
     async function setupResetToken(_app: Awaited<ReturnType<typeof getApp>>) {
       const crypto = await import('crypto');
-      const bcrypt = await import('bcrypt');
+      const bcrypt = await import('bcryptjs');
       const db = getPrisma();
 
       const rawToken = crypto.randomBytes(32).toString('hex');
@@ -359,7 +359,7 @@ describe('Auth Module', () => {
     it('rejects expired token', async () => {
       const app = await getApp();
       const crypto = await import('crypto');
-      const bcrypt = await import('bcrypt');
+      const bcrypt = await import('bcryptjs');
       const db = getPrisma();
 
       const rawToken = crypto.randomBytes(32).toString('hex');
@@ -597,7 +597,7 @@ describe('Auth Module', () => {
       it('verifies email with valid token', async () => {
         const app = await getApp();
         const crypto = await import('crypto');
-        const bcrypt = await import('bcrypt');
+        const bcrypt = await import('bcryptjs');
 
         // Create user directly with a known verification token
         const rawToken = crypto.randomBytes(32).toString('hex');

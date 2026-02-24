@@ -200,7 +200,8 @@ export function TopBar({ variant = "authenticated" }: TopBarProps) {
         {/* Avatar */}
         <Link
           href="/profile"
-          className="focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-[#57BBCE] rounded-full"
+          aria-label={`${user?.displayName || "User"} profile`}
+          className="min-w-[44px] min-h-[44px] flex items-center justify-center focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-[#57BBCE] rounded-full"
         >
           <UserAvatar displayName={user?.displayName || "User"} size="sm" />
         </Link>
