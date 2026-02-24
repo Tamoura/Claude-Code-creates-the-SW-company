@@ -8,6 +8,12 @@ function stripHtml(str: string): string {
   });
 }
 
+export const pollInputSchema = z.object({
+  question: z.string().min(1).max(300),
+  options: z.array(z.string().min(1).max(100)).min(2, 'Poll must have at least 2 options').max(4, 'Poll must have at most 4 options'),
+  durationDays: z.number().int().min(1).max(14).default(7),
+});
+
 export const createPostSchema = z.object({
   content: z
     .string()
@@ -21,7 +27,10 @@ export const createPostSchema = z.object({
     .array(z.string().uuid())
     .max(4, 'Maximum 4 media attachments per post')
     .optional(),
+  poll: pollInputSchema.optional(),
 });
+
+export type PollInput = z.infer<typeof pollInputSchema>;
 
 export const createCommentSchema = z.object({
   content: z

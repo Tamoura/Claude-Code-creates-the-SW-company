@@ -1,5 +1,6 @@
 import { FastifyPluginAsync } from 'fastify';
 import { ConnectionService } from './connection.service';
+import { MutualConnectionsService } from './mutual-connections.service';
 import { sendRequestSchema } from './connection.schemas';
 import { sendSuccess } from '../../lib/response';
 import { ValidationError } from '../../lib/errors';
@@ -9,6 +10,9 @@ const connectionRoutes: FastifyPluginAsync = async (
   fastify
 ) => {
   const connectionService = new ConnectionService(
+    fastify.prisma
+  );
+  const mutualService = new MutualConnectionsService(
     fastify.prisma
   );
 
@@ -228,6 +232,78 @@ const connectionRoutes: FastifyPluginAsync = async (
       outgoingCount: data.outgoing.length,
     } as any);
   });
+
+  // GET /api/v1/connections/mutual/:userId
+  fastify.get<{ Params: { userId: string } }>(
+    '/mutual/:userId',
+    {
+      schema: {
+        description: 'Get mutual connections with another user',
+        tags: ['Connections'],
+        security: [{ bearerAuth: [] }],
+        params: {
+          type: 'object',
+          required: ['userId'],
+          properties: {
+            userId: { type: 'string', format: 'uuid' },
+          },
+        },
+        response: {
+          200: {
+            type: 'object',
+            additionalProperties: true,
+            properties: {
+              success: { type: 'boolean' },
+              data: { type: 'object', additionalProperties: true },
+            },
+          },
+        },
+      },
+    },
+    async (request, reply) => {
+      const data = await mutualService.getMutualConnections(
+        request.user.sub,
+        request.params.userId
+      );
+      return sendSuccess(reply, data);
+    }
+  );
+
+  // GET /api/v1/connections/degree/:userId
+  fastify.get<{ Params: { userId: string } }>(
+    '/degree/:userId',
+    {
+      schema: {
+        description: 'Get connection degree (1st, 2nd, 3rd) with another user',
+        tags: ['Connections'],
+        security: [{ bearerAuth: [] }],
+        params: {
+          type: 'object',
+          required: ['userId'],
+          properties: {
+            userId: { type: 'string', format: 'uuid' },
+          },
+        },
+        response: {
+          200: {
+            type: 'object',
+            additionalProperties: true,
+            properties: {
+              success: { type: 'boolean' },
+              data: { type: 'object', additionalProperties: true },
+            },
+          },
+        },
+      },
+    },
+    async (request, reply) => {
+      const degree = await mutualService.getConnectionDegree(
+        request.user.sub,
+        request.params.userId
+      );
+      return sendSuccess(reply, { degree });
+    }
+  );
 };
 
 export default connectionRoutes;

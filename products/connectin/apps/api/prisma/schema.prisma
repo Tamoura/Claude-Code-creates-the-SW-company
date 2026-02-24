@@ -331,6 +331,8 @@ model Post {
   mentions      Mention[]
   postMedia     PostMedia[]
   bookmarks     Bookmark[]
+  poll          Poll?
+  postViews     PostView[]
 
   @@index([authorId, createdAt(sort: Desc)])
   @@index([createdAt(sort: Desc)])
@@ -846,6 +848,68 @@ model Bookmark {
   @@unique([userId, jobId])
   @@index([userId, createdAt(sort: Desc)])
   @@map("bookmarks")
+}
+
+// ─── Polls ─────────────────────────────────────────────────────
+
+model Poll {
+  id         String       @id @default(uuid())
+  postId     String       @unique @map("post_id")
+  question   String       @db.VarChar(300)
+  endsAt     DateTime     @map("ends_at")
+  totalVotes Int          @default(0) @map("total_votes")
+  createdAt  DateTime     @default(now()) @map("created_at")
+
+  post       Post         @relation(fields: [postId], references: [id], onDelete: Cascade)
+  options    PollOption[]
+  votes      PollVote[]
+
+  @@index([endsAt])
+  @@map("polls")
+}
+
+model PollOption {
+  id        String     @id @default(uuid())
+  pollId    String     @map("poll_id")
+  text      String     @db.VarChar(100)
+  voteCount Int        @default(0) @map("vote_count")
+  sortOrder Int        @default(0) @map("sort_order")
+
+  poll      Poll       @relation(fields: [pollId], references: [id], onDelete: Cascade)
+  votes     PollVote[]
+
+  @@index([pollId])
+  @@map("poll_options")
+}
+
+model PollVote {
+  id        String     @id @default(uuid())
+  pollId    String     @map("poll_id")
+  optionId  String     @map("option_id")
+  userId    String     @map("user_id")
+  createdAt DateTime   @default(now()) @map("created_at")
+
+  poll      Poll       @relation(fields: [pollId], references: [id], onDelete: Cascade)
+  option    PollOption @relation(fields: [optionId], references: [id], onDelete: Cascade)
+
+  @@unique([pollId, userId])
+  @@index([pollId])
+  @@map("poll_votes")
+}
+
+// ─── Post Views (Content Analytics) ───────────────────────────
+
+model PostView {
+  id        String   @id @default(uuid())
+  postId    String   @map("post_id")
+  userId    String?  @map("user_id")
+  viewedAt  DateTime @default(now()) @map("viewed_at")
+
+  post      Post     @relation(fields: [postId], references: [id], onDelete: Cascade)
+
+  @@index([postId, viewedAt(sort: Desc)])
+  @@index([userId])
+  @@map("post_views")
 }
 
 // ─── Profile Views ──────────────────────────────────────────────
