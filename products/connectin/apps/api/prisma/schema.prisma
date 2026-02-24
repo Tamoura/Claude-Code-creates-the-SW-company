@@ -127,6 +127,10 @@ model User {
   jobAlerts               JobAlert[]
   orgMemberships          OrgMember[]
   orgFollows              OrgFollower[]
+  groupMemberships        GroupMember[]
+  createdGroups           Group[]
+  eventRegistrations      EventAttendee[]
+  createdEvents           Event[]
 
   @@index([status, createdAt])
   @@index([verificationToken])
@@ -1074,4 +1078,113 @@ model OrgFollower {
   @@unique([organizationId, userId])
   @@index([userId])
   @@map("org_followers")
+}
+
+// ─── Groups ─────────────────────────────────────────────────
+
+enum GroupPrivacy {
+  PUBLIC
+  PRIVATE
+}
+
+enum GroupMemberRole {
+  OWNER
+  MODERATOR
+  MEMBER
+}
+
+model Group {
+  id          String       @id @default(uuid())
+  name        String       @db.VarChar(200)
+  description String?      @db.Text
+  privacy     GroupPrivacy @default(PUBLIC)
+  creatorId   String       @map("creator_id")
+  createdAt   DateTime     @default(now()) @map("created_at")
+  updatedAt   DateTime     @updatedAt @map("updated_at")
+
+  creator     User          @relation(fields: [creatorId], references: [id], onDelete: Cascade)
+  members     GroupMember[]
+  posts       GroupPost[]
+
+  @@index([creatorId])
+  @@map("groups")
+}
+
+model GroupMember {
+  id        String          @id @default(uuid())
+  groupId   String          @map("group_id")
+  userId    String          @map("user_id")
+  role      GroupMemberRole @default(MEMBER)
+  createdAt DateTime        @default(now()) @map("created_at")
+
+  group Group @relation(fields: [groupId], references: [id], onDelete: Cascade)
+  user  User  @relation(fields: [userId], references: [id], onDelete: Cascade)
+
+  @@unique([groupId, userId])
+  @@index([userId])
+  @@map("group_members")
+}
+
+model GroupPost {
+  id        String   @id @default(uuid())
+  groupId   String   @map("group_id")
+  authorId  String   @map("author_id")
+  content   String   @db.VarChar(3000)
+  createdAt DateTime @default(now()) @map("created_at")
+
+  group Group @relation(fields: [groupId], references: [id], onDelete: Cascade)
+
+  @@index([groupId, createdAt(sort: Desc)])
+  @@map("group_posts")
+}
+
+// ─── Events ─────────────────────────────────────────────────
+
+enum EventType {
+  VIRTUAL
+  IN_PERSON
+  HYBRID
+}
+
+enum EventStatus {
+  UPCOMING
+  LIVE
+  COMPLETED
+  CANCELLED
+}
+
+model Event {
+  id          String      @id @default(uuid())
+  title       String      @db.VarChar(200)
+  description String?     @db.Text
+  type        EventType
+  status      EventStatus @default(UPCOMING)
+  location    String?     @db.VarChar(300)
+  startsAt    DateTime    @map("starts_at")
+  endsAt      DateTime?   @map("ends_at")
+  creatorId   String      @map("creator_id")
+  createdAt   DateTime    @default(now()) @map("created_at")
+  updatedAt   DateTime    @updatedAt @map("updated_at")
+
+  creator     User            @relation(fields: [creatorId], references: [id], onDelete: Cascade)
+  attendees   EventAttendee[]
+
+  @@index([creatorId])
+  @@index([startsAt])
+  @@index([status, startsAt])
+  @@map("events")
+}
+
+model EventAttendee {
+  id           String   @id @default(uuid())
+  eventId      String   @map("event_id")
+  userId       String   @map("user_id")
+  registeredAt DateTime @default(now()) @map("registered_at")
+
+  event Event @relation(fields: [eventId], references: [id], onDelete: Cascade)
+  user  User  @relation(fields: [userId], references: [id], onDelete: Cascade)
+
+  @@unique([eventId, userId])
+  @@index([userId])
+  @@map("event_attendees")
 }
