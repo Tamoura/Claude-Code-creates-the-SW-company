@@ -93,7 +93,7 @@ export async function buildApp(
 
   await app.register(websocketPlugin);
   await app.register(
-    import('@fastify/multipart').then((m) => m.default),
+    (await import('@fastify/multipart')).default,
     { limits: { fileSize: 10 * 1024 * 1024 } } // 10 MB
   );
   await app.register(csrfPlugin);
