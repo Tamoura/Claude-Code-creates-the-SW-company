@@ -1,8 +1,8 @@
 # ConnectIn -- System Architecture
 
 > **Architect** | ConnectSW
-> **Version**: 1.0
-> **Date**: February 20, 2026
+> **Version**: 1.1
+> **Date**: February 24, 2026
 > **Status**: Accepted
 > **Product**: ConnectIn -- Professional Networking Platform
 > **Frontend Port**: 3111 | **Backend Port**: 5007
@@ -238,7 +238,7 @@ graph TD
             AUTH["<b>Auth Module</b><br/>Registration, login,<br/>OAuth, email verification,<br/>password reset, sessions"]
             PROFILE["<b>Profile Module</b><br/>CRUD, bilingual fields,<br/>avatar upload, completeness<br/>score, experience, education, skills"]
             CONNECT["<b>Connection Module</b><br/>Request lifecycle,<br/>mutual connections,<br/>cooldown enforcement,<br/>auto-expiry"]
-            FEED["<b>Feed Module</b><br/>Post CRUD, likes,<br/>comments, shares,<br/>hashtags, feed algorithm"]
+            FEED["<b>Feed Module</b><br/>Post CRUD, reactions,<br/>likes, comments, shares,<br/>hashtags, feed algorithm"]
             JOB["<b>Job Module</b><br/>Job CRUD, search,<br/>applications, recruiter<br/>candidate pipeline"]
             MSG["<b>Messaging Module</b><br/>Conversations, messages,<br/>read receipts, WebSocket<br/>push, typing indicators"]
             SEARCH["<b>Search Module</b><br/>Full-text search (people,<br/>posts, jobs), Arabic<br/>tokenization, trending topics"]
@@ -246,6 +246,10 @@ graph TD
             FILE["<b>File Upload Module</b><br/>Multipart handling,<br/>image processing,<br/>R2/S3 upload,<br/>format validation"]
             NOTIF["<b>Notification Module</b><br/>SSE push, email digests,<br/>notification preferences,<br/>unread counts"]
             ADMIN_MOD["<b>Admin Module</b><br/>Dashboard metrics,<br/>moderation queue,<br/>user management,<br/>content reports"]
+            BLOCK["<b>Block Module</b><br/>Block/unblock users,<br/>blocked list,<br/>content filtering"]
+            REPORT["<b>Report Module</b><br/>Report users/posts/<br/>comments, polymorphic<br/>target, status tracking"]
+            FOLLOW_MOD["<b>Follow Module</b><br/>Follow/unfollow users,<br/>follower/following lists,<br/>follow counts"]
+            ENDORSE["<b>Endorsement Module</b><br/>Endorse/remove skills,<br/>endorser lists,<br/>endorsement counts"]
         end
 
         subgraph DataAccess["Data Access Layer"]
@@ -273,6 +277,10 @@ graph TD
     AUTH_MW --> SEARCH
     AUTH_MW --> AI_ORCH
     AUTH_MW --> ADMIN_MOD
+    AUTH_MW --> BLOCK
+    AUTH_MW --> REPORT
+    AUTH_MW --> FOLLOW_MOD
+    AUTH_MW --> ENDORSE
 
     AUTH --> PRISMA
     AUTH --> REDIS_CLIENT
@@ -300,6 +308,11 @@ graph TD
 
     SEARCH --> PRISMA
 
+    BLOCK --> PRISMA
+    REPORT --> PRISMA
+    FOLLOW_MOD --> PRISMA
+    ENDORSE --> PRISMA
+
     AI_ORCH --> CLAUDE_EXT
     AI_ORCH --> REDIS_CLIENT
     AI_ORCH --> PRISMA
@@ -326,6 +339,10 @@ graph TD
     style FILE fill:#34495E,color:#fff
     style NOTIF fill:#2C3E50,color:#fff
     style ADMIN_MOD fill:#95A5A6,color:#fff
+    style BLOCK fill:#C0392B,color:#fff
+    style REPORT fill:#D35400,color:#fff
+    style FOLLOW_MOD fill:#16A085,color:#fff
+    style ENDORSE fill:#27AE60,color:#fff
 ```
 
 ### Module Responsibility Matrix
@@ -335,13 +352,17 @@ graph TD
 | Auth | `/api/v1/auth/*` | Prisma, Redis, OAuth providers, Email | `@connectsw/auth` (JWT, refresh tokens, password hashing) |
 | Profile | `/api/v1/profiles/*` | Prisma, AI Orchestrator, File Upload | -- |
 | Connection | `/api/v1/connections/*` | Prisma, Notification, BullMQ (expiry) | -- |
-| Feed | `/api/v1/posts/*` | Prisma, File Upload, Notification | -- |
+| Feed | `/api/v1/feed/*` | Prisma, File Upload, Notification (includes Reactions) | -- |
 | Job | `/api/v1/jobs/*` | Prisma, Notification | -- |
 | Messaging | `/api/v1/conversations/*`, `/api/v1/messages/*` | Prisma, Redis (pub/sub), WebSocket | -- |
 | Search | `/api/v1/search/*` | Prisma (tsvector full-text search) | -- |
 | AI Orchestrator | `/api/v1/ai/*` | Claude API, Redis (caching), Prisma | -- |
 | File Upload | (internal, no routes) | Cloudflare R2 / AWS S3 | -- |
 | Notification | `/api/v1/notifications/*` | BullMQ, Redis (SSE), Email service | `@connectsw/notifications` |
+| Block | `/api/v1/blocks/*` | Prisma | -- |
+| Report | `/api/v1/reports/*` | Prisma | -- |
+| Follow | `/api/v1/follows/*` | Prisma | -- |
+| Endorsement | `/api/v1/endorsements/*` | Prisma | -- |
 | Admin | `/api/v1/admin/*` | Prisma | `@connectsw/audit` |
 
 ---
@@ -369,12 +390,20 @@ erDiagram
     users ||--o{ content_reports : "submits"
     users ||--o{ hashtag_follows : "follows"
     users ||--o{ notification_preferences : "configures"
+    users ||--o{ reactions : "reacts to posts"
+    users ||--o{ blocks_given : "blocks users"
+    users ||--o{ blocks_received : "blocked by users"
+    users ||--o{ reports : "files reports"
+    users ||--o{ follows_given : "follows users"
+    users ||--o{ follows_received : "followed by users"
+    users ||--o{ endorsements : "endorses skills"
 
     profiles ||--o{ experiences : "contains"
     profiles ||--o{ educations : "contains"
     profiles ||--o{ profile_skills : "lists"
 
     skills ||--o{ profile_skills : "assigned to"
+    profile_skills ||--o{ endorsements : "receives"
 
     posts ||--o{ comments : "has"
     posts ||--o{ likes : "has"
@@ -382,6 +411,7 @@ erDiagram
     posts ||--o{ post_images : "has"
     posts ||--o{ post_hashtags : "tagged with"
     posts ||--o| posts : "shared from"
+    posts ||--o{ reactions : "receives"
 
     hashtags ||--o{ post_hashtags : "used in"
     hashtags ||--o{ hashtag_follows : "followed by"
@@ -695,6 +725,47 @@ erDiagram
         timestamp created_at "DEFAULT NOW()"
     }
 
+    reactions {
+        uuid id PK
+        uuid post_id FK
+        uuid user_id FK
+        enum type "LIKE | CELEBRATE | SUPPORT | LOVE | INSIGHTFUL | FUNNY"
+        timestamp created_at "DEFAULT NOW()"
+    }
+
+    blocks {
+        uuid id PK
+        uuid blocker_id FK
+        uuid blocked_id FK
+        timestamp created_at "DEFAULT NOW()"
+    }
+
+    reports {
+        uuid id PK
+        uuid reporter_id FK
+        enum target_type "USER | POST | COMMENT"
+        uuid target_id "polymorphic reference"
+        enum reason "SPAM | HARASSMENT | HATE_SPEECH | MISINFORMATION | IMPERSONATION | OTHER"
+        varchar description "NULLABLE, max 1000"
+        enum status "PENDING | REVIEWED | RESOLVED | DISMISSED, DEFAULT PENDING"
+        timestamp created_at "DEFAULT NOW()"
+        timestamp updated_at "AUTO-UPDATE"
+    }
+
+    follows {
+        uuid id PK
+        uuid follower_id FK
+        uuid following_id FK
+        timestamp created_at "DEFAULT NOW()"
+    }
+
+    endorsements {
+        uuid id PK
+        uuid endorser_id FK
+        uuid profile_skill_id FK
+        timestamp created_at "DEFAULT NOW()"
+    }
+
     audit_logs {
         uuid id PK
         varchar actor "NOT NULL"
@@ -732,11 +803,48 @@ erDiagram
 | `notifications` | `user_id, is_read, created_at DESC` | BTREE | Notification listing |
 | `hashtags` | `tag` | UNIQUE | Hashtag lookup |
 | `post_hashtags` | `post_id, hashtag_id` | UNIQUE | Prevent duplicate tags |
+| `reactions` | `post_id, user_id` | UNIQUE | Prevent duplicate reactions per user per post |
+| `reactions` | `post_id` | BTREE | Reaction count aggregation |
+| `blocks` | `blocker_id, blocked_id` | UNIQUE | Prevent duplicate blocks |
+| `blocks` | `blocker_id` | BTREE | Lookup blocked users for a blocker |
+| `blocks` | `blocked_id` | BTREE | Lookup who blocked a user |
+| `reports` | `reporter_id` | BTREE | Reporter history lookup |
+| `reports` | `target_type, target_id` | BTREE | Reports per target (polymorphic) |
+| `follows` | `follower_id, following_id` | UNIQUE | Prevent duplicate follows |
+| `follows` | `follower_id` | BTREE | Lookup who a user follows |
+| `follows` | `following_id` | BTREE | Lookup a user's followers |
+| `endorsements` | `endorser_id, profile_skill_id` | UNIQUE | Prevent duplicate endorsements |
+| `endorsements` | `profile_skill_id` | BTREE | List endorsers for a skill |
 | `audit_logs` | `actor` | BTREE | Audit trail queries |
 | `audit_logs` | `action` | BTREE | Audit trail queries |
 | `audit_logs` | `timestamp` | BTREE | Date range queries |
 
-### 6.3 Full-Text Search Configuration
+### 6.3 Enum Types
+
+The schema defines the following enum types used across Sprint 1 and Sprint 2 models:
+
+| Enum | Values | Used By |
+|------|--------|---------|
+| `ReactionType` | `LIKE`, `CELEBRATE`, `SUPPORT`, `LOVE`, `INSIGHTFUL`, `FUNNY` | `reactions.type` |
+| `ReportTargetType` | `USER`, `POST`, `COMMENT` | `reports.target_type` |
+| `ReportReason` | `SPAM`, `HARASSMENT`, `HATE_SPEECH`, `MISINFORMATION`, `IMPERSONATION`, `OTHER` | `reports.reason` |
+| `ReportStatus` | `PENDING`, `REVIEWED`, `RESOLVED`, `DISMISSED` | `reports.status` |
+| `TextDirection` | `rtl`, `ltr`, `auto` | `posts.text_direction`, `comments.text_direction`, `messages.text_direction` |
+| `ConnectionStatus` | `pending`, `accepted`, `rejected`, `withdrawn`, `expired` | `connections.status` |
+| `UserRole` | `user`, `recruiter`, `admin` | `users.role` |
+| `UserStatus` | `active`, `suspended`, `deactivated`, `deleted` | `users.status` |
+| `LanguagePreference` | `ar`, `en` | `users.language_preference` |
+| `WorkType` | `onsite`, `hybrid`, `remote` | `jobs.work_type` |
+| `ExperienceLevel` | `entry`, `mid`, `senior`, `lead`, `executive` | `jobs.experience_level` |
+| `JobLanguage` | `ar`, `en`, `bilingual` | `jobs.language` |
+| `JobStatus` | `draft`, `active`, `closed`, `archived` | `jobs.status` |
+| `ApplicationStatus` | `applied`, `reviewed`, `shortlisted`, `rejected` | `job_applications.status` |
+| `NotificationType` | `connection_request`, `connection_accepted`, `message`, `like`, `comment`, `share`, `job_application`, `mention`, `system` | `notifications.type` |
+| `EmailDigest` | `off`, `daily`, `weekly` | `notification_preferences.email_digest` |
+| `ReportCategory` | `spam`, `harassment`, `misinformation`, `hate_speech`, `impersonation`, `other` | `content_reports.category` (legacy) |
+| `ContentReportStatus` | `pending`, `reviewed`, `dismissed`, `actioned` | `content_reports.status` (legacy) |
+
+### 6.4 Full-Text Search Configuration
 
 PostgreSQL full-text search is used for MVP-phase search. Arabic search is handled via `simple` dictionary (which performs whitespace-based tokenization without stemming) since PostgreSQL does not ship an Arabic stemmer. Phase 2 will evaluate dedicated Arabic search solutions.
 
@@ -804,17 +912,20 @@ All API routes are versioned under `/api/v1/` and organized by module.
     GET    /                      # List my connections
     GET    /pending               # List pending requests
     GET    /mutual/:userId        # Mutual connections
-  /posts/
-    POST   /                      # Create post
-    GET    /feed                  # Get news feed
-    GET    /:id                   # Get single post
-    DELETE /:id                   # Delete own post
-    POST   /:id/like              # Like post
-    DELETE /:id/like              # Unlike post
-    POST   /:id/comments          # Add comment
-    GET    /:id/comments          # List comments
-    POST   /:id/share             # Share post
-    POST   /:id/report            # Report post
+  /feed/
+    POST   /posts                 # Create post
+    GET    /posts/feed            # Get news feed
+    GET    /posts/:id             # Get single post
+    DELETE /posts/:id             # Delete own post
+    POST   /posts/:id/like        # Like post
+    DELETE /posts/:id/like        # Unlike post
+    POST   /posts/:id/react       # React to post (type: LIKE|CELEBRATE|SUPPORT|LOVE|INSIGHTFUL|FUNNY)
+    DELETE /posts/:id/react       # Remove reaction from post
+    GET    /posts/:id/reactions   # Get reaction breakdown for a post
+    POST   /posts/:id/comments    # Add comment
+    GET    /posts/:id/comments    # List comments
+    POST   /posts/:id/share       # Share post
+    POST   /posts/:id/report      # Report post
   /jobs/
     POST   /                      # Create job (recruiter)
     GET    /                      # Search/list jobs
@@ -845,6 +956,24 @@ All API routes are versioned under `/api/v1/` and organized by module.
     POST   /reports/:id/action    # Take action on report
     GET    /users                 # User management list
     PATCH  /users/:id             # Update user status/role
+  /blocks/
+    POST   /                      # Block a user
+    DELETE /:userId               # Unblock a user
+    GET    /                      # List blocked users
+  /reports/
+    POST   /                      # Report a user, post, or comment (targetType, targetId, reason, description)
+  /follows/
+    POST   /                      # Follow a user
+    DELETE /:userId               # Unfollow a user
+    GET    /followers             # List followers (paginated: ?limit=&offset=)
+    GET    /following             # List users the current user follows
+    GET    /:userId/status        # Check if current user follows a user
+    GET    /:userId/counts        # Get follower and following counts for a user
+  /endorsements/
+    POST   /                      # Endorse a skill (profileSkillId)
+    DELETE /:profileSkillId       # Remove an endorsement
+    GET    /skill/:profileSkillId # List endorsers for a skill
+    GET    /by-me                 # List endorsements made by the current user
   /settings/
     GET    /notifications         # Get notification prefs
     PATCH  /notifications         # Update notification prefs
@@ -1673,3 +1802,4 @@ graph TD
 | Version | Date | Author | Changes |
 |---------|------|--------|---------|
 | 1.0 | 2026-02-20 | Architect (AI Agent) | Initial architecture document |
+| 1.1 | 2026-02-24 | Architect (AI Agent) | Sprint 2 modules: Reaction, Block, Report, Follow, Endorsement -- ER diagram, component diagram, module matrix, API routes, indexes, enum types |

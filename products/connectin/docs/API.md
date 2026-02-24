@@ -1,7 +1,7 @@
 # ConnectIn -- API Documentation
 
-> **Version**: 1.0
-> **Date**: February 20, 2026
+> **Version**: 1.1
+> **Date**: February 24, 2026
 > **Base URL**: `http://localhost:5007/api/v1` (development)
 > **Authentication**: JWT Bearer token (unless marked Public)
 > **Content-Type**: `application/json`
@@ -15,15 +15,19 @@
 3. [Profiles](#3-profiles)
 4. [Connections](#4-connections)
 5. [Posts & Feed](#5-posts--feed)
-6. [Jobs](#6-jobs)
-7. [Messaging](#7-messaging)
-8. [Search](#8-search)
-9. [Notifications](#9-notifications)
-10. [AI Features](#10-ai-features)
-11. [Admin](#11-admin)
-12. [Settings](#12-settings)
-13. [WebSocket Events](#13-websocket-events)
-14. [Error Codes](#14-error-codes)
+   - [Reactions](#reactions)
+6. [Follows](#6-follows)
+7. [Endorsements](#7-endorsements)
+8. [Block & Report](#8-block--report)
+9. [Jobs](#9-jobs)
+10. [Messaging](#10-messaging)
+11. [Search](#11-search)
+12. [Notifications](#12-notifications)
+13. [AI Features](#13-ai-features)
+14. [Admin](#14-admin)
+15. [Settings](#15-settings)
+16. [WebSocket Events](#16-websocket-events)
+17. [Error Codes](#17-error-codes)
 
 ---
 
@@ -914,6 +918,112 @@ Remove a like from a post.
 
 ---
 
+### Reactions
+
+Reactions extend the basic like system with expressive reaction types. A user can have at most one reaction per post. Reacting when a reaction already exists will replace it.
+
+#### POST /feed/posts/:id/react
+
+React to a post. If the user already reacted, the reaction type is updated (upsert). One reaction per user per post.
+
+**Request:**
+```json
+{
+  "type": "CELEBRATE"
+}
+```
+
+**Validation:**
+- `type` (required): One of `LIKE`, `CELEBRATE`, `SUPPORT`, `LOVE`, `INSIGHTFUL`, `FUNNY`
+
+**Response (200 OK):**
+```json
+{
+  "success": true,
+  "data": {
+    "reacted": true,
+    "type": "CELEBRATE",
+    "reactions": {
+      "LIKE": 5,
+      "CELEBRATE": 3,
+      "SUPPORT": 1,
+      "LOVE": 0,
+      "INSIGHTFUL": 2,
+      "FUNNY": 0
+    }
+  }
+}
+```
+
+**Error Responses:**
+
+| Status | Code | When |
+|--------|------|------|
+| 401 | `UNAUTHORIZED` | Missing or invalid JWT token |
+| 404 | `NOT_FOUND` | Post does not exist or has been deleted |
+| 422 | `VALIDATION_ERROR` | Invalid reaction type |
+
+---
+
+#### DELETE /feed/posts/:id/react
+
+Remove the authenticated user's reaction from a post.
+
+**Response (200 OK):**
+```json
+{
+  "success": true,
+  "data": {
+    "reacted": false,
+    "reactions": {
+      "LIKE": 5,
+      "CELEBRATE": 2,
+      "SUPPORT": 1,
+      "LOVE": 0,
+      "INSIGHTFUL": 2,
+      "FUNNY": 0
+    }
+  }
+}
+```
+
+**Error Responses:**
+
+| Status | Code | When |
+|--------|------|------|
+| 401 | `UNAUTHORIZED` | Missing or invalid JWT token |
+| 404 | `NOT_FOUND` | Post does not exist or has been deleted |
+
+---
+
+#### GET /feed/posts/:id/reactions
+
+Get the reaction breakdown (count per type) for a post.
+
+**Response (200 OK):**
+```json
+{
+  "success": true,
+  "data": {
+    "LIKE": 5,
+    "CELEBRATE": 2,
+    "SUPPORT": 1,
+    "LOVE": 0,
+    "INSIGHTFUL": 2,
+    "FUNNY": 0
+  }
+}
+```
+
+**Error Responses:**
+
+| Status | Code | When |
+|--------|------|------|
+| 401 | `UNAUTHORIZED` | Missing or invalid JWT token |
+| 404 | `NOT_FOUND` | Post does not exist or has been deleted |
+
+---
+
 ### POST /posts/:id/comments
 
 Add a comment to a post.
@@ -1012,7 +1122,443 @@ Report a post for violating community guidelines.
 
 ---
 
-## 6. Jobs
+## 6. Follows
+
+Follows are lightweight, one-directional relationships (unlike bidirectional connections). A user can follow anyone without requiring approval. Follows surface content in the feed and provide social signals.
+
+### POST /follows
+
+Follow a user. Idempotent -- calling twice for the same user does not produce an error.
+
+**Request:**
+```json
+{
+  "userId": "01HQ9XYZ..."
+}
+```
+
+**Validation:**
+- `userId` (required): UUID of the user to follow
+- Cannot follow yourself
+
+**Response (201 Created):**
+```json
+{
+  "success": true,
+  "data": {
+    "following": true
+  }
+}
+```
+
+**Error Responses:**
+
+| Status | Code | When |
+|--------|------|------|
+| 401 | `UNAUTHORIZED` | Missing or invalid JWT token |
+| 422 | `VALIDATION_ERROR` | Cannot follow yourself or invalid UUID |
+
+---
+
+### DELETE /follows/:userId
+
+Unfollow a user. Idempotent -- calling when not following does not produce an error.
+
+**Response (200 OK):**
+```json
+{
+  "success": true,
+  "data": {
+    "following": false
+  }
+}
+```
+
+**Error Responses:**
+
+| Status | Code | When |
+|--------|------|------|
+| 401 | `UNAUTHORIZED` | Missing or invalid JWT token |
+
+---
+
+### GET /follows/followers
+
+List users who follow the authenticated user, with offset-based pagination.
+
+**Query Parameters:**
+- `limit` (default: 20)
+- `offset` (default: 0)
+
+**Response (200 OK):**
+```json
+{
+  "success": true,
+  "data": [
+    {
+      "id": "01HQB789...",
+      "displayName": "Khalid Mansour",
+      "avatarUrl": "https://r2.connectin.app/avatars/01HQB789.webp",
+      "followedAt": "2026-02-22T14:00:00Z"
+    },
+    {
+      "id": "01HQC012...",
+      "displayName": "Layla Farouk",
+      "avatarUrl": null,
+      "followedAt": "2026-02-21T09:30:00Z"
+    }
+  ]
+}
+```
+
+---
+
+### GET /follows/following
+
+List users the authenticated user follows.
+
+**Response (200 OK):**
+```json
+{
+  "success": true,
+  "data": [
+    {
+      "id": "01HQ9XYZ...",
+      "displayName": "Sophia Chen",
+      "avatarUrl": "https://r2.connectin.app/avatars/01HQ9XYZ.webp",
+      "followedAt": "2026-02-20T18:00:00Z"
+    }
+  ]
+}
+```
+
+---
+
+### GET /follows/:userId/status
+
+Check whether the authenticated user follows a specific user.
+
+**Response (200 OK):**
+```json
+{
+  "success": true,
+  "data": {
+    "following": true
+  }
+}
+```
+
+**Error Responses:**
+
+| Status | Code | When |
+|--------|------|------|
+| 401 | `UNAUTHORIZED` | Missing or invalid JWT token |
+
+---
+
+### GET /follows/:userId/counts
+
+Get follower and following counts for any user. Useful for profile display.
+
+**Response (200 OK):**
+```json
+{
+  "success": true,
+  "data": {
+    "followers": 142,
+    "following": 87
+  }
+}
+```
+
+**Error Responses:**
+
+| Status | Code | When |
+|--------|------|------|
+| 401 | `UNAUTHORIZED` | Missing or invalid JWT token |
+
+---
+
+## 7. Endorsements
+
+Endorsements let users vouch for a connection's skills. Each user can endorse a given skill on a profile once. You cannot endorse your own skills. Endorsement counts are maintained on the profile skill record.
+
+### POST /endorsements
+
+Endorse a skill on another user's profile. Idempotent -- endorsing a skill already endorsed by you has no effect.
+
+**Request:**
+```json
+{
+  "profileSkillId": "01HQ8GHI..."
+}
+```
+
+**Validation:**
+- `profileSkillId` (required): UUID of the profile skill entry to endorse
+- Cannot endorse your own skills
+
+**Response (201 Created):**
+```json
+{
+  "success": true,
+  "data": {
+    "endorsed": true,
+    "endorsementCount": 13
+  }
+}
+```
+
+**Error Responses:**
+
+| Status | Code | When |
+|--------|------|------|
+| 401 | `UNAUTHORIZED` | Missing or invalid JWT token |
+| 404 | `NOT_FOUND` | Profile skill does not exist |
+| 422 | `VALIDATION_ERROR` | Cannot endorse your own skill or invalid UUID |
+
+---
+
+### DELETE /endorsements/:profileSkillId
+
+Remove your endorsement from a skill.
+
+**Response (200 OK):**
+```json
+{
+  "success": true,
+  "data": {
+    "endorsed": false,
+    "endorsementCount": 12
+  }
+}
+```
+
+**Error Responses:**
+
+| Status | Code | When |
+|--------|------|------|
+| 401 | `UNAUTHORIZED` | Missing or invalid JWT token |
+
+---
+
+### GET /endorsements/skill/:profileSkillId
+
+List all endorsers for a specific skill on a profile.
+
+**Response (200 OK):**
+```json
+{
+  "success": true,
+  "data": {
+    "endorsers": [
+      {
+        "id": "01HQ9XYZ...",
+        "displayName": "Sophia Chen",
+        "avatarUrl": "https://r2.connectin.app/avatars/01HQ9XYZ.webp",
+        "endorsedAt": "2026-02-22T10:00:00Z"
+      },
+      {
+        "id": "01HQB789...",
+        "displayName": "Khalid Mansour",
+        "avatarUrl": null,
+        "endorsedAt": "2026-02-21T14:30:00Z"
+      }
+    ]
+  }
+}
+```
+
+**Error Responses:**
+
+| Status | Code | When |
+|--------|------|------|
+| 401 | `UNAUTHORIZED` | Missing or invalid JWT token |
+
+---
+
+### GET /endorsements/by-me
+
+List all endorsements made by the authenticated user, including the skill name and profile owner.
+
+**Response (200 OK):**
+```json
+{
+  "success": true,
+  "data": {
+    "endorsements": [
+      {
+        "profileSkillId": "01HQ8GHI...",
+        "skillName": "TypeScript",
+        "profileOwnerName": "Ahmed Al-Rashidi",
+        "endorsedAt": "2026-02-22T10:00:00Z"
+      },
+      {
+        "profileSkillId": "01HQ8JKL...",
+        "skillName": "React",
+        "profileOwnerName": "Sophia Chen",
+        "endorsedAt": "2026-02-20T16:00:00Z"
+      }
+    ]
+  }
+}
+```
+
+**Error Responses:**
+
+| Status | Code | When |
+|--------|------|------|
+| 401 | `UNAUTHORIZED` | Missing or invalid JWT token |
+
+---
+
+## 8. Block & Report
+
+Blocking prevents all interaction between two users and removes any existing connection. Reports flag content or users for moderation review.
+
+### POST /blocks
+
+Block a user. Idempotent -- blocking an already-blocked user has no effect. Blocking a user automatically removes any existing connection between the two users.
+
+**Request:**
+```json
+{
+  "userId": "01HQP234..."
+}
+```
+
+**Validation:**
+- `userId` (required): UUID of the user to block
+- Cannot block yourself
+
+**Response (201 Created):**
+```json
+{
+  "success": true,
+  "data": {
+    "id": "01HQR567...",
+    "blockerId": "01HQ7GBX...",
+    "blockedId": "01HQP234...",
+    "createdAt": "2026-02-22T12:00:00Z"
+  }
+}
+```
+
+**Side Effects:**
+- Existing connection (if any) between the blocker and blocked user is removed
+- Blocked user cannot send connection requests to the blocker
+- Blocked user's posts are hidden from the blocker's feed
+
+**Error Responses:**
+
+| Status | Code | When |
+|--------|------|------|
+| 401 | `UNAUTHORIZED` | Missing or invalid JWT token |
+| 422 | `VALIDATION_ERROR` | Cannot block yourself or invalid UUID |
+
+---
+
+### DELETE /blocks/:userId
+
+Unblock a previously blocked user. Idempotent -- unblocking a non-blocked user returns success.
+
+**Response (200 OK):**
+```json
+{
+  "success": true,
+  "data": {
+    "success": true
+  }
+}
+```
+
+**Error Responses:**
+
+| Status | Code | When |
+|--------|------|------|
+| 401 | `UNAUTHORIZED` | Missing or invalid JWT token |
+
+---
+
+### GET /blocks
+
+List all users blocked by the authenticated user, sorted by most recently blocked.
+
+**Response (200 OK):**
+```json
+{
+  "success": true,
+  "data": [
+    {
+      "id": "01HQR567...",
+      "blockedId": "01HQP234...",
+      "user": {
+        "id": "01HQP234...",
+        "displayName": "Suspicious User",
+        "avatarUrl": null
+      },
+      "createdAt": "2026-02-22T12:00:00Z"
+    }
+  ]
+}
+```
+
+**Error Responses:**
+
+| Status | Code | When |
+|--------|------|------|
+| 401 | `UNAUTHORIZED` | Missing or invalid JWT token |
+
+---
+
+### POST /reports
+
+Report a user, post, or comment for violating community guidelines. This creates a moderation ticket for admin review.
+
+**Request:**
+```json
+{
+  "targetType": "POST",
+  "targetId": "01HQE678...",
+  "reason": "SPAM",
+  "description": "This post is promoting a scam investment scheme."
+}
+```
+
+**Validation:**
+- `targetType` (required): One of `USER`, `POST`, `COMMENT`
+- `targetId` (required): UUID of the reported entity
+- `reason` (required): One of `SPAM`, `HARASSMENT`, `HATE_SPEECH`, `MISINFORMATION`, `IMPERSONATION`, `OTHER`
+- `description` (optional): Additional context, max 1000 characters
+- Cannot report yourself (when `targetType` is `USER`)
+
+**Response (201 Created):**
+```json
+{
+  "success": true,
+  "data": {
+    "id": "01HQS890...",
+    "reporterId": "01HQ7GBX...",
+    "targetType": "POST",
+    "targetId": "01HQE678...",
+    "reason": "SPAM",
+    "description": "This post is promoting a scam investment scheme.",
+    "status": "PENDING",
+    "createdAt": "2026-02-22T12:30:00Z"
+  }
+}
+```
+
+**Error Responses:**
+
+| Status | Code | When |
+|--------|------|------|
+| 401 | `UNAUTHORIZED` | Missing or invalid JWT token |
+| 422 | `VALIDATION_ERROR` | Cannot report yourself, invalid target type, or invalid reason |
+
+---
+
+## 9. Jobs
 
 ### POST /jobs
 
@@ -1183,7 +1729,7 @@ Apply to a job posting.
 
 ---
 
-## 7. Messaging
+## 10. Messaging
 
 ### GET /conversations
 
@@ -1331,7 +1877,7 @@ Mark a message as read.
 
 ---
 
-## 8. Search
+## 11. Search
 
 ### GET /search
 
@@ -1410,7 +1956,7 @@ Get trending topics/hashtags.
 
 ---
 
-## 9. Notifications
+## 12. Notifications
 
 ### GET /notifications
 
@@ -1481,7 +2027,7 @@ Mark all notifications as read.
 
 ---
 
-## 10. AI Features
+## 13. AI Features
 
 ### POST /ai/profile/optimize
 
@@ -1540,7 +2086,7 @@ Trigger AI profile optimization. Rate limited to 5 calls per user per day.
 
 ---
 
-## 11. Admin
+## 14. Admin
 
 All admin endpoints require the `admin` role.
 
@@ -1650,7 +2196,7 @@ Update a user's role or status.
 
 ---
 
-## 12. Settings
+## 15. Settings
 
 ### GET /settings/notifications
 
@@ -1730,7 +2276,7 @@ Request a full data export (GDPR Right to Access).
 
 ---
 
-## 13. WebSocket Events
+## 16. WebSocket Events
 
 Connect to `ws://localhost:5007/ws` (or `wss://api.connectin.app/ws` in production) with the JWT token.
 
@@ -1777,7 +2323,7 @@ const ws = new WebSocket('ws://localhost:5007/ws', [], {
 
 ---
 
-## 14. Error Codes
+## 17. Error Codes
 
 ### HTTP Status Codes
 
@@ -1810,6 +2356,10 @@ const ws = new WebSocket('ws://localhost:5007/ws', [], {
 | `COOLDOWN_ACTIVE` | 403 | Connection request cooldown (30 days after rejection) |
 | `MAX_PENDING_REQUESTS` | 400 | Maximum pending outgoing connection requests (100) reached |
 | `NOT_CONNECTED` | 403 | Action requires an active connection (e.g., messaging) |
+| `SELF_ACTION` | 422 | Cannot perform action on yourself (block, follow, endorse own skill, report yourself) |
+| `ALREADY_BLOCKED` | 409 | User is already blocked (block is idempotent, so this is not returned in practice) |
+| `ALREADY_FOLLOWING` | 409 | Already following this user (follow is idempotent, so this is not returned in practice) |
+| `ALREADY_ENDORSED` | 409 | Already endorsed this skill (endorsement is idempotent, so this is not returned in practice) |
 | `AI_UNAVAILABLE` | 503 | Claude API is temporarily unavailable |
 | `AI_RATE_LIMITED` | 429 | Per-user daily AI feature limit exceeded |
 | `FILE_TOO_LARGE` | 400 | Uploaded file exceeds size limit |
@@ -1823,3 +2373,4 @@ const ws = new WebSocket('ws://localhost:5007/ws', [], {
 | Version | Date | Author | Changes |
 |---------|------|--------|---------|
 | 1.0 | 2026-02-20 | Architect (AI Agent) | Initial API documentation |
+| 1.1 | 2026-02-24 | Technical Writer (AI Agent) | Added Reactions, Follows, Endorsements, Block & Report modules |

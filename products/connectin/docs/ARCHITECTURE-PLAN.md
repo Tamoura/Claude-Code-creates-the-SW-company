@@ -1,9 +1,9 @@
 # ConnectIn -- Technical Architecture Plan (Gap Closure)
 
 > **Architect** | ConnectSW
-> **Version**: 2.0
+> **Version**: 2.1 (Updated: February 2026)
 > **Date**: February 24, 2026
-> **Status**: Proposed
+> **Status**: In Progress -- Phase 1 Backend 60% Implemented
 > **Product**: ConnectIn -- Arabic-First Professional Networking Platform
 > **Scope**: 25 new feature areas across 3 phases to close gaps vs LinkedIn/Qabilah
 
@@ -258,6 +258,10 @@ graph TD
 ## 2. Data Model Extensions
 
 ### 2.1 Phase 1 -- Profile and Content Enrichment
+
+> **Implementation Status (Feb 2026)**: 6 of 10 backend features complete, 95 tests passing.
+> IMPLEMENTED: Reaction, Endorsement, Block, Report, UserPreference, Follow, Profile Strength, Open-to-Work.
+> REMAINING: Media, PostMedia, Repost, Hashtag, PostHashtag, HashtagFollow, Mention, Bookmark, Cover/Banner.
 
 #### ER Diagram (Phase 1 Additions)
 
@@ -1629,6 +1633,8 @@ model PushToken {
 
 ### 3.1 Phase 1 Endpoints
 
+> **Implementation Status**: Reactions, Endorsements, Block/Report, Follow, User Preferences endpoints are IMPLEMENTED (Feb 2026). Media, Shares/Reposts, Hashtags, @Mentions, Bookmarks endpoints are PLANNED.
+
 #### Media Uploads
 
 | Method | Path | Auth | Rate Limit | Description |
@@ -1644,7 +1650,7 @@ Body: { file: binary, type: "IMAGE"|"VIDEO"|"DOCUMENT", altText?: string }
 Response 201: { id, url, cdnUrl, thumbnailUrl, type, status, width, height }
 ```
 
-#### Multi-Reaction System
+#### Multi-Reaction System -- IMPLEMENTED (Feb 2026, 18 tests)
 
 | Method | Path | Auth | Rate Limit | Description |
 |--------|------|:----:|:----------:|-------------|
@@ -1698,14 +1704,14 @@ Body: { postId?: string, jobId?: string, articleId?: string }
 Response 201: { bookmarkId, type, createdAt }
 ```
 
-#### Endorsements
+#### Endorsements -- IMPLEMENTED (Feb 2026, 9 tests)
 
 | Method | Path | Auth | Rate Limit | Description |
 |--------|------|:----:|:----------:|-------------|
 | POST | `/api/v1/profiles/:id/skills/:skillId/endorse` | Yes | 20/day | Endorse a connection's skill |
 | DELETE | `/api/v1/profiles/:id/skills/:skillId/endorse` | Yes | -- | Remove endorsement |
 
-#### Block/Report
+#### Block/Report -- IMPLEMENTED (Feb 2026, 14 tests)
 
 | Method | Path | Auth | Rate Limit | Description |
 |--------|------|:----:|:----------:|-------------|
@@ -1725,7 +1731,7 @@ GET /api/v1/connections/suggestions?limit=10
 Response 200: { data: [{ user, mutualConnections, reason }] }
 ```
 
-#### User Preferences (Dark Mode)
+#### User Preferences (Dark Mode) -- IMPLEMENTED (Feb 2026)
 
 | Method | Path | Auth | Rate Limit | Description |
 |--------|------|:----:|:----------:|-------------|
@@ -1785,7 +1791,7 @@ Response 200: { theme, feedSort, locale, ... }
 | GET | `/api/v1/events/:id/attendees` | Yes | -- | List attendees |
 | GET | `/api/v1/events/discover` | Yes | -- | Upcoming events |
 
-#### Follow System
+#### Follow System -- IMPLEMENTED (Feb 2026, 13 tests)
 
 | Method | Path | Auth | Rate Limit | Description |
 |--------|------|:----:|:----------:|-------------|
@@ -2011,20 +2017,20 @@ gantt
     dateFormat  YYYY-MM-DD
     axisFormat  %b %Y
 
-    section Phase 1
-    Reaction migration (Like → Reaction)     :p1a, 2026-03-01, 7d
-    Media + PostMedia tables                  :p1b, after p1a, 5d
-    Repost + Hashtag + Mention tables         :p1c, after p1b, 5d
-    Bookmark + Endorsement tables             :p1d, after p1c, 5d
-    Block + Report + UserPreference           :p1e, after p1d, 5d
-    Profile banner column                     :p1f, after p1e, 2d
+    section Phase 1 (Partial - In Progress)
+    Reaction migration (Like → Reaction)     :done, p1a, 2026-02-01, 7d
+    Endorsement tables                       :done, p1d, 2026-02-08, 5d
+    Block + Report + UserPreference          :done, p1e, 2026-02-08, 5d
+    Follow system                            :done, p1f, 2026-02-08, 5d
+    Media + PostMedia tables                 :p1b, 2026-03-15, 5d
+    Repost + Hashtag + Mention tables        :p1c, 2026-03-01, 5d
+    Profile banner column                    :p1g, after p1b, 2d
 
     section Phase 2
     Company + CompanyMember + Follower        :p2a, 2026-05-01, 7d
     Group + GroupMember + GroupPost            :p2b, after p2a, 7d
     Event + EventAttendee                     :p2c, after p2b, 5d
-    Follow system                             :p2d, after p2c, 5d
-    Poll + PollOption + PollVote              :p2e, after p2d, 5d
+    Poll + PollOption + PollVote              :p2e, after p2c, 5d
     Article + SavedSearch + SearchAlert       :p2f, after p2e, 5d
     JobAlert + Resume                         :p2g, after p2f, 5d
 
@@ -2066,23 +2072,23 @@ All new features are gated behind feature flags stored in Redis and configured v
 
 ```typescript
 interface FeatureFlags {
-  // Phase 1
-  FEATURE_MULTI_REACTIONS: boolean;    // Multi-reaction picker
+  // Phase 1 — IMPLEMENTED (backend, Feb 2026)
+  FEATURE_MULTI_REACTIONS: boolean;    // Multi-reaction picker — IMPLEMENTED
   FEATURE_MEDIA_UPLOADS: boolean;      // Image/video uploads in posts
   FEATURE_REPOSTS: boolean;            // Share/repost button
   FEATURE_HASHTAGS: boolean;           // Hashtag extraction and follow
   FEATURE_MENTIONS: boolean;           // @mention parsing
   FEATURE_BOOKMARKS: boolean;          // Save/bookmark button
-  FEATURE_ENDORSEMENTS: boolean;       // Skill endorsement UI
-  FEATURE_BLOCK_REPORT: boolean;       // Block/report users
+  FEATURE_ENDORSEMENTS: boolean;       // Skill endorsement UI — IMPLEMENTED
+  FEATURE_BLOCK_REPORT: boolean;       // Block/report users — IMPLEMENTED
   FEATURE_PYMK: boolean;              // People You May Know
   FEATURE_DARK_MODE: boolean;         // Dark mode toggle
+  FEATURE_FOLLOW_SYSTEM: boolean;     // Follow/unfollow users — IMPLEMENTED (moved from Phase 2)
 
   // Phase 2
   FEATURE_COMPANIES: boolean;
   FEATURE_GROUPS: boolean;
   FEATURE_EVENTS: boolean;
-  FEATURE_FOLLOW_SYSTEM: boolean;
   FEATURE_ADVANCED_SEARCH: boolean;
   FEATURE_POLLS: boolean;
   FEATURE_ARTICLES: boolean;

@@ -2,8 +2,8 @@
 
 > **Product Strategist** | ConnectSW
 > **Date**: February 24, 2026
-> **Version**: 1.0
-> **Status**: Active
+> **Version**: 1.1 (Updated: February 2026)
+> **Status**: Active -- Phase 1 In Progress
 > **Horizon**: 18+ months (5 phases)
 
 ---
@@ -19,6 +19,42 @@
 7. [Phase 5: HORIZON (18+ months)](#7-phase-5-horizon-18-months)
 8. [Dependencies Map](#8-dependencies-map)
 9. [Success Metrics](#9-success-metrics)
+
+---
+
+## Current Sprint Status (February 2026)
+
+**Phase 1 Backend Progress: 6 of 10 features complete (60%)**
+
+| Sprint | Features | Tests | Status |
+|--------|----------|:-----:|:------:|
+| Sprint 1 (Complete) | Profile Strength Meter, Open-to-Work Badge, User Preferences | 41 | DONE |
+| Sprint 2 (Complete) | Reactions, Block/Report, Follow, Endorsements | 54 | DONE |
+| Sprint 3 (Planned) | Hashtags & @Mentions, Shares/Reposts | -- | NOT STARTED |
+| Sprint 4 (Planned) | Cover/Banner Image, Image/Video Uploads | -- | NOT STARTED |
+| **Total** | **10 features** | **95 passing** | **60% backend** |
+
+**Key accomplishment**: 95 new backend tests passing across 6 implemented features. All frontend implementations remain pending.
+
+### What Was Delivered
+
+**Sprint 1 (Feb 2026)**:
+- Profile Strength Meter -- completeness score calculation with weighted field analysis
+- Open-to-Work Badge -- UserPreference model with public/recruiter-only visibility toggle
+- User Preferences Model -- theme, language, feed sort, activity status preferences
+
+**Sprint 2 (Feb 2026)**:
+- Reactions System -- 6-type reactions (LIKE, CELEBRATE, SUPPORT, LOVE, INSIGHTFUL, FUNNY) with counts (18 tests)
+- Block/Report System -- block/unblock, bidirectional profile hiding, connection removal on block, content reporting (14 tests)
+- Follow System -- follow/unfollow, followers/following lists, pagination, status check, counts (13 tests)
+- Endorsement System -- endorse/remove skills, endorser lists, idempotent operations, endorsement count tracking (9 tests)
+
+### What Remains (Phase 1)
+- Hashtags & @Mentions (backend)
+- Shares/Reposts (backend)
+- Cover/Banner Image Upload (backend + storage)
+- Image/Video Uploads (backend + storage)
+- All frontend implementations for all 10 features
 
 ---
 
@@ -100,41 +136,47 @@ Every candidate feature is scored on three dimensions, each rated 1-5:
 
 ```mermaid
 gantt
-    title Phase 1: NOW (March - May 2026)
+    title Phase 1: NOW (Feb - May 2026)
     dateFormat  YYYY-MM-DD
     axisFormat  %b %d
 
-    section Content
-    Image/Video Uploads            :p1a, 2026-03-01, 21d
-    Reactions System               :p1b, 2026-03-08, 14d
-    Hashtags & @Mentions           :p1c, 2026-03-22, 21d
-    Shares/Reposts                 :p1d, 2026-04-05, 14d
+    section Sprint 1 (DONE - Feb 2026)
+    Profile Strength Meter (BE)    :done, p1e, 2026-02-01, 7d
+    Open-to-Work Badge (BE)        :done, p1h, 2026-02-01, 7d
+    User Preferences (BE)          :done, p1k, 2026-02-01, 7d
 
-    section Profile
-    Profile Strength Meter         :p1e, 2026-03-01, 14d
-    Cover/Banner Image             :p1f, 2026-03-15, 7d
-    Endorsement UI                 :p1g, 2026-03-22, 14d
-    Open-to-Work Badge             :p1h, 2026-04-05, 7d
+    section Sprint 2 (DONE - Feb 2026)
+    Reactions System (BE)          :done, p1b, 2026-02-08, 7d
+    Block/Report Users (BE)        :done, p1j, 2026-02-08, 7d
+    Follow System (BE)             :done, p1i, 2026-02-08, 7d
+    Endorsement System (BE)        :done, p1g, 2026-02-08, 7d
 
-    section Social
-    Follow (Non-Connection)        :p1i, 2026-04-12, 14d
-    Block/Report Users             :p1j, 2026-04-12, 14d
+    section Sprint 3 (Planned)
+    Hashtags & @Mentions (BE)      :p1c, 2026-03-01, 14d
+    Shares/Reposts (BE)            :p1d, 2026-03-01, 14d
+
+    section Sprint 4 (Planned)
+    Cover/Banner Image (BE)        :p1f, 2026-03-15, 7d
+    Image/Video Uploads (BE)       :p1a, 2026-03-15, 21d
+
+    section Frontend (Planned)
+    All Phase 1 Frontend           :p1fe, 2026-04-01, 28d
 ```
 
 ### Phase 1 Feature Details
 
-| # | Feature | Description | Score | Effort | Dependencies |
-|---|---------|-------------|:-----:|:------:|-------------|
-| 1 | **Image/Video Uploads** | Allow image (up to 4) and video (up to 5 min) attachments on posts with R2 storage | 40 | L | Object storage (Cloudflare R2) setup |
-| 2 | **Reactions System** | Replace binary like with 6 reaction types: Like, Celebrate, Support, Love, Insightful, Funny -- extending the existing Like model | 40 | M | None (extends existing Like model) |
-| 3 | **Hashtags & @Mentions** | Parse #hashtags and @mentions in post content; hashtag pages aggregate posts; mentions trigger notifications | 48 | M | Notification system (exists) |
-| 4 | **Shares/Reposts** | Repost a post to your feed with optional commentary; track share count on original post | 32 | M | Post model (exists) |
-| 5 | **Profile Strength Meter** | AI-analyzed completeness score (photo, headline, summary, experience, education, skills) with specific improvement suggestions in Arabic/English | 60 | S | Profile model (exists) |
-| 6 | **Block/Report Users** | Block users (hide content bidirectionally, prevent messaging) and report content/users with moderation queue | 40 | M | Admin routes (exist) |
-| 7 | **Cover/Banner Image** | Upload a profile banner image (1584x396 recommended) stored on R2 | 30 | S | Object storage (same as #1) |
-| 8 | **Endorsement UI** | UI for connections to endorse each other's skills with a single click; display top endorsers | 48 | M | ProfileSkill model (exists, has endorsementCount) |
-| 9 | **Open-to-Work Badge** | Toggle on profile that signals availability to recruiters (public or recruiter-only visibility) | 60 | S | Profile model (exists) |
-| 10 | **Follow (Non-Connection)** | Follow a user's content without establishing a bilateral connection; followers see the user's posts in their feed | 32 | M | Feed algorithm adjustment required |
+| # | Feature | Description | Score | Effort | Backend | Frontend | Dependencies |
+|---|---------|-------------|:-----:|:------:|:-------:|:--------:|-------------|
+| 1 | **Image/Video Uploads** | Allow image (up to 4) and video (up to 5 min) attachments on posts with R2 storage | 40 | L | Planned | Planned | Object storage (Cloudflare R2) setup |
+| 2 | **Reactions System** | Replace binary like with 6 reaction types: Like, Celebrate, Support, Love, Insightful, Funny -- extending the existing Like model | 40 | M | DONE (Feb 2026) -- 18 tests | Planned | None (extends existing Like model) |
+| 3 | **Hashtags & @Mentions** | Parse #hashtags and @mentions in post content; hashtag pages aggregate posts; mentions trigger notifications | 48 | M | Planned | Planned | Notification system (exists) |
+| 4 | **Shares/Reposts** | Repost a post to your feed with optional commentary; track share count on original post | 32 | M | Planned | Planned | Post model (exists) |
+| 5 | **Profile Strength Meter** | AI-analyzed completeness score (photo, headline, summary, experience, education, skills) with specific improvement suggestions in Arabic/English | 60 | S | DONE (Feb 2026) | Planned | Profile model (exists) |
+| 6 | **Block/Report Users** | Block users (hide content bidirectionally, prevent messaging) and report content/users with moderation queue | 40 | M | DONE (Feb 2026) -- 14 tests | Planned | Admin routes (exist) |
+| 7 | **Cover/Banner Image** | Upload a profile banner image (1584x396 recommended) stored on R2 | 30 | S | Planned | Planned | Object storage (same as #1) |
+| 8 | **Endorsement UI** | UI for connections to endorse each other's skills with a single click; display top endorsers | 48 | M | DONE (Feb 2026) -- 9 tests | Planned | ProfileSkill model (exists, has endorsementCount) |
+| 9 | **Open-to-Work Badge** | Toggle on profile that signals availability to recruiters (public or recruiter-only visibility) | 60 | S | DONE (Feb 2026) | Planned | Profile model (exists) |
+| 10 | **Follow (Non-Connection)** | Follow a user's content without establishing a bilateral connection; followers see the user's posts in their feed | 32 | M | DONE (Feb 2026) -- 13 tests | Planned | Feed algorithm adjustment required |
 
 ---
 
