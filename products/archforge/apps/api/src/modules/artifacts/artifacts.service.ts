@@ -1,0 +1,618 @@
+/**
+ * Artifact Service
+ *
+ * Business logic for artifact CRUD, elements, relationships,
+ * and canvas auto-save with automatic versioning.
+ */
+
+import { FastifyInstance } from 'fastify';
+import { Prisma } from '@prisma/client';
+import { AppError } from '../../types/index.js';
+import { logger } from '../../utils/logger.js';
+import type {
+  ArtifactResponse,
+  ArtifactListResponse,
+  ElementResponse,
+  RelationshipResponse,
+} from './artifacts.types.js';
+
+export class ArtifactService {
+  constructor(private fastify: FastifyInstance) {}
+
+  private async audit(
+    action: string,
+    userId: string,
+    resourceId: string | null,
+    ip: string,
+    userAgent: string,
+    metadata: Record<string, unknown> = {},
+  ): Promise<void> {
+    try {
+      await this.fastify.prisma.auditLog.create({
+        data: {
+          userId,
+          resourceId,
+          resourceType: 'artifact',
+          action,
+          metadata,
+          ipAddress: ip || null,
+          userAgent: userAgent || null,
+        },
+      });
+    } catch (err) {
+      logger.error('Failed to write audit log', err);
+    }
+  }
+
+  private async verifyAccess(
+    userId: string,
+    projectId: string,
+  ): Promise<void> {
+    const member = await this.fastify.prisma.projectMember.findFirst({
+      where: { projectId, userId },
+    });
+    if (!member) {
+      throw new AppError(403, 'forbidden', 'Not a member of this project');
+    }
+  }
+
+  private formatArtifact(
+    artifact: Prisma.ArtifactGetPayload<{
+      include: { creator: true };
+    }>,
+  ): ArtifactResponse {
+    return {
+      id: artifact.id,
+      projectId: artifact.projectId,
+      name: artifact.name,
+      type: artifact.type,
+      framework: artifact.framework,
+      status: artifact.status,
+      canvasData: artifact.canvasData,
+      currentVersion: artifact.currentVersion,
+      createdBy: {
+        id: artifact.creator.id,
+        email: artifact.creator.email,
+        fullName: artifact.creator.fullName,
+      },
+      createdAt: artifact.createdAt.toISOString(),
+      updatedAt: artifact.updatedAt.toISOString(),
+    };
+  }
+
+  async create(
+    userId: string,
+    projectId: string,
+    data: { name: string; type: string; framework: string; canvasData?: unknown },
+    ip: string,
+    userAgent: string,
+  ): Promise<ArtifactResponse> {
+    await this.verifyAccess(userId, projectId);
+
+    const artifact = await this.fastify.prisma.$transaction(async (tx) => {
+      const a = await tx.artifact.create({
+        data: {
+          projectId,
+          createdBy: userId,
+          name: data.name,
+          type: data.type,
+          framework: data.framework,
+          canvasData: data.canvasData || undefined,
+          currentVersion: 1,
+        },
+        include: { creator: true },
+      });
+
+      await tx.artifactVersion.create({
+        data: {
+          artifactId: a.id,
+          createdBy: userId,
+          versionNumber: 1,
+          canvasData: a.canvasData as Prisma.InputJsonValue,
+          changeSummary: 'Initial creation',
+          changeType: 'creation',
+        },
+      });
+
+      return a;
+    });
+
+    logger.info('Artifact created', { artifactId: artifact.id, userId });
+    await this.audit('artifact.create', userId, artifact.id, ip, userAgent, {
+      name: data.name,
+    });
+
+    return this.formatArtifact(artifact);
+  }
+
+  async list(
+    userId: string,
+    projectId: string,
+    query: { status: string; cursor?: string; pageSize: number },
+  ): Promise<ArtifactListResponse> {
+    await this.verifyAccess(userId, projectId);
+
+    const where: Prisma.ArtifactWhereInput = {
+      projectId,
+      status: query.status,
+    };
+
+    const total = await this.fastify.prisma.artifact.count({ where });
+
+    const findArgs: Prisma.ArtifactFindManyArgs = {
+      where,
+      include: { creator: true },
+      orderBy: { updatedAt: 'desc' },
+      take: query.pageSize + 1,
+    };
+
+    if (query.cursor) {
+      findArgs.cursor = { id: query.cursor };
+      findArgs.skip = 1;
+    }
+
+    const artifacts = await this.fastify.prisma.artifact.findMany(findArgs);
+
+    const hasMore = artifacts.length > query.pageSize;
+    const data = artifacts.slice(0, query.pageSize);
+    const nextCursor = hasMore ? data[data.length - 1].id : null;
+
+    return {
+      data: data.map((a) =>
+        this.formatArtifact(
+          a as Parameters<typeof this.formatArtifact>[0],
+        ),
+      ),
+      meta: { total, pageSize: query.pageSize, hasMore, nextCursor },
+    };
+  }
+
+  async getById(
+    userId: string,
+    projectId: string,
+    artifactId: string,
+  ): Promise<ArtifactResponse> {
+    await this.verifyAccess(userId, projectId);
+
+    const artifact = await this.fastify.prisma.artifact.findFirst({
+      where: { id: artifactId, projectId },
+      include: { creator: true },
+    });
+
+    if (!artifact) {
+      throw new AppError(404, 'not-found', 'Artifact not found');
+    }
+
+    return this.formatArtifact(artifact);
+  }
+
+  async update(
+    userId: string,
+    projectId: string,
+    artifactId: string,
+    data: {
+      name?: string;
+      type?: string;
+      status?: string;
+      canvasData?: unknown;
+      nlDescription?: string | null;
+    },
+    ip: string,
+    userAgent: string,
+  ): Promise<ArtifactResponse> {
+    await this.verifyAccess(userId, projectId);
+
+    const existing = await this.fastify.prisma.artifact.findFirst({
+      where: { id: artifactId, projectId },
+    });
+
+    if (!existing) {
+      throw new AppError(404, 'not-found', 'Artifact not found');
+    }
+
+    const updateData: Prisma.ArtifactUpdateInput = {};
+    if (data.name !== undefined) updateData.name = data.name;
+    if (data.type !== undefined) updateData.type = data.type;
+    if (data.status !== undefined) updateData.status = data.status;
+    if (data.nlDescription !== undefined) {
+      updateData.nlDescription = data.nlDescription;
+    }
+
+    const artifact = await this.fastify.prisma.$transaction(async (tx) => {
+      if (data.canvasData !== undefined) {
+        const newVersion = existing.currentVersion + 1;
+        updateData.canvasData = data.canvasData as Prisma.InputJsonValue;
+        updateData.currentVersion = newVersion;
+
+        await tx.artifactVersion.create({
+          data: {
+            artifactId,
+            createdBy: userId,
+            versionNumber: newVersion,
+            canvasData: data.canvasData as Prisma.InputJsonValue,
+            changeSummary: 'Canvas updated',
+            changeType: 'manual_edit',
+          },
+        });
+      }
+
+      return tx.artifact.update({
+        where: { id: artifactId },
+        data: updateData,
+        include: { creator: true },
+      });
+    });
+
+    logger.info('Artifact updated', { artifactId, userId });
+    await this.audit('artifact.update', userId, artifactId, ip, userAgent, {
+      changes: Object.keys(data),
+    });
+
+    return this.formatArtifact(artifact);
+  }
+
+  async delete(
+    userId: string,
+    projectId: string,
+    artifactId: string,
+    ip: string,
+    userAgent: string,
+  ): Promise<void> {
+    await this.verifyAccess(userId, projectId);
+
+    const existing = await this.fastify.prisma.artifact.findFirst({
+      where: { id: artifactId, projectId },
+    });
+
+    if (!existing) {
+      throw new AppError(404, 'not-found', 'Artifact not found');
+    }
+
+    if (existing.createdBy !== userId) {
+      throw new AppError(
+        403,
+        'forbidden',
+        'Only the artifact creator can delete it',
+      );
+    }
+
+    await this.fastify.prisma.artifact.delete({
+      where: { id: artifactId },
+    });
+
+    logger.info('Artifact deleted', { artifactId, userId });
+    await this.audit('artifact.delete', userId, artifactId, ip, userAgent, {
+      name: existing.name,
+    });
+  }
+
+  // ==================== Elements ====================
+
+  async addElement(
+    userId: string,
+    projectId: string,
+    artifactId: string,
+    data: {
+      elementId: string;
+      elementType: string;
+      framework: string;
+      name: string;
+      description?: string | null;
+      properties?: unknown;
+      position?: unknown;
+      layer?: string | null;
+    },
+  ): Promise<ElementResponse> {
+    await this.verifyAccess(userId, projectId);
+
+    const artifact = await this.fastify.prisma.artifact.findFirst({
+      where: { id: artifactId, projectId },
+    });
+
+    if (!artifact) {
+      throw new AppError(404, 'not-found', 'Artifact not found');
+    }
+
+    const element = await this.fastify.prisma.artifactElement.create({
+      data: {
+        artifactId,
+        elementId: data.elementId,
+        elementType: data.elementType,
+        framework: data.framework,
+        name: data.name,
+        description: data.description || null,
+        properties: (data.properties || {}) as Prisma.InputJsonValue,
+        position: (data.position || {
+          x: 0, y: 0, width: 200, height: 100,
+        }) as Prisma.InputJsonValue,
+        layer: data.layer || null,
+      },
+    });
+
+    return {
+      id: element.id,
+      elementId: element.elementId,
+      elementType: element.elementType,
+      framework: element.framework,
+      name: element.name,
+      description: element.description,
+      properties: element.properties,
+      position: element.position,
+      layer: element.layer,
+    };
+  }
+
+  async updateElement(
+    userId: string,
+    projectId: string,
+    artifactId: string,
+    elementId: string,
+    data: {
+      name?: string;
+      description?: string | null;
+      properties?: unknown;
+      position?: unknown;
+    },
+  ): Promise<ElementResponse> {
+    await this.verifyAccess(userId, projectId);
+
+    const element = await this.fastify.prisma.artifactElement.findFirst({
+      where: { artifactId, elementId },
+      include: { artifact: true },
+    });
+
+    if (!element || element.artifact.projectId !== projectId) {
+      throw new AppError(404, 'not-found', 'Element not found');
+    }
+
+    const updateData: Prisma.ArtifactElementUpdateInput = {};
+    if (data.name !== undefined) updateData.name = data.name;
+    if (data.description !== undefined) {
+      updateData.description = data.description;
+    }
+    if (data.properties !== undefined) {
+      updateData.properties = data.properties as Prisma.InputJsonValue;
+    }
+    if (data.position !== undefined) {
+      updateData.position = data.position as Prisma.InputJsonValue;
+    }
+
+    const updated = await this.fastify.prisma.artifactElement.update({
+      where: { id: element.id },
+      data: updateData,
+    });
+
+    return {
+      id: updated.id,
+      elementId: updated.elementId,
+      elementType: updated.elementType,
+      framework: updated.framework,
+      name: updated.name,
+      description: updated.description,
+      properties: updated.properties,
+      position: updated.position,
+      layer: updated.layer,
+    };
+  }
+
+  async deleteElement(
+    userId: string,
+    projectId: string,
+    artifactId: string,
+    elementId: string,
+  ): Promise<void> {
+    await this.verifyAccess(userId, projectId);
+
+    const element = await this.fastify.prisma.artifactElement.findFirst({
+      where: { artifactId, elementId },
+      include: { artifact: true },
+    });
+
+    if (!element || element.artifact.projectId !== projectId) {
+      throw new AppError(404, 'not-found', 'Element not found');
+    }
+
+    await this.fastify.prisma.artifactElement.delete({
+      where: { id: element.id },
+    });
+  }
+
+  async listElements(
+    userId: string,
+    projectId: string,
+    artifactId: string,
+  ): Promise<{ data: ElementResponse[] }> {
+    await this.verifyAccess(userId, projectId);
+
+    const artifact = await this.fastify.prisma.artifact.findFirst({
+      where: { id: artifactId, projectId },
+    });
+
+    if (!artifact) {
+      throw new AppError(404, 'not-found', 'Artifact not found');
+    }
+
+    const elements = await this.fastify.prisma.artifactElement.findMany({
+      where: { artifactId },
+      orderBy: { createdAt: 'asc' },
+    });
+
+    return {
+      data: elements.map((e) => ({
+        id: e.id,
+        elementId: e.elementId,
+        elementType: e.elementType,
+        framework: e.framework,
+        name: e.name,
+        description: e.description,
+        properties: e.properties,
+        position: e.position,
+        layer: e.layer,
+      })),
+    };
+  }
+
+  // ==================== Relationships ====================
+
+  async addRelationship(
+    userId: string,
+    projectId: string,
+    artifactId: string,
+    data: {
+      relationshipId: string;
+      sourceElementId: string;
+      targetElementId: string;
+      relationshipType: string;
+      framework: string;
+      label?: string | null;
+      properties?: unknown;
+    },
+  ): Promise<RelationshipResponse> {
+    await this.verifyAccess(userId, projectId);
+
+    const artifact = await this.fastify.prisma.artifact.findFirst({
+      where: { id: artifactId, projectId },
+    });
+
+    if (!artifact) {
+      throw new AppError(404, 'not-found', 'Artifact not found');
+    }
+
+    const rel = await this.fastify.prisma.artifactRelationship.create({
+      data: {
+        artifactId,
+        relationshipId: data.relationshipId,
+        sourceElementId: data.sourceElementId,
+        targetElementId: data.targetElementId,
+        relationshipType: data.relationshipType,
+        framework: data.framework,
+        label: data.label || null,
+        properties: (data.properties || {}) as Prisma.InputJsonValue,
+      },
+    });
+
+    return {
+      id: rel.id,
+      relationshipId: rel.relationshipId,
+      sourceElementId: rel.sourceElementId,
+      targetElementId: rel.targetElementId,
+      relationshipType: rel.relationshipType,
+      framework: rel.framework,
+      label: rel.label,
+      properties: rel.properties,
+    };
+  }
+
+  async deleteRelationship(
+    userId: string,
+    projectId: string,
+    artifactId: string,
+    relationshipId: string,
+  ): Promise<void> {
+    await this.verifyAccess(userId, projectId);
+
+    const rel = await this.fastify.prisma.artifactRelationship.findFirst({
+      where: { artifactId, relationshipId },
+      include: { artifact: true },
+    });
+
+    if (!rel || rel.artifact.projectId !== projectId) {
+      throw new AppError(404, 'not-found', 'Relationship not found');
+    }
+
+    await this.fastify.prisma.artifactRelationship.delete({
+      where: { id: rel.id },
+    });
+  }
+
+  async listRelationships(
+    userId: string,
+    projectId: string,
+    artifactId: string,
+  ): Promise<{ data: RelationshipResponse[] }> {
+    await this.verifyAccess(userId, projectId);
+
+    const artifact = await this.fastify.prisma.artifact.findFirst({
+      where: { id: artifactId, projectId },
+    });
+
+    if (!artifact) {
+      throw new AppError(404, 'not-found', 'Artifact not found');
+    }
+
+    const rels = await this.fastify.prisma.artifactRelationship.findMany({
+      where: { artifactId },
+      orderBy: { createdAt: 'asc' },
+    });
+
+    return {
+      data: rels.map((r) => ({
+        id: r.id,
+        relationshipId: r.relationshipId,
+        sourceElementId: r.sourceElementId,
+        targetElementId: r.targetElementId,
+        relationshipType: r.relationshipType,
+        framework: r.framework,
+        label: r.label,
+        properties: r.properties,
+      })),
+    };
+  }
+
+  // ==================== Canvas Save ====================
+
+  async saveCanvas(
+    userId: string,
+    projectId: string,
+    artifactId: string,
+    canvasData: unknown,
+    ip: string,
+    userAgent: string,
+  ): Promise<ArtifactResponse> {
+    await this.verifyAccess(userId, projectId);
+
+    const existing = await this.fastify.prisma.artifact.findFirst({
+      where: { id: artifactId, projectId },
+    });
+
+    if (!existing) {
+      throw new AppError(404, 'not-found', 'Artifact not found');
+    }
+
+    const newVersion = existing.currentVersion + 1;
+
+    const artifact = await this.fastify.prisma.$transaction(async (tx) => {
+      await tx.artifactVersion.create({
+        data: {
+          artifactId,
+          createdBy: userId,
+          versionNumber: newVersion,
+          canvasData: canvasData as Prisma.InputJsonValue,
+          changeSummary: 'Auto-save',
+          changeType: 'auto_save',
+        },
+      });
+
+      return tx.artifact.update({
+        where: { id: artifactId },
+        data: {
+          canvasData: canvasData as Prisma.InputJsonValue,
+          currentVersion: newVersion,
+        },
+        include: { creator: true },
+      });
+    });
+
+    logger.info('Canvas saved', { artifactId, version: newVersion });
+    await this.audit(
+      'artifact.canvas_save',
+      userId,
+      artifactId,
+      ip,
+      userAgent,
+      { version: newVersion },
+    );
+
+    return this.formatArtifact(artifact);
+  }
+}

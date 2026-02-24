@@ -24,6 +24,10 @@ import authPlugin from './plugins/auth.js';
 // Routes
 import { authRoutes } from './modules/auth/index.js';
 import { projectRoutes } from './modules/projects/index.js';
+import { artifactRoutes } from './modules/artifacts/index.js';
+import { versionRoutes } from './modules/versions/index.js';
+import { commentRoutes } from './modules/comments/index.js';
+import { shareRoutes } from './modules/shares/index.js';
 
 // Utils
 import { logger } from './utils/logger.js';
@@ -228,6 +232,10 @@ export async function buildApp(options?: BuildAppOptions): Promise<FastifyInstan
   // Register API routes under /api/v1 prefix
   await fastify.register(authRoutes, { prefix: '/api/v1/auth' });
   await fastify.register(projectRoutes, { prefix: '/api/v1/projects' });
+  await fastify.register(artifactRoutes, { prefix: '/api/v1/projects' });
+  await fastify.register(versionRoutes, { prefix: '/api/v1/artifacts' });
+  await fastify.register(commentRoutes, { prefix: '/api/v1/artifacts' });
+  await fastify.register(shareRoutes, { prefix: '/api/v1/artifacts' });
 
   // Validate :id path parameters
   const SAFE_ID_RE = /^[a-zA-Z0-9_-]{1,128}$/;
