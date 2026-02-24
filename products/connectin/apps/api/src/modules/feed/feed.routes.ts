@@ -29,6 +29,11 @@ const feedRoutes: FastifyPluginAsync = async (fastify) => {
         properties: {
           content: { type: 'string', minLength: 1, maxLength: 3000 },
           mediaUrl: { type: 'string', format: 'uri' },
+          mediaIds: {
+            type: 'array',
+            items: { type: 'string', format: 'uuid' },
+            maxItems: 4,
+          },
         },
       },
       response: {

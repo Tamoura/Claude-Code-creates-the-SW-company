@@ -52,6 +52,18 @@ enum OpenToWorkVisibility {
   RECRUITERS_ONLY
 }
 
+enum MediaType {
+  IMAGE
+  VIDEO
+  DOCUMENT
+}
+
+enum MediaStatus {
+  PROCESSING
+  READY
+  FAILED
+}
+
 // ─── Users ──────────────────────────────────────────────────
 
 model User {
@@ -106,6 +118,7 @@ model User {
   reposts                 Repost[]
   mentions                Mention[]        @relation("MentionTarget")
   hashtagFollows          HashtagFollow[]
+  media                   Media[]
 
   @@index([status, createdAt])
   @@index([verificationToken])
@@ -312,6 +325,7 @@ model Post {
   reposts       Repost[]
   postHashtags  PostHashtag[]
   mentions      Mention[]
+  postMedia     PostMedia[]
 
   @@index([authorId, createdAt(sort: Desc)])
   @@index([createdAt(sort: Desc)])
@@ -750,6 +764,47 @@ model Repost {
   @@unique([originalPostId, userId])
   @@index([userId])
   @@map("reposts")
+}
+
+// ─── Media ───────────────────────────────────────────────────────
+
+model Media {
+  id            String      @id @default(uuid())
+  uploaderId    String      @map("uploader_id")
+  type          MediaType
+  status        MediaStatus @default(PROCESSING)
+  originalName  String      @map("original_name") @db.VarChar(255)
+  mimeType      String      @map("mime_type") @db.VarChar(100)
+  size          Int
+  url           String      @db.VarChar(1000)
+  thumbnailUrl  String?     @map("thumbnail_url") @db.VarChar(1000)
+  width         Int?
+  height        Int?
+  altText       String?     @map("alt_text") @db.VarChar(500)
+  createdAt     DateTime    @default(now()) @map("created_at")
+  updatedAt     DateTime    @updatedAt @map("updated_at")
+
+  uploader      User        @relation(fields: [uploaderId], references: [id], onDelete: Cascade)
+  postMedia     PostMedia[]
+
+  @@index([uploaderId])
+  @@index([status])
+  @@map("media")
+}
+
+model PostMedia {
+  id        String   @id @default(uuid())
+  postId    String   @map("post_id")
+  mediaId   String   @map("media_id")
+  sortOrder Int      @default(0) @map("sort_order")
+  createdAt DateTime @default(now()) @map("created_at")
+
+  post      Post     @relation(fields: [postId], references: [id], onDelete: Cascade)
+  media     Media    @relation(fields: [mediaId], references: [id], onDelete: Cascade)
+
+  @@unique([postId, mediaId])
+  @@index([postId])
+  @@map("post_media")
 }
 
 // ─── Endorsements ───────────────────────────────────────────────

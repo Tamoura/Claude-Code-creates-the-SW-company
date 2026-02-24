@@ -72,6 +72,14 @@ const errorHandlerPlugin: FastifyPluginAsync = async (fastify) => {
       return sendError(reply, 413, 'BODY_TOO_LARGE', 'Request body too large', undefined, reqId);
     }
 
+    // Multipart file too large
+    if (
+      error.code === 'FST_REQ_FILE_TOO_LARGE' ||
+      (rawError instanceof Error && rawError.message?.includes('request file too large'))
+    ) {
+      return sendError(reply, 400, 'FILE_TOO_LARGE', 'File exceeds the maximum allowed size', undefined, reqId);
+    }
+
     // Rate-limit errors: @fastify/rate-limit v9+ throws the errorResponseBuilder
     // result directly (not as an Error), so it reaches here as a plain object.
     if (
