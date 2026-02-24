@@ -35,6 +35,7 @@ import { blockRoutes, reportRoutes } from './modules/block/block.routes';
 import followRoutes from './modules/follow/follow.routes';
 import endorsementRoutes from './modules/endorsement/endorsement.routes';
 import hashtagRoutes from './modules/hashtag/hashtag.routes';
+import mediaRoutes from './modules/media/media.routes';
 
 export interface BuildAppOptions {
   skipRateLimit?: boolean;
@@ -78,6 +79,10 @@ export async function buildApp(
   }
 
   await app.register(websocketPlugin);
+  await app.register(
+    import('@fastify/multipart').then((m) => m.default),
+    { limits: { fileSize: 10 * 1024 * 1024 } } // 10 MB
+  );
   await app.register(csrfPlugin);
 
   /* istanbul ignore next */
@@ -134,6 +139,9 @@ export async function buildApp(
   });
   await app.register(hashtagRoutes, {
     prefix: '/api/v1/hashtags',
+  });
+  await app.register(mediaRoutes, {
+    prefix: '/api/v1/media',
   });
 
   // Session cleanup — run hourly in non-test environments

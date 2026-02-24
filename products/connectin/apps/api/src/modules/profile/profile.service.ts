@@ -713,6 +713,7 @@ export class ProfileService {
       summaryAr: profile.summaryAr,
       summaryEn: profile.summaryEn,
       avatarUrl: profile.avatarUrl,
+      bannerUrl: (profile as { bannerUrl?: string | null }).bannerUrl ?? null,
       location: profile.location,
       website: profile.website,
       completenessScore: profile.completenessScore,

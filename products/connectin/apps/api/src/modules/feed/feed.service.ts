@@ -3,7 +3,10 @@ import {
   TextDirection,
   ReactionType,
 } from '@prisma/client';
-import { NotFoundError } from '../../lib/errors';
+import {
+  NotFoundError,
+  ValidationError,
+} from '../../lib/errors';
 import {
   CreatePostInput,
   UpdatePostInput,
@@ -67,6 +70,61 @@ export class FeedService {
         post.id
       );
 
+    // Attach media if provided
+    let media: Array<{
+      id: string;
+      type: string;
+      url: string;
+      thumbnailUrl: string | null;
+      mimeType: string;
+      width: number | null;
+      height: number | null;
+      altText: string | null;
+    }> = [];
+    if (input.mediaIds && input.mediaIds.length > 0) {
+      if (input.mediaIds.length > 4) {
+        throw new ValidationError(
+          'Maximum 4 media attachments per post'
+        );
+      }
+
+      // Verify all media belong to the author
+      const mediaRecords =
+        await this.prisma.media.findMany({
+          where: {
+            id: { in: input.mediaIds },
+            uploaderId: authorId,
+          },
+        });
+
+      if (mediaRecords.length !== input.mediaIds.length) {
+        throw new ValidationError(
+          'One or more media items not found or not owned by you'
+        );
+      }
+
+      // Create PostMedia records
+      await this.prisma.postMedia.createMany({
+        data: input.mediaIds.map((mediaId, index) => ({
+          postId: post.id,
+          mediaId,
+          sortOrder: index,
+        })),
+        skipDuplicates: true,
+      });
+
+      media = mediaRecords.map((m) => ({
+        id: m.id,
+        type: m.type,
+        url: m.url,
+        thumbnailUrl: m.thumbnailUrl,
+        mimeType: m.mimeType,
+        width: m.width,
+        height: m.height,
+        altText: m.altText,
+      }));
+    }
+
     return {
       id: post.id,
       author: {
@@ -89,6 +147,7 @@ export class FeedService {
         offsetStart: m.offsetStart,
         offsetEnd: m.offsetEnd,
       })),
+      media,
       createdAt: post.createdAt,
     };
   }
@@ -146,6 +205,23 @@ export class FeedService {
           where: { userId },
           select: { id: true },
         },
+        postMedia: {
+          orderBy: { sortOrder: 'asc' },
+          include: {
+            media: {
+              select: {
+                id: true,
+                type: true,
+                url: true,
+                thumbnailUrl: true,
+                mimeType: true,
+                width: true,
+                height: true,
+                altText: true,
+              },
+            },
+          },
+        },
       },
     });
 
@@ -182,6 +258,7 @@ export class FeedService {
       likeCount: post.likeCount,
       commentCount: post.commentCount,
       isLikedByMe: post.likes.length > 0,
+      media: post.postMedia.map((pm) => pm.media),
       createdAt: post.createdAt,
     }));
 

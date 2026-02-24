@@ -17,6 +17,10 @@ export const createPostSchema = z.object({
   textDirection: z
     .enum(['RTL', 'LTR', 'AUTO'])
     .default('AUTO'),
+  mediaIds: z
+    .array(z.string().uuid())
+    .max(4, 'Maximum 4 media attachments per post')
+    .optional(),
 });
 
 export const createCommentSchema = z.object({

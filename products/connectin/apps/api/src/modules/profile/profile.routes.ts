@@ -12,9 +12,12 @@ import {
 import { sendSuccess } from '../../lib/response';
 import { ValidationError } from '../../lib/errors';
 import { zodToDetails } from '../../lib/validation';
+import { MediaService } from '../media/media.service';
+import { getStorage } from '../../lib/storage';
 
 const profileRoutes: FastifyPluginAsync = async (fastify) => {
   const profileService = new ProfileService(fastify.prisma);
+  const mediaService = new MediaService(fastify.prisma, getStorage());
 
   // All profile routes require authentication
   fastify.addHook('preHandler', fastify.authenticate);
@@ -613,6 +616,78 @@ const profileRoutes: FastifyPluginAsync = async (fastify) => {
       return sendSuccess(reply, result);
     }
   );
+  // PUT /api/v1/profiles/me/banner
+  fastify.put('/me/banner', {
+    schema: {
+      description: 'Upload a profile banner image',
+      tags: ['Profile'],
+      security: [{ bearerAuth: [] }],
+      consumes: ['multipart/form-data'],
+      response: {
+        200: {
+          type: 'object',
+          additionalProperties: true,
+          properties: {
+            success: { type: 'boolean' },
+            data: { type: 'object', additionalProperties: true },
+          },
+        },
+      },
+    },
+    config: {
+      rateLimit: {
+        max: 10,
+        timeWindow: '1 minute',
+      },
+    },
+  }, async (request, reply) => {
+    const data = await request.file();
+    if (!data) {
+      throw new ValidationError('No file uploaded');
+    }
+
+    const buffer = await data.toBuffer();
+
+    const result = await mediaService.uploadBanner(
+      request.user.sub,
+      {
+        filename: data.filename,
+        mimetype: data.mimetype,
+        data: buffer,
+      }
+    );
+    return sendSuccess(reply, result);
+  });
+
+  // DELETE /api/v1/profiles/me/banner
+  fastify.delete('/me/banner', {
+    schema: {
+      description: 'Remove profile banner image',
+      tags: ['Profile'],
+      security: [{ bearerAuth: [] }],
+      response: {
+        200: {
+          type: 'object',
+          additionalProperties: true,
+          properties: {
+            success: { type: 'boolean' },
+            data: { type: 'object', additionalProperties: true },
+          },
+        },
+      },
+    },
+    config: {
+      rateLimit: {
+        max: 10,
+        timeWindow: '1 minute',
+      },
+    },
+  }, async (request, reply) => {
+    const result = await mediaService.removeBanner(
+      request.user.sub
+    );
+    return sendSuccess(reply, result);
+  });
 };
 
 export default profileRoutes;
