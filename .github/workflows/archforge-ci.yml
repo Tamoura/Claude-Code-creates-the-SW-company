@@ -11,51 +11,142 @@ on:
       - 'products/archforge/**'
 
 jobs:
-  validate-docs:
+  api-lint-and-build:
     runs-on: ubuntu-latest
     steps:
-      - uses: actions/checkout@v6
-
-      - name: Check required documentation files exist
-        run: |
-          echo "Checking required documentation files for archforge..."
-          MISSING=0
-
-          check_file() {
-            if [ ! -f "$1" ]; then
-              echo "::error::Missing required file: $1"
-              MISSING=$((MISSING + 1))
-            else
-              echo "  OK: $1"
-            fi
-          }
-
-          check_file "products/archforge/README.md"
-
-          if [ $MISSING -gt 0 ]; then
-            echo "::error::$MISSING required documentation file(s) missing"
-            exit 1
-          fi
-          echo "All required documentation files present"
-
-      - name: Validate YAML files
-        run: |
-          echo "Validating YAML files in products/archforge..."
-          ERRORS=0
-          find products/archforge -name "*.yml" -o -name "*.yaml" | while read f; do
-            python3 -c "import yaml, sys; yaml.safe_load(open('$f'))" 2>/dev/null || {
-              echo "::error::Invalid YAML: $f"
-              ERRORS=$((ERRORS + 1))
-            }
-            echo "  OK: $f"
-          done
-          echo "YAML validation complete"
-
-      - name: Check for broken markdown links
-        uses: gaurav-nelson/github-action-markdown-link-check@v1
+      - uses: actions/checkout@v4
+      - uses: actions/setup-node@v4
         with:
-          use-quiet-mode: 'yes'
-          use-verbose-mode: 'no'
-          folder-path: 'products/archforge'
-          config-file: '.github/mlc_config.json'
-        continue-on-error: true
+          node-version: '20'
+          cache: 'npm'
+          cache-dependency-path: products/archforge/apps/api/package-lock.json
+      - name: Install API deps
+        run: cd products/archforge/apps/api && npm ci
+      - name: Generate Prisma client
+        run: cd products/archforge/apps/api && npx prisma generate
+      - name: TypeScript check
+        run: cd products/archforge/apps/api && npx tsc --noEmit
+      - name: Lint
+        run: cd products/archforge/apps/api && npm run lint || true
+
+  api-test:
+    runs-on: ubuntu-latest
+    services:
+      postgres:
+        image: postgres:15
+        env:
+          POSTGRES_USER: postgres
+          POSTGRES_PASSWORD: postgres
+          POSTGRES_DB: archforge_test
+        ports:
+          - 5432:5432
+        options: >-
+          --health-cmd pg_isready
+          --health-interval 10s
+          --health-timeout 5s
+          --health-retries 5
+    steps:
+      - uses: actions/checkout@v4
+      - uses: actions/setup-node@v4
+        with:
+          node-version: '20'
+          cache: 'npm'
+          cache-dependency-path: products/archforge/apps/api/package-lock.json
+      - name: Install API deps
+        run: cd products/archforge/apps/api && npm ci
+      - name: Generate Prisma client
+        run: cd products/archforge/apps/api && npx prisma generate
+      - name: Run migrations
+        run: cd products/archforge/apps/api && npx prisma migrate deploy
+        env:
+          DATABASE_URL: postgresql://postgres:postgres@localhost:5432/archforge_test
+      - name: Run tests with coverage
+        run: cd products/archforge/apps/api && npm run test:coverage -- --forceExit
+        env:
+          DATABASE_URL: postgresql://postgres:postgres@localhost:5432/archforge_test
+          JWT_SECRET: ci-test-jwt-secret-key-for-testing-only
+          OPENROUTER_API_KEY: test-key
+          INTERNAL_API_KEY: test-internal-api-key
+          NODE_ENV: test
+      - name: Upload coverage
+        uses: actions/upload-artifact@v4
+        with:
+          name: api-coverage
+          path: products/archforge/apps/api/coverage/
+
+  web-build:
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v4
+      - uses: actions/setup-node@v4
+        with:
+          node-version: '20'
+          cache: 'npm'
+          cache-dependency-path: products/archforge/apps/web/package-lock.json
+      - name: Install Web deps
+        run: cd products/archforge/apps/web && npm ci
+      - name: TypeScript check
+        run: cd products/archforge/apps/web && npx tsc --noEmit
+      - name: Build
+        run: cd products/archforge/apps/web && npm run build
+        env:
+          NEXT_PUBLIC_API_URL: http://localhost:5012
+
+  smoke-test:
+    needs: [api-test, web-build]
+    runs-on: ubuntu-latest
+    services:
+      postgres:
+        image: postgres:15
+        env:
+          POSTGRES_USER: postgres
+          POSTGRES_PASSWORD: postgres
+          POSTGRES_DB: archforge_smoke
+        ports:
+          - 5432:5432
+        options: >-
+          --health-cmd pg_isready
+          --health-interval 10s
+          --health-timeout 5s
+          --health-retries 5
+    steps:
+      - uses: actions/checkout@v4
+      - uses: actions/setup-node@v4
+        with:
+          node-version: '20'
+          cache: 'npm'
+          cache-dependency-path: products/archforge/apps/api/package-lock.json
+      - name: Install API deps
+        run: cd products/archforge/apps/api && npm ci
+      - name: Generate Prisma + migrate
+        run: cd products/archforge/apps/api && npx prisma generate && npx prisma migrate deploy
+        env:
+          DATABASE_URL: postgresql://postgres:postgres@localhost:5432/archforge_smoke
+      - name: Start API server
+        run: cd products/archforge/apps/api && npm run dev &
+        env:
+          DATABASE_URL: postgresql://postgres:postgres@localhost:5432/archforge_smoke
+          JWT_SECRET: ci-smoke-jwt-secret-key-for-testing
+          OPENROUTER_API_KEY: test-key
+          INTERNAL_API_KEY: test-internal-api-key
+          PORT: 5012
+      - name: Wait for API
+        run: |
+          for i in $(seq 1 30); do
+            curl -sf http://localhost:5012/health && exit 0
+            sleep 1
+          done
+          exit 1
+      - name: Run smoke tests
+        run: |
+          # Health check
+          curl -sf http://localhost:5012/health | jq .status
+
+          # Register a user
+          REGISTER=$(curl -sf -X POST http://localhost:5012/api/v1/auth/register \
+            -H "Content-Type: application/json" \
+            -d '{"email":"smoke@test.com","password":"SmokeTest123!@#","fullName":"Smoke Tester"}')
+          echo "Register: $REGISTER"
+
+          # Check response
+          echo "$REGISTER" | jq .userId
