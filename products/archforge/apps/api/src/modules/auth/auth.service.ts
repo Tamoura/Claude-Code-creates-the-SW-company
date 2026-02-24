@@ -58,15 +58,37 @@ export class AuthService {
     const passwordHash = await hashPassword(password);
     const verificationToken = randomBytes(32).toString('hex');
 
-    const user = await this.fastify.prisma.user.create({
-      data: {
-        email: normalizedEmail,
-        passwordHash,
-        fullName,
-        status: 'registered',
-        verificationToken: hashToken(verificationToken),
-        verificationExpires: new Date(Date.now() + VERIFICATION_TOKEN_EXPIRY_MS),
-      },
+    const user = await this.fastify.prisma.$transaction(async (tx) => {
+      const newUser = await tx.user.create({
+        data: {
+          email: normalizedEmail,
+          passwordHash,
+          fullName,
+          status: 'registered',
+          verificationToken: hashToken(verificationToken),
+          verificationExpires: new Date(Date.now() + VERIFICATION_TOKEN_EXPIRY_MS),
+        },
+      });
+
+      const slug = `personal-${newUser.id.slice(0, 8)}`;
+      const workspace = await tx.workspace.create({
+        data: {
+          name: 'Personal Workspace',
+          slug,
+          ownerId: newUser.id,
+          plan: 'free',
+        },
+      });
+
+      await tx.workspaceMember.create({
+        data: {
+          workspaceId: workspace.id,
+          userId: newUser.id,
+          role: 'owner',
+        },
+      });
+
+      return newUser;
     });
 
     logger.info('User registered', { userId: user.id, email: normalizedEmail });

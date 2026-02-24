@@ -45,6 +45,7 @@ export async function cleanDatabase(): Promise<void> {
     prisma.artifactVersion.deleteMany(),
     prisma.artifact.deleteMany(),
     prisma.template.deleteMany(),
+    prisma.projectMember.deleteMany(),
     prisma.project.deleteMany(),
     prisma.workspaceMember.deleteMany(),
     prisma.workspace.deleteMany(),
@@ -86,6 +87,14 @@ export async function createTestUser(
   if (registerRes.statusCode !== 201) {
     throw new Error(`Registration failed: ${registerRes.body}`);
   }
+
+  // Activate user (bypass email verification for tests)
+  const prisma = getPrisma();
+  const registerBody = registerRes.json();
+  await prisma.user.update({
+    where: { id: registerBody.userId },
+    data: { status: 'active', emailVerified: true },
+  });
 
   const loginRes = await testApp.inject({
     method: 'POST',

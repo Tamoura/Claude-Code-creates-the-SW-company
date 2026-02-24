@@ -90,6 +90,35 @@ describe('Auth endpoints', () => {
       expect(expiryDiff).toBeLessThanOrEqual(24 * 60 * 60 * 1000); // <= 24h
     });
 
+    it('should auto-create a personal workspace for the new user', async () => {
+      const res = await app.inject({
+        method: 'POST',
+        url: '/api/v1/auth/register',
+        payload: {
+          email: 'workspace@test.com',
+          password: 'Test123!@#',
+          fullName: 'Workspace User',
+        },
+      });
+
+      expect(res.statusCode).toBe(201);
+      const body = res.json();
+
+      const prisma = getPrisma();
+      const workspace = await prisma.workspace.findFirst({
+        where: { ownerId: body.userId },
+        include: { members: true },
+      });
+
+      expect(workspace).not.toBeNull();
+      expect(workspace!.name).toBe('Personal Workspace');
+      expect(workspace!.slug).toContain('personal-');
+      expect(workspace!.plan).toBe('free');
+      expect(workspace!.members).toHaveLength(1);
+      expect(workspace!.members[0].userId).toBe(body.userId);
+      expect(workspace!.members[0].role).toBe('owner');
+    });
+
     it('should return 409 for duplicate email', async () => {
       await app.inject({
         method: 'POST',
