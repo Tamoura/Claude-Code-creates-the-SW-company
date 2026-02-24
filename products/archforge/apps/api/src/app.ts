@@ -24,6 +24,9 @@ import authPlugin from './plugins/auth.js';
 // Routes
 import { authRoutes } from './modules/auth/index.js';
 import { projectRoutes } from './modules/projects/index.js';
+import { artifactRoutes } from './modules/artifacts/index.js';
+import { templateRoutes } from './modules/templates/index.js';
+import { exportRoutes } from './modules/exports/index.js';
 
 // Utils
 import { logger } from './utils/logger.js';
@@ -36,7 +39,7 @@ export interface BuildAppOptions {
 export async function buildApp(options?: BuildAppOptions): Promise<FastifyInstance> {
   const fastify = Fastify({
     trustProxy: true,
-    bodyLimit: 1048576, // 1MB
+    bodyLimit: 5242880, // 5MB
     logger: process.env.NODE_ENV === 'development' ? {
       level: 'info',
       transport: {
@@ -228,6 +231,9 @@ export async function buildApp(options?: BuildAppOptions): Promise<FastifyInstan
   // Register API routes under /api/v1 prefix
   await fastify.register(authRoutes, { prefix: '/api/v1/auth' });
   await fastify.register(projectRoutes, { prefix: '/api/v1/projects' });
+  await fastify.register(artifactRoutes, { prefix: '/api/v1/projects' });
+  await fastify.register(templateRoutes, { prefix: '/api/v1/templates' });
+  await fastify.register(exportRoutes, { prefix: '/api/v1/projects' });
 
   // Validate :id path parameters
   const SAFE_ID_RE = /^[a-zA-Z0-9_-]{1,128}$/;
