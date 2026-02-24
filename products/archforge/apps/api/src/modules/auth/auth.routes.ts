@@ -8,6 +8,7 @@ import { FastifyPluginAsync } from 'fastify';
 import { z } from 'zod';
 import { AppError } from '../../types/index.js';
 import { AuthService } from './auth.service.js';
+import { AuthRecoveryService } from './auth.recovery.js';
 import {
   registerSchema,
   loginSchema,
@@ -33,6 +34,7 @@ function handleValidationError(error: unknown, requestId: string) {
 
 const authRoutes: FastifyPluginAsync = async (fastify) => {
   const authService = new AuthService(fastify);
+  const recoveryService = new AuthRecoveryService(fastify);
 
   // POST /register
   fastify.post('/register', async (request, reply) => {
@@ -129,7 +131,7 @@ const authRoutes: FastifyPluginAsync = async (fastify) => {
       const body = forgotPasswordSchema.parse(request.body);
       const fpIp = request.ip;
       const fpUa = (request.headers['user-agent'] as string) || '';
-      await authService.forgotPassword(body.email, fpIp, fpUa);
+      await recoveryService.forgotPassword(body.email, fpIp, fpUa);
       return reply.send({
         message: 'If an account exists with that email, a reset link has been sent.',
       });
@@ -144,7 +146,7 @@ const authRoutes: FastifyPluginAsync = async (fastify) => {
       const body = resetPasswordSchema.parse(request.body);
       const rpIp = request.ip;
       const rpUa = (request.headers['user-agent'] as string) || '';
-      await authService.resetPassword(body.token, body.password, rpIp, rpUa);
+      await recoveryService.resetPassword(body.token, body.password, rpIp, rpUa);
       return reply.send({ message: 'Password reset successfully.' });
     } catch (error) {
       handleValidationError(error, request.id);
@@ -155,7 +157,7 @@ const authRoutes: FastifyPluginAsync = async (fastify) => {
   fastify.get('/verify-email/:token', async (request, reply) => {
     try {
       const { token } = request.params as { token: string };
-      await authService.verifyEmail(token);
+      await recoveryService.verifyEmail(token);
       return reply.send({ message: 'Email verified successfully.' });
     } catch (error) {
       handleValidationError(error, request.id);
