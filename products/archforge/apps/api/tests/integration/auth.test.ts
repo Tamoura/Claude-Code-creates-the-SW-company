@@ -744,4 +744,373 @@ describe('Auth endpoints', () => {
       expect(res.statusCode).toBe(401);
     });
   });
+
+  // ==================== FORGOT PASSWORD ====================
+
+  describe('POST /api/v1/auth/forgot-password', () => {
+    it('should return success for existing email', async () => {
+      await app.inject({
+        method: 'POST',
+        url: '/api/v1/auth/register',
+        payload: {
+          email: 'forgot@test.com',
+          password: 'Test123!@#',
+          fullName: 'Forgot User',
+        },
+      });
+
+      const res = await app.inject({
+        method: 'POST',
+        url: '/api/v1/auth/forgot-password',
+        payload: { email: 'forgot@test.com' },
+      });
+
+      expect(res.statusCode).toBe(200);
+      expect(res.json().message).toContain('reset link');
+    });
+
+    it('should return same success for non-existing email', async () => {
+      const res = await app.inject({
+        method: 'POST',
+        url: '/api/v1/auth/forgot-password',
+        payload: { email: 'nonexistent@test.com' },
+      });
+
+      expect(res.statusCode).toBe(200);
+      expect(res.json().message).toContain('reset link');
+    });
+
+    it('should store hashed reset token with 1h expiry', async () => {
+      await app.inject({
+        method: 'POST',
+        url: '/api/v1/auth/register',
+        payload: {
+          email: 'reset-token@test.com',
+          password: 'Test123!@#',
+          fullName: 'Reset Token User',
+        },
+      });
+
+      await app.inject({
+        method: 'POST',
+        url: '/api/v1/auth/forgot-password',
+        payload: { email: 'reset-token@test.com' },
+      });
+
+      const prisma = getPrisma();
+      const user = await prisma.user.findUnique({
+        where: { email: 'reset-token@test.com' },
+      });
+      expect(user!.resetToken).not.toBeNull();
+      expect(user!.resetToken!.length).toBe(64); // SHA-256 hex
+      expect(user!.resetTokenExpires).not.toBeNull();
+      const expiryDiff = user!.resetTokenExpires!.getTime() - Date.now();
+      expect(expiryDiff).toBeGreaterThan(55 * 60 * 1000); // > 55min
+      expect(expiryDiff).toBeLessThanOrEqual(60 * 60 * 1000); // <= 1h
+    });
+
+    it('should reject invalid email format', async () => {
+      const res = await app.inject({
+        method: 'POST',
+        url: '/api/v1/auth/forgot-password',
+        payload: { email: 'not-valid' },
+      });
+
+      expect(res.statusCode).toBe(400);
+    });
+  });
+
+  // ==================== RESET PASSWORD ====================
+
+  describe('POST /api/v1/auth/reset-password', () => {
+    let resetTokenRaw: string;
+
+    async function setupResetToken() {
+      await app.inject({
+        method: 'POST',
+        url: '/api/v1/auth/register',
+        payload: {
+          email: 'resetpw@test.com',
+          password: 'Test123!@#',
+          fullName: 'Reset PW User',
+        },
+      });
+
+      // Generate token directly via crypto to get the raw token
+      const crypto = await import('crypto');
+      resetTokenRaw = crypto.randomBytes(32).toString('hex');
+      const tokenHash = crypto.createHash('sha256').update(resetTokenRaw).digest('hex');
+
+      const prisma = getPrisma();
+      await prisma.user.updateMany({
+        where: { email: 'resetpw@test.com' },
+        data: {
+          resetToken: tokenHash,
+          resetTokenExpires: new Date(Date.now() + 60 * 60 * 1000),
+        },
+      });
+    }
+
+    it('should reset password with valid token', async () => {
+      await setupResetToken();
+
+      const res = await app.inject({
+        method: 'POST',
+        url: '/api/v1/auth/reset-password',
+        payload: {
+          token: resetTokenRaw,
+          password: 'NewPass123!@#',
+        },
+      });
+
+      expect(res.statusCode).toBe(200);
+      expect(res.json().message).toContain('reset successfully');
+
+      // Verify can login with new password
+      const loginRes = await app.inject({
+        method: 'POST',
+        url: '/api/v1/auth/login',
+        payload: { email: 'resetpw@test.com', password: 'NewPass123!@#' },
+      });
+      expect(loginRes.statusCode).toBe(200);
+    });
+
+    it('should return 400 for expired token', async () => {
+      await setupResetToken();
+      const prisma = getPrisma();
+      await prisma.user.updateMany({
+        where: { email: 'resetpw@test.com' },
+        data: { resetTokenExpires: new Date(Date.now() - 1000) },
+      });
+
+      const res = await app.inject({
+        method: 'POST',
+        url: '/api/v1/auth/reset-password',
+        payload: {
+          token: resetTokenRaw,
+          password: 'NewPass123!@#',
+        },
+      });
+
+      expect(res.statusCode).toBe(400);
+    });
+
+    it('should return 400 for invalid token', async () => {
+      const res = await app.inject({
+        method: 'POST',
+        url: '/api/v1/auth/reset-password',
+        payload: {
+          token: 'totally-invalid-token',
+          password: 'NewPass123!@#',
+        },
+      });
+
+      expect(res.statusCode).toBe(400);
+    });
+
+    it('should invalidate all sessions after reset', async () => {
+      await setupResetToken();
+
+      // Create a session
+      await app.inject({
+        method: 'POST',
+        url: '/api/v1/auth/login',
+        payload: { email: 'resetpw@test.com', password: 'Test123!@#' },
+      });
+
+      await app.inject({
+        method: 'POST',
+        url: '/api/v1/auth/reset-password',
+        payload: {
+          token: resetTokenRaw,
+          password: 'NewPass123!@#',
+        },
+      });
+
+      const prisma = getPrisma();
+      const activeSessions = await prisma.session.findMany({
+        where: {
+          user: { email: 'resetpw@test.com' },
+          revokedAt: null,
+        },
+      });
+      expect(activeSessions.length).toBe(0);
+    });
+
+    it('should clear lockout state after reset', async () => {
+      await setupResetToken();
+
+      const prisma = getPrisma();
+      await prisma.user.updateMany({
+        where: { email: 'resetpw@test.com' },
+        data: {
+          failedLoginAttempts: 5,
+          lockedUntil: new Date(Date.now() + 15 * 60 * 1000),
+        },
+      });
+
+      await app.inject({
+        method: 'POST',
+        url: '/api/v1/auth/reset-password',
+        payload: {
+          token: resetTokenRaw,
+          password: 'NewPass123!@#',
+        },
+      });
+
+      const user = await prisma.user.findUnique({
+        where: { email: 'resetpw@test.com' },
+      });
+      expect(user!.failedLoginAttempts).toBe(0);
+      expect(user!.lockedUntil).toBeNull();
+    });
+
+    it('should be one-time use (clear token after use)', async () => {
+      await setupResetToken();
+
+      await app.inject({
+        method: 'POST',
+        url: '/api/v1/auth/reset-password',
+        payload: {
+          token: resetTokenRaw,
+          password: 'NewPass123!@#',
+        },
+      });
+
+      // Second use should fail
+      const res = await app.inject({
+        method: 'POST',
+        url: '/api/v1/auth/reset-password',
+        payload: {
+          token: resetTokenRaw,
+          password: 'AnotherPass1!',
+        },
+      });
+      expect(res.statusCode).toBe(400);
+    });
+
+    it('should reject weak new password', async () => {
+      await setupResetToken();
+
+      const res = await app.inject({
+        method: 'POST',
+        url: '/api/v1/auth/reset-password',
+        payload: {
+          token: resetTokenRaw,
+          password: 'weak',
+        },
+      });
+
+      expect(res.statusCode).toBe(400);
+    });
+  });
+
+  // ==================== VERIFY EMAIL ====================
+
+  describe('GET /api/v1/auth/verify-email/:token', () => {
+    let verifyTokenRaw: string;
+
+    async function setupVerifyToken() {
+      const crypto = await import('crypto');
+      verifyTokenRaw = crypto.randomBytes(32).toString('hex');
+      const tokenHash = crypto.createHash('sha256').update(verifyTokenRaw).digest('hex');
+
+      await app.inject({
+        method: 'POST',
+        url: '/api/v1/auth/register',
+        payload: {
+          email: 'verifyemail@test.com',
+          password: 'Test123!@#',
+          fullName: 'Verify Email User',
+        },
+      });
+
+      const prisma = getPrisma();
+      await prisma.user.updateMany({
+        where: { email: 'verifyemail@test.com' },
+        data: {
+          verificationToken: tokenHash,
+          verificationExpires: new Date(Date.now() + 24 * 60 * 60 * 1000),
+        },
+      });
+    }
+
+    it('should verify email with valid token', async () => {
+      await setupVerifyToken();
+
+      const res = await app.inject({
+        method: 'GET',
+        url: `/api/v1/auth/verify-email/${verifyTokenRaw}`,
+      });
+
+      expect(res.statusCode).toBe(200);
+      expect(res.json().message).toContain('verified');
+
+      const prisma = getPrisma();
+      const user = await prisma.user.findUnique({
+        where: { email: 'verifyemail@test.com' },
+      });
+      expect(user!.emailVerified).toBe(true);
+      expect(user!.status).toBe('active');
+      expect(user!.verificationToken).toBeNull();
+    });
+
+    it('should return 400 for expired token', async () => {
+      await setupVerifyToken();
+      const prisma = getPrisma();
+      await prisma.user.updateMany({
+        where: { email: 'verifyemail@test.com' },
+        data: { verificationExpires: new Date(Date.now() - 1000) },
+      });
+
+      const res = await app.inject({
+        method: 'GET',
+        url: `/api/v1/auth/verify-email/${verifyTokenRaw}`,
+      });
+
+      expect(res.statusCode).toBe(400);
+    });
+
+    it('should return 400 for invalid token', async () => {
+      const res = await app.inject({
+        method: 'GET',
+        url: '/api/v1/auth/verify-email/totally-invalid-token',
+      });
+
+      expect(res.statusCode).toBe(400);
+    });
+
+    it('should return 400 for already verified email', async () => {
+      await setupVerifyToken();
+      const prisma = getPrisma();
+      await prisma.user.updateMany({
+        where: { email: 'verifyemail@test.com' },
+        data: { emailVerified: true },
+      });
+
+      const res = await app.inject({
+        method: 'GET',
+        url: `/api/v1/auth/verify-email/${verifyTokenRaw}`,
+      });
+
+      expect(res.statusCode).toBe(400);
+    });
+
+    it('should be one-time use (token cleared after verification)', async () => {
+      await setupVerifyToken();
+
+      await app.inject({
+        method: 'GET',
+        url: `/api/v1/auth/verify-email/${verifyTokenRaw}`,
+      });
+
+      // Second use should fail
+      const res = await app.inject({
+        method: 'GET',
+        url: `/api/v1/auth/verify-email/${verifyTokenRaw}`,
+      });
+
+      expect(res.statusCode).toBe(400);
+    });
+  });
 });
