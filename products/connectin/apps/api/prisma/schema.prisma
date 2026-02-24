@@ -131,6 +131,7 @@ model User {
   createdGroups           Group[]
   eventRegistrations      EventAttendee[]
   createdEvents           Event[]
+  articles                Article[]
 
   @@index([status, createdAt])
   @@index([verificationToken])
@@ -1187,4 +1188,32 @@ model EventAttendee {
   @@unique([eventId, userId])
   @@index([userId])
   @@map("event_attendees")
+}
+
+// ─── Articles (Long-Form Content) ───────────────────────────
+
+enum ArticleStatus {
+  DRAFT
+  PUBLISHED
+  ARCHIVED
+}
+
+model Article {
+  id            String        @id @default(uuid())
+  authorId      String        @map("author_id")
+  title         String        @db.VarChar(300)
+  slug          String        @unique @db.VarChar(350)
+  content       String        @db.Text
+  coverImageUrl String?       @map("cover_image_url") @db.VarChar(1000)
+  status        ArticleStatus @default(DRAFT)
+  publishedAt   DateTime?     @map("published_at")
+  viewCount     Int           @default(0) @map("view_count")
+  createdAt     DateTime      @default(now()) @map("created_at")
+  updatedAt     DateTime      @updatedAt @map("updated_at")
+
+  author User @relation(fields: [authorId], references: [id], onDelete: Cascade)
+
+  @@index([authorId, status])
+  @@index([status, publishedAt(sort: Desc)])
+  @@map("articles")
 }
