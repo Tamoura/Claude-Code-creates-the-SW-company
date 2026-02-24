@@ -34,6 +34,7 @@ import presenceRoutes from './modules/presence/presence.routes';
 import { blockRoutes, reportRoutes } from './modules/block/block.routes';
 import followRoutes from './modules/follow/follow.routes';
 import endorsementRoutes from './modules/endorsement/endorsement.routes';
+import hashtagRoutes from './modules/hashtag/hashtag.routes';
 
 export interface BuildAppOptions {
   skipRateLimit?: boolean;
@@ -130,6 +131,9 @@ export async function buildApp(
   });
   await app.register(endorsementRoutes, {
     prefix: '/api/v1/endorsements',
+  });
+  await app.register(hashtagRoutes, {
+    prefix: '/api/v1/hashtags',
   });
 
   // Session cleanup — run hourly in non-test environments

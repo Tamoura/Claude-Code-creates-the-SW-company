@@ -14,9 +14,17 @@ import {
   encodeCursor,
   CursorPaginationMeta,
 } from '../../lib/pagination';
+import { HashtagService } from '../hashtag/hashtag.service';
+import { MentionService } from '../mention/mention.service';
 
 export class FeedService {
-  constructor(private readonly prisma: PrismaClient) {}
+  private hashtagService: HashtagService;
+  private mentionService: MentionService;
+
+  constructor(private readonly prisma: PrismaClient) {
+    this.hashtagService = new HashtagService(prisma);
+    this.mentionService = new MentionService(prisma);
+  }
 
   async createPost(authorId: string, input: CreatePostInput) {
     const post = await this.prisma.post.create({
@@ -42,6 +50,23 @@ export class FeedService {
       },
     });
 
+    // Extract and link hashtags
+    const hashtags = this.hashtagService.extractHashtags(
+      input.content
+    );
+    await this.hashtagService.linkHashtagsToPost(
+      post.id,
+      hashtags
+    );
+
+    // Extract and create mentions
+    const mentions =
+      await this.mentionService.resolveAndCreateMentions(
+        input.content,
+        authorId,
+        post.id
+      );
+
     return {
       id: post.id,
       author: {
@@ -55,7 +80,15 @@ export class FeedService {
       textDirection: post.textDirection,
       likeCount: post.likeCount,
       commentCount: post.commentCount,
+      repostCount: post.repostCount,
       isLikedByMe: false,
+      hashtags,
+      mentions: mentions.map((m) => ({
+        userId: m.userId,
+        displayName: m.displayName,
+        offsetStart: m.offsetStart,
+        offsetEnd: m.offsetEnd,
+      })),
       createdAt: post.createdAt,
     };
   }
@@ -409,6 +442,14 @@ export class FeedService {
       }),
     ]);
 
+    // Extract mentions from comment
+    await this.mentionService.resolveAndCreateMentions(
+      input.content,
+      authorId,
+      undefined,
+      comment.id
+    );
+
     return {
       id: comment.id,
       postId: comment.postId,
@@ -418,6 +459,80 @@ export class FeedService {
       textDirection: comment.textDirection,
       createdAt: comment.createdAt,
     };
+  }
+
+  async repostPost(
+    postId: string,
+    userId: string,
+    comment?: string
+  ) {
+    const post = await this.prisma.post.findUnique({
+      where: { id: postId },
+      select: { id: true, isDeleted: true },
+    });
+
+    if (!post || post.isDeleted) {
+      throw new NotFoundError('Post not found');
+    }
+
+    await this.prisma.repost.upsert({
+      where: {
+        originalPostId_userId: {
+          originalPostId: postId,
+          userId,
+        },
+      },
+      create: {
+        originalPostId: postId,
+        userId,
+        comment: comment ?? null,
+      },
+      update: {
+        comment: comment ?? null,
+      },
+    });
+
+    // Recount reposts for accuracy
+    const repostCount = await this.prisma.repost.count({
+      where: { originalPostId: postId },
+    });
+
+    await this.prisma.post.update({
+      where: { id: postId },
+      data: { repostCount },
+    });
+
+    return {
+      originalPostId: postId,
+      comment: comment ?? null,
+      repostCount,
+    };
+  }
+
+  async removeRepost(postId: string, userId: string) {
+    const post = await this.prisma.post.findUnique({
+      where: { id: postId },
+      select: { id: true, isDeleted: true },
+    });
+
+    if (!post || post.isDeleted) {
+      throw new NotFoundError('Post not found');
+    }
+
+    await this.prisma.repost.deleteMany({
+      where: { originalPostId: postId, userId },
+    });
+
+    const repostCount = await this.prisma.repost.count({
+      where: { originalPostId: postId },
+    });
+
+    await this.prisma.post.update({
+      where: { id: postId },
+      data: { repostCount },
+    });
+
+    return { repostCount };
   }
 
   private emptyReactions() {
