@@ -52,6 +52,7 @@ tasks:
       - name: "Feature Design"
         type: "document"
         path: "products/{PRODUCT}/docs/features/{FEATURE_ID}-{FEATURE}.md"
+    context_output: ""
     parallel_ok: false
     checkpoint: true
     priority: "high"
@@ -69,16 +70,20 @@ tasks:
   # PHASE 2: IMPLEMENTATION (Parallel)
   # ============================================================================
 
-  - id: "BACKEND-{FEATURE_ID}"
-    name: "Implement Backend for {FEATURE}"
+  # --- Backend TDD Split ---
+
+  - id: "BACKEND-TESTS-{FEATURE_ID}"
+    name: "Write Failing Backend Tests for {FEATURE}"
     description: |
-      Implement backend changes for {FEATURE}:
-      - Follow TDD: Write tests first
-      - Implement API endpoints
-      - Update database schema if needed
-      - Ensure all tests pass
-      - Commits include [US-XX][FR-XXX] IDs
+      TDD RED phase — write failing tests for backend changes:
+      - Read feature design and acceptance criteria
+      - Write unit tests for new API endpoints
+      - Write integration tests for request/response flows
+      - Write database state verification tests
       - Test names include [US-XX][AC-X] IDs
+      - Run tests — they MUST FAIL (no implementation yet)
+      - Commit: test(scope): add failing tests for {FEATURE} [US-XX]
+      DO NOT write any implementation code!
     agent: "backend-engineer"
     depends_on: ["DESIGN-{FEATURE_ID}"]
     story_ids: ["{STORY_IDS}"]
@@ -88,35 +93,73 @@ tasks:
       - name: "Feature Design"
         required_from_task: "DESIGN-{FEATURE_ID}"
     produces:
-      - name: "Backend Implementation"
-        type: "directory"
-        path: "products/{PRODUCT}/apps/api/src"
       - name: "Backend Tests"
         type: "directory"
         path: "products/{PRODUCT}/apps/api/tests"
+    shared_files: ["products/{PRODUCT}/apps/api/package.json"]
+    context_output: ""
     parallel_ok: true
     checkpoint: false
     priority: "high"
-    estimated_time_minutes: 120
+    estimated_time_minutes: 60
     acceptance_criteria:
-      - "All new endpoints implemented"
-      - "Unit tests written and passing"
-      - "Integration tests written and passing"
+      - "Unit tests written for all new endpoints"
+      - "Integration tests written for request/response flows"
+      - "All new tests FAIL when run (no implementation yet)"
+      - "Test names include [US-XX][AC-X] IDs"
+      - "Tests committed to branch"
+    status: "pending"
+
+  - id: "BACKEND-IMPL-{FEATURE_ID}"
+    name: "Implement Backend for {FEATURE}"
+    description: |
+      TDD GREEN phase — make failing tests pass:
+      - Write the simplest code to make all tests pass
+      - Implement API endpoints, database schema changes, services
+      - Run ALL tests — they MUST all pass
+      - Commits include [US-XX][FR-XXX] IDs
+      - Do NOT modify test files
+      After green: REFACTOR if needed (keep tests passing)
+    agent: "backend-engineer"
+    depends_on: ["BACKEND-TESTS-{FEATURE_ID}"]
+    story_ids: ["{STORY_IDS}"]
+    requirement_ids: ["{REQUIREMENT_IDS}"]
+    epic: "{EPIC_ID}"
+    consumes:
+      - name: "Backend Tests"
+        required_from_task: "BACKEND-TESTS-{FEATURE_ID}"
+      - name: "Feature Design"
+        required_from_task: "DESIGN-{FEATURE_ID}"
+    produces:
+      - name: "Backend Implementation"
+        type: "directory"
+        path: "products/{PRODUCT}/apps/api/src"
+    shared_files: ["products/{PRODUCT}/apps/api/prisma/schema.prisma", "products/{PRODUCT}/apps/api/package.json"]
+    context_output: ""
+    parallel_ok: true
+    checkpoint: false
+    priority: "high"
+    estimated_time_minutes: 90
+    acceptance_criteria:
+      - "All new tests now pass"
+      - "All existing tests still pass (no regressions)"
       - "Database migrations created (if needed)"
       - "Test coverage >= 80%"
     status: "pending"
 
-  - id: "FRONTEND-{FEATURE_ID}"
-    name: "Implement Frontend for {FEATURE}"
+  # --- Frontend TDD Split ---
+
+  - id: "FRONTEND-TESTS-{FEATURE_ID}"
+    name: "Write Failing Frontend Tests for {FEATURE}"
     description: |
-      Implement frontend changes for {FEATURE}:
-      - Follow component-based architecture
-      - Implement UI components
-      - Connect to backend API
-      - Ensure responsive design
-      - Add unit tests
-      - Commits include [US-XX][FR-XXX] IDs
+      TDD RED phase — write failing tests for frontend changes:
+      - Read feature design and acceptance criteria
+      - Write component tests for new UI elements
+      - Write integration tests for API connections
       - Test names include [US-XX][AC-X] IDs
+      - Run tests — they MUST FAIL (no implementation yet)
+      - Commit: test(scope): add failing tests for {FEATURE} [US-XX]
+      DO NOT write any implementation code!
     agent: "frontend-engineer"
     depends_on: ["DESIGN-{FEATURE_ID}"]
     story_ids: ["{STORY_IDS}"]
@@ -126,21 +169,57 @@ tasks:
       - name: "Feature Design"
         required_from_task: "DESIGN-{FEATURE_ID}"
     produces:
-      - name: "Frontend Implementation"
-        type: "directory"
-        path: "products/{PRODUCT}/apps/web/src"
       - name: "Frontend Tests"
         type: "directory"
         path: "products/{PRODUCT}/apps/web/tests"
+    shared_files: ["products/{PRODUCT}/apps/web/package.json"]
+    context_output: ""
     parallel_ok: true
     checkpoint: false
     priority: "high"
-    estimated_time_minutes: 120
+    estimated_time_minutes: 45
+    acceptance_criteria:
+      - "Component tests written for new UI elements"
+      - "All new tests FAIL when run (no implementation yet)"
+      - "Test names include [US-XX][AC-X] IDs"
+      - "Tests committed to branch"
+    status: "pending"
+
+  - id: "FRONTEND-IMPL-{FEATURE_ID}"
+    name: "Implement Frontend for {FEATURE}"
+    description: |
+      TDD GREEN phase — make failing tests pass:
+      - Implement UI components, pages, API integration
+      - Ensure responsive design
+      - Run ALL tests — they MUST all pass
+      - Commits include [US-XX][FR-XXX] IDs
+      - Do NOT modify test files
+      After green: REFACTOR if needed (keep tests passing)
+    agent: "frontend-engineer"
+    depends_on: ["FRONTEND-TESTS-{FEATURE_ID}"]
+    story_ids: ["{STORY_IDS}"]
+    requirement_ids: ["{REQUIREMENT_IDS}"]
+    epic: "{EPIC_ID}"
+    consumes:
+      - name: "Frontend Tests"
+        required_from_task: "FRONTEND-TESTS-{FEATURE_ID}"
+      - name: "Feature Design"
+        required_from_task: "DESIGN-{FEATURE_ID}"
+    produces:
+      - name: "Frontend Implementation"
+        type: "directory"
+        path: "products/{PRODUCT}/apps/web/src"
+    shared_files: ["products/{PRODUCT}/apps/web/package.json"]
+    context_output: ""
+    parallel_ok: true
+    checkpoint: false
+    priority: "high"
+    estimated_time_minutes: 90
     acceptance_criteria:
       - "UI components implemented"
       - "API integration complete"
       - "Responsive design verified"
-      - "Unit tests written and passing"
+      - "All tests passing"
       - "No console errors"
     status: "pending"
 
@@ -161,15 +240,15 @@ tasks:
       - Run Testing Gate checklist
       - Generate requirement coverage report
     agent: "qa-engineer"
-    depends_on: ["BACKEND-{FEATURE_ID}", "FRONTEND-{FEATURE_ID}"]
+    depends_on: ["BACKEND-IMPL-{FEATURE_ID}", "FRONTEND-IMPL-{FEATURE_ID}"]
     story_ids: ["{STORY_IDS}"]
     requirement_ids: ["{REQUIREMENT_IDS}"]
     epic: "{EPIC_ID}"
     consumes:
       - name: "Backend Implementation"
-        required_from_task: "BACKEND-{FEATURE_ID}"
+        required_from_task: "BACKEND-IMPL-{FEATURE_ID}"
       - name: "Frontend Implementation"
-        required_from_task: "FRONTEND-{FEATURE_ID}"
+        required_from_task: "FRONTEND-IMPL-{FEATURE_ID}"
     produces:
       - name: "E2E Tests"
         type: "directory"
@@ -177,6 +256,7 @@ tasks:
       - name: "Test Report"
         type: "document"
         path: "products/{PRODUCT}/docs/test-reports/{FEATURE_ID}-{FEATURE}.md"
+    context_output: ""
     parallel_ok: false
     checkpoint: false
     priority: "critical"
@@ -198,11 +278,12 @@ tasks:
       - Update user guide (if applicable)
       - Update README if needed
     agent: "technical-writer"
-    depends_on: ["BACKEND-{FEATURE_ID}", "FRONTEND-{FEATURE_ID}"]
+    depends_on: ["BACKEND-IMPL-{FEATURE_ID}", "FRONTEND-IMPL-{FEATURE_ID}"]
     produces:
       - name: "Updated Docs"
         type: "document"
         path: "products/{PRODUCT}/docs/API.md"
+    context_output: ""
     parallel_ok: true
     checkpoint: false
     priority: "normal"
@@ -229,6 +310,7 @@ tasks:
       - name: "Testing Gate Report"
         type: "document"
         path: "products/{PRODUCT}/docs/quality-reports/testing-gate-{FEATURE_ID}.md"
+    context_output: ""
     parallel_ok: false
     checkpoint: false
     priority: "critical"

@@ -8,6 +8,8 @@ metadata:
   issue: "{ISSUE}"
   severity: "{SEVERITY}"
   workflow_type: "hotfix"
+  fast_track: true
+  skip_steps: ["3.3", "3.5", "3.7"]
   created_at: "{TIMESTAMP}"
   updated_at: "{TIMESTAMP}"
 
@@ -36,6 +38,7 @@ tasks:
       - name: "Investigation Report"
         type: "document"
         path: "products/{PRODUCT}/docs/hotfixes/{HOTFIX_ID}-investigation.md"
+    context_output: ""
     parallel_ok: false
     checkpoint: false
     priority: "critical"
@@ -72,6 +75,7 @@ tasks:
       - name: "Regression Test"
         type: "file"
         path: "products/{PRODUCT}/apps/api/tests/hotfix-{HOTFIX_ID}.test.ts"
+    context_output: ""
     parallel_ok: false
     checkpoint: false
     priority: "critical"
@@ -102,6 +106,7 @@ tasks:
       - name: "Verification Report"
         type: "document"
         path: "products/{PRODUCT}/docs/hotfixes/{HOTFIX_ID}-verification.md"
+    context_output: ""
     parallel_ok: false
     checkpoint: false
     priority: "critical"
@@ -161,6 +166,7 @@ tasks:
       - name: "Deployment Log"
         type: "document"
         path: "products/{PRODUCT}/docs/hotfixes/{HOTFIX_ID}-deployment.md"
+    context_output: ""
     parallel_ok: false
     checkpoint: false
     priority: "critical"
@@ -185,6 +191,7 @@ tasks:
       - name: "Monitoring Report"
         type: "document"
         path: "products/{PRODUCT}/docs/hotfixes/{HOTFIX_ID}-monitoring.md"
+    context_output: ""
     parallel_ok: false
     checkpoint: false
     priority: "critical"
@@ -213,6 +220,7 @@ tasks:
       - name: "Hotfix Complete"
         type: "document"
         path: "products/{PRODUCT}/docs/hotfixes/{HOTFIX_ID}-complete.md"
+    context_output: ""
     parallel_ok: false
     checkpoint: false
     priority: "high"

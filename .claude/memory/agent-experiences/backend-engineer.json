@@ -1,7 +1,7 @@
 {
   "agent": "backend-engineer",
   "version": "1.0.0",
-  "updated_at": "2026-01-29T08:07:00Z",
+  "updated_at": "2026-02-24T00:00:00Z",
   "learned_patterns": [],
   "task_history": [
     {
@@ -29,8 +29,18 @@
       "summary": "Strengthened password policy from weak (8 chars, uppercase, number) to industry best practices (12 chars, uppercase, lowercase, number, special char). Created comprehensive test suite with 29 passing tests covering all requirements, error messages, and edge cases. Updated all integration tests and API documentation with new password requirements and examples."
     }
   ],
-  "common_mistakes": [],
-  "preferred_approaches": [],
+  "common_mistakes": [
+    "Always hash tokens (refresh, API keys) with SHA-256 before storing in database — never store plaintext",
+    "Use crypto.timingSafeEqual for all security-sensitive comparisons — never use === for tokens or hashes",
+    "Ensure RFC 7807 error format on ALL error paths including validation, rate-limit, and unexpected errors"
+  ],
+  "preferred_approaches": [
+    "Route → Schema → Handler → Service → Prisma: keep route files thin, business logic in services",
+    "AppError class with toJSON() for consistent RFC 7807 responses across all endpoints",
+    "buildApp() in test files: create real Fastify instance with real database, use app.inject() for testing",
+    "Validate all required environment variables at startup with descriptive error messages",
+    "Register Fastify plugins with explicit dependency declarations via fastify-plugin"
+  ],
   "efficiency_improvements": [],
   "performance_metrics": {
     "tasks_completed": 3,

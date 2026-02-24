@@ -1,6 +1,6 @@
 {
   "version": "2.0.0",
-  "updated_at": "2026-01-31T00:00:00Z",
+  "updated_at": "2026-02-24T00:00:00Z",
   "patterns": [
     {
       "id": "PATTERN-001",
@@ -286,6 +286,132 @@
       "solution": "Logger class outputs JSON in production, readable text in dev. Include request_id, user_id, method, url, status, duration_ms in every log entry.",
       "code_snippet": "// Observability plugin hook\nfastify.addHook('onResponse', async (request, reply) => {\n  const duration = Date.now() - request.startTime;\n  logger.info('Request completed', {\n    request_id: request.id, method: request.method, url: request.url,\n    status: reply.statusCode, duration_ms: duration, user_id: request.currentUser?.id\n  });\n});",
       "when_to_use": "Every backend service",
+      "confidence": "high",
+      "times_applied": 1,
+      "success_rate": 1.0
+    },
+    {
+      "id": "PATTERN-017",
+      "name": "Token Rotation with JTI Blacklist",
+      "category": "security",
+      "description": "Rotate refresh tokens on each use and blacklist consumed JTIs to prevent replay attacks",
+      "learned_from": {
+        "product": "archforge",
+        "task": "AUTH-FOUNDATION",
+        "date": "2026-02-24"
+      },
+      "problem": "Stolen refresh tokens can be reused indefinitely",
+      "solution": "On each token refresh: invalidate old refresh token, issue new access+refresh pair, store JTI in blacklist table with expiry. Check blacklist on every token validation.",
+      "code_snippet": "// Blacklist check\nconst blacklisted = await prisma.jtiBlacklist.findUnique({ where: { jti } });\nif (blacklisted) throw new AppError(401, 'token-revoked', 'Token has been revoked');\n\n// On refresh: blacklist old, issue new\nawait prisma.jtiBlacklist.create({ data: { jti: oldJti, expiresAt: oldExp } });\nconst newTokens = generateTokenPair(user);",
+      "when_to_use": "Any auth system with refresh tokens",
+      "confidence": "high",
+      "times_applied": 1,
+      "success_rate": 1.0
+    },
+    {
+      "id": "PATTERN-018",
+      "name": "Session-Based Auth with Token Hash Storage",
+      "category": "security",
+      "description": "Store SHA-256 hash of refresh tokens in session table instead of plaintext",
+      "learned_from": {
+        "product": "archforge",
+        "task": "AUTH-FOUNDATION",
+        "date": "2026-02-24"
+      },
+      "problem": "Database breach exposes plaintext refresh tokens",
+      "solution": "Hash refresh tokens with SHA-256 before storing in sessions table. On validation, hash the presented token and compare against stored hash. Never store raw tokens.",
+      "code_snippet": "import { createHash } from 'crypto';\nconst tokenHash = createHash('sha256').update(refreshToken).digest('hex');\nawait prisma.session.create({ data: { userId, tokenHash, expiresAt } });",
+      "when_to_use": "Any system storing refresh tokens or API keys in database",
+      "confidence": "high",
+      "times_applied": 1,
+      "success_rate": 1.0
+    },
+    {
+      "id": "PATTERN-019",
+      "name": "Environment Variable Validation at Startup",
+      "category": "backend",
+      "description": "Validate all required environment variables at application startup with clear error messages",
+      "learned_from": {
+        "product": "archforge",
+        "task": "AUTH-FOUNDATION",
+        "date": "2026-02-24"
+      },
+      "problem": "Missing env vars cause cryptic runtime errors deep in the code",
+      "solution": "Create a config module that validates all required env vars at import time. Throw descriptive errors listing which vars are missing. Export typed config object.",
+      "code_snippet": "const required = ['DATABASE_URL', 'JWT_SECRET', 'JWT_REFRESH_SECRET'];\nconst missing = required.filter(k => !process.env[k]);\nif (missing.length) throw new Error(`Missing env vars: ${missing.join(', ')}`);\nexport const config = { dbUrl: process.env.DATABASE_URL!, jwtSecret: process.env.JWT_SECRET! };",
+      "when_to_use": "Every backend service",
+      "confidence": "high",
+      "times_applied": 1,
+      "success_rate": 1.0
+    },
+    {
+      "id": "PATTERN-020",
+      "name": "Timing-Safe Token Comparison",
+      "category": "security",
+      "description": "Use crypto.timingSafeEqual for token comparisons to prevent timing attacks",
+      "learned_from": {
+        "product": "archforge",
+        "task": "AUTH-FOUNDATION",
+        "date": "2026-02-24"
+      },
+      "problem": "String === comparison leaks token value through response timing differences",
+      "solution": "Use crypto.timingSafeEqual with Buffer.from() for all security-sensitive comparisons (tokens, hashes, verification codes).",
+      "code_snippet": "import { timingSafeEqual } from 'crypto';\nfunction safeCompare(a: string, b: string): boolean {\n  if (a.length !== b.length) return false;\n  return timingSafeEqual(Buffer.from(a), Buffer.from(b));\n}",
+      "when_to_use": "Any comparison of secrets, tokens, or hashes",
+      "confidence": "high",
+      "times_applied": 1,
+      "success_rate": 1.0
+    },
+    {
+      "id": "PATTERN-021",
+      "name": "RFC 7807 Error Consistency Across All Paths",
+      "category": "backend",
+      "description": "Ensure ALL error responses (validation, auth, not-found, rate-limit, server) use RFC 7807 format",
+      "learned_from": {
+        "product": "archforge",
+        "task": "AUTH-FOUNDATION",
+        "date": "2026-02-24"
+      },
+      "problem": "Different error paths return different JSON shapes, breaking client error handling",
+      "solution": "Global error handler catches all error types and normalizes to RFC 7807. Handle: AppError, Zod validation, Fastify schema validation, rate-limit errors, and unexpected errors separately but output the same shape.",
+      "code_snippet": "app.setErrorHandler((error, request, reply) => {\n  if (error instanceof AppError) return reply.status(error.statusCode).send(error.toJSON());\n  if (error.validation) return reply.status(400).send({ type: 'validation-error', status: 400, detail: error.message });\n  reply.status(500).send({ type: 'internal-error', status: 500, detail: 'Internal server error' });\n});",
+      "when_to_use": "Every API — must be set up in the error handler plugin",
+      "confidence": "high",
+      "times_applied": 1,
+      "success_rate": 1.0
+    },
+    {
+      "id": "PATTERN-022",
+      "name": "Redis Graceful Fallback",
+      "category": "backend",
+      "description": "Design features to work without Redis, falling back to in-memory or database alternatives",
+      "learned_from": {
+        "product": "archforge",
+        "task": "AUTH-FOUNDATION",
+        "date": "2026-02-24"
+      },
+      "problem": "Redis unavailability causes total service failure for features that could work without it",
+      "solution": "Abstract cache behind an interface. Primary: Redis. Fallback: in-memory Map with TTL cleanup. Rate limiting, JTI blacklist, and session cache all work with DB-backed fallback.",
+      "code_snippet": "class CacheService {\n  private fallback = new Map<string, { value: string; expiry: number }>();\n  async get(key: string) {\n    if (this.redis?.isReady) return this.redis.get(key);\n    const entry = this.fallback.get(key);\n    return entry && entry.expiry > Date.now() ? entry.value : null;\n  }\n}",
+      "when_to_use": "Any feature using Redis that should degrade gracefully",
+      "confidence": "high",
+      "times_applied": 1,
+      "success_rate": 1.0
+    },
+    {
+      "id": "PATTERN-023",
+      "name": "Fastify Plugin Registration with Dependency Declaration",
+      "category": "backend",
+      "description": "Declare plugin dependencies explicitly using fastify-plugin name and dependencies options",
+      "learned_from": {
+        "product": "archforge",
+        "task": "AUTH-FOUNDATION",
+        "date": "2026-02-24"
+      },
+      "problem": "Plugins silently fail when their dependencies are not yet registered",
+      "solution": "Wrap every plugin with fastify-plugin specifying name and dependencies array. Fastify validates registration order at startup. Register in order: config → prisma → redis → auth → routes.",
+      "code_snippet": "import fp from 'fastify-plugin';\nexport default fp(async (fastify) => {\n  // auth logic using fastify.prisma\n}, { name: 'auth-plugin', dependencies: ['prisma-plugin'] });",
+      "when_to_use": "Every Fastify plugin that depends on other plugins",
       "confidence": "high",
       "times_applied": 1,
       "success_rate": 1.0

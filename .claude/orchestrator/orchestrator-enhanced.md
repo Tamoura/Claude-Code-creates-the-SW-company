@@ -70,12 +70,16 @@ For detailed execution instructions, see: `.claude/orchestrator/claude-code-exec
 
 Scan the filesystem and git for ground truth. Use `state.yml` only for cross-product coordination data.
 
+**Fast path**: If the CEO request specifies a known product AND `products/{PRODUCT}/` exists,
+skip the full product discovery loop — only scan the target product directory.
+
 ```bash
 # 1. Check git status
 git status
 git branch -a
 
 # 2. Discover products from filesystem (not state.yml)
+# FAST PATH: If target product is known, skip this loop and go directly to step 3
 for product_dir in products/*/; do
   [ -d "$product_dir" ] || continue
   product=$(basename "$product_dir")
@@ -110,6 +114,31 @@ cat .claude/orchestrator/state.yml 2>/dev/null || echo "No state file"
 | "Fix bug: [X]" | bug-fix | `.claude/workflows/templates/bug-fix-tasks.yml` |
 | "Ship/deploy [X]" | release | `.claude/workflows/templates/release-tasks.yml` |
 | "Status update" | status-report | (no template, compile from state) |
+
+### Step 2.5: Task Complexity Classification (Fast Track)
+
+Before loading a task graph, classify the CEO request complexity to skip unnecessary overhead:
+
+```markdown
+| Complexity | Criteria | Skip Steps |
+|------------|----------|------------|
+| **Trivial** | Typo fix, README update, config tweak | 3.3 (backlog), 3.5 (pattern scoring), 3.7 (estimates) |
+| **Simple** | Single bug fix, minor feature, single-file change | 3.3 (backlog), 3.7 (estimates) |
+| **Standard** | Multi-file feature, new endpoint + tests | None |
+| **Complex** | New product, multi-service feature, architecture change | None |
+
+Classification rules:
+1. If CEO request matches "fix typo", "update README", "change config" → Trivial
+2. If workflow type is "bug-fix" or "hotfix" → Simple (unless CEO flags as complex)
+3. If workflow type is "new-product" → Complex
+4. If workflow type is "new-feature" → Standard (default)
+5. If template has `fast_track: true` in metadata → use template's `skip_steps`
+
+Fast Track benefits:
+- Trivial/Simple: skip 30-50% of setup overhead
+- Quality gates are NEVER skipped regardless of complexity
+- CEO checkpoints are NEVER skipped regardless of complexity
+```
 
 ### Step 3: Load & Instantiate Task Graph
 
@@ -295,7 +324,17 @@ B. IDENTIFY PARALLEL OPPORTUNITIES
    From ready tasks, group by:
    - Same dependency set
    - parallel_ok = true
-   - No resource conflicts (backend: apps/api/, frontend: apps/web/, devops: .github/)
+   - No resource conflicts (see conflict detection below)
+
+   **Resource Conflict Detection** (before launching parallel agents):
+   1. For each candidate parallel task, extract all `produces[].path` + `shared_files`
+   2. Check for EXACT file path matches between candidate tasks:
+      - If two tasks produce the same file → FORCE SEQUENTIAL (higher-dependency task first)
+   3. Known shared files ALWAYS checked for conflicts:
+      - `package.json`, `prisma/schema.prisma`, `tsconfig.json`, `.env`, shared type files
+   4. Log conflict decisions:
+      "Resource conflict on {FILE} between {TASK-A} and {TASK-B}. Running sequentially."
+   5. Tasks with no conflicts proceed in parallel as normal
 
 C. INVOKE AGENTS (PARALLEL-AWARE)
 
@@ -350,6 +389,23 @@ C. INVOKE AGENTS (PARALLEL-AWARE)
    ## Relevant Patterns (pre-filtered from company knowledge)
    {PRE_FILTERED_PATTERNS from Step 3.5}
 
+   ## Product Coding Conventions
+   Scan existing code in `products/{PRODUCT}/apps/` and match these conventions:
+   - **Error handling**: Find the AppError/error class used and follow the same pattern
+   - **Service layer**: Match the existing service class structure (constructor injection, etc.)
+   - **Test helpers**: Use the same buildApp()/test setup pattern found in existing tests
+   - **Import style**: Match existing import ordering and path conventions
+   - **Validation**: Use the same validation library/pattern (Zod, Joi, etc.) found in codebase
+   If no existing code exists yet (greenfield), follow company patterns from above.
+
+   ## Context from Prior Tasks
+   {CONTEXT_CHAIN — conventions and decisions from all completed upstream tasks in the
+   dependency chain, capped at 500 words. Example entries:
+   - "Error handling uses AppError with toJSON() — see src/types/index.ts"
+   - "Auth tokens are hashed with SHA-256 before DB storage"
+   - "All routes use /v1/ prefix with Fastify route schemas"
+   If no upstream tasks have completed yet, omit this section.}
+
    ## Your Current Task
    Task ID: {TASK_ID}
    Product: {PRODUCT}
@@ -359,11 +415,35 @@ C. INVOKE AGENTS (PARALLEL-AWARE)
    ## Acceptance Criteria
    {ACCEPTANCE_CRITERIA from task graph}
 
+   ## TDD Protocol (MANDATORY)
+   Follow Red-Green-Refactor strictly for ALL implementation tasks:
+
+   **RED**: Write a failing test first.
+   - Run the test — it MUST fail.
+   - Commit: `test(scope): add failing test for [feature] [US-XX]`
+   - Do NOT write implementation code in the RED phase.
+
+   **GREEN**: Write the simplest code to make the test pass.
+   - Run ALL tests — they MUST all pass.
+   - Commit: `feat(scope): implement [feature] [US-XX][FR-XXX]`
+   - Do NOT modify tests in the GREEN phase.
+
+   **REFACTOR**: Improve code quality while keeping tests green.
+   - Run ALL tests — they MUST still pass.
+   - Commit: `refactor(scope): [description] [US-XX]`
+
+   Repeat for each piece of functionality. When complete, include
+   `tdd_evidence` in your report: an array of {test_commit, impl_commit,
+   test_file, impl_file} for each TDD cycle completed.
+
    ## Constraints
    - Work in: products/{PRODUCT}/
    - Stage specific files only (never git add . or git add -A)
    - Verify staged files before commit (git diff --cached --stat)
    - Use conventional commit messages
+   - Do NOT modify files outside your designated directories when running in parallel
+   - If you must touch shared files (package.json, prisma/schema.prisma, tsconfig.json),
+     report `shared_files_modified: [list]` in your completion message
 
    ## Traceability (Constitution Article VI — MANDATORY)
    - Commits MUST include story/requirement IDs: feat(scope): message [US-XX][FR-XXX]
@@ -377,6 +457,13 @@ C. INVOKE AGENTS (PARALLEL-AWARE)
    Report: status (success/failure/blocked), summary, files changed,
    tests added/passing, time spent, learned patterns, blockers,
    story_ids implemented, requirement_ids addressed.
+
+   **conventions_established** (REQUIRED — for downstream agent context):
+   List any conventions you established or followed. Examples:
+   - "Error handling: AppError with toJSON() — see src/types/index.ts"
+   - "Token storage: SHA-256 hash before DB write — see services/auth.ts"
+   - "Route pattern: /v1/{resource} with Fastify JSON schemas"
+   These are passed to downstream agents so they maintain consistency.
 
    Then run:
    .claude/scripts/post-task-update.sh {AGENT} {TASK_ID} {PRODUCT} {STATUS} {MINUTES} "{SUMMARY}" "{PATTERN}"
@@ -394,7 +481,14 @@ D. RECEIVE AGENT MESSAGES & DETECT OVERRUNS
    2. Extract task_id from metadata
    3. Extract status from payload
    4. Extract artifacts, context, metrics
-   5. **Overrun Detection**: Compare `metrics.time_spent_minutes` against
+   5. **TDD Verification**: If the task was an implementation task (BACKEND-*, FRONTEND-*),
+      check for `tdd_evidence` in the agent's report:
+      - Verify test commits exist and precede implementation commits in git log
+      - If `tdd_evidence` is missing or test commits don't precede impl commits:
+        Log WARNING to audit trail: "TDD violation on {TASK_ID} by {AGENT}"
+      - Mode: WARNING initially (logged but not blocking)
+      - After 3 validated sprints with no violations, switch to HARD BLOCK mode
+   6. **Overrun Detection**: Compare `metrics.time_spent_minutes` against
       `task.estimation_range[high]` (from Step 3.7):
       - If actual > range[high]: log overrun alert, flag for estimation recalibration
       - If actual < range[low]: note as faster-than-expected (potential efficiency insight)
@@ -408,6 +502,10 @@ E. UPDATE TASK GRAPH + BACKLOG
      - Update task.status = "completed"
      - Record task.completed_at
      - Save artifacts to task.result
+     - **Store context_output**: Extract `conventions_established` from agent report
+       and save as `task.context_output`. When spawning downstream agents, concatenate
+       all `context_output` from upstream completed tasks (following depends_on chain)
+       into the `{CONTEXT_CHAIN}` placeholder in the sub-agent prompt.
      - Update agent memory (add to task_history)
      - Update performance metrics
      - If agent suggests learned pattern, add to memory
@@ -432,6 +530,13 @@ E. UPDATE TASK GRAPH + BACKLOG
        - Create decision checkpoint
      - Else:
        - Route to appropriate agent/resource
+
+   **Post-Parallel Reconciliation** (after collecting all parallel task results):
+   - Check for `shared_files_modified` overlaps between parallel agents
+   - If multiple agents modified the same shared file:
+     - Compatible changes (additive, different sections): merge manually
+     - Conflicting changes (same lines): spawn reconciliation sub-agent
+   - Log all shared file modifications to audit trail
 
 F. CHECK FOR CHECKPOINT
    If completed task has checkpoint = true:
@@ -468,7 +573,14 @@ F. CHECK FOR CHECKPOINT
        - Verifies: commit IDs, test names, E2E organization, architecture matrix
        - Constitution Article VI compliance check
        - If FAIL: Route to appropriate agent to add missing traceability
-     - **All pass condition**: smoke test PASS + no placeholders + E2E tests exist and pass + testing gate PASS + traceability gate PASS + all audit scores >= 8/10
+     - Run Documentation Gate: `.claude/scripts/documentation-gate.sh [product]`
+       - Constitution Article IX compliance check
+       - Verifies: PRD has >= 3 Mermaid diagrams, architecture has >= 2, README has >= 1
+       - Checks diagram type diversity (>= 3 distinct types in PRD)
+       - Warns on sections > 500 words without diagrams
+       - HARD BLOCK: must PASS before CEO checkpoint
+       - If FAIL: Route to Technical Writer or original agent to add diagrams
+     - **All pass condition**: smoke test PASS + no placeholders + E2E tests exist and pass + testing gate PASS + traceability gate PASS + documentation gate PASS + all audit scores >= 8/10
      - Once all pass:
        - PAUSE execution loop
        - Generate CEO report with audit scores + smoke test report

@@ -3,7 +3,7 @@
 # Mandatory post-task hook that updates memory, and appends to audit trail.
 # Called automatically after every agent task completion.
 #
-# Usage: .claude/scripts/post-task-update.sh <agent> <task_id> <product> <status> <time_minutes> "<summary>" [pattern]
+# Usage: .claude/scripts/post-task-update.sh <agent> <task_id> <product> <status> <time_minutes> "<summary>" [pattern] [tdd_compliant]
 
 set -e
 
@@ -17,12 +17,13 @@ STATUS=$4
 TIME_MINUTES=$5
 SUMMARY=$6
 PATTERN=$7
+TDD_COMPLIANT=${8:-"unknown"}
 
 if [ -z "$AGENT" ] || [ -z "$TASK_ID" ] || [ -z "$PRODUCT" ] || [ -z "$STATUS" ] || [ -z "$TIME_MINUTES" ] || [ -z "$SUMMARY" ]; then
-  echo "Usage: $0 <agent> <task_id> <product> <status> <time_minutes> \"<summary>\" [pattern]"
+  echo "Usage: $0 <agent> <task_id> <product> <status> <time_minutes> \"<summary>\" [pattern] [tdd_compliant]"
   echo ""
   echo "Example:"
-  echo "  $0 backend-engineer BACKEND-01 stablecoin-gateway success 30 \"Implemented payment endpoint\" \"fastify-plugin-pattern\""
+  echo "  $0 backend-engineer BACKEND-01 stablecoin-gateway success 30 \"Implemented payment endpoint\" \"fastify-plugin-pattern\" true"
   exit 1
 fi
 
@@ -31,7 +32,7 @@ AUDIT_FILE="$REPO_ROOT/.claude/audit-trail.jsonl"
 
 # 1. Append to audit trail (always succeeds, append-only)
 AUDIT_ENTRY=$(cat <<JSONEOF
-{"timestamp":"$TIMESTAMP","type":"task_complete","agent":"$AGENT","task_id":"$TASK_ID","product":"$PRODUCT","status":"$STATUS","time_minutes":$TIME_MINUTES,"summary":"$SUMMARY","branch":"$(git -C "$REPO_ROOT" branch --show-current 2>/dev/null || echo 'unknown')","commit":"$(git -C "$REPO_ROOT" rev-parse --short HEAD 2>/dev/null || echo 'unknown')"}
+{"timestamp":"$TIMESTAMP","type":"task_complete","agent":"$AGENT","task_id":"$TASK_ID","product":"$PRODUCT","status":"$STATUS","time_minutes":$TIME_MINUTES,"summary":"$SUMMARY","tdd_compliant":"$TDD_COMPLIANT","branch":"$(git -C "$REPO_ROOT" branch --show-current 2>/dev/null || echo 'unknown')","commit":"$(git -C "$REPO_ROOT" rev-parse --short HEAD 2>/dev/null || echo 'unknown')"}
 JSONEOF
 )
 echo "$AUDIT_ENTRY" >> "$AUDIT_FILE"
