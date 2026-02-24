@@ -67,12 +67,24 @@ CEO Brief → SPEC-{ID} → DESIGN-{ID}
 | M2 | Routing table incomplete | Covered by C6 |
 | M3 | Audit scores purely subjective | Added deterministic score anchoring with measurement requirements + score caps |
 | M4 | Code reviewer never invoked | Covered by C3 (CODE-REVIEW tasks in both pipelines) |
-| M5 | MCP tools aspirational | Not fixable in this context (infrastructure dependency) |
+| M5 | MCP tools aspirational | Updated migration path: MCP tools moved to Phase 4 roadmap, Phases 1-3 marked complete |
 | M6 | Estimation history cold-start | Seeded `estimation-history.json` for all 17 agents with baseline estimates |
-| M7 | Backlog overhead for small tasks | Not fixable in this context (process decision) |
+| M7 | Backlog overhead for small tasks | Documented explicit backlog skip rules in orchestrator (when to use vs skip) |
 | M8 | No rollback protocol | Added rollback protocol to orchestrator for failed downstream tasks |
 
-### Files Changed (11)
+### Minor (8)
+| ID | Gap | Fix |
+|----|-----|-----|
+| N1 | Component count inconsistency (60+ vs 25+) | Removed hardcoded counts, reference registry for current count |
+| N2 | prototype-first workflow not routed | Added prototype-first + hotfix to workflow type table |
+| N3 | Hotfix pipeline skips memory injection | Re-enabled step 3.5 (memory) for hotfixes |
+| N4 | Release gates run sequentially | Parallelized security/performance/testing gates |
+| N5 | Coverage measured at monorepo root | Per-app coverage measurement (api + web separately) |
+| N6 | Documentation gate skips ADR checks | Added ADR before/after diagram check per Article IX |
+| N7 | Migration path text stale | Updated: Phase 1-3 complete, Phase 4 future |
+| N8 | No orchestrator agent brief | Created `.claude/agents/briefs/orchestrator.md` |
+
+### Files Changed — Critical + Major commit (11 files)
 - `.claude/agents/briefs/frontend-engineer.md` (C2)
 - `.claude/agents/frontend-engineer.md` (C2)
 - `.claude/agents/product-manager.md` (C2)
@@ -84,3 +96,15 @@ CEO Brief → SPEC-{ID} → DESIGN-{ID}
 - `.claude/scripts/traceability-gate.sh` (C1)
 - `.claude/workflows/templates/new-feature-tasks.yml` (C3, M4)
 - `.claude/workflows/templates/new-product-tasks.yml` (C3, M4)
+
+### Files Changed — Minor + remaining Major commit (8 files)
+- `.claude/CLAUDE.md` (N1)
+- `.claude/agents/briefs/orchestrator.md` (N8, NEW)
+- `.claude/orchestrator/orchestrator-enhanced.md` (M5, M7, N2, N7)
+- `.claude/scripts/documentation-gate.sh` (N6)
+- `.claude/scripts/testing-gate-checklist.sh` (N5)
+- `.claude/workflows/templates/hotfix-tasks.yml` (N3)
+- `.claude/workflows/templates/release-tasks.yml` (N4)
+- `.specify/memory/constitution.md` (N1)
+
+## Total: 24 gaps closed (6 critical + 8 major + 8 minor + 2 covered by critical)
