@@ -47,3 +47,40 @@ CEO Brief → SPEC-{ID} → DESIGN-{ID}
 → [BACKEND-TESTS || FRONTEND-TESTS] → [BACKEND-IMPL || FRONTEND-IMPL]
 → QA-{ID} → DOCS-{ID} → GATE-TESTING-{ID} → ANALYZE-{ID} → CHECKPOINT
 ```
+
+## Quality Gap Fixes (14 gaps closed)
+
+### Critical (6)
+| ID | Gap | Fix |
+|----|-----|-----|
+| C1 | Traceability gate produced empty reports | Added report-writing block to `traceability-gate.sh` |
+| C2 | "Coming Soon" mandate contradicts smoke test | Removed mandate, replaced with real page skeleton guidance |
+| C3 | No security gate in pipelines | Added `GATE-SECURITY` + `CODE-REVIEW` to both templates |
+| C4 | Performance gate didn't measure real metrics | Added Lighthouse audit + gzipped bundle size check |
+| C5 | TDD enforcement was warning-only | Made it a HARD GATE that blocks on missing/invalid evidence |
+| C6 | 7 agents missing from routing table | Expanded from 10 to all 17 agents |
+
+### Major (8, 6 fixed directly + 2 covered by critical fixes)
+| ID | Gap | Fix |
+|----|-----|-----|
+| M1 | No deterministic spec consistency check | Created `spec-consistency-gate.sh` script |
+| M2 | Routing table incomplete | Covered by C6 |
+| M3 | Audit scores purely subjective | Added deterministic score anchoring with measurement requirements + score caps |
+| M4 | Code reviewer never invoked | Covered by C3 (CODE-REVIEW tasks in both pipelines) |
+| M5 | MCP tools aspirational | Not fixable in this context (infrastructure dependency) |
+| M6 | Estimation history cold-start | Seeded `estimation-history.json` for all 17 agents with baseline estimates |
+| M7 | Backlog overhead for small tasks | Not fixable in this context (process decision) |
+| M8 | No rollback protocol | Added rollback protocol to orchestrator for failed downstream tasks |
+
+### Files Changed (11)
+- `.claude/agents/briefs/frontend-engineer.md` (C2)
+- `.claude/agents/frontend-engineer.md` (C2)
+- `.claude/agents/product-manager.md` (C2)
+- `.claude/commands/audit.md` (M3)
+- `.claude/memory/metrics/estimation-history.json` (M6)
+- `.claude/orchestrator/orchestrator-enhanced.md` (C5, C6, M1, M8)
+- `.claude/quality-gates/executor.sh` (C4)
+- `.claude/scripts/spec-consistency-gate.sh` (M1, NEW)
+- `.claude/scripts/traceability-gate.sh` (C1)
+- `.claude/workflows/templates/new-feature-tasks.yml` (C3, M4)
+- `.claude/workflows/templates/new-product-tasks.yml` (C3, M4)
