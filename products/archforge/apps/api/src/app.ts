@@ -7,6 +7,7 @@
 
 import Fastify, { FastifyInstance, FastifyRequest } from 'fastify';
 import cors from '@fastify/cors';
+import cookie from '@fastify/cookie';
 import jwt from '@fastify/jwt';
 import rateLimit from '@fastify/rate-limit';
 import helmet from '@fastify/helmet';
@@ -21,13 +22,17 @@ import observabilityPlugin from './plugins/observability.js';
 import authPlugin from './plugins/auth.js';
 
 // Routes
-import authRoutes from './routes/v1/auth.js';
+import { authRoutes } from './modules/auth/index.js';
 
 // Utils
 import { logger } from './utils/logger.js';
 import { AppError } from './types/index.js';
 
-export async function buildApp(): Promise<FastifyInstance> {
+export interface BuildAppOptions {
+  skipRateLimit?: boolean;
+}
+
+export async function buildApp(options?: BuildAppOptions): Promise<FastifyInstance> {
   const fastify = Fastify({
     trustProxy: true,
     bodyLimit: 1048576, // 1MB
@@ -99,23 +104,29 @@ export async function buildApp(): Promise<FastifyInstance> {
     methods: ['GET', 'HEAD', 'POST', 'PUT', 'PATCH', 'DELETE', 'OPTIONS'],
   });
 
-  // 3. JWT (HS256 pinned)
+  // 3. Cookie (for httpOnly refresh tokens)
+  await fastify.register(cookie, {
+    secret: process.env.JWT_SECRET!,
+    parseOptions: {},
+  });
+
+  // 4. JWT (HS256 pinned)
   await fastify.register(jwt, {
     secret: process.env.JWT_SECRET!,
     sign: { algorithm: 'HS256' },
     verify: { algorithms: ['HS256'] },
   });
 
-  // 4. Observability (register first to track all requests)
+  // 5. Observability
   await fastify.register(observabilityPlugin);
 
-  // 5. Prisma
+  // 6. Prisma
   await fastify.register(prismaPlugin);
 
-  // 6. Redis
+  // 7. Redis
   await fastify.register(redisPlugin);
 
-  // 7. Rate limiting (Redis-backed when available)
+  // 8. Rate limiting (Redis-backed when available)
   const rateLimitConfig: Record<string, unknown> = {
     max: parseInt(process.env.RATE_LIMIT_MAX || '100'),
     timeWindow: parseInt(process.env.RATE_LIMIT_WINDOW || '60000'),
@@ -141,18 +152,19 @@ export async function buildApp(): Promise<FastifyInstance> {
     },
   };
 
-  if (fastify.redis) {
-    logger.info('Rate limiting configured with Redis distributed store');
-  } else {
-    logger.warn('Redis not configured - rate limiting uses in-memory store');
+  if (!options?.skipRateLimit) {
+    if (fastify.redis) {
+      logger.info('Rate limiting configured with Redis distributed store');
+    } else {
+      logger.warn('Redis not configured - rate limiting uses in-memory store');
+    }
+    await fastify.register(rateLimit, rateLimitConfig);
   }
 
-  await fastify.register(rateLimit, rateLimitConfig);
-
-  // 8. Auth plugin
+  // 9. Auth plugin
   await fastify.register(authPlugin);
 
-  // 9. Health route
+  // 10. Health route
   fastify.get('/health', async (request, reply) => {
     const checks: Record<string, { status: string; latency?: number; error?: string }> = {};
     let overallStatus = 'healthy';
@@ -229,7 +241,7 @@ export async function buildApp(): Promise<FastifyInstance> {
     }
   });
 
-  // 10. Global error handler
+  // 11. Global error handler
   fastify.setErrorHandler((error, request, reply) => {
     if (error instanceof AppError) {
       return reply.code(error.statusCode).send(error.toJSON());
@@ -273,7 +285,7 @@ export async function buildApp(): Promise<FastifyInstance> {
     });
   });
 
-  // 11. Not-found handler
+  // 12. Not-found handler
   fastify.setNotFoundHandler((request, reply) => {
     return reply.code(404).send({
       type: 'https://archforge.io/errors/not-found',
