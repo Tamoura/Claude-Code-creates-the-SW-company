@@ -174,7 +174,7 @@ All diagrams use **Mermaid syntax** (renders natively in GitHub, Command Center,
 3. If a matching component exists: **copy and adapt it** — do NOT rebuild from scratch
 4. If you build something new that is generic (not domain-specific): **add it to the registry**
 
-This rule exists because ConnectSW has 25+ production-tested components across products. Rebuilding wastes time and introduces inconsistency.
+This rule exists because ConnectSW maintains a growing library of production-tested components across products (see registry for current count). Rebuilding wastes time and introduces inconsistency.
 
 **Key registries:**
 - `.claude/COMPONENT-REGISTRY.md` — Reusable code components

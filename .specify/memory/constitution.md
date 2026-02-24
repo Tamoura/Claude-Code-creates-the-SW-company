@@ -39,7 +39,7 @@ Before building ANY backend plugin, service, utility, frontend hook, component, 
 - If building something new and generic: add it to the registry
 - Spec plans MUST reference existing components they will reuse
 
-**Rationale:** ConnectSW has 60+ production-tested components across 7 products. Rebuilding wastes time and introduces inconsistency.
+**Rationale:** ConnectSW maintains a growing library of production-tested components across products (see `.claude/COMPONENT-REGISTRY.md` for current count). Rebuilding wastes time and introduces inconsistency.
 
 ---
 

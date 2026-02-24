@@ -213,6 +213,31 @@ if [ -d "$SPEC_DIR" ]; then
 fi
 
 # ============================================================================
+# CHECK 7: ADRs contain before/after diagrams (Article IX requirement)
+# ============================================================================
+ADR_DIR="$PRODUCT_DIR/docs/ADRs"
+if [ -d "$ADR_DIR" ]; then
+  ADR_COUNT=0
+  ADR_WITH_DIAGRAMS=0
+  for adr in "$ADR_DIR"/*.md; do
+    [ -f "$adr" ] || continue
+    ADR_COUNT=$((ADR_COUNT + 1))
+    adr_diagrams=$(count_mermaid "$adr")
+    if [ "$adr_diagrams" -ge 2 ]; then
+      ADR_WITH_DIAGRAMS=$((ADR_WITH_DIAGRAMS + 1))
+    fi
+  done
+  if [ "$ADR_COUNT" -gt 0 ]; then
+    if [ "$ADR_WITH_DIAGRAMS" -eq "$ADR_COUNT" ]; then
+      record "PASS" "ADR Diagrams" "All $ADR_COUNT ADRs contain >= 2 diagrams (before/after)"
+    else
+      MISSING=$((ADR_COUNT - ADR_WITH_DIAGRAMS))
+      record "FAIL" "ADR Diagrams" "$MISSING of $ADR_COUNT ADRs missing before/after diagrams (>= 2 required per Article IX)"
+    fi
+  fi
+fi
+
+# ============================================================================
 # DETERMINE OVERALL RESULT
 # ============================================================================
 if [ "$FAIL_COUNT" -gt 0 ]; then
@@ -245,6 +270,7 @@ $(echo -e "$DETAILS")
 | Architecture | 2 | 2 |
 | README | 1 | 1 |
 | Feature Specs | 1 per spec | 1 |
+| ADRs | 2 (before/after) | 2 |
 
 ## Enforcement
 

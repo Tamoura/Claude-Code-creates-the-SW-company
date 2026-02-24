@@ -113,6 +113,8 @@ cat .claude/orchestrator/state.yml 2>/dev/null || echo "No state file"
 | "Add feature: [X]" | new-feature | `.claude/workflows/templates/new-feature-tasks.yml` |
 | "Fix bug: [X]" | bug-fix | `.claude/workflows/templates/bug-fix-tasks.yml` |
 | "Ship/deploy [X]" | release | `.claude/workflows/templates/release-tasks.yml` |
+| "Prototype: [idea]" | prototype-first | `.claude/workflows/templates/prototype-first-tasks.yml` |
+| "Hotfix: [issue]" | hotfix | `.claude/workflows/templates/hotfix-tasks.yml` |
 | "Status update" | status-report | (no template, compile from state) |
 
 **Agent Routing Table** (used when spawning sub-agents):
@@ -160,6 +162,12 @@ Fast Track benefits:
 - Trivial/Simple: skip 30-50% of setup overhead
 - Quality gates are NEVER skipped regardless of complexity
 - CEO checkpoints are NEVER skipped regardless of complexity
+
+**Backlog Management (Step 3.3) — When to use:**
+- **REQUIRED for**: new-product, new-feature (Standard/Complex) — provides story tracking, sprint planning
+- **SKIPPED for**: bug-fix, hotfix, Trivial, Simple — the task graph itself tracks all work; adding backlog items for a single fix creates overhead without value
+- Templates with `fast_track: true` + `skip_steps` including "3.3" automatically skip backlog
+- If in doubt: skip backlog for anything that fits in a single task graph execution
 ```
 
 ### Step 3: Load & Instantiate Task Graph
@@ -925,8 +933,9 @@ Orchestrator:
 
 ## Migration Path
 
-1. **Phase 1** (Current): Task graphs, AgentMessage, Memory ✅
-2. **Phase 2** (Next): Multi-gate quality, resource management, dashboard
-3. **Phase 3** (Future): Smart checkpointing, agent-specific tools, advanced features
+1. **Phase 1** (Complete): Task graphs, AgentMessage, Memory ✅
+2. **Phase 2** (Complete): Multi-gate quality system (spec consistency, browser, testing, traceability, documentation, security, performance gates), TDD hard enforcement, rollback protocol ✅
+3. **Phase 3** (Current): Spec-kit pipeline integration, Business Analyst agent, deterministic audit scoring ✅
+4. **Phase 4** (Future): Agent-specific MCP tools (see `.claude/mcp-tools/agent-tools.yml` for roadmap), smart checkpointing, resource management dashboard
 
 All existing products continue to work. New products automatically use enhanced system.
