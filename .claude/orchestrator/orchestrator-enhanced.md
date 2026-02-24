@@ -295,7 +295,17 @@ B. IDENTIFY PARALLEL OPPORTUNITIES
    From ready tasks, group by:
    - Same dependency set
    - parallel_ok = true
-   - No resource conflicts (backend: apps/api/, frontend: apps/web/, devops: .github/)
+   - No resource conflicts (see conflict detection below)
+
+   **Resource Conflict Detection** (before launching parallel agents):
+   1. For each candidate parallel task, extract all `produces[].path` + `shared_files`
+   2. Check for EXACT file path matches between candidate tasks:
+      - If two tasks produce the same file → FORCE SEQUENTIAL (higher-dependency task first)
+   3. Known shared files ALWAYS checked for conflicts:
+      - `package.json`, `prisma/schema.prisma`, `tsconfig.json`, `.env`, shared type files
+   4. Log conflict decisions:
+      "Resource conflict on {FILE} between {TASK-A} and {TASK-B}. Running sequentially."
+   5. Tasks with no conflicts proceed in parallel as normal
 
 C. INVOKE AGENTS (PARALLEL-AWARE)
 
@@ -402,6 +412,9 @@ C. INVOKE AGENTS (PARALLEL-AWARE)
    - Stage specific files only (never git add . or git add -A)
    - Verify staged files before commit (git diff --cached --stat)
    - Use conventional commit messages
+   - Do NOT modify files outside your designated directories when running in parallel
+   - If you must touch shared files (package.json, prisma/schema.prisma, tsconfig.json),
+     report `shared_files_modified: [list]` in your completion message
 
    ## Traceability (Constitution Article VI — MANDATORY)
    - Commits MUST include story/requirement IDs: feat(scope): message [US-XX][FR-XXX]
@@ -489,6 +502,13 @@ E. UPDATE TASK GRAPH + BACKLOG
      - Else:
        - Route to appropriate agent/resource
 
+   **Post-Parallel Reconciliation** (after collecting all parallel task results):
+   - Check for `shared_files_modified` overlaps between parallel agents
+   - If multiple agents modified the same shared file:
+     - Compatible changes (additive, different sections): merge manually
+     - Conflicting changes (same lines): spawn reconciliation sub-agent
+   - Log all shared file modifications to audit trail
+
 F. CHECK FOR CHECKPOINT
    If completed task has checkpoint = true:
      - **Browser Verification (FIRST — HIGHEST PRIORITY GATE)**:
@@ -524,7 +544,14 @@ F. CHECK FOR CHECKPOINT
        - Verifies: commit IDs, test names, E2E organization, architecture matrix
        - Constitution Article VI compliance check
        - If FAIL: Route to appropriate agent to add missing traceability
-     - **All pass condition**: smoke test PASS + no placeholders + E2E tests exist and pass + testing gate PASS + traceability gate PASS + all audit scores >= 8/10
+     - Run Documentation Gate: `.claude/scripts/documentation-gate.sh [product]`
+       - Constitution Article IX compliance check
+       - Verifies: PRD has >= 3 Mermaid diagrams, architecture has >= 2, README has >= 1
+       - Checks diagram type diversity (>= 3 distinct types in PRD)
+       - Warns on sections > 500 words without diagrams
+       - HARD BLOCK: must PASS before CEO checkpoint
+       - If FAIL: Route to Technical Writer or original agent to add diagrams
+     - **All pass condition**: smoke test PASS + no placeholders + E2E tests exist and pass + testing gate PASS + traceability gate PASS + documentation gate PASS + all audit scores >= 8/10
      - Once all pass:
        - PAUSE execution loop
        - Generate CEO report with audit scores + smoke test report

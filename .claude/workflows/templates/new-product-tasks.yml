@@ -69,6 +69,8 @@ tasks:
       - "Success metrics are measurable"
       - "MVP scope is clearly defined with story IDs listed"
       - "Product addendum created with tech stack and conventions"
+      - "Contains >= 3 Mermaid diagrams (C4, ER, sequence/flowchart)"
+      - "Uses >= 3 distinct Mermaid diagram types"
     status: "pending"
 
   # ============================================================================
@@ -130,6 +132,7 @@ tasks:
       - "Security considerations documented"
       - "Tech stack confirmed and documented"
       - "Traceability matrix included: US → FR → endpoint → table"
+      - "Contains >= 2 Mermaid diagrams (C4 context + container minimum)"
     status: "pending"
 
   # ============================================================================
@@ -166,6 +169,7 @@ tasks:
         type: "file"
         path: "products/{PRODUCT}/docker-compose.yml"
     context_output: ""
+    shared_files: [".github/workflows/{PRODUCT}-ci.yml"]
     parallel_ok: true
     checkpoint: false
     priority: "high"
@@ -213,6 +217,7 @@ tasks:
         type: "directory"
         path: "products/{PRODUCT}/apps/api/tests"
     context_output: ""
+    shared_files: ["products/{PRODUCT}/apps/api/prisma/schema.prisma", "products/{PRODUCT}/apps/api/package.json"]
     parallel_ok: true
     checkpoint: false
     priority: "high"
@@ -261,6 +266,7 @@ tasks:
         type: "directory"
         path: "products/{PRODUCT}/apps/web/tests"
     context_output: ""
+    shared_files: ["products/{PRODUCT}/apps/web/package.json"]
     parallel_ok: true
     checkpoint: false
     priority: "high"

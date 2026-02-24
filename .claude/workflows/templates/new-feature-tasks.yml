@@ -96,6 +96,7 @@ tasks:
       - name: "Backend Tests"
         type: "directory"
         path: "products/{PRODUCT}/apps/api/tests"
+    shared_files: ["products/{PRODUCT}/apps/api/package.json"]
     context_output: ""
     parallel_ok: true
     checkpoint: false
@@ -133,6 +134,7 @@ tasks:
       - name: "Backend Implementation"
         type: "directory"
         path: "products/{PRODUCT}/apps/api/src"
+    shared_files: ["products/{PRODUCT}/apps/api/prisma/schema.prisma", "products/{PRODUCT}/apps/api/package.json"]
     context_output: ""
     parallel_ok: true
     checkpoint: false
@@ -170,6 +172,7 @@ tasks:
       - name: "Frontend Tests"
         type: "directory"
         path: "products/{PRODUCT}/apps/web/tests"
+    shared_files: ["products/{PRODUCT}/apps/web/package.json"]
     context_output: ""
     parallel_ok: true
     checkpoint: false
@@ -206,6 +209,7 @@ tasks:
       - name: "Frontend Implementation"
         type: "directory"
         path: "products/{PRODUCT}/apps/web/src"
+    shared_files: ["products/{PRODUCT}/apps/web/package.json"]
     context_output: ""
     parallel_ok: true
     checkpoint: false

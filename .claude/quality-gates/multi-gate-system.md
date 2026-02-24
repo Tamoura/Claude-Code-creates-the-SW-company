@@ -6,13 +6,13 @@
 
 Catch issues earlier in the development process by running specialized checks at strategic points, not just before CEO review. The Spec Consistency Gate (powered by spec-kit) catches specification-level issues before any code is written or tested.
 
-## Six Quality Gates
+## Seven Quality Gates
 
 ```
-Spec → Spec Consistency Gate → Browser Gate → Security Gate → Performance Gate → Testing Gate → Production Gate → CEO
-              ↓                     ↓               ↓                ↓                  ↓                ↓
-          Spec/Plan            Browser         Security        Performance        Quality         Deployment
-          Aligned?             Works?          Issues          Issues             Issues          Readiness
+Spec → Spec Consistency Gate → Documentation Gate → Browser Gate → Security Gate → Performance Gate → Testing Gate → Production Gate → CEO
+              ↓                       ↓                  ↓               ↓                ↓                  ↓                ↓
+          Spec/Plan            Diagrams &           Browser         Security        Performance        Quality         Deployment
+          Aligned?             Article IX?          Works?          Issues          Issues             Issues          Readiness
 ```
 
 ### -1. Spec Consistency Gate (SPECIFICATION QUALITY) — spec-kit powered
@@ -76,6 +76,60 @@ Spec Consistency Checks:
 BLOCKING: If spec consistency gate has CRITICAL findings, flag for resolution.
 Unlike browser-first gate, this does NOT block subsequent gates for existing code,
 but MUST pass before CEO checkpoint.
+```
+
+---
+
+### -0.5. Documentation Quality Gate (ARTICLE IX ENFORCEMENT)
+
+**When**: After spec consistency gate, before browser-first gate. Also before any CEO checkpoint.
+**Purpose**: Enforce Constitution Article IX (Diagram-First Principle). Verify that PRDs, architecture docs, and READMEs contain required Mermaid diagrams with sufficient type diversity.
+**Invoked By**: Orchestrator automatically (Step 4.F) or any agent via script
+
+#### Checks
+
+```yaml
+Documentation Quality Checks:
+  - PRD contains >= 3 Mermaid diagram blocks (C4, ER, sequence/flowchart)
+  - Architecture docs contain >= 2 Mermaid diagram blocks
+  - README contains >= 1 Mermaid diagram block
+  - PRD uses >= 3 distinct diagram types (graph/flowchart, sequenceDiagram, erDiagram, etc.)
+  - No sections > 500 words without a diagram (warning)
+  - Feature specs contain at least 1 diagram each (if specs exist)
+```
+
+#### Implementation
+
+```bash
+# Run documentation quality gate
+.claude/scripts/documentation-gate.sh [product]
+
+# Output: PASS/FAIL/WARN + report file
+# Captures: GATE_REPORT_FILE=products/[product]/docs/quality-reports/documentation-gate-[date].md
+```
+
+#### Pass Criteria
+
+```
+✅ PASS if:
+- PRD has >= 3 Mermaid diagrams with >= 3 distinct types
+- Architecture has >= 2 Mermaid diagrams
+- README has >= 1 Mermaid diagram
+- No FAIL-level checks triggered
+
+⚠️ WARN if:
+- Feature specs missing diagrams
+- Sections > 500 words without diagrams
+- PRD has only 2 distinct diagram types
+
+❌ FAIL if:
+- PRD has fewer than 3 Mermaid diagrams (CRITICAL)
+- Architecture has fewer than 2 Mermaid diagrams
+- README has 0 Mermaid diagrams
+- PRD uses fewer than 2 distinct diagram types
+
+BLOCKING: Documentation gate must PASS before CEO checkpoint.
+If FAIL, route to Technical Writer or original agent to add diagrams.
 ```
 
 ---
@@ -546,6 +600,7 @@ tasks:
 | Gate | Automatic? | When Run |
 |------|-----------|----------|
 | Spec Consistency | Automatic | After task generation + before CEO checkpoint |
+| Documentation | Automatic | After spec consistency + before CEO checkpoint |
 | Browser-First | Automatic | Before ALL code-level gates (Phase 1 of testing gate) |
 | Security | Automatic in CI | On every PR |
 | Performance | Automatic | After staging deploy |
