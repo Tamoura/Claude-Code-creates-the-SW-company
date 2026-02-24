@@ -387,6 +387,87 @@ const feedRoutes: FastifyPluginAsync = async (fastify) => {
       return sendSuccess(reply, data, 201);
     }
   );
+  // POST /api/v1/feed/posts/:id/repost
+  fastify.post<{ Params: { id: string } }>(
+    '/posts/:id/repost',
+    {
+      schema: {
+        description: 'Repost a post',
+        tags: ['Feed'],
+        security: [{ bearerAuth: [] }],
+        params: {
+          type: 'object',
+          required: ['id'],
+          properties: {
+            id: { type: 'string' },
+          },
+        },
+        body: {
+          type: 'object',
+          additionalProperties: false,
+          properties: {
+            comment: { type: 'string', maxLength: 1000 },
+          },
+        },
+        response: {
+          201: {
+            type: 'object',
+            additionalProperties: true,
+            properties: {
+              success: { type: 'boolean' },
+              data: { type: 'object', additionalProperties: true },
+            },
+          },
+        },
+      },
+    },
+    async (request, reply) => {
+      const body = request.body as { comment?: string } | undefined;
+      const data = await feedService.repostPost(
+        request.params.id,
+        request.user.sub,
+        body?.comment
+      );
+      return sendSuccess(reply, data, 201);
+    }
+  );
+
+  // DELETE /api/v1/feed/posts/:id/repost
+  fastify.delete<{ Params: { id: string } }>(
+    '/posts/:id/repost',
+    {
+      schema: {
+        description: 'Remove a repost',
+        tags: ['Feed'],
+        security: [{ bearerAuth: [] }],
+        params: {
+          type: 'object',
+          required: ['id'],
+          properties: {
+            id: { type: 'string' },
+          },
+        },
+        response: {
+          200: {
+            type: 'object',
+            additionalProperties: true,
+            properties: {
+              success: { type: 'boolean' },
+              data: { type: 'object', additionalProperties: true },
+            },
+          },
+        },
+      },
+    },
+    async (request, reply) => {
+      const data = await feedService.removeRepost(
+        request.params.id,
+        request.user.sub
+      );
+      return sendSuccess(reply, data);
+    }
+  );
+
   // POST /api/v1/feed/posts/:id/react
   fastify.post<{ Params: { id: string } }>(
     '/posts/:id/react',
