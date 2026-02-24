@@ -12,6 +12,8 @@ metadata:
   version: "2.0.0"
   workflow_type: "bug-fix"
   issue_id: "{ISSUE_ID}"
+  fast_track: true
+  skip_steps: ["3.3", "3.7"]
   created_at: "{TIMESTAMP}"
   updated_at: "{TIMESTAMP}"
   traceability:

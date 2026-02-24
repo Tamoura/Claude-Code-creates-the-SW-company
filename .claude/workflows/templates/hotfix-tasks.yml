@@ -8,6 +8,8 @@ metadata:
   issue: "{ISSUE}"
   severity: "{SEVERITY}"
   workflow_type: "hotfix"
+  fast_track: true
+  skip_steps: ["3.3", "3.5", "3.7"]
   created_at: "{TIMESTAMP}"
   updated_at: "{TIMESTAMP}"
 

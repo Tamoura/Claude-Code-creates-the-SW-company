@@ -70,12 +70,16 @@ For detailed execution instructions, see: `.claude/orchestrator/claude-code-exec
 
 Scan the filesystem and git for ground truth. Use `state.yml` only for cross-product coordination data.
 
+**Fast path**: If the CEO request specifies a known product AND `products/{PRODUCT}/` exists,
+skip the full product discovery loop — only scan the target product directory.
+
 ```bash
 # 1. Check git status
 git status
 git branch -a
 
 # 2. Discover products from filesystem (not state.yml)
+# FAST PATH: If target product is known, skip this loop and go directly to step 3
 for product_dir in products/*/; do
   [ -d "$product_dir" ] || continue
   product=$(basename "$product_dir")
@@ -110,6 +114,31 @@ cat .claude/orchestrator/state.yml 2>/dev/null || echo "No state file"
 | "Fix bug: [X]" | bug-fix | `.claude/workflows/templates/bug-fix-tasks.yml` |
 | "Ship/deploy [X]" | release | `.claude/workflows/templates/release-tasks.yml` |
 | "Status update" | status-report | (no template, compile from state) |
+
+### Step 2.5: Task Complexity Classification (Fast Track)
+
+Before loading a task graph, classify the CEO request complexity to skip unnecessary overhead:
+
+```markdown
+| Complexity | Criteria | Skip Steps |
+|------------|----------|------------|
+| **Trivial** | Typo fix, README update, config tweak | 3.3 (backlog), 3.5 (pattern scoring), 3.7 (estimates) |
+| **Simple** | Single bug fix, minor feature, single-file change | 3.3 (backlog), 3.7 (estimates) |
+| **Standard** | Multi-file feature, new endpoint + tests | None |
+| **Complex** | New product, multi-service feature, architecture change | None |
+
+Classification rules:
+1. If CEO request matches "fix typo", "update README", "change config" → Trivial
+2. If workflow type is "bug-fix" or "hotfix" → Simple (unless CEO flags as complex)
+3. If workflow type is "new-product" → Complex
+4. If workflow type is "new-feature" → Standard (default)
+5. If template has `fast_track: true` in metadata → use template's `skip_steps`
+
+Fast Track benefits:
+- Trivial/Simple: skip 30-50% of setup overhead
+- Quality gates are NEVER skipped regardless of complexity
+- CEO checkpoints are NEVER skipped regardless of complexity
+```
 
 ### Step 3: Load & Instantiate Task Graph
 
