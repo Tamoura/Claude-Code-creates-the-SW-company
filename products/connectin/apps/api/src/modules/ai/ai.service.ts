@@ -1,4 +1,5 @@
 import { PrismaClient } from '@prisma/client';
+import { createHash } from 'crypto';
 import { OpenRouterClient } from './openrouter';
 import { BadRequestError } from '../../lib/errors';
 
@@ -57,8 +58,7 @@ const userDailyUsage = new Map<string, { count: number; resetsAt: number }>();
 const MAX_DAILY_OPTIMIZATIONS = 5;
 
 function hashProfileData(data: string): string {
-  const crypto = require('crypto');
-  return crypto.createHash('sha256').update(data).digest('hex').slice(0, 16);
+  return createHash('sha256').update(data).digest('hex').slice(0, 16);
 }
 
 function checkRateLimit(userId: string): void {
