@@ -2,20 +2,18 @@
  * Health check endpoint integration tests
  */
 
-import { buildApp } from '../../src/app';
 import { FastifyInstance } from 'fastify';
+import { getApp, closeApp } from '../helpers';
 
 describe('GET /health', () => {
   let app: FastifyInstance;
 
   beforeAll(async () => {
-    process.env.INTERNAL_API_KEY = 'test-internal-api-key';
-    app = await buildApp();
+    app = await getApp();
   });
 
   afterAll(async () => {
-    delete process.env.INTERNAL_API_KEY;
-    await app.close();
+    await closeApp();
   });
 
   it('should return 200 with healthy status', async () => {
