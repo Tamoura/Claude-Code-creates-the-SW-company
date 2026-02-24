@@ -35,10 +35,16 @@ model User {
   emailVerified Boolean   @default(false) @map("email_verified")
   totpEnabled   Boolean   @default(false) @map("totp_enabled")
   totpSecret    String?   @map("totp_secret") @db.VarChar(255)
-  status        String    @default("registered") @db.VarChar(20)
-  lastLoginAt   DateTime? @map("last_login_at") @db.Timestamptz()
-  createdAt     DateTime  @default(now()) @map("created_at") @db.Timestamptz()
-  updatedAt     DateTime  @updatedAt @map("updated_at") @db.Timestamptz()
+  status              String    @default("registered") @db.VarChar(20)
+  lastLoginAt         DateTime? @map("last_login_at") @db.Timestamptz()
+  failedLoginAttempts Int       @default(0) @map("failed_login_attempts")
+  lockedUntil         DateTime? @map("locked_until") @db.Timestamptz()
+  verificationToken   String?   @map("verification_token") @db.VarChar(255)
+  verificationExpires DateTime? @map("verification_expires") @db.Timestamptz()
+  resetToken          String?   @map("reset_token") @db.VarChar(255)
+  resetTokenExpires   DateTime? @map("reset_token_expires") @db.Timestamptz()
+  createdAt           DateTime  @default(now()) @map("created_at") @db.Timestamptz()
+  updatedAt           DateTime  @updatedAt @map("updated_at") @db.Timestamptz()
 
   // Relations
   oauthAccounts           OauthAccount[]
@@ -60,6 +66,8 @@ model User {
 
   @@index([email])
   @@index([status])
+  @@index([verificationToken])
+  @@index([resetToken])
   @@map("users")
 }
 
