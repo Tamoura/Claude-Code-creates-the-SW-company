@@ -2,7 +2,7 @@
 process.env.NODE_ENV = 'test';
 process.env.DATABASE_URL =
   process.env.DATABASE_URL ||
-  'postgresql://postgres:postgres@localhost:5432/connectin_test';
+  'postgresql://postgres@localhost:5432/connectin_test';
 process.env.JWT_SECRET =
   'test-jwt-secret-at-least-32-characters-long-for-testing';
 process.env.JWT_REFRESH_SECRET =

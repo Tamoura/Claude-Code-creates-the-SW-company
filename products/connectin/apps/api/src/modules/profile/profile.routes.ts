@@ -7,6 +7,7 @@ import {
   addSkillsSchema,
   addEducationSchema,
   updateEducationSchema,
+  openToWorkSchema,
 } from './profile.schemas';
 import { sendSuccess } from '../../lib/response';
 import { ValidationError } from '../../lib/errors';
@@ -100,6 +101,89 @@ const profileRoutes: FastifyPluginAsync = async (fastify) => {
       result.data
     );
     return sendSuccess(reply, profile);
+  });
+
+  // GET /api/v1/profiles/me/strength
+  fastify.get('/me/strength', {
+    schema: {
+      description: 'Get profile strength meter with score and suggestions',
+      tags: ['Profile'],
+      security: [{ bearerAuth: [] }],
+      response: {
+        200: {
+          type: 'object',
+          additionalProperties: true,
+          properties: {
+            success: { type: 'boolean' },
+            data: { type: 'object', additionalProperties: true },
+          },
+        },
+      },
+    },
+    config: {
+      rateLimit: {
+        max: 60,
+        timeWindow: '1 minute',
+      },
+    },
+  }, async (request, reply) => {
+    const strength = await profileService.getProfileStrength(
+      request.user.sub
+    );
+    return sendSuccess(reply, strength);
+  });
+
+  // PUT /api/v1/profiles/me/open-to-work
+  fastify.put('/me/open-to-work', {
+    schema: {
+      description: 'Update open-to-work status and visibility',
+      tags: ['Profile'],
+      security: [{ bearerAuth: [] }],
+      body: {
+        type: 'object',
+        additionalProperties: false,
+        required: ['openToWork'],
+        properties: {
+          openToWork: { type: 'boolean' },
+          visibility: {
+            type: 'string',
+            enum: ['PUBLIC', 'RECRUITERS_ONLY'],
+          },
+        },
+      },
+      response: {
+        200: {
+          type: 'object',
+          additionalProperties: true,
+          properties: {
+            success: { type: 'boolean' },
+            data: { type: 'object', additionalProperties: true },
+          },
+        },
+      },
+    },
+    config: {
+      rateLimit: {
+        max: 60,
+        timeWindow: '1 minute',
+      },
+    },
+  }, async (request, reply) => {
+    const result = openToWorkSchema.safeParse(
+      request.body
+    );
+    if (!result.success) {
+      throw new ValidationError(
+        'Validation failed',
+        zodToDetails(result.error)
+      );
+    }
+
+    const data = await profileService.updateOpenToWork(
+      request.user.sub,
+      result.data
+    );
+    return sendSuccess(reply, data);
   });
 
   // GET /api/v1/profiles/:id

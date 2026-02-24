@@ -7,6 +7,7 @@ import {
   AddSkillsInput,
   AddEducationInput,
   UpdateEducationInput,
+  OpenToWorkInput,
 } from './profile.schemas';
 
 export class ProfileService {
@@ -29,7 +30,10 @@ export class ProfileService {
           include: { skill: true },
         },
         user: {
-          select: { displayName: true },
+          select: {
+            displayName: true,
+            preference: true,
+          },
         },
       },
     });
@@ -38,7 +42,23 @@ export class ProfileService {
       throw new NotFoundError('Profile not found');
     }
 
-    return this.formatProfile(profile);
+    const formatted = this.formatProfile(profile);
+    const preference = (
+      profile.user as {
+        displayName: string;
+        preference?: {
+          openToWork: boolean;
+          openToWorkVisibility: string;
+        } | null;
+      }
+    ).preference;
+
+    return {
+      ...formatted,
+      openToWork: preference?.openToWork ?? false,
+      openToWorkVisibility:
+        preference?.openToWorkVisibility ?? 'RECRUITERS_ONLY',
+    };
   }
 
   /**
@@ -84,6 +104,8 @@ export class ProfileService {
         user: {
           select: {
             displayName: true,
+            role: true,
+            preference: true,
             // Only fetch PII fields when the requester is the owner
             ...(isOwner && { email: true }),
           },
@@ -96,18 +118,40 @@ export class ProfileService {
     }
 
     const formatted = this.formatProfile(profile);
+    const userWithPrefs = profile.user as {
+      displayName: string;
+      role?: string;
+      email?: string;
+      preference?: {
+        openToWork: boolean;
+        openToWorkVisibility: string;
+      } | null;
+    };
+    const preference = userWithPrefs.preference;
 
     if (!isOwner) {
+      // Only show open-to-work if visibility is PUBLIC
+      const showOpenToWork =
+        preference?.openToWork &&
+        preference?.openToWorkVisibility === 'PUBLIC';
+
       return {
         ...formatted,
         email: undefined,
         website: undefined,
+        ...(showOpenToWork && {
+          openToWork: true,
+          openToWorkVisibility: 'PUBLIC',
+        }),
       };
     }
 
     return {
       ...formatted,
-      email: (profile.user as { displayName: string; email?: string }).email,
+      email: userWithPrefs.email,
+      openToWork: preference?.openToWork ?? false,
+      openToWorkVisibility:
+        preference?.openToWorkVisibility ?? 'RECRUITERS_ONLY',
     };
   }
 
@@ -392,6 +436,142 @@ export class ProfileService {
     await this.recalculateCompleteness(profile.id);
 
     return { deleted: true };
+  }
+
+  async getProfileStrength(userId: string) {
+    const profile = await this.prisma.profile.findUnique({
+      where: { userId },
+      include: {
+        experiences: true,
+        educations: true,
+        profileSkills: true,
+      },
+    });
+
+    if (!profile) {
+      throw new NotFoundError('Profile not found');
+    }
+
+    const fields = [
+      {
+        field: 'avatarUrl',
+        weight: 15,
+        filled: !!profile.avatarUrl,
+        en: 'Add a profile photo to make a strong first impression',
+        ar: 'أضف صورة للملف الشخصي لتترك انطباعاً قوياً',
+      },
+      {
+        field: 'headline',
+        weight: 15,
+        filled: !!(profile.headlineEn || profile.headlineAr),
+        en: 'Write a headline that showcases your expertise',
+        ar: 'اكتب عنواناً يبرز خبراتك',
+      },
+      {
+        field: 'summary',
+        weight: 15,
+        filled: !!(profile.summaryEn || profile.summaryAr),
+        en: 'Add a summary to tell your professional story',
+        ar: 'أضف نبذة تحكي قصتك المهنية',
+      },
+      {
+        field: 'experience',
+        weight: 20,
+        filled: profile.experiences.length > 0,
+        en: 'Add work experience to build credibility',
+        ar: 'أضف خبرة عملية لبناء المصداقية',
+      },
+      {
+        field: 'education',
+        weight: 15,
+        filled: profile.educations.length > 0,
+        en: 'Add your educational background',
+        ar: 'أضف خلفيتك التعليمية',
+      },
+      {
+        field: 'skills',
+        weight: 10,
+        filled: profile.profileSkills.length > 0,
+        en: 'Add skills to get noticed by recruiters',
+        ar: 'أضف مهاراتك لتلفت انتباه المسؤولين عن التوظيف',
+      },
+      {
+        field: 'location',
+        weight: 5,
+        filled: !!profile.location,
+        en: 'Add your location to appear in local searches',
+        ar: 'أضف موقعك للظهور في نتائج البحث المحلية',
+      },
+      {
+        field: 'website',
+        weight: 5,
+        filled: !!profile.website,
+        en: 'Add a website or portfolio link',
+        ar: 'أضف رابط موقعك الإلكتروني أو معرض أعمالك',
+      },
+    ];
+
+    let score = 0;
+    const breakdown: {
+      field: string;
+      points: number;
+      earned: boolean;
+    }[] = [];
+    const suggestions: {
+      field: string;
+      weight: number;
+      en: string;
+      ar: string;
+    }[] = [];
+
+    for (const f of fields) {
+      breakdown.push({
+        field: f.field,
+        points: f.weight,
+        earned: f.filled,
+      });
+      if (f.filled) {
+        score += f.weight;
+      } else {
+        suggestions.push({
+          field: f.field,
+          weight: f.weight,
+          en: f.en,
+          ar: f.ar,
+        });
+      }
+    }
+
+    return {
+      score,
+      maxScore: 100,
+      breakdown,
+      suggestions,
+    };
+  }
+
+  async updateOpenToWork(
+    userId: string,
+    input: OpenToWorkInput
+  ) {
+    const preference =
+      await this.prisma.userPreference.upsert({
+        where: { userId },
+        create: {
+          userId,
+          openToWork: input.openToWork,
+          openToWorkVisibility: input.visibility,
+        },
+        update: {
+          openToWork: input.openToWork,
+          openToWorkVisibility: input.visibility,
+        },
+      });
+
+    return {
+      openToWork: preference.openToWork,
+      visibility: preference.openToWorkVisibility,
+    };
   }
 
   private calculateCompleteness(profile: {

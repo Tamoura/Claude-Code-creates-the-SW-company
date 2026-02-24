@@ -41,6 +41,17 @@ enum TextDirection {
   AUTO
 }
 
+enum ThemePreference {
+  LIGHT
+  DARK
+  SYSTEM
+}
+
+enum OpenToWorkVisibility {
+  PUBLIC
+  RECRUITERS_ONLY
+}
+
 // ─── Users ──────────────────────────────────────────────────
 
 model User {
@@ -84,6 +95,7 @@ model User {
   notifications           Notification[]
   notificationPreference  NotificationPreference?
   processingObjections    ProcessingObjection[]
+  preference              UserPreference?
 
   @@index([status, createdAt])
   @@index([verificationToken])
@@ -126,6 +138,7 @@ model Profile {
   summaryAr         String?         @map("summary_ar")
   summaryEn         String?         @map("summary_en")
   avatarUrl         String?         @map("avatar_url") @db.VarChar(500)
+  bannerUrl         String?         @map("banner_url") @db.VarChar(500)
   location          String?         @db.VarChar(100)
   website           String?         @db.VarChar(255)
   completenessScore Int             @default(0) @map("completeness_score")
@@ -138,6 +151,22 @@ model Profile {
   profileSkills     ProfileSkill[]
 
   @@map("profiles")
+}
+
+// ─── User Preferences ──────────────────────────────────────
+
+model UserPreference {
+  id                    String               @id @default(uuid())
+  userId                String               @unique @map("user_id")
+  theme                 ThemePreference      @default(SYSTEM)
+  openToWork            Boolean              @default(false) @map("open_to_work")
+  openToWorkVisibility  OpenToWorkVisibility @default(RECRUITERS_ONLY) @map("open_to_work_visibility")
+  createdAt             DateTime             @default(now()) @map("created_at")
+  updatedAt             DateTime             @updatedAt @map("updated_at")
+
+  user User @relation(fields: [userId], references: [id], onDelete: Cascade)
+
+  @@map("user_preferences")
 }
 
 // ─── Experiences ────────────────────────────────────────────

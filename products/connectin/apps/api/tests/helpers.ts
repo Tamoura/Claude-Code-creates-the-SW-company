@@ -53,6 +53,7 @@ export async function cleanDatabase(): Promise<void> {
   await db.savedJob.deleteMany();
   await db.jobApplication.deleteMany();
   await db.job.deleteMany();
+  await db.userPreference.deleteMany();
   await db.profile.deleteMany();
   await db.user.deleteMany();
 }
