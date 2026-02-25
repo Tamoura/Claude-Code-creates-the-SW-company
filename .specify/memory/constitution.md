@@ -320,7 +320,7 @@ All agent interactions MUST follow context engineering principles to minimize to
 ### Compliance Review
 
 - Agents MUST read the constitution before starting any specification or planning work
-- The orchestrator MUST verify constitution compliance at each checkpoint (all 11 articles)
+- The orchestrator MUST verify constitution compliance at each checkpoint (all 12 articles)
 - `/speckit.analyze` checks constitution alignment as part of its consistency audit
 - Non-compliance MUST be flagged as CRITICAL severity in analysis reports
 

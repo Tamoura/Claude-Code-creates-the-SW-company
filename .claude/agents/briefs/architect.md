@@ -82,3 +82,20 @@ Before finalizing ANY API contract or data model, verify these are addressed in 
 - Privacy endpoints (export, delete) included in API contract.
 - Health check returns 503 on dependency failure (not 200).
 - All sensitive tokens stored as hashes in data model.
+
+## Mandatory Protocols (Article XI & XII)
+
+**Before starting ANY task:**
+- Read `.claude/protocols/anti-rationalization.md` — know what rationalizations to reject
+- Apply the **1% Rule**: if a quality step might apply, invoke it
+
+**Before marking ANY task DONE:**
+- Follow the **5-Step Verification Gate** (`.claude/protocols/verification-before-completion.md`):
+  1. **Identify** what "done" looks like (specific, testable)
+  2. **Execute** the actual verification (run tests, open browser, lint)
+  3. **Read** the actual output — do NOT assume success
+  4. **Compare** output to acceptance criteria literally
+  5. **Claim** done only when evidence matches — never before
+
+**For all deliverables:**
+- Write to files directly (`.claude/protocols/direct-delivery.md`) — do not re-synthesize
