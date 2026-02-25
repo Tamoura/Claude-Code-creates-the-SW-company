@@ -241,6 +241,59 @@ const files = generateProduct({
 }, '/path/to/products/my-product');
 ```
 
+### `@connectsw/huggingface` — HuggingFace AI/ML Integration (NEW)
+Location: `packages/huggingface/`
+
+**InferenceClient** (`@connectsw/huggingface/clients/inference`):
+- Text Generation — Run LLMs (Llama, Mistral, etc.)
+- Embeddings — Generate vector embeddings for search/recommendations
+- Text Classification — Sentiment analysis, topic classification
+- Summarization — Summarize long text
+- Question Answering — Extract answers from context
+- Image Classification — Classify images
+- Text to Image — Generate images from prompts (Stable Diffusion, etc.)
+- Sentence Similarity — Compare sentence semantics
+- Token Classification (NER) — Named entity recognition
+- Zero-Shot Classification — Classify without training data
+
+**HubClient** (`@connectsw/huggingface/clients/hub`):
+- Search models/datasets with filters (author, task, library, sort)
+- Get model/dataset details and file listings
+- Trending models/datasets, models by task
+- Download files from model/dataset repos
+
+**DatasetLoader** (`@connectsw/huggingface/utils/datasets`):
+- Get dataset info and splits
+- Fetch rows with pagination
+- Search within datasets
+- Get Parquet file URLs for direct access
+- Async generator for batch processing (`iterateRows()`)
+
+**Fastify Plugin** (`@connectsw/huggingface/plugins/huggingface`):
+- Registers `fastify.hf.inference`, `fastify.hf.hub`, `fastify.hf.datasets`
+- Auto-reads `HUGGINGFACE_API_KEY` or `HF_API_KEY` from env
+- Configurable timeout, base URLs
+
+**Usage example (Fastify plugin):**
+```typescript
+import { huggingfacePlugin } from '@connectsw/huggingface';
+
+app.register(huggingfacePlugin);
+
+// In routes:
+const result = await fastify.hf.inference.textGeneration({
+  model: 'meta-llama/Llama-3.1-8B-Instruct',
+  inputs: 'Explain quantum computing:',
+  parameters: { max_new_tokens: 200 },
+});
+
+const models = await fastify.hf.hub.searchModels({ pipeline_tag: 'text-generation', limit: 10 });
+
+for await (const batch of fastify.hf.datasets.iterateRows('imdb', { batchSize: 100 })) {
+  // process batch
+}
+```
+
 ---
 
 ## How to Use This Registry
@@ -284,6 +337,12 @@ const files = generateProduct({
 | Real-time counters         | Redis Counters (pipeline-based daily counters with TTL)                       |
 | Embeddable JS SDK          | SDK pattern (IIFE bundle via esbuild, auto-init from script attributes)       |
 | New SaaS product scaffold  | `@connectsw/saas-kit` (CLI: `connectsw-create`, API: `generateProduct()`)    |
+| AI text generation         | `@connectsw/huggingface` InferenceClient.textGeneration()                    |
+| Embeddings / vectors       | `@connectsw/huggingface` InferenceClient.embeddings()                        |
+| Text classification / NLP  | `@connectsw/huggingface` InferenceClient (classification, NER, Q&A, etc.)    |
+| Image generation           | `@connectsw/huggingface` InferenceClient.textToImage()                       |
+| Browse HF models/datasets  | `@connectsw/huggingface` HubClient (search, details, download)               |
+| Load/process datasets      | `@connectsw/huggingface` DatasetLoader (rows, search, batch iterate)         |
 
 ---
 

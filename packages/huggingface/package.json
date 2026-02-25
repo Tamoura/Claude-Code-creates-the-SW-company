@@ -1,0 +1,43 @@
+{
+  "name": "@connectsw/huggingface",
+  "version": "1.0.0",
+  "description": "HuggingFace integration for ConnectSW products — inference, models, datasets",
+  "type": "module",
+  "main": "dist/index.js",
+  "types": "dist/index.d.ts",
+  "scripts": {
+    "build": "tsc",
+    "dev": "tsc --watch",
+    "test": "jest --passWithNoTests",
+    "lint": "eslint src/"
+  },
+  "exports": {
+    ".": "./dist/index.js",
+    "./clients/inference": "./dist/clients/inference.js",
+    "./clients/hub": "./dist/clients/hub.js",
+    "./utils/datasets": "./dist/utils/datasets.js",
+    "./plugins/huggingface": "./dist/plugins/huggingface.js"
+  },
+  "files": [
+    "dist"
+  ],
+  "dependencies": {
+    "fastify": "^4.24.0",
+    "fastify-plugin": "^4.5.0",
+    "zod": "^3.22.4"
+  },
+  "peerDependencies": {
+    "fastify": "^4.0.0"
+  },
+  "peerDependenciesMeta": {
+    "fastify": {
+      "optional": true
+    }
+  },
+  "devDependencies": {
+    "@types/node": "^20.0.0"
+  },
+  "engines": {
+    "node": ">=20.0.0"
+  }
+}
