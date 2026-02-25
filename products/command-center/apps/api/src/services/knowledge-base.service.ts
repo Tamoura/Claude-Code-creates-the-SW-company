@@ -258,7 +258,10 @@ function loadAgentExperiences(): AgentExperienceEntry[] {
         results.push({
           agent: (raw.agent as string) ?? file.replace('.json', ''),
           tasksCompleted: (metrics.tasks_completed as number) ?? 0,
-          successRate: (metrics.success_rate as number) ?? 0,
+          successRate: (() => {
+            const r = (metrics.success_rate as number) ?? 0;
+            return r <= 1 ? Math.round(r * 100) : Math.round(r);
+          })(),
           avgTimeMinutes: (metrics.average_time_minutes as number) ?? 0,
           commonMistakes: ((raw.common_mistakes ?? raw.commonMistakes ?? []) as string[]).slice(0, 5),
           preferredApproaches: ((raw.preferred_approaches ?? raw.preferredApproaches ?? []) as string[]).slice(0, 5),

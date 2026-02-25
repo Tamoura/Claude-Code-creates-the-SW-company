@@ -13,15 +13,9 @@ interface QualityGatesResponse {
   products: ProductQuality[];
 }
 
-const DIMENSIONS = [
-  'Security',
-  'Architecture',
-  'Testing',
-  'Code Quality',
-  'Performance',
-  'DevOps',
-  'Runability',
-];
+// Core dimensions shown first; extras appended alphabetically
+const CORE_DIMENSIONS = ['Security', 'Architecture', 'Testing', 'Code Quality', 'Performance', 'DevOps', 'Runability'];
+const EXTRA_DIMENSIONS = ['Accessibility', 'Privacy', 'Observability', 'API Design'];
 
 function LoadingSkeleton() {
   return (
@@ -112,10 +106,16 @@ function ProductCard({ product }: { product: ProductQuality }) {
       </div>
 
       <div className="space-y-2.5">
-        {DIMENSIONS.map((dim) => {
-          const score = product.scores[dim] ?? product.scores[dim.toLowerCase()] ?? 0;
-          return <ScoreBar key={dim} label={dim} score={score} />;
-        })}
+        {(() => {
+          const available = Object.keys(product.scores);
+          const dims = [
+            ...CORE_DIMENSIONS.filter((d) => available.includes(d)),
+            ...EXTRA_DIMENSIONS.filter((d) => available.includes(d)),
+          ];
+          return dims.map((dim) => (
+            <ScoreBar key={dim} label={dim} score={product.scores[dim]} />
+          ));
+        })()}
       </div>
     </div>
   );

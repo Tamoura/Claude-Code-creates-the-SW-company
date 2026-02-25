@@ -1,4 +1,6 @@
 import { execSync } from 'node:child_process';
+import { readdirSync } from 'node:fs';
+import { resolve } from 'node:path';
 import { repoRoot } from './repo.service.js';
 
 export interface CommitsByDay {
@@ -25,8 +27,39 @@ export interface GitAnalyticsResponse {
   commitsByDay: CommitsByDay[];
   commitsByProduct: Record<string, number>;
   commitsByAuthor: Record<string, number>;
+  commitsByType: Record<string, number>;
   totalCommits: number;
   stats: { additions: number; deletions: number };
+}
+
+interface RawCommit {
+  hash: string;
+  date: string;
+  author: string;
+  message: string;
+}
+
+function getRealProductNames(): Set<string> {
+  try {
+    const productsDir = resolve(repoRoot(), 'products');
+    const entries = readdirSync(productsDir, { withFileTypes: true });
+    return new Set(entries.filter((e) => e.isDirectory()).map((e) => e.name));
+  } catch {
+    return new Set();
+  }
+}
+
+function groupByCommitType(commits: RawCommit[]): Record<string, number> {
+  const map = new Map<string, number>();
+  const typeRe = /^(feat|fix|refactor|test|docs|chore|ci|perf|build|style)\b/i;
+  for (const c of commits) {
+    const match = c.message.match(typeRe);
+    const type = match ? match[1].toLowerCase() : 'other';
+    map.set(type, (map.get(type) ?? 0) + 1);
+  }
+  return Object.fromEntries(
+    Array.from(map.entries()).sort((a, b) => b[1] - a[1]),
+  );
 }
 
 /** Cache with 60s TTL (git operations are heavier) */
@@ -52,23 +85,27 @@ export function getGitAnalytics(): GitAnalyticsResponse {
   const authorRecord: Record<string, number> = {};
   for (const { author, count } of byAuthor) authorRecord[author] = count;
 
+  const realProducts = getRealProductNames();
+  const filteredProductRecord: Record<string, number> = {};
+  for (const [product, count] of Object.entries(productRecord)) {
+    if (realProducts.has(product)) {
+      filteredProductRecord[product] = count;
+    }
+  }
+
+  const commitsByType = groupByCommitType(commits);
+
   const data: GitAnalyticsResponse = {
     commitsByDay: byDay,
-    commitsByProduct: productRecord,
+    commitsByProduct: filteredProductRecord,
     commitsByAuthor: authorRecord,
+    commitsByType,
     totalCommits: commits.length,
     stats: { additions: numstat.added, deletions: numstat.removed },
   };
 
   cache = { data, ts: Date.now() };
   return data;
-}
-
-interface RawCommit {
-  hash: string;
-  date: string;
-  author: string;
-  message: string;
 }
 
 function parseCommitLog(): RawCommit[] {

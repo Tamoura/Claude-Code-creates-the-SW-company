@@ -5,6 +5,7 @@ interface GitAnalyticsResponse {
   commitsByDay: Array<{ date: string; count: number }>;
   commitsByProduct: Record<string, number>;
   commitsByAuthor: Record<string, number>;
+  commitsByType: Record<string, number>;
   totalCommits: number;
   stats: { additions: number; deletions: number };
 }
@@ -124,7 +125,7 @@ export default function GitAnalytics() {
   const maxDayCount = Math.max(...cells.map((c) => c.count), 1);
 
   const productEntries = Object.entries(data.commitsByProduct).sort((a, b) => b[1] - a[1]);
-  const authorEntries = Object.entries(data.commitsByAuthor).sort((a, b) => b[1] - a[1]);
+  const typeEntries = Object.entries(data.commitsByType ?? {}).sort((a, b) => b[1] - a[1]);
 
   return (
     <div>
@@ -191,13 +192,13 @@ export default function GitAnalytics() {
           )}
         </div>
 
-        {/* By Author */}
+        {/* By Commit Type */}
         <div className="bg-gray-900 border border-gray-800 rounded-xl p-6">
-          <h2 className="text-lg font-semibold text-white mb-4">By Author</h2>
-          {authorEntries.length > 0 ? (
-            <BarChart data={authorEntries as [string, number][]} color="purple" />
+          <h2 className="text-lg font-semibold text-white mb-4">By Type</h2>
+          {typeEntries.length > 0 ? (
+            <BarChart data={typeEntries as [string, number][]} color="purple" />
           ) : (
-            <p className="text-gray-500 text-sm">No author data available</p>
+            <p className="text-gray-500 text-sm">No commit type data</p>
           )}
         </div>
       </div>

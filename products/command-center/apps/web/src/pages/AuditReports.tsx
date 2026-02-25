@@ -1,312 +1,212 @@
 import { useState } from 'react';
 import { useApi } from '../hooks/useApi.js';
-import Badge from '../components/Badge.js';
 import StatCard from '../components/StatCard.js';
+import Badge from '../components/Badge.js';
+import MarkdownRenderer from '../components/MarkdownRenderer.js';
 
-interface AuditEntry {
-  timestamp: string;
-  type: string;
-  agent?: string;
-  product?: string;
-  status?: string;
-  summary?: string;
-  timeMinutes?: number;
+interface AuditReport {
+  product: string;
+  overallScore: number | null;
+  lastModified: string;
+  excerpt: string;
+  content: string;
+  qualityReports: string[];
 }
 
-interface AuditReportResponse {
-  total: number;
-  entries: AuditEntry[];
+interface AuditReportsData {
+  reports: AuditReport[];
   stats: {
-    byAgent: Record<string, number>;
-    byProduct: Record<string, number>;
-    byStatus: Record<string, number>;
-    byType: Record<string, number>;
+    total: number;
+    audited: number;
+    avgScore: number | null;
+    topScore: number | null;
   };
-  timeline: Array<{ date: string; count: number }>;
 }
 
-function BarChart({ data, color }: { data: [string, number][]; color: string }) {
-  const maxCount = Math.max(...data.map(([, count]) => count), 1);
+function scoreColor(score: number | null): string {
+  if (score === null) return 'text-gray-500';
+  if (score >= 8) return 'text-emerald-400';
+  if (score >= 6) return 'text-amber-400';
+  return 'text-red-400';
+}
 
-  const barColorMap: Record<string, string> = {
-    blue: 'bg-blue-500',
-    green: 'bg-emerald-500',
-    success: 'bg-emerald-500',
-    failure: 'bg-red-500',
-    blocked: 'bg-amber-500',
-  };
+function scoreBg(score: number | null): string {
+  if (score === null) return 'bg-gray-800 border-gray-700';
+  if (score >= 8) return 'bg-emerald-500/10 border-emerald-500/20';
+  if (score >= 6) return 'bg-amber-500/10 border-amber-500/20';
+  return 'bg-red-500/10 border-red-500/20';
+}
+
+function scoreVariant(score: number | null): 'success' | 'warning' | 'danger' | 'default' {
+  if (score === null) return 'default';
+  if (score >= 8) return 'success';
+  if (score >= 6) return 'warning';
+  return 'danger';
+}
+
+function formatDate(iso: string): string {
+  return new Date(iso).toLocaleDateString('en-US', { year: 'numeric', month: 'short', day: 'numeric' });
+}
+
+function AuditCard({ report }: { report: AuditReport }) {
+  const [expanded, setExpanded] = useState(false);
 
   return (
-    <div className="space-y-2">
-      {data.map(([label, count]) => (
-        <div key={label} className="flex items-center gap-2">
-          <span className="text-xs text-gray-400 w-32 truncate" title={label}>
-            {label}
-          </span>
-          <div className="flex-1 bg-gray-800 rounded-full h-2">
-            <div
-              className={`${barColorMap[color] || 'bg-blue-500'} rounded-full h-2 transition-all`}
-              style={{ width: `${(count / maxCount) * 100}%` }}
-            />
+    <div className="bg-gray-900 border border-gray-800 rounded-xl overflow-hidden hover:border-gray-700 transition-colors">
+      {/* Card Header */}
+      <div className="p-6">
+        <div className="flex items-start justify-between gap-4 mb-3">
+          <div className="flex-1 min-w-0">
+            <h3 className="text-lg font-semibold text-white capitalize">{report.product}</h3>
+            <p className="text-xs text-gray-500 mt-0.5">
+              Last updated {formatDate(report.lastModified)}
+              {report.qualityReports.length > 0 && (
+                <span className="ml-2 text-gray-600">
+                  · {report.qualityReports.length} quality report{report.qualityReports.length !== 1 ? 's' : ''}
+                </span>
+              )}
+            </p>
           </div>
-          <span className="text-xs text-gray-500 w-8 text-right">{count}</span>
+          <div className={`flex-shrink-0 text-right px-4 py-2 rounded-lg border ${scoreBg(report.overallScore)}`}>
+            {report.overallScore !== null ? (
+              <>
+                <p className={`text-2xl font-bold ${scoreColor(report.overallScore)}`}>{report.overallScore}</p>
+                <p className="text-xs text-gray-500">/10</p>
+              </>
+            ) : (
+              <p className="text-sm text-gray-500">No score</p>
+            )}
+          </div>
         </div>
-      ))}
+
+        {/* Excerpt */}
+        {report.excerpt && (
+          <p className="text-sm text-gray-400 leading-relaxed line-clamp-3 mb-4">{report.excerpt}</p>
+        )}
+
+        {/* Quality report badges */}
+        {report.qualityReports.length > 0 && (
+          <div className="flex flex-wrap gap-1.5 mb-4">
+            {report.qualityReports.map((qr) => (
+              <Badge key={qr} variant="default">{qr}</Badge>
+            ))}
+          </div>
+        )}
+
+        {/* Score badge inline */}
+        <div className="flex items-center gap-3 mb-4">
+          {report.overallScore !== null && (
+            <Badge variant={scoreVariant(report.overallScore)}>
+              {report.overallScore}/10
+            </Badge>
+          )}
+        </div>
+
+        <button
+          onClick={() => setExpanded(!expanded)}
+          className="flex items-center gap-1.5 text-sm text-blue-400 hover:text-blue-300 transition-colors"
+        >
+          <svg
+            className={`w-4 h-4 transition-transform ${expanded ? 'rotate-90' : ''}`}
+            fill="none"
+            stroke="currentColor"
+            viewBox="0 0 24 24"
+            strokeWidth={2}
+          >
+            <path strokeLinecap="round" strokeLinejoin="round" d="M9 5l7 7-7 7" />
+          </svg>
+          {expanded ? 'Collapse report' : 'View full report'}
+        </button>
+      </div>
+
+      {/* Full Markdown Content */}
+      {expanded && (
+        <div className="border-t border-gray-800 p-6 bg-gray-950/50 max-h-[60vh] overflow-y-auto">
+          <MarkdownRenderer content={report.content} />
+        </div>
+      )}
     </div>
   );
 }
 
-function StatusIndicator({ status }: { status?: string }) {
-  if (!status) return null;
-
-  const statusLower = status.toLowerCase();
-  let color = 'bg-gray-500';
-
-  if (statusLower.includes('success') || statusLower === 'pass') {
-    color = 'bg-emerald-500';
-  } else if (statusLower.includes('fail') || statusLower === 'error') {
-    color = 'bg-red-500';
-  } else if (statusLower.includes('block') || statusLower === 'pending') {
-    color = 'bg-amber-500';
-  }
-
+function LoadingSkeleton() {
   return (
-    <div className="flex items-center gap-2">
-      <div className={`w-2 h-2 rounded-full ${color}`} />
-      <span className="text-xs text-gray-500 capitalize">{status}</span>
+    <div className="animate-pulse">
+      <div className="h-8 bg-gray-800 rounded w-48 mb-2" />
+      <div className="h-4 bg-gray-800 rounded w-72 mb-8" />
+      <div className="grid grid-cols-2 lg:grid-cols-4 gap-4 mb-8">
+        {[...Array(4)].map((_, i) => <div key={i} className="h-28 bg-gray-800 rounded-xl" />)}
+      </div>
+      <div className="space-y-4">
+        {[...Array(3)].map((_, i) => <div key={i} className="h-48 bg-gray-800 rounded-xl" />)}
+      </div>
     </div>
   );
 }
 
 export default function AuditReports() {
-  const [filters, setFilters] = useState({ agent: '', product: '', status: '' });
+  const { data, loading } = useApi<AuditReportsData>('/audit/reports');
 
-  const query = Object.entries(filters)
-    .filter(([, v]) => v)
-    .map(([k, v]) => `${k}=${encodeURIComponent(v)}`)
-    .join('&');
-
-  const { data, loading } = useApi<AuditReportResponse>(`/audit/reports${query ? '?' + query : ''}`);
-
-  const handleFilterChange = (key: string, value: string) => {
-    setFilters((prev) => ({ ...prev, [key]: value }));
-  };
-
-  const clearFilters = () => {
-    setFilters({ agent: '', product: '', status: '' });
-  };
-
-  if (loading && !data) {
-    return (
-      <div className="animate-pulse space-y-6">
-        <div className="h-8 bg-gray-800 rounded w-48" />
-        <div className="grid grid-cols-4 gap-4">
-          <div className="h-24 bg-gray-800 rounded" />
-          <div className="h-24 bg-gray-800 rounded" />
-          <div className="h-24 bg-gray-800 rounded" />
-          <div className="h-24 bg-gray-800 rounded" />
-        </div>
-      </div>
-    );
-  }
-
+  if (loading && !data) return <LoadingSkeleton />;
   if (!data) return <p className="text-red-400">Failed to load audit reports</p>;
 
-  const successCount = data.stats.byStatus?.success || data.stats.byStatus?.pass || 0;
-  const successRate = data.total > 0 ? Math.round((successCount / data.total) * 100) : 0;
-
-  const agentOptions = Object.keys(data.stats.byAgent).sort();
-  const productOptions = Object.keys(data.stats.byProduct).sort();
-  const statusOptions = Object.keys(data.stats.byStatus).sort();
+  const { reports, stats } = data;
+  const pending = stats.total - stats.audited;
 
   return (
     <div>
       {/* Header */}
       <div className="mb-8">
         <h1 className="text-2xl font-bold text-white mb-1">Audit Reports</h1>
-        <p className="text-gray-500">Activity tracking and analytics</p>
+        <p className="text-gray-500">Code quality audits across all products</p>
       </div>
 
-      {/* Stats Cards Row */}
-      <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-4 gap-4 mb-6">
-        <StatCard label="Total Entries" value={data.total} color="blue" />
+      {/* Stat Cards */}
+      <div className="grid grid-cols-2 lg:grid-cols-4 gap-4 mb-8">
+        <StatCard label="Audited" value={stats.audited} sublabel={`of ${stats.total} products`} color="blue" />
         <StatCard
-          label="Unique Agents"
-          value={Object.keys(data.stats.byAgent).length}
-          color="green"
-        />
-        <StatCard
-          label="Products Tracked"
-          value={Object.keys(data.stats.byProduct).length}
+          label="Avg Score"
+          value={stats.avgScore !== null ? stats.avgScore : '—'}
+          sublabel="out of 10"
           color="purple"
         />
-        <StatCard label="Success Rate" value={`${successRate}%`} color="orange" />
+        <StatCard
+          label="Top Score"
+          value={stats.topScore !== null ? stats.topScore : '—'}
+          sublabel="best product"
+          color="green"
+        />
+        <StatCard label="Pending Audit" value={pending} sublabel="products" color="orange" />
       </div>
 
-      {/* Filters Bar */}
-      <div className="bg-gray-900 border border-gray-800 rounded-xl p-4 mb-6">
-        <div className="flex flex-wrap items-center gap-3">
-          <div className="flex-1 min-w-[180px]">
-            <label className="block text-xs text-gray-500 mb-1">Agent</label>
-            <select
-              value={filters.agent}
-              onChange={(e) => handleFilterChange('agent', e.target.value)}
-              className="w-full bg-gray-800 border-gray-700 text-gray-300 rounded-lg px-3 py-2 text-sm focus:outline-none focus:ring-2 focus:ring-blue-500"
-            >
-              <option value="">All Agents</option>
-              {agentOptions.map((agent) => (
-                <option key={agent} value={agent}>
-                  {agent}
-                </option>
-              ))}
-            </select>
-          </div>
-
-          <div className="flex-1 min-w-[180px]">
-            <label className="block text-xs text-gray-500 mb-1">Product</label>
-            <select
-              value={filters.product}
-              onChange={(e) => handleFilterChange('product', e.target.value)}
-              className="w-full bg-gray-800 border-gray-700 text-gray-300 rounded-lg px-3 py-2 text-sm focus:outline-none focus:ring-2 focus:ring-blue-500"
-            >
-              <option value="">All Products</option>
-              {productOptions.map((product) => (
-                <option key={product} value={product}>
-                  {product}
-                </option>
-              ))}
-            </select>
-          </div>
-
-          <div className="flex-1 min-w-[180px]">
-            <label className="block text-xs text-gray-500 mb-1">Status</label>
-            <select
-              value={filters.status}
-              onChange={(e) => handleFilterChange('status', e.target.value)}
-              className="w-full bg-gray-800 border-gray-700 text-gray-300 rounded-lg px-3 py-2 text-sm focus:outline-none focus:ring-2 focus:ring-blue-500"
-            >
-              <option value="">All Statuses</option>
-              {statusOptions.map((status) => (
-                <option key={status} value={status}>
-                  {status}
-                </option>
-              ))}
-            </select>
-          </div>
-
-          <div className="flex items-end">
-            <button
-              onClick={clearFilters}
-              disabled={!filters.agent && !filters.product && !filters.status}
-              className="px-4 py-2 text-sm font-medium text-gray-300 bg-gray-800 border border-gray-700 rounded-lg hover:bg-gray-700 transition-colors disabled:opacity-50 disabled:cursor-not-allowed"
-            >
-              Clear Filters
-            </button>
-          </div>
-        </div>
-      </div>
-
-      {/* Two-Column Layout */}
-      <div className="grid grid-cols-1 lg:grid-cols-3 gap-6">
-        {/* Left Column: Audit Entry Timeline (2/3) */}
-        <div className="lg:col-span-2">
-          <h2 className="text-lg font-semibold text-white mb-4">Timeline</h2>
-          <div className="space-y-3">
-            {data.entries.length === 0 && (
-              <div className="bg-gray-900 border border-gray-800 rounded-xl p-8 text-center">
-                <p className="text-gray-500">No audit entries found</p>
-              </div>
-            )}
-
-            {data.entries.map((entry, index) => (
-              <div
-                key={index}
-                className="bg-gray-900 border border-gray-800 rounded-xl p-4 hover:border-gray-700 transition-colors"
-              >
-                <div className="flex items-start justify-between mb-2">
-                  <div className="flex items-center gap-2">
-                    <span className="text-xs text-gray-500">
-                      {new Date(entry.timestamp).toLocaleString()}
-                    </span>
-                    <Badge variant="info">{entry.type}</Badge>
-                  </div>
-                  <StatusIndicator status={entry.status} />
-                </div>
-
-                {entry.summary && (
-                  <p className="text-sm text-gray-300 mb-3">{entry.summary}</p>
-                )}
-
-                <div className="flex flex-wrap items-center gap-2">
-                  {entry.agent && (
-                    <span className="inline-flex items-center px-2.5 py-0.5 rounded-full text-xs font-medium bg-blue-500/20 text-blue-400">
-                      {entry.agent}
-                    </span>
-                  )}
-                  {entry.product && (
-                    <span className="inline-flex items-center px-2.5 py-0.5 rounded-full text-xs font-medium bg-purple-500/20 text-purple-400">
-                      {entry.product}
-                    </span>
-                  )}
-                  {entry.timeMinutes !== undefined && (
-                    <span className="text-xs text-gray-500">
-                      {entry.timeMinutes < 1
-                        ? '< 1 min'
-                        : `${Math.round(entry.timeMinutes)} min`}
-                    </span>
-                  )}
-                </div>
-              </div>
-            ))}
-          </div>
-        </div>
-
-        {/* Right Column: Breakdown Charts (1/3) */}
-        <div className="space-y-6">
-          {/* By Agent */}
-          <div className="bg-gray-900 border border-gray-800 rounded-xl p-4">
-            <h3 className="text-sm font-semibold text-white mb-4">By Agent</h3>
-            <BarChart
-              data={Object.entries(data.stats.byAgent).sort((a, b) => b[1] - a[1])}
-              color="blue"
+      {/* Report List */}
+      {reports.length === 0 ? (
+        <div className="bg-gray-900 border border-gray-800 rounded-xl p-12 text-center">
+          <svg
+            className="w-12 h-12 text-gray-600 mx-auto mb-3"
+            fill="none"
+            stroke="currentColor"
+            viewBox="0 0 24 24"
+            strokeWidth={1.5}
+          >
+            <path
+              strokeLinecap="round"
+              strokeLinejoin="round"
+              d="M9 12h3.75M9 15h3.75M9 18h3.75m3 .75H18a2.25 2.25 0 002.25-2.25V6.108c0-1.135-.845-2.098-1.976-2.192a48.424 48.424 0 00-1.123-.08m-5.801 0c-.065.21-.1.433-.1.664 0 .414.336.75.75.75h4.5a.75.75 0 00.75-.75 2.25 2.25 0 00-.1-.664m-5.8 0A2.251 2.251 0 0113.5 2.25H15c1.012 0 1.867.668 2.15 1.586m-5.8 0c-.376.023-.75.05-1.124.08C9.095 4.01 8.25 4.973 8.25 6.108V8.25m0 0H4.875c-.621 0-1.125.504-1.125 1.125v11.25c0 .621.504 1.125 1.125 1.125h9.75c.621 0 1.125-.504 1.125-1.125V9.375c0-.621-.504-1.125-1.125-1.125H8.25zM6.75 12h.008v.008H6.75V12zm0 3h.008v.008H6.75V15zm0 3h.008v.008H6.75V18z"
             />
-          </div>
-
-          {/* By Product */}
-          <div className="bg-gray-900 border border-gray-800 rounded-xl p-4">
-            <h3 className="text-sm font-semibold text-white mb-4">By Product</h3>
-            <BarChart
-              data={Object.entries(data.stats.byProduct).sort((a, b) => b[1] - a[1])}
-              color="green"
-            />
-          </div>
-
-          {/* By Status */}
-          <div className="bg-gray-900 border border-gray-800 rounded-xl p-4">
-            <h3 className="text-sm font-semibold text-white mb-4">By Status</h3>
-            <div className="space-y-2">
-              {Object.entries(data.stats.byStatus)
-                .sort((a, b) => b[1] - a[1])
-                .map(([status, count]) => {
-                  const statusLower = status.toLowerCase();
-                  let color = 'blue';
-
-                  if (statusLower.includes('success') || statusLower === 'pass') {
-                    color = 'success';
-                  } else if (statusLower.includes('fail') || statusLower === 'error') {
-                    color = 'failure';
-                  } else if (statusLower.includes('block') || statusLower === 'pending') {
-                    color = 'blocked';
-                  }
-
-                  return (
-                    <BarChart key={status} data={[[status, count]]} color={color} />
-                  );
-                })}
-            </div>
-          </div>
+          </svg>
+          <p className="text-gray-400 text-sm">No audit reports found</p>
+          <p className="text-gray-600 text-xs mt-1">
+            Run <code className="text-blue-400">/audit [product]</code> to generate a report
+          </p>
         </div>
-      </div>
+      ) : (
+        <div className="space-y-4">
+          {reports.map((report) => (
+            <AuditCard key={report.product} report={report} />
+          ))}
+        </div>
+      )}
     </div>
   );
 }
