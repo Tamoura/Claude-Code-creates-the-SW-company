@@ -56,7 +56,7 @@ export default function PitchDeck() {
 
   const next = useCallback(() => goToSlide(currentSlide + 1), [goToSlide, currentSlide]);
   const prev = useCallback(() => goToSlide(currentSlide - 1), [goToSlide, currentSlide]);
-  const exit = useCallback(() => navigate(`/showcase/${name}`), [navigate, name]);
+  const exit = useCallback(() => navigate(`/products`), [navigate]);
 
   // Reset slide index when audience filter changes
   useEffect(() => {

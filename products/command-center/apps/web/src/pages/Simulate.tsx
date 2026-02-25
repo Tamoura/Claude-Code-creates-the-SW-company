@@ -134,9 +134,17 @@ function formatTime(minutes: number): string {
 
 // ── Main Component ─────────────────────────────────────────────────────
 
+const FALLBACK_WORKFLOWS: WorkflowInfo[] = [
+  { id: 'new-product', label: 'New Product' },
+  { id: 'new-feature', label: 'New Feature' },
+  { id: 'bug-fix', label: 'Bug Fix' },
+  { id: 'architecture-review', label: 'Architecture Review' },
+  { id: 'security-audit', label: 'Security Audit' },
+];
+
 export default function Simulate() {
   const { data: workflowsData, loading: workflowsLoading } = useApi<WorkflowsResponse>('/simulations/workflows');
-  const workflows = workflowsData?.workflows ?? [];
+  const workflows = workflowsData?.workflows ?? FALLBACK_WORKFLOWS;
   const [workflowType, setWorkflowType] = useState<WorkflowType>('new-product');
   const { data, loading } = useApi<SimulationResponse>(`/simulations?type=${workflowType}`);
   const [expandedPhase, setExpandedPhase] = useState<number | null>(null);
