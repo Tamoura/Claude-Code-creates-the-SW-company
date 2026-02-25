@@ -6,10 +6,10 @@ import MarkdownRenderer from '../components/MarkdownRenderer.js';
 
 // ── Types ──────────────────────────────────────────────────────────────
 
-type WorkflowType = 'new-product' | 'new-feature' | 'bug-fix' | 'architecture-review' | 'security-audit';
+type WorkflowType = string;
 
-interface WorkflowTab {
-  type: WorkflowType;
+interface WorkflowInfo {
+  id: string;
   label: string;
 }
 
@@ -71,23 +71,9 @@ interface SimulationResponse {
   workflowType?: WorkflowType;
 }
 
-// ── Constants ──────────────────────────────────────────────────────────
-
-const WORKFLOW_TABS: WorkflowTab[] = [
-  { type: 'new-product', label: 'New Product' },
-  { type: 'new-feature', label: 'New Feature' },
-  { type: 'bug-fix', label: 'Bug Fix' },
-  { type: 'architecture-review', label: 'Architecture Review' },
-  { type: 'security-audit', label: 'Security Audit' },
-];
-
-const WORKFLOW_LABELS: Record<WorkflowType, string> = {
-  'new-product': 'New Product',
-  'new-feature': 'New Feature',
-  'bug-fix': 'Bug Fix',
-  'architecture-review': 'Architecture Review',
-  'security-audit': 'Security Audit',
-};
+interface WorkflowsResponse {
+  workflows: WorkflowInfo[];
+}
 
 const agentColorMap: Record<string, string> = {
   'product-manager': 'text-purple-400',
@@ -149,10 +135,19 @@ function formatTime(minutes: number): string {
 // ── Main Component ─────────────────────────────────────────────────────
 
 export default function Simulate() {
+  const { data: workflowsData, loading: workflowsLoading } = useApi<WorkflowsResponse>('/simulations/workflows');
+  const workflows = workflowsData?.workflows ?? [];
   const [workflowType, setWorkflowType] = useState<WorkflowType>('new-product');
   const { data, loading } = useApi<SimulationResponse>(`/simulations?type=${workflowType}`);
   const [expandedPhase, setExpandedPhase] = useState<number | null>(null);
   const [fullscreenDiagram, setFullscreenDiagram] = useState<{ title: string; mermaid: string } | null>(null);
+
+  // Once workflows load, ensure selected type is valid
+  useEffect(() => {
+    if (workflows.length > 0 && !workflows.find((w) => w.id === workflowType)) {
+      setWorkflowType(workflows[0].id);
+    }
+  }, [workflows, workflowType]);
 
   const closeFullscreen = useCallback(() => setFullscreenDiagram(null), []);
 
@@ -200,17 +195,24 @@ export default function Simulate() {
 
       {/* Workflow Type Selector */}
       <div className="flex flex-wrap items-center gap-2 mb-8">
-        {WORKFLOW_TABS.map((tab) => (
+        {workflowsLoading && (
+          <div className="flex gap-2">
+            {[...Array(5)].map((_, i) => (
+              <div key={i} className="h-9 w-28 bg-gray-800 rounded-lg animate-pulse" />
+            ))}
+          </div>
+        )}
+        {!workflowsLoading && workflows.map((wf) => (
           <button
-            key={tab.type}
-            onClick={() => { setWorkflowType(tab.type); setExpandedPhase(null); }}
+            key={wf.id}
+            onClick={() => { setWorkflowType(wf.id); setExpandedPhase(null); }}
             className={`px-4 py-2 rounded-lg text-sm font-medium transition-colors ${
-              workflowType === tab.type
+              workflowType === wf.id
                 ? 'bg-blue-600 text-white'
                 : 'bg-gray-800 text-gray-400 hover:text-gray-200 hover:bg-gray-700'
             }`}
           >
-            {tab.label}
+            {wf.label}
           </button>
         ))}
       </div>
@@ -220,7 +222,7 @@ export default function Simulate() {
       {!loading && data && (
         <SimulationContent
           simulation={data.simulation}
-          workflowLabel={WORKFLOW_LABELS[workflowType]}
+          workflowLabel={workflows.find((w) => w.id === workflowType)?.label ?? workflowType}
           expandedPhase={expandedPhase}
           setExpandedPhase={setExpandedPhase}
           setFullscreenDiagram={setFullscreenDiagram}

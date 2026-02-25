@@ -1,15 +1,21 @@
 import type { FastifyInstance } from 'fastify';
-import { getSimulation, getNewProductSimulation, type WorkflowType } from '../../services/simulations.service.js';
-
-const VALID_WORKFLOW_TYPES: WorkflowType[] = [
-  'new-product',
-  'new-feature',
-  'bug-fix',
-  'architecture-review',
-  'security-audit',
-];
+import { getSimulation, getNewProductSimulation, listAvailableWorkflows } from '../../services/simulations.service.js';
 
 export async function simulationRoutes(fastify: FastifyInstance) {
+  // List all available workflow types (driven by real YAML files)
+  fastify.get('/simulations/workflows', async (_request, reply) => {
+    try {
+      const workflows = listAvailableWorkflows();
+      return { workflows };
+    } catch (err) {
+      fastify.log.error(err, 'Failed to list workflows');
+      return reply.status(500).send({
+        error: 'Failed to list workflows',
+        message: err instanceof Error ? err.message : 'Unknown error',
+      });
+    }
+  });
+
   // Legacy route for backwards compatibility
   fastify.get('/simulations/new-product', async (_request, reply) => {
     try {
@@ -24,15 +30,16 @@ export async function simulationRoutes(fastify: FastifyInstance) {
     }
   });
 
-  // Unified route with type query parameter
+  // Unified route — type param maps directly to a *-tasks.yml filename
   fastify.get<{ Querystring: { type?: string } }>(
     '/simulations',
     async (request, reply) => {
       try {
+        const workflows = listAvailableWorkflows();
+        const validIds = new Set(workflows.map((w) => w.id));
         const rawType = request.query.type ?? 'new-product';
-        const workflowType: WorkflowType = VALID_WORKFLOW_TYPES.includes(rawType as WorkflowType)
-          ? (rawType as WorkflowType)
-          : 'new-product';
+        const workflowType = validIds.has(rawType) ? rawType : 'new-product';
+
         const simulation = getSimulation(workflowType);
         return { simulation, workflowType };
       } catch (err) {
