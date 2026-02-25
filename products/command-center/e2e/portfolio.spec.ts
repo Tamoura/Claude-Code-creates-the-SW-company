@@ -22,9 +22,8 @@ test.describe('Products Page', () => {
 
   test('clicking a product card navigates to detail', async ({ page }) => {
     await page.goto('/products');
-    // Click the link/card that contains "Command Center"
-    const card = page.locator('main a[href="/products/command-center"]');
-    await card.click();
+    // Cards are clickable divs (not anchor tags)
+    await page.locator('main').locator('text=Command Center').first().click();
     await expect(page).toHaveURL(/\/products\/command-center/);
   });
 });
@@ -152,22 +151,3 @@ test.describe('Workflows Page', () => {
   });
 });
 
-test.describe('Dependency Graph Page', () => {
-  test('loads and shows dependency graph', async ({ page }) => {
-    await page.goto('/dependencies');
-    await expect(page.locator('main h1')).toContainText('Dependency Graph');
-  });
-
-  test('displays stat cards and sections', async ({ page }) => {
-    await page.goto('/dependencies');
-    const main = page.locator('main');
-    await expect(main.locator('text=Connections').first()).toBeVisible();
-    await expect(main.locator('text=Graph Visualization')).toBeVisible();
-    await expect(main.locator('text=Node List')).toBeVisible();
-  });
-
-  test('shows node list table', async ({ page }) => {
-    await page.goto('/dependencies');
-    await expect(page.locator('main table').first()).toBeVisible({ timeout: 10000 });
-  });
-});

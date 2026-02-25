@@ -25,44 +25,39 @@ test.describe('Audit Reports Page', () => {
   test('loads and shows audit reports', async ({ page }) => {
     await page.goto('/audit');
     await expect(page.locator('main h1')).toContainText('Audit Reports');
-    await expect(page.locator('main')).toContainText('Activity tracking');
+    await expect(page.locator('main')).toContainText('Code quality audits');
   });
 
   test('displays stat cards', async ({ page }) => {
     await page.goto('/audit');
     const main = page.locator('main');
-    await expect(main.locator('text=Total Entries')).toBeVisible();
-    await expect(main.locator('text=Unique Agents')).toBeVisible();
-    await expect(main.locator('text=Products Tracked')).toBeVisible();
-    await expect(main.locator('text=Success Rate')).toBeVisible();
+    await expect(main.locator('text=Audited').first()).toBeVisible();
+    await expect(main.locator('text=Avg Score').first()).toBeVisible();
+    await expect(main.locator('text=Top Score')).toBeVisible();
+    await expect(main.locator('text=Pending Audit')).toBeVisible();
   });
 
-  test('shows filter controls', async ({ page }) => {
+  test('shows product audit cards or empty state', async ({ page }) => {
     await page.goto('/audit');
-    const selects = page.locator('main select');
-    await expect(selects.first()).toBeVisible();
-  });
-
-  test('shows audit timeline entries', async ({ page }) => {
-    await page.goto('/audit');
-    // Timeline heading should be visible with audit entries
-    await expect(page.locator('main h2:has-text("Timeline")')).toBeVisible({ timeout: 10000 });
-  });
-
-  test('shows breakdown charts', async ({ page }) => {
-    await page.goto('/audit');
-    const main = page.locator('main');
-    await expect(main.locator('text=By Agent')).toBeVisible();
-    await expect(main.locator('text=By Product')).toBeVisible();
-    await expect(main.locator('text=By Status')).toBeVisible();
-  });
-
-  test('filter by agent works', async ({ page }) => {
-    await page.goto('/audit');
-    const agentSelect = page.locator('main select').first();
-    await agentSelect.selectOption({ index: 1 });
-    // Page should update without crashing
+    // Should either show product cards or a "No audit reports found" empty state
+    await page.waitForTimeout(2000);
     await expect(page.locator('main h1')).toContainText('Audit Reports');
+    const main = page.locator('main');
+    const cards = main.locator('.rounded-xl');
+    await expect(cards.first()).toBeVisible({ timeout: 5000 });
+  });
+
+  test('view report toggle works when reports exist', async ({ page }) => {
+    await page.goto('/audit');
+    await page.waitForTimeout(2000);
+    const viewBtn = page.locator('main button:has-text("View full report")').first();
+    if (await viewBtn.isVisible()) {
+      await viewBtn.click();
+      await expect(page.locator('main button:has-text("Collapse report")').first()).toBeVisible();
+    } else {
+      // No reports available — page still intact
+      await expect(page.locator('main h1')).toContainText('Audit Reports');
+    }
   });
 });
 

@@ -1,36 +1,41 @@
 import { test, expect } from '@playwright/test';
 
 test.describe('Overview Page', () => {
-  test('loads and shows executive overview', async ({ page }) => {
+  test('loads and shows company command center', async ({ page }) => {
     await page.goto('/overview');
-    await expect(page.locator('main h1')).toContainText('Executive Overview');
-    await expect(page.locator('main')).toContainText('ConnectSW company health at a glance');
+    await expect(page.locator('main h1')).toContainText('Company Command Center');
+    await expect(page.locator('main')).toContainText('ConnectSW AI Software Company');
   });
 
-  test('displays stat cards with data', async ({ page }) => {
+  test('displays KPI stat cards', async ({ page }) => {
     await page.goto('/overview');
     const main = page.locator('main');
     await expect(main.locator('text=Products').first()).toBeVisible();
-    await expect(main.locator('text=Shared Packages')).toBeVisible();
-    await expect(main.locator('text=AI Agents')).toBeVisible();
-    await expect(main.locator('text=Total Files')).toBeVisible();
+    await expect(main.locator('text=AI Agents').first()).toBeVisible();
+    await expect(main.locator('text=Avg Quality Score')).toBeVisible();
+    await expect(main.locator('text=Open Alerts')).toBeVisible();
   });
 
-  test('shows product phases section', async ({ page }) => {
+  test('shows phase distribution section', async ({ page }) => {
     await page.goto('/overview');
     const main = page.locator('main');
-    await expect(main.locator('h2:has-text("Product Phases")')).toBeVisible();
+    await expect(main.locator('h2:has-text("Phase Distribution")')).toBeVisible();
     await expect(main.locator('text=Foundation').first()).toBeVisible();
   });
 
-  test('shows recent activity section', async ({ page }) => {
+  test('shows active alerts section', async ({ page }) => {
     await page.goto('/overview');
-    await expect(page.locator('main h2:has-text("Recent Activity")')).toBeVisible();
+    await expect(page.locator('main h2:has-text("Active Alerts")')).toBeVisible();
   });
 
   test('shows recent commits section', async ({ page }) => {
     await page.goto('/overview');
     await expect(page.locator('main h2:has-text("Recent Commits")')).toBeVisible();
+  });
+
+  test('shows product health matrix', async ({ page }) => {
+    await page.goto('/overview');
+    await expect(page.locator('main h2:has-text("Product Health Matrix")')).toBeVisible();
   });
 });
 
