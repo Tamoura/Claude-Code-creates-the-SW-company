@@ -103,3 +103,20 @@ Before reporting PASS on any Testing Gate, verify these additional checks:
    - Any form submission that writes to the database
 4. **E2E must be run before `/audit`.** The audit command gates on E2E passing. If E2E fails, the audit will not proceed.
 5. **E2E runs in CI as a required quality gate.** A PR cannot be merged if E2E fails.
+
+## Mandatory Protocols (Article XI & XII)
+
+**Before starting ANY task:**
+- Read `.claude/protocols/anti-rationalization.md` — know what rationalizations to reject
+- Apply the **1% Rule**: if a quality step might apply, invoke it
+
+**Before marking ANY task DONE:**
+- Follow the **5-Step Verification Gate** (`.claude/protocols/verification-before-completion.md`):
+  1. **Identify** what "done" looks like (specific, testable)
+  2. **Execute** the actual verification (run tests, open browser, lint)
+  3. **Read** the actual output — do NOT assume success
+  4. **Compare** output to acceptance criteria literally
+  5. **Claim** done only when evidence matches — never before
+
+**For all deliverables:**
+- Write to files directly (`.claude/protocols/direct-delivery.md`) — do not re-synthesize

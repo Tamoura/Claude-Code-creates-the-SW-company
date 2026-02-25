@@ -41,7 +41,7 @@ CEO
       └── Code Reviewer (audits, security assessment)
 ```
 
-## Context Engineering (NEW — Constitution Article XI)
+## Context Engineering (NEW — Constitution Article XII)
 
 ConnectSW applies context engineering principles to maximize agent effectiveness and minimize token waste. Context windows degrade due to attention mechanics, not raw token limits.
 
@@ -115,6 +115,22 @@ release/[product]/v[X.Y.Z]       # Releases
 - **Verification-Before-Completion**: No task marked done without evidence (5-step gate)
 - **Anti-Rationalization**: 12 TDD + 5 process rationalizations with explicit counters
 - **The 1% Rule**: If a check *might* apply, it MUST be run
+
+### Protocol Library (`.claude/protocols/`)
+
+| Protocol | Category | When to Apply |
+|----------|----------|---------------|
+| `anti-rationalization.md` | Quality Assurance | Before ANY implementation work — Article XI |
+| `verification-before-completion.md` | Quality Assurance | Before marking ANY task done — Article XI |
+| `development-oriented-testing.md` | Testing | During implementation (not after) |
+| `dynamic-test-generation.md` | Testing | QA phase — edge cases beyond spec |
+| `context-engineering.md` | Context Engineering | When prompt design matters — Article XII |
+| `context-compression.md` | Context Engineering | When context exceeds 60% — Article XII |
+| `direct-delivery.md` | Context Engineering | Always — write deliverables to files — Article XII |
+| `parallel-execution.md` | Execution | When spawning multiple sub-agents |
+| `repository-back-translation.md` | Testing | Post-MVP — create agent learning exemplars |
+| `agent-message.schema.yml` | Agent Communication | Orchestrator + inter-agent messaging |
+| `message-router.ts` | Agent Communication | Infrastructure — orchestrator routing |
 
 ### Ports
 

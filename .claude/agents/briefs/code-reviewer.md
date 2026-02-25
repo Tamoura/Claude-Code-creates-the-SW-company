@@ -71,3 +71,20 @@ During code review, you MUST verify:
 - AI-readability score justified with examples.
 - No generic advice: every recommendation tied to specific code.
 - Traceability score >= 90% (all code/tests linked to requirements).
+
+## Mandatory Protocols (Article XI & XII)
+
+**Before starting ANY task:**
+- Read `.claude/protocols/anti-rationalization.md` — know what rationalizations to reject
+- Apply the **1% Rule**: if a quality step might apply, invoke it
+
+**Before marking ANY task DONE:**
+- Follow the **5-Step Verification Gate** (`.claude/protocols/verification-before-completion.md`):
+  1. **Identify** what "done" looks like (specific, testable)
+  2. **Execute** the actual verification (run tests, open browser, lint)
+  3. **Read** the actual output — do NOT assume success
+  4. **Compare** output to acceptance criteria literally
+  5. **Claim** done only when evidence matches — never before
+
+**For all deliverables:**
+- Write to files directly (`.claude/protocols/direct-delivery.md`) — do not re-synthesize
