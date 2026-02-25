@@ -1,4 +1,5 @@
-import { existsSync, readFileSync } from 'node:fs';
+import { existsSync, readFileSync, readdirSync } from 'node:fs';
+import { join } from 'node:path';
 import { repoPath } from './repo.service.js';
 
 export interface OperationsSection {
@@ -167,12 +168,116 @@ function buildTechStackSection(): OperationsSection {
   return { id: 'tech-stack', title: 'Technology Stack', icon: '\ud83d\udee0\ufe0f', content };
 }
 
+function buildProtocolsSection(): OperationsSection {
+  const protocolsDir = repoPath('.claude', 'protocols');
+  const protocols: Array<{ title: string; summary: string; file: string }> = [];
+
+  if (existsSync(protocolsDir)) {
+    const files = readdirSync(protocolsDir).filter(
+      (f) => f.endsWith('.md') || f.endsWith('.yml'),
+    );
+
+    for (const file of files.sort()) {
+      try {
+        const raw = readFileSync(join(protocolsDir, file), 'utf-8');
+        // Extract title: first # heading or first non-empty line
+        const titleMatch = raw.match(/^#\s+(.+)$/m);
+        const title = titleMatch
+          ? titleMatch[1].trim()
+          : file.replace(/\.(md|yml)$/, '').replace(/-/g, ' ');
+
+        // Extract first meaningful paragraph (after any heading, skip blank lines)
+        const lines = raw.split('\n');
+        let summary = '';
+        let pastHeader = false;
+        for (const line of lines) {
+          const trimmed = line.trim();
+          if (!pastHeader && trimmed.startsWith('#')) {
+            pastHeader = true;
+            continue;
+          }
+          if (pastHeader && trimmed && !trimmed.startsWith('#') && !trimmed.startsWith('**')) {
+            summary = trimmed.slice(0, 200);
+            break;
+          }
+        }
+
+        protocols.push({ title, summary, file });
+      } catch { /* skip unreadable files */ }
+    }
+  }
+
+  const listItems = protocols
+    .map((p) => `- **${p.title}**: ${p.summary || 'See protocol file for details.'}`)
+    .join('\n');
+
+  const content = protocols.length > 0
+    ? `${listItems}\n\nView all protocols at the [Protocols page](/protocols).`
+    : 'Protocol files not found. Check `.claude/protocols/` in the repository.';
+
+  return { id: 'protocols', title: 'Protocols', icon: '\ud83d\udcdc', content };
+}
+
+function buildConstitutionSection(): OperationsSection {
+  const content = `**Version**: v1.3.0
+
+The ConnectSW Constitution governs all spec-kit work and agent behavior. It consists of 12 articles:
+
+1. **Spec-First Development** — No implementation without an approved spec
+2. **Test-Driven Development** — Red-Green-Refactor, always
+3. **Real Databases, No Mocks** — Tests use real PostgreSQL, not mocks
+4. **80% Coverage Minimum** — Every product must maintain 80%+ test coverage
+5. **Documentation as Deliverable** — Docs are first-class, not an afterthought
+6. **Diagram-First Communication** — If it can be a diagram, it must be a diagram
+7. **Git Safety** — Never \`git add .\`; always stage specific files; verify before commit
+8. **Quality Gates** — All six gates must pass before CEO delivery
+9. **Port Registry** — All products use unique, registered ports
+10. **Component Reuse** — Check COMPONENT-REGISTRY.md before building anything new
+11. **Anti-Rationalization** — The 1% Rule: if a quality step might apply, invoke it
+12. **Verification Before Completion** — No task is done without evidence
+
+The constitution is located at \`.specify/memory/constitution.md\`.`;
+
+  return { id: 'constitution', title: 'Constitution', icon: '\ud83d\udcdc', content };
+}
+
+function buildSpecKitSection(): OperationsSection {
+  const content = `Spec-kit is ConnectSW's specification-driven development methodology. All product and feature work follows a structured **spec \u2192 plan \u2192 tasks \u2192 implement** pipeline.
+
+| Command | Agent | Purpose |
+|---------|-------|---------|
+| \`/speckit.specify\` | Product Manager | Create structured specs from CEO briefs |
+| \`/speckit.clarify\` | Product Manager | Resolve spec ambiguities (up to 5 questions) |
+| \`/speckit.plan\` | Architect | Create traceable implementation plans from specs |
+| \`/speckit.tasks\` | Orchestrator | Generate dependency-ordered task lists from plans |
+| \`/speckit.analyze\` | QA Engineer | Validate spec/plan/tasks consistency (quality gate) |
+| \`/speckit.checklist\` | QA Engineer | Generate requirements-quality checklists |
+| \`/speckit.constitution\` | Orchestrator | Update governing principles |
+| \`/speckit.implement\` | Orchestrator | Execute tasks via specialist agents |
+
+**Mandatory for new products**: BA-01, SPEC-01, CLARIFY-01, ANALYZE-01
+
+**Mandatory for new features**: SPEC-{ID} and ANALYZE-{ID}
+
+Key files:
+- \`.specify/memory/constitution.md\` — Governing principles (12 articles, v1.3.0)
+- \`.specify/templates/\` — Spec, plan, tasks, checklist templates
+- \`products/[product]/docs/specs/\` — Feature specifications
+- \`products/[product]/docs/plan.md\` — Implementation plans
+- \`products/[product]/docs/tasks.md\` — Task lists`;
+
+  return { id: 'spec-kit', title: 'Spec-Kit Commands', icon: '\ud83d\udee0\ufe0f', content };
+}
+
 /** Build the complete operations guide */
 export function getOperationsGuide(): OperationsGuide {
   return {
     sections: [
       buildOrchestratorSection(),
       buildCommandsSection(),
+      buildProtocolsSection(),
+      buildConstitutionSection(),
+      buildSpecKitSection(),
       buildGitSafetySection(),
       buildQualityGatesSection(),
       buildProductStructureSection(),

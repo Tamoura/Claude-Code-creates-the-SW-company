@@ -41,6 +41,16 @@ const agentColorMap: Record<string, string> = {
   'devops-engineer': 'text-cyan-400',
   'technical-writer': 'text-indigo-400',
   'orchestrator': 'text-yellow-400',
+  'business-analyst': 'text-pink-400',
+  'code-reviewer': 'text-rose-400',
+  'data-engineer': 'text-teal-400',
+  'innovation-specialist': 'text-violet-400',
+  'mobile-developer': 'text-orange-400',
+  'performance-engineer': 'text-lime-400',
+  'product-strategist': 'text-sky-400',
+  'security-engineer': 'text-red-300',
+  'support-engineer': 'text-emerald-400',
+  'ui-ux-designer': 'text-fuchsia-400',
 };
 
 const agentBgMap: Record<string, string> = {
@@ -52,6 +62,16 @@ const agentBgMap: Record<string, string> = {
   'devops-engineer': 'bg-cyan-500',
   'technical-writer': 'bg-indigo-500',
   'orchestrator': 'bg-yellow-500',
+  'business-analyst': 'bg-pink-500',
+  'code-reviewer': 'bg-rose-500',
+  'data-engineer': 'bg-teal-500',
+  'innovation-specialist': 'bg-violet-500',
+  'mobile-developer': 'bg-orange-500',
+  'performance-engineer': 'bg-lime-500',
+  'product-strategist': 'bg-sky-500',
+  'security-engineer': 'bg-red-300',
+  'support-engineer': 'bg-emerald-500',
+  'ui-ux-designer': 'bg-fuchsia-500',
 };
 
 function formatTime(minutes: number): string {

@@ -36,6 +36,8 @@ function phaseVariant(phase: string) {
 
 export default function Showcase() {
   const { data, loading } = useApi<{ products: Product[] }>('/products');
+  const { data: agentsData } = useApi<{ agents: unknown[] }>('/agents');
+  const agentCount = agentsData?.agents?.length ?? 18;
   const [audience, setAudience] = useState<Audience>('All');
 
   if (loading) {
@@ -80,7 +82,7 @@ export default function Showcase() {
           <div className="flex gap-6">
             <HeroStat label="Products" value={products.length} />
             <HeroStat label="Tests" value={totalTests.toLocaleString()} />
-            <HeroStat label="AI Agents" value={16} />
+            <HeroStat label="AI Agents" value={agentCount} />
           </div>
         </div>
         {/* Decorative gradient orb */}

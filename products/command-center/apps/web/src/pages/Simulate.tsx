@@ -6,6 +6,13 @@ import MarkdownRenderer from '../components/MarkdownRenderer.js';
 
 // ── Types ──────────────────────────────────────────────────────────────
 
+type WorkflowType = 'new-product' | 'new-feature' | 'bug-fix' | 'architecture-review' | 'security-audit';
+
+interface WorkflowTab {
+  type: WorkflowType;
+  label: string;
+}
+
 interface SimulationTask {
   id: string;
   name: string;
@@ -61,9 +68,26 @@ interface SimulationResult {
 
 interface SimulationResponse {
   simulation: SimulationResult;
+  workflowType?: WorkflowType;
 }
 
 // ── Constants ──────────────────────────────────────────────────────────
+
+const WORKFLOW_TABS: WorkflowTab[] = [
+  { type: 'new-product', label: 'New Product' },
+  { type: 'new-feature', label: 'New Feature' },
+  { type: 'bug-fix', label: 'Bug Fix' },
+  { type: 'architecture-review', label: 'Architecture Review' },
+  { type: 'security-audit', label: 'Security Audit' },
+];
+
+const WORKFLOW_LABELS: Record<WorkflowType, string> = {
+  'new-product': 'New Product',
+  'new-feature': 'New Feature',
+  'bug-fix': 'Bug Fix',
+  'architecture-review': 'Architecture Review',
+  'security-audit': 'Security Audit',
+};
 
 const agentColorMap: Record<string, string> = {
   'product-manager': 'text-purple-400',
@@ -74,6 +98,16 @@ const agentColorMap: Record<string, string> = {
   'devops-engineer': 'text-cyan-400',
   'technical-writer': 'text-indigo-400',
   'orchestrator': 'text-yellow-400',
+  'business-analyst': 'text-pink-400',
+  'code-reviewer': 'text-rose-400',
+  'data-engineer': 'text-teal-400',
+  'innovation-specialist': 'text-violet-400',
+  'mobile-developer': 'text-orange-400',
+  'performance-engineer': 'text-lime-400',
+  'product-strategist': 'text-sky-400',
+  'security-engineer': 'text-red-300',
+  'support-engineer': 'text-emerald-400',
+  'ui-ux-designer': 'text-fuchsia-400',
 };
 
 const agentBgMap: Record<string, string> = {
@@ -85,6 +119,16 @@ const agentBgMap: Record<string, string> = {
   'devops-engineer': 'bg-cyan-500',
   'technical-writer': 'bg-indigo-500',
   'orchestrator': 'bg-yellow-500',
+  'business-analyst': 'bg-pink-500',
+  'code-reviewer': 'bg-rose-500',
+  'data-engineer': 'bg-teal-500',
+  'innovation-specialist': 'bg-violet-500',
+  'mobile-developer': 'bg-orange-500',
+  'performance-engineer': 'bg-lime-500',
+  'product-strategist': 'bg-sky-500',
+  'security-engineer': 'bg-red-300',
+  'support-engineer': 'bg-emerald-500',
+  'ui-ux-designer': 'bg-fuchsia-500',
 };
 
 const deliverableIconMap: Record<string, string> = {
@@ -105,7 +149,8 @@ function formatTime(minutes: number): string {
 // ── Main Component ─────────────────────────────────────────────────────
 
 export default function Simulate() {
-  const { data, loading } = useApi<SimulationResponse>('/simulations/new-product');
+  const [workflowType, setWorkflowType] = useState<WorkflowType>('new-product');
+  const { data, loading } = useApi<SimulationResponse>(`/simulations?type=${workflowType}`);
   const [expandedPhase, setExpandedPhase] = useState<number | null>(null);
   const [fullscreenDiagram, setFullscreenDiagram] = useState<{ title: string; mermaid: string } | null>(null);
 
@@ -118,12 +163,6 @@ export default function Simulate() {
     document.addEventListener('keydown', handler);
     return () => document.removeEventListener('keydown', handler);
   }, [fullscreenDiagram, closeFullscreen]);
-
-  if (loading) return <LoadingSkeleton />;
-  if (!data) return <p className="text-red-400">Failed to load simulation</p>;
-
-  const { simulation } = data;
-  const { summary, phases, timeline, deliverables, qualityGates, mermaidDependency, mermaidGantt } = simulation;
 
   // Fullscreen overlay
   if (fullscreenDiagram) {
@@ -154,10 +193,63 @@ export default function Simulate() {
   return (
     <div>
       {/* Header */}
-      <h1 className="text-2xl font-bold text-white mb-1">Product Creation Simulation</h1>
-      <p className="text-gray-500 mb-8">
-        Preview every phase, agent, deliverable, and checkpoint before kicking off a new product
+      <h1 className="text-2xl font-bold text-white mb-1">Workflow Simulation</h1>
+      <p className="text-gray-500 mb-6">
+        Preview every phase, agent, deliverable, and checkpoint for each workflow type
       </p>
+
+      {/* Workflow Type Selector */}
+      <div className="flex flex-wrap items-center gap-2 mb-8">
+        {WORKFLOW_TABS.map((tab) => (
+          <button
+            key={tab.type}
+            onClick={() => { setWorkflowType(tab.type); setExpandedPhase(null); }}
+            className={`px-4 py-2 rounded-lg text-sm font-medium transition-colors ${
+              workflowType === tab.type
+                ? 'bg-blue-600 text-white'
+                : 'bg-gray-800 text-gray-400 hover:text-gray-200 hover:bg-gray-700'
+            }`}
+          >
+            {tab.label}
+          </button>
+        ))}
+      </div>
+
+      {loading && <LoadingSkeleton />}
+      {!loading && !data && <p className="text-red-400">Failed to load simulation</p>}
+      {!loading && data && (
+        <SimulationContent
+          simulation={data.simulation}
+          workflowLabel={WORKFLOW_LABELS[workflowType]}
+          expandedPhase={expandedPhase}
+          setExpandedPhase={setExpandedPhase}
+          setFullscreenDiagram={setFullscreenDiagram}
+        />
+      )}
+    </div>
+  );
+}
+
+// ── Simulation Content ──────────────────────────────────────────────────
+
+interface SimulationContentProps {
+  simulation: SimulationResult;
+  workflowLabel: string;
+  expandedPhase: number | null;
+  setExpandedPhase: (n: number | null) => void;
+  setFullscreenDiagram: (d: { title: string; mermaid: string } | null) => void;
+}
+
+function SimulationContent({ simulation, workflowLabel, expandedPhase, setExpandedPhase, setFullscreenDiagram }: SimulationContentProps) {
+  const { summary, phases, deliverables, qualityGates, mermaidDependency, mermaidGantt } = simulation;
+
+  return (
+    <div>
+      {/* Simulation Header */}
+      <div className="flex items-center gap-3 mb-6">
+        <Badge variant="info">{workflowLabel}</Badge>
+        <span className="text-sm text-gray-500">{summary.totalTasks} tasks across {summary.totalPhases} phases</span>
+      </div>
 
       {/* Stat Cards */}
       <div className="grid grid-cols-2 lg:grid-cols-3 gap-4 mb-8">
