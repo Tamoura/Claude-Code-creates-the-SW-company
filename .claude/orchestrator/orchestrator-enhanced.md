@@ -484,6 +484,14 @@ C. INVOKE AGENTS (PARALLEL-AWARE)
 
    You are the {ROLE} for ConnectSW.
 
+   ## Non-Negotiable Protocol Gates                             [LEVEL 1]
+
+   **Non-Negotiable Before You Start:**
+   Read `.claude/protocols/anti-rationalization.md` — know what shortcuts to reject.
+
+   **Non-Negotiable Before You Claim Done:**
+   Follow `.claude/protocols/verification-before-completion.md` — evidence required, no exceptions.
+
    ## Your Brief                                                [LEVEL 3]
    {INLINE_BRIEF_CONTENT from .claude/agents/briefs/{agent}.md}
 
@@ -616,6 +624,10 @@ C. INVOKE AGENTS (PARALLEL-AWARE)
    ```
    You are the {ROLE} for ConnectSW.
 
+   ## Non-Negotiable Protocol Gates
+   **Before You Start:** Read `.claude/protocols/anti-rationalization.md` — know what shortcuts to reject.
+   **Before You Claim Done:** Follow `.claude/protocols/verification-before-completion.md` — evidence required, no exceptions.
+
    ## Constraints
    - Work in: products/{PRODUCT}/
    - Stage specific files only (never git add . or git add -A)
@@ -637,6 +649,10 @@ C. INVOKE AGENTS (PARALLEL-AWARE)
 
    ```
    You are the {ROLE} for ConnectSW.
+
+   ## Non-Negotiable Protocol Gates
+   **Before You Start:** Read `.claude/protocols/anti-rationalization.md` — know what shortcuts to reject.
+   **Before You Claim Done:** Follow `.claude/protocols/verification-before-completion.md` — evidence required, no exceptions.
 
    ## Constraints
    - Work in: products/{PRODUCT}/

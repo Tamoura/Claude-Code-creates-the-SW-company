@@ -11,6 +11,26 @@
 #   - Tests MUST reference acceptance criteria: test('[US-XX][AC-X] desc', ...)
 #   - E2E tests organized by story: e2e/tests/stories/{story-id}/
 
+# ─────────────────────────────────────────────────────────────────
+# PROTOCOL ENFORCEMENT (ConnectSW Constitution Articles XI & XII)
+# ─────────────────────────────────────────────────────────────────
+# ALL AGENTS must follow BEFORE starting any task:
+#   - Read .claude/protocols/anti-rationalization.md (Article XI)
+#   - Apply the 1% Rule: if a quality step might apply, invoke it
+#
+# ALL AGENTS must follow BEFORE marking any task done:
+#   - Verification-Before-Completion 5-Step Gate (Article XI):
+#     1. Identify what "done" looks like (specific, testable)
+#     2. Execute the actual verification command
+#     3. Read the actual output (do NOT assume success)
+#     4. Compare output to acceptance criteria literally
+#     5. Claim done only when evidence matches
+#
+# FOR DELIVERABLES (Article XII):
+#   - Write all outputs to files (direct-delivery.md)
+#   - Compress context if >60% full (context-compression.md)
+# ─────────────────────────────────────────────────────────────────
+
 metadata:
   product: "{PRODUCT}"
   version: "3.0.0"
