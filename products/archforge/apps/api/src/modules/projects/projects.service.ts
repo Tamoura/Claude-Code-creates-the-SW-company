@@ -28,7 +28,7 @@ export class ProjectService {
           resourceId,
           resourceType: 'project',
           action,
-          metadata,
+          metadata: metadata as Prisma.InputJsonValue,
           ipAddress: ip || null,
           userAgent: userAgent || null,
         },

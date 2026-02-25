@@ -41,6 +41,7 @@ export interface ArtifactResponse {
   status: string;
   svgContent: string | null;
   nlDescription: string | null;
+  canvasData?: unknown;
   currentVersion: number;
   createdBy: {
     id: string;
@@ -95,4 +96,27 @@ export interface ArtifactListResponse {
     hasMore: boolean;
     nextCursor: string | null;
   };
+}
+
+export interface ElementResponse {
+  id: string;
+  elementId: string;
+  elementType: string;
+  framework: string;
+  name: string;
+  description: string | null;
+  properties: unknown;
+  position: unknown;
+  layer: string | null;
+}
+
+export interface RelationshipResponse {
+  id: string;
+  relationshipId: string;
+  sourceElementId: string;
+  targetElementId: string;
+  relationshipType: string;
+  framework: string;
+  label: string | null;
+  properties: unknown;
 }

@@ -6,6 +6,7 @@
  */
 
 import { FastifyInstance } from 'fastify';
+import { Prisma } from '@prisma/client';
 import { AppError } from '../../types/index.js';
 import { logger } from '../../utils/logger.js';
 import type {
@@ -34,7 +35,7 @@ export class ValidationService {
           resourceId,
           resourceType: 'artifact',
           action,
-          metadata,
+          metadata: metadata as Prisma.InputJsonValue,
           ipAddress: ip || null,
           userAgent: userAgent || null,
         },
@@ -365,7 +366,7 @@ export class ValidationService {
 
   private validateTOGAF(
     elements: ArtifactElementForValidation[],
-    relationships: ArtifactRelationshipForValidation[],
+    _relationships: ArtifactRelationshipForValidation[],
   ): ValidationRule[] {
     const rules: ValidationRule[] = [];
 

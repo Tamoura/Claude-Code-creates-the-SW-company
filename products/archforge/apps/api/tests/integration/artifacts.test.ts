@@ -1,8 +1,10 @@
 /**
  * Artifact endpoint integration tests
  *
- * Tests AI generation (mocked), CRUD operations, versioning,
- * validation, auth, and workspace isolation.
+ * Tests AI generation (mocked), manual CRUD, elements, relationships,
+ * canvas save, versioning, authentication, workspace isolation,
+ * audit logging, and error cases.
+ * Traces to US-03, US-06, US-08.
  */
 
 import { FastifyInstance } from 'fastify';
@@ -13,6 +15,7 @@ import {
   createTestUser,
   authHeaders,
   getPrisma,
+  TestUser,
 } from '../helpers';
 
 // Mock AI response for C4 context diagram
@@ -210,6 +213,25 @@ describe('Artifact endpoints', () => {
     return res.json().id;
   }
 
+  // Helper: create a manual artifact
+  async function createManualArtifact(
+    token: string,
+    projectId: string,
+    name = 'Test Artifact',
+  ): Promise<string> {
+    const res = await app.inject({
+      method: 'POST',
+      url: `/api/v1/projects/${projectId}/artifacts`,
+      headers: authHeaders(token),
+      payload: {
+        name,
+        type: 'c4_context',
+        framework: 'c4',
+      },
+    });
+    return res.json().id;
+  }
+
   // ==================== GENERATE ====================
 
   describe('POST /projects/:projectId/artifacts/generate', () => {
@@ -394,6 +416,127 @@ describe('Artifact endpoints', () => {
     });
   });
 
+  // ==================== CREATE (manual) ====================
+
+  describe('POST /api/v1/projects/:projectId/artifacts', () => {
+    it('should create an artifact manually', async () => {
+      const user = await createTestUser(app);
+      const projectId = await createProject(user.accessToken);
+
+      const res = await app.inject({
+        method: 'POST',
+        url: `/api/v1/projects/${projectId}/artifacts`,
+        headers: authHeaders(user.accessToken),
+        payload: {
+          name: 'System Context',
+          type: 'c4_context',
+          framework: 'c4',
+        },
+      });
+
+      expect(res.statusCode).toBe(201);
+      const body = res.json();
+      expect(body.id).toBeDefined();
+      expect(body.name).toBe('System Context');
+      expect(body.type).toBe('c4_context');
+      expect(body.framework).toBe('c4');
+      expect(body.status).toBe('draft');
+      expect(body.currentVersion).toBe(1);
+      expect(body.createdBy.id).toBe(user.id);
+    });
+
+    it('should create with custom canvasData', async () => {
+      const user = await createTestUser(app);
+      const projectId = await createProject(user.accessToken);
+
+      const canvasData = {
+        elements: [{ id: 'e1', name: 'User' }],
+        relationships: [],
+        viewport: { x: 0, y: 0, zoom: 1 },
+      };
+      const res = await app.inject({
+        method: 'POST',
+        url: `/api/v1/projects/${projectId}/artifacts`,
+        headers: authHeaders(user.accessToken),
+        payload: {
+          name: 'Custom Canvas',
+          type: 'c4_container',
+          framework: 'c4',
+          canvasData,
+        },
+      });
+
+      expect(res.statusCode).toBe(201);
+      const body = res.json();
+      expect(body.canvasData.elements).toHaveLength(1);
+    });
+
+    it('should return 400 for missing name', async () => {
+      const user = await createTestUser(app);
+      const projectId = await createProject(user.accessToken);
+
+      const res = await app.inject({
+        method: 'POST',
+        url: `/api/v1/projects/${projectId}/artifacts`,
+        headers: authHeaders(user.accessToken),
+        payload: { type: 'c4_context', framework: 'c4' },
+      });
+
+      expect(res.statusCode).toBe(400);
+    });
+
+    it('should return 400 for invalid framework', async () => {
+      const user = await createTestUser(app);
+      const projectId = await createProject(user.accessToken);
+
+      const res = await app.inject({
+        method: 'POST',
+        url: `/api/v1/projects/${projectId}/artifacts`,
+        headers: authHeaders(user.accessToken),
+        payload: {
+          name: 'Bad Framework',
+          type: 'test',
+          framework: 'invalid',
+        },
+      });
+
+      expect(res.statusCode).toBe(400);
+    });
+
+    it('should return 401 without auth', async () => {
+      const res = await app.inject({
+        method: 'POST',
+        url: `/api/v1/projects/00000000-0000-0000-0000-000000000000/artifacts`,
+        payload: {
+          name: 'No Auth',
+          type: 'c4_context',
+          framework: 'c4',
+        },
+      });
+
+      expect(res.statusCode).toBe(401);
+    });
+
+    it('should return 404 for non-member project', async () => {
+      const user = await createTestUser(app);
+      const other = await createTestUser(app);
+      const projectId = await createProject(user.accessToken);
+
+      const res = await app.inject({
+        method: 'POST',
+        url: `/api/v1/projects/${projectId}/artifacts`,
+        headers: authHeaders(other.accessToken),
+        payload: {
+          name: 'Intruder',
+          type: 'c4_context',
+          framework: 'c4',
+        },
+      });
+
+      expect(res.statusCode).toBe(404);
+    });
+  });
+
   // ==================== LIST ====================
 
   describe('GET /projects/:projectId/artifacts', () => {
@@ -438,6 +581,35 @@ describe('Artifact endpoints', () => {
       expect(body.data[0].elementCount).toBe(3);
     });
 
+    it('should support pagination', async () => {
+      const user = await createTestUser(app);
+      const projectId = await createProject(user.accessToken);
+
+      for (let i = 0; i < 3; i++) {
+        await app.inject({
+          method: 'POST',
+          url: `/api/v1/projects/${projectId}/artifacts`,
+          headers: authHeaders(user.accessToken),
+          payload: {
+            name: `Art ${i}`,
+            type: 'c4_context',
+            framework: 'c4',
+          },
+        });
+      }
+
+      const res = await app.inject({
+        method: 'GET',
+        url: `/api/v1/projects/${projectId}/artifacts?pageSize=2`,
+        headers: authHeaders(user.accessToken),
+      });
+
+      const body = res.json();
+      expect(body.data).toHaveLength(2);
+      expect(body.meta.hasMore).toBe(true);
+      expect(body.meta.nextCursor).toBeDefined();
+    });
+
     it('should return empty list when no artifacts exist', async () => {
       const user = await createTestUser(app);
       const projectId = await createProject(user.accessToken);
@@ -478,6 +650,25 @@ describe('Artifact endpoints', () => {
       expect(body.elements[0].elementType).toBe('c4_person');
     });
 
+    it('should return artifact by ID (manual)', async () => {
+      const user = await createTestUser(app);
+      const projectId = await createProject(user.accessToken);
+      const artifactId = await createManualArtifact(
+        user.accessToken,
+        projectId,
+        'Lookup Test',
+      );
+
+      const res = await app.inject({
+        method: 'GET',
+        url: `/api/v1/projects/${projectId}/artifacts/${artifactId}`,
+        headers: authHeaders(user.accessToken),
+      });
+
+      expect(res.statusCode).toBe(200);
+      expect(res.json().name).toBe('Lookup Test');
+    });
+
     it('should return 404 for non-existent artifact', async () => {
       const user = await createTestUser(app);
       const projectId = await createProject(user.accessToken);
@@ -512,6 +703,52 @@ describe('Artifact endpoints', () => {
 
       expect(res.statusCode).toBe(200);
       expect(res.json().name).toBe('Renamed Artifact');
+    });
+
+    it('should auto-version when canvasData changes', async () => {
+      const user = await createTestUser(app);
+      const projectId = await createProject(user.accessToken);
+      const artifactId = await createManualArtifact(
+        user.accessToken,
+        projectId,
+        'Versioned',
+      );
+
+      const res = await app.inject({
+        method: 'PUT',
+        url: `/api/v1/projects/${projectId}/artifacts/${artifactId}`,
+        headers: authHeaders(user.accessToken),
+        payload: {
+          canvasData: {
+            elements: [{ id: 'e1' }],
+            relationships: [],
+            viewport: { x: 0, y: 0, zoom: 2 },
+          },
+        },
+      });
+
+      expect(res.statusCode).toBe(200);
+      expect(res.json().currentVersion).toBe(2);
+    });
+
+    it('should update status to published', async () => {
+      const user = await createTestUser(app);
+      const projectId = await createProject(user.accessToken);
+      const artifactId = await createManualArtifact(
+        user.accessToken,
+        projectId,
+        'Status Test',
+      );
+
+      const res = await app.inject({
+        method: 'PUT',
+        url: `/api/v1/projects/${projectId}/artifacts/${artifactId}`,
+        headers: authHeaders(user.accessToken),
+        payload: { status: 'published' },
+      });
+
+      expect(res.statusCode).toBe(200);
+      expect(res.json().status).toBe('published');
     });
 
     it('should return 404 for non-existent artifact', async () => {
@@ -556,6 +793,19 @@ describe('Artifact endpoints', () => {
         headers: authHeaders(user.accessToken),
       });
       expect(getRes.statusCode).toBe(404);
+    });
+
+    it('should return 404 for non-existent artifact', async () => {
+      const user = await createTestUser(app);
+      const projectId = await createProject(user.accessToken);
+
+      const res = await app.inject({
+        method: 'DELETE',
+        url: `/api/v1/projects/${projectId}/artifacts/00000000-0000-0000-0000-000000000000`,
+        headers: authHeaders(user.accessToken),
+      });
+
+      expect(res.statusCode).toBe(404);
     });
   });
 
@@ -631,6 +881,290 @@ describe('Artifact endpoints', () => {
     });
   });
 
+  // ==================== ELEMENTS ====================
+
+  describe('Elements CRUD', () => {
+    let user: TestUser;
+    let projectId: string;
+    let artifactId: string;
+
+    beforeEach(async () => {
+      user = await createTestUser(app);
+      projectId = await createProject(user.accessToken);
+      artifactId = await createManualArtifact(
+        user.accessToken,
+        projectId,
+        'Element Test',
+      );
+    });
+
+    it('should add an element', async () => {
+      const res = await app.inject({
+        method: 'POST',
+        url: `/api/v1/projects/${projectId}/artifacts/${artifactId}/elements`,
+        headers: authHeaders(user.accessToken),
+        payload: {
+          elementId: 'user-001',
+          elementType: 'person',
+          framework: 'c4',
+          name: 'End User',
+          description: 'A user of the system',
+          position: { x: 100, y: 200, width: 200, height: 100 },
+        },
+      });
+
+      expect(res.statusCode).toBe(201);
+      const body = res.json();
+      expect(body.elementId).toBe('user-001');
+      expect(body.name).toBe('End User');
+      expect(body.position).toEqual({
+        x: 100,
+        y: 200,
+        width: 200,
+        height: 100,
+      });
+    });
+
+    it('should list elements', async () => {
+      await app.inject({
+        method: 'POST',
+        url: `/api/v1/projects/${projectId}/artifacts/${artifactId}/elements`,
+        headers: authHeaders(user.accessToken),
+        payload: {
+          elementId: 'el-1',
+          elementType: 'person',
+          framework: 'c4',
+          name: 'User A',
+        },
+      });
+      await app.inject({
+        method: 'POST',
+        url: `/api/v1/projects/${projectId}/artifacts/${artifactId}/elements`,
+        headers: authHeaders(user.accessToken),
+        payload: {
+          elementId: 'el-2',
+          elementType: 'system',
+          framework: 'c4',
+          name: 'System B',
+        },
+      });
+
+      const res = await app.inject({
+        method: 'GET',
+        url: `/api/v1/projects/${projectId}/artifacts/${artifactId}/elements`,
+        headers: authHeaders(user.accessToken),
+      });
+
+      expect(res.statusCode).toBe(200);
+      expect(res.json().data).toHaveLength(2);
+    });
+
+    it('should update an element', async () => {
+      await app.inject({
+        method: 'POST',
+        url: `/api/v1/projects/${projectId}/artifacts/${artifactId}/elements`,
+        headers: authHeaders(user.accessToken),
+        payload: {
+          elementId: 'upd-1',
+          elementType: 'person',
+          framework: 'c4',
+          name: 'Old Name',
+        },
+      });
+
+      const res = await app.inject({
+        method: 'PUT',
+        url: `/api/v1/projects/${projectId}/artifacts/${artifactId}/elements/upd-1`,
+        headers: authHeaders(user.accessToken),
+        payload: { name: 'New Name' },
+      });
+
+      expect(res.statusCode).toBe(200);
+      expect(res.json().name).toBe('New Name');
+    });
+
+    it('should delete an element', async () => {
+      await app.inject({
+        method: 'POST',
+        url: `/api/v1/projects/${projectId}/artifacts/${artifactId}/elements`,
+        headers: authHeaders(user.accessToken),
+        payload: {
+          elementId: 'del-1',
+          elementType: 'person',
+          framework: 'c4',
+          name: 'To Delete',
+        },
+      });
+
+      const res = await app.inject({
+        method: 'DELETE',
+        url: `/api/v1/projects/${projectId}/artifacts/${artifactId}/elements/del-1`,
+        headers: authHeaders(user.accessToken),
+      });
+
+      expect(res.statusCode).toBe(200);
+
+      const listRes = await app.inject({
+        method: 'GET',
+        url: `/api/v1/projects/${projectId}/artifacts/${artifactId}/elements`,
+        headers: authHeaders(user.accessToken),
+      });
+      expect(listRes.json().data).toHaveLength(0);
+    });
+
+    it('should return 404 for updating non-existent element', async () => {
+      const res = await app.inject({
+        method: 'PUT',
+        url: `/api/v1/projects/${projectId}/artifacts/${artifactId}/elements/nonexistent`,
+        headers: authHeaders(user.accessToken),
+        payload: { name: 'Ghost' },
+      });
+
+      expect(res.statusCode).toBe(404);
+    });
+  });
+
+  // ==================== RELATIONSHIPS ====================
+
+  describe('Relationships CRUD', () => {
+    let user: TestUser;
+    let projectId: string;
+    let artifactId: string;
+
+    beforeEach(async () => {
+      user = await createTestUser(app);
+      projectId = await createProject(user.accessToken);
+      artifactId = await createManualArtifact(
+        user.accessToken,
+        projectId,
+        'Rel Test',
+      );
+    });
+
+    it('should add a relationship', async () => {
+      const res = await app.inject({
+        method: 'POST',
+        url: `/api/v1/projects/${projectId}/artifacts/${artifactId}/relationships`,
+        headers: authHeaders(user.accessToken),
+        payload: {
+          relationshipId: 'rel-001',
+          sourceElementId: 'src-1',
+          targetElementId: 'tgt-1',
+          relationshipType: 'uses',
+          framework: 'c4',
+          label: 'Makes API calls',
+        },
+      });
+
+      expect(res.statusCode).toBe(201);
+      const body = res.json();
+      expect(body.relationshipId).toBe('rel-001');
+      expect(body.sourceElementId).toBe('src-1');
+      expect(body.label).toBe('Makes API calls');
+    });
+
+    it('should list relationships', async () => {
+      await app.inject({
+        method: 'POST',
+        url: `/api/v1/projects/${projectId}/artifacts/${artifactId}/relationships`,
+        headers: authHeaders(user.accessToken),
+        payload: {
+          relationshipId: 'r1',
+          sourceElementId: 's1',
+          targetElementId: 't1',
+          relationshipType: 'uses',
+          framework: 'c4',
+        },
+      });
+
+      const res = await app.inject({
+        method: 'GET',
+        url: `/api/v1/projects/${projectId}/artifacts/${artifactId}/relationships`,
+        headers: authHeaders(user.accessToken),
+      });
+
+      expect(res.statusCode).toBe(200);
+      expect(res.json().data).toHaveLength(1);
+    });
+
+    it('should delete a relationship', async () => {
+      await app.inject({
+        method: 'POST',
+        url: `/api/v1/projects/${projectId}/artifacts/${artifactId}/relationships`,
+        headers: authHeaders(user.accessToken),
+        payload: {
+          relationshipId: 'rdel-1',
+          sourceElementId: 's1',
+          targetElementId: 't1',
+          relationshipType: 'uses',
+          framework: 'c4',
+        },
+      });
+
+      const res = await app.inject({
+        method: 'DELETE',
+        url: `/api/v1/projects/${projectId}/artifacts/${artifactId}/relationships/rdel-1`,
+        headers: authHeaders(user.accessToken),
+      });
+
+      expect(res.statusCode).toBe(200);
+    });
+
+    it('should return 404 for deleting non-existent relationship', async () => {
+      const res = await app.inject({
+        method: 'DELETE',
+        url: `/api/v1/projects/${projectId}/artifacts/${artifactId}/relationships/nonexistent`,
+        headers: authHeaders(user.accessToken),
+      });
+
+      expect(res.statusCode).toBe(404);
+    });
+  });
+
+  // ==================== CANVAS SAVE ====================
+
+  describe('PUT /api/v1/projects/:projectId/artifacts/:artifactId/canvas', () => {
+    it('should save canvas and increment version', async () => {
+      const user = await createTestUser(app);
+      const projectId = await createProject(user.accessToken);
+      const artifactId = await createManualArtifact(
+        user.accessToken,
+        projectId,
+        'Canvas Test',
+      );
+
+      const res = await app.inject({
+        method: 'PUT',
+        url: `/api/v1/projects/${projectId}/artifacts/${artifactId}/canvas`,
+        headers: authHeaders(user.accessToken),
+        payload: {
+          canvasData: {
+            elements: [{ id: 'e1', name: 'Saved' }],
+            relationships: [],
+            viewport: { x: 10, y: 20, zoom: 1.5 },
+          },
+        },
+      });
+
+      expect(res.statusCode).toBe(200);
+      expect(res.json().currentVersion).toBe(2);
+    });
+
+    it('should return 404 for non-existent artifact', async () => {
+      const user = await createTestUser(app);
+      const projectId = await createProject(user.accessToken);
+
+      const res = await app.inject({
+        method: 'PUT',
+        url: `/api/v1/projects/${projectId}/artifacts/00000000-0000-0000-0000-000000000000/canvas`,
+        headers: authHeaders(user.accessToken),
+        payload: { canvasData: {} },
+      });
+
+      expect(res.statusCode).toBe(404);
+    });
+  });
+
   // ==================== WORKSPACE ISOLATION ====================
 
   describe('Workspace isolation', () => {
@@ -686,6 +1220,30 @@ describe('Artifact endpoints', () => {
       expect(logs).toHaveLength(1);
       expect(logs[0].userId).toBe(user.id);
       expect(logs[0].resourceType).toBe('artifact');
+    });
+
+    it('should log artifact.create event', async () => {
+      const user = await createTestUser(app);
+      const projectId = await createProject(user.accessToken);
+
+      const res = await app.inject({
+        method: 'POST',
+        url: `/api/v1/projects/${projectId}/artifacts`,
+        headers: authHeaders(user.accessToken),
+        payload: {
+          name: 'Audited',
+          type: 'c4_context',
+          framework: 'c4',
+        },
+      });
+      const artifactId = res.json().id;
+
+      const prisma = getPrisma();
+      const logs = await prisma.auditLog.findMany({
+        where: { resourceId: artifactId, action: 'artifact.create' },
+      });
+      expect(logs).toHaveLength(1);
+      expect(logs[0].userId).toBe(user.id);
     });
   });
 });

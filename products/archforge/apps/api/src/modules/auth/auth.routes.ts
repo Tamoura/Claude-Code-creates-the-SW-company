@@ -24,7 +24,7 @@ const REFRESH_COOKIE_OPTIONS = {
   maxAge: 7 * 24 * 60 * 60, // 7 days in seconds
 };
 
-function handleValidationError(error: unknown, requestId: string) {
+function handleValidationError(error: unknown, _requestId: string) {
   if (error instanceof AppError) throw error;
   if (error instanceof z.ZodError) {
     throw new AppError(400, 'validation-error', error.errors.map(e => e.message).join('; '));

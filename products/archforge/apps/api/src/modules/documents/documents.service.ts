@@ -65,7 +65,7 @@ export class DocumentService {
           resourceId,
           resourceType: 'document',
           action,
-          metadata,
+          metadata: metadata as Prisma.InputJsonValue,
           ipAddress: ip || null,
           userAgent: userAgent || null,
         },
