@@ -1,5 +1,5 @@
 import { readdirSync, existsSync, readFileSync } from 'node:fs';
-import { join } from 'node:path';
+import { join, basename, extname } from 'node:path';
 import { repoPath } from './repo.service.js';
 
 export interface Pattern {
@@ -70,8 +70,13 @@ export function getKnowledgeBase(): KnowledgeBase {
     return cache.data;
   }
 
-  const patterns = loadPatterns();
-  const { antiPatterns, gotchas } = loadAntiPatternsAndGotchas();
+  const basePatterns = loadPatterns();
+  const protocolPatterns = loadProtocolPatterns();
+  const patterns = [...basePatterns, ...protocolPatterns];
+
+  const { antiPatterns: baseAntiPatterns, gotchas } = loadAntiPatternsAndGotchas();
+  const antiPatterns = [...baseAntiPatterns, ...ADDITIONAL_ANTI_PATTERNS];
+
   const agentExperiences = loadAgentExperiences();
 
   const data: KnowledgeBase = { patterns, antiPatterns, gotchas, agentExperiences };
@@ -123,6 +128,95 @@ function computeScore(text: string, query: string): number {
     idx += query.length;
   }
   return score;
+}
+
+const ADDITIONAL_ANTI_PATTERNS: AntiPattern[] = [
+  {
+    id: 'rationalize-skip-tests',
+    pattern: 'Skipping tests "just this once"',
+    consequence: 'Test debt accumulates; bugs ship to production',
+    prevention: 'Follow Anti-Rationalization Framework article XI — the 1% Rule applies',
+  },
+  {
+    id: 'rationalize-mock-db',
+    pattern: 'Using mocks instead of real DB in tests',
+    consequence: 'Tests pass but integration fails in production',
+    prevention: 'Use real databases per ConnectSW testing standards (no mocks rule)',
+  },
+  {
+    id: 'rationalize-skip-spec',
+    pattern: 'Jumping to code without spec-kit specify step',
+    consequence: 'Implementation misaligns with requirements; rework required',
+    prevention: 'Always start with /speckit.specify — SPEC-01 is mandatory',
+  },
+  {
+    id: 'rationalize-broad-git-add',
+    pattern: 'Using git add . or git add -A',
+    consequence: 'Accidentally stages 600+ deleted files from branch divergence, destroying work',
+    prevention: 'Always stage specific files by name; run git diff --cached --stat before committing',
+  },
+  {
+    id: 'rationalize-claim-without-verify',
+    pattern: 'Claiming task done without verification',
+    consequence: 'Broken code ships as "complete"; QA or CEO discovers failure downstream',
+    prevention: 'Follow Verification-Before-Completion 5-step gate — evidence required for every completion claim',
+  },
+];
+
+function loadProtocolPatterns(): Pattern[] {
+  const protocolsDir = repoPath('.claude', 'protocols');
+  if (!existsSync(protocolsDir)) return [];
+
+  const patterns: Pattern[] = [];
+
+  try {
+    const files = readdirSync(protocolsDir).filter(
+      (f) => f.endsWith('.md') || f.endsWith('.yml'),
+    );
+
+    for (const file of files) {
+      try {
+        const raw = readFileSync(join(protocolsDir, file), 'utf-8');
+        const id = `protocol-${basename(file, extname(file))}`;
+
+        // Extract title from first # heading
+        const titleMatch = raw.match(/^#\s+(.+)$/m);
+        const name = titleMatch ? titleMatch[1].trim() : file.replace(/\.(md|yml)$/, '').replace(/-/g, ' ');
+
+        // Extract Purpose section as description
+        const purposeMatch = raw.match(/##\s+Purpose\s*\n+([\s\S]+?)(?=\n##|\n---|\n```|$)/);
+        const description = purposeMatch
+          ? purposeMatch[1].trim().slice(0, 300)
+          : raw.split('\n').filter((l) => l.trim() && !l.startsWith('#') && !l.startsWith('**') && !l.startsWith('|') && !l.startsWith('-')).slice(0, 2).join(' ').slice(0, 300);
+
+        // Extract Problem section
+        const problemMatch = raw.match(/##\s+(?:The\s+)?(?:Core\s+)?Problem[\s\S]*?\n+([\s\S]+?)(?=\n##|$)/);
+        const problem = problemMatch
+          ? problemMatch[1].trim().slice(0, 300)
+          : 'See protocol file for problem statement.';
+
+        // Solution is the protocol's overall approach
+        const solutionMatch = raw.match(/##\s+(?:Protocol|Solution|How\s+It\s+Works|Strategy)\s*\n+([\s\S]+?)(?=\n##|$)/);
+        const solution = solutionMatch
+          ? solutionMatch[1].trim().slice(0, 300)
+          : description;
+
+        patterns.push({
+          id,
+          name,
+          category: 'Protocol',
+          description,
+          problem,
+          solution,
+          confidence: 'high',
+          timesApplied: 1,
+          successRate: 95,
+        });
+      } catch { /* skip unreadable files */ }
+    }
+  } catch { /* ignore directory errors */ }
+
+  return patterns;
 }
 
 function loadPatterns(): Pattern[] {
