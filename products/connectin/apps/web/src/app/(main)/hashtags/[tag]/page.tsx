@@ -16,13 +16,12 @@ export default function HashtagPage() {
   const tag = typeof params?.tag === "string" ? params.tag : "";
 
   const [posts, setPosts] = useState<Post[]>([]);
-  const [isLoading, setIsLoading] = useState(false);
+  const [isLoading, setIsLoading] = useState(true);
   const [error, setError] = useState<string | null>(null);
 
   useEffect(() => {
     if (!tag) return;
     let cancelled = false;
-    setIsLoading(true);
     async function fetchPosts() {
       const res = await apiClient.get<Post[]>(`/hashtags/${tag}`);
       if (cancelled) return;
