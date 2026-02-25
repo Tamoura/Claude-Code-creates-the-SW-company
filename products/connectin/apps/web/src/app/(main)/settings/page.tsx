@@ -1,6 +1,8 @@
 "use client";
 
 import { useTranslation } from "react-i18next";
+import { useProfile } from "@/hooks/useProfile";
+import { SlugSettings } from "@/components/profile/SlugSettings";
 
 interface SettingsSectionProps {
   title: string;
@@ -10,7 +12,9 @@ interface SettingsSectionProps {
 function SettingsSection({ title, children }: SettingsSectionProps) {
   return (
     <div className="rounded-[18px] bg-white dark:bg-[#1C1C1E] p-6 shadow-apple-md">
-      <h2 className="mb-4 text-lg font-semibold text-neutral-900 tracking-[-0.01em]">{title}</h2>
+      <h2 className="mb-4 text-lg font-semibold text-neutral-900 dark:text-neutral-100 tracking-[-0.01em]">
+        {title}
+      </h2>
       {children}
     </div>
   );
@@ -18,6 +22,7 @@ function SettingsSection({ title, children }: SettingsSectionProps) {
 
 export default function SettingsPage() {
   const { t } = useTranslation("common");
+  const { profile } = useProfile();
 
   return (
     <div className="space-y-4">
@@ -37,6 +42,13 @@ export default function SettingsPage() {
         <p className="text-sm text-neutral-500">
           Manage who can see your profile and activity.
         </p>
+      </SettingsSection>
+
+      <SettingsSection title={t("settings.customUrl")}>
+        <SlugSettings
+          currentSlug={profile?.slug ?? ""}
+          onSlugUpdated={() => {}}
+        />
       </SettingsSection>
 
       <SettingsSection title={t("settings.language")}>

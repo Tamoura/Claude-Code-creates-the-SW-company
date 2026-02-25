@@ -194,6 +194,25 @@ export function useJobs() {
     []
   );
 
+  const easyApplyToJob = useCallback(async (jobId: string): Promise<void> => {
+    try {
+      const response = await apiClient.post<ApplyResponse>(
+        `/jobs/${jobId}/easy-apply`,
+        {}
+      );
+
+      if (response.success && response.data) {
+        setJobs((prev) =>
+          prev.map((j) => (j.id === jobId ? { ...j, isApplied: true } : j))
+        );
+      } else {
+        throw new Error(response.error?.message || "Easy apply failed");
+      }
+    } catch (err) {
+      throw err instanceof Error ? err : new Error("Network error");
+    }
+  }, []);
+
   useEffect(() => {
     fetchJobs(filters);
     // eslint-disable-next-line react-hooks/exhaustive-deps
@@ -211,5 +230,6 @@ export function useJobs() {
     saveJob,
     unsaveJob,
     applyToJob,
+    easyApplyToJob,
   };
 }

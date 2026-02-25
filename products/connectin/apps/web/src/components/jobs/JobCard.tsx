@@ -3,12 +3,14 @@
 import { useState } from "react";
 import { useTranslation } from "react-i18next";
 import { ChevronDown, ChevronUp } from "lucide-react";
+import { EasyApplyButton } from "./EasyApplyButton";
 import type { Job } from "@/types";
 
 interface JobCardProps {
   job: Job;
   onApply: (jobId: string) => void;
   onSave: (jobId: string, isSaved: boolean) => void;
+  onEasyApply?: (jobId: string) => void;
 }
 
 const WORK_TYPE_LABELS: Record<Job["workType"], string> = {
@@ -29,7 +31,7 @@ const EXPERIENCE_LABELS: Record<Job["experienceLevel"], string> = {
  * Job listing card for ConnectIn.
  * Shows job details with save/apply actions and expandable description.
  */
-export function JobCard({ job, onApply, onSave }: JobCardProps) {
+export function JobCard({ job, onApply, onSave, onEasyApply }: JobCardProps) {
   const { t } = useTranslation("common");
   const [expanded, setExpanded] = useState(false);
   const {
@@ -144,8 +146,14 @@ export function JobCard({ job, onApply, onSave }: JobCardProps) {
       )}
 
       {/* Actions */}
-      <div className="mt-4 flex items-center gap-2">
-        {isApplied ? (
+      <div className="mt-4 flex items-center gap-2 flex-wrap">
+        {onEasyApply ? (
+          <EasyApplyButton
+            onEasyApply={() => onEasyApply(id)}
+            isApplied={isApplied ?? false}
+            isLoading={false}
+          />
+        ) : isApplied ? (
           <span className="rounded-full bg-green-50 dark:bg-green-900/30 px-3 py-1 text-xs font-medium text-green-700 dark:text-green-400">
             {t("jobs.applied")}
           </span>

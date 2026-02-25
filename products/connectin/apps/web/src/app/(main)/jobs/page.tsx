@@ -46,6 +46,7 @@ export default function JobsPage() {
     saveJob,
     unsaveJob,
     applyToJob,
+    easyApplyToJob,
   } = useJobs();
 
   // Apply modal state
@@ -193,6 +194,7 @@ export default function JobsPage() {
                   saveJob(jobId);
                 }
               }}
+              onEasyApply={(jobId) => easyApplyToJob(jobId)}
             />
           ))}
 

@@ -77,6 +77,7 @@ const mockLoadMore = jest.fn();
 const mockSaveJob = jest.fn();
 const mockUnsaveJob = jest.fn();
 const mockApplyToJob = jest.fn().mockResolvedValue("app-1");
+const mockEasyApplyToJob = jest.fn().mockResolvedValue(undefined);
 
 const makeJob = (overrides: Record<string, unknown> = {}) => ({
   id: "job-1",
@@ -115,6 +116,7 @@ jest.mock("@/hooks/useJobs", () => ({
     saveJob: mockSaveJob,
     unsaveJob: mockUnsaveJob,
     applyToJob: mockApplyToJob,
+    easyApplyToJob: mockEasyApplyToJob,
   }),
 }));
 
@@ -272,27 +274,21 @@ describe("JobsPage", () => {
   });
 
   describe("apply flow", () => {
-    it("opens ApplyModal when Apply is clicked on a job card", async () => {
-      const user = userEvent.setup();
+    it("shows EasyApply button for each job card", () => {
       mockJobsState.jobs = [makeJob()];
       render(<JobsPage />);
-
-      await user.click(screen.getByRole("button", { name: /apply/i }));
-
-      // Modal should be visible
-      expect(screen.getByRole("dialog")).toBeInTheDocument();
+      // EasyApplyButton is shown when onEasyApply is provided
+      expect(
+        screen.getByRole("button", { name: /jobs.easyApply/i })
+      ).toBeInTheDocument();
     });
 
-    it("closes ApplyModal on cancel", async () => {
+    it("calls easyApplyToJob when EasyApply button is clicked", async () => {
       const user = userEvent.setup();
       mockJobsState.jobs = [makeJob()];
       render(<JobsPage />);
-
-      await user.click(screen.getByRole("button", { name: /apply/i }));
-      expect(screen.getByRole("dialog")).toBeInTheDocument();
-
-      await user.click(screen.getByRole("button", { name: /cancel/i }));
-      expect(screen.queryByRole("dialog")).not.toBeInTheDocument();
+      await user.click(screen.getByRole("button", { name: /jobs.easyApply/i }));
+      expect(mockEasyApplyToJob).toHaveBeenCalledWith("job-1");
     });
   });
 
