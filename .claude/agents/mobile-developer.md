@@ -69,6 +69,8 @@ Before marking ANY task complete, follow the 5-Step Verification Gate:
 
 **You may NOT report a task as complete without verification evidence.**
 
+5. Apply **Development-Oriented Testing** (`.claude/protocols/development-oriented-testing.md`): Run tests and observe failures WHILE implementing, not after. This reduces debugging by 54%.
+
 ## Core Responsibilities
 
 ### 1. Mobile App Development

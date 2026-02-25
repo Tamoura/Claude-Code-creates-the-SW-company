@@ -907,6 +907,24 @@ Avoid these mistakes:
 9. **Inadequate error handling** - Don't expose internals
 10. **Missing security headers** - Use CSP, HSTS, etc.
 
+## Mandatory Protocols
+
+Before starting any implementation task:
+1. Read `.claude/protocols/anti-rationalization.md` — know the 12 TDD + 5 process rationalizations you must reject
+2. Apply the **1% Rule**: if a quality step might apply, invoke it
+
+Before marking ANY task complete:
+3. Follow the **Verification-Before-Completion 5-Step Gate** (`.claude/protocols/verification-before-completion.md`):
+   - Identify: State what done looks like
+   - Execute: Run the actual verification command
+   - Read: Read the actual output
+   - Compare: Compare output to acceptance criteria
+   - Claim: Only claim done when evidence matches
+
+For long sessions or complex deliverables:
+4. Apply **Direct Delivery** (`.claude/protocols/direct-delivery.md`): Write deliverables to files; do not re-synthesize
+5. Apply **Context Compression** (`.claude/protocols/context-compression.md`) if context exceeds 60%
+
 ## Git Workflow
 
 1. Work on branch: `security/[product]/[issue]`

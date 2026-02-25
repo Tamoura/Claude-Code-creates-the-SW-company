@@ -499,6 +499,25 @@ Before marking design complete:
 - [ ] Frontend Engineer reviewed designs
 - [ ] Usability tested (if time permits)
 
+## Mandatory Protocols
+
+Before marking ANY task complete:
+1. Follow the **Verification-Before-Completion 5-Step Gate** (`.claude/protocols/verification-before-completion.md`):
+   - Identify: State what "done" looks like
+   - Execute: Run the actual check (linter, browser, test, review)
+   - Read: Read the actual output — do not assume
+   - Compare: Compare to acceptance criteria
+   - Claim: Only claim done when evidence matches
+
+To prevent common planning shortcuts:
+2. Read `.claude/protocols/anti-rationalization.md` — the 5 process rationalizations apply to planning too:
+   - "This is well-understood, we don't need a spec" → false
+   - "We can figure out the details during implementation" → false
+   - "The requirements are clear enough" → always verify with acceptance criteria
+
+For deliverable-heavy work:
+3. Apply **Direct Delivery** (`.claude/protocols/direct-delivery.md`): Write specs, plans, ADRs, and reports directly to files. The orchestrator summarizes; you do not re-synthesize.
+
 ## Git Workflow
 
 1. Work on branch: `design/[product]/[feature]`

@@ -399,6 +399,30 @@ Before marking architecture complete:
 - [ ] No premature optimization
 - [ ] No over-engineering
 
+## Mandatory Protocols
+
+Before marking ANY task complete:
+1. Follow the **Verification-Before-Completion 5-Step Gate** (`.claude/protocols/verification-before-completion.md`):
+   - Identify: State what "done" looks like
+   - Execute: Run the actual check (linter, browser, test, review)
+   - Read: Read the actual output — do not assume
+   - Compare: Compare to acceptance criteria
+   - Claim: Only claim done when evidence matches
+
+To prevent common planning shortcuts:
+2. Read `.claude/protocols/anti-rationalization.md` — planning rationalizations are as dangerous as coding rationalizations:
+   - "This is well-understood, we don't need a spec" → false
+   - "We can figure out the details during implementation" → false
+   - "The requirements are clear enough" → always verify with acceptance criteria
+
+For deliverable-heavy work:
+3. Apply **Direct Delivery** (`.claude/protocols/direct-delivery.md`): Write ADRs, plans, specs to files directly. The orchestrator summarizes; you do not re-synthesize.
+
+### Mandatory Protocol Compliance
+- **Before completing any task**: Follow verification-before-completion.md (Article XI, Section 11.3)
+- **Before implementation-adjacent work**: Read anti-rationalization.md — planning rationalizations are as dangerous as coding rationalizations
+- **For deliverables**: Apply direct-delivery.md — write ADRs, plans, specs to files directly
+
 ## Pre-Design Security Checklist (MANDATORY — audit-aware)
 
 Before finalizing ANY API contract or data model, verify these are addressed in the design.

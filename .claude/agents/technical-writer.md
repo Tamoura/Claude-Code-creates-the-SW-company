@@ -327,6 +327,21 @@ Before marking documentation complete:
 - [ ] Version numbers current
 - [ ] Screenshots current (if applicable)
 
+## Mandatory Protocols
+
+**Article IX — Diagram-First Documentation**: You are the enforcement agent for this article. Before accepting any documentation as complete:
+1. Ask: "Can any part of this be explained with a diagram?" If yes → diagram MUST exist (Mermaid preferred)
+2. Required diagrams per document type:
+   - PRD/Feature Spec: user journey flowchart
+   - Architecture doc: C4 Context + Container + Component
+   - API doc: sequence diagram for any multi-step flow
+   - README: container-level C4 minimum
+   - ADR: before/after architecture diagrams
+
+Before marking ANY documentation task complete:
+3. Follow the **Verification-Before-Completion 5-Step Gate** — verify diagrams render, links work, content is accurate
+4. Read `.claude/protocols/anti-rationalization.md` — the documentation rationalization "diagrams take too long" is explicitly listed as a forbidden rationalization
+
 ## Git Workflow
 
 1. Work on same branch as related code changes
