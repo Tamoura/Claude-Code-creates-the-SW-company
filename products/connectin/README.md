@@ -172,6 +172,63 @@ See [`.env.example`](.env.example) for all available configuration. Key variable
 | `CORS_ORIGIN` | No | `http://localhost:3111` | Allowed CORS origin |
 | `NEXT_PUBLIC_API_URL` | Yes | - | API URL for the frontend |
 
+## Feature Availability
+
+### Backend (All Phases 1-3 Complete — 557 API Tests)
+
+| Phase | Feature | Status |
+|-------|---------|:------:|
+| 1 | Reactions System (6 types) | DONE |
+| 1 | Hashtags & @Mentions | DONE |
+| 1 | Shares/Reposts | DONE |
+| 1 | Profile Strength Meter | DONE |
+| 1 | Block/Report Users | DONE |
+| 1 | Cover/Banner Image | DONE |
+| 1 | Endorsement System | DONE |
+| 1 | Open-to-Work Badge | DONE |
+| 1 | Follow (Non-Connection) | DONE |
+| 1 | Image/Video Uploads | DONE |
+| 2 | People You May Know (AI) | DONE |
+| 2 | AI Job Match Score | DONE |
+| 2 | Who Viewed Your Profile | DONE |
+| 2 | Saves/Bookmarks | DONE |
+| 2 | Polls | DONE |
+| 2 | Content Analytics | DONE |
+| 2 | Easy Apply (1-Click) | DONE |
+| 2 | Custom URL / Vanity Slug | DONE |
+| 2 | Mutual Connections | DONE |
+| 2 | Connection Degrees | DONE |
+| 3 | Company/Organization Pages | DONE |
+| 3 | Recommendations (Testimonials) | DONE |
+| 3 | Certifications/Licenses | DONE |
+| 3 | Resume AI Optimizer | DONE |
+| 3 | Job Alerts | DONE |
+| 3 | Salary Insights | DONE |
+| 3 | Group Messaging | DONE |
+| 3 | File Sharing in Messages | DONE |
+| 3 | Advanced Search | DONE |
+| 3 | AI Integration (Claude API) | DONE |
+
+### Frontend (636 Web Tests)
+
+| Feature | Status | Notes |
+|---------|:------:|-------|
+| Auth (login, register, OAuth) | DONE | |
+| Feed (posts, comments) | DONE | |
+| Profile (CRUD, experience, education) | DONE | |
+| Jobs (search, apply) | DONE | |
+| Messaging (1:1 real-time) | DONE | |
+| Notifications | DONE | |
+| Search | DONE | |
+| Saves/Bookmarks | DONE | PR #313 |
+| Custom URL/Slug | DONE | PR #313 |
+| Easy Apply | DONE | PR #313 |
+| Who Viewed Profile | DONE | PR #313 |
+| Reactions UI | In Progress | branch: feature/connectin/phase1-frontend |
+| Follow Button | In Progress | branch: feature/connectin/phase1-frontend |
+| Block/Report UI | In Progress | branch: feature/connectin/phase1-frontend |
+| Endorsement UI | In Progress | branch: feature/connectin/phase1-frontend |
+
 ## API Endpoints
 
 All routes are versioned under `/api/v1/`. Key modules:
@@ -180,14 +237,23 @@ All routes are versioned under `/api/v1/`. Key modules:
 |--------|-----------|-------------|
 | Health | `/health` | Service health check |
 | Auth | `/api/v1/auth/*` | Registration, login, OAuth, email verification |
-| Profile | `/api/v1/profiles/*` | Profile CRUD, experience, education, skills |
+| Profile | `/api/v1/profiles/*` | Profile CRUD, experience, education, skills, slug |
 | Connection | `/api/v1/connections/*` | Connection request lifecycle |
-| Feed | `/api/v1/posts/*` | Posts, likes, comments, shares |
-| Jobs | `/api/v1/jobs/*` | Job posting, search, applications |
-| Messaging | `/api/v1/conversations/*`, `/api/v1/messages/*` | Real-time messaging |
-| Search | `/api/v1/search/*` | Full-text search (people, posts, jobs) |
-| AI | `/api/v1/ai/*` | Profile optimization |
-| Admin | `/api/v1/admin/*` | Dashboard, moderation, user management |
+| Feed | `/api/v1/feed/*` | Posts, reactions, comments, reposts, hashtags |
+| Jobs | `/api/v1/jobs/*` | Job posting, search, applications, easy apply, alerts |
+| Messaging | `/api/v1/conversations/*` | Real-time 1:1 and group messaging |
+| Search | `/api/v1/search/*`, `/api/v1/search/advanced/*` | Full-text + boolean search (people, posts, jobs) |
+| AI | `/api/v1/ai/*` | Profile optimization, job matching |
+| Social | `/api/v1/follows/*`, `/api/v1/blocks/*`, `/api/v1/endorsements/*` | Follow, block, endorse |
+| Bookmarks | `/api/v1/bookmarks/*` | Save/unsave posts and jobs |
+| Organizations | `/api/v1/organizations/*` | Company pages |
+| Groups | `/api/v1/groups/*` | Group communities |
+| Events | `/api/v1/events/*` | Professional events |
+| Articles | `/api/v1/articles/*` | Long-form content |
+| Recommendations | `/api/v1/recommendations/*` | Professional testimonials |
+| Certifications | `/api/v1/certifications/*` | Credentials and licenses |
+| Salary | `/api/v1/salary-insights/*` | Salary benchmarking |
+| Polls | `/api/v1/polls/*` | Post polls |
 
 See [docs/API.md](docs/API.md) for full API documentation.
 
