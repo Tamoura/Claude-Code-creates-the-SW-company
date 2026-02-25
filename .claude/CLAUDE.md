@@ -108,10 +108,13 @@ release/[product]/v[X.Y.Z]       # Releases
 ### Code
 
 - TypeScript for all JavaScript code
-- TDD: Red-Green-Refactor
+- TDD: Red-Green-Refactor (enforced by Anti-Rationalization Framework)
 - No mocks in tests - real databases, real services
 - 80%+ test coverage minimum
 - ESLint + Prettier for formatting
+- **Verification-Before-Completion**: No task marked done without evidence (5-step gate)
+- **Anti-Rationalization**: 12 TDD + 5 process rationalizations with explicit counters
+- **The 1% Rule**: If a check *might* apply, it MUST be run
 
 ### Ports
 

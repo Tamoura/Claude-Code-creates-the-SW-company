@@ -6,14 +6,59 @@
 
 Catch issues earlier in the development process by running specialized checks at strategic points, not just before CEO review. The Spec Consistency Gate (powered by spec-kit) catches specification-level issues before any code is written or tested.
 
-## Seven Quality Gates
+## Eight Quality Gates
 
 ```
 Spec → Spec Consistency Gate → Documentation Gate → Browser Gate → Security Gate → Performance Gate → Testing Gate → Production Gate → CEO
               ↓                       ↓                  ↓               ↓                ↓                  ↓                ↓
           Spec/Plan            Diagrams &           Browser         Security        Performance        Quality         Deployment
           Aligned?             Article IX?          Works?          Issues          Issues             Issues          Readiness
+
+   ┌─────────────────────────────────────────────────────────────────────────────────────────────────────┐
+   │  Verification-Before-Completion Gate (runs at EVERY individual task, not just milestones)           │
+   │  Protocol: .claude/protocols/verification-before-completion.md                                      │
+   │  Enforcement: Anti-Rationalization Framework (.claude/protocols/anti-rationalization.md)             │
+   └─────────────────────────────────────────────────────────────────────────────────────────────────────┘
 ```
+
+### Task-Level Gate: Verification-Before-Completion
+
+**When**: Before ANY agent marks ANY task as complete. This is not a milestone gate — it runs at every individual task.
+**Purpose**: Prevent agents from claiming "done" without evidence. Catches issues at the source before they reach milestone-level gates.
+**Protocol**: `.claude/protocols/verification-before-completion.md`
+**Enforcement**: `.claude/protocols/anti-rationalization.md`
+
+#### The Five Steps (MANDATORY for every task completion)
+
+1. **Identify** the verification command (what will prove this works?)
+2. **Execute** the command (run it — don't predict)
+3. **Read** the actual output (don't skim)
+4. **Compare** against expected results (match acceptance criteria)
+5. **Claim** completion with evidence (include the output)
+
+#### Pass Criteria
+
+```
+✅ PASS if:
+- All 5 steps documented in task handoff
+- Verification command was actually executed (output included)
+- Output matches acceptance criteria
+- No discrepancies between expected and actual
+
+❌ FAIL if:
+- Any step missing from handoff
+- No evidence of command execution
+- Output doesn't match acceptance criteria
+- Agent claims "should work" without running verification
+```
+
+#### Enforcement
+
+- **QA Engineer** audits verification evidence during Testing Gate
+- **Orchestrator** rejects task completions without evidence section
+- **Anti-Rationalization Framework** counters common excuses for skipping verification
+
+---
 
 ### -1. Spec Consistency Gate (SPECIFICATION QUALITY) — spec-kit powered
 
@@ -30,7 +75,7 @@ Spec Consistency Checks:
   - Every spec requirement (FR-xxx) maps to at least one task
   - Every task maps back to a spec requirement (no orphan tasks)
   - TDD ordering verified (test tasks before implementation tasks)
-  - Constitution compliance (all 10 articles checked)
+  - Constitution compliance (all 11 articles checked)
   - Component reuse table references valid registry entries
   - Terminology consistent across spec, plan, and tasks
   - No conflicts between spec entities and data model
@@ -58,7 +103,7 @@ Spec Consistency Checks:
 ```
 ✅ PASS if:
 - All spec requirements covered by tasks
-- Constitution compliance: 10/10 articles satisfied
+- Constitution compliance: 11/11 articles satisfied
 - No CRITICAL or HIGH findings
 - Terminology consistent across artifacts
 
@@ -413,6 +458,8 @@ See `.claude/agents/qa-engineer.md` for existing implementation.
 - App loads without errors
 - All UI elements visible and styled
 - No console errors
+- Anti-rationalization audit: all tasks have verification evidence
+- TDD compliance: all tests written before implementation
 
 ❌ FAIL if:
 - Any test fails
@@ -420,6 +467,8 @@ See `.claude/agents/qa-engineer.md` for existing implementation.
 - App doesn't load
 - Buttons/forms invisible
 - Console errors present
+- Tasks missing verification evidence (Verification-Before-Completion violation)
+- TDD violations detected (implementation committed before tests)
 ```
 
 ---

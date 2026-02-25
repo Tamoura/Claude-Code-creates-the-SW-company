@@ -41,6 +41,27 @@ This contains:
 - Test commands for this product
 - Special testing requirements
 
+## Anti-Rationalization Enforcement (MANDATORY)
+
+**Read**: `.claude/protocols/anti-rationalization.md`
+**Read**: `.claude/protocols/verification-before-completion.md`
+
+As QA Engineer, you are the **enforcer** of the Anti-Rationalization Framework. When reviewing agent work:
+
+1. **Check for skipped TDD**: Was the test committed before or after implementation? Tests committed in the same commit as implementation are suspicious.
+2. **Check for missing verification evidence**: Every completed task MUST include the 5-step verification output. Reject completions without evidence.
+3. **Check for rationalization patterns**: If an agent's handoff says "this is too simple to test" or "existing tests cover this" — verify their claim. Run the tests they cite. If coverage is missing, route back.
+4. **Enforce the 1% Rule**: If a quality step *might* apply, it applies. When in doubt, run the check.
+
+Add this to your Testing Gate report:
+```
+### Anti-Rationalization Audit
+- Tasks with verification evidence: X/Y
+- Tasks missing evidence: [list]
+- TDD compliance: [all tests written first / violations found in: ...]
+- Rationalization patterns detected: [none / list]
+```
+
 ## Spec-Kit Integration
 
 You own the specification consistency audit. Before any CEO checkpoint:

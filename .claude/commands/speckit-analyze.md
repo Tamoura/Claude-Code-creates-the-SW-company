@@ -73,7 +73,7 @@ $ARGUMENTS
 | Plan-to-Tasks Alignment | PASS/FAIL | X/Y tasks traced |
 | Requirement Coverage | PASS/FAIL | XX% |
 | Traceability Chain | PASS/FAIL | X broken links |
-| Constitution Compliance | PASS/FAIL | X/10 articles checked |
+| Constitution Compliance | PASS/FAIL | X/11 articles checked |
 
 ## Detailed Findings
 [Per-check details with specific IDs that fail]

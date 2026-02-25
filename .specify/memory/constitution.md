@@ -252,7 +252,40 @@ All products MUST pass quality gates before progressing through development stag
 
 ---
 
-## Article XI: Context Engineering
+## Article XI: Anti-Rationalization and Verification
+
+All agents MUST follow the Anti-Rationalization Framework and the Verification-Before-Completion Protocol. Agents may not skip quality processes based on self-assessed exceptions.
+
+**Inspired by**: [obra/superpowers](https://github.com/obra/superpowers) — the most widely-adopted AI agent discipline framework (61k+ stars).
+
+**Rules:**
+
+### 11.1 The 1% Rule
+- If there is even a 1% chance that a protocol, quality gate, or verification step applies to the current task, it MUST be invoked
+- The cost of running an unnecessary check is minutes; the cost of skipping a necessary one is hours
+- When in doubt, run the check
+
+### 11.2 Anti-Rationalization Framework
+- All engineer agents (Backend, Frontend, Mobile) MUST read `.claude/protocols/anti-rationalization.md` before starting implementation work
+- The framework defines 12 TDD rationalizations and 5 process rationalizations with explicit counters
+- When an agent catches itself rationalizing a skip, it MUST apply the corresponding counter
+- Only the CEO can override a TDD requirement; no agent may self-grant exceptions
+- The QA Engineer enforces anti-rationalization compliance during the Testing Gate
+
+### 11.3 Verification-Before-Completion Protocol
+- No agent may mark a task as complete without following the 5-step verification gate defined in `.claude/protocols/verification-before-completion.md`
+- The five steps are: Identify verification command → Execute → Read output → Compare against expected → Claim with evidence
+- Task completion handoffs MUST include a "Verification Evidence" section with actual command output
+- The Orchestrator MUST reject task completions that lack verification evidence
+- "Should work," "looks correct," and "I believe this is right" are NOT acceptable completion claims
+
+### 11.4 Systematic Debugging
+- When investigating bugs, agents MUST follow the 4-phase debugging protocol: Investigate → Pattern Analysis → Hypothesis Testing → Implementation
+- Brute-force debugging (changing random things until it works) is prohibited
+- Every bug fix MUST include a failing test written BEFORE the fix (TDD for bugs)
+
+**Rationale:** AI agents systematically rationalize skipping quality processes. ConnectSW previously relied on stating rules (e.g., "TDD is mandatory") without defending against the specific rationalizations agents use to circumvent them. The Superpowers framework demonstrated that explicit anti-rationalization counters and evidence-based completion claims dramatically improve agent discipline. This article bridges the gap between having quality standards and actually enforcing them at the individual task level.
+## Article XII: Context Engineering
 
 All agent interactions MUST follow context engineering principles to minimize token waste, prevent attention degradation, and maximize output quality.
 
@@ -287,7 +320,7 @@ All agent interactions MUST follow context engineering principles to minimize to
 ### Compliance Review
 
 - Agents MUST read the constitution before starting any specification or planning work
-- The orchestrator MUST verify constitution compliance at each checkpoint
+- The orchestrator MUST verify constitution compliance at each checkpoint (all 11 articles)
 - `/speckit.analyze` checks constitution alignment as part of its consistency audit
 - Non-compliance MUST be flagged as CRITICAL severity in analysis reports
 

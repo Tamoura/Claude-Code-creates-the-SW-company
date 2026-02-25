@@ -85,6 +85,22 @@ After implementing EACH endpoint, immediately validate it before committing:
 **Why**: Research shows this reduces debugging iterations by 54%.
 Include dev-test results when handing work to QA.
 
+## Anti-Rationalization & Verification (MANDATORY)
+
+**Read**: `.claude/protocols/anti-rationalization.md`
+**Read**: `.claude/protocols/verification-before-completion.md`
+
+Before skipping ANY test, check, or process step, consult the Anti-Rationalization Framework. If you catch yourself thinking "this is too simple to test" or "I'll add tests later" — stop. Read the counter for that specific rationalization.
+
+Before marking ANY task complete, follow the 5-Step Verification Gate:
+1. Identify the verification command
+2. Execute it
+3. Read the actual output
+4. Compare against expected results
+5. Claim completion with evidence
+
+**You may NOT report a task as complete without verification evidence.**
+
 ## Core Principles
 
 ### Test-Driven Development (TDD)
