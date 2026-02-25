@@ -19,6 +19,8 @@ import { sprintBoardRoutes } from './routes/v1/sprint-board.js';
 import { alertsRoutes } from './routes/v1/alerts.js';
 import { settingsRoutes } from './routes/v1/settings.js';
 import { simulationRoutes } from './routes/v1/simulations.js';
+import { protocolRoutes } from './routes/v1/protocols.js';
+import { constitutionRoutes } from './routes/v1/constitution.js';
 
 export async function buildApp() {
   const app = Fastify({
@@ -63,6 +65,8 @@ export async function buildApp() {
   await app.register(alertsRoutes, { prefix: '/api/v1' });
   await app.register(settingsRoutes, { prefix: '/api/v1' });
   await app.register(simulationRoutes, { prefix: '/api/v1' });
+  await app.register(protocolRoutes, { prefix: '/api/v1' });
+  await app.register(constitutionRoutes, { prefix: '/api/v1' });
 
   return app;
 }

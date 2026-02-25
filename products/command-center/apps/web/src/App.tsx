@@ -25,6 +25,8 @@ import Simulate from './pages/Simulate.js';
 import Showcase from './pages/Showcase.js';
 import ProductShowcase from './pages/ProductShowcase.js';
 import PitchDeck from './pages/PitchDeck.js';
+import Protocols from './pages/Protocols.js';
+import Constitution from './pages/Constitution.js';
 
 export default function App() {
   return (
@@ -56,6 +58,8 @@ export default function App() {
         <Route path="alerts" element={<AlertCenter />} />
         <Route path="simulate" element={<Simulate />} />
         <Route path="settings" element={<Settings />} />
+        <Route path="protocols" element={<Protocols />} />
+        <Route path="constitution" element={<Constitution />} />
       </Route>
     </Routes>
   );
