@@ -41,6 +41,37 @@ CEO
       └── Code Reviewer (audits, security assessment)
 ```
 
+## Context Engineering (NEW — Constitution Article XI)
+
+ConnectSW applies context engineering principles to maximize agent effectiveness and minimize token waste. Context windows degrade due to attention mechanics, not raw token limits.
+
+### Key Protocols
+
+| Protocol | File | Purpose |
+|----------|------|---------|
+| Progressive Disclosure | `.claude/protocols/context-engineering.md` | Load only what agents need per task complexity |
+| Context Compression | `.claude/protocols/context-compression.md` | Anchored Iterative Summarization for long sessions |
+| Direct Delivery | `.claude/protocols/direct-delivery.md` | Specialists write to files; orchestrator summarizes, not re-synthesizes |
+
+### Progressive Disclosure Levels
+
+| Task Complexity | Context Loaded | ~Token Budget |
+|----------------|----------------|---------------|
+| Trivial (typo, config) | Role + Task + Constraints | ~500 |
+| Simple (single bug fix) | + Patterns + Experience | ~2,000 |
+| Standard (multi-file feature) | + Full Brief + Registry + TDD | ~5,000 |
+| Complex (new product) | All sections expanded | ~8,000 |
+
+### Attention-Optimized Prompt Order
+
+1. **Start** (high attention): Stable role/rules/tech stack (KV-cache reusable)
+2. **Middle** (lower attention): Variable patterns/context (supplementary)
+3. **End** (high attention): Current task + completion instructions (critical)
+
+### Script Registry
+
+All 28 scripts organized into 6 namespaces. See `.claude/scripts/SCRIPT-REGISTRY.md` for the "I Need To..." quick reference table.
+
 ## Standards
 
 ### Git
