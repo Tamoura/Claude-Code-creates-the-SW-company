@@ -31,7 +31,7 @@ export class TemplateService {
           resourceId,
           resourceType: 'template',
           action,
-          metadata,
+          metadata: metadata as Prisma.InputJsonValue,
           ipAddress: ip || null,
           userAgent: userAgent || null,
         },

@@ -32,7 +32,7 @@ export class VersionService {
           resourceId,
           resourceType: 'artifact_version',
           action,
-          metadata,
+          metadata: metadata as Prisma.InputJsonValue,
           ipAddress: ip || null,
           userAgent: userAgent || null,
         },

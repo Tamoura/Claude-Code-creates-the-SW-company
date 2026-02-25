@@ -29,7 +29,7 @@ export class CommentService {
           resourceId,
           resourceType: 'comment',
           action,
-          metadata,
+          metadata: metadata as Prisma.InputJsonValue,
           ipAddress: ip || null,
           userAgent: userAgent || null,
         },

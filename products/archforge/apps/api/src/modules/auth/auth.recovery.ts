@@ -6,6 +6,7 @@
  */
 
 import { FastifyInstance } from 'fastify';
+import { Prisma } from '@prisma/client';
 import { createHash, randomBytes } from 'crypto';
 import { hashPassword } from '../../utils/crypto.js';
 import { AppError } from '../../types/index.js';
@@ -28,7 +29,7 @@ export class AuthRecoveryService {
     try {
       await this.fastify.prisma.auditLog.create({
         data: {
-          userId, resourceType: 'user', action, metadata,
+          userId, resourceType: 'user', action, metadata: metadata as Prisma.InputJsonValue,
           ipAddress: ip || null, userAgent: userAgent || null,
         },
       });

@@ -52,7 +52,7 @@ export class ArtifactService {
           resourceId,
           resourceType: 'artifact',
           action,
-          metadata,
+          metadata: metadata as Prisma.InputJsonValue,
           ipAddress: ip || null,
           userAgent: userAgent || null,
         },
@@ -235,7 +235,7 @@ export class ArtifactService {
               elements: aiResult.elements,
               relationships: aiResult.relationships,
               viewport: { x: 0, y: 0, zoom: 1 },
-            },
+            } as unknown as Prisma.InputJsonValue,
           },
         });
 
@@ -249,7 +249,7 @@ export class ArtifactService {
               elements: aiResult.elements,
               relationships: aiResult.relationships,
               viewport: { x: 0, y: 0, zoom: 1 },
-            },
+            } as unknown as Prisma.InputJsonValue,
             svgContent: aiResult.mermaidDiagram || null,
             changeSummary: 'Initial AI generation',
             changeType: 'ai_generation',
@@ -374,7 +374,7 @@ export class ArtifactService {
               elements: aiResult.elements,
               relationships: aiResult.relationships,
               viewport: { x: 0, y: 0, zoom: 1 },
-            },
+            } as unknown as Prisma.InputJsonValue,
           },
         });
 
@@ -388,7 +388,7 @@ export class ArtifactService {
               elements: aiResult.elements,
               relationships: aiResult.relationships,
               viewport: { x: 0, y: 0, zoom: 1 },
-            },
+            } as unknown as Prisma.InputJsonValue,
             svgContent: aiResult.mermaidDiagram || null,
             changeSummary: `AI regeneration v${newVersion}`,
             changeType: 'ai_generation',

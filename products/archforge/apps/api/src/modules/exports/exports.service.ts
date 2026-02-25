@@ -6,6 +6,7 @@
  */
 
 import { FastifyInstance } from 'fastify';
+import { Prisma } from '@prisma/client';
 import { AppError } from '../../types/index.js';
 import { logger } from '../../utils/logger.js';
 import type { ExportResult } from './exports.types.js';
@@ -28,7 +29,7 @@ export class ExportService {
           resourceId,
           resourceType: 'export',
           action,
-          metadata,
+          metadata: metadata as Prisma.InputJsonValue,
           ipAddress: ip || null,
           userAgent: userAgent || null,
         },

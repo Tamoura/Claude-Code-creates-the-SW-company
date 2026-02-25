@@ -32,7 +32,7 @@ export class ShareService {
           resourceId,
           resourceType: 'share',
           action,
-          metadata,
+          metadata: metadata as Prisma.InputJsonValue,
           ipAddress: ip || null,
           userAgent: userAgent || null,
         },
