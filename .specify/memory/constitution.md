@@ -1,8 +1,8 @@
 # ConnectSW Constitution
 
-**Version**: 1.2.0
+**Version**: 1.3.0
 **Ratified**: 2026-02-11
-**Last Amended**: 2026-02-24
+**Last Amended**: 2026-02-25
 
 ## Preamble
 
@@ -249,6 +249,28 @@ All products MUST pass quality gates before progressing through development stag
 - `/speckit.analyze` constitutes a Specification Consistency Gate verifying spec-plan-task alignment
 
 **Rationale:** Multi-gate quality catches issues at the earliest, cheapest stage.
+
+---
+
+## Article XI: Context Engineering
+
+All agent interactions MUST follow context engineering principles to minimize token waste, prevent attention degradation, and maximize output quality.
+
+**Rules:**
+- **Progressive Disclosure**: Sub-agent prompts MUST be sized to task complexity. Trivial tasks get Level 1 only (~500 tokens). Simple tasks get Level 1+2 (~2,000 tokens). Standard tasks get Level 1+2+3 (~5,000 tokens). Complex tasks get all levels (~8,000 tokens). Loading the full prompt template for a typo fix is wasteful and degrades focus.
+- **Attention-Optimized Ordering**: Stable sections (role, rules, tech stack) MUST appear at the start of prompts (high attention + KV-cache reuse). Variable sections (patterns, context) go in the middle. Critical sections (current task, completion instructions) MUST appear at the end (high attention).
+- **Direct Delivery**: Specialist agents MUST write deliverables to `products/{PRODUCT}/.claude/deliverables/`. The orchestrator provides summaries + file paths to the CEO — it does NOT re-synthesize full deliverables. Downstream agents read deliverable files directly.
+- **Context Compression**: Agents in sessions exceeding 20 turns or 70% context utilization MUST write a structured session summary using the Anchored Iterative Summarization format (Session Intent, Files Modified, Decisions Made, Current State, Next Steps).
+- **Observation Masking**: Tool outputs from 3+ turns ago SHOULD be replaced with compact references. Boilerplate content SHOULD be stripped.
+- **Token Budget Tracking**: The orchestrator MUST track token consumption per sub-agent invocation and log it to `context_engineering_metrics` in cost-metrics.json.
+- **Four-Bucket Strategy**: When context approaches limits, apply in order: Write (persist to filesystem), Select (filter relevant only), Compress (structured summarization), Isolate (split across sub-agents).
+
+**Reference Documents:**
+- `.claude/protocols/context-engineering.md` — Full protocol with degradation thresholds and budget management
+- `.claude/protocols/context-compression.md` — Anchored Iterative Summarization methodology
+- `.claude/protocols/direct-delivery.md` — Telephone game fix with file-based delivery
+
+**Rationale:** Context windows degrade due to attention mechanics, not raw token limits. Models exhibit U-shaped attention curves where middle tokens receive 10-40% less recall. Loading everything into every agent's context wastes the attention budget and causes lost-in-middle degradation. Progressive disclosure and attention-optimized ordering counteract these effects. Direct delivery prevents the ~50% information loss that occurs when the orchestrator re-synthesizes specialist outputs. These principles are adapted from the [Agent-Skills-for-Context-Engineering](https://github.com/muratcankoylan/Agent-Skills-for-Context-Engineering) research, cited in academic work on context engineering.
 
 ---
 

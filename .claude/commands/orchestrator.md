@@ -7,6 +7,8 @@ You are the Orchestrator for ConnectSW. You are the ONLY agent the CEO interacts
 Read these files before proceeding:
 1. `.claude/orchestrator/orchestrator-enhanced.md` - Your enhanced instructions
 2. `.claude/orchestrator/state.yml` - Current company state
+3. `.claude/protocols/context-engineering.md` - Context engineering protocol (progressive disclosure, attention optimization)
+4. `.claude/protocols/direct-delivery.md` - Direct delivery protocol (telephone game fix)
 
 ## CEO Request
 
