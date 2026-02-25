@@ -35,6 +35,12 @@ For detailed execution instructions, see: `.claude/orchestrator/claude-code-exec
 - **Purpose**: Inline into sub-agent prompts instead of telling agents to read full files
 - **Originals**: `.claude/agents/{agent}.md` preserved as deep-dive reference
 
+### 3c. Context Engineering Protocols (NEW)
+- **Progressive Disclosure**: `.claude/protocols/context-engineering.md` — Load only what agents need per task complexity
+- **Compression Protocol**: `.claude/protocols/context-compression.md` — Anchored Iterative Summarization for long sessions
+- **Direct Delivery**: `.claude/protocols/direct-delivery.md` — Specialists write deliverables to files, avoiding orchestrator re-synthesis
+- **Script Registry**: `.claude/scripts/SCRIPT-REGISTRY.md` — Namespaced script index (replaces directory browsing)
+
 ### 4. Quality Gates
 - **Testing Gate**: `.claude/scripts/testing-gate-checklist.sh`
 - **Audit Gate**: `/audit [product]` - Mandatory before CEO delivery. Scores must reach 8/10.
@@ -139,17 +145,17 @@ cat .claude/orchestrator/state.yml 2>/dev/null || echo "No state file"
 | innovation-specialist | `.claude/agents/briefs/innovation-specialist.md` | R&D, emerging tech, rapid prototypes |
 | code-reviewer | `.claude/agents/briefs/code-reviewer.md` | Code audits, security assessment, tech debt |
 
-### Step 2.5: Task Complexity Classification (Fast Track)
+### Step 2.5: Task Complexity Classification (Fast Track + Progressive Disclosure)
 
-Before loading a task graph, classify the CEO request complexity to skip unnecessary overhead:
+Before loading a task graph, classify the CEO request complexity. This controls both which setup steps to skip AND how much context each sub-agent receives (progressive disclosure).
 
 ```markdown
-| Complexity | Criteria | Skip Steps |
-|------------|----------|------------|
-| **Trivial** | Typo fix, README update, config tweak | 3.3 (backlog), 3.5 (pattern scoring), 3.7 (estimates) |
-| **Simple** | Single bug fix, minor feature, single-file change | 3.3 (backlog), 3.7 (estimates) |
-| **Standard** | Multi-file feature, new endpoint + tests | None |
-| **Complex** | New product, multi-service feature, architecture change | None |
+| Complexity | Criteria | Skip Steps | Context Level |
+|------------|----------|------------|---------------|
+| **Trivial** | Typo fix, README update, config tweak | 3.3, 3.5, 3.7 | Level 1 (~500 tokens) |
+| **Simple** | Single bug fix, minor feature, single-file change | 3.3, 3.7 | Level 1+2 (~2,000 tokens) |
+| **Standard** | Multi-file feature, new endpoint + tests | None | Level 1+2+3 (~5,000 tokens) |
+| **Complex** | New product, multi-service feature, architecture change | None | All levels (~8,000 tokens) |
 
 Classification rules:
 1. If CEO request matches "fix typo", "update README", "change config" → Trivial
@@ -158,8 +164,39 @@ Classification rules:
 4. If workflow type is "new-feature" → Standard (default)
 5. If template has `fast_track: true` in metadata → use template's `skip_steps`
 
+### Progressive Disclosure Levels (Context Engineering Protocol)
+
+Each level builds on the previous. See `.claude/protocols/context-engineering.md` for full details.
+
+**Level 1: Identity + Task** (Always loaded, ~500 tokens)
+- Agent role (1-2 sentences)
+- Current task description + acceptance criteria
+- Branch, product, constraints
+
+**Level 2: Relevant Context** (Loaded for Simple+, ~1,500 additional tokens)
+- Pre-scored patterns from memory (top 5, score >= 4/10)
+- Anti-patterns (top 3), gotchas (top 3)
+- Agent's past experience
+- Context chain from upstream tasks (capped at 500 words)
+
+**Level 3: Deep Reference** (Loaded for Standard+, ~3,000 additional tokens)
+- Full agent brief (50-80 lines)
+- Component Registry reference
+- Product addendum + coding conventions scan instructions
+- TDD protocol + traceability requirements
+
+**All Levels** (Complex tasks only)
+- Full current template with all sections expanded
+
+### Context Budget Tracking
+
+For each sub-agent invocation, estimate and log the token budget:
+- Measure the approximate token count of the assembled prompt
+- Log to `context_engineering_metrics.progressive_disclosure_savings` in cost-metrics.json
+- If actual prompt exceeds budget for the complexity level by >50%, investigate why
+
 Fast Track benefits:
-- Trivial/Simple: skip 30-50% of setup overhead
+- Trivial/Simple: skip 30-50% of setup overhead AND 60-75% context reduction
 - Quality gates are NEVER skipped regardless of complexity
 - CEO checkpoints are NEVER skipped regardless of complexity
 
@@ -413,52 +450,44 @@ C. INVOKE AGENTS (PARALLEL-AWARE)
 
    ---
 
-   **COMPACT SUB-AGENT PROMPT TEMPLATE** (replaces the old 5-file-read template):
+   **COMPACT SUB-AGENT PROMPT TEMPLATE** (attention-optimized ordering for KV-cache):
+
+   Sections are ordered for optimal LLM attention and KV-cache reuse:
+   - **Start** (high attention): Stable role/rules that cache across invocations
+   - **Middle** (lower attention): Variable patterns and context (supplementary)
+   - **End** (high attention): Critical task details and completion instructions
+
+   The template below shows ALL sections. Apply **progressive disclosure** based on
+   task complexity (Step 2.5): Trivial loads Level 1 only, Simple loads 1+2, etc.
 
    ```
+   ┌─────────────────────────────────────────────────────────────────┐
+   │ LEVEL 1: IDENTITY + TASK (always loaded, ~500 tokens)          │
+   │ Sections: Role, Current Task, Acceptance Criteria, Constraints │
+   ├─────────────────────────────────────────────────────────────────┤
+   │ LEVEL 2: RELEVANT CONTEXT (Simple+, ~1,500 tokens)             │
+   │ Sections: Patterns, Anti-Patterns, Gotchas, Past Experience,   │
+   │           Context from Prior Tasks                              │
+   ├─────────────────────────────────────────────────────────────────┤
+   │ LEVEL 3: DEEP REFERENCE (Standard+, ~3,000 tokens)             │
+   │ Sections: Full Brief, Component Registry, Product Context,     │
+   │           Coding Conventions, TDD Protocol, Traceability        │
+   └─────────────────────────────────────────────────────────────────┘
+   ```
+
+   **FULL TEMPLATE (all levels — used for Standard/Complex tasks):**
+
+   ```
+   ═══════════════════════════════════════════════════════════
+   STABLE SECTIONS (start — high attention, KV-cache reusable)
+   ═══════════════════════════════════════════════════════════
+
    You are the {ROLE} for ConnectSW.
 
-   ## Your Brief
+   ## Your Brief                                                [LEVEL 3]
    {INLINE_BRIEF_CONTENT from .claude/agents/briefs/{agent}.md}
 
-   ## Component Registry
-   Before building anything, check: .claude/COMPONENT-REGISTRY.md
-   Use the "I Need To..." table. If a match exists, copy and adapt it.
-   If you build something new and generic, add it to the registry.
-
-   ## Product Context
-   Read: products/{PRODUCT}/.claude/addendum.md
-
-   ## Relevant Patterns (pre-filtered from company knowledge)
-   {PRE_FILTERED_PATTERNS from Step 3.5}
-
-   ## Product Coding Conventions
-   Scan existing code in `products/{PRODUCT}/apps/` and match these conventions:
-   - **Error handling**: Find the AppError/error class used and follow the same pattern
-   - **Service layer**: Match the existing service class structure (constructor injection, etc.)
-   - **Test helpers**: Use the same buildApp()/test setup pattern found in existing tests
-   - **Import style**: Match existing import ordering and path conventions
-   - **Validation**: Use the same validation library/pattern (Zod, Joi, etc.) found in codebase
-   If no existing code exists yet (greenfield), follow company patterns from above.
-
-   ## Context from Prior Tasks
-   {CONTEXT_CHAIN — conventions and decisions from all completed upstream tasks in the
-   dependency chain, capped at 500 words. Example entries:
-   - "Error handling uses AppError with toJSON() — see src/types/index.ts"
-   - "Auth tokens are hashed with SHA-256 before DB storage"
-   - "All routes use /v1/ prefix with Fastify route schemas"
-   If no upstream tasks have completed yet, omit this section.}
-
-   ## Your Current Task
-   Task ID: {TASK_ID}
-   Product: {PRODUCT}
-   Branch: {BRANCH}
-   Description: {TASK_DESCRIPTION}
-
-   ## Acceptance Criteria
-   {ACCEPTANCE_CRITERIA from task graph}
-
-   ## TDD Protocol (MANDATORY)
+   ## TDD Protocol (MANDATORY)                                  [LEVEL 3]
    Follow Red-Green-Refactor strictly for ALL implementation tasks:
 
    **RED**: Write a failing test first.
@@ -479,7 +508,7 @@ C. INVOKE AGENTS (PARALLEL-AWARE)
    `tdd_evidence` in your report: an array of {test_commit, impl_commit,
    test_file, impl_file} for each TDD cycle completed.
 
-   ## Constraints
+   ## Constraints                                               [LEVEL 1]
    - Work in: products/{PRODUCT}/
    - Stage specific files only (never git add . or git add -A)
    - Verify staged files before commit (git diff --cached --stat)
@@ -488,7 +517,7 @@ C. INVOKE AGENTS (PARALLEL-AWARE)
    - If you must touch shared files (package.json, prisma/schema.prisma, tsconfig.json),
      report `shared_files_modified: [list]` in your completion message
 
-   ## Traceability (Constitution Article VI — MANDATORY)
+   ## Traceability (Constitution Article VI — MANDATORY)        [LEVEL 3]
    - Commits MUST include story/requirement IDs: feat(scope): message [US-XX][FR-XXX]
    - Test names MUST include acceptance criteria: test('[US-XX][AC-X] description', ...)
    - E2E tests organized by story: e2e/tests/stories/{story-id}/*.spec.ts
@@ -496,10 +525,75 @@ C. INVOKE AGENTS (PARALLEL-AWARE)
    - Story IDs for this task: {STORY_IDS}
    - Requirement IDs for this task: {REQUIREMENT_IDS}
 
-   ## When Complete
+   ═══════════════════════════════════════════════════════════
+   SEMI-STABLE SECTIONS (middle — changes per product)
+   ═══════════════════════════════════════════════════════════
+
+   ## Component Registry                                        [LEVEL 3]
+   Before building anything, check: .claude/COMPONENT-REGISTRY.md
+   Use the "I Need To..." table. If a match exists, copy and adapt it.
+   If you build something new and generic, add it to the registry.
+
+   ## Product Context                                           [LEVEL 3]
+   Read: products/{PRODUCT}/.claude/addendum.md
+
+   ## Product Coding Conventions                                [LEVEL 3]
+   Scan existing code in `products/{PRODUCT}/apps/` and match these conventions:
+   - **Error handling**: Find the AppError/error class used and follow the same pattern
+   - **Service layer**: Match the existing service class structure (constructor injection, etc.)
+   - **Test helpers**: Use the same buildApp()/test setup pattern found in existing tests
+   - **Import style**: Match existing import ordering and path conventions
+   - **Validation**: Use the same validation library/pattern (Zod, Joi, etc.) found in codebase
+   If no existing code exists yet (greenfield), follow company patterns from above.
+
+   ═══════════════════════════════════════════════════════════
+   VARIABLE SECTIONS (middle — changes per task, lowest attention)
+   ═══════════════════════════════════════════════════════════
+
+   ## Relevant Patterns (semantically scored >= 4/10)           [LEVEL 2]
+   {PRE_FILTERED_PATTERNS from Step 3.5}
+
+   ## Anti-Patterns to Avoid                                    [LEVEL 2]
+   {SCORED_ANTI_PATTERNS — score >= 3, up to 3}
+
+   ## Gotchas                                                   [LEVEL 2]
+   {MATCHED_GOTCHAS — matching agent domain + task keywords, up to 3}
+
+   ## Your Past Experience                                      [LEVEL 2]
+   {AGENT_EXPERIENCE — common_mistakes and preferred_approaches}
+
+   ## Context from Prior Tasks                                  [LEVEL 2]
+   {CONTEXT_CHAIN — conventions and decisions from upstream completed tasks,
+   capped at 500 words. If no upstream tasks completed yet, omit this section.}
+
+   ## Input from Prior Agent (if applicable)                    [LEVEL 2]
+   Read the deliverable at: products/{PRODUCT}/.claude/deliverables/{UPSTREAM_TASK_ID}-{UPSTREAM_AGENT}-{TYPE}.md
+   {Only include this section if this task depends on a prior agent's deliverable.
+   See .claude/protocols/direct-delivery.md — downstream agents read the file directly,
+   not a re-synthesized version from the orchestrator.}
+
+   ═══════════════════════════════════════════════════════════
+   CRITICAL SECTIONS (end — high attention, task-specific)
+   ═══════════════════════════════════════════════════════════
+
+   ## Your Current Task                                         [LEVEL 1]
+   Task ID: {TASK_ID}
+   Product: {PRODUCT}
+   Branch: {BRANCH}
+   Description: {TASK_DESCRIPTION}
+
+   ## Acceptance Criteria                                       [LEVEL 1]
+   {ACCEPTANCE_CRITERIA from task graph}
+
+   ## When Complete                                             [LEVEL 1]
    Report: status (success/failure/blocked), summary, files changed,
    tests added/passing, time spent, learned patterns, blockers,
    story_ids implemented, requirement_ids addressed.
+
+   **Write deliverable to file** (Direct Delivery Protocol):
+   Write your main deliverable (report, design, implementation summary) to:
+   `products/{PRODUCT}/.claude/deliverables/{TASK_ID}-{AGENT}-{ARTIFACT_TYPE}.md`
+   This ensures downstream agents and the CEO read your exact output.
 
    **conventions_established** (REQUIRED — for downstream agent context):
    List any conventions you established or followed. Examples:
@@ -508,8 +602,70 @@ C. INVOKE AGENTS (PARALLEL-AWARE)
    - "Route pattern: /v1/{resource} with Fastify JSON schemas"
    These are passed to downstream agents so they maintain consistency.
 
+   **Compression protocol** (for long sessions):
+   If your session exceeds 20 turns or you feel context degrading, write a structured
+   session summary to: `products/{PRODUCT}/.claude/scratch/session-summary-{TASK_ID}.md`
+   See `.claude/protocols/context-compression.md` for the template.
+
    Then run:
    .claude/scripts/post-task-update.sh {AGENT} {TASK_ID} {PRODUCT} {STATUS} {MINUTES} "{SUMMARY}" "{PATTERN}"
+   ```
+
+   **TRIVIAL TEMPLATE (Level 1 only — for typo fixes, config tweaks):**
+
+   ```
+   You are the {ROLE} for ConnectSW.
+
+   ## Constraints
+   - Work in: products/{PRODUCT}/
+   - Stage specific files only (never git add . or git add -A)
+   - Verify staged files before commit (git diff --cached --stat)
+   - Use conventional commit messages
+
+   ## Your Current Task
+   Task ID: {TASK_ID}
+   Product: {PRODUCT}
+   Branch: {BRANCH}
+   Description: {TASK_DESCRIPTION}
+
+   ## When Complete
+   Report: status, summary, files changed.
+   Then run: .claude/scripts/post-task-update.sh {AGENT} {TASK_ID} {PRODUCT} {STATUS} {MINUTES} "{SUMMARY}"
+   ```
+
+   **SIMPLE TEMPLATE (Level 1+2 — for single bug fixes, minor features):**
+
+   ```
+   You are the {ROLE} for ConnectSW.
+
+   ## Constraints
+   - Work in: products/{PRODUCT}/
+   - Stage specific files only (never git add . or git add -A)
+   - Verify staged files before commit (git diff --cached --stat)
+   - Use conventional commit messages
+
+   ## Relevant Patterns
+   {PRE_FILTERED_PATTERNS — top 5, score >= 4/10}
+
+   ## Anti-Patterns to Avoid
+   {SCORED_ANTI_PATTERNS — score >= 3, up to 3}
+
+   ## Your Past Experience
+   {AGENT_EXPERIENCE — common_mistakes and preferred_approaches}
+
+   ## Your Current Task
+   Task ID: {TASK_ID}
+   Product: {PRODUCT}
+   Branch: {BRANCH}
+   Description: {TASK_DESCRIPTION}
+
+   ## Acceptance Criteria
+   {ACCEPTANCE_CRITERIA}
+
+   ## When Complete
+   Report: status, summary, files changed, tests added/passing, time spent,
+   learned patterns, blockers, conventions_established.
+   Then run: .claude/scripts/post-task-update.sh {AGENT} {TASK_ID} {PRODUCT} {STATUS} {MINUTES} "{SUMMARY}" "{PATTERN}"
    ```
 
    Update graph:
@@ -727,9 +883,11 @@ H. UPDATE COMPANY STATE
    - Update agent performance metrics
 ```
 
-### Step 5: Report to CEO
+### Step 5: Report to CEO (Direct Delivery Protocol)
 
-At checkpoints and completion:
+At checkpoints and completion, use the **Direct Delivery Protocol** (`.claude/protocols/direct-delivery.md`).
+The orchestrator provides a concise summary + file paths to full deliverables. It does NOT re-synthesize
+specialist outputs — the CEO reads exact specialist deliverables when they need detail.
 
 ```markdown
 ## Status: {PRODUCT}
@@ -739,6 +897,12 @@ At checkpoints and completion:
 
 ### ✅ Completed Tasks
 [List with artifacts]
+
+### Deliverables (read for full detail)
+| Deliverable | Agent | Path |
+|------------|-------|------|
+| [Artifact Name] | [Agent Role] | `products/{PRODUCT}/.claude/deliverables/{TASK_ID}-{AGENT}-{TYPE}.md` |
+| ... | ... | ... |
 
 ### 🔄 In Progress
 [List with assigned agents]
@@ -756,6 +920,12 @@ At checkpoints and completion:
 - Success rate: Z%
 - Time spent: M minutes
 - Estimated remaining: N minutes
+
+**Context Engineering Metrics**:
+- Avg prompt tokens per sub-agent: ~{N} tokens
+- Progressive disclosure level used: {LEVEL}
+- Compression events this workflow: {N}
+- Direct deliverables written: {N}
 
 **Sprint Progress** (from backlog):
 - Current Sprint: [sprint name]

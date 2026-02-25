@@ -1,6 +1,6 @@
 {
-  "version": "1.0.0",
-  "date": "2026-01-26",
+  "version": "2.0.0",
+  "date": "2026-02-25",
   "tokens_used": 0,
   "cost_usd": 0,
   "limits": {
@@ -10,22 +10,81 @@
   "by_model": {
     "haiku": {
       "tasks": 0,
-      "tokens": 0,
-      "cost_usd": 0
+      "input_tokens": 0,
+      "output_tokens": 0,
+      "total_tokens": 0,
+      "cost_usd": 0,
+      "cache_hits": 0,
+      "cache_misses": 0
     },
     "sonnet": {
       "tasks": 0,
-      "tokens": 0,
-      "cost_usd": 0
+      "input_tokens": 0,
+      "output_tokens": 0,
+      "total_tokens": 0,
+      "cost_usd": 0,
+      "cache_hits": 0,
+      "cache_misses": 0
     },
     "opus": {
       "tasks": 0,
-      "tokens": 0,
-      "cost_usd": 0
+      "input_tokens": 0,
+      "output_tokens": 0,
+      "total_tokens": 0,
+      "cost_usd": 0,
+      "cache_hits": 0,
+      "cache_misses": 0
     }
   },
   "by_product": {},
   "by_agent": {},
+  "by_task_type": {
+    "_description": "Token consumption by task type (PRD, ARCH, BACKEND, FRONTEND, QA, etc.) for budget planning",
+    "_schema": {
+      "task_type": "string",
+      "invocations": "number",
+      "avg_input_tokens": "number",
+      "avg_output_tokens": "number",
+      "median_total_tokens": "number",
+      "p90_total_tokens": "number",
+      "avg_context_utilization_pct": "number"
+    }
+  },
+  "context_engineering_metrics": {
+    "_description": "Metrics for context engineering effectiveness",
+    "progressive_disclosure_savings": {
+      "trivial_tasks_count": 0,
+      "trivial_avg_tokens": 0,
+      "simple_tasks_count": 0,
+      "simple_avg_tokens": 0,
+      "standard_tasks_count": 0,
+      "standard_avg_tokens": 0,
+      "complex_tasks_count": 0,
+      "complex_avg_tokens": 0,
+      "estimated_tokens_saved": 0
+    },
+    "compression_events": {
+      "total_compressions": 0,
+      "avg_compression_ratio": 0,
+      "refetch_rate_pct": 0,
+      "sessions_requiring_compression": 0
+    },
+    "direct_delivery_usage": {
+      "deliverables_written": 0,
+      "deliverables_read_by_downstream": 0,
+      "orchestrator_syntheses_avoided": 0
+    },
+    "observation_masking": {
+      "observations_masked": 0,
+      "tokens_saved_by_masking": 0
+    }
+  },
   "alerts_triggered": [],
+  "thresholds": {
+    "task_token_cost_warning_multiplier": 3.0,
+    "context_utilization_compress_pct": 70,
+    "context_utilization_force_compress_pct": 85,
+    "refetch_rate_warning_pct": 20
+  },
   "historical": []
 }
