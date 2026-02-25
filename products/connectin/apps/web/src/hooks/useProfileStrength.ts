@@ -14,11 +14,10 @@ interface ProfileStrengthData {
  */
 export function useProfileStrength() {
   const [data, setData] = useState<ProfileStrengthData | null>(null);
-  const [isLoading, setIsLoading] = useState(false);
+  const [isLoading, setIsLoading] = useState(true);
 
   useEffect(() => {
     let cancelled = false;
-    setIsLoading(true);
     async function fetch() {
       const res = await apiClient.get<ProfileStrengthData>("/profiles/me/strength");
       if (cancelled) return;

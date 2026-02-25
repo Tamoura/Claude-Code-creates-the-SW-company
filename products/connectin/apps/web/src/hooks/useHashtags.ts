@@ -14,11 +14,10 @@ interface TrendingHashtag {
  */
 export function useHashtags() {
   const [trending, setTrending] = useState<TrendingHashtag[]>([]);
-  const [isLoading, setIsLoading] = useState(false);
+  const [isLoading, setIsLoading] = useState(true);
 
   useEffect(() => {
     let cancelled = false;
-    setIsLoading(true);
     async function fetchTrending() {
       const res = await apiClient.get<TrendingHashtag[]>("/hashtags/trending");
       if (cancelled) return;

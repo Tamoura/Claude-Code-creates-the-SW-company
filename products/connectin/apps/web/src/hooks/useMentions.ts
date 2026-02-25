@@ -15,12 +15,12 @@ export function useMentions(query: string, enabled: boolean) {
 
   useEffect(() => {
     if (!enabled || !query) {
-      setResults([]);
       return;
     }
 
     if (debounceRef.current) clearTimeout(debounceRef.current);
     debounceRef.current = setTimeout(async () => {
+      setResults([]);
       setIsLoading(true);
       const res = await apiClient.get<SearchPersonResult[]>("/search/people", {
         params: { q: query },
