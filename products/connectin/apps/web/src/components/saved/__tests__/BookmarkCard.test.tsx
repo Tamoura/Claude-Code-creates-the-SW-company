@@ -1,7 +1,7 @@
 import { render, screen } from "@testing-library/react";
 import userEvent from "@testing-library/user-event";
 import { BookmarkCard } from "../BookmarkCard";
-import type { Bookmark } from "@/types";
+import type { Bookmark, Job, Post } from "@/types";
 
 jest.mock("react-i18next", () => ({
   useTranslation: () => ({
@@ -26,7 +26,7 @@ const postBookmark: Bookmark = {
     commentCount: 2,
     shareCount: 1,
     isLikedByMe: false,
-  } as any,
+  } as Post,
 };
 
 const jobBookmark: Bookmark = {
@@ -47,7 +47,7 @@ const jobBookmark: Bookmark = {
     status: "OPEN",
     applicantCount: 10,
     createdAt: "2026-01-01",
-  } as any,
+  } as Job,
 };
 
 describe("BookmarkCard", () => {
