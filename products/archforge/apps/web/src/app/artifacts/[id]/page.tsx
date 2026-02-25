@@ -1,11 +1,8 @@
-import PlaceholderPage from "@/components/PlaceholderPage";
+// This route is intentionally empty — artifact detail lives at
+// /projects/[id]/artifacts/[artifactId]
+// This file prevents Next.js from 404ing on old bookmarks.
+import { redirect } from 'next/navigation';
 
-export default function ArtifactDetailPage() {
-  return (
-    <PlaceholderPage
-      title="Artifact Editor"
-      description="The interactive canvas editor is coming soon. Generate, refine, and export ArchiMate, C4, and TOGAF diagrams with AI assistance."
-      backLink={{ href: "/dashboard", label: "Back to Dashboard" }}
-    />
-  );
+export default function LegacyArtifactPage() {
+  redirect('/dashboard');
 }

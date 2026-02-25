@@ -1,5 +1,5 @@
 /**
- * Artifact Routes
+ * Artifact Routes - registered under /api/v1/projects
  *
  * Thin route handlers that delegate to ArtifactService.
  * Nested under /api/v1/projects/:projectId/artifacts.
@@ -17,6 +17,8 @@ import {
   updateElementSchema,
   createRelationshipSchema,
   saveCanvasSchema,
+  generateArtifactSchema,
+  regenerateArtifactSchema,
 } from './artifacts.schemas.js';
 
 function handleValidationError(error: unknown) {
@@ -34,7 +36,35 @@ function handleValidationError(error: unknown) {
 const artifactRoutes: FastifyPluginAsync = async (fastify) => {
   const service = new ArtifactService(fastify);
 
-  // POST /:projectId/artifacts
+  // POST /:projectId/artifacts/generate (AI)
+  fastify.post(
+    '/:projectId/artifacts/generate',
+    async (request, reply) => {
+      try {
+        await fastify.authenticate(request);
+        const user = request.currentUser!;
+        const { projectId } = request.params as {
+          projectId: string;
+        };
+        const body = generateArtifactSchema.parse(request.body);
+        const ip = request.ip;
+        const ua =
+          (request.headers['user-agent'] as string) || '';
+        const result = await service.generate(
+          user.id,
+          projectId,
+          body,
+          ip,
+          ua,
+        );
+        return reply.code(201).send(result);
+      } catch (error) {
+        handleValidationError(error);
+      }
+    },
+  );
+
+  // POST /:projectId/artifacts (manual create)
   fastify.post('/:projectId/artifacts', async (request, reply) => {
     try {
       await fastify.authenticate(request);
@@ -51,18 +81,29 @@ const artifactRoutes: FastifyPluginAsync = async (fastify) => {
   });
 
   // GET /:projectId/artifacts
-  fastify.get('/:projectId/artifacts', async (request, reply) => {
-    try {
-      await fastify.authenticate(request);
-      const user = request.currentUser!;
-      const { projectId } = request.params as { projectId: string };
-      const query = listArtifactsQuerySchema.parse(request.query);
-      const result = await service.list(user.id, projectId, query);
-      return reply.send(result);
-    } catch (error) {
-      handleValidationError(error);
-    }
-  });
+  fastify.get(
+    '/:projectId/artifacts',
+    async (request, reply) => {
+      try {
+        await fastify.authenticate(request);
+        const user = request.currentUser!;
+        const { projectId } = request.params as {
+          projectId: string;
+        };
+        const query = listArtifactsQuerySchema.parse(
+          request.query,
+        );
+        const result = await service.list(
+          user.id,
+          projectId,
+          query,
+        );
+        return reply.send(result);
+      } catch (error) {
+        handleValidationError(error);
+      }
+    },
+  );
 
   // GET /:projectId/artifacts/:artifactId
   fastify.get(
@@ -100,7 +141,8 @@ const artifactRoutes: FastifyPluginAsync = async (fastify) => {
         };
         const body = updateArtifactSchema.parse(request.body);
         const ip = request.ip;
-        const ua = (request.headers['user-agent'] as string) || '';
+        const ua =
+          (request.headers['user-agent'] as string) || '';
         const result = await service.update(
           user.id,
           projectId,
@@ -128,9 +170,50 @@ const artifactRoutes: FastifyPluginAsync = async (fastify) => {
           artifactId: string;
         };
         const ip = request.ip;
-        const ua = (request.headers['user-agent'] as string) || '';
-        await service.delete(user.id, projectId, artifactId, ip, ua);
-        return reply.send({ message: 'Artifact deleted.' });
+        const ua =
+          (request.headers['user-agent'] as string) || '';
+        await service.delete(
+          user.id,
+          projectId,
+          artifactId,
+          ip,
+          ua,
+        );
+        return reply.send({
+          message: 'Artifact deleted.',
+        });
+      } catch (error) {
+        handleValidationError(error);
+      }
+    },
+  );
+
+  // POST /:projectId/artifacts/:artifactId/regenerate (AI)
+  fastify.post(
+    '/:projectId/artifacts/:artifactId/regenerate',
+    async (request, reply) => {
+      try {
+        await fastify.authenticate(request);
+        const user = request.currentUser!;
+        const { projectId, artifactId } = request.params as {
+          projectId: string;
+          artifactId: string;
+        };
+        const body = regenerateArtifactSchema.parse(
+          request.body,
+        );
+        const ip = request.ip;
+        const ua =
+          (request.headers['user-agent'] as string) || '';
+        const result = await service.regenerate(
+          user.id,
+          projectId,
+          artifactId,
+          body.prompt,
+          ip,
+          ua,
+        );
+        return reply.code(201).send(result);
       } catch (error) {
         handleValidationError(error);
       }

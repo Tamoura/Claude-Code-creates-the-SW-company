@@ -28,6 +28,10 @@ import { artifactRoutes } from './modules/artifacts/index.js';
 import { versionRoutes } from './modules/versions/index.js';
 import { commentRoutes } from './modules/comments/index.js';
 import { shareRoutes } from './modules/shares/index.js';
+import { templateRoutes } from './modules/templates/index.js';
+import { exportRoutes } from './modules/exports/index.js';
+import { documentRoutes } from './modules/documents/index.js';
+import { validationRoutes } from './modules/validation/index.js';
 
 // Utils
 import { logger } from './utils/logger.js';
@@ -40,7 +44,7 @@ export interface BuildAppOptions {
 export async function buildApp(options?: BuildAppOptions): Promise<FastifyInstance> {
   const fastify = Fastify({
     trustProxy: true,
-    bodyLimit: 1048576, // 1MB
+    bodyLimit: 5242880, // 5MB
     logger: process.env.NODE_ENV === 'development' ? {
       level: 'info',
       transport: {
@@ -236,6 +240,10 @@ export async function buildApp(options?: BuildAppOptions): Promise<FastifyInstan
   await fastify.register(versionRoutes, { prefix: '/api/v1/artifacts' });
   await fastify.register(commentRoutes, { prefix: '/api/v1/artifacts' });
   await fastify.register(shareRoutes, { prefix: '/api/v1/artifacts' });
+  await fastify.register(templateRoutes, { prefix: '/api/v1/templates' });
+  await fastify.register(exportRoutes, { prefix: '/api/v1/projects' });
+  await fastify.register(documentRoutes, { prefix: '/api/v1/projects' });
+  await fastify.register(validationRoutes, { prefix: '/api/v1/projects' });
 
   // Validate :id path parameters
   const SAFE_ID_RE = /^[a-zA-Z0-9_-]{1,128}$/;
