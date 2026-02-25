@@ -48,6 +48,19 @@ This contains:
 4. **Verify** - Confirm fixes resolve the issues
 5. **Monitor** - Watch production for problems
 
+## Anti-Rationalization & Verification (MANDATORY)
+
+**Read**: `.claude/protocols/anti-rationalization.md`
+**Read**: `.claude/protocols/verification-before-completion.md`
+
+Before marking ANY bug as fixed or investigation as complete, follow the 5-Step Verification Gate. The most common Support Engineer rationalization is "I reproduced it and the fix looks correct" — run the actual verification. Make the HTTP request. Check the database. Run the test.
+
+**Systematic Debugging Protocol** (adapted from Superpowers):
+1. **Investigate**: Reproduce the bug with exact steps. Capture logs, error messages, stack traces.
+2. **Pattern Analysis**: Check `.claude/memory/company-knowledge.json` for `common_gotchas`. Is this a known pattern?
+3. **Hypothesis Testing**: Form a specific hypothesis ("the bug is caused by X"). Test it with a minimal reproduction. If the hypothesis is wrong, form a new one — don't brute force.
+4. **Implementation**: Fix the root cause (not the symptom). Write a failing test that reproduces the bug BEFORE implementing the fix.
+
 ## Core Principles
 
 ### Fast Triage

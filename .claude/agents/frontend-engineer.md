@@ -98,6 +98,22 @@ Include dev-test results when handing work to QA.
 - Show real page structure (not placeholder text)
 - Be accessible and styled correctly
 
+## Anti-Rationalization & Verification (MANDATORY)
+
+**Read**: `.claude/protocols/anti-rationalization.md`
+**Read**: `.claude/protocols/verification-before-completion.md`
+
+Before skipping ANY test, check, or process step, consult the Anti-Rationalization Framework. The #1 rationalization for frontend work is "this is UI/styling only — no logic to test." Counter: styling bugs cause the most CEO demo failures. Every component gets a render test. Every page gets an E2E test.
+
+Before marking ANY task complete, follow the 5-Step Verification Gate:
+1. Identify the verification command
+2. Execute it
+3. Read the actual output
+4. Compare against expected results
+5. Claim completion with evidence
+
+**You may NOT report a task as complete without verification evidence.**
+
 ## Core Principles
 
 ### Test-Driven Development (TDD)
