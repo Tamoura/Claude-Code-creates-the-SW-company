@@ -6,7 +6,7 @@
       "displayName": "Stablecoin Gateway",
       "tagline": "Accept USDC/USDT at 0.5% — vs Stripe's 2.9%",
       "score": 9,
-      "completion": 85,
+      "completion": 95,
       "ttrWeeksMin": 2,
       "ttrWeeksMax": 4,
       "marketSize": "$1–5B",
@@ -27,7 +27,7 @@
       "displayName": "Archforge",
       "tagline": "AI-native enterprise architecture — TOGAF/ArchiMate/C4 from natural language",
       "score": 8,
-      "completion": 80,
+      "completion": 77,
       "ttrWeeksMin": 4,
       "ttrWeeksMax": 8,
       "marketSize": "$1.14B",
@@ -37,7 +37,8 @@
       "isCommercial": true,
       "blockers": [
         "Sales channel not established",
-        "Needs 1–2 pilot enterprise customers"
+        "Needs 1–2 pilot enterprise customers",
+        "No Docker config"
       ],
       "strengths": [
         "216 integration tests",
@@ -51,9 +52,9 @@
       "displayName": "ConnectIn",
       "tagline": "Arabic-first professional networking for 300M+ Arabic speakers",
       "score": 7,
-      "completion": 78,
-      "ttrWeeksMin": 8,
-      "ttrWeeksMax": 12,
+      "completion": 95,
+      "ttrWeeksMin": 2,
+      "ttrWeeksMax": 4,
       "marketSize": "$4.5B",
       "pricingModel": "Freemium + B2B Recruiting",
       "pricingDetail": "Free → $4.99/month premium → $299–999/month employer tiers",
@@ -75,9 +76,9 @@
       "displayName": "RecomEngine",
       "tagline": "Embeddable ML recommendations for mid-market e-commerce — no data science team needed",
       "score": 7,
-      "completion": 75,
-      "ttrWeeksMin": 6,
-      "ttrWeeksMax": 10,
+      "completion": 82,
+      "ttrWeeksMin": 4,
+      "ttrWeeksMax": 8,
       "marketSize": "$500M",
       "pricingModel": "SaaS + Usage-based",
       "pricingDetail": "Free <1M events → $299–799/month → $1,999+/month + per-event overage",
@@ -85,7 +86,8 @@
       "isCommercial": true,
       "blockers": [
         "Analytics dashboard needs polish",
-        "No beta customers yet"
+        "No beta customers yet",
+        "No Docker config"
       ],
       "strengths": [
         "80+ integration tests",
@@ -99,9 +101,9 @@
       "displayName": "Muaththir",
       "tagline": "Holistic child development tracker — 6 dimensions including Islamic growth",
       "score": 6,
-      "completion": 72,
-      "ttrWeeksMin": 10,
-      "ttrWeeksMax": 14,
+      "completion": 95,
+      "ttrWeeksMin": 2,
+      "ttrWeeksMax": 4,
       "marketSize": "$200–500M",
       "pricingModel": "Freemium",
       "pricingDetail": "Free (1 child) → $9.99/month → $19.99/month family plan",
@@ -123,9 +125,9 @@
       "displayName": "ConnectGRC",
       "tagline": "AI-native GRC talent platform — connecting risk/compliance professionals with employers",
       "score": 6,
-      "completion": 70,
-      "ttrWeeksMin": 12,
-      "ttrWeeksMax": 16,
+      "completion": 85,
+      "ttrWeeksMin": 2,
+      "ttrWeeksMax": 4,
       "marketSize": "$500M–1B",
       "pricingModel": "Freemium + B2B Recruiting",
       "pricingDetail": "Free → $9.99/month professional → $499–1,999/month employer portal",
@@ -148,9 +150,9 @@
       "displayName": "HumanID",
       "tagline": "Decentralized digital identity — W3C DIDs, verifiable credentials, zero-knowledge privacy",
       "score": 5,
-      "completion": 68,
-      "ttrWeeksMin": 16,
-      "ttrWeeksMax": 24,
+      "completion": 77,
+      "ttrWeeksMin": 4,
+      "ttrWeeksMax": 8,
       "marketSize": "$5–10B",
       "pricingModel": "B2B API",
       "pricingDetail": "$99/month dev (10k verifications) → $999/month growth → Custom enterprise",
@@ -159,7 +161,8 @@
       "blockers": [
         "Regulatory complexity (jurisdiction-sensitive)",
         "No pilot enterprise customers",
-        "Blockchain load not tested"
+        "Blockchain load not tested",
+        "No E2E test coverage"
       ],
       "strengths": [
         "37 API endpoints",
@@ -173,9 +176,9 @@
       "displayName": "LinkedIn Agent",
       "tagline": "AI-powered Arabic/English LinkedIn content generation with trend analysis",
       "score": 5,
-      "completion": 65,
-      "ttrWeeksMin": 6,
-      "ttrWeeksMax": 10,
+      "completion": 87,
+      "ttrWeeksMin": 2,
+      "ttrWeeksMax": 4,
       "marketSize": "$50–150M",
       "pricingModel": "Freemium",
       "pricingDetail": "Free (2 posts/month) → $4.99/month pro → $14.99/month team",
@@ -184,7 +187,8 @@
       "blockers": [
         "No beta user data",
         "Carousel generator incomplete",
-        "High competition from ChatGPT plugins"
+        "High competition from ChatGPT plugins",
+        "No Docker config"
       ],
       "strengths": [
         "Arabic-first (rare)",
@@ -197,9 +201,9 @@
       "displayName": "Quantum Computing UC",
       "tagline": "Industry use-case directory for executives evaluating quantum computing investments",
       "score": 4,
-      "completion": 60,
-      "ttrWeeksMin": 12,
-      "ttrWeeksMax": 20,
+      "completion": 67,
+      "ttrWeeksMin": 8,
+      "ttrWeeksMax": 12,
       "marketSize": "$1–2B",
       "pricingModel": "Advisory / Consulting",
       "pricingDetail": "Free catalog → $99–199/month premium research → $5–15k expert consultation",
@@ -208,7 +212,9 @@
       "blockers": [
         "Market adoption 3–5 years away",
         "No lead capture mechanism",
-        "Content becomes outdated fast"
+        "Content becomes outdated fast",
+        "API not yet implemented",
+        "No Docker config"
       ],
       "strengths": [
         "Strong thought leadership positioning",
@@ -221,7 +227,7 @@
       "displayName": "CodeGuardian",
       "tagline": "Multi-model AI code review routing specialized models per file type + GitHub PR integration",
       "score": 2,
-      "completion": 10,
+      "completion": 29,
       "ttrWeeksMin": 24,
       "ttrWeeksMax": 36,
       "marketSize": "$500M–1B",
@@ -232,7 +238,10 @@
       "blockers": [
         "Entire product unimplemented (design only)",
         "No validated assumptions",
-        "GitHub integration untested"
+        "GitHub integration untested",
+        "API not yet implemented",
+        "Web frontend not yet implemented",
+        "No E2E test coverage"
       ],
       "strengths": [
         "Strong architecture documentation",
@@ -245,7 +254,7 @@
       "displayName": "QDB One",
       "tagline": "Enterprise portal unifying Qatar Development Bank's three fragmented financing systems",
       "score": 2,
-      "completion": 25,
+      "completion": 57,
       "ttrWeeksMin": 0,
       "ttrWeeksMax": 0,
       "marketSize": "N/A",
@@ -256,7 +265,8 @@
       "blockers": [
         "Backend not implemented",
         "Requires SAML/OIDC with Qatar national auth (NAS)",
-        "12–18 months to MVP"
+        "12–18 months to MVP",
+        "No Docker config"
       ],
       "strengths": [
         "Comprehensive architecture documentation",
