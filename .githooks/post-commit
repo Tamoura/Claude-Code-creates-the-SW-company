@@ -29,3 +29,10 @@ PRODUCT=$(git diff-tree --no-commit-id --name-only -r HEAD 2>/dev/null | grep "^
 ENTRY="{\"timestamp\":\"$TIMESTAMP\",\"type\":\"commit\",\"agent\":\"$AUTHOR\",\"task_id\":\"$COMMIT_HASH\",\"product\":\"$PRODUCT\",\"status\":\"committed\",\"time_minutes\":0,\"summary\":\"$MESSAGE\",\"branch\":\"$BRANCH\",\"commit\":\"$COMMIT_HASH\",\"files_changed\":$FILES_CHANGED}"
 
 echo "$ENTRY" >> "$AUDIT_FILE" 2>/dev/null || true
+
+# ── GitNexus: re-index in background after every commit ──────────────────────
+# Keeps the knowledge graph current so agents always have accurate blast-radius,
+# call-chain, and impact data without any manual command.
+if command -v npx >/dev/null 2>&1 && [ -d "$REPO_ROOT/.gitnexus" ]; then
+  (cd "$REPO_ROOT" && npx gitnexus analyze . >/dev/null 2>&1 &)
+fi

@@ -82,3 +82,4 @@ docker-compose.override.yml
 .tree/
 *.code-workspace
 .claude/audit-trail.jsonl
+.gitnexus
