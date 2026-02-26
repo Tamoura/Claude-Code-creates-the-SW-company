@@ -20,11 +20,10 @@ interface JobsData {
 }
 
 interface AgentExperience {
-  role: string;
+  agent: string;
   tasksCompleted: number;
   successRate: number; // 0–100
-  avgDuration: string; // e.g. "45m"
-  patterns: string[];
+  avgTimeMinutes: number;
 }
 
 interface KBData {
@@ -81,12 +80,19 @@ function formatRole(role: string): string {
     .join(' ');
 }
 
+function formatAvgDuration(minutes: number): string {
+  if (minutes < 1) return `${Math.round(minutes * 60)}s`;
+  if (minutes < 60) return `${Math.round(minutes)}m`;
+  return `${Math.floor(minutes / 60)}h ${Math.round(minutes % 60)}m`;
+}
+
 // ─── Agent Leaderboard ───────────────────────────────────────────────────────
 
 function AgentLeaderboard({ experiences }: { experiences: AgentExperience[] }) {
   if (experiences.length === 0) return null;
 
   const sorted = [...experiences].sort((a, b) => b.tasksCompleted - a.tasksCompleted);
+
 
   return (
     <div className="bg-gray-900 border border-gray-800 rounded-xl p-6 mb-8">
@@ -115,15 +121,15 @@ function AgentLeaderboard({ experiences }: { experiences: AgentExperience[] }) {
           </thead>
           <tbody className="divide-y divide-gray-800">
             {sorted.map((agent) => (
-              <tr key={agent.role} className="hover:bg-gray-800/40 transition-colors">
+              <tr key={agent.agent} className="hover:bg-gray-800/40 transition-colors">
                 <td className="py-3 pr-4">
                   <div className="flex items-center gap-2">
                     <div className="w-6 h-6 rounded bg-gray-700 flex items-center justify-center flex-shrink-0">
                       <span className="text-xs text-gray-300 font-bold">
-                        {agent.role.charAt(0).toUpperCase()}
+                        {agent.agent.charAt(0).toUpperCase()}
                       </span>
                     </div>
-                    <span className="text-sm text-gray-200">{formatRole(agent.role)}</span>
+                    <span className="text-sm text-gray-200">{formatRole(agent.agent)}</span>
                   </div>
                 </td>
                 <td className="py-3 text-right pr-6">
@@ -143,7 +149,7 @@ function AgentLeaderboard({ experiences }: { experiences: AgentExperience[] }) {
                   </div>
                 </td>
                 <td className="py-3 text-right">
-                  <span className="text-sm text-gray-400">{agent.avgDuration}</span>
+                  <span className="text-sm text-gray-400">{formatAvgDuration(agent.avgTimeMinutes)}</span>
                 </td>
               </tr>
             ))}

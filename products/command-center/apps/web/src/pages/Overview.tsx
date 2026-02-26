@@ -57,7 +57,7 @@ export default function Overview() {
   if (loading) return <LoadingSkeleton />;
   if (!data) return <p className="text-red-400">Failed to load overview</p>;
 
-  const { stats, phaseBreakdown, activeAlerts, recentCommits, productHealthMatrix } = data;
+  const { stats, phaseBreakdown, activeAlerts = [], recentCommits = [], productHealthMatrix = [] } = data;
 
   return (
     <div>
