@@ -102,7 +102,7 @@ export default function Overview() {
                       style={{ width: `${(count / stats.totalProducts) * 100}%` }}
                     />
                   </div>
-                  <span className="text-slate-400 text-sm w-16 text-right">
+                  <span className="text-slate-400 text-sm whitespace-nowrap text-right min-w-[4.5rem]">
                     {count} product{count !== 1 ? 's' : ''}
                   </span>
                 </div>

@@ -170,7 +170,7 @@ function parseWorkflowYaml(id: string): { tasks: SimulationTask[]; raw: string; 
     produces: (t.produces ?? []).map((p) => ({
       name: p.name,
       type: p.type,
-      path: p.path,
+      path: (p.path ?? '').replace(/\{PRODUCT\}/g, 'your-product').replace(/\{[A-Z_]+\}/g, '…'),
     })),
     acceptanceCriteria: t.acceptance_criteria ?? [],
   }));
