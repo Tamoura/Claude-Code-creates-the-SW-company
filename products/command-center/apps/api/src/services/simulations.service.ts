@@ -401,8 +401,23 @@ const MERMAID_CLASS_DEFS = `
     classDef innov fill:#8b5cf6,stroke:#7c3aed,color:#fff
     classDef strat fill:#0ea5e9,stroke:#0284c7,color:#fff`;
 
+const MERMAID_DARK_INIT = `%%{init: {
+  "theme": "base",
+  "themeVariables": {
+    "background": "transparent",
+    "mainBkg": "#1e293b",
+    "nodeBorder": "#475569",
+    "clusterBkg": "#0f172a",
+    "edgeLabelBackground": "#1e293b",
+    "lineColor": "#64748b",
+    "primaryTextColor": "#f1f5f9",
+    "secondaryTextColor": "#94a3b8",
+    "tertiaryColor": "#0f172a"
+  }
+}}%%`;
+
 function generateDependencyDiagram(tasks: SimulationTask[]): string {
-  const lines: string[] = ['graph TD'];
+  const lines: string[] = [MERMAID_DARK_INIT, 'graph TD'];
   const idSet = new Set(tasks.map((t) => t.id));
 
   for (const task of tasks) {

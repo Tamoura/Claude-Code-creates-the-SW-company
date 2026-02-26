@@ -416,9 +416,11 @@ function buildTicks(totalDuration: number): number[] {
   return ticks;
 }
 
+const LABEL_W = 128; // px — matches w-32
+
 function TimeAxis({ ticks, totalDuration }: { ticks: number[]; totalDuration: number }) {
   return (
-    <div className="flex" style={{ marginLeft: '176px' }}>
+    <div className="flex" style={{ marginLeft: LABEL_W }}>
       <div className="flex-1 relative h-5">
         {ticks.map((t) => (
           <span
@@ -448,11 +450,10 @@ function ExecutionTimeline({ timeline, phases }: { timeline: TimelineEntry[]; ph
   }
 
   return (
-    <div className="overflow-x-auto">
-      <div className="min-w-[640px]">
+    <div>
 
-        {/* Legend */}
-        <div className="flex flex-wrap gap-x-4 gap-y-1.5 mb-4">
+      {/* Legend */}
+      <div className="flex flex-wrap gap-x-4 gap-y-1.5 mb-4">
           {uniqueAgents.map((agent) => (
             <div key={agent} className="flex items-center gap-1.5">
               <span className={`w-3 h-3 rounded-sm flex-shrink-0 ${agentBgMap[agent] ?? 'bg-slate-600'}`} />
@@ -470,8 +471,8 @@ function ExecutionTimeline({ timeline, phases }: { timeline: TimelineEntry[]; ph
 
         {/* Chart body */}
         <div className="relative mt-1">
-          {/* Vertical grid lines */}
-          <div className="absolute inset-0 flex pointer-events-none" style={{ marginLeft: '176px' }}>
+            {/* Vertical grid lines */}
+          <div className="absolute inset-0 flex pointer-events-none" style={{ marginLeft: LABEL_W }}>
             <div className="flex-1 relative">
               {ticks.map((t) => (
                 <div
@@ -492,8 +493,8 @@ function ExecutionTimeline({ timeline, phases }: { timeline: TimelineEntry[]; ph
             return (
               <div key={phaseName} className="mb-3">
                 {/* Phase header */}
-                <div className="flex items-center gap-0 mb-1">
-                  <div className="w-44 flex-shrink-0 pr-3 flex justify-end">
+                <div className="flex items-center mb-1">
+                  <div className="w-32 flex-shrink-0 pr-3 flex justify-end">
                     <span className="text-[10px] font-semibold uppercase tracking-wide text-slate-500">
                       Ph.{phaseObj.number}
                     </span>
@@ -515,12 +516,9 @@ function ExecutionTimeline({ timeline, phases }: { timeline: TimelineEntry[]; ph
                   const showLabel = widthPct > 8;
 
                   return (
-                    <div
-                      key={entry.taskId}
-                      className="flex items-center group/row"
-                    >
+                    <div key={entry.taskId} className="flex items-center group/row">
                       {/* Label column */}
-                      <div className="w-44 flex-shrink-0 pr-3 text-right">
+                      <div className="w-32 flex-shrink-0 pr-3 text-right">
                         <p className="text-xs text-slate-400 truncate" title={entry.taskName}>
                           {entry.taskName}
                         </p>
@@ -542,10 +540,7 @@ function ExecutionTimeline({ timeline, phases }: { timeline: TimelineEntry[]; ph
                               ? 'ring-1 ring-white/30 brightness-110'
                               : 'opacity-70 group-hover/row:opacity-90'
                           }`}
-                          style={{
-                            left: `${leftPct}%`,
-                            width: `${widthPct}%`,
-                          }}
+                          style={{ left: `${leftPct}%`, width: `${widthPct}%` }}
                           title={`${entry.taskId}: ${entry.taskName}\nAgent: ${entry.agent}\n${formatTime(entry.startMinute)} → ${formatTime(entry.endMinute)}${entry.isCriticalPath ? '\n⚡ Critical Path' : ''}`}
                         >
                           {showLabel && (
@@ -567,8 +562,6 @@ function ExecutionTimeline({ timeline, phases }: { timeline: TimelineEntry[]; ph
         <div className="mt-1">
           <TimeAxis ticks={ticks} totalDuration={totalDuration} />
         </div>
-
-      </div>
     </div>
   );
 }
