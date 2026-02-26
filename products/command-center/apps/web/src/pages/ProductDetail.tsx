@@ -1,4 +1,4 @@
-import { useParams, Link } from 'react-router-dom';
+import { useParams, Link, useSearchParams } from 'react-router-dom';
 import { useState, useEffect, useCallback } from 'react';
 import { useApi } from '../hooks/useApi.js';
 import Badge from '../components/Badge.js';
@@ -101,7 +101,8 @@ function splitIntoSlides(markdown: string, docTitle: string): Slide[] {
 
 export default function ProductDetail() {
   const { name } = useParams<{ name: string }>();
-  const [selectedDoc, setSelectedDoc] = useState<string | null>(null);
+  const [searchParams] = useSearchParams();
+  const [selectedDoc, setSelectedDoc] = useState<string | null>(() => searchParams.get('doc'));
   const [docContent, setDocContent] = useState<DocContentResponse | null>(null);
   const [loadingDoc, setLoadingDoc] = useState(false);
   const [fullscreen, setFullscreen] = useState(false);
