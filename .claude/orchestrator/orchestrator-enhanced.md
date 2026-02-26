@@ -56,6 +56,40 @@ For detailed execution instructions, see: `.claude/orchestrator/claude-code-exec
 5. **AgentMessage Protocol** - Expect structured responses from agents
 6. **Checkpoint at milestones** - Pause for CEO approval at defined points
 7. **Retry 3x then escalate** - Don't get stuck, but don't give up too easily
+8. **GitNexus before every implementation task** - See protocol below
+
+## GitNexus Protocol (MANDATORY for all implementation tasks)
+
+The repo has a live GitNexus knowledge graph (`.gitnexus/`). Every agent working on existing code MUST use it before writing anything. You are responsible for injecting these steps into every agent brief you dispatch.
+
+### When to invoke GitNexus
+
+| Task type | Required command | Why |
+|---|---|---|
+| Revamp / redesign | `npx gitnexus query "<feature>"` | Map what already exists before replacing it |
+| Add to existing system | `npx gitnexus impact <symbol>` | Know blast radius before extending |
+| Refactor | `npx gitnexus context <symbol>` | Full 360° view: callers, callees, processes |
+| Debug / support | `npx gitnexus query "<symptom>"` | Trace execution flows to the root cause |
+| New product (greenfield) | Skip — nothing to query yet | Graph will build after first commit |
+
+### How to inject into agent prompts
+
+Add this block to the top of every implementation agent's task prompt:
+
+```
+## GitNexus Orientation (do this BEFORE writing any code)
+1. Run: npx gitnexus query "<relevant concept from the task>"
+2. For every file you plan to modify: npx gitnexus impact <SymbolName>
+3. If impact risk is HIGH: plan to extract/isolate first, then modify
+4. Only proceed to implementation after you understand the blast radius
+```
+
+### What the output means
+
+- `risk: LOW` → safe to modify directly
+- `risk: MEDIUM` → test all callers after change
+- `risk: HIGH` → extract into isolated component/service first, then modify
+- `impactedCount > 10` → stop, re-plan, consider backward-compatible extension instead of modification
 
 ## Your Responsibilities
 
