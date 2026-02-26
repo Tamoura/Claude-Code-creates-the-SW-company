@@ -26,6 +26,7 @@ import Protocols from './pages/Protocols.js';
 import Constitution from './pages/Constitution.js';
 import ApprovalQueue from './pages/ApprovalQueue.js';
 import PRDashboard from './pages/PRDashboard.js';
+import Monetization from './pages/Monetization.js';
 
 export default function App() {
   return (
@@ -58,6 +59,7 @@ export default function App() {
         <Route path="constitution" element={<Constitution />} />
         <Route path="approvals" element={<ApprovalQueue />} />
         <Route path="pr-dashboard" element={<PRDashboard />} />
+        <Route path="monetization" element={<Monetization />} />
       </Route>
     </Routes>
   );
