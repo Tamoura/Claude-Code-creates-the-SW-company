@@ -1,4 +1,5 @@
-import { readFileSync } from 'node:fs';
+import { readFileSync, readdirSync, existsSync } from 'node:fs';
+import { join, basename } from 'node:path';
 import { parse as parseYaml } from 'yaml';
 import { repoPath } from './repo.service.js';
 
@@ -17,7 +18,6 @@ interface RawTask {
   agent: string;
   depends_on: string[];
   produces?: RawProduces[];
-  consumes?: Array<{ name: string; required_from_task: string }>;
   parallel_ok: boolean;
   checkpoint: boolean;
   priority: string;
@@ -98,19 +98,66 @@ export interface SimulationResult {
   mermaidGantt: string;
 }
 
-// ── YAML Parsing ───────────────────────────────────────────────────────
+export interface WorkflowInfo {
+  id: string;
+  label: string;
+}
 
-function parseNewProductYaml(): { tasks: SimulationTask[]; raw: string } {
-  const filePath = repoPath(
-    '.claude',
-    'workflows',
-    'templates',
-    'new-product-tasks.yml',
-  );
+// ── Helpers ─────────────────────────────────────────────────────────────
+
+const TEMPLATES_DIR = () => repoPath('.claude', 'workflows', 'templates');
+
+function prettifyId(id: string): string {
+  return id.split('-').map((w) => w.charAt(0).toUpperCase() + w.slice(1)).join(' ');
+}
+
+// Preferred display order for common workflows
+const WORKFLOW_ORDER = [
+  'new-product',
+  'new-feature',
+  'bug-fix',
+  'hotfix',
+  'release',
+  'architecture-review',
+  'security-audit',
+  'prototype-first',
+  'new-product-showcase',
+  'new-mobile-app',
+  'add-mobile-version',
+  'mobile-app-store-release',
+];
+
+// ── Available Workflows ─────────────────────────────────────────────────
+
+export function listAvailableWorkflows(): WorkflowInfo[] {
+  const dir = TEMPLATES_DIR();
+  if (!existsSync(dir)) return [];
+
+  const files = readdirSync(dir).filter((f) => f.endsWith('-tasks.yml'));
+
+  return files
+    .map((f) => {
+      const id = basename(f, '-tasks.yml');
+      return { id, label: prettifyId(id) };
+    })
+    .sort((a, b) => {
+      const ai = WORKFLOW_ORDER.indexOf(a.id);
+      const bi = WORKFLOW_ORDER.indexOf(b.id);
+      if (ai >= 0 && bi >= 0) return ai - bi;
+      if (ai >= 0) return -1;
+      if (bi >= 0) return 1;
+      return a.label.localeCompare(b.label);
+    });
+}
+
+// ── YAML Parsing ─────────────────────────────────────────────────────────
+
+function parseWorkflowYaml(id: string): { tasks: SimulationTask[]; raw: string; title: string } {
+  const filePath = join(TEMPLATES_DIR(), `${id}-tasks.yml`);
   const content = readFileSync(filePath, 'utf-8');
   const parsed: RawYaml = parseYaml(content);
 
-  const tasks: SimulationTask[] = parsed.tasks.map((t) => ({
+  const tasks: SimulationTask[] = (parsed.tasks ?? []).map((t) => ({
     id: t.id,
     name: t.name,
     description: (t.description ?? '').trim(),
@@ -128,93 +175,96 @@ function parseNewProductYaml(): { tasks: SimulationTask[]; raw: string } {
     acceptanceCriteria: t.acceptance_criteria ?? [],
   }));
 
-  return { tasks, raw: content };
+  return { tasks, raw: content, title: prettifyId(id) };
 }
 
-// ── Phase Grouping ─────────────────────────────────────────────────────
+// ── Phase Grouping (line-position based — works for any YAML) ────────────
 
-function groupIntoPhases(
-  tasks: SimulationTask[],
-  rawContent: string,
-): SimulationPhase[] {
-  // Extract phase markers from comments
-  const phaseRegex = /# PHASE (\d+): (.+)/g;
-  const phaseMarkers: Array<{ number: number; name: string }> = [];
-  let match: RegExpExecArray | null;
-  while ((match = phaseRegex.exec(rawContent)) !== null) {
-    phaseMarkers.push({
-      number: Number(match[1]),
-      name: match[2].replace(/\s*\(.*\)/, '').trim(),
-    });
+function groupIntoPhases(tasks: SimulationTask[], rawContent: string): SimulationPhase[] {
+  const lines = rawContent.split('\n');
+
+  // Find all "# PHASE X: Name" markers with their line numbers
+  const phaseMarkers: Array<{ number: number; name: string; line: number }> = [];
+  lines.forEach((line, idx) => {
+    const match = line.match(/# PHASE (\d+):\s*(.+)/);
+    if (match) {
+      phaseMarkers.push({
+        number: Number(match[1]),
+        name: match[2].replace(/\s*\(.*\)/, '').trim(),
+        line: idx,
+      });
+    }
+  });
+
+  // Fallback: no phase markers → single phase
+  if (phaseMarkers.length === 0) {
+    const totalMinutes = tasks.reduce((sum, t) => sum + t.estimatedMinutes, 0);
+    const hasParallel = tasks.filter((t) => t.parallelOk).length > 1;
+    const parallelMinutes = hasParallel
+      ? Math.max(...tasks.map((t) => t.estimatedMinutes))
+      : totalMinutes;
+    return [
+      {
+        number: 1,
+        name: 'All Tasks',
+        tasks,
+        totalMinutes,
+        parallelMinutes,
+        isParallel: hasParallel,
+        hasCheckpoint: tasks.some((t) => t.checkpoint),
+        agents: [...new Set(tasks.map((t) => t.agent))],
+      },
+    ];
   }
 
-  // Also check for the CHECKPOINT marker as implicit final phase extension
-  const checkpointMatch = rawContent.match(
-    /# CHECKPOINT: (.+?)[\r\n]/,
-  );
+  // Find each task ID's line number in the raw file
+  const taskLineMap = new Map<string, number>();
+  lines.forEach((line, idx) => {
+    // Matches:  - id: "BA-01"  or  - id: BA-01
+    const match = line.match(/^\s*-\s*id:\s*["']?([^"'\s#]+)["']?/);
+    if (match) {
+      taskLineMap.set(match[1], idx);
+    }
+  });
 
-  // Assign tasks to phases based on their position in the YAML
-  const taskIds = tasks.map((t) => t.id);
-  const phaseAssignments: Map<string, number> = new Map();
-
-  // Derive phase assignment from task ID prefix patterns
+  // Assign each task to the phase whose marker most recently precedes it
+  const phaseAssignments = new Map<string, number>();
   for (const task of tasks) {
-    if (task.id.startsWith('PRD')) phaseAssignments.set(task.id, 1);
-    else if (task.id.startsWith('ARCH')) phaseAssignments.set(task.id, 2);
-    else if (
-      task.id.startsWith('DEVOPS') ||
-      task.id.startsWith('BACKEND') ||
-      task.id.startsWith('FRONTEND')
-    )
-      phaseAssignments.set(task.id, 3);
-    else if (
-      task.id.startsWith('QA') ||
-      task.id.startsWith('DOCS') ||
-      task.id.startsWith('CHECKPOINT')
-    )
-      phaseAssignments.set(task.id, 4);
+    const taskLine = taskLineMap.get(task.id) ?? 0;
+    let assigned = phaseMarkers[0].number;
+    for (const pm of phaseMarkers) {
+      if (pm.line <= taskLine) assigned = pm.number;
+    }
+    phaseAssignments.set(task.id, assigned);
   }
 
-  const phases: SimulationPhase[] = phaseMarkers.map((pm) => {
-    const phaseTasks = tasks.filter(
-      (t) => phaseAssignments.get(t.id) === pm.number,
-    );
-    const totalMinutes = phaseTasks.reduce(
-      (sum, t) => sum + t.estimatedMinutes,
-      0,
-    );
-    const hasParallelTasks =
-      phaseTasks.filter((t) => t.parallelOk).length > 1;
-    const parallelMinutes = hasParallelTasks
+  return phaseMarkers.map((pm) => {
+    const phaseTasks = tasks.filter((t) => phaseAssignments.get(t.id) === pm.number);
+    const totalMinutes = phaseTasks.reduce((sum, t) => sum + t.estimatedMinutes, 0);
+    const hasParallel = phaseTasks.filter((t) => t.parallelOk).length > 1;
+    const parallelMinutes = hasParallel
       ? Math.max(...phaseTasks.map((t) => t.estimatedMinutes))
       : totalMinutes;
-
     return {
       number: pm.number,
       name: pm.name,
       tasks: phaseTasks,
       totalMinutes,
       parallelMinutes,
-      isParallel: hasParallelTasks,
+      isParallel: hasParallel,
       hasCheckpoint: phaseTasks.some((t) => t.checkpoint),
       agents: [...new Set(phaseTasks.map((t) => t.agent))],
     };
   });
-
-  return phases;
 }
 
 // ── Critical Path ──────────────────────────────────────────────────────
 
-function calculateTimeline(
-  tasks: SimulationTask[],
-  phases: SimulationPhase[],
-): TimelineEntry[] {
+function calculateTimeline(tasks: SimulationTask[], phases: SimulationPhase[]): TimelineEntry[] {
   const taskMap = new Map(tasks.map((t) => [t.id, t]));
   const earliestStart = new Map<string, number>();
   const earliestEnd = new Map<string, number>();
 
-  // Topological sort via Kahn's algorithm
   const inDegree = new Map<string, number>();
   const adj = new Map<string, string[]>();
   for (const task of tasks) {
@@ -246,46 +296,32 @@ function calculateTimeline(
         const succTask = taskMap.get(succ)!;
         earliestEnd.set(succ, currentEnd + succTask.estimatedMinutes);
       }
-
       const newDegree = (inDegree.get(succ) ?? 1) - 1;
       inDegree.set(succ, newDegree);
-      if (newDegree === 0) {
-        queue.push(succ);
-      }
+      if (newDegree === 0) queue.push(succ);
     }
   }
 
-  // Find critical path: trace back from the task with the maximum end time
-  const maxEnd = Math.max(...[...earliestEnd.values()]);
+  const maxEnd = Math.max(...[...earliestEnd.values()], 0);
   const criticalSet = new Set<string>();
 
-  // Walk backwards: a task is on the critical path if its end equals
-  // the max-end among its successors' requirements
   function traceCritical(taskId: string) {
     criticalSet.add(taskId);
     const task = taskMap.get(taskId)!;
     for (const dep of task.dependsOn) {
       const depEnd = earliestEnd.get(dep) ?? 0;
       const taskStart = earliestStart.get(taskId) ?? 0;
-      if (depEnd === taskStart) {
-        traceCritical(dep);
-      }
+      if (depEnd === taskStart) traceCritical(dep);
     }
   }
 
-  // Start from all tasks that end at maxEnd
   for (const task of tasks) {
-    if ((earliestEnd.get(task.id) ?? 0) === maxEnd) {
-      traceCritical(task.id);
-    }
+    if ((earliestEnd.get(task.id) ?? 0) === maxEnd) traceCritical(task.id);
   }
 
-  // Build phase lookup
   const taskPhase = new Map<string, string>();
   for (const phase of phases) {
-    for (const t of phase.tasks) {
-      taskPhase.set(t.id, phase.name);
-    }
+    for (const t of phase.tasks) taskPhase.set(t.id, phase.name);
   }
 
   return tasks
@@ -312,6 +348,16 @@ const AGENT_CLASS_MAP: Record<string, string> = {
   'devops-engineer': 'devops',
   'technical-writer': 'docs',
   orchestrator: 'checkpoint',
+  'business-analyst': 'ba',
+  'code-reviewer': 'review',
+  'security-engineer': 'sec',
+  'performance-engineer': 'perf',
+  'mobile-developer': 'mobile',
+  'support-engineer': 'support',
+  'ui-ux-designer': 'ux',
+  'data-engineer': 'data',
+  'innovation-specialist': 'innov',
+  'product-strategist': 'strat',
 };
 
 const AGENT_ICON_MAP: Record<string, string> = {
@@ -323,6 +369,16 @@ const AGENT_ICON_MAP: Record<string, string> = {
   'devops-engineer': '\uD83D\uDE80',
   'technical-writer': '\uD83D\uDCDD',
   orchestrator: '\u2705',
+  'business-analyst': '\uD83D\uDCC8',
+  'code-reviewer': '\uD83D\uDD0D',
+  'security-engineer': '\uD83D\uDD12',
+  'performance-engineer': '\u26A1',
+  'mobile-developer': '\uD83D\uDCF1',
+  'support-engineer': '\uD83C\uDF9F\uFE0F',
+  'ui-ux-designer': '\uD83C\uDFA8',
+  'data-engineer': '\uD83D\uDDC4\uFE0F',
+  'innovation-specialist': '\uD83D\uDCA1',
+  'product-strategist': '\uD83E\uDDED',
 };
 
 const MERMAID_CLASS_DEFS = `
@@ -333,7 +389,17 @@ const MERMAID_CLASS_DEFS = `
     classDef qa fill:#dc2626,stroke:#b91c1c,color:#fff
     classDef devops fill:#0891b2,stroke:#0e7490,color:#fff
     classDef docs fill:#6366f1,stroke:#4f46e5,color:#fff
-    classDef checkpoint fill:#f59e0b,stroke:#d97706,color:#000`;
+    classDef checkpoint fill:#f59e0b,stroke:#d97706,color:#000
+    classDef ba fill:#ec4899,stroke:#db2777,color:#fff
+    classDef review fill:#f43f5e,stroke:#e11d48,color:#fff
+    classDef sec fill:#ef4444,stroke:#dc2626,color:#fff
+    classDef perf fill:#84cc16,stroke:#65a30d,color:#000
+    classDef mobile fill:#f97316,stroke:#ea580c,color:#fff
+    classDef support fill:#10b981,stroke:#059669,color:#fff
+    classDef ux fill:#d946ef,stroke:#c026d3,color:#fff
+    classDef data fill:#14b8a6,stroke:#0d9488,color:#fff
+    classDef innov fill:#8b5cf6,stroke:#7c3aed,color:#fff
+    classDef strat fill:#0ea5e9,stroke:#0284c7,color:#fff`;
 
 function generateDependencyDiagram(tasks: SimulationTask[]): string {
   const lines: string[] = ['graph TD'];
@@ -348,9 +414,7 @@ function generateDependencyDiagram(tasks: SimulationTask[]): string {
 
   for (const task of tasks) {
     for (const dep of task.dependsOn) {
-      if (idSet.has(dep)) {
-        lines.push(`    ${dep} --> ${task.id}`);
-      }
+      if (idSet.has(dep)) lines.push(`    ${dep} --> ${task.id}`);
     }
   }
 
@@ -359,17 +423,11 @@ function generateDependencyDiagram(tasks: SimulationTask[]): string {
 }
 
 function sanitizeGanttId(id: string): string {
-  return id.replace(/-/g, '_').toLowerCase();
+  return id.replace(/[-{}.]/g, '_').toLowerCase();
 }
 
-function generateGantt(
-  timeline: TimelineEntry[],
-  phases: SimulationPhase[],
-  title = 'New Product Creation Timeline',
-): string {
-  const taskMap = new Map(
-    phases.flatMap((p) => p.tasks).map((t) => [t.id, t]),
-  );
+function generateGantt(timeline: TimelineEntry[], phases: SimulationPhase[], title = 'Workflow Timeline'): string {
+  const taskMap = new Map(phases.flatMap((p) => p.tasks).map((t) => [t.id, t]));
 
   const lines: string[] = [
     'gantt',
@@ -379,7 +437,6 @@ function generateGantt(
     '',
   ];
 
-  // Convert minutes offset to ISO datetime from a base date
   const base = '2024-01-01T';
   function toTime(minutes: number): string {
     const h = String(Math.floor(minutes / 60)).padStart(2, '0');
@@ -400,13 +457,9 @@ function generateGantt(
 
       if (deps.length > 0) {
         const afterClause = `after ${deps.map(sanitizeGanttId).join(' ')}`;
-        lines.push(
-          `    ${entry.taskName} :${critMarker}${ganttId}, ${afterClause}, ${duration}m`,
-        );
+        lines.push(`    ${entry.taskName} :${critMarker}${ganttId}, ${afterClause}, ${duration}m`);
       } else {
-        lines.push(
-          `    ${entry.taskName} :${critMarker}${ganttId}, ${toTime(entry.startMinute)}, ${duration}m`,
-        );
+        lines.push(`    ${entry.taskName} :${critMarker}${ganttId}, ${toTime(entry.startMinute)}, ${duration}m`);
       }
     }
     lines.push('');
@@ -415,186 +468,11 @@ function generateGantt(
   return lines.join('\n');
 }
 
-// ── Workflow Type Definitions ───────────────────────────────────────────
+// ── Main Build ─────────────────────────────────────────────────────────
 
-export type WorkflowType = 'new-product' | 'new-feature' | 'bug-fix' | 'architecture-review' | 'security-audit';
-
-interface InlineTask {
-  id: string;
-  name: string;
-  agent: string;
-  dependsOn: string[];
-  parallelOk: boolean;
-  checkpoint: boolean;
-  priority: string;
-  estimatedMinutes: number;
-  produces: Array<{ name: string; type: string; path: string }>;
-  acceptanceCriteria: string[];
-  description: string;
-}
-
-interface WorkflowDefinition {
-  title: string;
-  phases: Array<{ number: number; name: string }>;
-  taskPhaseMap: Record<string, number>;
-  tasks: InlineTask[];
-}
-
-const WORKFLOW_DEFINITIONS: Record<Exclude<WorkflowType, 'new-product'>, WorkflowDefinition> = {
-  'new-feature': {
-    title: 'New Feature',
-    phases: [
-      { number: 1, name: 'Analysis' },
-      { number: 2, name: 'Specification' },
-      { number: 3, name: 'Implementation' },
-      { number: 4, name: 'Quality & Delivery' },
-    ],
-    taskPhaseMap: {
-      'BA-01': 1,
-      'SPEC-01': 2,
-      'CLARIFY-01': 2,
-      'ARCH-01': 2,
-      'BE-01': 3,
-      'FE-01': 3,
-      'QA-01': 4,
-      'REVIEW-01': 4,
-      'DOCS-01': 4,
-    },
-    tasks: [
-      { id: 'BA-01', name: 'Business Analysis', agent: 'business-analyst', dependsOn: [], parallelOk: false, checkpoint: false, priority: 'high', estimatedMinutes: 30, produces: [{ name: 'Business Analysis Report', type: 'document', path: 'docs/specs/ba-analysis.md' }], acceptanceCriteria: ['Stakeholder needs documented', 'Gap analysis complete'], description: 'Analyze business requirements and stakeholder needs' },
-      { id: 'SPEC-01', name: 'Feature Specification', agent: 'product-manager', dependsOn: ['BA-01'], parallelOk: false, checkpoint: true, priority: 'high', estimatedMinutes: 45, produces: [{ name: 'Feature Spec', type: 'document', path: 'docs/specs/feature-spec.md' }], acceptanceCriteria: ['User stories complete', 'Acceptance criteria defined'], description: 'Create structured feature specification using spec-kit' },
-      { id: 'CLARIFY-01', name: 'Spec Clarification', agent: 'product-manager', dependsOn: ['SPEC-01'], parallelOk: false, checkpoint: false, priority: 'medium', estimatedMinutes: 20, produces: [], acceptanceCriteria: ['Ambiguities resolved'], description: 'Resolve spec ambiguities with up to 5 clarifying questions' },
-      { id: 'ARCH-01', name: 'Architecture Design', agent: 'architect', dependsOn: ['CLARIFY-01'], parallelOk: false, checkpoint: false, priority: 'high', estimatedMinutes: 60, produces: [{ name: 'Architecture Plan', type: 'document', path: 'docs/plan.md' }], acceptanceCriteria: ['C4 diagrams complete', 'ER diagram for schema changes'], description: 'Design architecture and create implementation plan' },
-      { id: 'BE-01', name: 'Backend Implementation', agent: 'backend-engineer', dependsOn: ['ARCH-01'], parallelOk: true, checkpoint: false, priority: 'high', estimatedMinutes: 120, produces: [{ name: 'API Endpoints', type: 'file', path: 'apps/api/src/routes/' }], acceptanceCriteria: ['All endpoints implemented', 'Unit tests passing'], description: 'Implement backend API endpoints and business logic' },
-      { id: 'FE-01', name: 'Frontend Implementation', agent: 'frontend-engineer', dependsOn: ['ARCH-01'], parallelOk: true, checkpoint: false, priority: 'high', estimatedMinutes: 120, produces: [{ name: 'UI Components', type: 'file', path: 'apps/web/src/pages/' }], acceptanceCriteria: ['UI matches spec', 'Component tests passing'], description: 'Implement frontend UI and connect to API' },
-      { id: 'QA-01', name: 'Quality Assurance', agent: 'qa-engineer', dependsOn: ['BE-01', 'FE-01'], parallelOk: false, checkpoint: true, priority: 'critical', estimatedMinutes: 60, produces: [{ name: 'Test Suite', type: 'file', path: 'e2e/' }], acceptanceCriteria: ['E2E tests passing', 'Coverage >= 80%'], description: 'Run quality gates and generate E2E tests' },
-      { id: 'REVIEW-01', name: 'Code Review', agent: 'code-reviewer', dependsOn: ['QA-01'], parallelOk: false, checkpoint: false, priority: 'high', estimatedMinutes: 30, produces: [{ name: 'Review Report', type: 'document', path: 'docs/quality-reports/' }], acceptanceCriteria: ['No critical issues', 'Security approved'], description: 'Audit code for quality, security, and standards compliance' },
-      { id: 'DOCS-01', name: 'Documentation', agent: 'technical-writer', dependsOn: ['REVIEW-01'], parallelOk: false, checkpoint: false, priority: 'medium', estimatedMinutes: 30, produces: [{ name: 'Feature Docs', type: 'document', path: 'docs/' }], acceptanceCriteria: ['API docs updated', 'README updated'], description: 'Write comprehensive feature documentation' },
-    ],
-  },
-  'bug-fix': {
-    title: 'Bug Fix',
-    phases: [
-      { number: 1, name: 'Triage' },
-      { number: 2, name: 'Investigation' },
-      { number: 3, name: 'Fix & Verify' },
-    ],
-    taskPhaseMap: {
-      'TRIAGE-01': 1,
-      'REPRO-01': 2,
-      'ROOT-01': 2,
-      'FIX-01': 3,
-      'TEST-01': 3,
-      'REVIEW-01': 3,
-      'DEPLOY-01': 3,
-    },
-    tasks: [
-      { id: 'TRIAGE-01', name: 'Bug Triage', agent: 'support-engineer', dependsOn: [], parallelOk: false, checkpoint: false, priority: 'critical', estimatedMinutes: 15, produces: [{ name: 'Triage Report', type: 'document', path: 'notes/bugs/' }], acceptanceCriteria: ['Severity assessed', 'Assigned to engineer'], description: 'Assess bug severity and route to appropriate engineer' },
-      { id: 'REPRO-01', name: 'Reproduce Bug', agent: 'qa-engineer', dependsOn: ['TRIAGE-01'], parallelOk: false, checkpoint: false, priority: 'high', estimatedMinutes: 20, produces: [{ name: 'Reproduction Steps', type: 'document', path: 'notes/bugs/' }], acceptanceCriteria: ['Bug reproducible', 'Steps documented'], description: 'Reliably reproduce the bug and document steps' },
-      { id: 'ROOT-01', name: 'Root Cause Analysis', agent: 'backend-engineer', dependsOn: ['REPRO-01'], parallelOk: false, checkpoint: false, priority: 'high', estimatedMinutes: 30, produces: [], acceptanceCriteria: ['Root cause identified', 'Impact scope defined'], description: 'Identify root cause and scope of impact' },
-      { id: 'FIX-01', name: 'Implement Fix', agent: 'backend-engineer', dependsOn: ['ROOT-01'], parallelOk: false, checkpoint: false, priority: 'critical', estimatedMinutes: 45, produces: [{ name: 'Bug Fix', type: 'file', path: 'apps/' }], acceptanceCriteria: ['Fix implemented', 'Regression test added'], description: 'Implement the minimal fix and add regression test' },
-      { id: 'TEST-01', name: 'Verify Fix', agent: 'qa-engineer', dependsOn: ['FIX-01'], parallelOk: false, checkpoint: true, priority: 'high', estimatedMinutes: 20, produces: [], acceptanceCriteria: ['Bug no longer reproducible', 'All tests passing'], description: 'Verify fix resolves the bug and no regressions introduced' },
-      { id: 'REVIEW-01', name: 'Code Review', agent: 'code-reviewer', dependsOn: ['TEST-01'], parallelOk: false, checkpoint: false, priority: 'high', estimatedMinutes: 20, produces: [], acceptanceCriteria: ['Fix approved', 'No new issues introduced'], description: 'Review fix for correctness and code quality' },
-      { id: 'DEPLOY-01', name: 'Deploy Fix', agent: 'devops-engineer', dependsOn: ['REVIEW-01'], parallelOk: false, checkpoint: true, priority: 'critical', estimatedMinutes: 20, produces: [], acceptanceCriteria: ['Deployed to production', 'Health checks passing'], description: 'Deploy fix and verify production health' },
-    ],
-  },
-  'architecture-review': {
-    title: 'Architecture Review',
-    phases: [
-      { number: 1, name: 'Scoping' },
-      { number: 2, name: 'Assessment' },
-      { number: 3, name: 'Proposal & Sign-off' },
-    ],
-    taskPhaseMap: {
-      'SCOPE-01': 1,
-      'CURRENT-01': 2,
-      'GAPS-01': 2,
-      'PERF-01': 2,
-      'PROPOSE-01': 3,
-      'REVIEW-01': 3,
-      'ADR-01': 3,
-    },
-    tasks: [
-      { id: 'SCOPE-01', name: 'Define Review Scope', agent: 'architect', dependsOn: [], parallelOk: false, checkpoint: false, priority: 'high', estimatedMinutes: 20, produces: [{ name: 'Review Scope', type: 'document', path: 'docs/ADRs/' }], acceptanceCriteria: ['Scope defined', 'Review goals documented'], description: 'Define scope and goals of the architecture review' },
-      { id: 'CURRENT-01', name: 'Document Current Architecture', agent: 'architect', dependsOn: ['SCOPE-01'], parallelOk: false, checkpoint: false, priority: 'high', estimatedMinutes: 60, produces: [{ name: 'As-Is Architecture', type: 'document', path: 'docs/ADRs/' }], acceptanceCriteria: ['C4 diagrams of current state', 'Data flows documented'], description: 'Create C4 diagrams and document current architecture state' },
-      { id: 'GAPS-01', name: 'Security Gap Analysis', agent: 'security-engineer', dependsOn: ['CURRENT-01'], parallelOk: true, checkpoint: false, priority: 'high', estimatedMinutes: 45, produces: [{ name: 'Security Analysis', type: 'document', path: 'docs/quality-reports/' }], acceptanceCriteria: ['Security gaps identified', 'Risk ratings assigned'], description: 'Identify security gaps and vulnerabilities in current architecture' },
-      { id: 'PERF-01', name: 'Performance Assessment', agent: 'performance-engineer', dependsOn: ['CURRENT-01'], parallelOk: true, checkpoint: false, priority: 'medium', estimatedMinutes: 45, produces: [{ name: 'Performance Report', type: 'document', path: 'docs/quality-reports/' }], acceptanceCriteria: ['Bottlenecks identified', 'Baseline metrics recorded'], description: 'Assess performance characteristics and identify bottlenecks' },
-      { id: 'PROPOSE-01', name: 'Propose New Architecture', agent: 'architect', dependsOn: ['GAPS-01', 'PERF-01'], parallelOk: false, checkpoint: true, priority: 'high', estimatedMinutes: 90, produces: [{ name: 'To-Be Architecture', type: 'document', path: 'docs/ADRs/' }], acceptanceCriteria: ['New architecture documented', 'Before/after diagrams included'], description: 'Design and document proposed architecture improvements' },
-      { id: 'REVIEW-01', name: 'Architecture Review', agent: 'code-reviewer', dependsOn: ['PROPOSE-01'], parallelOk: false, checkpoint: false, priority: 'high', estimatedMinutes: 30, produces: [], acceptanceCriteria: ['Proposal reviewed', 'Trade-offs documented'], description: 'Review proposed architecture for correctness and trade-offs' },
-      { id: 'ADR-01', name: 'Write ADRs', agent: 'technical-writer', dependsOn: ['REVIEW-01'], parallelOk: false, checkpoint: false, priority: 'medium', estimatedMinutes: 30, produces: [{ name: 'Architecture Decision Records', type: 'document', path: 'docs/ADRs/' }], acceptanceCriteria: ['ADRs written for each decision', 'Alternatives documented'], description: 'Document architecture decisions with context and consequences' },
-    ],
-  },
-  'security-audit': {
-    title: 'Security Audit',
-    phases: [
-      { number: 1, name: 'Planning' },
-      { number: 2, name: 'Assessment' },
-      { number: 3, name: 'Remediation' },
-    ],
-    taskPhaseMap: {
-      'SCOPE-01': 1,
-      'SCAN-01': 2,
-      'PENTEST-01': 2,
-      'DEPS-01': 2,
-      'REPORT-01': 2,
-      'REMEDIATE-01': 3,
-      'VERIFY-01': 3,
-    },
-    tasks: [
-      { id: 'SCOPE-01', name: 'Audit Scoping', agent: 'security-engineer', dependsOn: [], parallelOk: false, checkpoint: false, priority: 'high', estimatedMinutes: 20, produces: [{ name: 'Audit Scope Document', type: 'document', path: 'docs/quality-reports/' }], acceptanceCriteria: ['Scope boundaries defined', 'Attack surface mapped'], description: 'Define audit scope and identify attack surface' },
-      { id: 'SCAN-01', name: 'Static Security Scan', agent: 'security-engineer', dependsOn: ['SCOPE-01'], parallelOk: true, checkpoint: false, priority: 'high', estimatedMinutes: 30, produces: [{ name: 'SAST Results', type: 'document', path: 'docs/quality-reports/' }], acceptanceCriteria: ['All files scanned', 'No critical findings unresolved'], description: 'Run static analysis security testing across codebase' },
-      { id: 'PENTEST-01', name: 'Penetration Testing', agent: 'security-engineer', dependsOn: ['SCOPE-01'], parallelOk: true, checkpoint: false, priority: 'high', estimatedMinutes: 60, produces: [{ name: 'Pentest Results', type: 'document', path: 'docs/quality-reports/' }], acceptanceCriteria: ['Auth flows tested', 'Injection vectors tested'], description: 'Conduct penetration testing on API and auth flows' },
-      { id: 'DEPS-01', name: 'Dependency Audit', agent: 'devops-engineer', dependsOn: ['SCOPE-01'], parallelOk: true, checkpoint: false, priority: 'medium', estimatedMinutes: 20, produces: [{ name: 'Dependency Report', type: 'document', path: 'docs/quality-reports/' }], acceptanceCriteria: ['All CVEs identified', 'Update plan created'], description: 'Audit npm dependencies for known vulnerabilities' },
-      { id: 'REPORT-01', name: 'Security Report', agent: 'security-engineer', dependsOn: ['SCAN-01', 'PENTEST-01', 'DEPS-01'], parallelOk: false, checkpoint: true, priority: 'critical', estimatedMinutes: 45, produces: [{ name: 'Security Audit Report', type: 'document', path: 'docs/quality-reports/' }], acceptanceCriteria: ['All findings documented', 'Risk ratings assigned', 'Remediation plan included'], description: 'Compile comprehensive security audit report with findings' },
-      { id: 'REMEDIATE-01', name: 'Remediate Findings', agent: 'backend-engineer', dependsOn: ['REPORT-01'], parallelOk: false, checkpoint: false, priority: 'critical', estimatedMinutes: 90, produces: [], acceptanceCriteria: ['Critical findings fixed', 'High findings fixed or mitigated'], description: 'Implement security fixes for all critical and high findings' },
-      { id: 'VERIFY-01', name: 'Verify Remediation', agent: 'qa-engineer', dependsOn: ['REMEDIATE-01'], parallelOk: false, checkpoint: true, priority: 'high', estimatedMinutes: 30, produces: [{ name: 'Verification Report', type: 'document', path: 'docs/quality-reports/' }], acceptanceCriteria: ['All fixes verified', 'Re-test passed', 'Audit closed'], description: 'Verify all remediations are effective and audit is closed' },
-    ],
-  },
-};
-
-// ── Inline Workflow Builder ──────────────────────────────────────────────
-
-function buildSimulationFromInline(
-  workflowType: Exclude<WorkflowType, 'new-product'>,
-): SimulationResult {
-  const def = WORKFLOW_DEFINITIONS[workflowType];
-
-  const tasks: SimulationTask[] = def.tasks.map((t) => ({
-    id: t.id,
-    name: t.name,
-    description: t.description,
-    agent: t.agent,
-    dependsOn: t.dependsOn,
-    parallelOk: t.parallelOk,
-    checkpoint: t.checkpoint,
-    priority: t.priority,
-    estimatedMinutes: t.estimatedMinutes,
-    produces: t.produces,
-    acceptanceCriteria: t.acceptanceCriteria,
-  }));
-
-  const phases: SimulationPhase[] = def.phases.map((pm) => {
-    const phaseTasks = tasks.filter(
-      (t) => def.taskPhaseMap[t.id] === pm.number,
-    );
-    const totalMinutes = phaseTasks.reduce((sum, t) => sum + t.estimatedMinutes, 0);
-    const hasParallelTasks = phaseTasks.filter((t) => t.parallelOk).length > 1;
-    const parallelMinutes = hasParallelTasks
-      ? Math.max(...phaseTasks.map((t) => t.estimatedMinutes))
-      : totalMinutes;
-
-    return {
-      number: pm.number,
-      name: pm.name,
-      tasks: phaseTasks,
-      totalMinutes,
-      parallelMinutes,
-      isParallel: hasParallelTasks,
-      hasCheckpoint: phaseTasks.some((t) => t.checkpoint),
-      agents: [...new Set(phaseTasks.map((t) => t.agent))],
-    };
-  });
-
+function buildSimulation(id: string): SimulationResult {
+  const { tasks, raw, title } = parseWorkflowYaml(id);
+  const phases = groupIntoPhases(tasks, raw);
   const timeline = calculateTimeline(tasks, phases);
 
   const sequentialMinutes = tasks.reduce((sum, t) => sum + t.estimatedMinutes, 0);
@@ -616,13 +494,11 @@ function buildSimulationFromInline(
       taskId: t.id,
     }));
 
-  const uniqueAgents = new Set(tasks.map((t) => t.agent));
-
   return {
     summary: {
       totalPhases: phases.length,
       totalTasks: tasks.length,
-      totalAgents: uniqueAgents.size,
+      totalAgents: new Set(tasks.map((t) => t.agent)).size,
       checkpointCount: tasks.filter((t) => t.checkpoint).length,
       sequentialMinutes,
       parallelMinutes,
@@ -633,78 +509,17 @@ function buildSimulationFromInline(
     deliverables: allDeliverables,
     qualityGates,
     mermaidDependency: generateDependencyDiagram(tasks),
-    mermaidGantt: generateGantt(timeline, phases, def.title),
+    mermaidGantt: generateGantt(timeline, phases, title),
   };
 }
 
-// ── Main Exports ─────────────────────────────────────────────────────────
+// ── Public Exports ────────────────────────────────────────────────────
 
+export function getSimulation(type: string): SimulationResult {
+  return buildSimulation(type);
+}
+
+/** @deprecated use getSimulation('new-product') */
 export function getNewProductSimulation(): SimulationResult {
-  const { tasks, raw } = parseNewProductYaml();
-  const phases = groupIntoPhases(tasks, raw);
-  const timeline = calculateTimeline(tasks, phases);
-
-  const sequentialMinutes = tasks.reduce(
-    (sum, t) => sum + t.estimatedMinutes,
-    0,
-  );
-  const parallelMinutes = Math.max(
-    ...timeline.map((t) => t.endMinute),
-    0,
-  );
-  const savingsPercent =
-    sequentialMinutes > 0
-      ? Math.round(
-          ((sequentialMinutes - parallelMinutes) / sequentialMinutes) * 100,
-        )
-      : 0;
-
-  const allDeliverables: Deliverable[] = tasks.flatMap((t) =>
-    t.produces.map((p) => ({ name: p.name, type: p.type, path: p.path })),
-  );
-
-  const qualityGates: QualityGate[] = [];
-  for (const task of tasks) {
-    if (task.checkpoint) {
-      qualityGates.push({
-        name: task.name,
-        description: task.description,
-        taskId: task.id,
-      });
-    }
-    if (task.id.startsWith('QA')) {
-      qualityGates.push({
-        name: task.name,
-        description: task.description,
-        taskId: task.id,
-      });
-    }
-  }
-
-  const uniqueAgents = new Set(tasks.map((t) => t.agent));
-
-  return {
-    summary: {
-      totalPhases: phases.length,
-      totalTasks: tasks.length,
-      totalAgents: uniqueAgents.size,
-      checkpointCount: tasks.filter((t) => t.checkpoint).length,
-      sequentialMinutes,
-      parallelMinutes,
-      savingsPercent,
-    },
-    phases,
-    timeline,
-    deliverables: allDeliverables,
-    qualityGates,
-    mermaidDependency: generateDependencyDiagram(tasks),
-    mermaidGantt: generateGantt(timeline, phases),
-  };
-}
-
-export function getSimulation(type: WorkflowType): SimulationResult {
-  if (type === 'new-product') {
-    return getNewProductSimulation();
-  }
-  return buildSimulationFromInline(type);
+  return buildSimulation('new-product');
 }

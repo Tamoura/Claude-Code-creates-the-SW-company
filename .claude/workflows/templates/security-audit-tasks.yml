@@ -1,0 +1,260 @@
+# Security Audit Workflow Task Graph Template
+# Placeholders: {PRODUCT}, {DESCRIPTION}, {TIMESTAMP}
+#
+# TRACEABILITY RULES (Constitution Article VI):
+#   - All findings MUST have severity ratings and CVE references where applicable
+#   - Remediation commits MUST reference the finding ID (e.g., [SEC-001])
+#   - Verification step required for every Critical/High finding
+
+# ─────────────────────────────────────────────────────────────────
+# PROTOCOL ENFORCEMENT (ConnectSW Constitution Articles XI & XII)
+# ─────────────────────────────────────────────────────────────────
+# ALL AGENTS must follow BEFORE starting any task:
+#   - Read .claude/protocols/anti-rationalization.md (Article XI)
+#   - Apply the 1% Rule: if a quality step might apply, invoke it
+#
+# ALL AGENTS must follow BEFORE marking any task done:
+#   - Verification-Before-Completion 5-Step Gate (Article XI):
+#     1. Identify what "done" looks like (specific, testable)
+#     2. Execute the actual verification command
+#     3. Read the actual output (do NOT assume success)
+#     4. Compare output to acceptance criteria literally
+#     5. Claim done only when evidence matches
+#
+# FOR DELIVERABLES (Article XII):
+#   - Write all outputs to files (direct-delivery.md)
+#   - Compress context if >60% full (context-compression.md)
+# ─────────────────────────────────────────────────────────────────
+
+# CONSTITUTION REFERENCE: .specify/memory/constitution.md (v1.3.0)
+# Key articles for security audits:
+#   Article XI (Anti-Rationalization): "It's probably fine" is forbidden
+#   Article XI (Verification): A finding is NOT fixed until provably gone
+#   Article VIII (Git Safety): Never git add . — stage specific files
+
+metadata:
+  product: "{PRODUCT}"
+  version: "1.0.0"
+  workflow_type: "security-audit"
+  created_at: "{TIMESTAMP}"
+  updated_at: "{TIMESTAMP}"
+
+tasks:
+  # ============================================================================
+  # PHASE 1: PLANNING
+  # ============================================================================
+
+  - id: "SCOPE-01"
+    name: "Audit Scoping"
+    description: |
+      Define the security audit scope and map the attack surface for: {PRODUCT}
+
+      1. Identify all entry points (HTTP endpoints, WebSockets, file uploads, etc.)
+      2. Map authentication and authorization flows
+      3. List all third-party integrations and external services
+      4. Identify data classification (PII, secrets, financial data)
+      5. Define audit boundaries (in scope / out of scope)
+      6. List known vulnerabilities or past security incidents
+      7. Create threat model diagram showing attacker paths
+    agent: "security-engineer"
+    depends_on: []
+    produces:
+      - name: "Audit Scope Document"
+        type: "document"
+        path: "products/{PRODUCT}/docs/quality-reports/security-audit-scope.md"
+    parallel_ok: false
+    checkpoint: false
+    priority: "high"
+    estimated_time_minutes: 20
+    acceptance_criteria:
+      - "All entry points documented"
+      - "Attack surface mapped with threat model diagram"
+      - "Scope boundaries defined (in/out)"
+      - "Data classification complete"
+    status: "pending"
+
+  # ============================================================================
+  # PHASE 2: ASSESSMENT
+  # ============================================================================
+
+  - id: "SCAN-01"
+    name: "Static Security Scan (SAST)"
+    description: |
+      Run static analysis security testing across the entire codebase.
+
+      1. Scan for hardcoded secrets (API keys, passwords, tokens)
+      2. Check for SQL injection vectors
+      3. Identify XSS vulnerabilities
+      4. Check for insecure direct object references (IDOR)
+      5. Review authentication implementation (JWT handling, session management)
+      6. Check for missing rate limiting
+      7. Identify CSRF vulnerabilities
+      8. Review error handling (no sensitive data in error messages)
+    agent: "security-engineer"
+    depends_on: ["SCOPE-01"]
+    produces:
+      - name: "SAST Results"
+        type: "document"
+        path: "products/{PRODUCT}/docs/quality-reports/sast-results.md"
+    parallel_ok: true
+    checkpoint: false
+    priority: "high"
+    estimated_time_minutes: 30
+    acceptance_criteria:
+      - "All files scanned"
+      - "No hardcoded secrets"
+      - "OWASP Top 10 categories checked"
+      - "Findings rated Critical/High/Medium/Low"
+    status: "pending"
+
+  - id: "PENTEST-01"
+    name: "Penetration Testing"
+    description: |
+      Conduct penetration testing on API endpoints and auth flows.
+
+      1. Test authentication: brute force protection, account enumeration
+      2. Test authorization: privilege escalation, horizontal/vertical IDOR
+      3. Test injection: SQL, NoSQL, command injection
+      4. Test input validation: buffer overflows, format strings
+      5. Test session management: token rotation, logout, session fixation
+      6. Test API rate limiting and abuse prevention
+      7. Test file upload security (if applicable)
+      8. Document reproduction steps for every finding
+    agent: "security-engineer"
+    depends_on: ["SCOPE-01"]
+    produces:
+      - name: "Penetration Test Results"
+        type: "document"
+        path: "products/{PRODUCT}/docs/quality-reports/pentest-results.md"
+    parallel_ok: true
+    checkpoint: false
+    priority: "high"
+    estimated_time_minutes: 60
+    acceptance_criteria:
+      - "All auth flows tested"
+      - "All injection vectors tested"
+      - "Findings include reproduction steps"
+      - "CVSS scores assigned where applicable"
+    status: "pending"
+
+  - id: "DEPS-01"
+    name: "Dependency Vulnerability Audit"
+    description: |
+      Audit all npm/package dependencies for known vulnerabilities.
+
+      1. Run `npm audit` for all packages in the monorepo
+      2. Check for dependencies with known CVEs
+      3. Identify outdated packages with security patches available
+      4. Check for dependency confusion attack vectors
+      5. Review license compliance
+      6. Create update plan: immediate (Critical/High) vs. scheduled (Medium/Low)
+    agent: "devops-engineer"
+    depends_on: ["SCOPE-01"]
+    produces:
+      - name: "Dependency Vulnerability Report"
+        type: "document"
+        path: "products/{PRODUCT}/docs/quality-reports/deps-audit.md"
+    parallel_ok: true
+    checkpoint: false
+    priority: "medium"
+    estimated_time_minutes: 20
+    acceptance_criteria:
+      - "All dependencies audited"
+      - "CVEs listed with severity"
+      - "Update plan created"
+      - "Critical/High vulnerabilities flagged for immediate action"
+    status: "pending"
+
+  - id: "REPORT-01"
+    name: "Compile Security Audit Report"
+    description: |
+      Compile all findings into a comprehensive security audit report.
+
+      1. Aggregate findings from SCAN-01, PENTEST-01, DEPS-01
+      2. Assign unique finding IDs (SEC-001, SEC-002, ...)
+      3. Rate overall security posture score (0-10)
+      4. Create executive summary for CEO
+      5. Prioritize findings by risk: Critical → High → Medium → Low
+      6. Create remediation roadmap with effort estimates
+      7. Define timeline: Critical (24h), High (1 week), Medium (1 month)
+    agent: "security-engineer"
+    depends_on: ["SCAN-01", "PENTEST-01", "DEPS-01"]
+    produces:
+      - name: "Security Audit Report"
+        type: "document"
+        path: "products/{PRODUCT}/docs/quality-reports/security-audit-report.md"
+    parallel_ok: false
+    checkpoint: true
+    priority: "critical"
+    estimated_time_minutes: 45
+    acceptance_criteria:
+      - "All findings documented with unique IDs"
+      - "Severity ratings assigned (Critical/High/Medium/Low)"
+      - "Executive summary complete"
+      - "Remediation roadmap with timelines"
+      - "Overall security score assigned"
+    status: "pending"
+
+  # ============================================================================
+  # PHASE 3: REMEDIATION
+  # ============================================================================
+
+  - id: "REMEDIATE-01"
+    name: "Remediate Critical & High Findings"
+    description: |
+      Implement security fixes for all Critical and High severity findings.
+
+      For each Critical/High finding from REPORT-01:
+      1. Write a failing security test that reproduces the vulnerability (TDD)
+      2. Implement the fix
+      3. Verify the test now passes
+      4. Confirm no regressions introduced
+      5. Reference finding ID in commit message (e.g., fix(security): [SEC-001])
+
+      Do NOT mark this task done until ALL Critical and High findings are fixed
+      and verified with actual test output (Verification-Before-Completion gate).
+    agent: "backend-engineer"
+    depends_on: ["REPORT-01"]
+    produces:
+      - name: "Security Fixes"
+        type: "directory"
+        path: "products/{PRODUCT}/apps/"
+    parallel_ok: false
+    checkpoint: false
+    priority: "critical"
+    estimated_time_minutes: 90
+    acceptance_criteria:
+      - "All Critical findings remediated"
+      - "All High findings remediated or formally accepted with mitigation"
+      - "Security regression tests added for each fix"
+      - "All existing tests still passing"
+    status: "pending"
+
+  - id: "VERIFY-01"
+    name: "Verify Remediation & Close Audit"
+    description: |
+      Re-test all remediated findings and formally close the audit.
+
+      1. Re-run SAST scan and confirm no Critical/High remain
+      2. Re-test all penetration test findings that were fixed
+      3. Re-run npm audit and confirm Critical/High deps updated
+      4. Verify security regression tests all pass
+      5. Update security audit report with remediation status per finding
+      6. Assign final security score (post-remediation)
+      7. Generate formal audit closure document
+    agent: "qa-engineer"
+    depends_on: ["REMEDIATE-01"]
+    produces:
+      - name: "Audit Closure Report"
+        type: "document"
+        path: "products/{PRODUCT}/docs/quality-reports/security-audit-closure.md"
+    parallel_ok: false
+    checkpoint: true
+    priority: "high"
+    estimated_time_minutes: 30
+    acceptance_criteria:
+      - "All Critical/High findings verified as fixed"
+      - "Re-test results documented"
+      - "Final security score assigned"
+      - "Audit formally closed with date and sign-off"
+    status: "pending"

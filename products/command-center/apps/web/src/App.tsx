@@ -16,17 +16,16 @@ import HealthScorecard from './pages/HealthScorecard.js';
 import GitAnalytics from './pages/GitAnalytics.js';
 import QualityGates from './pages/QualityGates.js';
 import AgentMonitor from './pages/AgentMonitor.js';
-import DependencyGraph from './pages/DependencyGraph.js';
 import KnowledgeBase from './pages/KnowledgeBase.js';
 import SprintBoard from './pages/SprintBoard.js';
 import AlertCenter from './pages/AlertCenter.js';
 import Settings from './pages/Settings.js';
 import Simulate from './pages/Simulate.js';
-import Showcase from './pages/Showcase.js';
-import ProductShowcase from './pages/ProductShowcase.js';
 import PitchDeck from './pages/PitchDeck.js';
 import Protocols from './pages/Protocols.js';
 import Constitution from './pages/Constitution.js';
+import ApprovalQueue from './pages/ApprovalQueue.js';
+import PRDashboard from './pages/PRDashboard.js';
 
 export default function App() {
   return (
@@ -36,9 +35,7 @@ export default function App() {
         <Route path="overview" element={<Overview />} />
         <Route path="products" element={<Products />} />
         <Route path="products/:name" element={<ProductDetail />} />
-        <Route path="showcase" element={<Showcase />} />
-        <Route path="showcase/:name" element={<ProductShowcase />} />
-        <Route path="showcase/:name/pitch" element={<PitchDeck />} />
+        <Route path="products/:name/pitch-deck" element={<PitchDeck />} />
         <Route path="agents" element={<Agents />} />
         <Route path="agents/:id" element={<AgentDetail />} />
         <Route path="workflows" element={<Workflows />} />
@@ -52,7 +49,6 @@ export default function App() {
         <Route path="git-analytics" element={<GitAnalytics />} />
         <Route path="quality-gates" element={<QualityGates />} />
         <Route path="monitor" element={<AgentMonitor />} />
-        <Route path="dependencies" element={<DependencyGraph />} />
         <Route path="knowledge" element={<KnowledgeBase />} />
         <Route path="sprint" element={<SprintBoard />} />
         <Route path="alerts" element={<AlertCenter />} />
@@ -60,6 +56,8 @@ export default function App() {
         <Route path="settings" element={<Settings />} />
         <Route path="protocols" element={<Protocols />} />
         <Route path="constitution" element={<Constitution />} />
+        <Route path="approvals" element={<ApprovalQueue />} />
+        <Route path="pr-dashboard" element={<PRDashboard />} />
       </Route>
     </Routes>
   );

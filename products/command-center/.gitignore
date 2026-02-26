@@ -1,0 +1,12 @@
+# Proof archives — too large for git
+e2e-proof-*.zip
+
+# Playwright video and trace artifacts — large binary files
+e2e-proof/*/video/
+e2e-proof/*/trace/
+
+# Playwright built-in output directories
+playwright-report/
+test-results/
+
+# Keep: e2e-proof/api-proof/*.json (small JSON proofs, committed as evidence)

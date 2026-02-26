@@ -1,0 +1,247 @@
+# Architecture Review Workflow Task Graph Template
+# Placeholders: {PRODUCT}, {DESCRIPTION}, {TIMESTAMP}
+#
+# TRACEABILITY RULES (Constitution Article VI):
+#   - Architecture decisions MUST be captured in ADRs
+#   - Before/after diagrams required for every structural change
+#   - All ADRs must document alternatives considered
+
+# ─────────────────────────────────────────────────────────────────
+# PROTOCOL ENFORCEMENT (ConnectSW Constitution Articles XI & XII)
+# ─────────────────────────────────────────────────────────────────
+# ALL AGENTS must follow BEFORE starting any task:
+#   - Read .claude/protocols/anti-rationalization.md (Article XI)
+#   - Apply the 1% Rule: if a quality step might apply, invoke it
+#
+# ALL AGENTS must follow BEFORE marking any task done:
+#   - Verification-Before-Completion 5-Step Gate (Article XI):
+#     1. Identify what "done" looks like (specific, testable)
+#     2. Execute the actual verification command
+#     3. Read the actual output (do NOT assume success)
+#     4. Compare output to acceptance criteria literally
+#     5. Claim done only when evidence matches
+#
+# FOR DELIVERABLES (Article XII):
+#   - Write all outputs to files (direct-delivery.md)
+#   - Compress context if >60% full (context-compression.md)
+# ─────────────────────────────────────────────────────────────────
+
+metadata:
+  product: "{PRODUCT}"
+  version: "1.0.0"
+  workflow_type: "architecture-review"
+  created_at: "{TIMESTAMP}"
+  updated_at: "{TIMESTAMP}"
+
+tasks:
+  # ============================================================================
+  # PHASE 1: SCOPING
+  # ============================================================================
+
+  - id: "SCOPE-01"
+    name: "Define Review Scope"
+    description: |
+      Define the scope and goals of the architecture review for: {PRODUCT}
+
+      1. Identify which systems, services, and components are in scope
+      2. Document the review objectives (scalability, security, maintainability, cost)
+      3. List known pain points raised by stakeholders
+      4. Establish success criteria for the review
+      5. Identify stakeholders who must sign off on findings
+    agent: "architect"
+    depends_on: []
+    produces:
+      - name: "Review Scope Document"
+        type: "document"
+        path: "products/{PRODUCT}/docs/ADRs/arch-review-scope.md"
+    parallel_ok: false
+    checkpoint: false
+    priority: "high"
+    estimated_time_minutes: 20
+    acceptance_criteria:
+      - "Scope boundaries clearly defined"
+      - "Review objectives documented"
+      - "Stakeholders identified"
+      - "Success criteria established"
+    status: "pending"
+
+  # ============================================================================
+  # PHASE 2: ASSESSMENT
+  # ============================================================================
+
+  - id: "CURRENT-01"
+    name: "Document Current Architecture"
+    description: |
+      Create a comprehensive as-is view of the current architecture.
+
+      1. Generate C4 Context diagram (system + external integrations)
+      2. Generate C4 Container diagram (apps, databases, services)
+      3. Generate C4 Component diagram for complex containers
+      4. Map all data flows with sequence diagrams
+      5. Document tech stack and versions
+      6. Identify all integration points and third-party dependencies
+      7. Note technical debt items discovered
+    agent: "architect"
+    depends_on: ["SCOPE-01"]
+    produces:
+      - name: "As-Is Architecture Document"
+        type: "document"
+        path: "products/{PRODUCT}/docs/ADRs/arch-as-is.md"
+    parallel_ok: false
+    checkpoint: false
+    priority: "high"
+    estimated_time_minutes: 60
+    acceptance_criteria:
+      - "C4 Context diagram complete (Mermaid)"
+      - "C4 Container diagram complete (Mermaid)"
+      - "All data flows documented with sequence diagrams"
+      - "Tech stack versions captured"
+      - "Integration points listed"
+    status: "pending"
+
+  - id: "GAPS-01"
+    name: "Security Gap Analysis"
+    description: |
+      Identify security gaps and vulnerabilities in the current architecture.
+
+      1. Review authentication and authorization patterns
+      2. Check for exposed secrets or insecure configurations
+      3. Assess network exposure and API security
+      4. Review data encryption at rest and in transit
+      5. Identify missing security controls
+      6. Rate each gap: Critical / High / Medium / Low
+      7. Estimate remediation effort per finding
+    agent: "security-engineer"
+    depends_on: ["CURRENT-01"]
+    produces:
+      - name: "Security Gap Analysis"
+        type: "document"
+        path: "products/{PRODUCT}/docs/quality-reports/security-gap-analysis.md"
+    parallel_ok: true
+    checkpoint: false
+    priority: "high"
+    estimated_time_minutes: 45
+    acceptance_criteria:
+      - "All security gaps identified and rated"
+      - "Risk ratings assigned (Critical/High/Medium/Low)"
+      - "Remediation effort estimated per finding"
+      - "Quick wins (low effort, high impact) highlighted"
+    status: "pending"
+
+  - id: "PERF-01"
+    name: "Performance Assessment"
+    description: |
+      Assess performance characteristics and identify bottlenecks.
+
+      1. Profile API response times for critical paths
+      2. Identify N+1 query problems and missing indexes
+      3. Assess caching strategy (or lack thereof)
+      4. Review bundle sizes and frontend performance
+      5. Identify scalability ceiling (current architecture limits)
+      6. Document baseline metrics
+    agent: "performance-engineer"
+    depends_on: ["CURRENT-01"]
+    produces:
+      - name: "Performance Assessment Report"
+        type: "document"
+        path: "products/{PRODUCT}/docs/quality-reports/perf-assessment.md"
+    parallel_ok: true
+    checkpoint: false
+    priority: "medium"
+    estimated_time_minutes: 45
+    acceptance_criteria:
+      - "Bottlenecks identified and ranked by impact"
+      - "Baseline metrics recorded"
+      - "Scalability ceiling estimated"
+      - "Quick wins identified"
+    status: "pending"
+
+  # ============================================================================
+  # PHASE 3: PROPOSAL & SIGN-OFF
+  # ============================================================================
+
+  - id: "PROPOSE-01"
+    name: "Propose New Architecture"
+    description: |
+      Design and document the proposed to-be architecture.
+
+      1. Address all Critical/High security gaps from GAPS-01
+      2. Address all high-impact performance issues from PERF-01
+      3. Create C4 diagrams for proposed architecture
+      4. Include before/after comparison diagrams (MANDATORY per Constitution)
+      5. Document migration path from as-is to to-be
+      6. Estimate implementation effort per change
+      7. Define which changes are immediate vs. next quarter vs. roadmap
+    agent: "architect"
+    depends_on: ["GAPS-01", "PERF-01"]
+    produces:
+      - name: "To-Be Architecture Document"
+        type: "document"
+        path: "products/{PRODUCT}/docs/ADRs/arch-to-be.md"
+    parallel_ok: false
+    checkpoint: true
+    priority: "high"
+    estimated_time_minutes: 90
+    acceptance_criteria:
+      - "To-be C4 diagrams complete (Mermaid)"
+      - "Before/after comparison diagrams included"
+      - "All Critical/High findings addressed"
+      - "Migration path documented"
+      - "Effort estimates included"
+    status: "pending"
+
+  - id: "REVIEW-01"
+    name: "Architecture Review Sign-off"
+    description: |
+      Review the proposed architecture for correctness, completeness, and trade-offs.
+
+      1. Validate all diagrams are accurate and consistent
+      2. Verify all identified gaps are addressed
+      3. Review trade-offs documentation
+      4. Check implementation effort estimates are realistic
+      5. Approve or request revisions
+    agent: "code-reviewer"
+    depends_on: ["PROPOSE-01"]
+    produces:
+      - name: "Architecture Review Sign-off"
+        type: "document"
+        path: "products/{PRODUCT}/docs/quality-reports/arch-review-signoff.md"
+    parallel_ok: false
+    checkpoint: false
+    priority: "high"
+    estimated_time_minutes: 30
+    acceptance_criteria:
+      - "All diagrams reviewed and approved"
+      - "Trade-offs documented and accepted"
+      - "Sign-off recorded with reviewer name and date"
+    status: "pending"
+
+  - id: "ADR-01"
+    name: "Write Architecture Decision Records"
+    description: |
+      Document all significant architectural decisions made during this review.
+
+      For each decision:
+      1. Context: What situation required this decision?
+      2. Decision: What was chosen?
+      3. Alternatives Considered: What else was evaluated? (with diagrams if structural)
+      4. Consequences: What are the trade-offs?
+      5. Status: Accepted / Superseded / Deprecated
+
+      Each ADR must include before/after diagrams (Constitution Diagram-First Mandate).
+    agent: "technical-writer"
+    depends_on: ["REVIEW-01"]
+    produces:
+      - name: "Architecture Decision Records"
+        type: "directory"
+        path: "products/{PRODUCT}/docs/ADRs/"
+    parallel_ok: false
+    checkpoint: false
+    priority: "medium"
+    estimated_time_minutes: 30
+    acceptance_criteria:
+      - "One ADR per major architectural decision"
+      - "Alternatives considered documented in each ADR"
+      - "Before/after diagrams in each ADR"
+      - "ADRs follow standard format"
+    status: "pending"

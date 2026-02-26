@@ -44,6 +44,18 @@ export function getAlerts(): Alert[] {
     alerts.push({ ...a, id: `alert-${nextId++}` });
   }
 
+  // 4. Check for missing documentation
+  const docsAlerts = checkMissingDocs();
+  for (const a of docsAlerts) {
+    alerts.push({ ...a, id: `alert-${nextId++}` });
+  }
+
+  // 5. Check for unmerged feature branches
+  const branchAlerts = checkStaleBranches();
+  for (const a of branchAlerts) {
+    alerts.push({ ...a, id: `alert-${nextId++}` });
+  }
+
   // Sort by severity (critical first), then timestamp (newest first)
   const severityOrder: Record<AlertSeverity, number> = {
     critical: 0,
@@ -127,6 +139,93 @@ function checkStaleProducts(): Omit<Alert, 'id'>[] {
       }
     } catch { /* ignore */ }
   }
+
+  return alerts;
+}
+
+function checkMissingDocs(): Omit<Alert, 'id'>[] {
+  const alerts: Omit<Alert, 'id'>[] = [];
+  const productsDir = repoPath('products');
+  if (!existsSync(productsDir)) return [];
+
+  const products = readdirSync(productsDir, { withFileTypes: true })
+    .filter((e) => e.isDirectory())
+    .map((e) => e.name);
+
+  const now = new Date().toISOString();
+
+  for (const product of products) {
+    const dir = repoPath('products', product);
+    const docsDir = join(dir, 'docs');
+
+    // Only check products that have apps/ (are real products, not skeletons)
+    const hasApps = existsSync(join(dir, 'apps'));
+    if (!hasApps) continue;
+
+    if (!existsSync(join(docsDir, 'PRD.md'))) {
+      alerts.push({
+        severity: 'warning',
+        source: 'docs-check',
+        message: 'Missing PRD.md — product requirements not documented',
+        product,
+        timestamp: now,
+      });
+    }
+
+    if (!existsSync(join(docsDir, 'tasks.md'))) {
+      alerts.push({
+        severity: 'info',
+        source: 'docs-check',
+        message: 'Missing tasks.md — no task list found for sprint board',
+        product,
+        timestamp: now,
+      });
+    }
+  }
+
+  return alerts;
+}
+
+function checkStaleBranches(): Omit<Alert, 'id'>[] {
+  const alerts: Omit<Alert, 'id'>[] = [];
+  const now = new Date().toISOString();
+
+  try {
+    const output = execSync(
+      'git branch -r --format="%(refname:short) %(committerdate:iso-strict)"',
+      { cwd: repoRoot(), encoding: 'utf-8', timeout: 10000 },
+    );
+
+    const thirtyDaysAgo = Date.now() - 30 * 24 * 60 * 60 * 1000;
+
+    for (const line of output.trim().split('\n')) {
+      const trimmed = line.trim();
+      if (!trimmed) continue;
+
+      const parts = trimmed.split(' ');
+      const branchName = parts[0];
+      const dateStr = parts[1];
+
+      if (!branchName || branchName.includes('HEAD')) continue;
+      // Only flag feature/fix branches (not main, release, etc.)
+      if (!/\/(feature|fix|arch|foundation)\//.test(branchName)) continue;
+
+      if (dateStr) {
+        const branchTime = new Date(dateStr).getTime();
+        if (branchTime < thirtyDaysAgo) {
+          const daysSince = Math.floor((Date.now() - branchTime) / (24 * 60 * 60 * 1000));
+          const shortName = branchName.replace('origin/', '');
+          alerts.push({
+            severity: 'info',
+            source: 'branch-check',
+            message: `Branch "${shortName}" has had no commits in ${daysSince} days — consider merging or closing`,
+            product: null,
+            timestamp: now,
+          });
+        }
+      }
+    }
+  } catch { /* git not available or no remote */ }
 
   return alerts;
 }

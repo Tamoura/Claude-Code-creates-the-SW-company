@@ -31,16 +31,16 @@ interface AgentDetailResponse {
 const roleColorMap: Record<string, { bg: string; text: string }> = {
   backend: { bg: 'bg-emerald-500/20', text: 'text-emerald-400' },
   frontend: { bg: 'bg-amber-500/20', text: 'text-amber-400' },
-  qa: { bg: 'bg-red-500/20', text: 'text-red-400' },
-  security: { bg: 'bg-red-500/20', text: 'text-red-400' },
+  qa: { bg: 'bg-rose-500/20', text: 'text-rose-400' },
+  security: { bg: 'bg-rose-500/20', text: 'text-rose-400' },
   devops: { bg: 'bg-cyan-500/20', text: 'text-cyan-400' },
-  architect: { bg: 'bg-blue-500/20', text: 'text-blue-400' },
+  architect: { bg: 'bg-indigo-500/20', text: 'text-indigo-400' },
   product: { bg: 'bg-purple-500/20', text: 'text-purple-400' },
   writer: { bg: 'bg-indigo-500/20', text: 'text-indigo-400' },
   innovation: { bg: 'bg-pink-500/20', text: 'text-pink-400' },
   support: { bg: 'bg-orange-500/20', text: 'text-orange-400' },
   mobile: { bg: 'bg-teal-500/20', text: 'text-teal-400' },
-  'code-reviewer': { bg: 'bg-yellow-500/20', text: 'text-yellow-400' },
+  'code-reviewer': { bg: 'bg-amber-500/20', text: 'text-amber-400' },
   designer: { bg: 'bg-rose-500/20', text: 'text-rose-400' },
 };
 
@@ -61,7 +61,7 @@ function getRoleBadge(agentId: string): { label: string; color: { bg: string; te
   if (id.includes('code-reviewer')) return { label: 'Code Review', color: roleColorMap['code-reviewer'] };
   if (id.includes('designer')) return { label: 'UI/UX Design', color: roleColorMap.designer };
 
-  return { label: 'General', color: { bg: 'bg-gray-700', text: 'text-gray-300' } };
+  return { label: 'General', color: { bg: 'bg-slate-700', text: 'text-slate-300' } };
 }
 
 export default function AgentDetail() {
@@ -72,19 +72,19 @@ export default function AgentDetail() {
   if (loading) {
     return (
       <div className="animate-pulse space-y-6">
-        <div className="h-6 bg-gray-800 rounded w-48" />
-        <div className="h-32 bg-gray-800 rounded" />
+        <div className="h-6 bg-slate-800 rounded w-48" />
+        <div className="h-32 bg-slate-800 rounded" />
         <div className="grid grid-cols-4 gap-4">
-          <div className="h-24 bg-gray-800 rounded" />
-          <div className="h-24 bg-gray-800 rounded" />
-          <div className="h-24 bg-gray-800 rounded" />
-          <div className="h-24 bg-gray-800 rounded" />
+          <div className="h-24 bg-slate-800 rounded" />
+          <div className="h-24 bg-slate-800 rounded" />
+          <div className="h-24 bg-slate-800 rounded" />
+          <div className="h-24 bg-slate-800 rounded" />
         </div>
       </div>
     );
   }
 
-  if (!data) return <p className="text-red-400">Failed to load agent details</p>;
+  if (!data) return <p className="text-rose-400">Failed to load agent details</p>;
 
   const { agent } = data;
   const roleBadge = getRoleBadge(agent.id);
@@ -94,14 +94,14 @@ export default function AgentDetail() {
       {/* Back Link */}
       <Link
         to="/agents"
-        className="inline-flex items-center gap-2 text-sm text-gray-400 hover:text-gray-200 mb-6 transition-colors"
+        className="inline-flex items-center gap-2 text-sm text-slate-400 hover:text-slate-200 mb-6 transition-colors"
       >
         <span>←</span>
         <span>Back to Agent Hub</span>
       </Link>
 
       {/* Agent Header Card */}
-      <div className="bg-gray-900 border border-gray-800 rounded-xl p-6 mb-6">
+      <div className="bg-slate-900 border border-slate-800 rounded-xl p-6 mb-6">
         <div className="flex items-start justify-between mb-3">
           <h1 className="text-2xl font-bold text-white">{agent.name}</h1>
           <div className="flex gap-2">
@@ -111,7 +111,7 @@ export default function AgentDetail() {
             </span>
           </div>
         </div>
-        <p className="text-gray-400 leading-relaxed">{agent.description}</p>
+        <p className="text-slate-400 leading-relaxed">{agent.description}</p>
       </div>
 
       {/* Stats Row */}
@@ -141,16 +141,16 @@ export default function AgentDetail() {
       )}
 
       {/* Tabbed Content Area */}
-      <div className="bg-gray-900 border border-gray-800 rounded-xl overflow-hidden">
+      <div className="bg-slate-900 border border-slate-800 rounded-xl overflow-hidden">
         {/* Tab Headers */}
-        <div className="border-b border-gray-800 px-6 pt-6 pb-0">
+        <div className="border-b border-slate-800 px-6 pt-6 pb-0">
           <div className="flex gap-2">
             <button
               onClick={() => setActiveTab('overview')}
               className={`px-4 py-2 text-sm font-medium rounded-t-lg transition-colors ${
                 activeTab === 'overview'
-                  ? 'bg-blue-600/20 text-blue-400 border-b-2 border-blue-400'
-                  : 'text-gray-400 hover:text-gray-200 hover:bg-gray-800'
+                  ? 'bg-indigo-600/20 text-indigo-400 border-b-2 border-indigo-400'
+                  : 'text-slate-400 hover:text-slate-200 hover:bg-slate-800'
               }`}
             >
               Overview
@@ -159,8 +159,8 @@ export default function AgentDetail() {
               onClick={() => setActiveTab('definition')}
               className={`px-4 py-2 text-sm font-medium rounded-t-lg transition-colors ${
                 activeTab === 'definition'
-                  ? 'bg-blue-600/20 text-blue-400 border-b-2 border-blue-400'
-                  : 'text-gray-400 hover:text-gray-200 hover:bg-gray-800'
+                  ? 'bg-indigo-600/20 text-indigo-400 border-b-2 border-indigo-400'
+                  : 'text-slate-400 hover:text-slate-200 hover:bg-slate-800'
               }`}
             >
               Full Definition
@@ -170,8 +170,8 @@ export default function AgentDetail() {
                 onClick={() => setActiveTab('brief')}
                 className={`px-4 py-2 text-sm font-medium rounded-t-lg transition-colors ${
                   activeTab === 'brief'
-                    ? 'bg-blue-600/20 text-blue-400 border-b-2 border-blue-400'
-                    : 'text-gray-400 hover:text-gray-200 hover:bg-gray-800'
+                    ? 'bg-indigo-600/20 text-indigo-400 border-b-2 border-indigo-400'
+                    : 'text-slate-400 hover:text-slate-200 hover:bg-slate-800'
                 }`}
               >
                 Brief
@@ -190,8 +190,8 @@ export default function AgentDetail() {
                 <h3 className="text-lg font-semibold text-white mb-3">Responsibilities</h3>
                 <ul className="space-y-2">
                   {agent.responsibilities.map((r, i) => (
-                    <li key={i} className="text-sm text-gray-300 flex items-start gap-2">
-                      <span className="text-blue-500 mt-1">•</span>
+                    <li key={i} className="text-sm text-slate-300 flex items-start gap-2">
+                      <span className="text-indigo-500 mt-1">•</span>
                       <span>{r}</span>
                     </li>
                   ))}
@@ -227,8 +227,8 @@ export default function AgentDetail() {
           {/* Brief Tab */}
           {activeTab === 'brief' && agent.brief && (
             <div>
-              <div className="mb-4 p-3 bg-blue-500/10 border border-blue-500/20 rounded-lg">
-                <p className="text-sm text-blue-300">
+              <div className="mb-4 p-3 bg-indigo-500/10 border border-indigo-500/20 rounded-lg">
+                <p className="text-sm text-indigo-300">
                   This is the compact version injected into sub-agent prompts
                 </p>
               </div>

@@ -36,11 +36,11 @@ test.describe('Git Analytics Page', () => {
     await expect(page.locator('main').locator('text=Mon').first()).toBeVisible();
   });
 
-  test('shows by-product and by-author charts', async ({ page }) => {
+  test('shows by-product and by-type charts', async ({ page }) => {
     await page.goto('/git-analytics');
     const main = page.locator('main');
     await expect(main.locator('text=By Product')).toBeVisible();
-    await expect(main.locator('text=By Author')).toBeVisible();
+    await expect(main.locator('text=By Type')).toBeVisible();
   });
 });
 

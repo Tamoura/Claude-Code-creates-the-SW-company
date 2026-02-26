@@ -56,7 +56,7 @@ export default function PitchDeck() {
 
   const next = useCallback(() => goToSlide(currentSlide + 1), [goToSlide, currentSlide]);
   const prev = useCallback(() => goToSlide(currentSlide - 1), [goToSlide, currentSlide]);
-  const exit = useCallback(() => navigate(`/showcase/${name}`), [navigate, name]);
+  const exit = useCallback(() => navigate(`/products`), [navigate]);
 
   // Reset slide index when audience filter changes
   useEffect(() => {
@@ -76,17 +76,17 @@ export default function PitchDeck() {
 
   if (deckLoading) {
     return (
-      <div className="fixed inset-0 z-50 bg-gray-950 flex items-center justify-center">
-        <div className="animate-pulse text-gray-500 text-lg">Loading pitch deck...</div>
+      <div className="fixed inset-0 z-50 bg-slate-950 flex items-center justify-center">
+        <div className="animate-pulse text-slate-500 text-lg">Loading pitch deck...</div>
       </div>
     );
   }
 
   if (!deckData || totalSlides === 0) {
     return (
-      <div className="fixed inset-0 z-50 bg-gray-950 flex flex-col items-center justify-center gap-4">
-        <p className="text-gray-400 text-lg">No pitch deck available for this product.</p>
-        <button onClick={exit} className="text-blue-400 hover:text-blue-300 underline">
+      <div className="fixed inset-0 z-50 bg-slate-950 flex flex-col items-center justify-center gap-4">
+        <p className="text-slate-400 text-lg">No pitch deck available for this product.</p>
+        <button onClick={exit} className="text-indigo-400 hover:text-indigo-300 underline">
           Go back
         </button>
       </div>
@@ -97,9 +97,9 @@ export default function PitchDeck() {
   const progress = totalSlides > 1 ? ((currentSlide + 1) / totalSlides) * 100 : 100;
 
   return (
-    <div className="fixed inset-0 z-50 bg-gray-950 flex flex-col overflow-hidden">
+    <div className="fixed inset-0 z-50 bg-slate-950 flex flex-col overflow-hidden">
       {/* Progress bar */}
-      <div className="absolute top-0 left-0 right-0 h-1 bg-gray-900 z-20">
+      <div className="absolute top-0 left-0 right-0 h-1 bg-slate-900 z-20">
         <div
           className="h-full transition-all duration-300 ease-out"
           style={{ width: `${progress}%`, backgroundColor: accentColor }}
@@ -111,7 +111,7 @@ export default function PitchDeck() {
         <div className="flex items-center gap-4">
           <button
             onClick={exit}
-            className="text-gray-400 hover:text-white transition-colors p-1"
+            className="text-slate-400 hover:text-white transition-colors p-1"
             title="Close (Esc)"
           >
             <svg className="w-6 h-6" fill="none" stroke="currentColor" viewBox="0 0 24 24">
@@ -119,14 +119,14 @@ export default function PitchDeck() {
             </svg>
           </button>
           <span className="text-white font-semibold">{displayName}</span>
-          <span className="text-gray-500 text-sm">
+          <span className="text-slate-500 text-sm">
             {currentSlide + 1} / {totalSlides}
           </span>
         </div>
 
         {/* Audience filter */}
         <div className="flex items-center gap-2">
-          <span className="text-xs text-gray-500 mr-1">Audience:</span>
+          <span className="text-xs text-slate-500 mr-1">Audience:</span>
           {AUDIENCE_OPTIONS.map((a) => (
             <button
               key={a}
@@ -134,7 +134,7 @@ export default function PitchDeck() {
               className={`px-3 py-1 rounded-full text-xs font-medium transition-colors ${
                 audience === a
                   ? 'text-white'
-                  : 'bg-gray-800 text-gray-500 hover:text-gray-300'
+                  : 'bg-slate-800 text-slate-500 hover:text-slate-300'
               }`}
               style={audience === a ? { backgroundColor: `${accentColor}30`, color: accentColor } : undefined}
             >
@@ -160,7 +160,7 @@ export default function PitchDeck() {
         <button
           onClick={prev}
           disabled={currentSlide === 0}
-          className="flex items-center gap-2 px-4 py-2 rounded-lg text-sm font-medium disabled:opacity-30 disabled:cursor-not-allowed bg-gray-800 text-gray-300 hover:bg-gray-700 transition-colors"
+          className="flex items-center gap-2 px-4 py-2 rounded-lg text-sm font-medium disabled:opacity-30 disabled:cursor-not-allowed bg-slate-800 text-slate-300 hover:bg-slate-700 transition-colors"
         >
           <svg className="w-4 h-4" fill="none" stroke="currentColor" viewBox="0 0 24 24">
             <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M15 19l-7-7 7-7" />
@@ -186,7 +186,7 @@ export default function PitchDeck() {
         <button
           onClick={next}
           disabled={currentSlide === totalSlides - 1}
-          className="flex items-center gap-2 px-4 py-2 rounded-lg text-sm font-medium disabled:opacity-30 disabled:cursor-not-allowed bg-gray-800 text-gray-300 hover:bg-gray-700 transition-colors"
+          className="flex items-center gap-2 px-4 py-2 rounded-lg text-sm font-medium disabled:opacity-30 disabled:cursor-not-allowed bg-slate-800 text-slate-300 hover:bg-slate-700 transition-colors"
         >
           Next
           <svg className="w-4 h-4" fill="none" stroke="currentColor" viewBox="0 0 24 24">
@@ -205,7 +205,7 @@ function renderSlide(slide: any, accentColor: string) {
   if (isGridSlide(slide.layout)) return <GridSlide slide={slide} accentColor={accentColor} />;
   return (
     <div className="flex items-center justify-center h-full">
-      <p className="text-gray-500">Unknown slide layout: {slide.layout}</p>
+      <p className="text-slate-500">Unknown slide layout: {slide.layout}</p>
     </div>
   );
 }

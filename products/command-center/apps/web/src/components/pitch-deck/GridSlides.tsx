@@ -45,7 +45,7 @@ export function GridSlide({ slide, accentColor }: { slide: FeatureGridSlideData;
               {ICON_MAP[f.icon] ?? '•'}
             </div>
             <div className="text-lg font-semibold text-white mb-1">{f.title}</div>
-            <div className="text-sm text-gray-400 leading-relaxed">{f.description}</div>
+            <div className="text-sm text-slate-400 leading-relaxed">{f.description}</div>
           </div>
         ))}
       </div>

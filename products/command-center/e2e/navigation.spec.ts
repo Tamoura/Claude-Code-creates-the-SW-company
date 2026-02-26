@@ -5,7 +5,7 @@ test.describe('Navigation & Layout', () => {
     await page.goto('/overview');
     await expect(page.locator('aside h1')).toContainText('ConnectSW');
     await expect(page.locator('aside')).toContainText('Command Center');
-    await expect(page.locator('aside')).toContainText('v0.3.0');
+    await expect(page.locator('aside')).toContainText('v0.4.0');
   });
 
   test('sidebar has all navigation links', async ({ page }) => {
@@ -20,7 +20,6 @@ test.describe('Navigation & Layout', () => {
     await expect(page.locator('a[href="/products"]')).toBeVisible();
     await expect(page.locator('a[href="/agents"]')).toBeVisible();
     await expect(page.locator('a[href="/workflows"]')).toBeVisible();
-    await expect(page.locator('a[href="/dependencies"]')).toBeVisible();
 
     // Quality & Ops section
     await expect(page.locator('a[href="/quality-gates"]')).toBeVisible();
