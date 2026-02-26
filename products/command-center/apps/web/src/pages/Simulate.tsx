@@ -148,7 +148,7 @@ export default function Simulate() {
   const [workflowType, setWorkflowType] = useState<WorkflowType>('new-product');
   const { data, loading } = useApi<SimulationResponse>(`/simulations?type=${workflowType}`);
   const [expandedPhase, setExpandedPhase] = useState<number | null>(null);
-  const [fullscreenDiagram, setFullscreenDiagram] = useState<{ title: string; mermaid: string } | null>(null);
+  const [fullscreenDiagram, setFullscreenDiagram] = useState<{ title: string; mermaid?: string; timelineData?: { entries: TimelineEntry[]; phases: SimulationPhase[] } } | null>(null);
 
   // Once workflows load, ensure selected type is valid
   useEffect(() => {
@@ -186,7 +186,12 @@ export default function Simulate() {
         </div>
         <div className="flex-1 overflow-auto p-8">
           <div className="max-w-6xl mx-auto">
-            <MarkdownRenderer content={`\`\`\`mermaid\n${fullscreenDiagram.mermaid}\n\`\`\``} />
+            {fullscreenDiagram.mermaid && (
+              <MarkdownRenderer content={`\`\`\`mermaid\n${fullscreenDiagram.mermaid}\n\`\`\``} />
+            )}
+            {fullscreenDiagram.timelineData && (
+              <ExecutionTimeline timeline={fullscreenDiagram.timelineData.entries} phases={fullscreenDiagram.timelineData.phases} />
+            )}
           </div>
         </div>
       </div>
@@ -247,11 +252,11 @@ interface SimulationContentProps {
   workflowLabel: string;
   expandedPhase: number | null;
   setExpandedPhase: (n: number | null) => void;
-  setFullscreenDiagram: (d: { title: string; mermaid: string } | null) => void;
+  setFullscreenDiagram: (d: { title: string; mermaid?: string; timelineData?: { entries: TimelineEntry[]; phases: SimulationPhase[] } } | null) => void;
 }
 
 function SimulationContent({ simulation, workflowLabel, expandedPhase, setExpandedPhase, setFullscreenDiagram }: SimulationContentProps) {
-  const { summary, phases, deliverables, qualityGates, mermaidDependency, mermaidGantt } = simulation;
+  const { summary, phases, timeline, deliverables, qualityGates, mermaidDependency } = simulation;
 
   return (
     <div>
@@ -290,7 +295,7 @@ function SimulationContent({ simulation, workflowLabel, expandedPhase, setExpand
               <p className="text-sm text-slate-500 mt-1">Critical path highlighted — determines minimum total duration</p>
             </div>
             <button
-              onClick={() => setFullscreenDiagram({ title: 'Execution Timeline', mermaid: mermaidGantt })}
+              onClick={() => setFullscreenDiagram({ title: 'Execution Timeline', timelineData: { entries: timeline, phases } })}
               className="text-slate-400 hover:text-white transition-colors flex items-center gap-1.5 px-2 py-1 rounded hover:bg-slate-800 text-xs"
             >
               <svg className="w-4 h-4" fill="none" stroke="currentColor" viewBox="0 0 24 24" strokeWidth={1.5}>
@@ -299,7 +304,7 @@ function SimulationContent({ simulation, workflowLabel, expandedPhase, setExpand
               Fullscreen
             </button>
           </div>
-          <MarkdownRenderer content={`\`\`\`mermaid\n${mermaidGantt}\n\`\`\``} />
+          <ExecutionTimeline timeline={timeline} phases={phases} />
         </div>
       </section>
 
@@ -386,6 +391,184 @@ function SimulationContent({ simulation, workflowLabel, expandedPhase, setExpand
           </div>
         </div>
       </section>
+    </div>
+  );
+}
+
+// ── Execution Timeline ─────────────────────────────────────────────────
+
+function getTickInterval(totalDuration: number): number {
+  if (totalDuration <= 120) return 15;
+  if (totalDuration <= 480) return 30;
+  if (totalDuration <= 960) return 60;
+  return 120;
+}
+
+function buildTicks(totalDuration: number): number[] {
+  const interval = getTickInterval(totalDuration);
+  const ticks: number[] = [];
+  for (let t = 0; t <= totalDuration; t += interval) {
+    ticks.push(t);
+  }
+  if (ticks[ticks.length - 1] !== totalDuration) {
+    ticks.push(totalDuration);
+  }
+  return ticks;
+}
+
+function TimeAxis({ ticks, totalDuration }: { ticks: number[]; totalDuration: number }) {
+  return (
+    <div className="flex" style={{ marginLeft: '176px' }}>
+      <div className="flex-1 relative h-5">
+        {ticks.map((t) => (
+          <span
+            key={t}
+            className="absolute text-[10px] text-slate-500 -translate-x-1/2"
+            style={{ left: `${(t / totalDuration) * 100}%` }}
+          >
+            {formatTime(t)}
+          </span>
+        ))}
+      </div>
+    </div>
+  );
+}
+
+function ExecutionTimeline({ timeline, phases }: { timeline: TimelineEntry[]; phases: SimulationPhase[] }) {
+  const totalDuration = Math.max(...timeline.map((e) => e.endMinute), 1);
+  const ticks = buildTicks(totalDuration);
+  const uniqueAgents = [...new Set(timeline.map((e) => e.agent))];
+
+  // Group entries by phase name in phase order
+  const phaseOrder = phases.map((p) => p.name);
+  const entriesByPhase: Record<string, TimelineEntry[]> = {};
+  for (const entry of timeline) {
+    if (!entriesByPhase[entry.phase]) entriesByPhase[entry.phase] = [];
+    entriesByPhase[entry.phase].push(entry);
+  }
+
+  return (
+    <div className="overflow-x-auto">
+      <div className="min-w-[640px]">
+
+        {/* Legend */}
+        <div className="flex flex-wrap gap-x-4 gap-y-1.5 mb-4">
+          {uniqueAgents.map((agent) => (
+            <div key={agent} className="flex items-center gap-1.5">
+              <span className={`w-3 h-3 rounded-sm flex-shrink-0 ${agentBgMap[agent] ?? 'bg-slate-600'}`} />
+              <span className="text-xs text-slate-400">{agent}</span>
+            </div>
+          ))}
+          <div className="flex items-center gap-1.5 ml-2 pl-2 border-l border-slate-700">
+            <span className="w-3 h-3 rounded-sm flex-shrink-0 bg-white/20 ring-1 ring-white/40" />
+            <span className="text-xs text-slate-400">Critical path</span>
+          </div>
+        </div>
+
+        {/* Top time axis */}
+        <TimeAxis ticks={ticks} totalDuration={totalDuration} />
+
+        {/* Chart body */}
+        <div className="relative mt-1">
+          {/* Vertical grid lines */}
+          <div className="absolute inset-0 flex pointer-events-none" style={{ marginLeft: '176px' }}>
+            <div className="flex-1 relative">
+              {ticks.map((t) => (
+                <div
+                  key={t}
+                  className="absolute top-0 bottom-0 border-l border-slate-800/80"
+                  style={{ left: `${(t / totalDuration) * 100}%` }}
+                />
+              ))}
+            </div>
+          </div>
+
+          {/* Phase rows */}
+          {phaseOrder.map((phaseName) => {
+            const phaseObj = phases.find((p) => p.name === phaseName);
+            const entries = entriesByPhase[phaseName];
+            if (!phaseObj || !entries || entries.length === 0) return null;
+
+            return (
+              <div key={phaseName} className="mb-3">
+                {/* Phase header */}
+                <div className="flex items-center gap-0 mb-1">
+                  <div className="w-44 flex-shrink-0 pr-3 flex justify-end">
+                    <span className="text-[10px] font-semibold uppercase tracking-wide text-slate-500">
+                      Ph.{phaseObj.number}
+                    </span>
+                  </div>
+                  <div className="flex-1 flex items-center gap-2">
+                    <div className="flex-1 h-px bg-slate-800" />
+                    <span className="text-[10px] font-semibold uppercase tracking-wide text-slate-500 whitespace-nowrap px-1">
+                      {phaseName}
+                    </span>
+                    <div className="flex-1 h-px bg-slate-800" />
+                  </div>
+                </div>
+
+                {/* Task rows */}
+                {entries.map((entry) => {
+                  const duration = entry.endMinute - entry.startMinute;
+                  const leftPct = (entry.startMinute / totalDuration) * 100;
+                  const widthPct = Math.max((duration / totalDuration) * 100, 0.8);
+                  const showLabel = widthPct > 8;
+
+                  return (
+                    <div
+                      key={entry.taskId}
+                      className="flex items-center group/row"
+                    >
+                      {/* Label column */}
+                      <div className="w-44 flex-shrink-0 pr-3 text-right">
+                        <p className="text-xs text-slate-400 truncate" title={entry.taskName}>
+                          {entry.taskName}
+                        </p>
+                        <p
+                          className={`text-[10px] truncate ${agentColorMap[entry.agent] ?? 'text-slate-500'}`}
+                          title={entry.agent}
+                        >
+                          {entry.agent}
+                        </p>
+                      </div>
+
+                      {/* Bar track */}
+                      <div className="flex-1 relative h-7 flex items-center">
+                        <div
+                          className={`absolute h-5 rounded-sm flex items-center justify-end overflow-hidden ${
+                            agentBgMap[entry.agent] ?? 'bg-slate-600'
+                          } ${
+                            entry.isCriticalPath
+                              ? 'ring-1 ring-white/30 brightness-110'
+                              : 'opacity-70 group-hover/row:opacity-90'
+                          }`}
+                          style={{
+                            left: `${leftPct}%`,
+                            width: `${widthPct}%`,
+                          }}
+                          title={`${entry.taskId}: ${entry.taskName}\nAgent: ${entry.agent}\n${formatTime(entry.startMinute)} → ${formatTime(entry.endMinute)}${entry.isCriticalPath ? '\n⚡ Critical Path' : ''}`}
+                        >
+                          {showLabel && (
+                            <span className="text-[9px] text-white/90 font-medium px-1 truncate">
+                              {formatTime(duration)}
+                            </span>
+                          )}
+                        </div>
+                      </div>
+                    </div>
+                  );
+                })}
+              </div>
+            );
+          })}
+        </div>
+
+        {/* Bottom time axis */}
+        <div className="mt-1">
+          <TimeAxis ticks={ticks} totalDuration={totalDuration} />
+        </div>
+
+      </div>
     </div>
   );
 }
