@@ -148,7 +148,7 @@ export default function Simulate() {
   const [workflowType, setWorkflowType] = useState<WorkflowType>('new-product');
   const { data, loading } = useApi<SimulationResponse>(`/simulations?type=${workflowType}`);
   const [expandedPhase, setExpandedPhase] = useState<number | null>(null);
-  const [fullscreenDiagram, setFullscreenDiagram] = useState<{ title: string; mermaid?: string; timelineData?: { entries: TimelineEntry[]; phases: SimulationPhase[] } } | null>(null);
+  const [fullscreenDiagram, setFullscreenDiagram] = useState<{ title: string; mermaid?: string; timelineData?: { entries: TimelineEntry[]; phases: SimulationPhase[] }; depsPhases?: SimulationPhase[] } | null>(null);
 
   // Once workflows load, ensure selected type is valid
   useEffect(() => {
@@ -191,6 +191,9 @@ export default function Simulate() {
             )}
             {fullscreenDiagram.timelineData && (
               <ExecutionTimeline timeline={fullscreenDiagram.timelineData.entries} phases={fullscreenDiagram.timelineData.phases} />
+            )}
+            {fullscreenDiagram.depsPhases && (
+              <DependencyGraph phases={fullscreenDiagram.depsPhases} />
             )}
           </div>
         </div>
@@ -252,11 +255,11 @@ interface SimulationContentProps {
   workflowLabel: string;
   expandedPhase: number | null;
   setExpandedPhase: (n: number | null) => void;
-  setFullscreenDiagram: (d: { title: string; mermaid?: string; timelineData?: { entries: TimelineEntry[]; phases: SimulationPhase[] } } | null) => void;
+  setFullscreenDiagram: (d: { title: string; mermaid?: string; timelineData?: { entries: TimelineEntry[]; phases: SimulationPhase[] }; depsPhases?: SimulationPhase[] } | null) => void;
 }
 
 function SimulationContent({ simulation, workflowLabel, expandedPhase, setExpandedPhase, setFullscreenDiagram }: SimulationContentProps) {
-  const { summary, phases, timeline, deliverables, qualityGates, mermaidDependency } = simulation;
+  const { summary, phases, timeline, deliverables, qualityGates } = simulation;
 
   return (
     <div>
@@ -332,7 +335,7 @@ function SimulationContent({ simulation, workflowLabel, expandedPhase, setExpand
               <p className="text-sm text-slate-500 mt-1">Full dependency graph — agent-colored nodes</p>
             </div>
             <button
-              onClick={() => setFullscreenDiagram({ title: 'Task Dependencies', mermaid: mermaidDependency })}
+              onClick={() => setFullscreenDiagram({ title: 'Task Dependencies', depsPhases: phases })}
               className="text-slate-400 hover:text-white transition-colors flex items-center gap-1.5 px-2 py-1 rounded hover:bg-slate-800 text-xs"
             >
               <svg className="w-4 h-4" fill="none" stroke="currentColor" viewBox="0 0 24 24" strokeWidth={1.5}>
@@ -341,7 +344,7 @@ function SimulationContent({ simulation, workflowLabel, expandedPhase, setExpand
               Fullscreen
             </button>
           </div>
-          <MarkdownRenderer content={`\`\`\`mermaid\n${mermaidDependency}\n\`\`\``} />
+          <DependencyGraph phases={phases} />
         </div>
       </section>
 
@@ -391,6 +394,116 @@ function SimulationContent({ simulation, workflowLabel, expandedPhase, setExpand
           </div>
         </div>
       </section>
+    </div>
+  );
+}
+
+// ── Dependency Graph ────────────────────────────────────────────────────
+
+const DNODE_W = 160;
+const DNODE_H = 58;
+const DROW_GAP = 6;
+const DCOL_GAP = 48;
+const DHEADER_H = 24;
+
+function DependencyGraph({ phases }: { phases: SimulationPhase[] }) {
+  const allTasks = phases.flatMap((p) => p.tasks);
+
+  // Map taskId → absolute pixel position (top-left corner of node)
+  const posMap = new Map<string, { x: number; y: number }>();
+  phases.forEach((phase, colIdx) => {
+    phase.tasks.forEach((task, rowIdx) => {
+      posMap.set(task.id, {
+        x: colIdx * (DNODE_W + DCOL_GAP),
+        y: DHEADER_H + rowIdx * (DNODE_H + DROW_GAP),
+      });
+    });
+  });
+
+  const maxRows = Math.max(...phases.map((p) => p.tasks.length), 1);
+  const totalW = phases.length > 0 ? phases.length * (DNODE_W + DCOL_GAP) - DCOL_GAP : DNODE_W;
+  const totalH = DHEADER_H + maxRows * (DNODE_H + DROW_GAP) - DROW_GAP;
+
+  // Collect edges from dependsOn
+  const edges = allTasks.flatMap((task) =>
+    (task.dependsOn ?? [])
+      .filter((depId) => posMap.has(depId))
+      .map((depId) => ({ from: depId, to: task.id })),
+  );
+
+  return (
+    <div className="overflow-x-auto pb-2">
+      <div style={{ position: 'relative', width: totalW, height: totalH }}>
+
+        {/* Phase column headers */}
+        {phases.map((phase, colIdx) => (
+          <div
+            key={phase.number}
+            style={{ position: 'absolute', left: colIdx * (DNODE_W + DCOL_GAP), top: 0, width: DNODE_W }}
+            className="flex items-center justify-center"
+          >
+            <span className="text-[10px] font-semibold uppercase tracking-wider text-slate-500 bg-slate-900 px-2 rounded">
+              Phase {phase.number}
+            </span>
+          </div>
+        ))}
+
+        {/* SVG layer — edges with bezier curves and arrowheads */}
+        <svg
+          style={{ position: 'absolute', left: 0, top: 0, width: totalW, height: totalH, overflow: 'visible' }}
+          className="pointer-events-none"
+        >
+          <defs>
+            <marker id="dep-arrow" viewBox="0 0 8 8" markerWidth="5" markerHeight="5" refX="7" refY="4" orient="auto">
+              <path d="M1,1 L7,4 L1,7 Z" fill="#475569" />
+            </marker>
+          </defs>
+          {edges.map(({ from, to }) => {
+            const fp = posMap.get(from);
+            const tp = posMap.get(to);
+            if (!fp || !tp) return null;
+            const x1 = fp.x + DNODE_W;          // right edge of source
+            const y1 = fp.y + DNODE_H / 2;       // vertical center of source
+            const x2 = tp.x - 4;                 // just before left edge of target
+            const y2 = tp.y + DNODE_H / 2;       // vertical center of target
+            const cpX = (x1 + tp.x) / 2;         // horizontal midpoint for bezier
+            return (
+              <path
+                key={`${from}-${to}`}
+                d={`M ${x1} ${y1} C ${cpX} ${y1}, ${cpX} ${y2}, ${x2} ${y2}`}
+                fill="none"
+                stroke="#475569"
+                strokeWidth={1.5}
+                markerEnd="url(#dep-arrow)"
+              />
+            );
+          })}
+        </svg>
+
+        {/* Task nodes */}
+        {phases.map((phase) =>
+          phase.tasks.map((task) => {
+            const pos = posMap.get(task.id);
+            if (!pos) return null;
+            return (
+              <div
+                key={task.id}
+                style={{ position: 'absolute', left: pos.x, top: pos.y, width: DNODE_W, height: DNODE_H }}
+                className="rounded-lg border border-slate-700 bg-slate-800/90 px-3 py-2 flex flex-col justify-center hover:border-slate-500 transition-colors cursor-default"
+                title={`${task.id}: ${task.name}\n${task.agent}`}
+              >
+                <div className="flex items-center gap-1.5 mb-0.5">
+                  <div className={`w-2 h-2 rounded-full flex-shrink-0 ${agentBgMap[task.agent] ?? 'bg-slate-600'}`} />
+                  <span className="text-[10px] text-slate-500 truncate font-mono">{task.id}</span>
+                  {task.checkpoint && <span className="text-amber-400 text-[10px] ml-auto flex-shrink-0">★</span>}
+                </div>
+                <p className="text-xs font-medium text-slate-200 truncate leading-snug">{task.name}</p>
+                <p className={`text-[10px] truncate ${agentColorMap[task.agent] ?? 'text-slate-500'}`}>{task.agent}</p>
+              </div>
+            );
+          })
+        )}
+      </div>
     </div>
   );
 }
