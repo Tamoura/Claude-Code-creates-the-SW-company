@@ -46,9 +46,9 @@ function formatAge(hours: number): string {
 
 const ciConfig = {
   success: { label: 'CI Pass', dot: 'bg-emerald-500', text: 'text-emerald-400' },
-  failure: { label: 'CI Fail', dot: 'bg-red-500', text: 'text-red-400' },
-  pending: { label: 'CI Running', dot: 'bg-yellow-500', text: 'text-yellow-400' },
-  unknown: { label: 'CI Unknown', dot: 'bg-gray-500', text: 'text-gray-400' },
+  failure: { label: 'CI Fail', dot: 'bg-rose-500', text: 'text-rose-400' },
+  pending: { label: 'CI Running', dot: 'bg-amber-500', text: 'text-amber-400' },
+  unknown: { label: 'CI Unknown', dot: 'bg-slate-500', text: 'text-slate-400' },
 };
 
 const reviewConfig: Record<
@@ -67,11 +67,11 @@ function PRCard({ pr }: { pr: PR }) {
   const review = pr.reviewDecision ? reviewConfig[pr.reviewDecision] : null;
 
   return (
-    <div className="bg-gray-900 border border-gray-800 rounded-xl p-4 hover:border-gray-700 transition-colors">
+    <div className="bg-slate-900 border border-slate-800 rounded-xl p-4 hover:border-slate-700 transition-colors">
       <div className="flex items-start gap-3">
         {/* PR number */}
         <div className="flex-shrink-0 w-10 text-center">
-          <span className="text-xs font-mono text-gray-500">#{pr.number}</span>
+          <span className="text-xs font-mono text-slate-500">#{pr.number}</span>
         </div>
 
         <div className="flex-1 min-w-0">
@@ -84,14 +84,14 @@ function PRCard({ pr }: { pr: PR }) {
           </div>
 
           {/* Branch info */}
-          <p className="text-xs text-gray-500 mt-1 font-mono truncate">
+          <p className="text-xs text-slate-500 mt-1 font-mono truncate">
             {pr.headBranch} → {pr.baseBranch}
           </p>
 
           {/* Meta row */}
           <div className="flex items-center gap-3 mt-2 flex-wrap">
-            <span className="text-xs text-gray-500">by <span className="text-gray-400">{pr.author}</span></span>
-            <span className="text-xs text-gray-600">age: <span className="text-gray-500">{formatAge(pr.ageHours)}</span></span>
+            <span className="text-xs text-slate-500">by <span className="text-slate-400">{pr.author}</span></span>
+            <span className="text-xs text-slate-600">age: <span className="text-slate-500">{formatAge(pr.ageHours)}</span></span>
 
             {/* CI dot */}
             <div className="flex items-center gap-1">
@@ -120,7 +120,7 @@ export default function PRDashboard() {
   }, [data, activeTab, ciFilter]);
 
   if (loading) return <LoadingSkeleton />;
-  if (!data) return <p className="text-red-400">Failed to load PR dashboard</p>;
+  if (!data) return <p className="text-rose-400">Failed to load PR dashboard</p>;
 
   const { stats } = data;
 
@@ -130,12 +130,12 @@ export default function PRDashboard() {
         <h1 className="text-2xl font-bold text-white">PR Dashboard</h1>
         <button
           onClick={refetch}
-          className="text-xs text-gray-500 hover:text-gray-300 transition-colors"
+          className="text-xs text-slate-500 hover:text-slate-300 transition-colors"
         >
           Refresh
         </button>
       </div>
-      <p className="text-gray-500 mb-8">Open pull requests across all ConnectSW products</p>
+      <p className="text-slate-500 mb-8">Open pull requests across all ConnectSW products</p>
 
       {/* Stats */}
       <div className="grid grid-cols-3 gap-4 mb-4">
@@ -151,15 +151,15 @@ export default function PRDashboard() {
 
       {/* View tabs */}
       <div className="flex items-center justify-between mb-4">
-        <div className="flex gap-1 bg-gray-900 border border-gray-800 rounded-lg p-1 w-fit">
+        <div className="flex gap-1 bg-slate-900 border border-slate-800 rounded-lg p-1 w-fit">
           {(['open', 'closed'] as const).map((tab) => (
             <button
               key={tab}
               onClick={() => setActiveTab(tab)}
               className={`px-4 py-2 rounded-md text-sm font-medium transition-colors capitalize ${
                 activeTab === tab
-                  ? 'bg-gray-700 text-white'
-                  : 'text-gray-400 hover:text-gray-200'
+                  ? 'bg-slate-700 text-white'
+                  : 'text-slate-400 hover:text-slate-200'
               }`}
             >
               {tab === 'open'
@@ -170,15 +170,15 @@ export default function PRDashboard() {
         </div>
 
         {/* CI filter */}
-        <div className="flex gap-1 bg-gray-900 border border-gray-800 rounded-lg p-1 w-fit">
+        <div className="flex gap-1 bg-slate-900 border border-slate-800 rounded-lg p-1 w-fit">
           {(['all', 'failure', 'pending'] as const).map((f) => (
             <button
               key={f}
               onClick={() => setCiFilter(f)}
               className={`px-3 py-1.5 rounded-md text-xs font-medium transition-colors capitalize ${
                 ciFilter === f
-                  ? 'bg-gray-700 text-white'
-                  : 'text-gray-500 hover:text-gray-300'
+                  ? 'bg-slate-700 text-white'
+                  : 'text-slate-500 hover:text-slate-300'
               }`}
             >
               {f === 'all' ? 'All CI' : f === 'failure' ? 'Failing' : 'Pending'}
@@ -189,7 +189,7 @@ export default function PRDashboard() {
 
       {/* PR list */}
       {displayedPRs.length === 0 ? (
-        <div className="bg-gray-900 border border-gray-800 rounded-xl p-12 text-center">
+        <div className="bg-slate-900 border border-slate-800 rounded-xl p-12 text-center">
           <svg
             className="w-12 h-12 text-emerald-500 mx-auto mb-3"
             fill="none"
@@ -203,7 +203,7 @@ export default function PRDashboard() {
               d="M9 12.75L11.25 15 15 9.75M21 12a9 9 0 11-18 0 9 9 0 0118 0z"
             />
           </svg>
-          <p className="text-gray-400 text-sm">No PRs match this filter</p>
+          <p className="text-slate-400 text-sm">No PRs match this filter</p>
         </div>
       ) : (
         <div className="space-y-2">
@@ -219,21 +219,21 @@ export default function PRDashboard() {
 function LoadingSkeleton() {
   return (
     <div className="animate-pulse">
-      <div className="h-8 bg-gray-800 rounded w-48 mb-2" />
-      <div className="h-4 bg-gray-800 rounded w-64 mb-8" />
+      <div className="h-8 bg-slate-800 rounded w-48 mb-2" />
+      <div className="h-4 bg-slate-800 rounded w-64 mb-8" />
       <div className="grid grid-cols-3 gap-4 mb-4">
         {[...Array(3)].map((_, i) => (
-          <div key={i} className="h-28 bg-gray-800 rounded-xl" />
+          <div key={i} className="h-28 bg-slate-800 rounded-xl" />
         ))}
       </div>
       <div className="grid grid-cols-3 gap-4 mb-8">
         {[...Array(3)].map((_, i) => (
-          <div key={i} className="h-28 bg-gray-800 rounded-xl" />
+          <div key={i} className="h-28 bg-slate-800 rounded-xl" />
         ))}
       </div>
       <div className="space-y-2">
         {[...Array(5)].map((_, i) => (
-          <div key={i} className="h-20 bg-gray-800 rounded-xl" />
+          <div key={i} className="h-20 bg-slate-800 rounded-xl" />
         ))}
       </div>
     </div>

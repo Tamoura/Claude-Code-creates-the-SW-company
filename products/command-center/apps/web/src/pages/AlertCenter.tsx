@@ -40,7 +40,7 @@ export default function AlertCenter() {
   }, [data, activeTab]);
 
   if (loading) return <LoadingSkeleton />;
-  if (!data) return <p className="text-red-400">Failed to load alerts</p>;
+  if (!data) return <p className="text-rose-400">Failed to load alerts</p>;
 
   const tabs: { key: FilterTab; label: string }[] = [
     { key: 'all', label: `All (${data.alerts.length})` },
@@ -52,7 +52,7 @@ export default function AlertCenter() {
   return (
     <div>
       <h1 className="text-2xl font-bold text-white mb-1">Alert Center</h1>
-      <p className="text-gray-500 mb-8">System alerts and notifications</p>
+      <p className="text-slate-500 mb-8">System alerts and notifications</p>
 
       {/* Stat cards */}
       <div className="grid grid-cols-3 gap-4 mb-8">
@@ -62,15 +62,15 @@ export default function AlertCenter() {
       </div>
 
       {/* Filter tabs */}
-      <div className="flex gap-1 mb-6 bg-gray-900 border border-gray-800 rounded-lg p-1 w-fit">
+      <div className="flex gap-1 mb-6 bg-slate-900 border border-slate-800 rounded-lg p-1 w-fit">
         {tabs.map((tab) => (
           <button
             key={tab.key}
             onClick={() => setActiveTab(tab.key)}
             className={`px-4 py-2 rounded-md text-sm font-medium transition-colors ${
               activeTab === tab.key
-                ? 'bg-gray-700 text-white'
-                : 'text-gray-400 hover:text-gray-200'
+                ? 'bg-slate-700 text-white'
+                : 'text-slate-400 hover:text-slate-200'
             }`}
           >
             {tab.label}
@@ -80,11 +80,11 @@ export default function AlertCenter() {
 
       {/* Alert list */}
       {filtered.length === 0 ? (
-        <div className="bg-gray-900 border border-gray-800 rounded-xl p-12 text-center">
+        <div className="bg-slate-900 border border-slate-800 rounded-xl p-12 text-center">
           <svg className="w-12 h-12 text-emerald-500 mx-auto mb-3" fill="none" stroke="currentColor" viewBox="0 0 24 24" strokeWidth={1.5}>
             <path strokeLinecap="round" strokeLinejoin="round" d="M9 12.75L11.25 15 15 9.75M21 12a9 9 0 11-18 0 9 9 0 0118 0z" />
           </svg>
-          <p className="text-gray-400 text-sm">All clear — no active alerts</p>
+          <p className="text-slate-400 text-sm">All clear — no active alerts</p>
         </div>
       ) : (
         <div className="space-y-3">
@@ -106,7 +106,7 @@ const severityConfig = {
   critical: {
     border: 'border-l-red-500',
     icon: (
-      <svg className="w-5 h-5 text-red-400" fill="none" stroke="currentColor" viewBox="0 0 24 24" strokeWidth={2}>
+      <svg className="w-5 h-5 text-rose-400" fill="none" stroke="currentColor" viewBox="0 0 24 24" strokeWidth={2}>
         <path strokeLinecap="round" strokeLinejoin="round" d="M12 9v3.75m-9.303 3.376c-.866 1.5.217 3.374 1.948 3.374h14.71c1.73 0 2.813-1.874 1.948-3.374L13.949 3.378c-.866-1.5-3.032-1.5-3.898 0L2.697 16.126zM12 15.75h.007v.008H12v-.008z" />
       </svg>
     ),
@@ -114,7 +114,7 @@ const severityConfig = {
   warning: {
     border: 'border-l-yellow-500',
     icon: (
-      <svg className="w-5 h-5 text-yellow-400" fill="none" stroke="currentColor" viewBox="0 0 24 24" strokeWidth={2}>
+      <svg className="w-5 h-5 text-amber-400" fill="none" stroke="currentColor" viewBox="0 0 24 24" strokeWidth={2}>
         <path strokeLinecap="round" strokeLinejoin="round" d="M12 9v3.75m-9.303 3.376c-.866 1.5.217 3.374 1.948 3.374h14.71c1.73 0 2.813-1.874 1.948-3.374L13.949 3.378c-.866-1.5-3.032-1.5-3.898 0L2.697 16.126zM12 15.75h.007v.008H12v-.008z" />
       </svg>
     ),
@@ -122,7 +122,7 @@ const severityConfig = {
   info: {
     border: 'border-l-blue-500',
     icon: (
-      <svg className="w-5 h-5 text-blue-400" fill="none" stroke="currentColor" viewBox="0 0 24 24" strokeWidth={2}>
+      <svg className="w-5 h-5 text-indigo-400" fill="none" stroke="currentColor" viewBox="0 0 24 24" strokeWidth={2}>
         <path strokeLinecap="round" strokeLinejoin="round" d="M11.25 11.25l.041-.02a.75.75 0 011.063.852l-.708 2.836a.75.75 0 001.063.853l.041-.021M21 12a9 9 0 11-18 0 9 9 0 0118 0zm-9-3.75h.008v.008H12V8.25z" />
       </svg>
     ),
@@ -147,7 +147,7 @@ function AlertCard({ alert, expanded, onToggle }: { alert: Alert; expanded: bool
 
   return (
     <div
-      className={`bg-gray-900 border border-gray-800 border-l-4 ${config.border} rounded-xl p-4 hover:border-gray-700 transition-colors`}
+      className={`bg-slate-900 border border-slate-800 border-l-4 ${config.border} rounded-xl p-4 hover:border-slate-700 transition-colors`}
     >
       <div className="flex items-start gap-3">
         <div className="flex-shrink-0 mt-0.5">{config.icon}</div>
@@ -156,18 +156,18 @@ function AlertCard({ alert, expanded, onToggle }: { alert: Alert; expanded: bool
           <div className="flex items-center gap-2 mt-2 flex-wrap">
             <Badge>{alert.source}</Badge>
             {alert.product && <Badge variant="info">{alert.product}</Badge>}
-            <span className="text-xs text-gray-500">{formatRelativeTime(alert.timestamp)}</span>
+            <span className="text-xs text-slate-500">{formatRelativeTime(alert.timestamp)}</span>
           </div>
           {alert.details && (
             <button
               onClick={onToggle}
-              className="text-xs text-gray-500 hover:text-gray-300 mt-2 transition-colors"
+              className="text-xs text-slate-500 hover:text-slate-300 mt-2 transition-colors"
             >
               {expanded ? 'Hide details' : 'Show details'}
             </button>
           )}
           {expanded && alert.details && (
-            <div className="mt-3 bg-gray-800/50 rounded-lg p-3 text-xs text-gray-400 whitespace-pre-wrap">
+            <div className="mt-3 bg-slate-800/50 rounded-lg p-3 text-xs text-slate-400 whitespace-pre-wrap">
               {alert.details}
             </div>
           )}
@@ -180,13 +180,13 @@ function AlertCard({ alert, expanded, onToggle }: { alert: Alert; expanded: bool
 function LoadingSkeleton() {
   return (
     <div className="animate-pulse">
-      <div className="h-8 bg-gray-800 rounded w-36 mb-2" />
-      <div className="h-4 bg-gray-800 rounded w-56 mb-8" />
+      <div className="h-8 bg-slate-800 rounded w-36 mb-2" />
+      <div className="h-4 bg-slate-800 rounded w-56 mb-8" />
       <div className="grid grid-cols-3 gap-4 mb-8">
-        {[...Array(3)].map((_, i) => <div key={i} className="h-28 bg-gray-800 rounded-xl" />)}
+        {[...Array(3)].map((_, i) => <div key={i} className="h-28 bg-slate-800 rounded-xl" />)}
       </div>
       <div className="space-y-3">
-        {[...Array(4)].map((_, i) => <div key={i} className="h-20 bg-gray-800 rounded-xl" />)}
+        {[...Array(4)].map((_, i) => <div key={i} className="h-20 bg-slate-800 rounded-xl" />)}
       </div>
     </div>
   );

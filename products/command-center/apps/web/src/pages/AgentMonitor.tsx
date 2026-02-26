@@ -64,13 +64,13 @@ const statusVariant = (status: string): 'info' | 'success' | 'danger' | 'warning
 function successRateColor(rate: number): string {
   if (rate >= 80) return 'text-emerald-400';
   if (rate >= 60) return 'text-amber-400';
-  return 'text-red-400';
+  return 'text-rose-400';
 }
 
 function successRateBarColor(rate: number): string {
   if (rate >= 80) return 'bg-emerald-500';
   if (rate >= 60) return 'bg-amber-500';
-  return 'bg-red-500';
+  return 'bg-rose-500';
 }
 
 function formatRole(role: string): string {
@@ -95,49 +95,49 @@ function AgentLeaderboard({ experiences }: { experiences: AgentExperience[] }) {
 
 
   return (
-    <div className="bg-gray-900 border border-gray-800 rounded-xl p-6 mb-8">
+    <div className="bg-slate-900 border border-slate-700 rounded-xl p-6 mb-8">
       <div className="flex items-center justify-between mb-5">
-        <h2 className="text-lg font-semibold text-white">Agent Performance</h2>
-        <span className="text-xs text-gray-500">{experiences.length} agents tracked</span>
+        <h2 className="text-lg font-semibold text-slate-50">Agent Performance</h2>
+        <span className="text-xs text-slate-500">{experiences.length} agents tracked</span>
       </div>
 
       <div className="overflow-x-auto">
         <table className="w-full">
           <thead>
-            <tr className="border-b border-gray-800">
-              <th className="text-left pb-3 text-xs font-semibold text-gray-500 uppercase tracking-wider">
+            <tr className="border-b border-slate-700">
+              <th className="text-left pb-3 text-xs font-semibold text-slate-500 uppercase tracking-wider">
                 Agent Role
               </th>
-              <th className="text-right pb-3 text-xs font-semibold text-gray-500 uppercase tracking-wider pr-6">
+              <th className="text-right pb-3 text-xs font-semibold text-slate-500 uppercase tracking-wider pr-6">
                 Tasks
               </th>
-              <th className="pb-3 text-xs font-semibold text-gray-500 uppercase tracking-wider" style={{ minWidth: '160px' }}>
+              <th className="pb-3 text-xs font-semibold text-slate-500 uppercase tracking-wider" style={{ minWidth: '160px' }}>
                 Success Rate
               </th>
-              <th className="text-right pb-3 text-xs font-semibold text-gray-500 uppercase tracking-wider">
+              <th className="text-right pb-3 text-xs font-semibold text-slate-500 uppercase tracking-wider">
                 Avg Duration
               </th>
             </tr>
           </thead>
-          <tbody className="divide-y divide-gray-800">
+          <tbody className="divide-y divide-slate-700">
             {sorted.map((agent) => (
-              <tr key={agent.agent} className="hover:bg-gray-800/40 transition-colors">
+              <tr key={agent.agent} className="hover:bg-slate-800/40 transition-colors">
                 <td className="py-3 pr-4">
                   <div className="flex items-center gap-2">
-                    <div className="w-6 h-6 rounded bg-gray-700 flex items-center justify-center flex-shrink-0">
-                      <span className="text-xs text-gray-300 font-bold">
+                    <div className="w-6 h-6 rounded bg-slate-700 flex items-center justify-center flex-shrink-0">
+                      <span className="text-xs text-slate-300 font-bold">
                         {agent.agent.charAt(0).toUpperCase()}
                       </span>
                     </div>
-                    <span className="text-sm text-gray-200">{formatRole(agent.agent)}</span>
+                    <span className="text-sm text-slate-200">{formatRole(agent.agent)}</span>
                   </div>
                 </td>
                 <td className="py-3 text-right pr-6">
-                  <span className="text-sm font-medium text-white">{agent.tasksCompleted}</span>
+                  <span className="text-sm font-medium text-slate-50">{agent.tasksCompleted}</span>
                 </td>
                 <td className="py-3 pr-4">
                   <div className="flex items-center gap-2">
-                    <div className="flex-1 bg-gray-800 rounded-full h-1.5" style={{ minWidth: '80px' }}>
+                    <div className="flex-1 bg-slate-800 rounded-full h-1.5" style={{ minWidth: '80px' }}>
                       <div
                         className={`h-1.5 rounded-full ${successRateBarColor(agent.successRate)}`}
                         style={{ width: `${agent.successRate}%` }}
@@ -149,7 +149,7 @@ function AgentLeaderboard({ experiences }: { experiences: AgentExperience[] }) {
                   </div>
                 </td>
                 <td className="py-3 text-right">
-                  <span className="text-sm text-gray-400">{formatAvgDuration(agent.avgTimeMinutes)}</span>
+                  <span className="text-sm text-slate-400">{formatAvgDuration(agent.avgTimeMinutes)}</span>
                 </td>
               </tr>
             ))}
@@ -165,12 +165,12 @@ function AgentLeaderboard({ experiences }: { experiences: AgentExperience[] }) {
 function LoadingSkeleton() {
   return (
     <div className="animate-pulse">
-      <div className="h-8 bg-gray-800 rounded w-56 mb-2" />
-      <div className="h-4 bg-gray-800 rounded w-72 mb-8" />
-      <div className="h-48 bg-gray-800 rounded-xl mb-8" />
+      <div className="h-8 bg-slate-800 rounded w-56 mb-2" />
+      <div className="h-4 bg-slate-800 rounded w-72 mb-8" />
+      <div className="h-48 bg-slate-800 rounded-xl mb-8" />
       <div className="grid grid-cols-2 lg:grid-cols-4 gap-4 mb-8">
         {[...Array(4)].map((_, i) => (
-          <div key={i} className="h-28 bg-gray-800 rounded-xl" />
+          <div key={i} className="h-28 bg-slate-800 rounded-xl" />
         ))}
       </div>
     </div>
@@ -216,7 +216,7 @@ export default function AgentMonitor() {
   }, [data]);
 
   if (loading) return <LoadingSkeleton />;
-  if (!data) return <p className="text-red-400">Failed to load job data</p>;
+  if (!data) return <p className="text-rose-400">Failed to load job data</p>;
 
   const jobs = data.jobs ?? [];
   const running = jobs.filter((j) => j.status === 'running');
@@ -232,7 +232,7 @@ export default function AgentMonitor() {
     <div>
       {/* Header */}
       <div className="flex items-center gap-3 mb-1">
-        <h1 className="text-2xl font-bold text-white">Live Agent Monitor</h1>
+        <h1 className="text-2xl font-bold text-slate-50">Live Agent Monitor</h1>
         {polling && (
           <span className="relative flex h-3 w-3">
             <span className="animate-ping absolute inline-flex h-full w-full rounded-full bg-emerald-400 opacity-75" />
@@ -241,10 +241,10 @@ export default function AgentMonitor() {
         )}
       </div>
       <div className="flex items-center gap-4 mb-8">
-        <p className="text-gray-500">Real-time job monitoring and history</p>
+        <p className="text-slate-500">Real-time job monitoring and history</p>
         <button
           onClick={() => setPolling((p) => !p)}
-          className="text-xs text-gray-500 hover:text-gray-300 transition-colors"
+          className="text-xs text-slate-500 hover:text-slate-300 transition-colors"
         >
           {polling ? 'Pause' : 'Resume'}
         </button>
@@ -264,13 +264,13 @@ export default function AgentMonitor() {
       {/* Active Jobs */}
       {running.length > 0 && (
         <div className="mb-8">
-          <h2 className="text-lg font-semibold text-white mb-4">Active Jobs</h2>
+          <h2 className="text-lg font-semibold text-slate-50 mb-4">Active Jobs</h2>
           <div className="grid gap-4">
             {running.map((job) => (
-              <div key={job.id} className="bg-gray-900 border border-gray-800 rounded-xl p-5">
+              <div key={job.id} className="bg-slate-900 border border-slate-700 rounded-xl p-5">
                 <div className="flex items-center justify-between mb-3">
                   <div className="flex items-center gap-3">
-                    <svg className="w-5 h-5 text-blue-400 animate-spin" fill="none" viewBox="0 0 24 24">
+                    <svg className="w-5 h-5 text-indigo-400 animate-spin" fill="none" viewBox="0 0 24 24">
                       <circle
                         className="opacity-25"
                         cx="12"
@@ -285,15 +285,15 @@ export default function AgentMonitor() {
                         d="M4 12a8 8 0 018-8V0C5.373 0 0 5.373 0 12h4z"
                       />
                     </svg>
-                    <code className="text-sm text-gray-200 font-mono">{job.command}</code>
+                    <code className="text-sm text-slate-200 font-mono">{job.command}</code>
                   </div>
-                  <span className="text-xs text-gray-500">{formatElapsed(job.createdAt)}</span>
+                  <span className="text-xs text-slate-500">{formatElapsed(job.createdAt)}</span>
                 </div>
                 <div
                   ref={(el) => {
                     if (el) outputRefs.current.set(job.id, el);
                   }}
-                  className="bg-gray-950 border border-gray-800 rounded-lg p-3 max-h-40 overflow-y-auto"
+                  className="bg-slate-950 border border-slate-700 rounded-lg p-3 max-h-40 overflow-y-auto"
                 >
                   {(job.output ?? []).slice(-5).map((line, i) => (
                     <div
@@ -304,7 +304,7 @@ export default function AgentMonitor() {
                     </div>
                   ))}
                   {(job.output ?? []).length === 0 && (
-                    <span className="font-mono text-xs text-gray-600">Waiting for output...</span>
+                    <span className="font-mono text-xs text-slate-600">Waiting for output...</span>
                   )}
                 </div>
               </div>
@@ -315,51 +315,51 @@ export default function AgentMonitor() {
 
       {/* Job History Table */}
       <div>
-        <h2 className="text-lg font-semibold text-white mb-4">Job History</h2>
+        <h2 className="text-lg font-semibold text-slate-50 mb-4">Job History</h2>
         {sorted.length === 0 ? (
-          <p className="text-gray-500 text-sm">No jobs recorded yet</p>
+          <p className="text-slate-500 text-sm">No jobs recorded yet</p>
         ) : (
-          <div className="bg-gray-900 border border-gray-800 rounded-xl overflow-hidden">
+          <div className="bg-slate-900 border border-slate-700 rounded-xl overflow-hidden">
             <table className="w-full">
               <thead>
-                <tr className="border-b border-gray-800">
-                  <th className="text-left px-4 py-3 text-xs font-semibold text-gray-500 uppercase tracking-wider">
+                <tr className="border-b border-slate-700">
+                  <th className="text-left px-4 py-3 text-xs font-semibold text-slate-500 uppercase tracking-wider">
                     ID
                   </th>
-                  <th className="text-left px-4 py-3 text-xs font-semibold text-gray-500 uppercase tracking-wider">
+                  <th className="text-left px-4 py-3 text-xs font-semibold text-slate-500 uppercase tracking-wider">
                     Command
                   </th>
-                  <th className="text-left px-4 py-3 text-xs font-semibold text-gray-500 uppercase tracking-wider">
+                  <th className="text-left px-4 py-3 text-xs font-semibold text-slate-500 uppercase tracking-wider">
                     Status
                   </th>
-                  <th className="text-left px-4 py-3 text-xs font-semibold text-gray-500 uppercase tracking-wider">
+                  <th className="text-left px-4 py-3 text-xs font-semibold text-slate-500 uppercase tracking-wider">
                     Duration
                   </th>
-                  <th className="text-left px-4 py-3 text-xs font-semibold text-gray-500 uppercase tracking-wider">
+                  <th className="text-left px-4 py-3 text-xs font-semibold text-slate-500 uppercase tracking-wider">
                     Exit Code
                   </th>
                 </tr>
               </thead>
-              <tbody className="divide-y divide-gray-800">
+              <tbody className="divide-y divide-slate-700">
                 {sorted.map((job) => (
-                  <tr key={job.id} className="hover:bg-gray-800/50 transition-colors">
+                  <tr key={job.id} className="hover:bg-slate-800/50 transition-colors">
                     <td className="px-4 py-3">
                       <code className="text-xs text-purple-400 bg-purple-500/10 px-1.5 py-0.5 rounded">
                         {shortId(job.id)}
                       </code>
                     </td>
                     <td className="px-4 py-3">
-                      <code className="text-sm text-gray-300 font-mono">{job.command}</code>
+                      <code className="text-sm text-slate-300 font-mono">{job.command}</code>
                     </td>
                     <td className="px-4 py-3">
                       <Badge variant={statusVariant(job.status)}>{job.status}</Badge>
                     </td>
-                    <td className="px-4 py-3 text-sm text-gray-400">
+                    <td className="px-4 py-3 text-sm text-slate-400">
                       {job.status === 'running'
                         ? formatElapsed(job.createdAt)
                         : formatDuration(job.createdAt, job.completedAt)}
                     </td>
-                    <td className="px-4 py-3 text-sm text-gray-400">
+                    <td className="px-4 py-3 text-sm text-slate-400">
                       {job.exitCode !== null ? job.exitCode : '-'}
                     </td>
                   </tr>

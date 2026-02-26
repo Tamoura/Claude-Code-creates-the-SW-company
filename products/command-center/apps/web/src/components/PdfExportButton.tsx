@@ -55,8 +55,8 @@ export default function PdfExportButton({
 
   const isLight = theme === 'light';
   const baseStyles = isLight
-    ? 'text-gray-500 hover:text-gray-900 hover:bg-gray-100'
-    : 'text-gray-400 hover:text-white hover:bg-gray-800';
+    ? 'text-slate-500 hover:text-slate-900 hover:bg-slate-100'
+    : 'text-slate-400 hover:text-white hover:bg-slate-800';
 
   if (compact) {
     return (

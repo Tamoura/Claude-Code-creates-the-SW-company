@@ -38,17 +38,17 @@ export default function ProductShowcase() {
   if (loading) {
     return (
       <div className="animate-pulse space-y-6">
-        <div className="h-40 bg-gray-800 rounded-2xl" />
+        <div className="h-40 bg-slate-800 rounded-2xl" />
         <div className="grid grid-cols-3 gap-4">
           {[1, 2, 3].map((i) => (
-            <div key={i} className="h-24 bg-gray-800 rounded-xl" />
+            <div key={i} className="h-24 bg-slate-800 rounded-xl" />
           ))}
         </div>
       </div>
     );
   }
 
-  if (!data) return <p className="text-red-400">Product not found</p>;
+  if (!data) return <p className="text-rose-400">Product not found</p>;
 
   const product = data.product;
   const sc = product.showcase;
@@ -66,20 +66,20 @@ export default function ProductShowcase() {
   return (
     <div>
       {/* Breadcrumb */}
-      <div className="flex items-center gap-2 text-sm text-gray-500 mb-6">
+      <div className="flex items-center gap-2 text-sm text-slate-500 mb-6">
         <Link
           to="/showcase"
-          className="hover:text-gray-300 transition-colors"
+          className="hover:text-slate-300 transition-colors"
         >
           Showcase
         </Link>
         <span>/</span>
-        <span className="text-gray-300">{product.displayName}</span>
+        <span className="text-slate-300">{product.displayName}</span>
       </div>
 
       {/* Hero */}
       <div
-        className="relative overflow-hidden rounded-2xl border border-gray-800 p-8 mb-8"
+        className="relative overflow-hidden rounded-2xl border border-slate-800 p-8 mb-8"
         style={{
           background: `linear-gradient(135deg, ${accentColor}15, transparent 60%)`,
         }}
@@ -95,11 +95,11 @@ export default function ProductShowcase() {
           </div>
 
           {sc?.tagline ? (
-            <p className="text-lg text-gray-300 mb-4 max-w-2xl">
+            <p className="text-lg text-slate-300 mb-4 max-w-2xl">
               {sc.tagline}
             </p>
           ) : (
-            <p className="text-lg text-gray-400 mb-4 max-w-2xl">
+            <p className="text-lg text-slate-400 mb-4 max-w-2xl">
               {product.description}
             </p>
           )}
@@ -121,7 +121,7 @@ export default function ProductShowcase() {
               {sc.audiences.map((a) => (
                 <span
                   key={a}
-                  className="text-xs bg-gray-800 text-gray-400 px-2 py-0.5 rounded-full capitalize"
+                  className="text-xs bg-slate-800 text-slate-400 px-2 py-0.5 rounded-full capitalize"
                 >
                   {a}
                 </span>
@@ -161,9 +161,9 @@ export default function ProductShowcase() {
             {sc.highlights.map((h) => (
               <div
                 key={h}
-                className="bg-gray-900 border border-gray-800 rounded-xl p-4 text-center"
+                className="bg-slate-900 border border-slate-800 rounded-xl p-4 text-center"
               >
-                <span className="text-sm text-gray-300">{h}</span>
+                <span className="text-sm text-slate-300">{h}</span>
               </div>
             ))}
           </div>
@@ -209,10 +209,10 @@ export default function ProductShowcase() {
                 <Link
                   key={doc}
                   to={`/products/${product.name}`}
-                  className="flex items-center gap-3 bg-gray-900 border border-gray-800 rounded-xl p-4 hover:border-gray-700 transition-colors"
+                  className="flex items-center gap-3 bg-slate-900 border border-slate-800 rounded-xl p-4 hover:border-slate-700 transition-colors"
                 >
                   <svg
-                    className="w-5 h-5 text-gray-400"
+                    className="w-5 h-5 text-slate-400"
                     fill="none"
                     stroke="currentColor"
                     viewBox="0 0 24 24"
@@ -224,16 +224,16 @@ export default function ProductShowcase() {
                       d="M9 12h6m-6 4h6m2 5H7a2 2 0 01-2-2V5a2 2 0 012-2h5.586a1 1 0 01.707.293l5.414 5.414a1 1 0 01.293.707V19a2 2 0 01-2 2z"
                     />
                   </svg>
-                  <span className="text-sm text-gray-300">{doc}</span>
+                  <span className="text-sm text-slate-300">{doc}</span>
                 </Link>
               ))
             ) : (
               <Link
                 to={`/products/${product.name}`}
-                className="flex items-center gap-3 bg-gray-900 border border-gray-800 rounded-xl p-4 hover:border-gray-700 transition-colors"
+                className="flex items-center gap-3 bg-slate-900 border border-slate-800 rounded-xl p-4 hover:border-slate-700 transition-colors"
               >
                 <svg
-                  className="w-5 h-5 text-gray-400"
+                  className="w-5 h-5 text-slate-400"
                   fill="none"
                   stroke="currentColor"
                   viewBox="0 0 24 24"
@@ -245,7 +245,7 @@ export default function ProductShowcase() {
                     d="M9 12h6m-6 4h6m2 5H7a2 2 0 01-2-2V5a2 2 0 012-2h5.586a1 1 0 01.707.293l5.414 5.414a1 1 0 01.293.707V19a2 2 0 01-2 2z"
                   />
                 </svg>
-                <span className="text-sm text-gray-300">
+                <span className="text-sm text-slate-300">
                   Browse all {product.fileCount} documents
                 </span>
               </Link>
@@ -274,7 +274,7 @@ function MetricCard({
         borderColor: `${color}20`,
       }}
     >
-      <div className="text-sm text-gray-400">{label}</div>
+      <div className="text-sm text-slate-400">{label}</div>
       <div className="text-2xl font-bold text-white mt-1">{value}</div>
     </div>
   );

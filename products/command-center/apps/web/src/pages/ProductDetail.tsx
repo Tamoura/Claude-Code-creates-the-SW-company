@@ -169,21 +169,21 @@ export default function ProductDetail() {
   if (docsLoading) {
     return (
       <div className="animate-pulse">
-        <div className="h-8 bg-gray-800 rounded w-64 mb-6" />
+        <div className="h-8 bg-slate-800 rounded w-64 mb-6" />
         <div className="grid grid-cols-4 gap-6">
           <div className="col-span-1 space-y-3">
-            <div className="h-6 bg-gray-800 rounded" />
-            <div className="h-6 bg-gray-800 rounded" />
-            <div className="h-6 bg-gray-800 rounded" />
+            <div className="h-6 bg-slate-800 rounded" />
+            <div className="h-6 bg-slate-800 rounded" />
+            <div className="h-6 bg-slate-800 rounded" />
           </div>
-          <div className="col-span-3 h-96 bg-gray-800 rounded" />
+          <div className="col-span-3 h-96 bg-slate-800 rounded" />
         </div>
       </div>
     );
   }
 
   if (!docsData || !name) {
-    return <p className="text-red-400">Failed to load product documentation</p>;
+    return <p className="text-rose-400">Failed to load product documentation</p>;
   }
 
   const sortedDocs = sortDocsByImportance(docsData.docs);
@@ -227,26 +227,26 @@ export default function ProductDetail() {
   if (presentationMode && docContent && slides.length > 0) {
     const slide = slides[slideIndex];
     return (
-      <div className="fixed inset-0 z-50 bg-gray-950 flex flex-col">
+      <div className="fixed inset-0 z-50 bg-slate-950 flex flex-col">
         {/* Presentation toolbar */}
-        <div className="flex items-center justify-between px-6 py-3 border-b border-gray-800 bg-gray-950/95 backdrop-blur">
+        <div className="flex items-center justify-between px-6 py-3 border-b border-slate-800 bg-slate-950/95 backdrop-blur">
           <div className="flex items-center gap-3">
             <button
               onClick={() => setPresentationMode(false)}
-              className="text-gray-400 hover:text-white transition-colors"
+              className="text-slate-400 hover:text-white transition-colors"
               title="Exit presentation (Esc)"
             >
               <svg className="w-5 h-5" fill="none" stroke="currentColor" viewBox="0 0 24 24">
                 <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M6 18L18 6M6 6l12 12" />
               </svg>
             </button>
-            <span className="text-sm text-gray-400 truncate">{docContent.title}</span>
+            <span className="text-sm text-slate-400 truncate">{docContent.title}</span>
           </div>
           <div className="flex items-center gap-4">
-            <span className="text-sm text-gray-500">
+            <span className="text-sm text-slate-500">
               {slideIndex + 1} / {slides.length}
             </span>
-            <span className="text-xs text-gray-600">Arrow keys to navigate</span>
+            <span className="text-xs text-slate-600">Arrow keys to navigate</span>
           </div>
         </div>
 
@@ -261,14 +261,14 @@ export default function ProductDetail() {
         </div>
 
         {/* Navigation buttons */}
-        <div className="flex items-center justify-between px-6 py-3 border-t border-gray-800">
+        <div className="flex items-center justify-between px-6 py-3 border-t border-slate-800">
           <button
             onClick={() => setSlideIndex((i) => Math.max(i - 1, 0))}
             disabled={slideIndex === 0}
             className={`flex items-center gap-2 px-4 py-2 rounded-lg text-sm font-medium transition-colors ${
               slideIndex === 0
-                ? 'text-gray-600 cursor-not-allowed'
-                : 'text-gray-300 hover:bg-gray-800'
+                ? 'text-slate-600 cursor-not-allowed'
+                : 'text-slate-300 hover:bg-slate-800'
             }`}
           >
             <svg className="w-4 h-4" fill="none" stroke="currentColor" viewBox="0 0 24 24">
@@ -284,7 +284,7 @@ export default function ProductDetail() {
                 key={i}
                 onClick={() => setSlideIndex(i)}
                 className={`w-2 h-2 rounded-full transition-colors ${
-                  i === slideIndex ? 'bg-blue-500' : 'bg-gray-700 hover:bg-gray-600'
+                  i === slideIndex ? 'bg-indigo-500' : 'bg-slate-700 hover:bg-slate-600'
                 }`}
               />
             ))}
@@ -295,8 +295,8 @@ export default function ProductDetail() {
             disabled={slideIndex === slides.length - 1}
             className={`flex items-center gap-2 px-4 py-2 rounded-lg text-sm font-medium transition-colors ${
               slideIndex === slides.length - 1
-                ? 'text-gray-600 cursor-not-allowed'
-                : 'text-gray-300 hover:bg-gray-800'
+                ? 'text-slate-600 cursor-not-allowed'
+                : 'text-slate-300 hover:bg-slate-800'
             }`}
           >
             Next
@@ -312,22 +312,22 @@ export default function ProductDetail() {
   // --- Fullscreen document view ---
   if (fullscreen && selectedDoc && docContent) {
     return (
-      <div className={`fixed inset-0 z-50 overflow-y-auto ${isLight ? 'bg-white' : 'bg-gray-950'}`}>
+      <div className={`fixed inset-0 z-50 overflow-y-auto ${isLight ? 'bg-white' : 'bg-slate-950'}`}>
         {/* Fullscreen toolbar */}
         <div className={`sticky top-0 z-10 backdrop-blur border-b px-6 py-3 flex items-center justify-between ${
-          isLight ? 'bg-white/95 border-gray-200' : 'bg-gray-950/95 border-gray-800'
+          isLight ? 'bg-white/95 border-slate-200' : 'bg-slate-950/95 border-slate-800'
         }`}>
           <div className="flex items-center gap-3 min-w-0">
             <button
               onClick={() => setFullscreen(false)}
-              className={`transition-colors shrink-0 ${isLight ? 'text-gray-500 hover:text-gray-900' : 'text-gray-400 hover:text-white'}`}
+              className={`transition-colors shrink-0 ${isLight ? 'text-slate-500 hover:text-slate-900' : 'text-slate-400 hover:text-white'}`}
               title="Exit fullscreen (Esc)"
             >
               <svg className="w-5 h-5" fill="none" stroke="currentColor" viewBox="0 0 24 24">
                 <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M6 18L18 6M6 6l12 12" />
               </svg>
             </button>
-            <h1 className={`text-lg font-semibold truncate ${isLight ? 'text-gray-900' : 'text-white'}`}>{docContent.title}</h1>
+            <h1 className={`text-lg font-semibold truncate ${isLight ? 'text-slate-900' : 'text-white'}`}>{docContent.title}</h1>
             <Badge variant={categoryConfig[docContent.category as keyof typeof categoryConfig]?.variant ?? 'default'}>
               {categoryConfig[docContent.category as keyof typeof categoryConfig]?.label ?? docContent.category}
             </Badge>
@@ -344,7 +344,7 @@ export default function ProductDetail() {
             {/* Present */}
             <button
               onClick={() => { setFullscreen(false); enterPresentation(); }}
-              className={`p-1.5 rounded-lg transition-colors ${isLight ? 'text-gray-500 hover:text-gray-900 hover:bg-gray-100' : 'text-gray-400 hover:text-white hover:bg-gray-800'}`}
+              className={`p-1.5 rounded-lg transition-colors ${isLight ? 'text-slate-500 hover:text-slate-900 hover:bg-slate-100' : 'text-slate-400 hover:text-white hover:bg-slate-800'}`}
               title="Present"
             >
               <svg className="w-5 h-5" fill="none" stroke="currentColor" viewBox="0 0 24 24">
@@ -354,7 +354,7 @@ export default function ProductDetail() {
             {/* Theme toggle */}
             <button
               onClick={() => setDocTheme(isLight ? 'dark' : 'light')}
-              className={`p-1.5 rounded-lg transition-colors ${isLight ? 'text-gray-500 hover:text-gray-900 hover:bg-gray-100' : 'text-gray-400 hover:text-white hover:bg-gray-800'}`}
+              className={`p-1.5 rounded-lg transition-colors ${isLight ? 'text-slate-500 hover:text-slate-900 hover:bg-slate-100' : 'text-slate-400 hover:text-white hover:bg-slate-800'}`}
               title={isLight ? 'Switch to dark mode' : 'Switch to light mode'}
             >
               {isLight ? (
@@ -367,8 +367,8 @@ export default function ProductDetail() {
                 </svg>
               )}
             </button>
-            <span className={`text-sm ${isLight ? 'text-gray-500' : 'text-gray-500'}`}>{productData?.product.displayName || name}</span>
-            <span className={`text-sm ${isLight ? 'text-gray-400' : 'text-gray-500'}`}>Esc to exit</span>
+            <span className={`text-sm ${isLight ? 'text-slate-500' : 'text-slate-500'}`}>{productData?.product.displayName || name}</span>
+            <span className={`text-sm ${isLight ? 'text-slate-400' : 'text-slate-500'}`}>Esc to exit</span>
           </div>
         </div>
 
@@ -384,14 +384,14 @@ export default function ProductDetail() {
   return (
     <div>
       {/* Breadcrumb */}
-      <div className="flex items-center gap-2 text-sm text-gray-500 mb-6">
-        <Link to="/products" className="hover:text-gray-300 transition-colors">Products</Link>
+      <div className="flex items-center gap-2 text-sm text-slate-500 mb-6">
+        <Link to="/products" className="hover:text-slate-300 transition-colors">Products</Link>
         <span>/</span>
-        <span className="text-gray-300">{productData?.product.displayName || name}</span>
+        <span className="text-slate-300">{productData?.product.displayName || name}</span>
         {selectedDoc && (
           <>
             <span>/</span>
-            <span className="text-gray-300">{docContent?.title || selectedDoc}</span>
+            <span className="text-slate-300">{docContent?.title || selectedDoc}</span>
           </>
         )}
       </div>
@@ -399,9 +399,9 @@ export default function ProductDetail() {
       <div className="grid grid-cols-1 lg:grid-cols-4 gap-6 lg:h-[calc(100vh-8rem)]">
         {/* Left sidebar navigation — scrolls independently */}
         <div className="lg:col-span-1 lg:overflow-y-auto lg:min-h-0 scrollbar-thin">
-          <div className="bg-gray-900 border border-gray-800 rounded-xl p-4">
+          <div className="bg-slate-900 border border-slate-800 rounded-xl p-4">
             {/* Product header */}
-            <div className="mb-4 pb-4 border-b border-gray-800">
+            <div className="mb-4 pb-4 border-b border-slate-800">
               <h2 className="text-lg font-semibold text-white mb-2">
                 {productData?.product.displayName || name}
               </h2>
@@ -415,7 +415,7 @@ export default function ProductDetail() {
             {/* Doc categories */}
             <nav className="space-y-1">
               {docsData.docs.length === 0 ? (
-                <p className="text-sm text-gray-500 italic">No documents available</p>
+                <p className="text-sm text-slate-500 italic">No documents available</p>
               ) : (
                 orderedCategories.map((category) => {
                   const docs = groupedDocs[category];
@@ -427,8 +427,8 @@ export default function ProductDetail() {
                     <div key={category} className="space-y-1">
                       {/* Category header */}
                       <div
-                        className={`flex items-center gap-2 px-2 py-1.5 text-xs font-semibold text-gray-400 uppercase tracking-wider ${
-                          shouldCollapse ? 'cursor-pointer hover:text-gray-300' : ''
+                        className={`flex items-center gap-2 px-2 py-1.5 text-xs font-semibold text-slate-400 uppercase tracking-wider ${
+                          shouldCollapse ? 'cursor-pointer hover:text-slate-300' : ''
                         }`}
                         onClick={() => shouldCollapse && toggleCategory(category)}
                       >
@@ -457,8 +457,8 @@ export default function ProductDetail() {
                               onClick={() => setSelectedDoc(doc.filename)}
                               className={`w-full text-left px-3 py-2 rounded-lg text-sm transition-colors ${
                                 selectedDoc === doc.filename
-                                  ? 'bg-blue-600/20 text-blue-400 font-medium'
-                                  : 'text-gray-400 hover:text-gray-200 hover:bg-gray-800'
+                                  ? 'bg-indigo-600/20 text-indigo-400 font-medium'
+                                  : 'text-slate-400 hover:text-slate-200 hover:bg-slate-800'
                               }`}
                             >
                               {doc.title}
@@ -476,42 +476,42 @@ export default function ProductDetail() {
 
         {/* Main content area — scrolls independently */}
         <div className="lg:col-span-3 lg:overflow-y-auto lg:min-h-0 scrollbar-thin">
-          <div className={`rounded-xl p-8 border ${selectedDoc && isLight ? 'bg-white border-gray-200' : 'bg-gray-900 border-gray-800'}`}>
+          <div className={`rounded-xl p-8 border ${selectedDoc && isLight ? 'bg-white border-slate-200' : 'bg-slate-900 border-slate-800'}`}>
             {!selectedDoc ? (
               // Landing page - product overview
               <div>
                 <h1 className="text-3xl font-bold text-white mb-3">
                   {productData?.product.displayName || name}
                 </h1>
-                <p className="text-gray-400 text-lg mb-6">
+                <p className="text-slate-400 text-lg mb-6">
                   {productData?.product.description || 'Product documentation'}
                 </p>
 
                 {productData?.product && (
                   <div className="grid grid-cols-2 gap-4 mb-8">
-                    <div className="bg-gray-950 border border-gray-800 rounded-lg p-4">
-                      <div className="text-sm text-gray-500 mb-1">Phase</div>
+                    <div className="bg-slate-950 border border-slate-800 rounded-lg p-4">
+                      <div className="text-sm text-slate-500 mb-1">Phase</div>
                       <div className="text-lg font-semibold text-white">
                         {productData.product.phase}
                       </div>
                     </div>
-                    <div className="bg-gray-950 border border-gray-800 rounded-lg p-4">
-                      <div className="text-sm text-gray-500 mb-1">Documents</div>
+                    <div className="bg-slate-950 border border-slate-800 rounded-lg p-4">
+                      <div className="text-sm text-slate-500 mb-1">Documents</div>
                       <div className="text-lg font-semibold text-white">
                         {productData.product.fileCount}
                       </div>
                     </div>
                     {productData.product.apiPort && (
-                      <div className="bg-gray-950 border border-gray-800 rounded-lg p-4">
-                        <div className="text-sm text-gray-500 mb-1">API Port</div>
+                      <div className="bg-slate-950 border border-slate-800 rounded-lg p-4">
+                        <div className="text-sm text-slate-500 mb-1">API Port</div>
                         <div className="text-lg font-semibold text-white">
                           :{productData.product.apiPort}
                         </div>
                       </div>
                     )}
                     {productData.product.webPort && (
-                      <div className="bg-gray-950 border border-gray-800 rounded-lg p-4">
-                        <div className="text-sm text-gray-500 mb-1">Web Port</div>
+                      <div className="bg-slate-950 border border-slate-800 rounded-lg p-4">
+                        <div className="text-sm text-slate-500 mb-1">Web Port</div>
                         <div className="text-lg font-semibold text-white">
                           :{productData.product.webPort}
                         </div>
@@ -524,7 +524,7 @@ export default function ProductDetail() {
                 <div>
                   <h2 className="text-xl font-semibold text-white mb-4">Documentation</h2>
                   {sortedDocs.length === 0 ? (
-                    <div className="text-center py-12 text-gray-500">
+                    <div className="text-center py-12 text-slate-500">
                       <svg className="w-16 h-16 mx-auto mb-4 opacity-50" fill="none" stroke="currentColor" viewBox="0 0 24 24">
                         <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={1.5} d="M9 12h6m-6 4h6m2 5H7a2 2 0 01-2-2V5a2 2 0 012-2h5.586a1 1 0 01.707.293l5.414 5.414a1 1 0 01.293.707V19a2 2 0 01-2 2z" />
                       </svg>
@@ -539,13 +539,13 @@ export default function ProductDetail() {
                           <button
                             key={doc.filename}
                             onClick={() => setSelectedDoc(doc.filename)}
-                            className="bg-gray-950 border border-gray-800 rounded-lg p-4 hover:border-gray-700 transition-colors text-left"
+                            className="bg-slate-950 border border-slate-800 rounded-lg p-4 hover:border-slate-700 transition-colors text-left"
                           >
                             <div className="flex items-start justify-between mb-2">
                               <h3 className="text-base font-semibold text-white">{doc.title}</h3>
                               <Badge variant={config.variant}>{config.label}</Badge>
                             </div>
-                            <div className="text-xs text-gray-500">
+                            <div className="text-xs text-slate-500">
                               Last modified: {new Date(doc.lastModified).toLocaleDateString()}
                             </div>
                           </button>
@@ -560,20 +560,20 @@ export default function ProductDetail() {
               <div>
                 {loadingDoc ? (
                   <div className="animate-pulse space-y-4">
-                    <div className="h-8 bg-gray-800 rounded w-3/4" />
-                    <div className="h-4 bg-gray-800 rounded w-1/2" />
+                    <div className="h-8 bg-slate-800 rounded w-3/4" />
+                    <div className="h-4 bg-slate-800 rounded w-1/2" />
                     <div className="space-y-3 mt-8">
-                      <div className="h-4 bg-gray-800 rounded" />
-                      <div className="h-4 bg-gray-800 rounded" />
-                      <div className="h-4 bg-gray-800 rounded w-5/6" />
+                      <div className="h-4 bg-slate-800 rounded" />
+                      <div className="h-4 bg-slate-800 rounded" />
+                      <div className="h-4 bg-slate-800 rounded w-5/6" />
                     </div>
                   </div>
                 ) : docContent ? (
                   <div>
                     {/* Doc header */}
-                    <div className={`mb-8 pb-6 border-b ${isLight ? 'border-gray-200' : 'border-gray-800'}`}>
+                    <div className={`mb-8 pb-6 border-b ${isLight ? 'border-slate-200' : 'border-slate-800'}`}>
                       <div className="flex items-start justify-between mb-3">
-                        <h1 className={`text-3xl font-bold ${isLight ? 'text-gray-900' : 'text-white'}`}>{docContent.title}</h1>
+                        <h1 className={`text-3xl font-bold ${isLight ? 'text-slate-900' : 'text-white'}`}>{docContent.title}</h1>
                         <div className="flex items-center gap-2 shrink-0">
                           {/* PDF Download */}
                           <PdfExportButton
@@ -586,7 +586,7 @@ export default function ProductDetail() {
                           {/* Theme toggle */}
                           <button
                             onClick={() => setDocTheme(isLight ? 'dark' : 'light')}
-                            className={`transition-colors p-1.5 rounded-lg ${isLight ? 'text-gray-500 hover:text-gray-900 hover:bg-gray-100' : 'text-gray-400 hover:text-white hover:bg-gray-800'}`}
+                            className={`transition-colors p-1.5 rounded-lg ${isLight ? 'text-slate-500 hover:text-slate-900 hover:bg-slate-100' : 'text-slate-400 hover:text-white hover:bg-slate-800'}`}
                             title={isLight ? 'Switch to dark mode' : 'Switch to light mode'}
                           >
                             {isLight ? (
@@ -602,7 +602,7 @@ export default function ProductDetail() {
                           {/* Present */}
                           <button
                             onClick={enterPresentation}
-                            className={`transition-colors p-1.5 rounded-lg ${isLight ? 'text-gray-500 hover:text-gray-900 hover:bg-gray-100' : 'text-gray-400 hover:text-white hover:bg-gray-800'}`}
+                            className={`transition-colors p-1.5 rounded-lg ${isLight ? 'text-slate-500 hover:text-slate-900 hover:bg-slate-100' : 'text-slate-400 hover:text-white hover:bg-slate-800'}`}
                             title="Present"
                           >
                             <svg className="w-5 h-5" fill="none" stroke="currentColor" viewBox="0 0 24 24">
@@ -612,7 +612,7 @@ export default function ProductDetail() {
                           {/* Fullscreen */}
                           <button
                             onClick={() => setFullscreen(true)}
-                            className={`transition-colors p-1.5 rounded-lg ${isLight ? 'text-gray-500 hover:text-gray-900 hover:bg-gray-100' : 'text-gray-400 hover:text-white hover:bg-gray-800'}`}
+                            className={`transition-colors p-1.5 rounded-lg ${isLight ? 'text-slate-500 hover:text-slate-900 hover:bg-slate-100' : 'text-slate-400 hover:text-white hover:bg-slate-800'}`}
                             title="Fullscreen"
                           >
                             <svg className="w-5 h-5" fill="none" stroke="currentColor" viewBox="0 0 24 24">
@@ -624,7 +624,7 @@ export default function ProductDetail() {
                           </Badge>
                         </div>
                       </div>
-                      <p className="text-sm text-gray-500">
+                      <p className="text-sm text-slate-500">
                         Last modified: {new Date(
                           docsData.docs.find(d => d.filename === selectedDoc)?.lastModified || ''
                         ).toLocaleString()}
@@ -635,7 +635,7 @@ export default function ProductDetail() {
                     <MarkdownRenderer content={docContent.content} theme={docTheme} />
                   </div>
                 ) : (
-                  <div className="text-center py-12 text-red-400">
+                  <div className="text-center py-12 text-rose-400">
                     <p>Failed to load document</p>
                   </div>
                 )}

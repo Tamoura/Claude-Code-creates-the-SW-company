@@ -94,9 +94,9 @@ function MarketSlide({ slide, accentColor }: { slide: MarketSlideData; accentCol
                 style={{ backgroundColor: accentColor, opacity: rings[i].opacity + 0.3 }}
               />
               <div>
-                <div className="text-sm text-gray-500 uppercase tracking-wider">{item.tier}</div>
+                <div className="text-sm text-slate-500 uppercase tracking-wider">{item.tier}</div>
                 <div className="text-3xl font-bold text-white">{item.value}</div>
-                <div className="text-gray-400 text-sm">{item.description}</div>
+                <div className="text-slate-400 text-sm">{item.description}</div>
               </div>
             </div>
           ))}
@@ -130,7 +130,7 @@ function TractionSlide({ slide, accentColor }: { slide: TractionSlideData; accen
                 >
                   {item.date}
                 </div>
-                <p className="text-lg text-gray-300 leading-relaxed">{item.milestone}</p>
+                <p className="text-lg text-slate-300 leading-relaxed">{item.milestone}</p>
               </div>
             </div>
           ))}
@@ -145,7 +145,7 @@ function BusinessModelSlide({ slide, accentColor }: { slide: BusinessModelSlideD
     <div className="flex flex-col justify-center h-full px-16 max-w-6xl mx-auto">
       <div className="w-16 h-1 rounded mb-6" style={{ backgroundColor: accentColor }} />
       <h2 className="text-5xl font-bold text-white mb-3 tracking-tight">{slide.heading}</h2>
-      <p className="text-xl text-gray-400 mb-10">{slide.model}</p>
+      <p className="text-xl text-slate-400 mb-10">{slide.model}</p>
 
       <div className="grid gap-4" style={{ gridTemplateColumns: `repeat(${Math.min(slide.tiers.length, 4)}, 1fr)` }}>
         {slide.tiers.map((tier, i) => {
@@ -159,11 +159,11 @@ function BusinessModelSlide({ slide, accentColor }: { slide: BusinessModelSlideD
                 borderColor: isHighlighted ? `${accentColor}40` : 'rgba(255,255,255,0.08)',
               }}
             >
-              <div className="text-sm text-gray-500 uppercase tracking-wider mb-1">{tier.name}</div>
+              <div className="text-sm text-slate-500 uppercase tracking-wider mb-1">{tier.name}</div>
               <div className="text-2xl font-bold text-white mb-4">{tier.price}</div>
               <ul className="space-y-2">
                 {tier.features.map((f, fi) => (
-                  <li key={fi} className="flex items-start gap-2 text-sm text-gray-400">
+                  <li key={fi} className="flex items-start gap-2 text-sm text-slate-400">
                     <span style={{ color: accentColor }} className="mt-0.5">✓</span>
                     {f}
                   </li>
@@ -199,14 +199,14 @@ function CompetitiveSlide({ slide, accentColor }: { slide: CompetitiveSlideData;
         {/* Quadrant chart */}
         <div className="relative flex-shrink-0" style={{ width: 380, height: 380 }}>
           {/* Grid background */}
-          <div className="absolute inset-0 border border-gray-800 rounded-lg bg-gray-900/50">
-            <div className="absolute top-1/2 left-0 right-0 h-px bg-gray-800" />
-            <div className="absolute left-1/2 top-0 bottom-0 w-px bg-gray-800" />
+          <div className="absolute inset-0 border border-slate-800 rounded-lg bg-slate-900/50">
+            <div className="absolute top-1/2 left-0 right-0 h-px bg-slate-800" />
+            <div className="absolute left-1/2 top-0 bottom-0 w-px bg-slate-800" />
           </div>
 
           {/* Axis labels */}
-          <div className="absolute -bottom-7 left-1/2 -translate-x-1/2 text-xs text-gray-500">{slide.axes.x} →</div>
-          <div className="absolute -left-7 top-1/2 -translate-y-1/2 -rotate-90 text-xs text-gray-500">{slide.axes.y} →</div>
+          <div className="absolute -bottom-7 left-1/2 -translate-x-1/2 text-xs text-slate-500">{slide.axes.x} →</div>
+          <div className="absolute -left-7 top-1/2 -translate-y-1/2 -rotate-90 text-xs text-slate-500">{slide.axes.y} →</div>
 
           {/* Competitor dots */}
           {slide.competitors.map((c, i) => {
@@ -222,7 +222,7 @@ function CompetitiveSlide({ slide, accentColor }: { slide: CompetitiveSlideData;
                   className="w-3 h-3 rounded-full mb-1"
                   style={{ backgroundColor: isUs ? accentColor : '#6B7280' }}
                 />
-                <span className={`text-xs font-medium whitespace-nowrap ${isUs ? 'text-white' : 'text-gray-500'}`}>
+                <span className={`text-xs font-medium whitespace-nowrap ${isUs ? 'text-white' : 'text-slate-500'}`}>
                   {c.name}
                 </span>
               </div>
@@ -241,10 +241,10 @@ function CompetitiveSlide({ slide, accentColor }: { slide: CompetitiveSlideData;
                   style={{ backgroundColor: isUs ? accentColor : '#6B7280' }}
                 />
                 <div>
-                  <div className={`text-sm font-semibold ${isUs ? 'text-white' : 'text-gray-400'}`}>
+                  <div className={`text-sm font-semibold ${isUs ? 'text-white' : 'text-slate-400'}`}>
                     {c.name}
                   </div>
-                  <div className="text-xs text-gray-500">{c.note}</div>
+                  <div className="text-xs text-slate-500">{c.note}</div>
                 </div>
               </div>
             );
@@ -291,7 +291,7 @@ function MetricsSlide({ slide, accentColor }: { slide: MetricsSlideData; accentC
                 {trendIcon(m.trend)}
               </span>
             </div>
-            <div className="text-sm text-gray-400">{m.label}</div>
+            <div className="text-sm text-slate-400">{m.label}</div>
           </div>
         ))}
       </div>

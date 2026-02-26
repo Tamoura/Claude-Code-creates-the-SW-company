@@ -43,17 +43,17 @@ export default function Showcase() {
   if (loading) {
     return (
       <div className="animate-pulse space-y-8">
-        <div className="h-32 bg-gray-800 rounded-2xl" />
+        <div className="h-32 bg-slate-800 rounded-2xl" />
         <div className="grid grid-cols-3 gap-4">
           {[1, 2, 3].map((i) => (
-            <div key={i} className="h-48 bg-gray-800 rounded-xl" />
+            <div key={i} className="h-48 bg-slate-800 rounded-xl" />
           ))}
         </div>
       </div>
     );
   }
 
-  if (!data) return <p className="text-red-400">Failed to load products</p>;
+  if (!data) return <p className="text-rose-400">Failed to load products</p>;
 
   const products = data.products;
   const filtered =
@@ -72,10 +72,10 @@ export default function Showcase() {
   return (
     <div>
       {/* Hero */}
-      <div className="relative overflow-hidden rounded-2xl bg-gradient-to-br from-blue-600/20 via-purple-600/10 to-gray-900 border border-gray-800 p-8 mb-8">
+      <div className="relative overflow-hidden rounded-2xl bg-gradient-to-br from-indigo-600/20 via-purple-600/10 to-slate-900 border border-slate-800 p-8 mb-8">
         <div className="relative z-10">
           <h1 className="text-4xl font-bold text-white mb-2">ConnectSW</h1>
-          <p className="text-lg text-gray-300 mb-6 max-w-2xl">
+          <p className="text-lg text-slate-300 mb-6 max-w-2xl">
             An AI-first software company where Claude Code agents build
             production-grade products under CEO direction.
           </p>
@@ -86,7 +86,7 @@ export default function Showcase() {
           </div>
         </div>
         {/* Decorative gradient orb */}
-        <div className="absolute -top-24 -right-24 w-80 h-80 bg-blue-500/10 rounded-full blur-3xl" />
+        <div className="absolute -top-24 -right-24 w-80 h-80 bg-indigo-500/10 rounded-full blur-3xl" />
       </div>
 
       {/* Audience filter tabs */}
@@ -97,14 +97,14 @@ export default function Showcase() {
             onClick={() => setAudience(a)}
             className={`px-4 py-1.5 rounded-full text-sm font-medium transition-colors ${
               audience === a
-                ? 'bg-blue-600 text-white'
-                : 'bg-gray-800 text-gray-400 hover:text-gray-200 hover:bg-gray-700'
+                ? 'bg-indigo-600 text-white'
+                : 'bg-slate-800 text-slate-400 hover:text-slate-200 hover:bg-slate-700'
             }`}
           >
             {a}
           </button>
         ))}
-        <span className="text-sm text-gray-500 ml-3">
+        <span className="text-sm text-slate-500 ml-3">
           {filtered.length} product{filtered.length !== 1 ? 's' : ''}
         </span>
       </div>
@@ -117,7 +117,7 @@ export default function Showcase() {
       </div>
 
       {filtered.length === 0 && (
-        <div className="text-center py-16 text-gray-500">
+        <div className="text-center py-16 text-slate-500">
           <p className="text-lg">No products match this audience filter.</p>
         </div>
       )}
@@ -129,7 +129,7 @@ function HeroStat({ label, value }: { label: string; value: string | number }) {
   return (
     <div>
       <div className="text-2xl font-bold text-white">{value}</div>
-      <div className="text-sm text-gray-400">{label}</div>
+      <div className="text-sm text-slate-400">{label}</div>
     </div>
   );
 }
@@ -139,22 +139,22 @@ function ProductCard({ product }: { product: Product }) {
   const accentColor = sc?.color ?? '#3B82F6';
 
   return (
-    <div className="group bg-gray-900 border border-gray-800 rounded-xl overflow-hidden hover:border-gray-700 hover:shadow-lg transition-all">
+    <div className="group bg-slate-900 border border-slate-800 rounded-xl overflow-hidden hover:border-slate-700 hover:shadow-lg transition-all">
       {/* Accent color strip */}
       <div className="h-1" style={{ backgroundColor: accentColor }} />
 
       <Link to={`/showcase/${product.name}`} className="block p-5">
         <div className="flex items-start justify-between mb-2">
-          <h3 className="text-lg font-semibold text-white group-hover:text-blue-400 transition-colors">
+          <h3 className="text-lg font-semibold text-white group-hover:text-indigo-400 transition-colors">
             {product.displayName}
           </h3>
           <Badge variant={phaseVariant(product.phase)}>{product.phase}</Badge>
         </div>
 
         {sc?.tagline ? (
-          <p className="text-sm text-gray-400 mb-3">{sc.tagline}</p>
+          <p className="text-sm text-slate-400 mb-3">{sc.tagline}</p>
         ) : (
-          <p className="text-sm text-gray-500 mb-3">{product.description}</p>
+          <p className="text-sm text-slate-500 mb-3">{product.description}</p>
         )}
 
         {sc?.category && (
@@ -175,13 +175,13 @@ function ProductCard({ product }: { product: Product }) {
             {sc.highlights.slice(0, 4).map((h) => (
               <span
                 key={h}
-                className="text-xs bg-gray-800 text-gray-400 px-2 py-0.5 rounded"
+                className="text-xs bg-slate-800 text-slate-400 px-2 py-0.5 rounded"
               >
                 {h}
               </span>
             ))}
             {sc.highlights.length > 4 && (
-              <span className="text-xs text-gray-600">
+              <span className="text-xs text-slate-600">
                 +{sc.highlights.length - 4}
               </span>
             )}

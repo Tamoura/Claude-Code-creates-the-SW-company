@@ -40,10 +40,10 @@ const typeConfig: Record<
   ApprovalItem['type'],
   { label: string; color: string; borderColor: string }
 > = {
-  checkpoint: { label: 'Checkpoint', color: 'text-blue-400', borderColor: 'border-l-blue-500' },
+  checkpoint: { label: 'Checkpoint', color: 'text-indigo-400', borderColor: 'border-l-blue-500' },
   architecture: { label: 'Architecture', color: 'text-purple-400', borderColor: 'border-l-purple-500' },
   deployment: { label: 'Deployment', color: 'text-emerald-400', borderColor: 'border-l-emerald-500' },
-  blocker: { label: 'Blocker', color: 'text-red-400', borderColor: 'border-l-red-500' },
+  blocker: { label: 'Blocker', color: 'text-rose-400', borderColor: 'border-l-red-500' },
 };
 
 const statusConfig: Record<
@@ -103,7 +103,7 @@ function ItemCard({
 
   return (
     <div
-      className={`bg-gray-900 border border-gray-800 border-l-4 ${cfg.borderColor} rounded-xl p-5 hover:border-gray-700 transition-colors`}
+      className={`bg-slate-900 border border-slate-800 border-l-4 ${cfg.borderColor} rounded-xl p-5 hover:border-slate-700 transition-colors`}
     >
       <div className="flex items-start justify-between gap-4">
         <div className="flex-1 min-w-0">
@@ -117,11 +117,11 @@ function ItemCard({
           </div>
 
           <p className="text-sm font-semibold text-white mb-1">{item.title}</p>
-          <p className="text-xs text-gray-400 leading-relaxed">{item.description}</p>
+          <p className="text-xs text-slate-400 leading-relaxed">{item.description}</p>
 
           {/* Meta */}
-          <div className="flex items-center gap-3 mt-3 text-xs text-gray-500">
-            <span>by <span className="text-gray-400">{item.requestedBy}</span></span>
+          <div className="flex items-center gap-3 mt-3 text-xs text-slate-500">
+            <span>by <span className="text-slate-400">{item.requestedBy}</span></span>
             <span>{formatRelativeTime(item.requestedAt)}</span>
             {item.resolvedAt && (
               <span>resolved {formatRelativeTime(item.resolvedAt)}</span>
@@ -130,7 +130,7 @@ function ItemCard({
 
           {/* Resolved note */}
           {item.resolvedNote && (
-            <div className="mt-3 bg-gray-800/50 rounded-lg px-3 py-2 text-xs text-gray-400">
+            <div className="mt-3 bg-slate-800/50 rounded-lg px-3 py-2 text-xs text-slate-400">
               Note: {item.resolvedNote}
             </div>
           )}
@@ -145,7 +145,7 @@ function ItemCard({
                     onChange={(e) => setNoteInput(e.target.value)}
                     placeholder="Optional note (visible in history)…"
                     rows={2}
-                    className="w-full bg-gray-800 border border-gray-700 rounded-lg px-3 py-2 text-xs text-gray-200 placeholder-gray-600 focus:outline-none focus:border-gray-500 resize-none"
+                    className="w-full bg-slate-800 border border-slate-700 rounded-lg px-3 py-2 text-xs text-slate-200 placeholder-gray-600 focus:outline-none focus:border-slate-500 resize-none"
                   />
                   <div className="flex items-center gap-2">
                     <button
@@ -158,13 +158,13 @@ function ItemCard({
                     <button
                       onClick={() => handle('reject')}
                       disabled={acting}
-                      className="px-4 py-1.5 bg-red-700 hover:bg-red-600 disabled:opacity-50 text-white text-xs font-medium rounded-lg transition-colors"
+                      className="px-4 py-1.5 bg-rose-700 hover:bg-rose-600 disabled:opacity-50 text-white text-xs font-medium rounded-lg transition-colors"
                     >
                       {acting ? 'Saving…' : 'Reject'}
                     </button>
                     <button
                       onClick={() => setExpanded(false)}
-                      className="px-3 py-1.5 text-gray-500 hover:text-gray-300 text-xs transition-colors"
+                      className="px-3 py-1.5 text-slate-500 hover:text-slate-300 text-xs transition-colors"
                     >
                       Cancel
                     </button>
@@ -173,7 +173,7 @@ function ItemCard({
               ) : (
                 <button
                   onClick={() => setExpanded(true)}
-                  className="text-xs text-blue-400 hover:text-blue-300 font-medium transition-colors"
+                  className="text-xs text-indigo-400 hover:text-indigo-300 font-medium transition-colors"
                 >
                   Review →
                 </button>
@@ -208,7 +208,7 @@ export default function ApprovalQueue() {
   }, [data, activeTab]);
 
   if (loading) return <LoadingSkeleton />;
-  if (!data) return <p className="text-red-400">Failed to load approval queue</p>;
+  if (!data) return <p className="text-rose-400">Failed to load approval queue</p>;
 
   const tabs: { key: FilterTab; label: string }[] = [
     { key: 'all', label: `All (${data.items.length})` },
@@ -219,7 +219,7 @@ export default function ApprovalQueue() {
   return (
     <div>
       <h1 className="text-2xl font-bold text-white mb-1">Approval Queue</h1>
-      <p className="text-gray-500 mb-8">CEO checkpoints, architecture reviews, and deployment approvals</p>
+      <p className="text-slate-500 mb-8">CEO checkpoints, architecture reviews, and deployment approvals</p>
 
       {/* Stats */}
       <div className="grid grid-cols-3 gap-4 mb-8">
@@ -237,15 +237,15 @@ export default function ApprovalQueue() {
       </div>
 
       {/* Tabs */}
-      <div className="flex gap-1 mb-6 bg-gray-900 border border-gray-800 rounded-lg p-1 w-fit">
+      <div className="flex gap-1 mb-6 bg-slate-900 border border-slate-800 rounded-lg p-1 w-fit">
         {tabs.map((tab) => (
           <button
             key={tab.key}
             onClick={() => setActiveTab(tab.key)}
             className={`px-4 py-2 rounded-md text-sm font-medium transition-colors ${
               activeTab === tab.key
-                ? 'bg-gray-700 text-white'
-                : 'text-gray-400 hover:text-gray-200'
+                ? 'bg-slate-700 text-white'
+                : 'text-slate-400 hover:text-slate-200'
             }`}
           >
             {tab.label}
@@ -255,7 +255,7 @@ export default function ApprovalQueue() {
 
       {/* List */}
       {filtered.length === 0 ? (
-        <div className="bg-gray-900 border border-gray-800 rounded-xl p-12 text-center">
+        <div className="bg-slate-900 border border-slate-800 rounded-xl p-12 text-center">
           <svg
             className="w-12 h-12 text-emerald-500 mx-auto mb-3"
             fill="none"
@@ -269,7 +269,7 @@ export default function ApprovalQueue() {
               d="M9 12.75L11.25 15 15 9.75M21 12a9 9 0 11-18 0 9 9 0 0118 0z"
             />
           </svg>
-          <p className="text-gray-400 text-sm">Queue is empty</p>
+          <p className="text-slate-400 text-sm">Queue is empty</p>
         </div>
       ) : (
         <div className="space-y-3">
@@ -285,16 +285,16 @@ export default function ApprovalQueue() {
 function LoadingSkeleton() {
   return (
     <div className="animate-pulse">
-      <div className="h-8 bg-gray-800 rounded w-48 mb-2" />
-      <div className="h-4 bg-gray-800 rounded w-72 mb-8" />
+      <div className="h-8 bg-slate-800 rounded w-48 mb-2" />
+      <div className="h-4 bg-slate-800 rounded w-72 mb-8" />
       <div className="grid grid-cols-3 gap-4 mb-8">
         {[...Array(3)].map((_, i) => (
-          <div key={i} className="h-28 bg-gray-800 rounded-xl" />
+          <div key={i} className="h-28 bg-slate-800 rounded-xl" />
         ))}
       </div>
       <div className="space-y-3">
         {[...Array(3)].map((_, i) => (
-          <div key={i} className="h-24 bg-gray-800 rounded-xl" />
+          <div key={i} className="h-24 bg-slate-800 rounded-xl" />
         ))}
       </div>
     </div>

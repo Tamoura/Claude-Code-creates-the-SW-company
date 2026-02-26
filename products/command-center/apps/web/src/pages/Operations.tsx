@@ -40,7 +40,7 @@ export default function Operations() {
   }, [data]);
 
   if (loading) return <LoadingSkeleton />;
-  if (!data) return <p className="text-red-400">Failed to load operations guide</p>;
+  if (!data) return <p className="text-rose-400">Failed to load operations guide</p>;
 
   const { sections } = data;
 
@@ -55,12 +55,12 @@ export default function Operations() {
   return (
     <div>
       <h1 className="text-2xl font-bold text-white mb-1">Operations Guide</h1>
-      <p className="text-gray-500 mb-8">How to operate and manage ConnectSW</p>
+      <p className="text-slate-500 mb-8">How to operate and manage ConnectSW</p>
 
       <div className="flex gap-8">
         {/* Sidebar Navigation */}
         <nav className="hidden lg:block w-64 flex-shrink-0 sticky top-8 self-start">
-          <div className="bg-gray-900 border border-gray-800 rounded-xl p-4">
+          <div className="bg-slate-900 border border-slate-800 rounded-xl p-4">
             <h3 className="text-sm font-semibold text-white mb-3 px-3">Contents</h3>
             <ul className="space-y-1">
               {sections.map((section) => (
@@ -69,8 +69,8 @@ export default function Operations() {
                     onClick={() => handleNavClick(section.id)}
                     className={`w-full text-left px-3 py-2 rounded-lg transition-colors flex items-center gap-2 ${
                       activeSection === section.id
-                        ? 'bg-blue-500/20 text-blue-400'
-                        : 'text-gray-400 hover:text-gray-300 hover:bg-gray-800'
+                        ? 'bg-indigo-500/20 text-indigo-400'
+                        : 'text-slate-400 hover:text-slate-300 hover:bg-slate-800'
                     }`}
                   >
                     <span className="text-lg">{section.icon}</span>
@@ -89,7 +89,7 @@ export default function Operations() {
               key={section.id}
               id={section.id}
               ref={(el) => { sectionRefs.current[section.id] = el; }}
-              className="bg-gray-900 border border-gray-800 rounded-xl p-6"
+              className="bg-slate-900 border border-slate-800 rounded-xl p-6"
             >
               <h2 className="text-xl font-semibold text-white mb-4 flex items-center gap-3">
                 <span className="text-2xl">{section.icon}</span>
@@ -109,15 +109,15 @@ export default function Operations() {
 function LoadingSkeleton() {
   return (
     <div className="animate-pulse">
-      <div className="h-8 bg-gray-800 rounded w-48 mb-2" />
-      <div className="h-4 bg-gray-800 rounded w-72 mb-8" />
+      <div className="h-8 bg-slate-800 rounded w-48 mb-2" />
+      <div className="h-4 bg-slate-800 rounded w-72 mb-8" />
       <div className="flex gap-8">
         <div className="hidden lg:block w-64 flex-shrink-0">
-          <div className="h-96 bg-gray-800 rounded-xl" />
+          <div className="h-96 bg-slate-800 rounded-xl" />
         </div>
         <div className="flex-1 space-y-8">
           {[...Array(3)].map((_, i) => (
-            <div key={i} className="h-64 bg-gray-800 rounded-xl" />
+            <div key={i} className="h-64 bg-slate-800 rounded-xl" />
           ))}
         </div>
       </div>

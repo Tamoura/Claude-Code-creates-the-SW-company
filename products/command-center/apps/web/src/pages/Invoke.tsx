@@ -129,17 +129,17 @@ export default function Invoke() {
   return (
     <div>
       <h1 className="text-2xl font-bold text-white mb-1">Invoke</h1>
-      <p className="text-gray-500 mb-6">Run commands and view live output</p>
+      <p className="text-slate-500 mb-6">Run commands and view live output</p>
 
       {/* Presets */}
       <div className="mb-6">
-        <p className="text-xs text-gray-500 mb-2">Quick Commands</p>
+        <p className="text-xs text-slate-500 mb-2">Quick Commands</p>
         <div className="flex gap-2 flex-wrap">
           {PRESETS.map((preset) => (
             <button
               key={preset.command}
               onClick={() => handlePreset(preset.command)}
-              className="px-3 py-1.5 text-xs rounded-lg bg-gray-800 text-gray-400 hover:bg-gray-700 hover:text-gray-200 transition-colors border border-gray-700"
+              className="px-3 py-1.5 text-xs rounded-lg bg-slate-800 text-slate-400 hover:bg-slate-700 hover:text-slate-200 transition-colors border border-slate-700"
             >
               {preset.label}
             </button>
@@ -151,19 +151,19 @@ export default function Invoke() {
       <form onSubmit={handleSubmit} className="mb-6">
         <div className="flex gap-3">
           <div className="flex-1 relative">
-            <span className="absolute left-3 top-2.5 text-gray-600 text-sm font-mono">$</span>
+            <span className="absolute left-3 top-2.5 text-slate-600 text-sm font-mono">$</span>
             <input
               type="text"
               value={command}
               onChange={(e) => setCommand(e.target.value)}
               placeholder="Enter command..."
-              className="w-full pl-7 pr-4 py-2.5 bg-gray-900 border border-gray-700 rounded-lg text-sm text-gray-200 font-mono placeholder:text-gray-600 focus:outline-none focus:border-blue-500 focus:ring-1 focus:ring-blue-500"
+              className="w-full pl-7 pr-4 py-2.5 bg-slate-900 border border-slate-700 rounded-lg text-sm text-slate-200 font-mono placeholder:text-slate-600 focus:outline-none focus:border-indigo-500 focus:ring-1 focus:ring-indigo-500"
             />
           </div>
           <button
             type="submit"
             disabled={!command.trim() || submitting || jobStatus === 'running'}
-            className="px-5 py-2.5 bg-blue-600 text-white text-sm font-medium rounded-lg hover:bg-blue-700 disabled:opacity-40 disabled:cursor-not-allowed transition-colors"
+            className="px-5 py-2.5 bg-indigo-600 text-white text-sm font-medium rounded-lg hover:bg-indigo-700 disabled:opacity-40 disabled:cursor-not-allowed transition-colors"
           >
             Run
           </button>
@@ -171,25 +171,25 @@ export default function Invoke() {
             <button
               type="button"
               onClick={handleCancel}
-              className="px-4 py-2.5 bg-red-600/20 text-red-400 text-sm font-medium rounded-lg hover:bg-red-600/30 transition-colors border border-red-500/30"
+              className="px-4 py-2.5 bg-rose-600/20 text-rose-400 text-sm font-medium rounded-lg hover:bg-rose-600/30 transition-colors border border-rose-500/30"
             >
               Cancel
             </button>
           )}
         </div>
-        {error && <p className="text-red-400 text-sm mt-2">{error}</p>}
+        {error && <p className="text-rose-400 text-sm mt-2">{error}</p>}
       </form>
 
       {/* Terminal output */}
       {(output.length > 0 || jobStatus) && (
         <div className="mb-8">
           <div className="flex items-center justify-between mb-2">
-            <p className="text-xs text-gray-500">Output</p>
+            <p className="text-xs text-slate-500">Output</p>
             {jobStatus && <Badge variant={statusVariant(jobStatus)}>{jobStatus}</Badge>}
           </div>
           <div
             ref={outputRef}
-            className="bg-black border border-gray-800 rounded-xl p-4 font-mono text-xs text-gray-300 max-h-96 overflow-y-auto"
+            className="bg-black border border-slate-800 rounded-xl p-4 font-mono text-xs text-slate-300 max-h-96 overflow-y-auto"
           >
             {output.map((line, i) => (
               <div key={i} className="leading-5 whitespace-pre-wrap break-all">
@@ -197,7 +197,7 @@ export default function Invoke() {
               </div>
             ))}
             {jobStatus === 'running' && (
-              <div className="text-blue-400 animate-pulse mt-1">...</div>
+              <div className="text-indigo-400 animate-pulse mt-1">...</div>
             )}
           </div>
         </div>
@@ -207,12 +207,12 @@ export default function Invoke() {
       {jobs.length > 0 && (
         <div>
           <h2 className="text-lg font-semibold text-white mb-4">Job History</h2>
-          <div className="bg-gray-900 border border-gray-800 rounded-xl divide-y divide-gray-800">
+          <div className="bg-slate-900 border border-slate-800 rounded-xl divide-y divide-slate-800">
             {jobs.map((job) => (
-              <div key={job.id} className="p-4 flex items-center justify-between hover:bg-gray-800/50 transition-colors">
+              <div key={job.id} className="p-4 flex items-center justify-between hover:bg-slate-800/50 transition-colors">
                 <div className="flex-1 min-w-0">
-                  <code className="text-sm text-gray-300 font-mono">{job.command}</code>
-                  <div className="flex items-center gap-3 mt-1 text-xs text-gray-600">
+                  <code className="text-sm text-slate-300 font-mono">{job.command}</code>
+                  <div className="flex items-center gap-3 mt-1 text-xs text-slate-600">
                     <span>{new Date(job.createdAt).toLocaleString()}</span>
                     <span>{job.outputLines} lines</span>
                     {job.exitCode !== null && <span>exit {job.exitCode}</span>}

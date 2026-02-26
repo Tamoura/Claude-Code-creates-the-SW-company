@@ -20,13 +20,13 @@ const EXTRA_DIMENSIONS = ['Accessibility', 'Privacy', 'Observability', 'API Desi
 function LoadingSkeleton() {
   return (
     <div className="animate-pulse">
-      <div className="h-8 bg-gray-800 rounded w-48 mb-2" />
-      <div className="h-4 bg-gray-800 rounded w-72 mb-8" />
+      <div className="h-8 bg-slate-800 rounded w-48 mb-2" />
+      <div className="h-4 bg-slate-800 rounded w-72 mb-8" />
       <div className="grid grid-cols-2 lg:grid-cols-4 gap-4 mb-8">
-        {[...Array(3)].map((_, i) => <div key={i} className="h-28 bg-gray-800 rounded-xl" />)}
+        {[...Array(3)].map((_, i) => <div key={i} className="h-28 bg-slate-800 rounded-xl" />)}
       </div>
       <div className="grid grid-cols-1 lg:grid-cols-2 gap-6">
-        {[...Array(4)].map((_, i) => <div key={i} className="h-64 bg-gray-800 rounded-xl" />)}
+        {[...Array(4)].map((_, i) => <div key={i} className="h-64 bg-slate-800 rounded-xl" />)}
       </div>
     </div>
   );
@@ -35,19 +35,19 @@ function LoadingSkeleton() {
 function scoreColor(score: number): string {
   if (score >= 8) return 'text-emerald-400';
   if (score >= 6) return 'text-amber-400';
-  return 'text-red-400';
+  return 'text-rose-400';
 }
 
 function barColor(score: number): string {
   if (score >= 8) return 'bg-emerald-500';
   if (score >= 6) return 'bg-amber-500';
-  return 'bg-red-500';
+  return 'bg-rose-500';
 }
 
 function barBgColor(score: number): string {
   if (score >= 8) return 'bg-emerald-500/10';
   if (score >= 6) return 'bg-amber-500/10';
-  return 'bg-red-500/10';
+  return 'bg-rose-500/10';
 }
 
 function ScoreBar({ label, score }: { label: string; score: number }) {
@@ -55,10 +55,10 @@ function ScoreBar({ label, score }: { label: string; score: number }) {
 
   return (
     <div className="flex items-center gap-2">
-      <span className="text-xs text-gray-400 w-24 truncate" title={label}>
+      <span className="text-xs text-slate-400 w-24 truncate" title={label}>
         {label}
       </span>
-      <div className="flex-1 bg-gray-800 rounded-full h-2">
+      <div className="flex-1 bg-slate-800 rounded-full h-2">
         <div
           className={`${barColor(score)} rounded-full h-2 transition-all`}
           style={{ width: `${percentage}%` }}
@@ -74,25 +74,25 @@ function ScoreBar({ label, score }: { label: string; score: number }) {
 function ProductCard({ product }: { product: ProductQuality }) {
   if (!product.hasAudit) {
     return (
-      <div className="bg-gray-900 border border-gray-800 rounded-xl p-6">
+      <div className="bg-slate-900 border border-slate-800 rounded-xl p-6">
         <div className="flex items-start justify-between mb-4">
           <h3 className="text-lg font-semibold text-white">{product.name}</h3>
-          <span className="text-xs text-gray-600 bg-gray-800 px-2 py-1 rounded">No audit</span>
+          <span className="text-xs text-slate-600 bg-slate-800 px-2 py-1 rounded">No audit</span>
         </div>
         <div className="flex items-center justify-center py-8">
-          <p className="text-gray-500 text-sm">No audit report yet</p>
+          <p className="text-slate-500 text-sm">No audit report yet</p>
         </div>
       </div>
     );
   }
 
   return (
-    <div className="bg-gray-900 border border-gray-800 rounded-xl p-6 hover:border-gray-700 transition-colors">
+    <div className="bg-slate-900 border border-slate-800 rounded-xl p-6 hover:border-slate-700 transition-colors">
       <div className="flex items-start justify-between mb-6">
         <div>
           <h3 className="text-lg font-semibold text-white">{product.name}</h3>
           {product.recentReports.length > 0 && (
-            <p className="text-xs text-gray-500 mt-0.5">
+            <p className="text-xs text-slate-500 mt-0.5">
               {product.recentReports.length} report{product.recentReports.length !== 1 ? 's' : ''}
             </p>
           )}
@@ -101,7 +101,7 @@ function ProductCard({ product }: { product: ProductQuality }) {
           <p className={`text-3xl font-bold ${scoreColor(product.overallScore)}`}>
             {product.overallScore}
           </p>
-          <p className="text-xs text-gray-500">/10</p>
+          <p className="text-xs text-slate-500">/10</p>
         </div>
       </div>
 
@@ -125,7 +125,7 @@ export default function QualityGates() {
   const { data, loading } = useApi<QualityGatesResponse>('/quality-gates');
 
   if (loading && !data) return <LoadingSkeleton />;
-  if (!data) return <p className="text-red-400">Failed to load quality gates</p>;
+  if (!data) return <p className="text-rose-400">Failed to load quality gates</p>;
 
   const products = data.products;
   const audited = products.filter((p) => p.hasAudit);
@@ -139,7 +139,7 @@ export default function QualityGates() {
       {/* Header */}
       <div className="mb-8">
         <h1 className="text-2xl font-bold text-white mb-1">Quality Gate Dashboard</h1>
-        <p className="text-gray-500">Code quality scores across all products</p>
+        <p className="text-slate-500">Code quality scores across all products</p>
       </div>
 
       {/* Stat Cards */}
@@ -172,8 +172,8 @@ export default function QualityGates() {
       </div>
 
       {products.length === 0 && (
-        <div className="bg-gray-900 border border-gray-800 rounded-xl p-12 text-center">
-          <p className="text-gray-500">No products found</p>
+        <div className="bg-slate-900 border border-slate-800 rounded-xl p-12 text-center">
+          <p className="text-slate-500">No products found</p>
         </div>
       )}
     </div>

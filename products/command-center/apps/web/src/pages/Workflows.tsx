@@ -34,13 +34,13 @@ interface WorkflowsResponse {
 
 const agentColorMap: Record<string, string> = {
   'product-manager': 'text-purple-400',
-  'architect': 'text-blue-400',
+  'architect': 'text-indigo-400',
   'backend-engineer': 'text-green-400',
   'frontend-engineer': 'text-amber-400',
-  'qa-engineer': 'text-red-400',
+  'qa-engineer': 'text-rose-400',
   'devops-engineer': 'text-cyan-400',
   'technical-writer': 'text-indigo-400',
-  'orchestrator': 'text-yellow-400',
+  'orchestrator': 'text-amber-400',
   'business-analyst': 'text-pink-400',
   'code-reviewer': 'text-rose-400',
   'data-engineer': 'text-teal-400',
@@ -48,20 +48,20 @@ const agentColorMap: Record<string, string> = {
   'mobile-developer': 'text-orange-400',
   'performance-engineer': 'text-lime-400',
   'product-strategist': 'text-sky-400',
-  'security-engineer': 'text-red-300',
+  'security-engineer': 'text-rose-300',
   'support-engineer': 'text-emerald-400',
   'ui-ux-designer': 'text-fuchsia-400',
 };
 
 const agentBgMap: Record<string, string> = {
   'product-manager': 'bg-purple-500',
-  'architect': 'bg-blue-500',
+  'architect': 'bg-indigo-500',
   'backend-engineer': 'bg-green-500',
   'frontend-engineer': 'bg-amber-500',
-  'qa-engineer': 'bg-red-500',
+  'qa-engineer': 'bg-rose-500',
   'devops-engineer': 'bg-cyan-500',
   'technical-writer': 'bg-indigo-500',
-  'orchestrator': 'bg-yellow-500',
+  'orchestrator': 'bg-amber-500',
   'business-analyst': 'bg-pink-500',
   'code-reviewer': 'bg-rose-500',
   'data-engineer': 'bg-teal-500',
@@ -69,7 +69,7 @@ const agentBgMap: Record<string, string> = {
   'mobile-developer': 'bg-orange-500',
   'performance-engineer': 'bg-lime-500',
   'product-strategist': 'bg-sky-500',
-  'security-engineer': 'bg-red-300',
+  'security-engineer': 'bg-rose-300',
   'support-engineer': 'bg-emerald-500',
   'ui-ux-designer': 'bg-fuchsia-500',
 };
@@ -99,7 +99,7 @@ export default function Workflows() {
   }, [fullscreenWorkflow, closeFullscreen]);
 
   if (loading) return <LoadingSkeleton />;
-  if (!data) return <p className="text-red-400">Failed to load workflows</p>;
+  if (!data) return <p className="text-rose-400">Failed to load workflows</p>;
 
   const { workflows } = data;
 
@@ -110,17 +110,17 @@ export default function Workflows() {
   // Fullscreen overlay
   if (fullscreenWorkflow) {
     return (
-      <div className="fixed inset-0 z-50 bg-gray-950 flex flex-col">
+      <div className="fixed inset-0 z-50 bg-slate-950 flex flex-col">
         {/* Toolbar */}
-        <div className="flex items-center justify-between px-6 py-4 border-b border-gray-800 bg-gray-900">
+        <div className="flex items-center justify-between px-6 py-4 border-b border-slate-800 bg-slate-900">
           <div className="flex items-center gap-3">
             <h2 className="text-lg font-semibold text-white">{fullscreenWorkflow.name}</h2>
             <Badge variant="info">{fullscreenWorkflow.workflowType}</Badge>
-            <span className="text-sm text-gray-500">{fullscreenWorkflow.taskCount} tasks &middot; {formatTime(fullscreenWorkflow.estimatedMinutes)}</span>
+            <span className="text-sm text-slate-500">{fullscreenWorkflow.taskCount} tasks &middot; {formatTime(fullscreenWorkflow.estimatedMinutes)}</span>
           </div>
           <button
             onClick={closeFullscreen}
-            className="text-gray-400 hover:text-white transition-colors flex items-center gap-2 px-3 py-1.5 rounded-lg hover:bg-gray-800"
+            className="text-slate-400 hover:text-white transition-colors flex items-center gap-2 px-3 py-1.5 rounded-lg hover:bg-slate-800"
             title="Exit fullscreen (Esc)"
           >
             <svg className="w-5 h-5" fill="none" stroke="currentColor" viewBox="0 0 24 24" strokeWidth={1.5}>
@@ -142,7 +142,7 @@ export default function Workflows() {
   return (
     <div>
       <h1 className="text-2xl font-bold text-white mb-1">Workflows</h1>
-      <p className="text-gray-500 mb-8">Company workflow definitions and execution diagrams</p>
+      <p className="text-slate-500 mb-8">Company workflow definitions and execution diagrams</p>
 
       {/* Overview Stats */}
       <div className="grid grid-cols-2 lg:grid-cols-4 gap-4 mb-8">
@@ -177,7 +177,7 @@ interface WorkflowCardProps {
 
 function WorkflowCard({ workflow, expanded, onToggle, onFullscreen }: WorkflowCardProps) {
   return (
-    <div className="bg-gray-900 border border-gray-800 rounded-xl p-6">
+    <div className="bg-slate-900 border border-slate-800 rounded-xl p-6">
       {/* Collapsed Header */}
       <div className="flex items-start justify-between mb-4">
         <div className="flex-1">
@@ -185,8 +185,8 @@ function WorkflowCard({ workflow, expanded, onToggle, onFullscreen }: WorkflowCa
             <h3 className="text-lg font-semibold text-white">{workflow.name}</h3>
             <Badge variant="info">{workflow.workflowType}</Badge>
           </div>
-          <p className="text-sm text-gray-400 mb-3">{workflow.description}</p>
-          <div className="flex items-center gap-4 text-sm text-gray-500">
+          <p className="text-sm text-slate-400 mb-3">{workflow.description}</p>
+          <div className="flex items-center gap-4 text-sm text-slate-500">
             <span>{workflow.taskCount} tasks</span>
             <span>&middot;</span>
             <span>{formatTime(workflow.estimatedMinutes)}</span>
@@ -197,7 +197,7 @@ function WorkflowCard({ workflow, expanded, onToggle, onFullscreen }: WorkflowCa
       {/* Agent Avatars */}
       <div className="flex items-center gap-2 mb-4">
         {workflow.agents.map((agent, idx) => {
-          const bgClass = agentBgMap[agent] || 'bg-gray-500';
+          const bgClass = agentBgMap[agent] || 'bg-slate-500';
           return (
             <div
               key={idx}
@@ -213,7 +213,7 @@ function WorkflowCard({ workflow, expanded, onToggle, onFullscreen }: WorkflowCa
       {/* Toggle Button */}
       <button
         onClick={onToggle}
-        className="text-sm text-blue-400 hover:text-blue-300 transition-colors flex items-center gap-1"
+        className="text-sm text-indigo-400 hover:text-indigo-300 transition-colors flex items-center gap-1"
       >
         {expanded ? '▼ Collapse' : '▶ Expand diagram & tasks'}
       </button>
@@ -222,12 +222,12 @@ function WorkflowCard({ workflow, expanded, onToggle, onFullscreen }: WorkflowCa
       {expanded && (
         <div className="mt-6 space-y-6">
           {/* Mermaid Diagram */}
-          <div className="border-t border-gray-800 pt-6">
+          <div className="border-t border-slate-800 pt-6">
             <div className="flex items-center justify-between mb-3">
               <h4 className="text-sm font-semibold text-white">Execution Flow</h4>
               <button
                 onClick={onFullscreen}
-                className="text-gray-400 hover:text-white transition-colors flex items-center gap-1.5 px-2 py-1 rounded hover:bg-gray-800 text-xs"
+                className="text-slate-400 hover:text-white transition-colors flex items-center gap-1.5 px-2 py-1 rounded hover:bg-slate-800 text-xs"
                 title="View fullscreen"
               >
                 <svg className="w-4 h-4" fill="none" stroke="currentColor" viewBox="0 0 24 24" strokeWidth={1.5}>
@@ -240,36 +240,36 @@ function WorkflowCard({ workflow, expanded, onToggle, onFullscreen }: WorkflowCa
           </div>
 
           {/* Task List Table */}
-          <div className="border-t border-gray-800 pt-6">
+          <div className="border-t border-slate-800 pt-6">
             <h4 className="text-sm font-semibold text-white mb-3">Task Details</h4>
             <div className="overflow-x-auto">
-              <table className="min-w-full divide-y divide-gray-700">
-                <thead className="bg-gray-800">
+              <table className="min-w-full divide-y divide-slate-700">
+                <thead className="bg-slate-800">
                   <tr>
-                    <th className="px-3 py-2 text-left text-xs font-semibold uppercase text-gray-400">ID</th>
-                    <th className="px-3 py-2 text-left text-xs font-semibold uppercase text-gray-400">Task</th>
-                    <th className="px-3 py-2 text-left text-xs font-semibold uppercase text-gray-400">Agent</th>
-                    <th className="px-3 py-2 text-left text-xs font-semibold uppercase text-gray-400">Dependencies</th>
-                    <th className="px-3 py-2 text-left text-xs font-semibold uppercase text-gray-400">Parallel</th>
-                    <th className="px-3 py-2 text-left text-xs font-semibold uppercase text-gray-400">Priority</th>
-                    <th className="px-3 py-2 text-left text-xs font-semibold uppercase text-gray-400">Time</th>
+                    <th className="px-3 py-2 text-left text-xs font-semibold uppercase text-slate-400">ID</th>
+                    <th className="px-3 py-2 text-left text-xs font-semibold uppercase text-slate-400">Task</th>
+                    <th className="px-3 py-2 text-left text-xs font-semibold uppercase text-slate-400">Agent</th>
+                    <th className="px-3 py-2 text-left text-xs font-semibold uppercase text-slate-400">Dependencies</th>
+                    <th className="px-3 py-2 text-left text-xs font-semibold uppercase text-slate-400">Parallel</th>
+                    <th className="px-3 py-2 text-left text-xs font-semibold uppercase text-slate-400">Priority</th>
+                    <th className="px-3 py-2 text-left text-xs font-semibold uppercase text-slate-400">Time</th>
                   </tr>
                 </thead>
-                <tbody className="divide-y divide-gray-700">
+                <tbody className="divide-y divide-slate-700">
                   {workflow.tasks.map((task) => {
-                    const agentColor = agentColorMap[task.agent] || 'text-gray-400';
+                    const agentColor = agentColorMap[task.agent] || 'text-slate-400';
                     return (
-                      <tr key={task.id} className="even:bg-gray-900/50 odd:bg-gray-900 hover:bg-gray-800/50 transition-colors">
-                        <td className="px-3 py-2 text-xs text-gray-500">{task.id}</td>
-                        <td className="px-3 py-2 text-sm text-gray-300 flex items-center gap-2">
-                          {task.checkpoint && <span className="text-yellow-400" title="Checkpoint">★</span>}
+                      <tr key={task.id} className="even:bg-slate-900/50 odd:bg-slate-900 hover:bg-slate-800/50 transition-colors">
+                        <td className="px-3 py-2 text-xs text-slate-500">{task.id}</td>
+                        <td className="px-3 py-2 text-sm text-slate-300 flex items-center gap-2">
+                          {task.checkpoint && <span className="text-amber-400" title="Checkpoint">★</span>}
                           {task.name}
                         </td>
                         <td className={`px-3 py-2 text-sm font-medium ${agentColor}`}>{task.agent}</td>
-                        <td className="px-3 py-2 text-xs text-gray-500">
+                        <td className="px-3 py-2 text-xs text-slate-500">
                           {task.dependsOn.length > 0 ? task.dependsOn.join(', ') : '—'}
                         </td>
-                        <td className="px-3 py-2 text-xs text-gray-500">
+                        <td className="px-3 py-2 text-xs text-slate-500">
                           {task.parallelOk ? '✓' : '—'}
                         </td>
                         <td className="px-3 py-2 text-xs">
@@ -277,7 +277,7 @@ function WorkflowCard({ workflow, expanded, onToggle, onFullscreen }: WorkflowCa
                             {task.priority}
                           </Badge>
                         </td>
-                        <td className="px-3 py-2 text-xs text-gray-500">{formatTime(task.estimatedMinutes)}</td>
+                        <td className="px-3 py-2 text-xs text-slate-500">{formatTime(task.estimatedMinutes)}</td>
                       </tr>
                     );
                   })}
@@ -294,13 +294,13 @@ function WorkflowCard({ workflow, expanded, onToggle, onFullscreen }: WorkflowCa
 function LoadingSkeleton() {
   return (
     <div className="animate-pulse">
-      <div className="h-8 bg-gray-800 rounded w-48 mb-2" />
-      <div className="h-4 bg-gray-800 rounded w-72 mb-8" />
+      <div className="h-8 bg-slate-800 rounded w-48 mb-2" />
+      <div className="h-4 bg-slate-800 rounded w-72 mb-8" />
       <div className="grid grid-cols-2 lg:grid-cols-4 gap-4 mb-8">
-        {[...Array(4)].map((_, i) => <div key={i} className="h-28 bg-gray-800 rounded-xl" />)}
+        {[...Array(4)].map((_, i) => <div key={i} className="h-28 bg-slate-800 rounded-xl" />)}
       </div>
       <div className="grid grid-cols-1 lg:grid-cols-2 gap-6">
-        {[...Array(4)].map((_, i) => <div key={i} className="h-64 bg-gray-800 rounded-xl" />)}
+        {[...Array(4)].map((_, i) => <div key={i} className="h-64 bg-slate-800 rounded-xl" />)}
       </div>
     </div>
   );
