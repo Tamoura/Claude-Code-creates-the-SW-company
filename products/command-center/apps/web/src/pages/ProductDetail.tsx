@@ -114,6 +114,20 @@ export default function ProductDetail() {
   const { data: docsData, loading: docsLoading } = useApi<ProductDocsResponse>(`/products/${name}/docs`);
   const { data: productData } = useApi<{ product: ProductOverview }>(`/products/${name}`);
 
+  // Collapse all categories by default once docs load;
+  // keep the active doc's category expanded
+  useEffect(() => {
+    if (docsData?.docs.length) {
+      const allCategories = new Set(docsData.docs.map((d) => d.category));
+      if (selectedDoc) {
+        const activeCategory = docsData.docs.find((d) => d.filename === selectedDoc)?.category;
+        if (activeCategory) allCategories.delete(activeCategory);
+      }
+      setCollapsedCategories(allCategories);
+    }
+  // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, [docsData]);
+
   // Split content by ## headings into slides
   const slides = docContent
     ? splitIntoSlides(docContent.content, docContent.title)
