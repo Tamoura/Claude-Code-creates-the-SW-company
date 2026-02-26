@@ -422,35 +422,30 @@ export default function ProductDetail() {
                   const docs = groupedDocs[category];
                   const config = categoryConfig[category as keyof typeof categoryConfig];
                   const isCollapsed = collapsedCategories.has(category);
-                  const shouldCollapse = docs.length > 3;
 
                   return (
                     <div key={category} className="space-y-1">
-                      {/* Category header */}
+                      {/* Category header — always collapsible */}
                       <div
-                        className={`flex items-center gap-2 px-2 py-1.5 text-xs font-semibold text-slate-400 uppercase tracking-wider ${
-                          shouldCollapse ? 'cursor-pointer hover:text-slate-300' : ''
-                        }`}
-                        onClick={() => shouldCollapse && toggleCategory(category)}
+                        className="flex items-center gap-2 px-2 py-1.5 text-xs font-semibold text-slate-400 uppercase tracking-wider cursor-pointer hover:text-slate-300"
+                        onClick={() => toggleCategory(category)}
                       >
                         <svg className="w-4 h-4" fill="none" stroke="currentColor" viewBox="0 0 24 24">
                           <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d={config.icon} />
                         </svg>
                         <span className="flex-1">{config.label}</span>
-                        {shouldCollapse && (
-                          <svg
-                            className={`w-4 h-4 transition-transform ${isCollapsed ? '' : 'rotate-90'}`}
-                            fill="none"
-                            stroke="currentColor"
-                            viewBox="0 0 24 24"
-                          >
-                            <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M9 5l7 7-7 7" />
-                          </svg>
-                        )}
+                        <svg
+                          className={`w-4 h-4 transition-transform ${isCollapsed ? '' : 'rotate-90'}`}
+                          fill="none"
+                          stroke="currentColor"
+                          viewBox="0 0 24 24"
+                        >
+                          <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M9 5l7 7-7 7" />
+                        </svg>
                       </div>
 
                       {/* Doc list */}
-                      {(!shouldCollapse || !isCollapsed) && (
+                      {!isCollapsed && (
                         <div className="space-y-0.5">
                           {docs.map((doc) => (
                             <button
