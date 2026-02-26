@@ -12,6 +12,9 @@
     "build:web": "cd apps/web && npm run build",
     "test": "npm run test:api",
     "test:api": "cd apps/api && npm test",
+    "test:e2e": "npx playwright test",
+    "test:e2e:report": "npx playwright show-report e2e-proof",
+    "proof:package": "bash scripts/package-proof.sh",
     "lint": "npm run lint:api && npm run lint:web",
     "lint:api": "cd apps/api && npm run lint",
     "lint:web": "cd apps/web && npm run lint"

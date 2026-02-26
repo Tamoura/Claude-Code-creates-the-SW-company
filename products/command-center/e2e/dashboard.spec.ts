@@ -96,3 +96,79 @@ test.describe('Alert Center Page', () => {
     await expect(page.locator('main')).toContainText('All clear');
   });
 });
+
+test.describe('Approval Queue Page', () => {
+  test('loads and shows Approval Queue h1', async ({ page }) => {
+    await page.goto('/approvals');
+    await expect(page.locator('main h1')).toContainText('Approval Queue');
+  });
+
+  test('displays stat cards for Pending, Approved, Rejected', async ({ page }) => {
+    await page.goto('/approvals');
+    const main = page.locator('main');
+    await expect(main.locator('text=Pending').first()).toBeVisible();
+    await expect(main.locator('text=Approved').first()).toBeVisible();
+    await expect(main.locator('text=Rejected').first()).toBeVisible();
+  });
+
+  test('shows filter tabs All, Pending, Resolved', async ({ page }) => {
+    await page.goto('/approvals');
+    const main = page.locator('main');
+    await expect(main.locator('button:has-text("All")')).toBeVisible();
+    await expect(main.locator('button', { hasText: /Pending/ })).toBeVisible();
+    await expect(main.locator('button', { hasText: /Resolved/ })).toBeVisible();
+  });
+
+  test('pending items have a Review button', async ({ page }) => {
+    await page.goto('/approvals');
+    // Default tab is "Pending" — at least one seed item should be pending
+    const reviewBtn = page.locator('main button:has-text("Review")');
+    await expect(reviewBtn.first()).toBeVisible();
+  });
+
+  test('clicking Review shows Approve, Reject buttons and note textarea', async ({ page }) => {
+    await page.goto('/approvals');
+    const reviewBtn = page.locator('main button:has-text("Review")').first();
+    await reviewBtn.click();
+    const main = page.locator('main');
+    await expect(main.locator('button:has-text("Approve")')).toBeVisible();
+    await expect(main.locator('button:has-text("Reject")')).toBeVisible();
+    await expect(main.locator('textarea')).toBeVisible();
+  });
+});
+
+test.describe('PR Dashboard Page', () => {
+  test('loads and shows PR Dashboard h1', async ({ page }) => {
+    await page.goto('/pr-dashboard');
+    await expect(page.locator('main h1')).toContainText('PR Dashboard');
+  });
+
+  test('displays stat cards Open PRs, Needs Review, CI Failures, Approved, Draft, Total', async ({
+    page,
+  }) => {
+    await page.goto('/pr-dashboard');
+    const main = page.locator('main');
+    await expect(main.locator('text=Open PRs').first()).toBeVisible();
+    await expect(main.locator('text=Needs Review').first()).toBeVisible();
+    await expect(main.locator('text=CI Failures').first()).toBeVisible();
+    await expect(main.locator('text=Approved').first()).toBeVisible();
+    await expect(main.locator('text=Draft').first()).toBeVisible();
+    // "Total" appears as "Total (open+closed)"
+    await expect(main.locator('text=/Total/').first()).toBeVisible();
+  });
+
+  test('shows filter tabs Open and Recently Closed', async ({ page }) => {
+    await page.goto('/pr-dashboard');
+    const main = page.locator('main');
+    await expect(main.locator('button', { hasText: /Open/ })).toBeVisible();
+    await expect(main.locator('button', { hasText: /Recently Closed/ })).toBeVisible();
+  });
+
+  test('shows CI filter buttons All CI, Failing, Pending', async ({ page }) => {
+    await page.goto('/pr-dashboard');
+    const main = page.locator('main');
+    await expect(main.locator('button:has-text("All CI")')).toBeVisible();
+    await expect(main.locator('button:has-text("Failing")')).toBeVisible();
+    await expect(main.locator('button:has-text("Pending")')).toBeVisible();
+  });
+});
