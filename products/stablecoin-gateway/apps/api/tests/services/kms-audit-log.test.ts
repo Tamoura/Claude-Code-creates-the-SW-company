@@ -248,4 +248,78 @@ describe('KMSService - Structured Audit Log (AC-KMS-02-03)', () => {
       expect(JSON.stringify(logObj)).not.toContain(TEST_KEY_ID);
     });
   });
+
+  describe('error-path audit log', () => {
+    it('[US-KMS-02][AC-1] signTransaction() emits warn audit log on signing failure', async () => {
+      await primePublicKeyCache();
+
+      const toAddress = ethers.Wallet.createRandom().address;
+      const tx = { to: toAddress, chainId: 137, type: 2, nonce: 0 };
+
+      // Mock KMS sign call to throw
+      mockKMSClient.send.mockRejectedValueOnce(new Error('KMS sign failed'));
+
+      await expect(kmsService.signTransaction(tx)).rejects.toThrow();
+
+      expect(logger.warn).toHaveBeenCalledWith(
+        expect.stringContaining('signing'),
+        expect.objectContaining({
+          keyId: TEST_KEY_ID.substring(0, 8) + '...',
+          operation: 'transaction-signing',
+          outcome: 'failure',
+        })
+      );
+    });
+
+    it('[US-KMS-02][AC-1] sign() emits warn audit log on signing failure', async () => {
+      await primePublicKeyCache();
+
+      const messageHash = ethers.id('test message');
+
+      // Mock KMS sign call to throw
+      mockKMSClient.send.mockRejectedValueOnce(new Error('KMS sign failed'));
+
+      await expect(kmsService.sign(messageHash)).rejects.toThrow();
+
+      expect(logger.warn).toHaveBeenCalledWith(
+        expect.stringContaining('signing'),
+        expect.objectContaining({
+          keyId: TEST_KEY_ID.substring(0, 8) + '...',
+          operation: 'message-signing',
+          outcome: 'failure',
+        })
+      );
+    });
+
+    it('[US-KMS-02][AC-1] error-path audit log does not contain ARN or sensitive data', async () => {
+      await primePublicKeyCache();
+
+      const toAddress = ethers.Wallet.createRandom().address;
+      const tx = { to: toAddress, chainId: 137, type: 2, nonce: 0 };
+
+      // Simulate KMS throwing an error whose message contains the full ARN
+      const arnLikeMessage =
+        `KMS key ${TEST_KEY_ID} is disabled`;
+      mockKMSClient.send.mockRejectedValueOnce(new Error(arnLikeMessage));
+
+      await expect(kmsService.signTransaction(tx)).rejects.toThrow();
+
+      const warnCalls = (logger.warn as jest.Mock).mock.calls;
+      const auditCall = warnCalls.find(
+        (call) =>
+          call[1] &&
+          typeof call[1] === 'object' &&
+          call[1].outcome === 'failure'
+      );
+      expect(auditCall).toBeDefined();
+      const logObj = auditCall[1];
+
+      // The logged errorCode must not contain the full key ID (ARN)
+      const logStr = JSON.stringify(logObj);
+      expect(logStr).not.toContain(TEST_KEY_ID);
+
+      // errorCode field must be present
+      expect(logObj).toHaveProperty('errorCode');
+    });
+  });
 });
