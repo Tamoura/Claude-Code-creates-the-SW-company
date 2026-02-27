@@ -191,6 +191,14 @@ export class KMSService {
   }
 
   /**
+   * Return the currently active KMS key ID.
+   * Used by callers that need to save the old key before rotation.
+   */
+  getCurrentKeyId(): string {
+    return this.keyId;
+  }
+
+  /**
    * Clear cached values (useful for key rotation)
    */
   clearCache(): void {

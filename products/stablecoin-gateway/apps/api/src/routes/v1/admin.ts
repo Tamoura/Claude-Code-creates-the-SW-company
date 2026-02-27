@@ -45,17 +45,20 @@ const adminRoutes: FastifyPluginAsync = async (fastify) => {
       const { newKeyId } = body;
 
       const svc = getKmsService();
+      const oldKeyId = svc.getCurrentKeyId();
       svc.rotateKey(newKeyId);
 
       const health = await svc.healthCheck();
       if (health.status !== 'healthy') {
+        // Attempt rollback to the previous key so the service stays operational
+        try { svc.rotateKey(oldKeyId); } catch (_) {}
         logger.error('KMS key rotation health check failed', undefined, {
           newKeyId: newKeyId.substring(0, 8) + '...',
           healthMessage: health.message,
         });
         return reply.code(503).send({
           error: 'new-key-unhealthy',
-          message: health.message,
+          message: 'KMS key unhealthy after rotation, rolled back',
         });
       }
 
