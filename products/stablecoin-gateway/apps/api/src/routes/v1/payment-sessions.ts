@@ -19,7 +19,10 @@ const sseConnectionsByUser = new Map<string, number>();
 let sseGlobalConnections = 0;
 const SSE_MAX_PER_USER = 10;
 const SSE_MAX_GLOBAL = parseInt(process.env.SSE_MAX_CONNECTIONS || '100', 10);
-const SSE_USE_REDIS_COUNTERS = process.env.SSE_USE_REDIS_COUNTERS === 'true';
+// TODO(ARC-03): When migrating SSE to multi-instance deployment, replace the
+// in-memory connection counter below with a Redis-backed counter.
+// Env var SSE_USE_REDIS_COUNTERS is reserved for future use.
+// See: products/stablecoin-gateway/docs/AUDIT-REPORT.md — ARC-03
 
 const paymentSessionRoutes: FastifyPluginAsync = async (fastify) => {
   // POST /v1/payment-sessions
