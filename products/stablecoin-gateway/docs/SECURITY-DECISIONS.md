@@ -6,69 +6,82 @@
 
 ---
 
-## CRIT-002: Private Key Storage - RISK ACCEPTED FOR MVP
+## CRIT-002: Private Key Storage - RESOLVED (KMS-01)
 
 ### Decision
-**Defer AWS KMS implementation to Month 2-3. Use environment variables with enhanced security practices for MVP launch.**
+**AWS KMS Hot Wallet implemented. Raw private keys no longer stored in environment variables.**
 
 ### Rationale
-1. **Bootstrap Strategy**: Minimize infrastructure costs during beta ($0 vs $50/month)
-2. **Limited Exposure**: Hot wallet only holds gas fees (~$100 max)
-3. **Non-Custodial**: Customer funds go directly to merchant wallets (we never hold)
-4. **Fast Launch**: Focus on product-market fit in Month 1-2
-5. **Planned Upgrade**: KMS implementation ready, deploy when we have revenue (Month 3)
+1. **Deferred MVP Strategy**: Initially accepted risk with env var + controls (Month 1-2)
+2. **Post-Launch Upgrade**: Implemented AWS KMS at Month 2 (2026-02-27) to transition to HSM-backed signing
+3. **Production-Ready**: KMS implementation enables key rotation without downtime and audit logging
+4. **Non-Custodial**: Customer funds still go directly to merchant wallets (we never hold)
+5. **Compliance**: Satisfies SOC 2 and industry best practices for hot wallet key storage
 
 ### Risk Level
-**MEDIUM** (was CRITICAL, now mitigated with controls below)
+**LOW** (was MEDIUM with env vars, now RESOLVED with AWS KMS)
 
-### Mitigation Controls (Implemented)
+### Implementation Details (Deployed 2026-02-27)
 
-#### 1. Wallet Balance Limits
-- **Maximum Balance**: $100 (covers ~200 Polygon transactions)
-- **Auto-Alert**: Notify if balance exceeds $150
-- **Refill Process**: Manual top-up only when balance < $20
+#### 1. AWS KMS Integration
+- **Service**: `kms.service.ts` — Core KMS operations (sign, verify, health checks)
+- **Provider**: `kms-signer.service.ts` — Wallet provider abstraction for production/dev environments
+- **Adapter**: `KMSWalletAdapter` — ethers.js-compatible interface for blockchain operations
+- **Key Storage**: AWS KMS (never in application memory)
+- **Signing Algorithm**: secp256k1 (Ethereum standard)
+- **Network Support**: Polygon, Ethereum, EVM-compatible chains
 
-#### 2. Environment Variable Security
-- **Encrypted Secrets**: Store in encrypted vault (GitHub Secrets, Railway encrypted env)
-- **No Logging**: Private key NEVER logged (checked in code review)
-- **Limited Access**: Only 1-2 people have production env access
-- **Rotation Ready**: Document key rotation procedure
+#### 2. Startup Guard & Safety
+- **Cold Start Check**: Verifies KMS key accessibility on application startup
+- **AppError Type**: Typed error class with RFC 7807 JSON serialization
+- **Production Mode**: Blocks raw env var key usage in production (throws 500)
+- **Dev Fallback**: Allows env var key with warning logs in development only
+- **Health Check**: Validates KMS connectivity before accepting transactions
 
-#### 3. Monitoring & Alerts
-- **Balance Monitoring**: Check wallet balance every 15 minutes
-- **Transaction Monitoring**: Alert on any unexpected outbound transaction
-- **Access Logging**: Log all production environment variable access
-- **Anomaly Detection**: Alert on unusual gas usage patterns
+#### 3. Structured Audit Logging
+- **AuditLog Model**: Records all KMS operations (sign, rotate, health check)
+- **Fire-and-Forget**: Audit logging never blocks transaction processing
+- **Sensitive Field Redaction**: Key IDs masked in logs (first 8 chars only)
+- **Queryable**: Admin API supports filtering by actor, action, timestamp
+- **Ring Buffer Fallback**: In-memory 10k-entry fallback if database unavailable
 
-#### 4. Incident Response
-- **If Compromised**: Rotate private key within 5 minutes
-- **Emergency Procedure**: Transfer remaining funds to backup wallet
-- **Customer Impact**: ZERO (customers' funds not affected)
-- **Maximum Loss**: $100
+#### 4. Key Rotation Endpoint
+- **Endpoint**: `POST /v1/admin/kms/rotate`
+- **Auth**: Admin role required
+- **Input**: `{ newKeyId: string }`
+- **Response**: `{ success: bool, message: string, keyId: string }`
+- **Health Check**: Validates new key before returning success
+- **No Downtime**: Rotation happens without restart
+- **Idempotent**: Safe to retry if network error occurs
+- **Error Handling**:
+  - 400: Invalid newKeyId (validation error)
+  - 401: Unauthenticated or non-admin role
+  - 503: New key unhealthy (KMS unavailable or key disabled)
 
-### Implementation Timeline
+### Migration Path (Completed)
 
-**Month 1-2 (MVP)**:
-- ✅ Use environment variables with controls above
+**Phase 1 (MVP - Month 1-2)**:
+- ✅ Environment variables with balance limits + monitoring
 - ✅ Maximum wallet balance: $100
-- ✅ Monitoring and alerting active
 - ✅ Incident response plan documented
 
-**Month 3 (Post-Launch)**:
-- 🔄 Implement AWS KMS or HashiCorp Vault
-- 🔄 Migrate to hardware-based key storage
-- 🔄 Audit implementation
-- 🔄 Update security documentation
+**Phase 2 (Post-Launch - Feb 27, 2026)**:
+- ✅ AWS KMS integration complete
+- ✅ Key rotation endpoint deployed
+- ✅ Audit logging enabled
+- ✅ Production startup guard active
+- ✅ All tests passing (KMS service, signer provider, rotation endpoint)
 
 ### Sign-Off
 
-- [x] **CEO**: Accepted risk for MVP (Month 1-2 only)
-- [x] **Security Engineer**: Mitigation controls documented
-- [ ] **Backend Engineer**: Monitoring implemented
-- [ ] **DevOps Engineer**: Alerts configured
+- [x] **CEO**: Approved KMS implementation (2026-02-27)
+- [x] **Security Engineer**: Audit logging and rotation endpoint reviewed
+- [x] **Backend Engineer**: KMS service, signer provider, endpoint implemented
+- [x] **DevOps Engineer**: AWS KMS key provisioned and health checks configured
+- [x] **QA Engineer**: All KMS tests passing (100%)
 
 ### Review Date
-**2026-03-01** - Must implement KMS/Vault before Month 3
+**Ongoing** - AWS KMS in production, key rotation endpoint available for emergency use
 
 ---
 

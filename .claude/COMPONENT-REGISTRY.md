@@ -376,6 +376,15 @@ const files = generateProduct({
 - **Description**: Full webhook delivery pipeline. Queues webhooks to all subscribed endpoints, processes the queue with concurrent workers using `SELECT FOR UPDATE SKIP LOCKED` (safe for multi-instance deployments), and delegates actual HTTP delivery to the executor service. Supports composite idempotency keys (endpointId + eventType + resourceId) to prevent duplicate deliveries. Retries with exponential backoff (1m, 5m, 15m, 1h, 2h) up to 5 attempts.
 - **To reuse**: Copy along with `webhook-circuit-breaker.service.ts` and `webhook-delivery-executor.service.ts`. Update the `WebhookEventType` union to match your domain events. Requires WebhookEndpoint and WebhookDelivery Prisma models.
 
+#### KMS Wallet Signing Service
+- **Source**: `stablecoin-gateway/apps/api/src/services/kms.service.ts`, `kms-signer.service.ts`, `kms-signing.service.ts`
+- **Maturity**: Production
+- **Reuse**: Copy all three files as-is for HSM-backed blockchain signing
+- **Dependencies**: `ethers`, `aws-sdk/client-kms` (production) or Node `crypto` (dev fallback)
+- **Used by**: stablecoin-gateway (blockchain transaction signing)
+- **Description**: HSM-backed wallet signing via AWS KMS. Private keys never exist in application memory. Provides three layers: (1) `KMSService` — AWS KMS operations (sign, verify, health checks, key rotation), (2) `KMSSignerProvider` — Fastify-friendly wallet provider abstraction supporting dual-mode (KMS in prod, env var in dev), (3) `KMSWalletAdapter` — ethers.js-compatible interface for seamless integration with blockchain libraries. Includes startup guard (validates KMS connectivity on app start), structured audit logging (fire-and-forget), and admin rotation endpoint (`POST /v1/admin/kms/rotate`). Supports secp256k1 signing for Polygon, Ethereum, and EVM-compatible chains.
+- **To reuse**: Copy all three files. Set `USE_KMS=true` and `KMS_KEY_ID=arn:aws:kms:...` in production. In development, set `USE_KMS=false` and `MERCHANT_WALLET_PRIVATE_KEY=0x...` for env var fallback. Add `POST /v1/admin/kms/rotate` endpoint to admin routes (see stablecoin-gateway/apps/api/src/routes/v1/admin.ts for implementation example). Requires AuditLog Prisma model for logging.
+
 ---
 
 ### Utilities
