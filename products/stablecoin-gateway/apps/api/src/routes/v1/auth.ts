@@ -641,11 +641,20 @@ const authRoutes: FastifyPluginAsync = async (fastify) => {
       // Hash the new password (same bcrypt rounds as signup)
       const passwordHash = await hashPassword(body.newPassword);
 
-      // Update user's password
-      await fastify.prisma.user.update({
-        where: { id: tokenData.userId },
-        data: { passwordHash },
-      });
+      // Update password and revoke all existing sessions atomically.
+      // MED-01: password reset must invalidate active sessions to prevent
+      // session fixation — an attacker who obtained a refresh token before
+      // the reset can no longer use it after this point.
+      await fastify.prisma.$transaction([
+        fastify.prisma.user.update({
+          where: { id: tokenData.userId },
+          data: { passwordHash },
+        }),
+        fastify.prisma.refreshToken.updateMany({
+          where: { userId: tokenData.userId, revoked: false },
+          data: { revokedAt: new Date(), revoked: true },
+        }),
+      ]);
 
       // Delete the token so it cannot be reused
       await redis.del(`reset:${body.token}`);

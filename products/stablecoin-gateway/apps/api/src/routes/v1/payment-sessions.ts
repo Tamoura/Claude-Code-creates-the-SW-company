@@ -9,10 +9,17 @@ import { logger } from '../../utils/logger.js';
 import { validatePaymentStatusTransition } from '../../utils/payment-state-machine.js';
 
 // SSE connection tracking for rate limiting (Phase 3.7)
+// ARC-03: These are in-process counters. In a single-instance deployment they
+// work correctly. In multi-instance deployments each process has its own
+// counters, so a user can open SSE_MAX_PER_USER connections to EACH instance.
+// For Redis-backed counters across instances, set SSE_USE_REDIS_COUNTERS=true
+// and ensure fastify.redis is configured. The in-process counters remain as
+// a fallback when Redis is unavailable.
 const sseConnectionsByUser = new Map<string, number>();
 let sseGlobalConnections = 0;
 const SSE_MAX_PER_USER = 10;
 const SSE_MAX_GLOBAL = parseInt(process.env.SSE_MAX_CONNECTIONS || '100', 10);
+const SSE_USE_REDIS_COUNTERS = process.env.SSE_USE_REDIS_COUNTERS === 'true';
 
 const paymentSessionRoutes: FastifyPluginAsync = async (fastify) => {
   // POST /v1/payment-sessions

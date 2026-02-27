@@ -21,7 +21,13 @@ import { FastifyPluginAsync, FastifyRequest, FastifyReply } from 'fastify';
 import crypto from 'crypto';
 import { logger } from '../utils/logger.js';
 
-// Metrics storage (in-memory for simplicity, can be replaced with Prometheus/StatsD)
+// Metrics storage: in-memory counters. HIGH-03: counters reset on process restart.
+// Each process instance reports independently. The `started_at` field in the
+// /internal/metrics response allows monitoring systems to detect restarts and
+// treat counts as "since last start" rather than lifetime totals.
+// For persistent, multi-instance metrics, migrate to prom-client + Prometheus.
+const metricsStartedAt = new Date().toISOString();
+
 interface Metrics {
   requests: {
     total: number;
@@ -226,6 +232,10 @@ const observabilityPlugin: FastifyPluginAsync = async (fastify) => {
         p50_ms: Math.round(p50),
         p95_ms: Math.round(p95),
         p99_ms: Math.round(p99),
+      },
+      meta: {
+        started_at: metricsStartedAt,
+        note: 'Counters are in-memory and reset on process restart. In multi-instance deployments each process reports independently.',
       },
       timestamp: new Date().toISOString(),
     });
