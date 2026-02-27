@@ -36,7 +36,7 @@ describe('GDPR Data Access — GET /v1/me (Art.15) and GET /v1/me/export (Art.20
     expect(signupRes.statusCode).toBe(201);
 
     const body = signupRes.json();
-    const userId = body.user?.id;
+    const userId = body.id;
     const accessToken = body.access_token;
 
     return { accessToken, userId, email };
