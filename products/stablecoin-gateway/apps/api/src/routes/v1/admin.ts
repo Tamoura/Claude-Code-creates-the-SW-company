@@ -3,6 +3,11 @@ import { z, ZodError } from 'zod';
 import { Prisma } from '@prisma/client';
 import { AppError } from '../../types/index.js';
 import { logger } from '../../utils/logger.js';
+import { createKMSService, KMSService } from '../../services/kms.service.js';
+
+const kmsRotateBodySchema = z.object({
+  newKeyId: z.string().min(1, 'newKeyId is required'),
+});
 
 const merchantListQuerySchema = z.object({
   limit: z.coerce.number().min(1).max(100).default(20),
@@ -21,6 +26,66 @@ const adminRoutes: FastifyPluginAsync = async (fastify) => {
   fastify.addHook('onRequest', async (request) => {
     await fastify.authenticate(request);
     await fastify.requireAdmin(request);
+  });
+
+  // Lazy KMS service singleton for admin operations.
+  // Only created when USE_KMS is configured; absent in dev/test envs.
+  let kmsService: KMSService | null = null;
+  function getKmsService(): KMSService {
+    if (!kmsService) {
+      kmsService = createKMSService();
+    }
+    return kmsService;
+  }
+
+  // POST /v1/admin/kms/rotate — trigger KMS key rotation without downtime
+  fastify.post('/kms/rotate', async (request, reply) => {
+    try {
+      const body = kmsRotateBodySchema.parse(request.body);
+      const { newKeyId } = body;
+
+      const svc = getKmsService();
+      const oldKeyId = svc.getCurrentKeyId();
+      svc.rotateKey(newKeyId);
+
+      const health = await svc.healthCheck();
+      if (health.status !== 'healthy') {
+        // Attempt rollback to the previous key so the service stays operational
+        try { svc.rotateKey(oldKeyId); } catch (_) {}
+        logger.error('KMS key rotation health check failed', undefined, {
+          newKeyId: newKeyId.substring(0, 8) + '...',
+          healthMessage: health.message,
+        });
+        return reply.code(503).send({
+          error: 'new-key-unhealthy',
+          message: 'KMS key unhealthy after rotation, rolled back',
+        });
+      }
+
+      logger.info('KMS key rotation completed', {
+        newKeyId: newKeyId.substring(0, 8) + '...',
+      });
+
+      return reply.send({
+        success: true,
+        message: 'Key rotation initiated',
+        keyId: newKeyId.substring(0, 8) + '...',
+      });
+    } catch (error) {
+      if (error instanceof ZodError) {
+        return reply.code(400).send({
+          type: 'https://gateway.io/errors/validation-error',
+          title: 'Validation Error',
+          status: 400,
+          detail: error.message,
+        });
+      }
+      if (error instanceof AppError) {
+        return reply.code(error.statusCode).send(error.toJSON());
+      }
+      logger.error('KMS rotate endpoint error', error);
+      throw error;
+    }
   });
 
   // GET /v1/admin/merchants
