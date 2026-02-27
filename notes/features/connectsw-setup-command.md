@@ -15,8 +15,8 @@ Bootstrap the entire ConnectSW AI agent system into any git repo by running `/co
 - Global find/sed replaces "ConnectSW" with company name across all copied files
 - macOS `sed -i ''` with Linux fallback `sed -i`
 
-## 21 .claude/ Directories Copied
-agents, commands, engine, workflows, protocols, quality-gates, scripts,
+## 22 .claude/ Directories Copied
+agents, commands, engine, workflows, protocols, quality-gates, scripts, skills,
 standards, templates, advanced-features, architecture, resource-management,
 dashboard, monitoring, checkpointing, security, mcp-tools, audit, checklists, tests
 + orchestrator (excluding state.yml)
@@ -29,7 +29,7 @@ dashboard, monitoring, checkpointing, security, mcp-tools, audit, checklists, te
 - `.claude/memory/memory-system.md`, `relevance-scoring.md`
 
 ## Verification Checklist
-- [ ] Creates all 21+ directories under `.claude/`
+- [ ] Creates all 22+ directories under `.claude/`
 - [ ] Fresh state.yml with company name and today's date
 - [ ] "ConnectSW" replaced with company name in all files
 - [ ] `.githooks/` exists and hooks path configured

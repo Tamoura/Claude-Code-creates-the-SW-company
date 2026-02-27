@@ -6,7 +6,7 @@
       "layout": "title",
       "title": "Command Center",
       "subtitle": "One dashboard to run an AI software company",
-      "tagline": "12 products. 16 agents. One pane of glass.",
+      "tagline": "12 products. 17 agents. One pane of glass.",
       "audiences": ["consumers", "customers", "investors", "founders"]
     },
     {
@@ -14,7 +14,7 @@
       "heading": "The Problem",
       "statement": "Running an AI-agent software company has no dashboard",
       "points": [
-        "AI agent orchestration across 16 specialist agents requires constant context-switching",
+        "AI agent orchestration across 17 specialist agents requires constant context-switching",
         "Product portfolio visibility is scattered across repos, docs, and CI pipelines",
         "No single view shows health, progress, and status across 12+ simultaneous products",
         "CEO decision-making requires assembling data from git, GitHub, docs, and agent logs manually"
@@ -28,7 +28,7 @@
       "points": [
         "Zero-database architecture — reads from filesystem and git CLI for always-fresh data",
         "Product catalog — status, ports, CI pipelines, docs, health for all 12 products",
-        "Agent Hub — 16 agents with capabilities, performance, and invocation history",
+        "Agent Hub — 17 agents with capabilities, performance, and invocation history",
         "Built-in document viewer with Mermaid rendering and PDF export"
       ],
       "audiences": ["investors", "founders"]
@@ -70,7 +70,7 @@
       "heading": "Business Model",
       "model": "Internal Tool — Strategic Value",
       "tiers": [
-        { "name": "Internal Use", "price": "$0", "features": ["Full dashboard", "All 12 products", "All 16 agents"] },
+        { "name": "Internal Use", "price": "$0", "features": ["Full dashboard", "All 12 products", "All 17 agents"] },
         { "name": "Strategic Value", "price": "Priceless", "features": ["CEO decision support", "Investor demos", "Portfolio visibility"] }
       ],
       "audiences": ["investors", "founders"]
@@ -92,7 +92,7 @@
       "heading": "Key Metrics",
       "metrics": [
         { "value": "12", "label": "Products Monitored", "trend": "up" },
-        { "value": "16", "label": "AI Agents Tracked", "trend": "stable" },
+        { "value": "17", "label": "AI Agents Tracked", "trend": "stable" },
         { "value": "<2s", "label": "Dashboard Load Time", "trend": "stable" },
         { "value": "<500ms", "label": "API Response Time", "trend": "stable" },
         { "value": "30s", "label": "Data Freshness TTL", "trend": "stable" },
