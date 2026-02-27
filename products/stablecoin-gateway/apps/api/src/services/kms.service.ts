@@ -149,13 +149,25 @@ export class KMSService {
     }
   }
 
-  // Delegate signing to KMSSigningService
+  // Delegate signing to KMSSigningService with structured audit log
   async signTransaction(transaction: ethers.TransactionRequest): Promise<string> {
-    return this.signingService.signTransaction(transaction);
+    const result = await this.signingService.signTransaction(transaction);
+    logger.info('KMS signing audit', {
+      keyId: this.keyId.substring(0, 8) + '...',
+      operation: 'transaction-signing',
+      outcome: 'success',
+    });
+    return result;
   }
 
   async sign(messageHash: string): Promise<ethers.Signature> {
-    return this.signingService.sign(messageHash);
+    const result = await this.signingService.sign(messageHash);
+    logger.info('KMS signing audit', {
+      keyId: this.keyId.substring(0, 8) + '...',
+      operation: 'message-signing',
+      outcome: 'success',
+    });
+    return result;
   }
 
   /**
