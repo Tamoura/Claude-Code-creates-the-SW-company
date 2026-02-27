@@ -247,7 +247,7 @@ describe('KMS Signer Service', () => {
       const provider = new EnvVarSignerProvider();
 
       await expect(provider.getWallet('polygon')).rejects.toThrow(
-        'MERCHANT_WALLET_PRIVATE_KEY not configured'
+        'Merchant wallet private key not configured'
       );
     });
 

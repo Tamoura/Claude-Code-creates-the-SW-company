@@ -101,7 +101,7 @@ export class EnvVarSignerProvider implements SignerProvider {
 
     const key = process.env.MERCHANT_WALLET_PRIVATE_KEY;
     if (!key) {
-      throw new Error('MERCHANT_WALLET_PRIVATE_KEY not configured');
+      throw new AppError(500, 'kms-not-configured', 'Merchant wallet private key not configured');
     }
 
     // Create wallet without logging the key
