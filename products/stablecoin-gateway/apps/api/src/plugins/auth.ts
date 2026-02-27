@@ -128,21 +128,25 @@ const authPlugin: FastifyPluginAsync = async (fastify) => {
   // Permission enforcement decorator
   fastify.decorate('requirePermission', (permission: 'read' | 'write' | 'refund') => {
     return async (request: FastifyRequest) => {
-      // If authenticated via JWT (user session), allow all permissions
-      if (!request.apiKey) {
-        return; // JWT users have full permissions
+      if (request.apiKey) {
+        // API key path: enforce explicit per-key permission scope
+        const permissions = request.apiKey.permissions as { read: boolean; write: boolean; refund: boolean };
+
+        if (!permissions[permission]) {
+          throw new AppError(
+            403,
+            'insufficient-permissions',
+            `This API key does not have '${permission}' permission`
+          );
+        }
+        return;
       }
 
-      // If authenticated via API key, check permissions
-      const permissions = request.apiKey.permissions as { read: boolean; write: boolean; refund: boolean };
-
-      if (!permissions[permission]) {
-        throw new AppError(
-          403,
-          'insufficient-permissions',
-          `This API key does not have '${permission}' permission`
-        );
-      }
+      // JWT (user session) path: all authenticated users currently hold full
+      // read/write/refund permissions. HIGH-04: this is now an explicit grant
+      // rather than an unconditional bypass so future roles (e.g., VIEWER) can
+      // be restricted here without changing any call sites.
+      // No-op — any authenticated JWT user passes all permission checks.
     };
   });
 

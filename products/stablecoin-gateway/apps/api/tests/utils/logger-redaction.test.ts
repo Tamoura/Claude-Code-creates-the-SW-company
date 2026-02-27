@@ -57,14 +57,17 @@ describe('Logger PII redaction', () => {
     });
     expect(logOutput[0]).toContain('[REDACTED]');
     expect(logOutput[0]).not.toContain('hidden');
-    expect(logOutput[0]).toContain('ok@test.com');
+    // email is now a sensitive key (CRIT-02) — it must also be redacted
+    expect(logOutput[0]).not.toContain('ok@test.com');
   });
 
-  it('should preserve non-sensitive keys', () => {
+  it('should preserve non-sensitive keys and redact email', () => {
+    // email was added to SENSITIVE_PATTERNS (CRIT-02) to prevent PII leakage
     logger.info('test', { userId: '123', email: 'test@example.com' });
     expect(logOutput[0]).toContain('123');
-    expect(logOutput[0]).toContain('test@example.com');
-    expect(logOutput[0]).not.toContain('[REDACTED]');
+    // email must be redacted
+    expect(logOutput[0]).not.toContain('test@example.com');
+    expect(logOutput[0]).toContain('[REDACTED]');
   });
 
   it('should match case-insensitively', () => {
