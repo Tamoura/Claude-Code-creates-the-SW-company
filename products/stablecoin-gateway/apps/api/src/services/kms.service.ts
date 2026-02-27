@@ -151,23 +151,43 @@ export class KMSService {
 
   // Delegate signing to KMSSigningService with structured audit log
   async signTransaction(transaction: ethers.TransactionRequest): Promise<string> {
-    const result = await this.signingService.signTransaction(transaction);
-    logger.info('KMS signing audit', {
-      keyId: this.keyId.substring(0, 8) + '...',
-      operation: 'transaction-signing',
-      outcome: 'success',
-    });
-    return result;
+    try {
+      const result = await this.signingService.signTransaction(transaction);
+      logger.info('KMS signing audit', {
+        keyId: this.keyId.substring(0, 8) + '...',
+        operation: 'transaction-signing',
+        outcome: 'success',
+      });
+      return result;
+    } catch (err) {
+      logger.warn('KMS signing failed', {
+        keyId: this.keyId.substring(0, 8) + '...',
+        operation: 'transaction-signing',
+        outcome: 'failure',
+        errorCode: err instanceof AppError ? err.code : 'unknown',
+      });
+      throw err;
+    }
   }
 
   async sign(messageHash: string): Promise<ethers.Signature> {
-    const result = await this.signingService.sign(messageHash);
-    logger.info('KMS signing audit', {
-      keyId: this.keyId.substring(0, 8) + '...',
-      operation: 'message-signing',
-      outcome: 'success',
-    });
-    return result;
+    try {
+      const result = await this.signingService.sign(messageHash);
+      logger.info('KMS signing audit', {
+        keyId: this.keyId.substring(0, 8) + '...',
+        operation: 'message-signing',
+        outcome: 'success',
+      });
+      return result;
+    } catch (err) {
+      logger.warn('KMS signing failed', {
+        keyId: this.keyId.substring(0, 8) + '...',
+        operation: 'message-signing',
+        outcome: 'failure',
+        errorCode: err instanceof AppError ? err.code : 'unknown',
+      });
+      throw err;
+    }
   }
 
   /**
