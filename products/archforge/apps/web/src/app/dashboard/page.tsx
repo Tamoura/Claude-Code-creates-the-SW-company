@@ -51,7 +51,7 @@ function CreateProjectModal({ isOpen, onClose, onCreate }: CreateProjectModalPro
       const project = await projectsApi.create({
         name: name.trim(),
         description: description.trim() || undefined,
-        framework,
+        frameworkPreference: framework,
       });
       onCreate(project);
       handleClose();
@@ -163,7 +163,7 @@ function ProjectCard({ project }: { project: Project }) {
         <h3 className="font-semibold text-gray-900 group-hover:text-primary-600 transition-colors line-clamp-1">
           {project.name}
         </h3>
-        <Badge value={project.framework} variant="framework" className="ml-2 flex-shrink-0" />
+        <Badge value={project.frameworkPreference} variant="framework" className="ml-2 flex-shrink-0" />
       </div>
       {project.description && (
         <p className="text-sm text-gray-500 mb-4 line-clamp-2 leading-relaxed">
@@ -193,7 +193,7 @@ function DashboardContent() {
     setError(null);
     try {
       const data = await projectsApi.list();
-      setProjectList(data.projects);
+      setProjectList(data.data);
     } catch (err) {
       setError(err instanceof ApiError ? err.message : 'Failed to load projects.');
     } finally {

@@ -105,6 +105,12 @@ tasks:
       - Identify affected components
       - Create feature design document
       - Map new/changed endpoints to requirement IDs
+
+      SPECKIT PLAN: After completing the design doc, generate the implementation
+      plan using /speckit.plan methodology:
+      Read and follow: .specify/templates/commands/plan.md
+      Read constitution: .specify/memory/constitution.md
+      Output plan to: products/{PRODUCT}/docs/features/{FEATURE_ID}-plan.md
     agent: "architect"
     depends_on: ["SPEC-{FEATURE_ID}"]
     story_ids: ["{STORY_IDS}"]
@@ -117,6 +123,9 @@ tasks:
       - name: "Feature Design"
         type: "document"
         path: "products/{PRODUCT}/docs/features/{FEATURE_ID}-{FEATURE}.md"
+      - name: "Feature Implementation Plan"
+        type: "document"
+        path: "products/{PRODUCT}/docs/features/{FEATURE_ID}-plan.md"
     context_output: ""
     parallel_ok: false
     checkpoint: true
@@ -129,6 +138,48 @@ tasks:
       - "Affected components identified"
       - "No conflicts with existing architecture"
       - "Traceability: every change mapped to a story/requirement"
+      - "plan.md generated via speckit.plan methodology"
+      - "plan.md maps every US-XX and FR-XXX to implementation sections"
+    status: "pending"
+
+  - id: "TASKS-{FEATURE_ID}"
+    name: "Generate Task List for {FEATURE}"
+    description: |
+      Generate a dependency-ordered, agent-assignable task list from the
+      feature implementation plan using /speckit.tasks methodology:
+      Read and follow: .specify/templates/commands/tasks.md
+      Read constitution: .specify/memory/constitution.md
+      Input: products/{PRODUCT}/docs/features/{FEATURE_ID}-plan.md
+      Input: products/{PRODUCT}/docs/specs/{FEATURE_ID}.md
+      Output: products/{PRODUCT}/docs/features/{FEATURE_ID}-tasks.md
+
+      Break the plan into tasks with TDD ordering enforced.
+    agent: "orchestrator"
+    depends_on: ["DESIGN-{FEATURE_ID}"]
+    story_ids: ["{STORY_IDS}"]
+    requirement_ids: ["{REQUIREMENT_IDS}"]
+    epic: "{EPIC_ID}"
+    consumes:
+      - name: "Feature Implementation Plan"
+        required_from_task: "DESIGN-{FEATURE_ID}"
+      - name: "Feature Specification"
+        required_from_task: "SPEC-{FEATURE_ID}"
+    produces:
+      - name: "Feature Task List"
+        type: "document"
+        path: "products/{PRODUCT}/docs/features/{FEATURE_ID}-tasks.md"
+    context_output: ""
+    parallel_ok: false
+    checkpoint: false
+    priority: "critical"
+    estimated_time_minutes: 20
+    acceptance_criteria:
+      - "Every plan section maps to at least one task"
+      - "All tasks have assigned agent roles"
+      - "TDD ordering: test tasks precede implementation tasks"
+      - "Dependencies correctly reflect execution order"
+      - "Story IDs and requirement IDs populated per task"
+      - "Output written to products/{PRODUCT}/docs/features/{FEATURE_ID}-tasks.md"
     status: "pending"
 
   # ============================================================================
@@ -150,7 +201,7 @@ tasks:
       - Commit: test(scope): add failing tests for {FEATURE} [US-XX]
       DO NOT write any implementation code!
     agent: "backend-engineer"
-    depends_on: ["DESIGN-{FEATURE_ID}"]
+    depends_on: ["TASKS-{FEATURE_ID}"]
     story_ids: ["{STORY_IDS}"]
     requirement_ids: ["{REQUIREMENT_IDS}"]
     epic: "{EPIC_ID}"
@@ -226,7 +277,7 @@ tasks:
       - Commit: test(scope): add failing tests for {FEATURE} [US-XX]
       DO NOT write any implementation code!
     agent: "frontend-engineer"
-    depends_on: ["DESIGN-{FEATURE_ID}"]
+    depends_on: ["TASKS-{FEATURE_ID}"]
     story_ids: ["{STORY_IDS}"]
     requirement_ids: ["{REQUIREMENT_IDS}"]
     epic: "{EPIC_ID}"

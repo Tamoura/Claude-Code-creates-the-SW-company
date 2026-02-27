@@ -18,8 +18,12 @@ export interface Project {
   name: string;
   description: string | null;
   status: string;
-  framework: string;
+  frameworkPreference: string;
   artifactCount?: number;
+  memberCount?: number;
+  createdBy?: { id: string; email: string; fullName: string };
+  archivedAt?: string | null;
+  thumbnailUrl?: string | null;
   updatedAt: string;
   createdAt: string;
 }
@@ -51,9 +55,18 @@ export interface Artifact {
   type: string;
   framework: string;
   status: string;
-  version: number;
-  mermaidDiagram: string | null;
-  prompt: string | null;
+  currentVersion: number;
+  /** @deprecated use currentVersion */
+  version?: number;
+  elementCount?: number;
+  svgContent?: string | null;
+  /** @deprecated use svgContent */
+  mermaidDiagram?: string | null;
+  nlDescription?: string | null;
+  /** @deprecated use nlDescription */
+  prompt?: string | null;
+  canvasData?: unknown;
+  createdBy?: { id: string; email: string; fullName: string };
   createdAt: string;
   updatedAt: string;
   elements?: ArtifactElement[];
@@ -87,19 +100,21 @@ export interface ExportResult {
 }
 
 export interface PaginatedProjects {
-  projects: Project[];
-  pagination: {
+  data: Project[];
+  meta: {
     total: number;
-    limit: number;
+    pageSize: number;
+    hasMore: boolean;
     nextCursor: string | null;
   };
 }
 
 export interface PaginatedArtifacts {
-  artifacts: Artifact[];
-  pagination: {
+  data: Artifact[];
+  meta: {
     total: number;
-    limit: number;
+    pageSize: number;
+    hasMore: boolean;
     nextCursor: string | null;
   };
 }
@@ -201,7 +216,7 @@ export const projects = {
 
   get: (id: string) => request<Project>(`/api/v1/projects/${id}`),
 
-  create: (data: { name: string; description?: string; framework: string }) =>
+  create: (data: { name: string; description?: string; frameworkPreference: string }) =>
     request<Project>('/api/v1/projects', {
       method: 'POST',
       body: JSON.stringify(data),

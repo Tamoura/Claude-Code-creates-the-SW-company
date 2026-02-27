@@ -45,9 +45,9 @@ function ProjectPickerModal({
     projectsApi
       .list()
       .then((data) => {
-        setProjectList(data.projects);
-        if (data.projects.length > 0) {
-          setSelectedProjectId(data.projects[0].id);
+        setProjectList(data.data);
+        if (data.data.length > 0) {
+          setSelectedProjectId(data.data[0].id);
         }
       })
       .catch(() => setError('Failed to load projects.'))

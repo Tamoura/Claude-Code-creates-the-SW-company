@@ -100,6 +100,28 @@ Both parts are saved to the same file, clearly separated by `---` and headers.
 
 ---
 
+## DIAGRAM-FIRST MANDATE (MANDATORY — CEO directive)
+
+**Every section that can be visualised MUST include a Mermaid diagram. Text is supplementary to diagrams, never a replacement.**
+
+| Section | Required Diagram(s) |
+|---------|-------------------|
+| Section 0 | Audit scope flowchart |
+| Section 1 | Score dashboard (`xychart-beta` bar chart of all 11 dimensions) |
+| Section 2 | Stop/Fix/Continue flowchart |
+| Section 3 | C4 Context diagram + C4 Container diagram |
+| Section 4 | Risk severity matrix (quadrant chart) |
+| Section 5 | Risk dependency graph (flowchart) |
+| Section 6 | Architecture layer diagram showing violations |
+| Section 7 | Security finding flow (attack path sequence diagram) |
+| Section 12 | Technical debt quadrant chart |
+| Section 13 | Remediation Gantt chart |
+| Section 15 | AI-Readiness radar (xychart-beta) |
+
+A diagram-free section is an **incomplete section**. If Mermaid cannot render a concept, use ASCII art as fallback — never omit the visual entirely.
+
+---
+
 # PART A — EXECUTIVE MEMO
 
 ---
@@ -107,6 +129,22 @@ Both parts are saved to the same file, clearly separated by `---` and headers.
 #### Section 0: Methodology & Limitations
 
 This section establishes credibility and sets expectations. It MUST appear before any findings.
+
+**REQUIRED DIAGRAM — Audit Scope Flowchart:**
+```mermaid
+flowchart TD
+    A[Audit Start] --> B[Source Code\naps/api/src · apps/web/src]
+    A --> C[Schema & Config\nprisma · .env · docker]
+    A --> D[Tests & CI/CD\ntests/ · .github/workflows/]
+    A --> E[Dependencies\npackage.json · lock files]
+    B --> F[Static Analysis]
+    C --> F
+    D --> F
+    E --> F
+    F --> G[Synthesis]
+    G --> H[Executive Memo\nPart A]
+    G --> I[Engineering Appendix\nPart B]
+```
 
 **Audit Scope:**
 - List every directory scanned (e.g., `apps/api/src/`, `apps/web/src/`, `apps/api/prisma/`)
@@ -137,6 +175,17 @@ This section establishes credibility and sets expectations. It MUST appear befor
 
 #### Section 1: Executive Decision Summary (1 page)
 
+**REQUIRED DIAGRAM — Score Dashboard (replace X with actual scores):**
+```mermaid
+xychart-beta
+    title "Audit Score Dashboard — [Product Name]"
+    x-axis ["Security", "Architecture", "Test Cov.", "Code Quality", "Performance", "DevOps", "Runability", "Accessibility", "Privacy", "Observability", "API Design"]
+    y-axis "Score (0–10)" 0 --> 10
+    bar [X, X, X, X, X, X, X, X, X, X, X]
+    line [8, 8, 8, 8, 8, 8, 8, 8, 8, 8, 8]
+```
+*(The horizontal line at 8 marks the production-ready threshold)*
+
 This section is for CEO/Board/Investors. No jargon. Answer these questions explicitly:
 
 | Question | Answer |
@@ -154,7 +203,24 @@ Include a **Top 5 Risks in Plain Language** list — no technical jargon, writte
 
 #### Section 2: Stop / Fix / Continue
 
-Executives need clear action categories:
+**REQUIRED DIAGRAM — Action Priority Flowchart:**
+```mermaid
+flowchart LR
+    subgraph STOP["🛑 STOP — Immediate"]
+        S1[Item 1]
+        S2[Item 2]
+    end
+    subgraph FIX["🔧 FIX — Before Production"]
+        F1[Item 1]
+        F2[Item 2]
+        F3[Item 3]
+    end
+    subgraph CONTINUE["✅ CONTINUE — Working Well"]
+        C1[Item 1]
+        C2[Item 2]
+    end
+    STOP --> FIX --> CONTINUE
+```
 
 | Category | Items |
 |----------|-------|
@@ -164,12 +230,63 @@ Executives need clear action categories:
 
 #### Section 3: System Overview
 
-- Architecture diagram (text-based)
-- Technology stack
-- Key flows (payment, auth, etc.)
-- Infrastructure topology
+**REQUIRED DIAGRAM 1 — C4 Level 1: Context (who uses it, what it connects to):**
+```mermaid
+graph TD
+    CEO["👤 CEO / Users"]
+    PRODUCT["[Product Name]\nCore System"]
+    DB[("PostgreSQL\nDatabase")]
+    EXTERNAL["External Services\ne.g. Stripe · Auth0 · S3"]
+
+    CEO -->|"Uses"| PRODUCT
+    PRODUCT -->|"Reads/Writes"| DB
+    PRODUCT -->|"Calls"| EXTERNAL
+
+    style PRODUCT fill:#1e3a5f,stroke:#4a90d9,color:#fff
+    style DB fill:#2d4a2d,stroke:#5a9a5a,color:#fff
+    style EXTERNAL fill:#4a3a1e,stroke:#c9a050,color:#fff
+```
+
+**REQUIRED DIAGRAM 2 — C4 Level 2: Container (apps, services, tech stack):**
+```mermaid
+graph TD
+    subgraph SYSTEM["[Product Name] — Container View"]
+        WEB["Next.js Frontend\nPort :XXXX"]
+        API["Fastify API\nPort :XXXX"]
+        DB[("PostgreSQL\nDatabase")]
+        CACHE[("Redis Cache\nif applicable")]
+    end
+    BROWSER["👤 Browser"] -->|"HTTPS"| WEB
+    WEB -->|"REST /api/v1"| API
+    API -->|"Prisma ORM"| DB
+    API -->|"ioredis"| CACHE
+
+    style API fill:#1e3a5f,stroke:#4a90d9,color:#fff
+    style WEB fill:#2d1e5f,stroke:#9a4ad9,color:#fff
+    style DB fill:#2d4a2d,stroke:#5a9a5a,color:#fff
+```
+
+**Technology stack table, key flows (auth, payments, etc.), and infrastructure topology follow below.**
 
 #### Section 4: Critical Issues (Top 10)
+
+**REQUIRED DIAGRAM — Risk Severity Matrix:**
+```mermaid
+quadrantChart
+    title Risk Severity Matrix — [Product Name]
+    x-axis Low Likelihood --> High Likelihood
+    y-axis Low Impact --> High Impact
+    quadrant-1 Critical — Act Now
+    quadrant-2 High — Plan Soon
+    quadrant-3 Low — Monitor
+    quadrant-4 Medium — Schedule
+    RISK-001: [0.85, 0.90]
+    RISK-002: [0.70, 0.75]
+    RISK-003: [0.50, 0.80]
+    RISK-004: [0.30, 0.60]
+    RISK-005: [0.20, 0.30]
+```
+*(Replace coordinates with actual likelihood/impact values 0–1 for each finding)*
 
 For each issue provide ALL of:
 - **File/Location**: exact `file:line` reference
@@ -184,6 +301,23 @@ For each issue provide ALL of:
 - **Compliance Impact**: Which standards this violates (OWASP, SOC2, ISO 27001, GDPR/PDPL if applicable)
 
 #### Section 5: Risk Register
+
+**REQUIRED DIAGRAM — Risk Dependency Graph (resolve in this order):**
+```mermaid
+flowchart TD
+    R001["RISK-001\nCritical"]:::crit --> R003["RISK-003\nHigh"]:::high
+    R001 --> R004["RISK-004\nMedium"]:::med
+    R002["RISK-002\nCritical"]:::crit --> R005["RISK-005\nHigh"]:::high
+    R003 --> R006["RISK-006\nMedium"]:::med
+    R005 --> R007["RISK-007\nLow"]:::low
+    R004 --> R008["RISK-008\nLow"]:::low
+
+    classDef crit fill:#7f1d1d,stroke:#ef4444,color:#fff
+    classDef high fill:#7c2d12,stroke:#f97316,color:#fff
+    classDef med fill:#713f12,stroke:#eab308,color:#fff
+    classDef low fill:#1e3a5f,stroke:#60a5fa,color:#fff
+```
+*(Replace RISK-IDs and dependency edges with actual findings from this audit)*
 
 A single consolidated table that tracks every finding as a trackable item with clear ownership and SLAs. This is what management uses to assign work and track remediation.
 
@@ -209,10 +343,77 @@ Rules for the Risk Register:
 
 #### Section 6: Architecture Problems
 
+**REQUIRED DIAGRAM — Architecture Layer Diagram (show actual violations as ⚡ edges):**
+```mermaid
+graph TD
+    subgraph PRESENTATION["Presentation Layer"]
+        WEB["Next.js Pages\napps/web/src/pages/"]
+        COMP["Components\napps/web/src/components/"]
+    end
+    subgraph APPLICATION["Application Layer"]
+        ROUTES["Fastify Routes\napps/api/src/routes/"]
+        SERVICES["Services\napps/api/src/services/"]
+    end
+    subgraph DOMAIN["Domain / Business Logic"]
+        BIZ["Business Rules\napps/api/src/domain/"]
+        WORKERS["Workers\napps/api/src/workers/"]
+    end
+    subgraph INFRA["Infrastructure Layer"]
+        DB[("PostgreSQL\nPrisma ORM")]
+        PLUGINS["Plugins\napps/api/src/plugins/"]
+        CACHE[("Cache / Queue")]
+    end
+
+    WEB -->|"REST"| ROUTES
+    COMP --> WEB
+    ROUTES --> SERVICES
+    SERVICES --> BIZ
+    SERVICES --> WORKERS
+    BIZ --> DB
+    SERVICES --> PLUGINS
+    PLUGINS --> DB
+    WORKERS --> CACHE
+
+    ROUTES -->|"⚡ VIOLATION: Direct DB access\nfile:line"| DB
+    BIZ -->|"⚡ VIOLATION: Cross-domain import\nfile:line"| SERVICES
+
+    style PRESENTATION fill:#1e1e3f,stroke:#6366f1
+    style APPLICATION fill:#1e3a1e,stroke:#22c55e
+    style DOMAIN fill:#3f2d1e,stroke:#f59e0b
+    style INFRA fill:#1e1e1e,stroke:#94a3b8
+```
+*(Replace ⚡ violation edges with actual file:line violations found during the audit)*
+
 - Layering violations, coupling, bottlenecks
 - Each with file:line references and impact assessment
 
 #### Section 7: Security Findings
+
+**REQUIRED DIAGRAM — Attack Path Sequence (show the worst-case exploit chain):**
+```mermaid
+sequenceDiagram
+    actor Attacker
+    participant API as Fastify API
+    participant DB as PostgreSQL
+    participant Victim as Victim Account
+
+    Note over Attacker,Victim: Attack Path: [Describe the vulnerability chain]
+
+    Attacker->>API: POST /api/auth/login<br/>{"email": "victim@example.com"}
+    Note right of API: ⚡ No rate limiting (RISK-001)
+    API->>DB: SELECT * FROM users WHERE email = ?
+    DB-->>API: User record
+    API-->>Attacker: 200 OK — account enumeration possible
+
+    Attacker->>API: GET /api/users/999/profile<br/>Authorization: Bearer [attacker_token]
+    Note right of API: ⚡ Missing object-level auth (RISK-002)<br/>OWASP API1: BOLA
+    API->>DB: SELECT * FROM users WHERE id = 999
+    DB-->>API: Victim's PII data
+    API-->>Attacker: 200 OK — victim's data exposed
+
+    Note over Attacker,Victim: Impact: PII breach, account takeover
+```
+*(Replace with the actual worst-case attack chain found during this audit. Show each step with RISK-ID references)*
 
 Organized by category:
 - Authentication & Authorization
@@ -421,6 +622,26 @@ Check and report on:
 
 #### Section 12: Technical Debt Map
 
+**REQUIRED DIAGRAM — Technical Debt Quadrant (effort to fix vs. cost of delay):**
+```mermaid
+quadrantChart
+    title Technical Debt Quadrant — [Product Name]
+    x-axis Low Effort to Fix --> High Effort to Fix
+    y-axis Low Cost of Delay --> High Cost of Delay
+    quadrant-1 Pay Now — High Impact, Quick Win
+    quadrant-2 Schedule — Strategic Investment
+    quadrant-3 Deprioritize — Low Value
+    quadrant-4 Quick Wins — Do First
+    Missing rate limiting: [0.15, 0.90]
+    No API versioning: [0.25, 0.60]
+    Test coverage gaps: [0.55, 0.80]
+    No structured logging: [0.30, 0.70]
+    Missing OpenAPI docs: [0.35, 0.45]
+    Circular dependencies: [0.70, 0.55]
+    No DB migrations CI: [0.50, 0.65]
+```
+*(Replace items with actual debt found. X = effort to fix 0–1, Y = cost of delay 0–1)*
+
 Categorize debt by urgency and cost:
 
 | Priority | Debt Item | Interest (cost of delay) | Owner | Payoff |
@@ -430,6 +651,36 @@ Categorize debt by urgency and cost:
 | LOW | ... | ... | ... | ... |
 
 #### Section 13: Remediation Roadmap (Phased)
+
+**REQUIRED DIAGRAM — Remediation Gantt Chart:**
+```mermaid
+gantt
+    title Remediation Roadmap — [Product Name]
+    dateFormat  YYYY-MM-DD
+    axisFormat  %b %d
+
+    section Phase 0 — Immediate (48h)
+    Rotate exposed secrets         :crit, p0a, 2025-01-01, 1d
+    Patch critical vulnerabilities :crit, p0b, after p0a, 1d
+
+    section Phase 1 — Stabilize (1-2 weeks)
+    Auth hardening                 :active, p1a, after p0b, 4d
+    Input validation & rate limits :p1b, after p0b, 3d
+    CI/CD security gates           :p1c, after p1a, 3d
+    Config management              :p1d, after p1b, 2d
+
+    section Phase 2 — Production-Ready (2-4 weeks)
+    Architecture refactor          :p2a, after p1c, 7d
+    Test coverage to 80%+          :p2b, after p1c, 10d
+    Observability stack            :p2c, after p1d, 5d
+    Compliance gaps (GDPR/OWASP)   :p2d, after p2a, 7d
+
+    section Phase 3 — Excellence (4-8 weeks)
+    Performance optimization       :p3a, after p2b, 10d
+    Advanced security controls     :p3b, after p2d, 14d
+    External audit prep            :p3c, after p3a, 7d
+```
+*(Adjust task names, durations, and dates to match the actual findings and available team capacity)*
 
 NOT a vague 30/60/90 day plan. Concrete phases with clear gates:
 
@@ -459,6 +710,17 @@ NOT a vague 30/60/90 day plan. Concrete phases with clear gates:
 Numbered list of changes that can be done in under a day each, with file references.
 
 #### Section 15: AI-Readiness Score (0-10 with sub-scores)
+
+**REQUIRED DIAGRAM — AI-Readiness Profile:**
+```mermaid
+xychart-beta
+    title "AI-Readiness Score — [Product Name]"
+    x-axis ["Modularity", "API Design", "Testability", "Observability", "Documentation"]
+    y-axis "Score (0–2)" 0 --> 2
+    bar [X, X, X, X, X]
+    line [2, 2, 2, 2, 2]
+```
+*(Replace X with actual sub-scores 0–2. The line at 2 marks the full-score threshold. Sum = AI-Readiness total out of 10)*
 
 | Sub-dimension | Score | Notes |
 |---------------|-------|-------|

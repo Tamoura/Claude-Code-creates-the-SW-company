@@ -1,0 +1,278 @@
+{
+  "lastUpdated": "2026-02-27",
+  "products": [
+    {
+      "id": "stablecoin-gateway",
+      "displayName": "Stablecoin Gateway",
+      "tagline": "Accept USDC/USDT at 0.5% — vs Stripe's 2.9%",
+      "score": 9,
+      "completion": 95,
+      "ttrWeeksMin": 2,
+      "ttrWeeksMax": 4,
+      "marketSize": "$1–5B",
+      "pricingModel": "Transaction + SaaS",
+      "pricingDetail": "0.5% per transaction + optional $299–999/month premium tier",
+      "phase": "launch-now",
+      "isCommercial": true,
+      "blockers": [],
+      "strengths": [
+        "467+ passing tests",
+        "Full merchant dashboard",
+        "Docker + CI/CD ready",
+        "95/100 OWASP compliance"
+      ]
+    },
+    {
+      "id": "archforge",
+      "displayName": "Archforge",
+      "tagline": "AI-native enterprise architecture — TOGAF/ArchiMate/C4 from natural language",
+      "score": 8,
+      "completion": 77,
+      "ttrWeeksMin": 4,
+      "ttrWeeksMax": 8,
+      "marketSize": "$1.14B",
+      "pricingModel": "Per-seat SaaS",
+      "pricingDetail": "Free → $99/seat/month professional → Custom enterprise",
+      "phase": "launch-now",
+      "isCommercial": true,
+      "blockers": [
+        "Sales channel not established",
+        "Needs 1–2 pilot enterprise customers",
+        "No Docker config"
+      ],
+      "strengths": [
+        "216 integration tests",
+        "Canvas editor + template gallery",
+        "OpenRouter AI integrated",
+        "18 Prisma models"
+      ]
+    },
+    {
+      "id": "connectin",
+      "displayName": "ConnectIn",
+      "tagline": "Arabic-first professional networking for 300M+ Arabic speakers",
+      "score": 7,
+      "completion": 95,
+      "ttrWeeksMin": 2,
+      "ttrWeeksMax": 4,
+      "marketSize": "$4.5B",
+      "pricingModel": "Freemium + B2B Recruiting",
+      "pricingDetail": "Free → $4.99/month premium → $299–999/month employer tiers",
+      "phase": "near-term",
+      "isCommercial": true,
+      "blockers": [
+        "Frontend Phase 1 (reactions/follow/block) incomplete",
+        "Recruiter dashboard not built"
+      ],
+      "strengths": [
+        "1,193+ total tests",
+        "26 E2E tests passing",
+        "38 Prisma tables",
+        "Rare Arabic-first positioning"
+      ]
+    },
+    {
+      "id": "recomengine",
+      "displayName": "RecomEngine",
+      "tagline": "Embeddable ML recommendations for mid-market e-commerce — no data science team needed",
+      "score": 7,
+      "completion": 82,
+      "ttrWeeksMin": 4,
+      "ttrWeeksMax": 8,
+      "marketSize": "$500M",
+      "pricingModel": "SaaS + Usage-based",
+      "pricingDetail": "Free <1M events → $299–799/month → $1,999+/month + per-event overage",
+      "phase": "near-term",
+      "isCommercial": true,
+      "blockers": [
+        "Analytics dashboard needs polish",
+        "No beta customers yet",
+        "No Docker config"
+      ],
+      "strengths": [
+        "80+ integration tests",
+        "JavaScript SDK ready (<10KB)",
+        "A/B testing built-in",
+        "Multi-tenant from day 1"
+      ]
+    },
+    {
+      "id": "muaththir",
+      "displayName": "Muaththir",
+      "tagline": "Holistic child development tracker — 6 dimensions including Islamic growth",
+      "score": 6,
+      "completion": 95,
+      "ttrWeeksMin": 2,
+      "ttrWeeksMax": 4,
+      "marketSize": "$200–500M",
+      "pricingModel": "Freemium",
+      "pricingDetail": "Free (1 child) → $9.99/month → $19.99/month family plan",
+      "phase": "medium-term",
+      "isCommercial": true,
+      "blockers": [
+        "No parent beta feedback yet",
+        "Mobile UX needs polish",
+        "Monetization model unvalidated"
+      ],
+      "strengths": [
+        "Full radar charts + timeline UI",
+        "Islamic dimension unique differentiator",
+        "B2B channel via Islamic schools possible"
+      ]
+    },
+    {
+      "id": "connectgrc",
+      "displayName": "ConnectGRC",
+      "tagline": "AI-native GRC talent platform — connecting risk/compliance professionals with employers",
+      "score": 6,
+      "completion": 85,
+      "ttrWeeksMin": 2,
+      "ttrWeeksMax": 4,
+      "marketSize": "$500M–1B",
+      "pricingModel": "Freemium + B2B Recruiting",
+      "pricingDetail": "Free → $9.99/month professional → $499–1,999/month employer portal",
+      "phase": "medium-term",
+      "isCommercial": true,
+      "blockers": [
+        "Admin panel 30% incomplete",
+        "Employer dashboard not started",
+        "No beta recruiters yet"
+      ],
+      "strengths": [
+        "30+ API endpoints",
+        "Tier placement system",
+        "Career simulator built",
+        "Niche = defensible"
+      ]
+    },
+    {
+      "id": "humanid",
+      "displayName": "HumanID",
+      "tagline": "Decentralized digital identity — W3C DIDs, verifiable credentials, zero-knowledge privacy",
+      "score": 5,
+      "completion": 77,
+      "ttrWeeksMin": 4,
+      "ttrWeeksMax": 8,
+      "marketSize": "$5–10B",
+      "pricingModel": "B2B API",
+      "pricingDetail": "$99/month dev (10k verifications) → $999/month growth → Custom enterprise",
+      "phase": "medium-term",
+      "isCommercial": true,
+      "blockers": [
+        "Regulatory complexity (jurisdiction-sensitive)",
+        "No pilot enterprise customers",
+        "Blockchain load not tested",
+        "No E2E test coverage"
+      ],
+      "strengths": [
+        "37 API endpoints",
+        "Polygon L2 integration",
+        "ZKP privacy model",
+        "Massive TAM"
+      ]
+    },
+    {
+      "id": "linkedin-agent",
+      "displayName": "LinkedIn Agent",
+      "tagline": "AI-powered Arabic/English LinkedIn content generation with trend analysis",
+      "score": 5,
+      "completion": 87,
+      "ttrWeeksMin": 2,
+      "ttrWeeksMax": 4,
+      "marketSize": "$50–150M",
+      "pricingModel": "Freemium",
+      "pricingDetail": "Free (2 posts/month) → $4.99/month pro → $14.99/month team",
+      "phase": "medium-term",
+      "isCommercial": true,
+      "blockers": [
+        "No beta user data",
+        "Carousel generator incomplete",
+        "High competition from ChatGPT plugins",
+        "No Docker config"
+      ],
+      "strengths": [
+        "Arabic-first (rare)",
+        "OpenRouter multi-model routing",
+        "Format recommendation engine"
+      ]
+    },
+    {
+      "id": "quantum-computing-usecases",
+      "displayName": "Quantum Computing UC",
+      "tagline": "Industry use-case directory for executives evaluating quantum computing investments",
+      "score": 4,
+      "completion": 67,
+      "ttrWeeksMin": 8,
+      "ttrWeeksMax": 12,
+      "marketSize": "$1–2B",
+      "pricingModel": "Advisory / Consulting",
+      "pricingDetail": "Free catalog → $99–199/month premium research → $5–15k expert consultation",
+      "phase": "deprioritize",
+      "isCommercial": true,
+      "blockers": [
+        "Market adoption 3–5 years away",
+        "No lead capture mechanism",
+        "Content becomes outdated fast",
+        "API not yet implemented",
+        "No Docker config"
+      ],
+      "strengths": [
+        "Strong thought leadership positioning",
+        "Bilingual EN/AR",
+        "Niche with low competition today"
+      ]
+    },
+    {
+      "id": "codeguardian",
+      "displayName": "CodeGuardian",
+      "tagline": "Multi-model AI code review routing specialized models per file type + GitHub PR integration",
+      "score": 2,
+      "completion": 29,
+      "ttrWeeksMin": 24,
+      "ttrWeeksMax": 36,
+      "marketSize": "$500M–1B",
+      "pricingModel": "Freemium + Pro",
+      "pricingDetail": "Free (public repos) → $99/month private → Custom enterprise",
+      "phase": "deprioritize",
+      "isCommercial": true,
+      "blockers": [
+        "Entire product unimplemented (design only)",
+        "No validated assumptions",
+        "GitHub integration untested",
+        "API not yet implemented",
+        "Web frontend not yet implemented",
+        "No E2E test coverage"
+      ],
+      "strengths": [
+        "Strong architecture documentation",
+        "DevSecOps TAM growing 28% CAGR",
+        "Could be internal tool first"
+      ]
+    },
+    {
+      "id": "qdb-one",
+      "displayName": "QDB One",
+      "tagline": "Enterprise portal unifying Qatar Development Bank's three fragmented financing systems",
+      "score": 2,
+      "completion": 57,
+      "ttrWeeksMin": 0,
+      "ttrWeeksMax": 0,
+      "marketSize": "N/A",
+      "pricingModel": "Internal Tool",
+      "pricingDetail": "Government enterprise — ROI in operational efficiency ($2–5M/year saved), not external revenue",
+      "phase": "deprioritize",
+      "isCommercial": false,
+      "blockers": [
+        "Backend not implemented",
+        "Requires SAML/OIDC with Qatar national auth (NAS)",
+        "12–18 months to MVP",
+        "No Docker config"
+      ],
+      "strengths": [
+        "Comprehensive architecture documentation",
+        "10 ADRs",
+        "Full data model designed"
+      ]
+    }
+  ]
+}

@@ -23,6 +23,7 @@ import { protocolRoutes } from './routes/v1/protocols.js';
 import { constitutionRoutes } from './routes/v1/constitution.js';
 import { approvalQueueRoutes } from './routes/v1/approval-queue.js';
 import { prDashboardRoutes } from './routes/v1/pr-dashboard.js';
+import { monetizationRoutes } from './routes/v1/monetization.js';
 
 export async function buildApp() {
   const app = Fastify({
@@ -71,6 +72,7 @@ export async function buildApp() {
   await app.register(constitutionRoutes, { prefix: '/api/v1' });
   await app.register(approvalQueueRoutes, { prefix: '/api/v1' });
   await app.register(prDashboardRoutes, { prefix: '/api/v1' });
+  await app.register(monetizationRoutes, { prefix: '/api/v1' });
 
   return app;
 }

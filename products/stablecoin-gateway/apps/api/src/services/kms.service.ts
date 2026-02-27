@@ -149,13 +149,53 @@ export class KMSService {
     }
   }
 
-  // Delegate signing to KMSSigningService
+  // Delegate signing to KMSSigningService with structured audit log
   async signTransaction(transaction: ethers.TransactionRequest): Promise<string> {
-    return this.signingService.signTransaction(transaction);
+    try {
+      const result = await this.signingService.signTransaction(transaction);
+      logger.info('KMS signing audit', {
+        keyId: this.keyId.substring(0, 8) + '...',
+        operation: 'transaction-signing',
+        outcome: 'success',
+      });
+      return result;
+    } catch (err) {
+      logger.warn('KMS signing failed', {
+        keyId: this.keyId.substring(0, 8) + '...',
+        operation: 'transaction-signing',
+        outcome: 'failure',
+        errorCode: err instanceof AppError ? err.code : 'unknown',
+      });
+      throw err;
+    }
   }
 
   async sign(messageHash: string): Promise<ethers.Signature> {
-    return this.signingService.sign(messageHash);
+    try {
+      const result = await this.signingService.sign(messageHash);
+      logger.info('KMS signing audit', {
+        keyId: this.keyId.substring(0, 8) + '...',
+        operation: 'message-signing',
+        outcome: 'success',
+      });
+      return result;
+    } catch (err) {
+      logger.warn('KMS signing failed', {
+        keyId: this.keyId.substring(0, 8) + '...',
+        operation: 'message-signing',
+        outcome: 'failure',
+        errorCode: err instanceof AppError ? err.code : 'unknown',
+      });
+      throw err;
+    }
+  }
+
+  /**
+   * Return the currently active KMS key ID.
+   * Used by callers that need to save the old key before rotation.
+   */
+  getCurrentKeyId(): string {
+    return this.keyId;
   }
 
   /**
