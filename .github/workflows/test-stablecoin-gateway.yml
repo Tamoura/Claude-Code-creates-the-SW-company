@@ -142,8 +142,21 @@ jobs:
       - name: Run frontend tests
         run: npm test
 
+  secrets-scan:
+    name: Secrets Scan
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v4
+        with:
+          fetch-depth: 0
+      - name: Run Gitleaks
+        uses: gitleaks/gitleaks-action@v2
+        env:
+          GITHUB_TOKEN: ${{ secrets.GITHUB_TOKEN }}
+          GITLEAKS_LICENSE: ${{ secrets.GITLEAKS_LICENSE }}
+
   quality-gate:
-    needs: [lint, security, test-api, test-frontend]
+    needs: [lint, security, test-api, test-frontend, secrets-scan]
     runs-on: ubuntu-latest
     if: always()
     steps:
@@ -154,10 +167,12 @@ jobs:
           echo "  security:       ${{ needs.security.result }}"
           echo "  test-api:       ${{ needs.test-api.result }}"
           echo "  test-frontend:  ${{ needs.test-frontend.result }}"
+          echo "  secrets-scan:   ${{ needs.secrets-scan.result }}"
           if [ "${{ needs.lint.result }}" != "success" ] || \
              [ "${{ needs.security.result }}" != "success" ] || \
              [ "${{ needs.test-api.result }}" != "success" ] || \
-             [ "${{ needs.test-frontend.result }}" != "success" ]; then
+             [ "${{ needs.test-frontend.result }}" != "success" ] || \
+             [ "${{ needs.secrets-scan.result }}" != "success" ]; then
             echo "Quality gate FAILED: one or more jobs did not succeed"
             exit 1
           fi
