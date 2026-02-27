@@ -80,9 +80,9 @@ export class RefundProcessingWorker {
       // concurrent instances from claiming the same refunds.
       await this.prisma.$transaction(async (tx) => {
         const pendingRefunds = await tx.$queryRaw`
-          SELECT id FROM "Refund"
+          SELECT id FROM "refunds"
           WHERE status = 'PENDING'
-          ORDER BY "createdAt" ASC
+          ORDER BY "created_at" ASC
           LIMIT ${BATCH_SIZE}
           FOR UPDATE SKIP LOCKED
         `;
