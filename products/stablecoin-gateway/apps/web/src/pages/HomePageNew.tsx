@@ -15,6 +15,7 @@ export default function HomePageNew() {
     <div className="min-h-screen bg-page-bg text-text-primary">
       <PublicNav />
 
+      <main id="main-content">
       {/* Hero Section */}
       <section className="max-w-6xl mx-auto px-6 pt-20 pb-16 text-center">
         <div className="inline-block px-3 py-1 rounded-full text-xs font-semibold bg-pink-500/15 text-accent-pink border border-pink-500/30 mb-6">
@@ -124,25 +125,25 @@ export default function HomePageNew() {
               </p>
               <ul className="space-y-3 text-sm text-text-secondary">
                 <li className="flex items-center gap-2">
-                  <svg className="w-4 h-4 text-accent-green flex-shrink-0" fill="none" viewBox="0 0 24 24" stroke="currentColor">
+                  <svg className="w-4 h-4 text-accent-green flex-shrink-0" fill="none" viewBox="0 0 24 24" stroke="currentColor" aria-hidden="true">
                     <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M5 13l4 4L19 7" />
                   </svg>
                   RESTful API with OpenAPI spec
                 </li>
                 <li className="flex items-center gap-2">
-                  <svg className="w-4 h-4 text-accent-green flex-shrink-0" fill="none" viewBox="0 0 24 24" stroke="currentColor">
+                  <svg className="w-4 h-4 text-accent-green flex-shrink-0" fill="none" viewBox="0 0 24 24" stroke="currentColor" aria-hidden="true">
                     <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M5 13l4 4L19 7" />
                   </svg>
                   Webhook notifications with HMAC signatures
                 </li>
                 <li className="flex items-center gap-2">
-                  <svg className="w-4 h-4 text-accent-green flex-shrink-0" fill="none" viewBox="0 0 24 24" stroke="currentColor">
+                  <svg className="w-4 h-4 text-accent-green flex-shrink-0" fill="none" viewBox="0 0 24 24" stroke="currentColor" aria-hidden="true">
                     <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M5 13l4 4L19 7" />
                   </svg>
                   API key management with granular permissions
                 </li>
                 <li className="flex items-center gap-2">
-                  <svg className="w-4 h-4 text-accent-green flex-shrink-0" fill="none" viewBox="0 0 24 24" stroke="currentColor">
+                  <svg className="w-4 h-4 text-accent-green flex-shrink-0" fill="none" viewBox="0 0 24 24" stroke="currentColor" aria-hidden="true">
                     <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M5 13l4 4L19 7" />
                   </svg>
                   Real-time payment status via SSE
@@ -184,6 +185,8 @@ export default function HomePageNew() {
           Create Free Account
         </Link>
       </section>
+
+      </main>
 
       <PublicFooter />
     </div>

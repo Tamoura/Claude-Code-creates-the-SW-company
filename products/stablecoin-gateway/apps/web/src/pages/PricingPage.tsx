@@ -52,6 +52,7 @@ export default function PricingPage() {
     <div className="min-h-screen bg-page-bg text-text-primary">
       <PublicNav />
 
+      <main id="main-content">
       {/* Hero Section */}
       <section className="max-w-6xl mx-auto px-6 pt-20 pb-16 text-center">
         <h1 className="text-5xl font-bold text-text-primary mb-4">
@@ -203,13 +204,16 @@ export default function PricingPage() {
             Set up your account in minutes and start accepting USDC and USDT.
           </p>
           <button
+            type="button"
             onClick={() => navigate('/signup')}
-            className="px-8 py-3 text-sm font-semibold text-white bg-gradient-to-r from-pink-500 to-pink-600 rounded-lg hover:from-pink-600 hover:to-pink-700 transition-all"
+            className="px-8 py-3 text-sm font-semibold text-white bg-gradient-to-r from-pink-500 to-pink-600 rounded-lg hover:from-pink-600 hover:to-pink-700 transition-all focus:outline-none focus:ring-2 focus:ring-pink-500 focus:ring-offset-2"
           >
             Start accepting stablecoins today
           </button>
         </div>
       </section>
+
+      </main>
 
       <PublicFooter />
     </div>
