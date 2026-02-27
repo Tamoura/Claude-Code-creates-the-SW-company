@@ -1,3 +1,6 @@
+// Must be imported first — before any other module — so OTel patches apply
+import './telemetry.js';
+
 import { buildApp } from './app.js';
 import { logger } from './utils/logger.js';
 import { validateEnvironment } from './utils/env-validator.js';
