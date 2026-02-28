@@ -15,6 +15,14 @@
 - **[Story]**: Links to user story (e.g., [US1], [US2])
 - **→ file/path**: Target file to create/modify
 
+## Pre-verified Exclusions (already implemented)
+
+*From Implementation Audit in plan.md — these capabilities are NOT included as tasks.*
+
+| Capability | Evidence | Spec Req | Would Have Been |
+|-----------|----------|----------|-----------------|
+| [Capability] | [File path showing implementation] | [FR/NFR-XXX] | [Phase X task] |
+
 ## Phase 1: Setup
 
 - [ ] T001 Initialize product structure → products/[product]/package.json

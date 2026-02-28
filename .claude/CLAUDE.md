@@ -122,6 +122,7 @@ release/[product]/v[X.Y.Z]       # Releases
 |----------|----------|---------------|
 | `anti-rationalization.md` | Quality Assurance | Before ANY implementation work — Article XI |
 | `verification-before-completion.md` | Quality Assurance | Before marking ANY task done — Article XI |
+| `verification-before-planning.md` | Quality Assurance | Before generating plans/tasks — Article II |
 | `development-oriented-testing.md` | Testing | During implementation (not after) |
 | `dynamic-test-generation.md` | Testing | QA phase — edge cases beyond spec |
 | `context-engineering.md` | Context Engineering | When prompt design matters — Article XII |
