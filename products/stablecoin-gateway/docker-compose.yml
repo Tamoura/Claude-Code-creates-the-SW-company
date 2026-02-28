@@ -88,7 +88,7 @@ services:
     container_name: stablecoin-gateway-web
     working_dir: /app
     ports:
-      - "3104:3104"
+      - "127.0.0.1:3104:3104"
     environment:
       - NODE_ENV=${NODE_ENV:-development}
       - VITE_API_URL=${VITE_API_URL:-http://localhost:5001}

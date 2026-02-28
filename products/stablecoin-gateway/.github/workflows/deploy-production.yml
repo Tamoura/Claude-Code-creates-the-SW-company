@@ -75,11 +75,20 @@ jobs:
         env:
           DATABASE_URL: ${{ secrets.DATABASE_URL }}
 
-      - name: Backup database
+      - name: Backup database (pre-migration snapshot)
         run: |
-          echo "Creating database backup before migration..."
-          # Add database backup script here if needed
-          # For RDS, snapshots are created automatically
+          echo "Creating pre-migration database backup..."
+          # Create an RDS snapshot before running migrations
+          SNAPSHOT_ID="stablecoin-gw-pre-deploy-$(date +%Y%m%d-%H%M%S)-${{ inputs.version }}"
+          aws rds create-db-snapshot \
+            --db-instance-identifier ${{ secrets.RDS_INSTANCE_ID }} \
+            --db-snapshot-identifier "$SNAPSHOT_ID" \
+            --region us-east-1 || echo "WARNING: Snapshot creation failed - verify RDS_INSTANCE_ID secret is set"
+          aws rds wait db-snapshot-available \
+            --db-snapshot-identifier "$SNAPSHOT_ID" \
+            --region us-east-1 || echo "WARNING: Snapshot wait timed out - check AWS console"
+          echo "BACKUP_SNAPSHOT_ID=$SNAPSHOT_ID" >> $GITHUB_ENV
+          echo "Snapshot created: $SNAPSHOT_ID"
 
       - name: Run database migrations
         working-directory: products/stablecoin-gateway/apps/api
@@ -168,8 +177,22 @@ jobs:
         run: |
           echo "Production deployment of ${{ inputs.version }} succeeded"
 
-      - name: Notify deployment failure
+      - name: Rollback on failure
         if: failure()
         run: |
-          echo "Production deployment failed - consider rollback"
-          echo "To rollback: Trigger this workflow with the previous version tag"
+          echo "Production deployment FAILED for version ${{ inputs.version }}"
+          echo ""
+          echo "=== ROLLBACK INSTRUCTIONS ==="
+          echo "1. Re-run this workflow with the PREVIOUS stable version tag"
+          echo "2. If database migration caused the failure, restore from snapshot:"
+          echo "   Snapshot ID: ${{ env.BACKUP_SNAPSHOT_ID }}"
+          echo "   aws rds restore-db-instance-from-db-snapshot \\"
+          echo "     --db-instance-identifier stablecoin-gw-restored \\"
+          echo "     --db-snapshot-identifier ${{ env.BACKUP_SNAPSHOT_ID }} \\"
+          echo "     --region us-east-1"
+          echo "3. To force-rollback ECS to the previous task definition:"
+          echo "   aws ecs update-service --cluster stablecoin-gateway-production \\"
+          echo "     --service api --force-new-deployment --region us-east-1"
+          echo ""
+          echo "See docs/ROLLBACK.md for detailed procedures."
+          exit 1

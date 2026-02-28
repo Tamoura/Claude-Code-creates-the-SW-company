@@ -63,6 +63,16 @@ jobs:
         env:
           DATABASE_URL: postgresql://test:test@localhost:5432/stablecoin_gateway_test
 
+      - name: Type check API
+        working-directory: products/stablecoin-gateway/apps/api
+        run: npx tsc --noEmit
+
+      - name: Build API
+        working-directory: products/stablecoin-gateway/apps/api
+        run: npm run build
+        env:
+          DATABASE_URL: postgresql://test:test@localhost:5432/stablecoin_gateway_test
+
       - name: Run unit tests
         working-directory: products/stablecoin-gateway/apps/api
         run: npm test -- --ci --coverage
