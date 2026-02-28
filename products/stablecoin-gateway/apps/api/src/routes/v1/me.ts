@@ -12,6 +12,9 @@
 import { FastifyPluginAsync } from 'fastify';
 import { AppError } from '../../types/index.js';
 import { logger } from '../../utils/logger.js';
+import {
+  getProfileRouteSchema, exportDataRouteSchema, deleteAccountRouteSchema,
+} from '../../schemas/me.js';
 
 const meRoutes: FastifyPluginAsync = async (fastify) => {
   // GET /v1/me — GDPR Right of Access (Article 15)
@@ -20,6 +23,7 @@ const meRoutes: FastifyPluginAsync = async (fastify) => {
   // passwordHash or other internal fields.
   fastify.get('/', {
     onRequest: [fastify.authenticate],
+    schema: getProfileRouteSchema,
   }, async (request, reply) => {
     const userId = request.currentUser!.id;
 
@@ -44,6 +48,7 @@ const meRoutes: FastifyPluginAsync = async (fastify) => {
   // Never includes sensitive fields: keyHash, passwordHash, secret.
   fastify.get('/export', {
     onRequest: [fastify.authenticate],
+    schema: exportDataRouteSchema,
   }, async (request, reply) => {
     const userId = request.currentUser!.id;
 
@@ -134,6 +139,7 @@ const meRoutes: FastifyPluginAsync = async (fastify) => {
   // for compliance and non-repudiation purposes.
   fastify.delete('/', {
     onRequest: [fastify.authenticate],
+    schema: deleteAccountRouteSchema,
   }, async (request, reply) => {
     const userId = request.currentUser!.id;
 

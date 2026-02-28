@@ -24,6 +24,9 @@ import { AppError } from '../../types/index.js';
 import { EmailService } from '../../services/email.service.js';
 import { logger } from '../../utils/logger.js';
 import { validateBody } from '../../utils/validation.js';
+import {
+  getNotificationPrefsRouteSchema, updateNotificationPrefsRouteSchema,
+} from '../../schemas/notifications.js';
 
 /**
  * Validation schema for updating notification preferences
@@ -84,6 +87,7 @@ const notificationRoutes: FastifyPluginAsync = async (fastify) => {
    */
   fastify.get('/preferences', {
     onRequest: [fastify.authenticate, fastify.requirePermission('read')],
+    schema: getNotificationPrefsRouteSchema,
   }, async (request, reply) => {
     try {
       const userId = request.currentUser!.id;
@@ -124,6 +128,7 @@ const notificationRoutes: FastifyPluginAsync = async (fastify) => {
    */
   fastify.patch('/preferences', {
     onRequest: [fastify.authenticate, fastify.requirePermission('write')],
+    schema: updateNotificationPrefsRouteSchema,
   }, async (request, reply) => {
     try {
       const userId = request.currentUser!.id;

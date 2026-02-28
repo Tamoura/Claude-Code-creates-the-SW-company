@@ -5,6 +5,11 @@ import { AppError } from '../../types/index.js';
 import { logger } from '../../utils/logger.js';
 import { validateBody, validateQuery, ethereumAddressSchema } from '../../utils/validation.js';
 import QRCode from 'qrcode';
+import {
+  createPaymentLinkRouteSchema, listPaymentLinksRouteSchema, resolvePaymentLinkRouteSchema,
+  qrCodeRouteSchema, getPaymentLinkRouteSchema, updatePaymentLinkRouteSchema,
+  deletePaymentLinkRouteSchema,
+} from '../../schemas/payment-links.js';
 
 // ==================== Validation Schemas ====================
 
@@ -113,6 +118,7 @@ const paymentLinkRoutes: FastifyPluginAsync = async (fastify) => {
     '/',
     {
       onRequest: [fastify.authenticate, fastify.requirePermission('write')],
+      schema: createPaymentLinkRouteSchema,
     },
     async (request, reply) => {
       try {
@@ -169,6 +175,7 @@ const paymentLinkRoutes: FastifyPluginAsync = async (fastify) => {
     '/',
     {
       onRequest: [fastify.authenticate, fastify.requirePermission('read')],
+      schema: listPaymentLinksRouteSchema,
     },
     async (request, reply) => {
       try {
@@ -216,7 +223,7 @@ const paymentLinkRoutes: FastifyPluginAsync = async (fastify) => {
 
   // GET /v1/payment-links/resolve/:shortCode - Resolve short code (public)
   // Registered before /:id to prevent Fastify from matching "resolve" as an :id param
-  fastify.get('/resolve/:shortCode', publicRateLimit, async (request, reply) => {
+  fastify.get('/resolve/:shortCode', { ...publicRateLimit, schema: resolvePaymentLinkRouteSchema }, async (request, reply) => {
     try {
       const { shortCode } = request.params as { shortCode: string };
 
@@ -241,7 +248,7 @@ const paymentLinkRoutes: FastifyPluginAsync = async (fastify) => {
 
   // GET /v1/payment-links/:id/qr - Generate QR code (public)
   // Registered before /:id to prevent Fastify from matching QR path segments incorrectly
-  fastify.get('/:id/qr', qrRateLimit, async (request, reply) => {
+  fastify.get('/:id/qr', { ...qrRateLimit, schema: qrCodeRouteSchema }, async (request, reply) => {
     try {
       const { id } = request.params as { id: string };
 
@@ -309,6 +316,7 @@ const paymentLinkRoutes: FastifyPluginAsync = async (fastify) => {
     '/:id',
     {
       onRequest: [fastify.authenticate, fastify.requirePermission('read')],
+      schema: getPaymentLinkRouteSchema,
     },
     async (request, reply) => {
       try {
@@ -345,6 +353,7 @@ const paymentLinkRoutes: FastifyPluginAsync = async (fastify) => {
     '/:id',
     {
       onRequest: [fastify.authenticate, fastify.requirePermission('write')],
+      schema: updatePaymentLinkRouteSchema,
     },
     async (request, reply) => {
       try {
@@ -396,6 +405,7 @@ const paymentLinkRoutes: FastifyPluginAsync = async (fastify) => {
     '/:id',
     {
       onRequest: [fastify.authenticate, fastify.requirePermission('write')],
+      schema: deletePaymentLinkRouteSchema,
     },
     async (request, reply) => {
       try {

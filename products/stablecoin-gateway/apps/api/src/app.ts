@@ -202,11 +202,17 @@ export async function buildApp(): Promise<FastifyInstance> {
       },
       servers: [{ url: 'http://localhost:5001', description: 'Development' }],
       tags: [
+        { name: 'auth', description: 'Authentication and authorization' },
         { name: 'payments', description: 'Payment session management' },
+        { name: 'payment-links', description: 'Reusable payment link management' },
+        { name: 'checkout', description: 'Public checkout endpoints' },
         { name: 'refunds', description: 'Refund processing' },
         { name: 'webhooks', description: 'Webhook endpoint management' },
-        { name: 'auth', description: 'Authentication and authorization' },
         { name: 'api-keys', description: 'API key management' },
+        { name: 'analytics', description: 'Payment analytics and reporting' },
+        { name: 'notifications', description: 'Notification preferences' },
+        { name: 'account', description: 'Account self-service and GDPR data rights' },
+        { name: 'admin', description: 'Admin-only operations' },
         { name: 'internal', description: 'Internal service endpoints' },
       ],
       components: {
@@ -220,6 +226,27 @@ export async function buildApp(): Promise<FastifyInstance> {
             type: 'http',
             scheme: 'bearer',
             description: 'API key (sk_live_... or sk_test_...)',
+          },
+        },
+        schemas: {
+          ErrorResponse: {
+            type: 'object',
+            properties: {
+              type: { type: 'string', format: 'uri', example: 'https://gateway.io/errors/validation-error' },
+              title: { type: 'string', example: 'Validation Error' },
+              status: { type: 'integer', example: 400 },
+              detail: { type: 'string', example: 'Invalid email format' },
+              request_id: { type: 'string', example: 'req_abc123' },
+            },
+          },
+          PaginationResponse: {
+            type: 'object',
+            properties: {
+              limit: { type: 'integer' },
+              offset: { type: 'integer' },
+              total: { type: 'integer' },
+              has_more: { type: 'boolean' },
+            },
           },
         },
       },

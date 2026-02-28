@@ -8,6 +8,9 @@ import {
   analyticsVolumeQuerySchema,
   analyticsBreakdownQuerySchema,
 } from '../../utils/validation.js';
+import {
+  analyticsOverviewRouteSchema, analyticsVolumeRouteSchema, analyticsPaymentsRouteSchema,
+} from '../../schemas/analytics.js';
 
 const analyticsRoutes: FastifyPluginAsync = async (fastify) => {
   const analyticsService = new AnalyticsService(fastify.prisma);
@@ -15,7 +18,7 @@ const analyticsRoutes: FastifyPluginAsync = async (fastify) => {
   // GET /v1/analytics/overview - Summary statistics
   fastify.get(
     '/overview',
-    { onRequest: [fastify.authenticate, fastify.requirePermission('read')] },
+    { onRequest: [fastify.authenticate, fastify.requirePermission('read')], schema: analyticsOverviewRouteSchema },
     async (request, reply) => {
       try {
         analyticsOverviewQuerySchema.parse(request.query);
@@ -43,7 +46,7 @@ const analyticsRoutes: FastifyPluginAsync = async (fastify) => {
   // GET /v1/analytics/volume - Time-series volume data
   fastify.get(
     '/volume',
-    { onRequest: [fastify.authenticate, fastify.requirePermission('read')] },
+    { onRequest: [fastify.authenticate, fastify.requirePermission('read')], schema: analyticsVolumeRouteSchema },
     async (request, reply) => {
       try {
         const query = analyticsVolumeQuerySchema.parse(request.query);
@@ -71,7 +74,7 @@ const analyticsRoutes: FastifyPluginAsync = async (fastify) => {
   // GET /v1/analytics/payments - Breakdown by status/network/token
   fastify.get(
     '/payments',
-    { onRequest: [fastify.authenticate, fastify.requirePermission('read')] },
+    { onRequest: [fastify.authenticate, fastify.requirePermission('read')], schema: analyticsPaymentsRouteSchema },
     async (request, reply) => {
       try {
         const query = analyticsBreakdownQuerySchema.parse(request.query);

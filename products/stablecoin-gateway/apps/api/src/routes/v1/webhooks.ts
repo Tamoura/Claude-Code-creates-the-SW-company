@@ -27,6 +27,10 @@ import { logger } from '../../utils/logger.js';
 import { validateWebhookUrl } from '../../utils/url-validator.js';
 import { encryptSecret } from '../../utils/encryption.js';
 import crypto from 'crypto';
+import {
+  createWebhookRouteSchema, listWebhooksRouteSchema, getWebhookRouteSchema,
+  updateWebhookRouteSchema, deleteWebhookRouteSchema, rotateWebhookSecretRouteSchema,
+} from '../../schemas/webhooks.js';
 
 /**
  * Generate a webhook secret with whsec_ prefix (Stripe-style)
@@ -141,6 +145,7 @@ const webhookRoutes: FastifyPluginAsync = async (fastify) => {
   // POST /v1/webhooks - Create webhook
   fastify.post('/', {
     onRequest: [fastify.authenticate, fastify.requirePermission('write')],
+    schema: createWebhookRouteSchema,
   }, async (request, reply) => {
     try {
       const body = validateBody(createWebhookSchema, request.body);
@@ -196,6 +201,7 @@ const webhookRoutes: FastifyPluginAsync = async (fastify) => {
   // GET /v1/webhooks - List all webhooks (paginated)
   fastify.get('/', {
     onRequest: [fastify.authenticate, fastify.requirePermission('read')],
+    schema: listWebhooksRouteSchema,
   }, async (request, reply) => {
     try {
       const query = validateQuery(listWebhooksQuerySchema, request.query);
@@ -243,6 +249,7 @@ const webhookRoutes: FastifyPluginAsync = async (fastify) => {
   // GET /v1/webhooks/:id - Get webhook by ID
   fastify.get('/:id', {
     onRequest: [fastify.authenticate, fastify.requirePermission('read')],
+    schema: getWebhookRouteSchema,
   }, async (request, reply) => {
     try {
       const { id } = request.params as { id: string };
@@ -273,6 +280,7 @@ const webhookRoutes: FastifyPluginAsync = async (fastify) => {
   // PATCH /v1/webhooks/:id - Update webhook
   fastify.patch('/:id', {
     onRequest: [fastify.authenticate, fastify.requirePermission('write')],
+    schema: updateWebhookRouteSchema,
   }, async (request, reply) => {
     try {
       const { id } = request.params as { id: string };
@@ -342,6 +350,7 @@ const webhookRoutes: FastifyPluginAsync = async (fastify) => {
   // DELETE /v1/webhooks/:id - Delete webhook
   fastify.delete('/:id', {
     onRequest: [fastify.authenticate, fastify.requirePermission('write')],
+    schema: deleteWebhookRouteSchema,
   }, async (request, reply) => {
     try {
       const { id } = request.params as { id: string };
@@ -382,6 +391,7 @@ const webhookRoutes: FastifyPluginAsync = async (fastify) => {
   // POST /v1/webhooks/:id/rotate-secret - Rotate webhook secret
   fastify.post('/:id/rotate-secret', {
     onRequest: [fastify.authenticate, fastify.requirePermission('write')],
+    schema: rotateWebhookSecretRouteSchema,
   }, async (request, reply) => {
     try {
       const { id } = request.params as { id: string };
