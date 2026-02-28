@@ -14,11 +14,17 @@ import Decimal from 'decimal.js';
 /**
  * Convert a decimal amount to token units using string arithmetic.
  *
- * @param amount - Amount as string, number, or Decimal
+ * @param amount - Amount as string, number, or Decimal (must be positive)
  * @param decimals - Token decimal places (6 for USDC/USDT)
  * @returns BigInt token units
+ * @throws Error if amount is negative or zero
  */
 export function amountToTokenUnits(amount: string | number | Decimal, decimals: number): bigint {
+  const d = new Decimal(amount);
+  if (d.isNegative() || d.isZero()) {
+    throw new Error(`Amount must be positive, received: ${amount}`);
+  }
+
   const str = amount.toString();
   const [whole, frac = ''] = str.split('.');
   const paddedFrac = frac.padEnd(decimals, '0').slice(0, decimals);

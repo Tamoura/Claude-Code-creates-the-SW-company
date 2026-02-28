@@ -275,6 +275,37 @@ export class BlockchainTransactionService {
   }
 
   /**
+   * Release a previously reserved spend amount.
+   *
+   * Called when a refund transaction fails AFTER checkAndReserveSpend
+   * succeeded. Without this, failed transactions permanently lock up
+   * the daily spending budget.
+   */
+  private async releaseSpend(amount: number): Promise<void> {
+    if (!this.redis) {
+      return;
+    }
+
+    try {
+      const key = this.getDailySpendKey();
+      const amountCents = dollarsToCents(amount);
+      await this.redis.incrby(key, -amountCents);
+
+      logger.info('Released reserved spend after failed transaction', {
+        amountCents,
+        dailySpendKey: key,
+      });
+    } catch (error: unknown) {
+      // Log but do not throw — releasing spend is best-effort.
+      // The TTL on the key will eventually expire anyway.
+      logger.error(
+        'Failed to release reserved spend after transaction failure',
+        { error, amount } as Record<string, unknown>
+      );
+    }
+  }
+
+  /**
    * Lazily initialize and cache a wallet per network via the signer
    * provider. Each network gets its own wallet instance to prevent
    * cross-network wallet reuse.
@@ -307,6 +338,7 @@ export class BlockchainTransactionService {
     params: RefundTransactionParams
   ): Promise<RefundTransactionResult> {
     const { network, token, recipientAddress, amount } = params;
+    let spendReserved = false;
 
     try {
       // Validate inputs
@@ -328,6 +360,7 @@ export class BlockchainTransactionService {
       // This eliminates the race condition where concurrent requests could both
       // pass the limit check before either records its spend.
       const withinLimit = await this.checkAndReserveSpend(Number(amount));
+      spendReserved = withinLimit;
       if (!withinLimit) {
         return {
           success: false,
@@ -374,6 +407,8 @@ export class BlockchainTransactionService {
         });
       } catch (error) {
         logger.error('Gas estimation failed', error);
+        // Release the reserved spend since the transaction will not execute
+        await this.releaseSpend(Number(amount));
         return {
           success: false,
           error: `Gas estimation failed: ${error instanceof Error ? error.message : 'Unknown error'}`,
@@ -424,6 +459,8 @@ export class BlockchainTransactionService {
           txHash: tx.hash,
           status: receipt.status,
         });
+        // Release the reserved spend since the on-chain transfer reverted
+        await this.releaseSpend(Number(amount));
         return {
           success: false,
           txHash: tx.hash,
@@ -460,6 +497,12 @@ export class BlockchainTransactionService {
         recipient: recipientAddress,
         amount,
       });
+
+      // Release the reserved spend so failed transactions do not
+      // permanently lock up the daily spending budget.
+      if (spendReserved) {
+        await this.releaseSpend(Number(amount));
+      }
 
       return {
         success: false,

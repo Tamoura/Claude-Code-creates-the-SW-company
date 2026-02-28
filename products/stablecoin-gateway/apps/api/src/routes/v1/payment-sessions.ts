@@ -1,5 +1,5 @@
 import { FastifyPluginAsync, FastifyRequest } from 'fastify';
-import { ZodError } from 'zod';
+import { z, ZodError } from 'zod';
 import { Prisma, PaymentStatus } from '@prisma/client';
 import { createPaymentSessionSchema, listPaymentSessionsQuerySchema, updatePaymentSessionSchema, idempotencyKeySchema, validateBody, validateQuery } from '../../utils/validation.js';
 import { PaymentService } from '../../services/payment.service.js';
@@ -7,6 +7,16 @@ import { BlockchainMonitorService } from '../../services/blockchain-monitor.serv
 import { AppError } from '../../types/index.js';
 import { logger } from '../../utils/logger.js';
 import { validatePaymentStatusTransition } from '../../utils/payment-state-machine.js';
+
+// SEC: Internal-only schema that extends the public update schema with `status`.
+// The public `updatePaymentSessionSchema` (in validation.ts) does NOT include
+// status, preventing external clients from setting status directly.
+// Status transitions are guarded here by blockchain verification and the state
+// machine — only authenticated internal callers with 'write' permission can
+// trigger them, and only when blockchain verification succeeds.
+const internalUpdateSchema = updatePaymentSessionSchema.extend({
+  status: z.enum(['PENDING', 'CONFIRMING', 'COMPLETED', 'FAILED', 'REFUNDED']).optional(),
+});
 
 // SSE connection tracking for rate limiting (Phase 3.7)
 // ARC-03: These are in-process counters. In a single-instance deployment they
@@ -215,8 +225,9 @@ const paymentSessionRoutes: FastifyPluginAsync = async (fastify) => {
       const { id } = request.params as { id: string };
       const userId = request.currentUser!.id;
 
-      // Validate request body
-      const updates = validateBody(updatePaymentSessionSchema, request.body);
+      // Validate request body using internal schema (includes status for
+      // server-side state transitions guarded by blockchain verification).
+      const updates = validateBody(internalUpdateSchema, request.body);
 
       const paymentService = new PaymentService(fastify.prisma);
 

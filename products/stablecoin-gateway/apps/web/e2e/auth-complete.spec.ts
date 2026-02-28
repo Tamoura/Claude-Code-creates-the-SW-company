@@ -8,19 +8,20 @@ test.describe('Authentication Flows', () => {
   test('landing page shows Sign In and Get Started buttons', async ({ page }) => {
     await page.goto('/');
 
-    await expect(page.locator('button', { hasText: 'Sign In' })).toBeVisible();
-    await expect(page.locator('button', { hasText: 'Get Started' })).toBeVisible();
+    // Nav links render as <a> tags (React Router <Link>), not <button>
+    await expect(page.locator('a', { hasText: 'Sign In' })).toBeVisible();
+    await expect(page.locator('a', { hasText: 'Get Started' })).toBeVisible();
   });
 
   test('Sign In button navigates to login page', async ({ page }) => {
     await page.goto('/');
-    await page.locator('button', { hasText: 'Sign In' }).click();
+    await page.locator('a', { hasText: 'Sign In' }).click();
     await expect(page).toHaveURL(/\/login/);
   });
 
   test('Get Started button navigates to signup page', async ({ page }) => {
     await page.goto('/');
-    await page.locator('button', { hasText: 'Get Started' }).click();
+    await page.locator('a', { hasText: 'Get Started' }).click();
     await expect(page).toHaveURL(/\/signup/);
   });
 
