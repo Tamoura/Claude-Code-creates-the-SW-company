@@ -3,10 +3,10 @@
   "version": "1.0.0",
   "private": true,
   "scripts": {
-    "dev": "concurrently \"npm run dev --prefix apps/api\" \"npm run dev --prefix apps/web\" --names \"api,web\" --prefix-colors \"blue,green\"",
-    "build": "npm run build --prefix apps/api && npm run build --prefix apps/web",
-    "test": "npm test --prefix apps/api",
-    "test:e2e": "cd e2e && npm test"
+    "dev": "concurrently \"pnpm run dev --prefix apps/api\" \"pnpm run dev --prefix apps/web\" --names \"api,web\" --prefix-colors \"blue,green\"",
+    "build": "pnpm run build --prefix apps/api && pnpm run build --prefix apps/web",
+    "test": "pnpm test --prefix apps/api",
+    "test:e2e": "cd e2e && pnpm test"
   },
   "devDependencies": {
     "concurrently": "^9.2.1"

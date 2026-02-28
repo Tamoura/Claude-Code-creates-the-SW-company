@@ -4,16 +4,16 @@
   "private": true,
   "description": "ArchForge - AI-Powered Enterprise Architecture Platform",
   "scripts": {
-    "dev": "concurrently \"npm run dev:api\" \"npm run dev:web\"",
-    "dev:api": "cd apps/api && npm run dev",
-    "dev:web": "cd apps/web && npm run dev",
-    "test": "cd apps/api && npm test",
-    "test:web": "cd apps/web && npm test",
-    "lint": "cd apps/api && npm run lint",
+    "dev": "concurrently \"pnpm run dev:api\" \"pnpm run dev:web\"",
+    "dev:api": "cd apps/api && pnpm run dev",
+    "dev:web": "cd apps/web && pnpm run dev",
+    "test": "cd apps/api && pnpm test",
+    "test:web": "cd apps/web && pnpm test",
+    "lint": "cd apps/api && pnpm run lint",
     "db:migrate": "cd apps/api && npx prisma migrate dev",
     "db:generate": "cd apps/api && npx prisma generate",
     "db:studio": "cd apps/api && npx prisma studio",
-    "db:seed": "cd apps/api && npm run db:seed"
+    "db:seed": "cd apps/api && pnpm run db:seed"
   },
   "devDependencies": {
     "concurrently": "^9.1.0"
