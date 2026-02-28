@@ -75,10 +75,12 @@ export class RefundProcessingWorker {
     }
 
     try {
-      // Wrap FOR UPDATE SKIP LOCKED in an interactive transaction so the
-      // row-level locks are held for the duration of processing, preventing
-      // concurrent instances from claiming the same refunds.
-      await this.prisma.$transaction(async (tx) => {
+      // Use the transaction ONLY for claiming refunds (SELECT FOR UPDATE
+      // SKIP LOCKED + status transition to PROCESSING). This keeps the
+      // DB transaction short (~milliseconds). Blockchain calls happen
+      // OUTSIDE the transaction to avoid holding DB connections open for
+      // 30+ seconds per refund.
+      const claimedRefunds = await this.prisma.$transaction(async (tx) => {
         const pendingRefunds = await tx.$queryRaw<Array<{ id: string; user_id: string }>>`
           SELECT r.id, ps.user_id
           FROM "refunds" r
@@ -93,31 +95,47 @@ export class RefundProcessingWorker {
           !Array.isArray(pendingRefunds) ||
           pendingRefunds.length === 0
         ) {
-          return;
+          return [];
         }
 
-        let processed = 0;
-        let failed = 0;
+        // Mark claimed refunds as PROCESSING so other workers skip them
+        const claimedIds = pendingRefunds.map((r) => r.id);
+        await tx.$executeRaw`
+          UPDATE "refunds"
+          SET status = 'PROCESSING', updated_at = NOW()
+          WHERE id = ANY(${claimedIds}::text[])
+        `;
 
-        for (const refund of pendingRefunds) {
-          try {
-            await this.refundService.processRefund(refund.id, refund.user_id);
-            processed++;
-          } catch (error) {
-            failed++;
-            logger.error(
-              `Failed to process refund ${refund.id}`,
-              error instanceof Error ? error : undefined,
-            );
-          }
+        return pendingRefunds;
+      });
+
+      if (claimedRefunds.length === 0) {
+        return;
+      }
+
+      // Process each claimed refund OUTSIDE the transaction.
+      // processRefund makes blockchain calls that can take 30+ seconds.
+      let processed = 0;
+      let failed = 0;
+
+      for (const refund of claimedRefunds) {
+        try {
+          await this.refundService.processRefund(refund.id, refund.user_id);
+          processed++;
+        } catch (error) {
+          failed++;
+          logger.error(
+            `Failed to process refund ${refund.id}`,
+            error instanceof Error ? error : undefined,
+          );
         }
+      }
 
-        logger.info('Refund processing batch complete', {
-          total: pendingRefunds.length,
-          processed,
-          failed,
-        });
-      }, { timeout: 120_000 }); // 2 minute timeout for batch processing
+      logger.info('Refund processing batch complete', {
+        total: claimedRefunds.length,
+        processed,
+        failed,
+      });
     } catch (error) {
       logger.error(
         'Refund processing worker failed',
