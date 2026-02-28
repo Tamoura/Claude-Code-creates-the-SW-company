@@ -1,4 +1,5 @@
 import { FastifyPluginAsync, FastifyRequest } from 'fastify';
+import { getCheckoutRouteSchema } from '../../schemas/checkout.js';
 
 /**
  * Public checkout routes - no authentication required.
@@ -17,7 +18,7 @@ const checkoutRoutes: FastifyPluginAsync = async (fastify) => {
   };
 
   // GET /v1/checkout/:id - Public endpoint for checkout page
-  fastify.get('/:id', publicRateLimit, async (request, reply) => {
+  fastify.get('/:id', { ...publicRateLimit, schema: getCheckoutRouteSchema }, async (request, reply) => {
     const { id } = request.params as { id: string };
 
     const session = await fastify.prisma.paymentSession.findUnique({

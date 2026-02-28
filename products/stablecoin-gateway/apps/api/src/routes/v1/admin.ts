@@ -4,6 +4,9 @@ import { Prisma } from '@prisma/client';
 import { AppError } from '../../types/index.js';
 import { logger } from '../../utils/logger.js';
 import { createKMSService, KMSService } from '../../services/kms.service.js';
+import {
+  kmsRotateRouteSchema, merchantsListRouteSchema, merchantPaymentsRouteSchema,
+} from '../../schemas/admin.js';
 
 const kmsRotateBodySchema = z.object({
   newKeyId: z.string().min(1, 'newKeyId is required'),
@@ -39,7 +42,7 @@ const adminRoutes: FastifyPluginAsync = async (fastify) => {
   }
 
   // POST /v1/admin/kms/rotate — trigger KMS key rotation without downtime
-  fastify.post('/kms/rotate', async (request, reply) => {
+  fastify.post('/kms/rotate', { schema: kmsRotateRouteSchema }, async (request, reply) => {
     try {
       const body = kmsRotateBodySchema.parse(request.body);
       const { newKeyId } = body;
@@ -89,7 +92,7 @@ const adminRoutes: FastifyPluginAsync = async (fastify) => {
   });
 
   // GET /v1/admin/merchants
-  fastify.get('/merchants', async (request, reply) => {
+  fastify.get('/merchants', { schema: merchantsListRouteSchema }, async (request, reply) => {
     try {
       const query = merchantListQuerySchema.parse(request.query);
       const { limit: take, offset: skip, search } = query;
@@ -179,7 +182,7 @@ const adminRoutes: FastifyPluginAsync = async (fastify) => {
   });
 
   // GET /v1/admin/merchants/:id/payments
-  fastify.get('/merchants/:id/payments', async (request, reply) => {
+  fastify.get('/merchants/:id/payments', { schema: merchantPaymentsRouteSchema }, async (request, reply) => {
     try {
       const { id } = request.params as { id: string };
       const query = merchantPaymentsQuerySchema.parse(request.query);

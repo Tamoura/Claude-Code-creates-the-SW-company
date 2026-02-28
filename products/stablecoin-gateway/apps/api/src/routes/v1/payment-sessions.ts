@@ -7,6 +7,11 @@ import { BlockchainMonitorService } from '../../services/blockchain-monitor.serv
 import { AppError } from '../../types/index.js';
 import { logger } from '../../utils/logger.js';
 import { validatePaymentStatusTransition } from '../../utils/payment-state-machine.js';
+import {
+  createPaymentSessionRouteSchema, listPaymentSessionsRouteSchema,
+  getPaymentSessionRouteSchema, updatePaymentSessionRouteSchema,
+  paymentSessionEventsRouteSchema,
+} from '../../schemas/payment-sessions.js';
 
 // SEC: Internal-only schema that extends the public update schema with `status`.
 // The public `updatePaymentSessionSchema` (in validation.ts) does NOT include
@@ -38,6 +43,7 @@ const paymentSessionRoutes: FastifyPluginAsync = async (fastify) => {
   // POST /v1/payment-sessions
   fastify.post('/', {
     onRequest: [fastify.authenticate, fastify.requirePermission('write')],
+    schema: createPaymentSessionRouteSchema,
   }, async (request, reply) => {
     try {
       const body = validateBody(createPaymentSessionSchema, request.body);
@@ -141,6 +147,7 @@ const paymentSessionRoutes: FastifyPluginAsync = async (fastify) => {
   // GET /v1/payment-sessions
   fastify.get('/', {
     onRequest: [fastify.authenticate, fastify.requirePermission('read')],
+    schema: listPaymentSessionsRouteSchema,
   }, async (request, reply) => {
     try {
       const query = validateQuery(listPaymentSessionsQuerySchema, request.query);
@@ -188,6 +195,7 @@ const paymentSessionRoutes: FastifyPluginAsync = async (fastify) => {
   // GET /v1/payment-sessions/:id
   fastify.get('/:id', {
     onRequest: [fastify.authenticate, fastify.requirePermission('read')],
+    schema: getPaymentSessionRouteSchema,
   }, async (request, reply) => {
     try {
       const { id } = request.params as { id: string };
@@ -220,6 +228,7 @@ const paymentSessionRoutes: FastifyPluginAsync = async (fastify) => {
   // PATCH /v1/payment-sessions/:id
   fastify.patch('/:id', {
     onRequest: [fastify.authenticate, fastify.requirePermission('write')],
+    schema: updatePaymentSessionRouteSchema,
   }, async (request, reply) => {
     try {
       const { id } = request.params as { id: string };
@@ -451,6 +460,7 @@ const paymentSessionRoutes: FastifyPluginAsync = async (fastify) => {
 
   // GET /v1/payment-sessions/:id/events (SSE)
   fastify.get('/:id/events', {
+    schema: paymentSessionEventsRouteSchema,
     config: {
       rateLimit: {
         max: 10,
