@@ -1,655 +1,560 @@
-# Stablecoin Gateway -- Test & CI/CD Quality Audit Report
+# Stablecoin Gateway: Test Coverage & CI/CD Audit Report (v2)
 
-**Auditor**: Code Reviewer Agent (Principal Architect + Security Engineer + Staff Backend)
-**Date**: 2026-02-28
-**Scope**: `products/stablecoin-gateway/apps/api/tests/`, `.github/workflows/`, `e2e/`
-**Product Version**: main branch, commit d7b68b4
+**Audit Date**: 2026-02-28
+**Auditor**: Code Reviewer Agent (Principal Software Architect + Security Engineer + Staff Backend Engineer)
+**Product**: stablecoin-gateway
+**Scope**: All test files, E2E tests, CI/CD workflows, dependency configuration
+**Previous Audit**: 2026-02-28 (v1) -- this report supersedes with comprehensive file-level analysis
 
 ---
 
 ## Executive Summary
 
-**Overall Test & CI/CD Assessment: GOOD (7.5/10)**
+**Overall Assessment**: Good (7.5/10)
 
-The stablecoin-gateway has a remarkably deep test suite for a product of its maturity. With **115 test files** across 7 directories covering **55 source files**, the test-to-source ratio of 2.09:1 is well above industry average. Security testing is particularly thorough, with dedicated tests for OWASP Top 10 categories including auth bypass, rate limiting, account lockout, BOLA, token revocation, and PII redaction.
+The stablecoin-gateway has an exceptionally deep test suite with **1,559 total test cases** across **168 test files**, spanning backend API integration tests, frontend component/hook tests, and a comprehensive 83-test full-stack E2E suite. The CI/CD pipeline includes 6 quality gate jobs with SAST scanning (CodeQL + Semgrep), Gitleaks secret scanning, and npm audit. Security testing covers SSRF, BOLA, CORS, rate limiting, account lockout, token revocation, and path traversal -- well above industry average.
 
-The CI/CD pipeline is well-structured with 4 workflows covering CI, security scanning, staging deployment, and production deployment with approval gates and database backup.
+However, there are specific gaps that need attention before the next production deployment.
 
-**Top 5 Findings:**
+**Top 5 Findings (Prioritized)**:
 
-1. **[HIGH]** E2E test suite is disconnected from CI -- the `e2e/` directory uses a separate Jest config hitting running services, but the CI `e2e` job runs Playwright against `apps/web/`, meaning the full-stack E2E tests are never run in CI.
-2. **[HIGH]** Production deployment has no separate test gate job -- tests and deploy are in a single job, so a failing test step does not block via `needs:` dependency; it relies on step ordering within one job.
-3. **[MEDIUM]** No test coverage threshold enforcement -- CI runs `--coverage` but has no minimum coverage gate (e.g., `--coverageThreshold`).
-4. **[MEDIUM]** Missing tests for `checkout.ts`, `me.ts`, `dev.ts` routes, `email.service.ts`, `telemetry.ts`, and `kms-signing.service.ts`.
-5. **[LOW]** The `global.fetch = jest.fn()` mock in `webhook-delivery.test.ts` is a global side effect that could leak between test files.
+| # | Severity | Finding | Impact |
+|---|----------|---------|--------|
+| 1 | **HIGH** | E2E full-stack tests (83 cases) not integrated into CI | Critical cross-cutting regressions undetected |
+| 2 | **HIGH** | `EmailService` has zero test coverage | Notification preferences, receipt HTML, XSS prevention untested |
+| 3 | **HIGH** | Checkout route (`/v1/checkout/:id`) has no dedicated tests | Public-facing unauthenticated endpoint untested for expiry, field exclusion |
+| 4 | **MEDIUM** | JWT_SECRET in CI workflow is low-entropy (`test-jwt-secret-ci`, 19 chars) | Does not meet the 64-char minimum enforced by own test suite |
+| 5 | **MEDIUM** | No coverage threshold enforcement in API Jest config | Test coverage can silently regress |
 
-**Recommendation**: Fix First (address items 1-3 before next production deployment)
-
----
-
-## Test Infrastructure Analysis
-
-### Test File Inventory
-
-| Directory | Files | Focus Area |
-|-----------|-------|------------|
-| `tests/integration/` | 30 | Route-level integration tests with real Fastify + real DB |
-| `tests/services/` | 32 | Service-layer unit/integration tests |
-| `tests/routes/v1/` | 17 | Focused route behavior tests |
-| `tests/routes/` (root) | 3 | Rate limiting on specific route groups |
-| `tests/routes/internal/` | 1 | Internal webhook worker route |
-| `tests/plugins/` | 4 | Plugin-level tests (auth, observability, redis) |
-| `tests/unit/` | 3 | Pure unit tests (state machine, encryption, URL validator) |
-| `tests/schema/` | 1 | Prisma schema validation tests |
-| `tests/ci/` | 2 | CI/CD workflow structure validation tests |
-| `tests/utils/` | 9 | Utility function tests |
-| **Total** | **115** | |
-
-### Test Setup (`tests/setup.ts`)
-
-**Severity: GOOD**
-
-The setup file at `/Users/tamer/Desktop/Projects/Claude Code creates the SW company/products/stablecoin-gateway/apps/api/tests/setup.ts`:
-
-- Uses **real PrismaClient** and **real Redis** (no mocks for infrastructure)
-- Cleans DB in correct FK-constraint order before tests
-- Flushes Redis to clear rate-limit, circuit-breaker, and lockout keys
-- Properly disconnects both clients in `afterAll`
-
-**Positive**: This follows the company standard of "no mocks in tests - real databases, real services."
-
-**Risk**: The `beforeAll` runs once for the entire suite, not per file. Tests that modify shared state (users, payment sessions) may have ordering dependencies. This is partially mitigated by many test files creating their own app instances via `buildApp()`.
+**Recommendation**: Fix HIGH items before next production deployment. Current state is safe for staging.
 
 ---
 
-## Coverage Analysis by Domain
+## 1. Test Coverage -- Quantitative Summary
 
-### 1. Authentication & Authorization -- EXCELLENT (9/10)
+### Total Inventory
 
-**Test files**: `auth.test.ts`, `auth-negative-paths.test.ts`, `auth-permissions.test.ts`, `auth-jti.test.ts`, `auth-logout-validation.test.ts`, `auth-rate-limit.test.ts`, `auth-rate-limit-isolated.test.ts`, `account-lockout.test.ts`, `admin-auth.test.ts`, `token-revocation.test.ts`, `sessions.test.ts`, `change-password.test.ts`, `password-reset.test.ts`, `password-reset-session-revocation.test.ts`, `sse-auth.test.ts`, `sse-token.test.ts`, `sse-token-revalidation.test.ts`, `sse-query-token.test.ts`
+| Layer | Test Files | Test Cases | Testing Framework |
+|-------|-----------|------------|-------------------|
+| Backend API (`apps/api/tests/`) | 115 | 1,029 | Jest + real PostgreSQL + Redis |
+| Frontend components (`apps/web/src/`) | 45 | 394 | Vitest + jsdom |
+| Frontend tests dir (`apps/web/tests/`) | 7 | 53 | Vitest + jsdom |
+| E2E full-stack (`e2e/integration/`) | 1 | 83 | Jest + fetch() against live services |
+| **TOTAL** | **168** | **1,559** | |
 
-**Covered scenarios**:
-- Signup with valid/invalid data
-- Email enumeration prevention (returns 201 for duplicate emails)
-- Login success/failure
-- Expired JWT rejection
-- Missing/malformed Authorization header
-- Nonexistent user JWT
-- Random garbage token
-- API key permission enforcement (read-only cannot write = 403)
-- Nonexistent API key hash
-- JTI revocation via Redis blacklist
-- Account lockout after 5 failed attempts (429)
-- Lockout expiry simulation
-- Failed-attempt counter reset on success
-- Graceful degradation when Redis unavailable
-- SSE token authentication
-- Token revalidation
-- Password reset flow with session revocation
+### Backend Test Files by Directory
 
-**Gap**: No test for JWT algorithm confusion attack (e.g., `alg: "none"`). The `@fastify/jwt` library likely handles this, but an explicit test would confirm.
+| Directory | Files | Test Cases | Coverage Focus |
+|-----------|-------|------------|----------------|
+| `tests/integration/` | 30 | ~280 | Route-level with real Fastify + DB |
+| `tests/services/` | ~40 | ~415 | Service-layer business logic + race conditions |
+| `tests/routes/v1/` | ~19 | ~165 | Route-specific: GDPR, pagination, expiry, lockout |
+| `tests/routes/` (other) | 4 | ~15 | Rate limiting, SSE, webhook worker |
+| `tests/plugins/` | 4 | ~53 | Auth, observability, Redis configuration |
+| `tests/unit/` | 3 | ~56 | Encryption, payment state machine, URL validator |
+| `tests/utils/` | ~10 | ~100 | Validation, logging, env, crypto, JWT entropy |
+| `tests/schema/` | 1 | 3 | Decimal precision in Prisma schema |
+| `tests/ci/` | 2 | 18 | Deploy preflight + audit config verification |
+| `tests/workers/` | 2 | 14 | Refund processing worker + locking |
 
-### 2. BOLA (Broken Object-Level Authorization) -- GOOD (8/10)
+### Route Coverage Matrix
 
-**Evidence from tests**:
-- `webhooks.test.ts`: "should not return other users webhooks", "should return 404 for other users webhook" (multiple CRUD operations)
-- `api-keys.test.ts`: "should return 404 for key owned by another user", "should return 404 when trying to delete another user key"
-- `sse-token.test.ts`: "should reject payment session owned by another user"
-- `payment-links.test.ts`: "should not return other user's payment links"
-- `refunds.test.ts`: "should return 404 for refund owned by another user"
-- `webhook-rotation.test.ts`: Cross-user rotation attempt
+| Source Route File | Test File(s) | Test Cases | Status |
+|-------------------|-------------|------------|--------|
+| `routes/v1/auth.ts` | `auth.test.ts`, `auth-rate-limit.test.ts`, `auth-rate-limit-isolated.test.ts`, `account-lockout.test.ts`, `auth-jti.test.ts`, `auth-logout-validation.test.ts`, `change-password.test.ts`, `password-reset.test.ts`, `password-reset-session-revocation.test.ts`, `sessions.test.ts`, `token-revocation.test.ts` | ~60+ | EXCELLENT |
+| `routes/v1/payment-sessions.ts` | `payment-sessions.test.ts`, `payment-sessions-patch.test.ts`, `payment-session-expiry.test.ts`, `payment-concurrency.test.ts`, `payment-idempotency.test.ts`, `pagination.test.ts`, `idempotency-key-validation.test.ts` | ~83 | EXCELLENT |
+| `routes/v1/webhooks.ts` | `webhooks.test.ts`, `webhook-rotation.test.ts`, `webhook-encryption-enforcement.test.ts` | ~56 | EXCELLENT |
+| `routes/v1/refunds.ts` | `refunds.test.ts`, `refund-idempotency.test.ts`, `refunds-pagination.test.ts`, `refunds-permission.test.ts` | ~32 | EXCELLENT |
+| `routes/v1/payment-links.ts` | `payment-links.test.ts` | 34 | GOOD |
+| `routes/v1/api-keys.ts` | `api-keys.test.ts` | 15 | GOOD |
+| `routes/v1/admin.ts` | `admin-routes.test.ts`, `admin-auth.test.ts` | 15 | GOOD |
+| `routes/v1/analytics.ts` | `analytics.test.ts` | 9 | GOOD |
+| `routes/v1/notifications.ts` | `notifications.test.ts` | 7 | GOOD |
+| `routes/v1/me.ts` | `gdpr-data-access.test.ts`, `gdpr-account-deletion.test.ts` | 15 | GOOD |
+| `routes/internal/webhook-worker.ts` | `webhook-worker.test.ts` | 8 | GOOD |
+| `routes/v1/checkout.ts` | None (indirect only via `merchant-payment-flow.test.ts`) | 0 | **MISSING** |
+| `routes/v1/dev.ts` | None | 0 | **MISSING** (dev-only) |
 
-**Gap**: No explicit BOLA test for `GET /v1/payment-sessions/:id` -- a user retrieving another user's payment session. The route test at `payment-sessions.test.ts:272` tests 404 for nonexistent ID but does not create a second user to verify cross-user isolation.
+**Routes tested: 11 of 13 (85%)**
 
-### 3. Rate Limiting -- EXCELLENT (9/10)
+### Service Coverage Matrix
 
-**Test files**: `rate-limit.test.ts`, `rate-limiting-enhanced.test.ts`, `auth-rate-limit.test.ts`, `auth-rate-limit-isolated.test.ts`, `sse-rate-limit.test.ts`, `request-limits.test.ts`
+| Service File | Test File(s) | Status |
+|-------------|-------------|--------|
+| `webhook.service.ts` | `webhook.service.test.ts`, `webhook.test.ts`, `webhook-event-type.test.ts`, `webhook-resource-id.test.ts` | EXCELLENT |
+| `webhook-delivery.service.ts` | `webhook-delivery.test.ts` (15 cases, race conditions, idempotency) | GOOD |
+| `webhook-circuit-breaker.service.ts` | `webhook-circuit-breaker.test.ts`, `circuit-breaker-atomicity.test.ts` | GOOD |
+| `blockchain-monitor.service.ts` | `blockchain-monitor.test.ts`, `blockchain-monitor-timeout.test.ts`, `blockchain-monitor-tolerance.test.ts`, `blockchain-monitor-error-paths.test.ts` | EXCELLENT |
+| `blockchain-transaction.service.ts` | `blockchain-transaction.test.ts`, `blockchain-multi-transfer.test.ts`, `blockchain-field-bypass.test.ts` | EXCELLENT |
+| `kms.service.ts` | `kms.service.test.ts`, `kms-key-rotation.test.ts`, `kms-error-sanitization.test.ts`, `kms-signing-algorithm.test.ts`, `kms-recovery-validation.test.ts`, `kms-audit-log.test.ts`, `kms-admin-rotation.test.ts` | EXCELLENT |
+| `kms-signer.service.ts` | `kms-signer.service.test.ts` (17 cases) | GOOD |
+| `nonce-manager.service.ts` | `nonce-manager.test.ts`, `nonce-lock-atomicity.test.ts` | GOOD |
+| `audit-log.service.ts` | `audit-log.test.ts` (24 cases), `audit-log-persistence.test.ts` | EXCELLENT |
+| `payment.service.ts` | `payment-race-condition.test.ts`, `payment-state-machine-enforcement.test.ts`, `payment-verification-precision.test.ts`, integration tests | GOOD |
+| `refund.service.ts` | `refund-race-condition.test.ts`, `refund-failsafe.test.ts`, `refund-idempotency-blockchain.test.ts`, `refund-payment-status-guard.test.ts`, `refund-confirmation-finality.test.ts` | EXCELLENT |
+| `refund-finalization.service.ts` | Partially via `refund-confirmation-finality.test.ts` | FAIR |
+| `refund-query.service.ts` | Partially via `refund-failsafe.test.ts` | FAIR |
+| `analytics.service.ts` | Via `analytics.test.ts` route tests only | FAIR |
+| `payment-link.service.ts` | Via `payment-links.test.ts` route tests only | FAIR |
+| `email.service.ts` | **NONE** | **MISSING** |
+| `blockchain-query.service.ts` | **NONE** | **MISSING** |
+| `webhook-delivery-executor.service.ts` | **NONE** | **MISSING** |
 
-**Covered scenarios**:
-- Global rate limit enforcement
-- Rate limit headers present (`x-ratelimit-limit`, `x-ratelimit-remaining`, `x-ratelimit-reset`)
-- Health endpoint exemption from rate limiting
-- Auth endpoint specific rate limits
-- SSE endpoint rate limits
-- Request body size limits
-- Redis-backed distributed rate limiting
-- Graceful fallback without Redis
+**Services tested: 14 of 19 (74%) -- 3 with zero coverage**
 
-**Strength**: The use of unique `User-Agent` strings per test block to isolate rate-limit buckets shows sophisticated understanding of the fingerprinting mechanism.
+### Plugin & Utility Coverage
 
-### 4. Financial Precision (Decimal.js) -- EXCELLENT (10/10)
-
-**Test files**: `financial-precision.test.ts`, `decimal-precision.test.ts`, `decimal-precision-fix.test.ts`, `payment-verification-precision.test.ts`
-
-**Covered scenarios**:
-- `0.1 + 0.2 === 0.3` (the canonical floating-point bug)
-- Three partial refunds ($33.33 x 3 on $99.99) leaving $0.00
-- Large amounts (>$1M) maintaining precision
-- Wei-to-USD conversion (USDC 6 decimals)
-- Partial refund remaining calculation precision
-- Proposed refund exceeding remaining amount detection
-- Schema validation: Prisma `Decimal(18, 6)` not `Decimal(10, 2)`
-- Migration file existence and SQL correctness
-
-**Strength**: This is the best financial precision test suite I have reviewed. It covers the exact edge cases that cause real-world payment bugs. The contrast test (`0.1 + 0.2 !== 0.3` in native Number) is excellent documentation.
-
-### 5. Payment Flow & State Machine -- VERY GOOD (8.5/10)
-
-**Test files**: `payment-state-machine.test.ts`, `payment-state-machine-enforcement.test.ts`, `payment-sessions.test.ts`, `payment-sessions-patch.test.ts`, `payment-session-expiry.test.ts`, `payment-concurrency.test.ts`, `payment-idempotency.test.ts`, `payment-race-condition.test.ts`, `payment-links.test.ts`, `merchant-payment-flow.test.ts`
-
-**Covered scenarios**:
-- All valid state transitions (PENDING->CONFIRMING->COMPLETED->REFUNDED)
-- All invalid state transitions (16 rejection cases)
-- Error messages with hints
-- Concurrent `CONFIRMING->COMPLETED` with `SELECT ... FOR UPDATE` lock
-- Idempotent same-state transitions
-- Database consistency after concurrent writes
-- Payment session CRUD
-- Pagination and filtering
-- Merchant payment flow E2E
-
-**Gap**: No test for payment session expiry handling when a session is in `CONFIRMING` state (only `PENDING` expiry tested).
-
-### 6. Refund System -- VERY GOOD (8.5/10)
-
-**Test files**: `refunds.test.ts`, `refund-idempotency.test.ts`, `refund-idempotency-blockchain.test.ts`, `refund-race-condition.test.ts`, `refund-failsafe.test.ts`, `refund-confirmation-finality.test.ts`, `refund-payment-status-guard.test.ts`, `refund-processing.worker.test.ts`, `refund-worker-locking.test.ts`, `refunds-pagination.test.ts`, `refunds-permission.test.ts`
-
-**Covered scenarios**:
-- Only COMPLETED payments can be refunded
-- Refund amount cannot exceed payment amount
-- Partial refunds
-- User isolation (BOLA)
-- Idempotency with blockchain
-- Race condition handling
-- Failsafe mechanisms
-- Worker locking
-- Pagination
-
-**Gap**: No test for refund amount of exactly `0` (zero-amount refund) or negative amount.
-
-### 7. Webhook System -- VERY GOOD (8.5/10)
-
-**Test files**: `webhooks.test.ts`, `webhook.test.ts`, `webhook.service.test.ts`, `webhook-delivery.test.ts`, `webhook-circuit-breaker.test.ts`, `webhook-encryption-startup.test.ts`, `webhook-encryption-enforcement.test.ts`, `webhook-rotation.test.ts`, `webhook-event-type.test.ts`, `webhook-resource-id.test.ts`, `webhook-worker.test.ts`
-
-**Covered scenarios**:
-- CRUD lifecycle
-- Multi-endpoint delivery
-- Event subscription filtering
-- Disabled endpoint skipping
-- HMAC signature generation/verification
-- Delivery retry with exponential backoff
-- Network error handling
-- Max retry permanent failure
-- Idempotency (duplicate prevention)
-- Concurrent race condition handling
-- Circuit breaker
-- Secret encryption at rest
-- Secret rotation
-
-**Issue**: `webhook-delivery.test.ts` uses `global.fetch = jest.fn()` (line 6) which is a global side effect. This mock could leak to other test files running in the same worker. Should use `jest.spyOn(global, 'fetch')` with proper restore in `afterAll`.
-
-### 8. Blockchain & KMS -- GOOD (8/10)
-
-**Test files**: `blockchain-monitor.test.ts`, `blockchain-monitor-timeout.test.ts`, `blockchain-monitor-tolerance.test.ts`, `blockchain-multi-transfer.test.ts`, `blockchain-transaction.test.ts`, `blockchain-verification.test.ts`, `blockchain-field-bypass.test.ts`, `kms.service.test.ts`, `kms-key-rotation.test.ts`, `kms-error-sanitization.test.ts`, `kms-recovery-validation.test.ts`, `kms-signing-algorithm.test.ts`, `kms-signer.service.test.ts`, `kms-admin-rotation.test.ts`, `kms-audit-log.test.ts`, `nonce-manager.test.ts`, `nonce-lock-atomicity.test.ts`, `provider-failover.test.ts`, `sender-validation.test.ts`
-
-**Covered scenarios**:
-- Transaction verification (exists, confirmations, recipient)
-- EIP-2 s-value normalization
-- DER signature parsing
-- KMS public key caching
-- Transaction signing
-- Health check
-- Provider failover
-- Nonce management with locks
-
-**Issue**: KMS tests use `jest.mock('@aws-sdk/client-kms')` which is appropriate for a third-party service, but there are no contract tests verifying the mock matches real AWS KMS behavior.
-
-### 9. Security-Specific Tests -- EXCELLENT (9/10)
-
-**Test files**: `security-headers.test.ts`, `security-log-sanitization.test.ts`, `logger-redaction.test.ts`, `encryption.test.ts`, `encryption-validation.test.ts`, `cors-null-origin.test.ts`, `app-cors.test.ts`, `jwt-secret-entropy.test.ts`, `hmac-api-key.test.ts`, `production-secrets-mandatory.test.ts`, `env-validator.test.ts`, `audit-log.test.ts`, `audit-log-persistence.test.ts`, `spending-limit-atomicity.test.ts`, `wallet-spending-limits.test.ts`, `wallet-network-caching.test.ts`
-
-**Covered scenarios**:
-- Security headers (X-Content-Type-Options, X-Frame-Options, X-XSS-Protection, HSTS, CSP)
-- X-Powered-By removal
-- PII redaction in logs (password, token, secret, key, authorization, email)
-- AES-256-GCM encryption/decryption
-- Tampering detection (ciphertext, IV, auth tag)
-- CORS null origin rejection
-- JWT secret entropy validation
-- HMAC API key hashing
-- Production secret enforcement (process.exit on missing secrets)
-- Audit log persistence
-
-**Gap**: No SSRF test for webhook URL validation (testing that internal/private IPs like `127.0.0.1`, `169.254.x.x`, `10.x.x.x` are rejected as webhook destinations).
-
-### 10. GDPR Compliance -- GOOD (7.5/10)
-
-**Test files**: `gdpr-data-access.test.ts`, `gdpr-account-deletion.test.ts`
-
-**Covered**: Right of Access (Article 15), Right to Erasure (Article 17)
-
-**Gap**: No test for Right to Data Portability (Article 20) export endpoint (`GET /v1/me/export`), which is implemented in `me.ts`.
-
-### 11. Observability & DevOps -- GOOD (7/10)
-
-**Test files**: `observability.test.ts`, `observability-auth.test.ts`, `health.test.ts`, `audit-config.test.ts`, `deploy-preflight.test.ts`
-
-**Strength**: The `ci/` tests that parse YAML workflow files and verify step ordering, environment variables, and service definitions are an innovative approach to CI/CD testing. This is a pattern I rarely see and strongly endorse.
+| Category | Tested | Total | Percentage |
+|----------|--------|-------|-----------|
+| Plugins (`auth.ts`, `redis.ts`, `observability.ts`, `prisma.ts`) | 4 | 4 | **100%** |
+| Utils (`validation.ts`, `encryption.ts`, `crypto.ts`, `url-validator.ts`, `env-validator.ts`, `logger.ts`, etc.) | 8 of 11 | 11 | **73%** |
 
 ---
 
-## Untested Source Files
+## 2. Test Quality Assessment
 
-The following source files have **no dedicated test file**:
+### What Is Working Well
 
-| Source File | Severity | Risk |
-|-------------|----------|------|
-| `src/routes/v1/checkout.ts` | **HIGH** | Public-facing endpoint, no auth required. No test for session enumeration, expiry edge cases, or data leakage. |
-| `src/routes/v1/me.ts` | **MEDIUM** | GDPR routes partially tested (data access, deletion) but export endpoint untested. |
-| `src/routes/v1/dev.ts` | **LOW** | Dev-only route, but no test verifying it is NOT registered in production. |
-| `src/services/email.service.ts` | **MEDIUM** | Email sending logic untested. |
-| `src/services/analytics.service.ts` | **LOW** | Analytics service partially covered by `analytics.test.ts` route test. |
-| `src/telemetry.ts` | **LOW** | OpenTelemetry initialization not tested. |
-| `src/services/kms-signing.service.ts` | **LOW** | Covered by `kms-signer.service.test.ts` (naming mismatch). |
-| `src/utils/redis-rate-limit-store.ts` | **LOW** | Implicitly tested through rate-limit integration tests. |
-| `src/utils/startup-checks.ts` | **LOW** | Partially covered by env-validator tests. |
-| `src/app.ts` | **LOW** | Implicitly tested by every integration test via `buildApp()`. |
+**1. Real Database Integration (No Mocks for Infrastructure)**
 
-**Estimated Test Coverage**: ~78-82% of source files have direct or strong indirect test coverage. The gaps are concentrated in public-facing routes (`checkout.ts`) and operational infrastructure (`telemetry.ts`, `email.service.ts`).
+The test setup (`/Users/tamer/Desktop/Projects/Claude Code creates the SW company/products/stablecoin-gateway/apps/api/tests/setup.ts`) uses real PrismaClient + real Redis. Database cleanup respects FK constraints. Every integration test uses `buildApp()` to construct a real Fastify instance with all middleware (auth, rate limiting, CORS, validation, Helmet headers). Tests exercise `app.inject()` for full middleware-stack fidelity.
+
+**2. Security Test Depth -- SSRF, BOLA, CORS, Headers**
+
+File `/Users/tamer/Desktop/Projects/Claude Code creates the SW company/products/stablecoin-gateway/apps/api/tests/integration/webhooks.test.ts` lines 771-960 contains a dedicated `SSRF Protection` describe block testing:
+- `localhost` rejection
+- `127.0.0.1` rejection
+- Private networks (`10.x.x.x`, `192.168.x.x`)
+- Cloud metadata endpoint (`169.254.169.254`)
+- URL credential injection (`user:password@host`)
+- SSRF via webhook update (not just creation)
+
+BOLA protection is tested across webhooks, API keys, refunds, and SSE tokens with explicit cross-user isolation checks.
+
+**3. Financial Precision Testing (Best-in-Class)**
+
+Files:
+- `/Users/tamer/Desktop/Projects/Claude Code creates the SW company/products/stablecoin-gateway/apps/api/tests/services/financial-precision.test.ts` (12 cases)
+- `/Users/tamer/Desktop/Projects/Claude Code creates the SW company/products/stablecoin-gateway/apps/api/tests/services/decimal-precision-fix.test.ts` (7 cases)
+- `/Users/tamer/Desktop/Projects/Claude Code creates the SW company/products/stablecoin-gateway/apps/api/tests/schema/decimal-precision.test.ts` (3 cases)
+- `/Users/tamer/Desktop/Projects/Claude Code creates the SW company/products/stablecoin-gateway/apps/api/tests/services/payment-verification-precision.test.ts` (4 cases)
+
+Tests cover: `0.1 + 0.2 === 0.3` using Decimal.js, three partial refunds of $33.33 on $99.99, large amounts >$1M, Wei-to-USD conversions with USDC 6-decimal precision, and Prisma schema validation ensuring `Decimal(18,6)` not `Decimal(10,2)`.
+
+**4. Race Condition / Concurrency Testing**
+
+Explicit concurrent tests with `Promise.all` and `Promise.allSettled`:
+- `/Users/tamer/Desktop/Projects/Claude Code creates the SW company/products/stablecoin-gateway/apps/api/tests/services/payment-race-condition.test.ts` (4 cases)
+- `/Users/tamer/Desktop/Projects/Claude Code creates the SW company/products/stablecoin-gateway/apps/api/tests/services/refund-race-condition.test.ts` (9 cases)
+- `/Users/tamer/Desktop/Projects/Claude Code creates the SW company/products/stablecoin-gateway/apps/api/tests/services/nonce-lock-atomicity.test.ts` (4 cases)
+- `/Users/tamer/Desktop/Projects/Claude Code creates the SW company/products/stablecoin-gateway/apps/api/tests/services/spending-limit-atomicity.test.ts` (7 cases)
+- `/Users/tamer/Desktop/Projects/Claude Code creates the SW company/products/stablecoin-gateway/apps/api/tests/integration/payment-concurrency.test.ts` (4 cases)
+- Webhook idempotency race (`webhook-delivery.test.ts:448-453`)
+
+**5. CI/CD Self-Testing (Innovative)**
+
+Files:
+- `/Users/tamer/Desktop/Projects/Claude Code creates the SW company/products/stablecoin-gateway/apps/api/tests/ci/deploy-preflight.test.ts` (14 cases) -- parses `deploy-production.yml` YAML to verify test steps precede build steps, env vars are set with correct values, and PostgreSQL/Redis services are defined
+- `/Users/tamer/Desktop/Projects/Claude Code creates the SW company/products/stablecoin-gateway/apps/api/tests/ci/audit-config.test.ts` (4 cases) -- verifies npm audit uses `--audit-level=high` and has no `continue-on-error`
+
+This is a pattern I strongly endorse and rarely see in practice.
+
+**6. E2E Full-Stack Test Quality**
+
+File `/Users/tamer/Desktop/Projects/Claude Code creates the SW company/products/stablecoin-gateway/e2e/integration/full-stack.test.ts` -- 83 test cases across 21 describe blocks using raw `fetch()` against live services with NO mocks and NO app imports. Covers: auth flows, payment CRUD, API keys, webhooks, refunds, analytics, profile/export endpoints, input validation bounds, BOLA protection, rate limiting headers, RFC 7807 error format, password validation, security headers, webhook URL validation, path traversal prevention, and idempotency key validation.
+
+**7. Database State Verification**
+
+Tests verify actual database state, not just HTTP responses:
+- Webhook deletion verified in DB (`webhooks.test.ts:664-667`)
+- Cascade deletion of webhook deliveries verified (`webhooks.test.ts:762-766`)
+- Webhook secret stored in correct format in DB (`webhooks.test.ts:216-220`)
+- Refund updates against `app.prisma` for state setup (`refunds.test.ts:53-61`)
+
+**8. Email Enumeration Prevention**
+
+File `/Users/tamer/Desktop/Projects/Claude Code creates the SW company/products/stablecoin-gateway/apps/api/tests/integration/auth.test.ts:82-115` -- duplicate signup returns 201 with generic message (not 409), and the response explicitly lacks `access_token` to prevent login.
+
+**9. Rate Limit Bucket Isolation**
+
+Tests use unique `User-Agent` headers per describe block to isolate fingerprinted rate limit buckets:
+```typescript
+const testUA = `AuthSignupTest/${Date.now()}`;
+```
+This prevents cross-test interference when auth endpoints use IP+UA fingerprinting.
+
+**10. Frontend Test Coverage Breadth**
+
+45 frontend test files in `apps/web/src/` covering:
+- All dashboard pages (Analytics, ApiKeys, CreatePaymentLink, DashboardHome, Invoices, PaymentDetail, PaymentsList, Refunds, Security, Settings, Webhooks)
+- Admin pages (MerchantsList, MerchantPayments)
+- Checkout flows (Success, Failed)
+- Auth pages (Signup)
+- Public pages (Home, Pricing, Docs)
+- Component-level (ErrorBoundary, Sidebar, StatCard, ThemeToggle, TopHeader, TransactionsTable, SseStatusBadge, CheckoutPreview, DeveloperIntegration)
+- Hooks (useAnalytics, useDashboardData, usePaymentEvents, useRefunds, useSessions, useSettings, useTheme)
+- Libraries (api-client, payments, wallet, transactions, invoice-pdf)
+- Accessibility suite (19 tests)
+- Auth lifecycle, token manager (7 additional tests in `tests/` dir)
 
 ---
 
-## CI/CD Pipeline Analysis
+## 3. Missing Tests -- Critical Gaps
 
-### Workflow Inventory
+### Gap #1: EmailService -- ZERO Test Coverage
 
-| Workflow | Trigger | Purpose |
-|----------|---------|---------|
-| `ci.yml` | PR + push to main | Tests, lint, security audit, E2E, build |
-| `security-checks.yml` | Push + PR (path-filtered) | Hardcoded secret detection |
-| `deploy-staging.yml` | Push to main | Test gate + deploy to ECS |
-| `deploy-production.yml` | Manual (workflow_dispatch) | Pre-flight tests + DB backup + deploy to ECS |
+**File**: `/Users/tamer/Desktop/Projects/Claude Code creates the SW company/products/stablecoin-gateway/apps/api/src/services/email.service.ts`
 
-### CI Pipeline (`ci.yml`) -- GOOD (7.5/10)
+**Severity**: HIGH
+
+**Lines of untested code**: ~185 lines of business logic
+
+**What is untested**:
+- `sendPaymentReceipt()` -- receipt HTML generation with payment details
+- `sendMerchantNotification()` -- different event types (`payment.received`, `payment.failed`, `refund.processed`) produce correct subjects and templates
+- `getNotificationPreferences()` -- auto-creation of default preferences for new users
+- `updateNotificationPreferences()` -- partial update behavior (only provided fields updated)
+- `escapeHtml()` (line 68) -- XSS prevention function that escapes `<`, `>`, `&`, `"`, `'` characters. This is **security-critical** code with zero test coverage
+- Error handling -- `sendPaymentReceipt` and `sendMerchantNotification` should return `false` on failure
+
+**Recommended test file**: `tests/services/email.service.test.ts` with 10-12 test cases.
+
+### Gap #2: Checkout Route -- No Dedicated Tests
+
+**File**: `/Users/tamer/Desktop/Projects/Claude Code creates the SW company/products/stablecoin-gateway/apps/api/src/routes/v1/checkout.ts`
+
+**Severity**: HIGH
+
+**Why this matters**: This is a **public endpoint** (no authentication required) at `GET /v1/checkout/:id`. It:
+1. Returns payment session data to unauthenticated customers
+2. Has expiry logic (returns 410 for expired sessions)
+3. Deliberately excludes sensitive fields (`merchant_address`, `customer_address`, `tx_hash`) to prevent enumeration
+4. Has rate limiting (60 req/min per IP)
+
+**None of these behaviors have dedicated test coverage.** The E2E test touches checkout indirectly via `merchant-payment-flow.test.ts` but does not verify:
+- Expired payment returns 410
+- Non-existent payment returns 404
+- Response body excludes sensitive fields (the most critical assertion)
+- Rate limiting on the public endpoint
+
+**Recommended test file**: `tests/integration/checkout.test.ts` with 6-8 test cases.
+
+### Gap #3: BlockchainQueryService
+
+**File**: `/Users/tamer/Desktop/Projects/Claude Code creates the SW company/products/stablecoin-gateway/apps/api/src/services/blockchain-query.service.ts`
+
+**Severity**: MEDIUM
+
+**Impact**: This service reads blockchain state. While `blockchain-monitor.service.ts` and `blockchain-transaction.service.ts` are well-tested, the query service has no dedicated tests.
+
+### Gap #4: WebhookDeliveryExecutorService
+
+**File**: `/Users/tamer/Desktop/Projects/Claude Code creates the SW company/products/stablecoin-gateway/apps/api/src/services/webhook-delivery-executor.service.ts`
+
+**Severity**: MEDIUM
+
+**Impact**: The executor that performs actual HTTP delivery has no tests. `webhook-delivery.test.ts` tests the `WebhookDeliveryService` queue/process logic but mocks `global.fetch`, so the executor's HTTP behavior, timeout handling, and response parsing are untested.
+
+### Gap #5: Dev Route Production Guard
+
+**File**: `/Users/tamer/Desktop/Projects/Claude Code creates the SW company/products/stablecoin-gateway/apps/api/src/routes/v1/dev.ts`
+
+**Severity**: LOW (dev-only, but important guard)
+
+**Impact**: The comment says "NEVER registered in production" but no test verifies this claim. A regression that accidentally registers dev routes in production would allow anyone to mark payments as COMPLETED without blockchain verification.
+
+---
+
+## 4. CI/CD Pipeline Analysis
+
+### Workflow Inventory (17 total monorepo-wide, 4 directly relevant)
+
+| Workflow File | Trigger | Purpose | Stablecoin-Gateway Impact |
+|--------------|---------|---------|---------------------------|
+| `test-stablecoin-gateway.yml` | PR paths + push to main | **Primary CI**: lint, security, test-api, test-frontend, secrets-scan, quality-gate | **DIRECT** -- primary gate |
+| `security-sast.yml` | PR + push to main | CodeQL + Semgrep + npm audit (all products) | **DIRECT** -- security scanning |
+| `claude-code-review.yml` | PR (all types) | AI-powered code review via Claude | **DIRECT** -- review gate |
+| `test.yml` | PR + push to main | Monorepo shared lint + security | **INDIRECT** -- shared checks |
+
+### Primary CI: `test-stablecoin-gateway.yml`
+
+**File**: `/Users/tamer/Desktop/Projects/Claude Code creates the SW company/.github/workflows/test-stablecoin-gateway.yml`
+
+**Architecture** (6 jobs, all must pass via quality gate):
+
+```
+lint ----------------\
+security -------------\
+test-api (PG+Redis) ----> quality-gate (if: always(), verifies all 5 succeeded)
+test-frontend ---------/
+secrets-scan ---------/
+```
+
+| Job | Steps | Services | Status |
+|-----|-------|----------|--------|
+| `lint` | checkout, npm ci, ESLint, TypeScript `tsc --noEmit` | None | GOOD |
+| `security` | checkout, npm ci, `npm audit --audit-level=high --omit=dev` | None | GOOD |
+| `test-api` | checkout, npm ci, prisma generate, prisma migrate deploy, `npm test -- --forceExit --testTimeout=30000` | PostgreSQL 15-alpine (health checked), Redis 7-alpine (health checked) | EXCELLENT |
+| `test-frontend` | checkout, npm ci, `npm test` (Vitest) | None | GOOD |
+| `secrets-scan` | checkout (full history), Gitleaks | None | EXCELLENT |
+| `quality-gate` | Verifies all 5 jobs passed, fails if any did not | None | EXCELLENT |
 
 **Strengths**:
-- 5 parallel jobs: `test-api`, `test-web`, `lint`, `security`, `e2e`
-- `build` job depends on `[test-api, test-web, lint]` via `needs:`
-- Real PostgreSQL 15 and Redis 7 service containers
-- Type check (`tsc --noEmit`) runs BEFORE build and tests
-- `npm audit --audit-level=high` blocks on HIGH/CRITICAL vulnerabilities
-- Codecov coverage upload
+- Path-filtered: only triggers on `products/stablecoin-gateway/**` changes
+- Real PostgreSQL and Redis services with health checks
+- Database migrations run before tests
+- All 5 jobs must pass (enforced by quality-gate with `if: always()`)
+- Gitleaks scans full git history (`fetch-depth: 0`)
 
-**Issues**:
+### SAST Pipeline: `security-sast.yml`
 
-#### Issue #1: E2E Job Disconnect (HIGH)
+**File**: `/Users/tamer/Desktop/Projects/Claude Code creates the SW company/.github/workflows/security-sast.yml`
 
-**File**: `/Users/tamer/Desktop/Projects/Claude Code creates the SW company/products/stablecoin-gateway/.github/workflows/ci.yml:192-228`
+| Job | Tool | Config | Status |
+|-----|------|--------|--------|
+| `codeql` | GitHub CodeQL | `security-extended` queries, JS/TS | EXCELLENT |
+| `semgrep` | Semgrep | Default ruleset, SARIF upload, PR commenting (20 findings max) | GOOD (but `continue-on-error: true`) |
+| `npm-audit` | npm audit | All products + packages, `--audit-level=critical --omit=dev` | GOOD |
 
-The CI `e2e` job runs Playwright against `apps/web/` (the frontend):
+### AI Code Review: `claude-code-review.yml`
+
+**File**: `/Users/tamer/Desktop/Projects/Claude Code creates the SW company/.github/workflows/claude-code-review.yml`
+
+Runs on all PR types (opened, synchronize, ready_for_review, reopened). Uses `anthropics/claude-code-action@v1` with code-review plugin. This adds an AI review layer to every PR.
+
+---
+
+## 5. CI/CD Findings
+
+### Finding #1: E2E Full-Stack Tests Not in CI (HIGH)
+
+**Location**: E2E tests at `/Users/tamer/Desktop/Projects/Claude Code creates the SW company/products/stablecoin-gateway/e2e/integration/full-stack.test.ts` require both API (port 5001) and frontend (port 3104) running. No CI job starts these services and runs the E2E suite.
+
+**Impact**: 83 test cases covering BOLA, RFC 7807 compliance, security headers, rate limiting, path traversal, and idempotency are never validated in CI. Regressions would go undetected until manual testing.
+
+**Fix**: Add an `e2e` job to `test-stablecoin-gateway.yml` that starts both services, waits for health checks, runs `npm test` in `e2e/`, and adds it to the quality-gate dependency list.
+
+### Finding #2: JWT_SECRET in CI is Low-Entropy (MEDIUM)
+
+**File**: `/Users/tamer/Desktop/Projects/Claude Code creates the SW company/.github/workflows/test-stablecoin-gateway.yml:94`
+
+**Code**:
 ```yaml
-- name: Run E2E tests
-  working-directory: products/stablecoin-gateway/apps/web
-  run: npx playwright test
+JWT_SECRET: test-jwt-secret-ci
 ```
 
-But the `e2e/` directory at the product root contains a **separate Jest-based full-stack integration test** (`e2e/integration/full-stack.test.ts`) that hits a running API at `localhost:5001` and frontend at `localhost:3104`. This test:
-- Tests auth flow (signup, login, duplicate rejection)
-- Tests payment session creation
-- Tests API key CRUD
-- Tests webhook CRUD
-- Tests frontend accessibility
-- Tests auth edge cases
+This is 19 characters. The project's own test at `/Users/tamer/Desktop/Projects/Claude Code creates the SW company/products/stablecoin-gateway/apps/api/tests/utils/jwt-secret-entropy.test.ts` enforces a 64-character minimum for production. While this is a test-only value, it:
+1. Contradicts the project's own security standards
+2. Establishes a pattern of low-entropy secrets in version control
 
-**This full-stack test is never run in CI.** The `build` job does not depend on `e2e` via `needs:`, so even the Playwright tests are non-blocking.
+**Fix**: Use a 64+ character test secret to align with the project's entropy requirements.
 
-**Impact**: Full-stack integration bugs (API + DB + frontend interplay) can reach production undetected.
+### Finding #3: Semgrep is Non-Blocking (MEDIUM)
 
-**Fix**:
-```yaml
-build:
-  name: Build
-  needs: [test-api, test-web, lint, e2e]  # Add e2e dependency
-```
-And add a CI job for the full-stack integration tests (requires both API and web running).
-
-#### Issue #2: Security Job Non-Blocking (MEDIUM)
-
-**File**: `/Users/tamer/Desktop/Projects/Claude Code creates the SW company/products/stablecoin-gateway/.github/workflows/ci.yml:229-231`
-
-The `build` job depends on `[test-api, test-web, lint]` but NOT `security`:
-```yaml
-build:
-  name: Build
-  needs: [test-api, test-web, lint]  # Missing: security, e2e
-```
-
-A build with HIGH-severity npm vulnerabilities will still succeed.
-
-**Fix**:
-```yaml
-needs: [test-api, test-web, lint, security, e2e]
-```
-
-#### Issue #3: No Coverage Threshold (MEDIUM)
-
-**File**: `/Users/tamer/Desktop/Projects/Claude Code creates the SW company/products/stablecoin-gateway/.github/workflows/ci.yml:78`
+**File**: `/Users/tamer/Desktop/Projects/Claude Code creates the SW company/.github/workflows/security-sast.yml:49`
 
 ```yaml
-run: npm test -- --ci --coverage
+continue-on-error: true
 ```
 
-Coverage is generated and uploaded to Codecov, but there is no `--coverageThreshold` flag or Jest config to fail the build if coverage drops below a minimum. Coverage can silently regress.
+Semgrep findings never block the build. Security issues found by static analysis are informational only.
 
-**Fix**: Add to `jest.config.ts`:
+**Fix**: Remove `continue-on-error` after establishing a findings baseline. Use `.semgrepignore` for known false positives.
+
+### Finding #4: `forceExit` Masks Resource Leaks (LOW)
+
+**File**: `/Users/tamer/Desktop/Projects/Claude Code creates the SW company/.github/workflows/test-stablecoin-gateway.yml:122` and `/Users/tamer/Desktop/Projects/Claude Code creates the SW company/products/stablecoin-gateway/e2e/integration/jest.config.ts:109`
+
+Both CI and E2E config use `forceExit`. This masks Fastify server or database connection leaks that are not properly cleaned up in `afterAll()`.
+
+**Fix**: Run tests locally with `--detectOpenHandles` to identify the leak source. Remove `forceExit` once fixed.
+
+### Finding #5: No Coverage Threshold Enforcement (MEDIUM)
+
+**File**: `/Users/tamer/Desktop/Projects/Claude Code creates the SW company/products/stablecoin-gateway/apps/api/package.json`
+
+The API uses Jest but has no `coverageThreshold` configured. The E2E config has thresholds (80% across the board at `/Users/tamer/Desktop/Projects/Claude Code creates the SW company/products/stablecoin-gateway/e2e/integration/jest.config.ts:62-69`) but measures test file coverage, not source code coverage.
+
+**Fix**: Add Jest config for API with:
 ```typescript
 coverageThreshold: {
-  global: {
-    branches: 70,
-    functions: 80,
-    lines: 80,
-    statements: 80,
-  },
+  global: { branches: 75, functions: 80, lines: 80, statements: 80 }
 },
+collectCoverageFrom: ['src/**/*.ts', '!src/**/*.d.ts']
 ```
 
-### Security Checks Workflow (`security-checks.yml`) -- GOOD (7/10)
+### Finding #6: No Staging Step in CI Pipeline (MEDIUM)
 
-**Strengths**:
-- Checks for hardcoded JWT_SECRET in docker-compose
-- Checks for hardcoded POSTGRES_PASSWORD
-- Scans for common secret patterns (API_KEY, SECRET, PASSWORD)
-- Verifies `.env.example` exists
-- Verifies `.env` is in `.gitignore`
+The CI pipeline runs tests and gates quality, but there is no deployment workflow for staging visible in the workflow files. The `deploy-preflight.test.ts` references a `deploy-production.yml`, suggesting production deployment exists, but there is no staging gate between CI pass and production.
 
-**Issues**:
+### Finding #7: Unused Playwright in Frontend (LOW)
 
-#### Issue #4: Limited Secret Scanning Scope (MEDIUM)
+**File**: `/Users/tamer/Desktop/Projects/Claude Code creates the SW company/products/stablecoin-gateway/apps/web/package.json`
 
-**File**: `/Users/tamer/Desktop/Projects/Claude Code creates the SW company/products/stablecoin-gateway/.github/workflows/security-checks.yml:51-65`
-
-The secret scan only checks `docker-compose*.yml` files. It does not scan:
-- `.ts` source files for hardcoded secrets
-- `.env.example` for accidentally committed real values
-- Config files (`tsconfig.json`, `jest.config.ts`, etc.)
-
-**Fix**: Adopt a proper secret scanning tool like `truffleHog`, `detect-secrets`, or `gitleaks` as a CI step:
-```yaml
-- name: Run gitleaks
-  uses: gitleaks/gitleaks-action@v2
-  env:
-    GITHUB_TOKEN: ${{ secrets.GITHUB_TOKEN }}
-```
-
-#### Issue #5: No SAST (Static Application Security Testing) (MEDIUM)
-
-No SAST tool (e.g., Semgrep, CodeQL, Snyk Code) is configured. The security checks are limited to dependency auditing (`npm audit`) and secret pattern matching.
-
-**Fix**: Add CodeQL or Semgrep:
-```yaml
-- name: Run Semgrep
-  uses: returntocorp/semgrep-action@v1
-  with:
-    config: >-
-      p/owasp-top-ten
-      p/nodejs
-      p/typescript
-```
-
-### Deploy Staging (`deploy-staging.yml`) -- GOOD (7.5/10)
-
-**Strengths**:
-- `test-gate` job runs full test suite before deployment
-- `deploy` job depends on `test-gate` via `needs:`
-- Uses `environment: staging` for GitHub environment protection
-- AWS credentials via GitHub Secrets
-- Post-deployment smoke tests (curl health endpoints)
-- Docker images tagged with both SHA and `latest`
-
-**Issues**:
-
-#### Issue #6: Sleep-Based Deploy Verification (LOW)
-
-**File**: `/Users/tamer/Desktop/Projects/Claude Code creates the SW company/products/stablecoin-gateway/.github/workflows/deploy-staging.yml:186-188`
-
-```yaml
-- name: Wait for deployment
-  run: sleep 60
-```
-
-A fixed 60-second sleep is fragile. ECS deployments can take longer. Better to use `aws ecs wait services-stable`:
-
-```yaml
-- name: Wait for deployment
-  run: |
-    aws ecs wait services-stable \
-      --cluster stablecoin-gateway-staging \
-      --services api web \
-      --region us-east-1
-```
-
-#### Issue #7: No Rollback Automation for Staging (LOW)
-
-If the staging smoke test fails, the workflow exits with failure but does not roll back. The production workflow has rollback instructions; staging should have similar.
-
-### Deploy Production (`deploy-production.yml`) -- VERY GOOD (8.5/10)
-
-**Strengths**:
-- `workflow_dispatch` (manual trigger) with version input -- prevents accidental deploys
-- `environment: production` for GitHub approval gates
-- Pre-flight test gate (unit tests + lint) before build
-- **Database backup via RDS snapshot** before migrations -- critical for a financial system
-- Snapshot naming includes timestamp and version tag
-- `aws rds wait db-snapshot-available` ensures backup completes before proceeding
-- Post-deployment health verification
-- Detailed rollback instructions in failure step
-- Docker images tagged with version (not just `latest`)
-
-**Issues**:
-
-#### Issue #8: Single-Job Architecture (HIGH)
-
-**File**: `/Users/tamer/Desktop/Projects/Claude Code creates the SW company/products/stablecoin-gateway/.github/workflows/deploy-production.yml:11-14`
-
-Tests and deployment are in a **single job** (`deploy`). If any step fails, the entire job fails -- but this means:
-1. If the test step passes and the deploy step fails, the DB snapshot exists but no restore is automatic
-2. There is no `needs:` dependency chain; step ordering is the only guard
-3. A future refactoring that reorders steps could accidentally deploy before tests
-
-**Fix**: Split into two jobs:
-```yaml
-jobs:
-  pre-flight:
-    name: Pre-flight Gate
-    runs-on: ubuntu-latest
-    steps: [tests, lint]
-
-  deploy:
-    name: Deploy
-    needs: [pre-flight]
-    runs-on: ubuntu-latest
-    environment: production
-    steps: [backup, migrate, build, push, deploy, verify]
-```
-
-#### Issue #9: Rollback is Manual Instructions Only (MEDIUM)
-
-**File**: `/Users/tamer/Desktop/Projects/Claude Code creates the SW company/products/stablecoin-gateway/.github/workflows/deploy-production.yml:180-198`
-
-The rollback step only echoes instructions. For a financial system, automated rollback (at least for the ECS service) would be safer:
-
-```yaml
-- name: Rollback on failure
-  if: failure()
-  run: |
-    echo "Rolling back ECS services to previous task definition..."
-    aws ecs update-service \
-      --cluster stablecoin-gateway-production \
-      --service api \
-      --force-new-deployment \
-      --region us-east-1
-```
-
-#### Issue #10: Sleep 120s for Production (LOW)
-
-**File**: `/Users/tamer/Desktop/Projects/Claude Code creates the SW company/products/stablecoin-gateway/.github/workflows/deploy-production.yml:159`
-
-Same issue as staging but with 120 seconds. Use `aws ecs wait services-stable`.
+The frontend declares `@playwright/test: ^1.58.2` as a devDependency and defines a `test:e2e` script, but no Playwright test files exist in `apps/web/`. All E2E testing uses the separate `e2e/` directory with Jest + fetch. The dependency is dead weight.
 
 ---
 
-## E2E Test Analysis
+## 6. Deployment Safety Assessment
 
-### `e2e/integration/full-stack.test.ts` -- GOOD (7/10)
+| Check | Present? | Details |
+|-------|----------|---------|
+| Pre-deployment test gate | YES | `quality-gate` requires all 5 jobs (lint, security, test-api, test-frontend, secrets-scan) |
+| TypeScript type checking | YES | `tsc --noEmit --pretty` in lint job |
+| ESLint | YES | `npm run lint --if-present` |
+| Security audit | YES | `npm audit --audit-level=high --omit=dev` (blocking) |
+| SAST scanning | YES | CodeQL (`security-extended`) + Semgrep (non-blocking) |
+| Secret scanning | YES | Gitleaks with full git history |
+| Database migration | YES | `prisma migrate deploy` runs in CI |
+| Health check endpoint | YES | `/health` and `/ready` tested in `health.test.ts` (6 cases) |
+| E2E tests in CI | **NO** | 83 E2E tests exist but run manually only |
+| Coverage enforcement | **NO** | No thresholds configured |
+| Staging deployment | **UNKNOWN** | Not visible in available workflow files |
+| Rollback capability | **UNKNOWN** | Not visible in available workflow files |
+| npm audit (critical) | YES | Global SAST workflow audits all products at `--audit-level=critical` |
 
-**File**: `/Users/tamer/Desktop/Projects/Claude Code creates the SW company/products/stablecoin-gateway/e2e/integration/full-stack.test.ts`
+---
 
-**Strengths**:
-- Tests complete user journey: signup -> login -> create payment -> API key CRUD -> webhook CRUD
-- Tests auth edge cases (invalid token, missing token, expired JWT)
-- Uses unique timestamp-based test data to avoid conflicts
-- Tests both API and frontend accessibility
+## 7. Secret Management in CI
 
-**Issues**:
+| Secret/Value | Method | Assessment |
+|-------------|--------|------------|
+| `GITHUB_TOKEN` | `${{ secrets.GITHUB_TOKEN }}` (auto-injected) | GOOD |
+| `GITLEAKS_LICENSE` | `${{ secrets.GITLEAKS_LICENSE }}` | GOOD |
+| `CLAUDE_CODE_OAUTH_TOKEN` | `${{ secrets.CLAUDE_CODE_OAUTH_TOKEN }}` | GOOD |
+| `DATABASE_URL` | Hardcoded (points to local service container) | ACCEPTABLE (test-only) |
+| `REDIS_URL` | Hardcoded (`redis://localhost:6379`) | ACCEPTABLE (test-only) |
+| `JWT_SECRET` | Hardcoded (`test-jwt-secret-ci`) | **NEEDS FIX** -- low entropy |
+| `FRONTEND_URL` | Hardcoded (`http://localhost:3104`) | ACCEPTABLE (test-only) |
+| `ALLOWED_ORIGINS` | Hardcoded (`http://localhost:3104`) | ACCEPTABLE (test-only) |
+| `USE_KMS` | Hardcoded (`false`) | ACCEPTABLE (test-only) |
+| `LOG_LEVEL` | Hardcoded (`warn`) | ACCEPTABLE |
 
-#### Issue #11: Hardcoded Ports (MEDIUM)
+**No production secrets are exposed.** All hardcoded values are test-only configuration for CI service containers.
 
-```typescript
-const API_BASE_URL = 'http://localhost:5001';
-const FRONTEND_URL = 'http://localhost:3104';
+---
+
+## 8. Dependency Assessment
+
+### Backend (`apps/api/package.json`)
+
+| Package | Version | Status | Notes |
+|---------|---------|--------|-------|
+| `fastify` | `^5.7.4` | Current | Major version 5 |
+| `@prisma/client` | `^5.8.1` | Check for updates | Prisma 5.x, verify latest patches |
+| `bcrypt` | `^6.0.0` | Current | Secure password hashing |
+| `ethers` | `^6.10.0` | Current | Ethereum interaction |
+| `zod` | `^3.22.4` | Current | Input validation |
+| `@fastify/helmet` | `^13.0.2` | Current | Security headers |
+| `@fastify/rate-limit` | `^10.3.0` | Current | Rate limiting |
+| `@fastify/jwt` | `^10.0.0` | Current | JWT auth |
+| `ioredis` | `^5.9.3` | Current | Redis client |
+| `@aws-sdk/client-kms` | `^3.995.0` | Current | AWS KMS |
+| `decimal.js` | `^10.6.0` | Current | Financial precision |
+| `bullmq` | `^5.70.1` | Current | Job queue |
+| `@typescript-eslint/*` | `^6.18.1` | **OUTDATED** | v6 is legacy, v8 is current. Frontend uses v8. |
+
+### Frontend (`apps/web/package.json`)
+
+| Package | Version | Status | Notes |
+|---------|---------|--------|-------|
+| `react` | `^19.2.0` | Current | React 19 (latest) |
+| `vite` | `^7.2.4` | Current | Build tool |
+| `vitest` | `^3.2.4` | Current | Test framework |
+| `@playwright/test` | `^1.58.2` | **Unused** | No Playwright tests exist in web dir |
+| `viem` | `^2.46.2` | Current | Ethereum client |
+| `wagmi` | `^3.5.0` | Current | Wallet connection |
+| `tailwindcss` | `^4.1.18` | Current | Styling |
+| `typescript` | `~5.9.3` | Current | |
+
+### Inconsistency
+
+The API uses `@typescript-eslint/eslint-plugin: ^6.18.1` (v6) while the frontend uses `typescript-eslint: ^8.56.0` (v8). This should be unified to v8.
+
+---
+
+## 9. Test Quality Scorecard
+
+| Domain | Coverage | Quality | Edge Cases | Security | Overall |
+|--------|----------|---------|------------|----------|---------|
+| Auth & AuthZ | 9/10 | 9/10 | 9/10 | 9/10 | **9.0** |
+| Payment Flow | 9/10 | 9/10 | 8/10 | 8/10 | **8.5** |
+| Refund System | 9/10 | 8/10 | 9/10 | 8/10 | **8.5** |
+| Webhook System | 9/10 | 8/10 | 9/10 | 9/10 | **8.8** |
+| Blockchain & KMS | 8/10 | 8/10 | 8/10 | 8/10 | **8.0** |
+| Financial Precision | 10/10 | 10/10 | 10/10 | N/A | **10.0** |
+| Rate Limiting | 9/10 | 9/10 | 8/10 | 9/10 | **8.8** |
+| Security Headers/CORS | 8/10 | 8/10 | 7/10 | 9/10 | **8.0** |
+| BOLA Protection | 8/10 | 8/10 | 8/10 | 9/10 | **8.3** |
+| GDPR Compliance | 7/10 | 7/10 | 6/10 | 7/10 | **6.8** |
+| Observability | 7/10 | 8/10 | 6/10 | N/A | **7.0** |
+| CI/CD Pipeline | 7/10 | 8/10 | 7/10 | 8/10 | **7.5** |
+| Frontend Components | 8/10 | 7/10 | 6/10 | 6/10 | **6.8** |
+| E2E Full-Stack | 9/10 | 8/10 | 8/10 | 8/10 | **8.3** |
+
+**Weighted Average: 8.2/10**
+
+---
+
+## 10. Remediation Roadmap
+
+### Immediate (1-2 days)
+
+| # | Action | Effort | Impact |
+|---|--------|--------|--------|
+| 1 | Write `tests/services/email.service.test.ts` (10-12 tests: receipts, notifications, preferences, `escapeHtml` XSS) | 2-3 hours | Closes HIGH gap |
+| 2 | Write `tests/integration/checkout.test.ts` (6-8 tests: happy path, 410 expiry, 404, field exclusion, rate limit) | 2 hours | Closes HIGH gap |
+| 3 | Change `JWT_SECRET` in `test-stablecoin-gateway.yml` to 64+ characters | 5 minutes | Aligns CI with own security standards |
+| 4 | Add Jest `coverageThreshold` to API test config | 30 minutes | Prevents silent regressions |
+
+### Short-Term (1-2 weeks)
+
+| # | Action | Effort | Impact |
+|---|--------|--------|--------|
+| 5 | Add E2E job to `test-stablecoin-gateway.yml` (start services, run `e2e/integration/full-stack.test.ts`) | 4 hours | Adds 83 tests to CI |
+| 6 | Write tests for `blockchain-query.service.ts` | 2 hours | Closes MEDIUM gap |
+| 7 | Write tests for `webhook-delivery-executor.service.ts` | 2 hours | Closes MEDIUM gap |
+| 8 | Remove `continue-on-error` from Semgrep in `security-sast.yml` | 15 minutes | Makes SAST blocking |
+| 9 | Remove `forceExit` from CI and E2E config, fix underlying leaks | 2 hours | Catches resource leaks |
+| 10 | Update `@typescript-eslint/*` from v6 to v8 in API package | 1 hour | Consistency + latest rules |
+
+### Medium-Term (1 month)
+
+| # | Action | Effort | Impact |
+|---|--------|--------|--------|
+| 11 | Add staging deployment workflow with E2E gate | 1 day | Pre-production validation |
+| 12 | Add webhook delivery integration test with local HTTP server | 4 hours | Tests real HTTP delivery |
+| 13 | Write dev-route production guard test (verify not registered when `NODE_ENV=production`) | 30 minutes | Prevents accidental exposure |
+| 14 | Remove unused Playwright dependency from `apps/web/package.json` | 5 minutes | Reduces attack surface |
+| 15 | Add rollback automation in deployment workflow | 1 day | Production safety |
+
+---
+
+## Appendix: Metrics Summary
+
+```
+TOTAL TEST FILES:              168
+TOTAL TEST CASES:            1,559
+  Backend API:               1,029 (115 files)
+  Frontend:                    447 (52 files)
+  E2E Full-Stack:               83 (1 file)
+
+CI PIPELINE JOBS:                6 (lint, security, test-api, test-frontend, secrets-scan, quality-gate)
+CI WORKFLOW FILES:               4 relevant (test, SAST, Claude review, monorepo shared)
+SAST TOOLS:                      3 (CodeQL, Semgrep, Gitleaks)
+
+ROUTES TESTED:              11/13 (85%)
+SERVICES TESTED:            14/19 (74%)
+PLUGINS TESTED:              4/4  (100%)
+
+TEST-TO-SOURCE RATIO:        2.09:1 (115 test files / 55 source files for API)
+SECURITY TEST CATEGORIES:       10 (SSRF, BOLA, CORS, headers, rate limit, lockout,
+                                    token revocation, path traversal, encryption, PII redaction)
+RACE CONDITION TEST FILES:       6
+FINANCIAL PRECISION TESTS:      26
 ```
 
-These should be environment variables. Port 5001 does not match the company port registry (API ports are 5000+, and the addendum mentions different ports in different places).
-
-#### Issue #12: No Cleanup (LOW)
-
-Test data (users, payment sessions, API keys) created during E2E tests is not cleaned up. In a shared staging environment, this would pollute the database.
-
-#### Issue #13: Sequential Test Dependencies (MEDIUM)
-
-Tests depend on shared state (`authToken`, `createdApiKeyId`, `createdWebhookId`) set by previous tests. If the login test fails, all subsequent tests fail with misleading errors. Each test block should be independently runable.
-
 ---
 
-## Test Quality Assessment
-
-### Testing Approach Distribution
-
-| Approach | File Count | Percentage |
-|----------|-----------|------------|
-| Integration (real Fastify + real DB) | 87 | 75.6% |
-| Unit (isolated function tests) | 15 | 13.0% |
-| Schema/Config validation | 3 | 2.6% |
-| CI/CD structure validation | 2 | 1.7% |
-| Mock-heavy service tests | 8 | 7.0% |
-
-**Assessment**: The 75%+ integration test ratio is excellent. Tests are testing **behavior** (HTTP status codes, response shapes, database state) rather than implementation details. The few mock-heavy tests (`kms.service.test.ts`, `webhook-delivery.test.ts`) mock external dependencies (AWS KMS, HTTP fetch) which is appropriate.
-
-### Anti-Patterns Detected
-
-1. **Global fetch mock** in `webhook-delivery.test.ts` (line 6): `global.fetch = jest.fn()` should be `jest.spyOn(global, 'fetch')` with restore.
-
-2. **Shared state across describe blocks** in `full-stack.test.ts`: `authToken` and IDs are set in one `describe` and used in another. A test framework reordering or parallel execution would break these.
-
-3. **No negative test for dev routes in production**: `dev.ts` contains comment "NEVER registered in production" but there is no test verifying this claim (e.g., `expect(app).not.toHaveRoute('/v1/dev/simulate/:id')` when `NODE_ENV=production`).
-
-### Test Quality Strengths
-
-1. **Rate limit bucket isolation**: Using unique `User-Agent` strings per test block to avoid rate-limit collisions is sophisticated.
-
-2. **Financial precision contrast tests**: Testing both `Decimal('0.1').plus('0.2') === '0.3'` AND `0.1 + 0.2 !== 0.3` in the same test is excellent documentation-as-code.
-
-3. **CI/CD meta-tests**: Tests that parse workflow YAML to verify step ordering and env vars (`audit-config.test.ts`, `deploy-preflight.test.ts`) catch deployment regressions that traditional tests miss.
-
-4. **Concurrency tests**: `payment-race-condition.test.ts` uses `Promise.allSettled` with real database `SELECT ... FOR UPDATE` to verify serialization. This is production-grade testing.
-
-5. **Security test depth**: 8 distinct auth negative-path tests, account lockout with Redis simulation, PII redaction verification, encryption tampering detection.
-
----
-
-## Critical Issues Summary (Ranked by Risk)
-
-| # | Severity | Issue | Location | Fix Effort |
-|---|----------|-------|----------|------------|
-| 1 | **HIGH** | E2E tests not blocking CI build | `ci.yml:229` | 1 hour |
-| 2 | **HIGH** | Security audit not blocking CI build | `ci.yml:229` | 10 min |
-| 3 | **HIGH** | Production deploy: single-job architecture | `deploy-production.yml:11` | 2 hours |
-| 4 | **MEDIUM** | No test coverage threshold | `ci.yml:78` | 30 min |
-| 5 | **MEDIUM** | No SAST tool in CI | `.github/workflows/` | 2 hours |
-| 6 | **MEDIUM** | Checkout route (`checkout.ts`) untested | `src/routes/v1/checkout.ts` | 3 hours |
-| 7 | **MEDIUM** | BOLA gap for payment session GET by ID | `payment-sessions.test.ts` | 1 hour |
-| 8 | **MEDIUM** | Secret scanning limited to docker-compose | `security-checks.yml:51` | 1 hour |
-| 9 | **MEDIUM** | E2E hardcoded ports and no cleanup | `e2e/integration/full-stack.test.ts` | 1 hour |
-| 10 | **LOW** | Global fetch mock leak risk | `webhook-delivery.test.ts:6` | 15 min |
-| 11 | **LOW** | No dev route production guard test | Missing | 30 min |
-| 12 | **LOW** | Sleep-based deploy verification | `deploy-staging.yml:186`, `deploy-production.yml:159` | 30 min |
-| 13 | **LOW** | No automated rollback for staging | `deploy-staging.yml` | 1 hour |
-
----
-
-## Remediation Roadmap
-
-### Immediate (This Sprint)
-
-1. Add `security` and `e2e` to `build.needs` in `ci.yml`
-2. Add `--coverageThreshold` to Jest config or CI command
-3. Write tests for `checkout.ts` (public endpoint, no auth -- highest risk)
-4. Add BOLA test for `GET /v1/payment-sessions/:id` with cross-user check
-5. Fix global fetch mock in `webhook-delivery.test.ts`
-
-### Next Sprint
-
-6. Split production deploy into 2 jobs (pre-flight + deploy)
-7. Add SAST tool (Semgrep or CodeQL) to CI
-8. Add `gitleaks` secret scanner to CI
-9. Replace `sleep` with `aws ecs wait services-stable`
-10. Add dev-route production guard test
-
-### Backlog
-
-11. Write tests for `email.service.ts`
-12. Write test for GDPR data export (`GET /v1/me/export`)
-13. Add JWT algorithm confusion test
-14. Add SSRF test for webhook URL validation
-15. Convert E2E to use environment variables for ports
-16. Add E2E test cleanup (delete test data)
-
----
-
-## Test Category Scorecard
-
-| Category | Coverage | Quality | Depth | Overall |
-|----------|----------|---------|-------|---------|
-| Auth & AuthZ | 9/10 | 9/10 | 9/10 | **9/10** |
-| BOLA | 8/10 | 8/10 | 7/10 | **7.7/10** |
-| Rate Limiting | 9/10 | 9/10 | 9/10 | **9/10** |
-| Financial Precision | 10/10 | 10/10 | 10/10 | **10/10** |
-| Payment Flow | 8/10 | 9/10 | 9/10 | **8.7/10** |
-| Refund System | 8/10 | 8/10 | 9/10 | **8.3/10** |
-| Webhook System | 8/10 | 7/10 | 9/10 | **8/10** |
-| Blockchain & KMS | 8/10 | 7/10 | 8/10 | **7.7/10** |
-| Security | 9/10 | 9/10 | 8/10 | **8.7/10** |
-| GDPR | 7/10 | 7/10 | 6/10 | **6.7/10** |
-| Observability | 7/10 | 8/10 | 6/10 | **7/10** |
-| CI/CD Pipeline | 7/10 | 8/10 | 7/10 | **7.3/10** |
-
-**Weighted Average: 8.1/10**
-
----
-
-## CI/CD Scorecard
-
-| Dimension | Score | Notes |
-|-----------|-------|-------|
-| Build Gate | 8/10 | Type check + build before tests; but no bundle size check |
-| Test Gate | 7/10 | Tests run before deploy; but E2E and security non-blocking |
-| Secret Management | 8/10 | Secrets in GitHub Secrets; CI test uses safe test values |
-| Deployment Safety | 7.5/10 | DB backup, approval gates; but single-job, manual rollback |
-| Security Scanning | 6/10 | npm audit + custom secret patterns; no SAST, no gitleaks |
-| Rollback Plan | 6/10 | Instructions printed; no automation |
-
-**CI/CD Overall: 7.1/10**
-
----
-
-*Report generated by Code Reviewer Agent. All file paths are absolute. All findings include specific file references and line numbers where applicable.*
+*Report generated by Code Reviewer Agent. All file paths are absolute. All findings include specific file references.*
+*Previous version (v1) is superseded by this comprehensive analysis.*
