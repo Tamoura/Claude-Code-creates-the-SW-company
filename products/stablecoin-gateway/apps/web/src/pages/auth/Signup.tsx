@@ -193,11 +193,11 @@ export default function Signup() {
               />
               <span className="text-sm text-text-secondary">
                 I agree to the{' '}
-                <a href="#" className="text-accent-pink hover:text-pink-400 underline">
+                <a href="/terms" className="text-accent-pink hover:text-pink-400 underline">
                   Terms of Service
                 </a>{' '}
                 and{' '}
-                <a href="#" className="text-accent-pink hover:text-pink-400 underline">
+                <a href="/privacy" className="text-accent-pink hover:text-pink-400 underline">
                   Privacy Policy
                 </a>
               </span>

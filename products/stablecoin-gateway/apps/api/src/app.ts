@@ -340,6 +340,18 @@ export async function buildApp(): Promise<FastifyInstance> {
     });
   });
 
+  // Readiness probe — lightweight check that DB is reachable.
+  // Load balancers hit this to decide whether to route traffic.
+  // Unlike /health, this does NOT expose infrastructure details.
+  fastify.get('/ready', async (_request, reply) => {
+    try {
+      await fastify.prisma.$queryRaw`SELECT 1`;
+      return reply.code(200).send({ status: 'ready' });
+    } catch {
+      return reply.code(503).send({ status: 'not_ready' });
+    }
+  });
+
   // Global error handler
   fastify.setErrorHandler((error, request, reply) => {
     if (error instanceof AppError) {
