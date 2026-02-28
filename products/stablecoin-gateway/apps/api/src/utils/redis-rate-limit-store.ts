@@ -75,15 +75,20 @@ export class RedisRateLimitStore {
     const ttl = (this as any)._routeTtl || 60000; // Use route-specific TTL or default
 
     try {
-      // Increment and set TTL if not exists
-      const current = await this.redis.incr(redisKey);
-
-      // Set TTL on first request (when counter is 1)
-      if (current === 1) {
-        await this.redis.pexpire(redisKey, ttl);
-      }
-
-      const remainingTtl = await this.redis.pttl(redisKey);
+      // Atomic INCR + PEXPIRE via Lua script to prevent race conditions
+      // where a key could be incremented but never expire (leak).
+      // Returns [current_count, remaining_ttl_ms].
+      const luaScript = `
+        local current = redis.call('INCR', KEYS[1])
+        if current == 1 then
+          redis.call('PEXPIRE', KEYS[1], ARGV[1])
+        end
+        local remaining = redis.call('PTTL', KEYS[1])
+        return {current, remaining}
+      `;
+      const result = await this.redis.eval(luaScript, 1, redisKey, ttl) as [number, number];
+      const current = result[0];
+      const remainingTtl = result[1];
 
       callback(null, {
         current,

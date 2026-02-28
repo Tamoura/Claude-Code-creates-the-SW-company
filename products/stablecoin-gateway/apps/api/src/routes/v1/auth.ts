@@ -123,8 +123,10 @@ const authRoutes: FastifyPluginAsync = async (fastify) => {
 
     try {
       const redis = fastify.redis;
-      const lockKey = `lockout:${body.email}`;
-      const failKey = `failed:${body.email}`;
+      // PRIVACY: Hash email before using as Redis key to avoid storing PII
+      const emailHash = createHash('sha256').update(body.email.toLowerCase()).digest('hex');
+      const lockKey = `lockout:${emailHash}`;
+      const failKey = `failed:${emailHash}`;
 
       // Check if account is locked (Redis-based, degrades gracefully)
       if (redis) {
@@ -162,7 +164,7 @@ const authRoutes: FastifyPluginAsync = async (fastify) => {
               LOCKOUT_DURATION_MS
             );
             logger.warn('Account locked due to failed login attempts', {
-              email: body.email,
+              emailHash,
               attempts,
             });
             throw new AppError(

@@ -178,6 +178,33 @@ const observabilityPlugin: FastifyPluginAsync = async (fastify) => {
     throw error;
   });
 
+  // Periodic metrics flush: log a summary every 60 seconds so that metrics
+  // are captured in log aggregation (e.g. CloudWatch, Datadog) and survive
+  // process restarts. The interval is cleared on server close.
+  const METRICS_FLUSH_INTERVAL_MS = 60_000;
+  const flushInterval = setInterval(() => {
+    if (metrics.requests.total === 0) return; // nothing to report yet
+    const avgDuration =
+      metrics.performance.requestCount > 0
+        ? Math.round(metrics.performance.totalDuration / metrics.performance.requestCount)
+        : 0;
+    logger.info('metrics_snapshot', {
+      requests_total: metrics.requests.total,
+      errors_total: metrics.errors.total,
+      avg_duration_ms: avgDuration,
+      p99_ms: Math.round(calculatePercentile(metrics.performance.p99, 99)),
+      by_status: metrics.requests.byStatus,
+      started_at: metricsStartedAt,
+    });
+  }, METRICS_FLUSH_INTERVAL_MS);
+  // Prevent the interval from keeping the process alive during shutdown
+  if (flushInterval.unref) flushInterval.unref();
+
+  // Also clear interval explicitly on server shutdown
+  fastify.addHook('onClose', async () => {
+    clearInterval(flushInterval);
+  });
+
   // Metrics endpoint (internal only - requires INTERNAL_API_KEY authentication)
   fastify.get('/internal/metrics', async (request, reply) => {
     const authHeader = request.headers.authorization;
@@ -189,15 +216,19 @@ const observabilityPlugin: FastifyPluginAsync = async (fastify) => {
       return reply.code(500).send({ error: 'Metrics endpoint not configured' });
     }
 
-    // Timing-safe comparison to prevent timing side-channel attacks
+    // Timing-safe comparison to prevent timing side-channel attacks.
+    // Both buffers are padded to equal length so the comparison does NOT
+    // leak whether the supplied value has the correct length.
     const expectedValue = `Bearer ${expectedKey}`;
     const suppliedValue = authHeader || '';
+    const maxLen = Math.max(expectedValue.length, suppliedValue.length);
+    const expectedBuf = Buffer.alloc(maxLen, 0);
+    const suppliedBuf = Buffer.alloc(maxLen, 0);
+    Buffer.from(expectedValue).copy(expectedBuf);
+    Buffer.from(suppliedValue).copy(suppliedBuf);
     const isValid =
       suppliedValue.length === expectedValue.length &&
-      crypto.timingSafeEqual(
-        Buffer.from(suppliedValue),
-        Buffer.from(expectedValue),
-      );
+      crypto.timingSafeEqual(suppliedBuf, expectedBuf);
 
     if (!isValid) {
       return reply.code(401).send({ error: 'Unauthorized' });

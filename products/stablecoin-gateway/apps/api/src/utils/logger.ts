@@ -4,14 +4,24 @@ interface LogData {
   [key: string]: unknown;
 }
 
-/** Keys whose values should be redacted from log output. */
-const SENSITIVE_PATTERNS = [
+/** Substring patterns: any key containing these substrings is redacted. */
+const SENSITIVE_SUBSTRINGS = [
   'password', 'secret', 'token', 'authorization',
   'apikey', 'api_key', 'private_key', 'privatekey',
   'credit_card', 'creditcard', 'ssn', 'cookie',
   'encryption_key', 'hmac', 'mnemonic', 'seed_phrase',
-  'email',
+  'email', 'ipaddress', 'ip_address',
 ];
+
+/**
+ * Exact-match patterns: only keys that match exactly (case-insensitive) are
+ * redacted. This prevents short tokens like "ip" from matching unrelated keys
+ * such as "description" or "script".
+ */
+const SENSITIVE_EXACT = new Set([
+  'ip', 'client_ip', 'clientip', 'remote_ip', 'remoteip',
+  'x_forwarded_for', 'x-forwarded-for',
+]);
 
 /**
  * Recursively redact sensitive fields from a data object.
@@ -21,7 +31,10 @@ function redactSensitiveFields(data: LogData): LogData {
   const redacted: LogData = {};
   for (const [key, value] of Object.entries(data)) {
     const lowerKey = key.toLowerCase();
-    if (SENSITIVE_PATTERNS.some((p) => lowerKey.includes(p))) {
+    const isSensitive =
+      SENSITIVE_EXACT.has(lowerKey) ||
+      SENSITIVE_SUBSTRINGS.some((p) => lowerKey.includes(p));
+    if (isSensitive) {
       redacted[key] = '[REDACTED]';
     } else if (value !== null && typeof value === 'object' && !Array.isArray(value)) {
       redacted[key] = redactSensitiveFields(value as LogData);

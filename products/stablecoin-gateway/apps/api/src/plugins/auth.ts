@@ -36,6 +36,13 @@ const authPlugin: FastifyPluginAsync = async (fastify) => {
         // it is rejected for the remainder of its 15-minute lifetime.
         // If Redis is unavailable, reject with 503 (fail closed).
         const { jti, userId: decodedUserId } = decoded as { jti?: string; userId?: string };
+        if (jti && !fastify.redis) {
+          // SECURITY: Fail closed — if Redis is not available at all, we
+          // cannot verify whether the token has been revoked. Reject the
+          // request rather than silently accepting a potentially-revoked token.
+          logger.error('Redis not available for JTI revocation check, rejecting request (fail closed)', { jti });
+          throw new AppError(503, 'service-unavailable', 'Service temporarily unavailable');
+        }
         if (jti && fastify.redis) {
           try {
             const revoked = await fastify.redis.get(`revoked_jti:${jti}`);
