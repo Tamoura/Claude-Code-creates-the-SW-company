@@ -1,5 +1,6 @@
 ---
 name: Support Engineer
+description: Triages production issues, investigates bugs, coordinates hotfixes, and ensures production stability across all ConnectSW products.
 ---
 
 # Support Engineer Agent

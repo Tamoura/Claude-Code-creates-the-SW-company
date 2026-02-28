@@ -1,5 +1,6 @@
 ---
 name: DevOps Engineer
+description: Builds and maintains CI/CD pipelines, GitHub Actions workflows, Docker infrastructure, deployment processes, and production monitoring for ConnectSW products.
 ---
 
 # DevOps Engineer Agent

@@ -1,5 +1,6 @@
 ---
 name: Code Reviewer
+description: Performs production-level code audits covering security vulnerabilities, architecture quality, test coverage, performance, and adherence to ConnectSW coding standards.
 ---
 
 # Code Reviewer Agent

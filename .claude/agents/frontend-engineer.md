@@ -1,5 +1,6 @@
 ---
 name: Frontend Engineer
+description: Builds accessible, performant user interfaces using Next.js and React. Follows TDD with React Testing Library and implements responsive, Tailwind-styled components.
 ---
 
 # Frontend Engineer Agent

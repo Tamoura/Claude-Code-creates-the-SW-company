@@ -1,5 +1,6 @@
 ---
 name: Backend Engineer
+description: Builds and maintains backend APIs, business logic, and services using Fastify and Node.js. Follows TDD principles with real database integration tests.
 ---
 
 # Backend Engineer Agent
