@@ -250,10 +250,24 @@ export class RefundService {
 
   /**
    * Process a refund (execute blockchain transaction)
+   *
+   * ADR: userId is optional but MUST be provided when called from
+   * route handlers for BOLA protection. Without this check, any
+   * authenticated user who discovers a refund ID could trigger
+   * processing of another user's refund, draining funds to an
+   * address they don't control. The ownership check mirrors the
+   * pattern used in createRefund.
+   *
+   * Internal callers (refund worker) already verified ownership
+   * upstream via the PENDING refund query, so they may omit userId.
    */
-  async processRefund(id: string): Promise<Refund> {
-    const refund = await this.prisma.refund.findUnique({
-      where: { id },
+  async processRefund(id: string, userId?: string): Promise<Refund> {
+    const whereClause = userId
+      ? { id, paymentSession: { userId } }
+      : { id };
+
+    const refund = await this.prisma.refund.findFirst({
+      where: whereClause,
       include: { paymentSession: true },
     });
 
@@ -369,12 +383,12 @@ export class RefundService {
   }
 
   // Delegate to finalization service
-  async completeRefund(id: string, txHash: string, blockNumber?: number): Promise<Refund> {
-    return this.finalizationService.completeRefund(id, txHash, blockNumber);
+  async completeRefund(id: string, txHash: string, blockNumber?: number, userId?: string): Promise<Refund> {
+    return this.finalizationService.completeRefund(id, txHash, blockNumber, userId);
   }
 
-  async failRefund(id: string): Promise<Refund> {
-    return this.finalizationService.failRefund(id);
+  async failRefund(id: string, userId?: string): Promise<Refund> {
+    return this.finalizationService.failRefund(id, userId);
   }
 
   async confirmRefundFinality(

@@ -79,12 +79,14 @@ export class RefundProcessingWorker {
       // row-level locks are held for the duration of processing, preventing
       // concurrent instances from claiming the same refunds.
       await this.prisma.$transaction(async (tx) => {
-        const pendingRefunds = await tx.$queryRaw`
-          SELECT id FROM "refunds"
-          WHERE status = 'PENDING'
-          ORDER BY "created_at" ASC
+        const pendingRefunds = await tx.$queryRaw<Array<{ id: string; user_id: string }>>`
+          SELECT r.id, ps.user_id
+          FROM "refunds" r
+          INNER JOIN "payment_sessions" ps ON r.payment_session_id = ps.id
+          WHERE r.status = 'PENDING'
+          ORDER BY r."created_at" ASC
           LIMIT ${BATCH_SIZE}
-          FOR UPDATE SKIP LOCKED
+          FOR UPDATE OF r SKIP LOCKED
         `;
 
         if (
@@ -99,7 +101,7 @@ export class RefundProcessingWorker {
 
         for (const refund of pendingRefunds) {
           try {
-            await this.refundService.processRefund(refund.id);
+            await this.refundService.processRefund(refund.id, refund.user_id);
             processed++;
           } catch (error) {
             failed++;
@@ -139,6 +141,7 @@ export class RefundProcessingWorker {
       where: { status: 'PENDING' },
       orderBy: { createdAt: 'asc' },
       take: BATCH_SIZE,
+      include: { paymentSession: { select: { userId: true } } },
     });
 
     if (pendingRefunds.length === 0) {
@@ -150,7 +153,7 @@ export class RefundProcessingWorker {
 
     for (const refund of pendingRefunds) {
       try {
-        await this.refundService.processRefund(refund.id);
+        await this.refundService.processRefund(refund.id, refund.paymentSession.userId);
         processed++;
       } catch (error) {
         failed++;
