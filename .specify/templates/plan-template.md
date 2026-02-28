@@ -122,6 +122,21 @@ sequenceDiagram
 
 **If ANY gate fails: ERROR — resolve before proceeding.**
 
+## Implementation Audit *(mandatory — Verification-Before-Planning Protocol)*
+
+**Gate: Before Phase 0** — Capabilities verified against existing codebase per `.claude/protocols/verification-before-planning.md`.
+
+| # | Capability | Spec Req | Status | Evidence | Action |
+|---|-----------|----------|--------|----------|--------|
+| 1 | [Capability] | [FR/NFR-XXX] | [NOT_IMPLEMENTED / PARTIALLY_IMPLEMENTED / FULLY_IMPLEMENTED / NEEDS_UPGRADE] | [File path or "none found"] | [INCLUDE / EXCLUDE / INCLUDE (gaps only)] |
+
+**Verified scope**: X of Y capabilities proceed to planning.
+- **Excluded** (already implemented): [list]
+- **Included** (new work needed): [list]
+- **Reduced scope** (gaps only): [list]
+
+**Verification method**: [GitNexus query / Grep / File system scan]
+
 ## Component Reuse Plan
 
 | Need | Existing Component | Source Product | Action |

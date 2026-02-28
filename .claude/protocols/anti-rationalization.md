@@ -132,6 +132,12 @@ These are the most common excuses agents use to skip writing tests first. Each h
 
 **Rule**: No direct commits to main. All work on branches with PR review. (Constitution Article VIII)
 
+### Rationalization P6: "I don't need to check if this is already implemented — the spec wouldn't ask for it if it existed"
+
+**Counter**: Specs are written from requirements, not from codebase audits. The spec author may not know what previous sprints delivered. The stablecoin-gateway audit found 4 P0/P1 items that were already fully implemented — CI/CD, correlation IDs, admin seed, and structured logging. Checking takes seconds; rebuilding takes hours.
+
+**Rule**: Run the Verification-Before-Planning gate (`.claude/protocols/verification-before-planning.md`) before generating plans or tasks. Every capability must be verified as not-yet-implemented before it appears in a task list. (Constitution Article II)
+
 ---
 
 ## Applying This Framework
@@ -143,8 +149,9 @@ Before writing any implementation code, ask yourself:
 1. **Did I write the test first?** If no → write the test.
 2. **Am I rationalizing skipping the test?** If yes → re-read the relevant counter above.
 3. **Did I check the Component Registry?** If no → check it.
-4. **Does my commit include traceability IDs?** If no → add them.
-5. **Would this benefit from a diagram?** If maybe → draw it (1% Rule).
+4. **Did I verify this isn't already implemented?** If no → run the Verification-Before-Planning gate.
+5. **Does my commit include traceability IDs?** If no → add them.
+6. **Would this benefit from a diagram?** If maybe → draw it (1% Rule).
 
 ### For QA Engineer
 

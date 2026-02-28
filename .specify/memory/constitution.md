@@ -1,8 +1,8 @@
 # ConnectSW Constitution
 
-**Version**: 1.3.0
+**Version**: 1.4.0
 **Ratified**: 2026-02-11
-**Last Amended**: 2026-02-25
+**Last Amended**: 2026-02-28
 
 ## Preamble
 
@@ -38,8 +38,9 @@ Before building ANY backend plugin, service, utility, frontend hook, component, 
 - If a matching component exists at maturity "Production" or "Solid": copy and adapt it
 - If building something new and generic: add it to the registry
 - Spec plans MUST reference existing components they will reuse
+- **Implementation Status Verification**: Before generating ANY plan (`/speckit.plan`) or task list (`/speckit.tasks`), agents MUST verify the implementation status of each proposed capability using the Verification-Before-Planning Protocol (`.claude/protocols/verification-before-planning.md`). Plans and task lists MUST include an "Implementation Audit" table documenting what was checked and what was found. This extends the reuse principle: don't just check for reusable components — check for already-implemented features.
 
-**Rationale:** ConnectSW maintains a growing library of production-tested components across products (see `.claude/COMPONENT-REGISTRY.md` for current count). Rebuilding wastes time and introduces inconsistency.
+**Rationale:** ConnectSW maintains a growing library of production-tested components across products (see `.claude/COMPONENT-REGISTRY.md` for current count). Rebuilding wastes time and introduces inconsistency. The Verification-Before-Planning gate ensures that the "reuse before rebuild" principle extends to whole features, not just components.
 
 ---
 

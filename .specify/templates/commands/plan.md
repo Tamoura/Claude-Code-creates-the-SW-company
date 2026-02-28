@@ -40,6 +40,17 @@ You are creating an implementation plan that translates a feature specification 
    - Verify ports assigned (Article VII)
    - **If ANY gate fails: ERROR — resolve before proceeding**
 
+2b. **Implementation Audit (Gate — Verification-Before-Planning)**:
+   - Follow `.claude/protocols/verification-before-planning.md`
+   - Inventory all capabilities the spec proposes to build
+   - For each, query the codebase (GitNexus if available, Grep otherwise):
+     - `gitnexus_query({ query: "<capability>" })` for execution flows
+     - Grep for implementation markers (function names, route paths, config files)
+   - Classify each as: `NOT_IMPLEMENTED` / `PARTIALLY_IMPLEMENTED` / `FULLY_IMPLEMENTED` / `NEEDS_UPGRADE`
+   - **If ANY capability is FULLY_IMPLEMENTED**: exclude it from the plan entirely
+   - **If PARTIALLY_IMPLEMENTED**: plan only the gaps, citing what already exists
+   - **Gate**: The plan MUST include an "Implementation Audit" section. Plans without this table are rejected.
+
 3. **Phase 0: Research**:
    - Extract unknowns from the spec
    - Research open source solutions (GitHub, npm) per Architect agent guidelines
@@ -62,6 +73,7 @@ You are creating an implementation plan that translates a feature specification 
    - **Integration Points table is MANDATORY**: Systems, protocols, data exchanged, auth methods
    - **Security Considerations section is MANDATORY**: Auth, authorization, data protection, input validation
    - **Error Handling Strategy table is MANDATORY**: Error categories, detection, recovery, user experience
+   - **Implementation Audit table is MANDATORY**: Every planned capability must show verification status per `.claude/protocols/verification-before-planning.md`
    - Complete Constitution Check table
    - Fill Component Reuse Plan
    - Define project structure (following ConnectSW conventions)
