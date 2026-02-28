@@ -191,30 +191,24 @@ export class RefundFinalizationService {
    * is in PROCESSING status. This method checks whether the transaction
    * has reached sufficient network-specific confirmations for finality.
    */
+  /**
+   * Confirm refund transaction finality by checking on-chain confirmations.
+   *
+   * SEC-014: After executeRefund succeeds with 1 confirmation, the refund
+   * is in PROCESSING status. This method checks whether the transaction
+   * has reached sufficient network-specific confirmations for finality.
+   *
+   * ADR: Uses $transaction + FOR UPDATE to prevent concurrent finality
+   * checks from double-completing the same refund. Without the row lock,
+   * two concurrent calls could both read status=PROCESSING, both check
+   * confirmations, and both transition to COMPLETED — firing duplicate
+   * webhooks and corrupting the refund total calculation.
+   */
   async confirmRefundFinality(
     refundId: string,
     txHash: string,
     network: 'polygon' | 'ethereum'
   ): Promise<ConfirmFinalityResult> {
-    const refund = await this.prisma.refund.findUnique({
-      where: { id: refundId },
-      include: {
-        paymentSession: true,
-      },
-    });
-
-    if (!refund) {
-      throw new AppError(404, 'refund-not-found', 'Refund not found');
-    }
-
-    if (refund.status !== RefundStatus.PROCESSING) {
-      throw new AppError(
-        400,
-        'invalid-refund-status',
-        'Refund must be in PROCESSING status to confirm finality'
-      );
-    }
-
     const required = CONFIRMATION_REQUIREMENTS[network];
     const confirmations = await this.blockchainMonitor.getConfirmations(network, txHash);
 
@@ -226,16 +220,54 @@ export class RefundFinalizationService {
       };
     }
 
-    const completedRefund = await this.prisma.refund.update({
-      where: { id: refundId },
-      data: {
-        status: RefundStatus.COMPLETED,
-        completedAt: new Date(),
-      },
-      include: {
-        paymentSession: true,
-      },
-    });
+    // Sufficient confirmations — lock the row and transition atomically
+    const completedRefund = await this.prisma.$transaction(async (tx) => {
+      type RefundRow = { id: string; status: string; payment_session_id: string };
+      const rows = await tx.$queryRaw<RefundRow[]>`
+        SELECT r.id, r.status, r.payment_session_id
+        FROM "refunds" r
+        WHERE r.id = ${refundId}
+        FOR UPDATE
+      `;
+
+      if (rows.length === 0) {
+        throw new AppError(404, 'refund-not-found', 'Refund not found');
+      }
+
+      const lockedRefund = rows[0];
+
+      // Already completed — idempotent exit
+      if (lockedRefund.status === RefundStatus.COMPLETED) {
+        return null;
+      }
+
+      if (lockedRefund.status !== RefundStatus.PROCESSING) {
+        throw new AppError(
+          400,
+          'invalid-refund-status',
+          'Refund must be in PROCESSING status to confirm finality'
+        );
+      }
+
+      return tx.refund.update({
+        where: { id: refundId },
+        data: {
+          status: RefundStatus.COMPLETED,
+          completedAt: new Date(),
+        },
+        include: {
+          paymentSession: true,
+        },
+      });
+    }, { timeout: 10000 });
+
+    // Null means already completed (idempotent)
+    if (!completedRefund) {
+      return {
+        status: 'confirmed',
+        confirmations,
+      };
+    }
 
     await this.webhookService.queueWebhook(
       completedRefund.paymentSession.userId,

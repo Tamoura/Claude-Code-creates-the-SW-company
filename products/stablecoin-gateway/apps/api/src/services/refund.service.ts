@@ -275,8 +275,11 @@ export class RefundService {
       throw new AppError(404, 'refund-not-found', 'Refund not found');
     }
 
-    if (refund.status !== RefundStatus.PENDING) {
-      throw new AppError(400, 'invalid-refund-status', 'Refund must be in PENDING status to process');
+    // Accept PENDING (from API routes) or PROCESSING (from worker which
+    // already claimed the refund via FOR UPDATE SKIP LOCKED + status transition).
+    const processableStatuses: RefundStatus[] = [RefundStatus.PENDING, RefundStatus.PROCESSING];
+    if (!processableStatuses.includes(refund.status)) {
+      throw new AppError(400, 'invalid-refund-status', 'Refund must be in PENDING or PROCESSING status to process');
     }
 
     if (!this.blockchainService) {
@@ -287,10 +290,13 @@ export class RefundService {
       return refund;
     }
 
-    await this.prisma.refund.update({
-      where: { id },
-      data: { status: RefundStatus.PROCESSING },
-    });
+    // Only transition to PROCESSING if not already (worker pre-sets this)
+    if (refund.status === RefundStatus.PENDING) {
+      await this.prisma.refund.update({
+        where: { id },
+        data: { status: RefundStatus.PROCESSING },
+      });
+    }
 
     try {
       if (!refund.paymentSession.customerAddress) {

@@ -142,11 +142,14 @@ export class RefundProcessingWorker {
         error instanceof Error ? error : undefined,
       );
     } finally {
-      // Release lock only if we still own it
-      const currentValue = await this.redis.get(lockKey);
-      if (currentValue === lockValue) {
-        await this.redis.del(lockKey);
-      }
+      // Atomic compare-and-delete via Lua script to prevent TOCTOU race
+      // where another instance acquires the lock between GET and DEL.
+      await this.redis.eval(
+        `if redis.call("get", KEYS[1]) == ARGV[1] then return redis.call("del", KEYS[1]) else return 0 end`,
+        1,
+        lockKey,
+        lockValue,
+      );
     }
   }
 
