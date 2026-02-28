@@ -1,13 +1,61 @@
 import { FastifyPluginAsync } from 'fastify';
+import crypto from 'crypto';
 import { logger } from '../../utils/logger.js';
 
 /**
  * Development-only routes for simulating payment flows.
  * Bypasses blockchain verification. NEVER registered in production.
+ *
+ * Security: Protected by INTERNAL_API_KEY (timing-safe comparison).
+ * Even in dev/staging, this route MUST require authentication because
+ * it can mark any payment session as COMPLETED without blockchain proof.
+ * RISK-001 remediation.
  */
+
+/**
+ * Verify the Bearer token matches INTERNAL_API_KEY using timing-safe comparison.
+ * Returns true if valid, false if invalid, throws if key not configured.
+ */
+function verifyInternalApiKey(authHeader: string | undefined): 'ok' | 'unauthorized' | 'not-configured' {
+  const expectedKey = process.env.INTERNAL_API_KEY;
+
+  if (!expectedKey) {
+    return 'not-configured';
+  }
+
+  const expectedValue = `Bearer ${expectedKey}`;
+  const suppliedValue = authHeader || '';
+
+  // Hash both values before comparing to normalise length and prevent
+  // length-based information leakage (same pattern as webhook-worker.ts)
+  const expectedHash = crypto.createHash('sha256').update(expectedValue).digest();
+  const suppliedHash = crypto.createHash('sha256').update(suppliedValue).digest();
+
+  return crypto.timingSafeEqual(expectedHash, suppliedHash) ? 'ok' : 'unauthorized';
+}
+
 const devRoutes: FastifyPluginAsync = async (fastify) => {
   // POST /v1/dev/simulate/:id — advance a payment to COMPLETED
   fastify.post('/simulate/:id', async (request, reply) => {
+    // RISK-001: Require INTERNAL_API_KEY for all dev routes.
+    // Without this, anyone who discovers the URL on a dev/staging server
+    // can confirm any pending payment without paying.
+    const authResult = verifyInternalApiKey(request.headers.authorization);
+
+    if (authResult === 'not-configured') {
+      logger.error('INTERNAL_API_KEY not configured - dev route unavailable');
+      return reply.code(500).send({ error: 'Internal API key not configured' });
+    }
+
+    if (authResult === 'unauthorized') {
+      logger.warn('Unauthorized dev route access attempt', {
+        ip: request.ip,
+        requestId: request.id,
+        userAgent: request.headers['user-agent'],
+      });
+      return reply.code(401).send({ error: 'Unauthorized' });
+    }
+
     const { id } = request.params as { id: string };
 
     const session = await fastify.prisma.paymentSession.findUnique({

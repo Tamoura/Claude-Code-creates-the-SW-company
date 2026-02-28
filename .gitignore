@@ -66,9 +66,10 @@ credentials.json
 secrets.json
 service-account.json
 
-# Package manager locks (keep package-lock.json)
+# Package manager locks — pnpm is the source of truth
+# pnpm-lock.yaml is committed (do NOT ignore it)
+package-lock.json
 yarn.lock
-pnpm-lock.yaml
 
 # Turbo
 .turbo/

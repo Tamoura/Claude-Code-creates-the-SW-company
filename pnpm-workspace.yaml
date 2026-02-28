@@ -1,0 +1,11 @@
+packages:
+  # Product roots (concurrently, playwright, etc.)
+  - 'products/*'
+  # All apps within each product
+  - 'products/*/apps/*'
+  # E2E test suites
+  - 'products/*/e2e'
+  # Shared packages within products (e.g. stablecoin-gateway/packages/sdk)
+  - 'products/*/packages/*'
+  # Root shared packages
+  - 'packages/*'
