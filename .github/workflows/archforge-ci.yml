@@ -76,7 +76,6 @@ jobs:
         run: |
           pnpm run test:coverage --coverageThreshold='{"global":{"branches":70,"functions":75,"lines":80,"statements":80}}' 2>/dev/null || \
           pnpm run test:coverage
-        continue-on-error: true  # coverage threshold is a warning gate for now
         env:
           DATABASE_URL: postgresql://postgres:postgres@localhost:5432/archforge_test
           JWT_SECRET: ci-test-jwt-secret-key-for-testing-only
@@ -229,8 +228,7 @@ jobs:
       - name: Run traceability gate
         run: |
           chmod +x .claude/scripts/traceability-gate.sh
-          .claude/scripts/traceability-gate.sh archforge || true
-        continue-on-error: true
+          .claude/scripts/traceability-gate.sh archforge
 
       - name: Verify all jobs succeeded
         run: |

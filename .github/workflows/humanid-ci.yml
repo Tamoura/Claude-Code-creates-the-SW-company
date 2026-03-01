@@ -144,7 +144,6 @@ jobs:
         run: |
           pnpm test --coverage --coverageThreshold='{"global":{"branches":70,"functions":75,"lines":80,"statements":80}}' --if-present 2>/dev/null || \
           pnpm test --if-present
-        continue-on-error: true  # coverage threshold is a warning gate for now
 
   e2e:
     runs-on: ubuntu-latest
@@ -181,8 +180,7 @@ jobs:
       - name: Run traceability gate
         run: |
           chmod +x .claude/scripts/traceability-gate.sh
-          .claude/scripts/traceability-gate.sh humanid || true
-        continue-on-error: true
+          .claude/scripts/traceability-gate.sh humanid
 
       - name: Verify all jobs succeeded
         run: |

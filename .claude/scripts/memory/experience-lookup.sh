@@ -138,7 +138,7 @@ if command -v jq &> /dev/null; then
       (if type == "string" then . else
         (.mistake // "") + " " + (.prevention // "") + " " + (.impact // "")
       end) | ascii_downcase as $text |
-      ($kw | map(select($text | contains(.))) | length) as $score |
+      ($kw | map(select(. as $k | $text | index($k))) | length) as $score |
       select($score > 0) |
       {
         type: "mistake",
@@ -158,7 +158,7 @@ if command -v jq &> /dev/null; then
       (if type == "string" then . else
         (.scenario // "") + " " + (.approach // "") + " " + (.reason // "")
       end) | ascii_downcase as $text |
-      ($kw | map(select($text | contains(.))) | length) as $score |
+      ($kw | map(select(. as $k | $text | index($k))) | length) as $score |
       select($score > 0) |
       {
         type: "approach",

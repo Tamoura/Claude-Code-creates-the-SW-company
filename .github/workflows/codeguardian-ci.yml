@@ -137,8 +137,7 @@ jobs:
       - name: Run traceability gate
         run: |
           chmod +x .claude/scripts/traceability-gate.sh
-          .claude/scripts/traceability-gate.sh codeguardian || true
-        continue-on-error: true
+          .claude/scripts/traceability-gate.sh codeguardian
 
       - name: Verify all jobs succeeded
         run: |
