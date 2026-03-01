@@ -1,0 +1,183 @@
+name: Claude CI Fix
+
+on:
+  workflow_run:
+    workflows:
+      - "ArchForge CI"
+      - "CodeGuardian CI"
+      - "Command Center CI"
+      - "ConnectGRC CI"
+      - "ConnectIn CI"
+      - "HumanID CI"
+      - "LinkedIn Agent CI"
+      - "Muaththir CI"
+      - "QDB One CI"
+      - "Quantum Computing Usecases CI"
+      - "RecomEngine CI"
+      - "TaskFlow CI"
+      - "Test Stablecoin Gateway"
+      - "Test"
+    types:
+      - completed
+
+jobs:
+  ci-fix:
+    # Only run when a CI workflow has failed — never trigger on own workflows
+    if: github.event.workflow_run.conclusion == 'failure'
+    runs-on: ubuntu-latest
+    permissions:
+      contents: write
+      pull-requests: write
+      issues: write
+      actions: read
+      id-token: write
+
+    steps:
+      - name: Check for existing fix attempt
+        id: check-existing
+        env:
+          GH_TOKEN: ${{ secrets.GITHUB_TOKEN }}
+        run: |
+          RUN_ID="${{ github.event.workflow_run.id }}"
+          BRANCH_NAME="fix/ci/run-${RUN_ID}"
+
+          # Check if a fix branch already exists (prevents retry loops)
+          if git ls-remote --heads origin "$BRANCH_NAME" | grep -q .; then
+            echo "Fix branch already exists for run ${RUN_ID}. Skipping to prevent loops."
+            echo "skip=true" >> "$GITHUB_OUTPUT"
+          else
+            echo "skip=false" >> "$GITHUB_OUTPUT"
+            echo "branch_name=$BRANCH_NAME" >> "$GITHUB_OUTPUT"
+            echo "run_id=$RUN_ID" >> "$GITHUB_OUTPUT"
+          fi
+
+      - name: Checkout repository
+        if: steps.check-existing.outputs.skip == 'false'
+        uses: actions/checkout@v6
+        with:
+          ref: ${{ github.event.workflow_run.head_branch }}
+          fetch-depth: 0
+
+      - name: Fetch CI failure logs
+        if: steps.check-existing.outputs.skip == 'false'
+        id: failure-logs
+        env:
+          GH_TOKEN: ${{ secrets.GITHUB_TOKEN }}
+        run: |
+          RUN_ID="${{ github.event.workflow_run.id }}"
+
+          # Get failed job details
+          FAILED_JOBS=$(gh api "repos/${{ github.repository }}/actions/runs/${RUN_ID}/jobs" \
+            --jq '.jobs[] | select(.conclusion == "failure") | {name: .name, id: .id}' 2>/dev/null || echo "")
+
+          if [ -z "$FAILED_JOBS" ]; then
+            echo "No failed jobs found. Skipping."
+            echo "has_failures=false" >> "$GITHUB_OUTPUT"
+            exit 0
+          fi
+
+          echo "has_failures=true" >> "$GITHUB_OUTPUT"
+
+          # Get logs for the first failed job (limit scope)
+          FIRST_JOB_ID=$(echo "$FAILED_JOBS" | head -1 | jq -r '.id // empty')
+          if [ -n "$FIRST_JOB_ID" ]; then
+            gh api "repos/${{ github.repository }}/actions/jobs/${FIRST_JOB_ID}/logs" \
+              > /tmp/ci-failure-logs.txt 2>/dev/null || echo "Could not fetch logs" > /tmp/ci-failure-logs.txt
+            # Truncate to last 200 lines to keep prompt manageable
+            tail -200 /tmp/ci-failure-logs.txt > /tmp/ci-failure-logs-truncated.txt
+          else
+            echo "No job ID found" > /tmp/ci-failure-logs-truncated.txt
+          fi
+
+      - name: Create fix branch
+        if: |
+          steps.check-existing.outputs.skip == 'false' &&
+          steps.failure-logs.outputs.has_failures == 'true'
+        run: |
+          git checkout -b "${{ steps.check-existing.outputs.branch_name }}"
+
+      - name: Run Claude Code to analyze and fix CI failure
+        if: |
+          steps.check-existing.outputs.skip == 'false' &&
+          steps.failure-logs.outputs.has_failures == 'true'
+        id: claude
+        uses: anthropics/claude-code-action@v1
+        with:
+          claude_code_oauth_token: ${{ secrets.CLAUDE_CODE_OAUTH_TOKEN }}
+          prompt: |
+            You are a CI failure fix agent for the ConnectSW codebase.
+
+            A CI workflow has failed. Analyze the failure and attempt a fix.
+
+            Failed workflow: ${{ github.event.workflow_run.name }}
+            Branch: ${{ github.event.workflow_run.head_branch }}
+            Run ID: ${{ github.event.workflow_run.id }}
+            Commit: ${{ github.event.workflow_run.head_sha }}
+
+            CI failure logs (last 200 lines):
+            $(cat /tmp/ci-failure-logs-truncated.txt)
+
+            Instructions:
+            1. Analyze the CI failure logs to identify the root cause.
+            2. Common causes: test failures, lint errors, type errors, build failures, missing dependencies.
+            3. Find the relevant files and implement a minimal, focused fix.
+            4. Do NOT refactor unrelated code. Only fix what caused the CI failure.
+            5. Run the relevant tests locally if possible to verify the fix.
+            6. Follow the project conventions in CLAUDE.md (TypeScript, conventional commits).
+            7. Stage and commit only the files you changed using specific file names (never git add . or git add -A).
+            8. Use commit message format: fix(ci): <description of what was fixed>
+
+            IMPORTANT: This is a single attempt. If the failure is too complex or requires
+            human judgment (e.g., intentional breaking changes, architecture decisions),
+            do NOT force a fix. Instead, leave a clear comment explaining what you found.
+
+      - name: Push branch and create PR
+        if: |
+          steps.check-existing.outputs.skip == 'false' &&
+          steps.failure-logs.outputs.has_failures == 'true'
+        env:
+          GH_TOKEN: ${{ secrets.GITHUB_TOKEN }}
+        run: |
+          # Check if any commits were made by Claude
+          if git log --oneline origin/${{ github.event.workflow_run.head_branch }}..HEAD | grep -q .; then
+            git push origin "${{ steps.check-existing.outputs.branch_name }}"
+            gh pr create \
+              --base "${{ github.event.workflow_run.head_branch }}" \
+              --title "fix(ci): auto-fix for ${{ github.event.workflow_run.name }} failure" \
+              --body "$(cat <<'EOF'
+          ## Automated CI Fix
+
+          This PR was automatically generated by Claude Code to fix a CI failure.
+
+          **Failed workflow:** ${{ github.event.workflow_run.name }}
+          **Failed run:** https://github.com/${{ github.repository }}/actions/runs/${{ github.event.workflow_run.id }}
+          **Branch:** ${{ github.event.workflow_run.head_branch }}
+          **Commit:** ${{ github.event.workflow_run.head_sha }}
+
+          ## Safety Gate
+
+          - [ ] **Manual review required** — this is an AI-generated fix
+          - [ ] Verify the fix addresses the actual CI failure
+          - [ ] Confirm no unintended side effects
+          - [ ] CI passes on this PR
+
+          ## Retry Limit
+
+          This workflow only attempts one fix per CI failure run. If this fix does not
+          resolve the issue, manual intervention is required.
+
+          > This PR requires manual approval before merge. Do NOT auto-merge.
+          EOF
+          )" \
+              --label "ci-fix,needs-review"
+          else
+            echo "Claude did not produce any commits. The failure may require manual investigation."
+            echo "Creating an issue comment on the original branch if a PR exists."
+
+            # Try to find and comment on the PR for the failed branch
+            PR_NUMBER=$(gh pr list --head "${{ github.event.workflow_run.head_branch }}" --json number --jq '.[0].number // empty')
+            if [ -n "$PR_NUMBER" ]; then
+              gh pr comment "$PR_NUMBER" \
+                --body "Claude Code analyzed the CI failure in **${{ github.event.workflow_run.name }}** ([run](https://github.com/${{ github.repository }}/actions/runs/${{ github.event.workflow_run.id }})) but was unable to produce an automated fix. Manual investigation is required."
+            fi
+          fi

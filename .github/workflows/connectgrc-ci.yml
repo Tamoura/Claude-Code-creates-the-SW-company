@@ -64,7 +64,6 @@ jobs:
         run: |
           pnpm test --coverage --coverageThreshold='{"global":{"branches":70,"functions":75,"lines":80,"statements":80}}' 2>/dev/null || \
           pnpm test
-        continue-on-error: true  # coverage threshold is a warning gate for now
 
   test-web:
     name: Web - Tests
@@ -91,7 +90,6 @@ jobs:
         run: |
           pnpm test --coverage --coverageThreshold='{"global":{"branches":70,"functions":75,"lines":80,"statements":80}}' -- --passWithNoTests 2>/dev/null || \
           pnpm test -- --passWithNoTests
-        continue-on-error: true  # coverage threshold is a warning gate for now
 
   lint:
     name: Lint & Type Check
@@ -205,8 +203,7 @@ jobs:
       - name: Run traceability gate
         run: |
           chmod +x .claude/scripts/traceability-gate.sh
-          .claude/scripts/traceability-gate.sh connectgrc || true
-        continue-on-error: true
+          .claude/scripts/traceability-gate.sh connectgrc
 
       - name: Verify all jobs succeeded
         run: |
