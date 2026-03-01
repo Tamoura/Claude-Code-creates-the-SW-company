@@ -45,29 +45,31 @@ jobs:
           fi
         working-directory: .
 
+      - uses: pnpm/action-setup@v4
+        with:
+          version: 10
       - name: Setup Node.js
         if: steps.check.outputs.exists == 'true'
         uses: actions/setup-node@v4
         with:
           node-version: ${{ env.NODE_VERSION }}
-          cache: npm
-          cache-dependency-path: ${{ matrix.app.path }}/package-lock.json
+          cache: pnpm
 
       - name: Install dependencies
         if: steps.check.outputs.exists == 'true'
-        run: npm ci
+        run: pnpm install --frozen-lockfile
 
       - name: Generate Prisma client
         if: steps.check.outputs.exists == 'true' && matrix.app.needs-prisma
-        run: npx prisma generate
+        run: pnpm exec prisma generate
 
       - name: Run lint
         if: steps.check.outputs.exists == 'true'
-        run: npm run lint --if-present
+        run: pnpm run lint --if-present
 
       - name: Run type check
         if: steps.check.outputs.exists == 'true'
-        run: npx tsc --noEmit --pretty
+        run: pnpm exec tsc --noEmit --pretty
 
   test-api:
     name: API Tests
@@ -120,25 +122,27 @@ jobs:
           fi
         working-directory: .
 
+      - uses: pnpm/action-setup@v4
+        with:
+          version: 10
       - name: Setup Node.js
         if: steps.check.outputs.exists == 'true'
         uses: actions/setup-node@v4
         with:
           node-version: ${{ env.NODE_VERSION }}
-          cache: npm
-          cache-dependency-path: products/connectin/apps/api/package-lock.json
+          cache: pnpm
 
       - name: Install dependencies
         if: steps.check.outputs.exists == 'true'
-        run: npm ci
+        run: pnpm install --frozen-lockfile
 
       - name: Generate Prisma client
         if: steps.check.outputs.exists == 'true'
-        run: npx prisma generate
+        run: pnpm exec prisma generate
 
       - name: Reset and push schema (test isolation — production uses prisma migrate deploy)
         if: steps.check.outputs.exists == 'true'
-        run: npx prisma db push --force-reset
+        run: pnpm exec prisma db push --force-reset
 
       - name: Verify migration is up to date
         if: steps.check.outputs.exists == 'true'
@@ -152,7 +156,7 @@ jobs:
 
       - name: Run tests with coverage
         if: steps.check.outputs.exists == 'true'
-        run: npm test -- --coverage
+        run: pnpm test -- --coverage
 
       - name: Upload coverage report
         if: always() && steps.check.outputs.exists == 'true'
@@ -173,18 +177,20 @@ jobs:
     steps:
       - uses: actions/checkout@v6
 
+      - uses: pnpm/action-setup@v4
+        with:
+          version: 10
       - name: Setup Node.js
         uses: actions/setup-node@v4
         with:
           node-version: ${{ env.NODE_VERSION }}
-          cache: npm
-          cache-dependency-path: products/connectin/apps/web/package-lock.json
+          cache: pnpm
 
       - name: Install dependencies
-        run: npm ci
+        run: pnpm install --frozen-lockfile
 
       - name: Run tests with coverage
-        run: npm test -- --coverage
+        run: pnpm test -- --coverage
 
       - name: Upload coverage report
         if: always()
@@ -220,21 +226,23 @@ jobs:
           fi
         working-directory: .
 
+      - uses: pnpm/action-setup@v4
+        with:
+          version: 10
       - name: Setup Node.js
         if: steps.check.outputs.exists == 'true'
         uses: actions/setup-node@v4
         with:
           node-version: ${{ env.NODE_VERSION }}
-          cache: npm
-          cache-dependency-path: ${{ matrix.app }}/package-lock.json
+          cache: pnpm
 
       - name: Install dependencies
         if: steps.check.outputs.exists == 'true'
-        run: npm ci
+        run: pnpm install --frozen-lockfile
 
       - name: Run security audit
         if: steps.check.outputs.exists == 'true'
-        run: npm audit --audit-level=critical --omit=dev
+        run: pnpm audit --audit-level=critical --omit=dev
 
   test-e2e:
     name: E2E Tests (Playwright)
@@ -278,6 +286,9 @@ jobs:
             echo "::notice::E2E tests not found — skipping"
           fi
 
+      - uses: pnpm/action-setup@v4
+        with:
+          version: 10
       - name: Setup Node.js
         if: steps.check.outputs.exists == 'true'
         uses: actions/setup-node@v4
@@ -287,7 +298,7 @@ jobs:
       - name: Install API dependencies
         if: steps.check.outputs.exists == 'true'
         working-directory: products/connectin/apps/api
-        run: npm ci
+        run: pnpm install --frozen-lockfile
 
       - name: Generate Prisma client & push schema
         if: steps.check.outputs.exists == 'true'
@@ -299,25 +310,25 @@ jobs:
       - name: Seed database
         if: steps.check.outputs.exists == 'true'
         working-directory: products/connectin/apps/api
-        run: npm run db:seed
+        run: pnpm run db:seed
 
       - name: Start API server
         if: steps.check.outputs.exists == 'true'
         working-directory: products/connectin/apps/api
-        run: npm run dev &
+        run: pnpm run dev &
         env:
           DATABASE_URL: postgresql://postgres:postgres@localhost:5432/connectin_e2e
 
       - name: Install web dependencies
         if: steps.check.outputs.exists == 'true'
         working-directory: products/connectin/apps/web
-        run: npm ci
+        run: pnpm install --frozen-lockfile
 
       - name: Build and start web app
         if: steps.check.outputs.exists == 'true'
         working-directory: products/connectin/apps/web
         run: |
-          npm run build
+          pnpm run build
           npm start -- -p 3111 &
         env:
           PORT: 3111
@@ -343,17 +354,17 @@ jobs:
       - name: Install E2E dependencies
         if: steps.check.outputs.exists == 'true'
         working-directory: products/connectin/e2e
-        run: npm ci
+        run: pnpm install --frozen-lockfile
 
       - name: Install Playwright browsers
         if: steps.check.outputs.exists == 'true'
         working-directory: products/connectin/e2e
-        run: npx playwright install --with-deps chromium
+        run: pnpm exec playwright install --with-deps chromium
 
       - name: Run E2E tests
         if: steps.check.outputs.exists == 'true'
         working-directory: products/connectin/e2e
-        run: npm test
+        run: pnpm test
         env:
           BASE_URL: http://localhost:3111
           CI: true
