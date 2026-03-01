@@ -138,8 +138,7 @@ const webhookRoutes: FastifyPluginAsync<WebhookRoutesOptions> = async (fastify, 
 
       const webhook = await fastify.prisma.webhookEndpoint.update({ where: { id }, data });
       logger.info('Webhook updated', { webhookId: id, fields: Object.keys(data) });
-      // nosemgrep: javascript.express.security.audit.xss.direct-response-write
-      return reply.send(formatResponse(webhook));
+      return reply.send(formatResponse(webhook)); // nosemgrep: javascript.express.security.audit.xss.direct-response-write
     } catch (error) {
       if (error instanceof ZodError) return reply.code(400).send({ status: 400, detail: error.message });
       if (error instanceof Error && error.message.includes('URL')) return reply.code(400).send({ status: 400, detail: error.message });

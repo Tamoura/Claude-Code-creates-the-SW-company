@@ -34,8 +34,7 @@ const projectRoutes: FastifyPluginAsync = async (fastify) => {
       const user = request.currentUser!;
       const query = listProjectsQuerySchema.parse(request.query);
       const result = await projectService.list(user.id, query);
-      // nosemgrep: javascript.express.security.audit.xss.direct-response-write
-      return reply.send(result);
+      return reply.send(result); // nosemgrep: javascript.express.security.audit.xss.direct-response-write
     } catch (error) {
       handleValidationError(error);
     }
@@ -79,8 +78,7 @@ const projectRoutes: FastifyPluginAsync = async (fastify) => {
       const ip = request.ip;
       const ua = (request.headers['user-agent'] as string) || '';
       const result = await projectService.update(user.id, projectId, body, ip, ua);
-      // nosemgrep: javascript.express.security.audit.xss.direct-response-write
-      return reply.send(result);
+      return reply.send(result); // nosemgrep: javascript.express.security.audit.xss.direct-response-write
     } catch (error) {
       handleValidationError(error);
     }
