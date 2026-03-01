@@ -61,7 +61,7 @@ const jobRoutes: FastifyPluginAsync = async (fastify) => {
       fastify.prisma.job.count({ where }),
     ]);
 
-    return reply.send(paginatedResult(jobs, total, pagination)); // nosemgrep: javascript.express.security.audit.xss.direct-response-write
+    return reply.send(paginatedResult(jobs, total, pagination)); // nosemgrep: javascript.express.security.audit.xss.direct-response-write.direct-response-write
   });
 
   // GET /jobs/:id - Get job details

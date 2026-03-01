@@ -168,7 +168,7 @@ const observationRoutes: FastifyPluginAsync = async (fastify) => {
     ]);
 
     const formatted = observations.map((o) => formatObservation(o, locale));
-    return reply.send(paginatedResult(formatted, total, pagination)); // nosemgrep: javascript.express.security.audit.xss.direct-response-write
+    return reply.send(paginatedResult(formatted, total, pagination)); // nosemgrep: javascript.express.security.audit.xss.direct-response-write.direct-response-write
   });
 
   // GET /api/children/:childId/observations/:id
