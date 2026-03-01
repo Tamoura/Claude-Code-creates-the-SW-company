@@ -401,8 +401,12 @@ const MERMAID_CLASS_DEFS = `
     classDef innov fill:#8b5cf6,stroke:#7c3aed,color:#fff
     classDef strat fill:#0ea5e9,stroke:#0284c7,color:#fff`;
 
+const MERMAID_DARK_INIT = `%%{init: {'theme': 'dark', 'themeVariables': {'background': '#111827', 'mainBkg': '#1f2937', 'nodeBorder': '#374151', 'clusterBkg': '#1f2937', 'titleColor': '#f9fafb', 'edgeLabelBackground': '#1f2937', 'lineColor': '#6b7280', 'textColor': '#f3f4f6'}}}%%`;
+
+const GANTT_DARK_INIT = `%%{init: {'theme': 'dark', 'themeVariables': {'background': '#111827', 'sectionBkgColor': '#1e293b', 'altSectionBkgColor': '#0f172a', 'sectionBkgColor2': '#1e293b', 'taskBkgColor': '#2563eb', 'taskBorderColor': '#1d4ed8', 'taskTextColor': '#f1f5f9', 'taskTextOutsideColor': '#94a3b8', 'taskTextClickableColor': '#bfdbfe', 'critBkgColor': '#7f1d1d', 'critBorderColor': '#ef4444', 'critTextColor': '#fecaca', 'gridColor': '#1f2937', 'todayLineColor': '#3b82f6', 'titleColor': '#f9fafb', 'numberSectionStyles': 4}}}%%`;
+
 function generateDependencyDiagram(tasks: SimulationTask[]): string {
-  const lines: string[] = ['graph TD'];
+  const lines: string[] = [MERMAID_DARK_INIT, 'graph TD'];
   const idSet = new Set(tasks.map((t) => t.id));
 
   for (const task of tasks) {
@@ -430,6 +434,7 @@ function generateGantt(timeline: TimelineEntry[], phases: SimulationPhase[], tit
   const taskMap = new Map(phases.flatMap((p) => p.tasks).map((t) => [t.id, t]));
 
   const lines: string[] = [
+    GANTT_DARK_INIT,
     'gantt',
     '    dateFormat YYYY-MM-DDTHH:mm',
     '    axisFormat %H:%M',
