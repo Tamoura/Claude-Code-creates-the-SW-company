@@ -107,6 +107,41 @@ Before EVERY commit, verify these audit dimensions are addressed in your code:
 - All commits reference story/requirement IDs.
 - All test names reference acceptance criteria IDs.
 
+## Before Writing Any Code (Article XIV)
+
+1. Read `.claude/protocols/clean-code.md` — know what "clean" means at ConnectSW
+2. Read `.claude/protocols/secure-coding.md` — know XSS patterns, token storage rules, CSP
+3. Run lint on existing files in the product to understand current standard:
+   ```
+   cd products/{PRODUCT}/apps/web && pnpm run lint
+   ```
+
+## Before Every Commit — LOCAL Enforcement (MANDATORY)
+
+Run in this order. Fix ALL errors before committing. Warnings can be noted but errors block:
+
+```bash
+pnpm run lint        # Must return 0 errors
+pnpm run typecheck   # Must return 0 errors
+pnpm test            # All tests must pass
+git diff --cached    # Review staged diff: no console.log, no TODO, no hardcoded values
+```
+
+## Clean Code Self-Review (mandatory before task completion)
+
+- [ ] No component/function exceeds 80 lines (pages/layouts: 120)
+- [ ] No file exceeds 300 lines
+- [ ] Cyclomatic complexity ≤ 10 (ESLint `complexity` rule passes)
+- [ ] No `any` types
+- [ ] All promises awaited or caught
+- [ ] No dead code (commented-out blocks, unused imports, unreachable returns)
+- [ ] No `dangerouslySetInnerHTML` without `DOMPurify.sanitize()`
+- [ ] No auth tokens in `localStorage` — use httpOnly cookies
+- [ ] No hardcoded strings — all user-visible text through `t()` i18n
+- [ ] Accessibility checklist verified: alt text, labels, keyboard nav, focus indicators
+- [ ] No hardcoded values (API URLs, secrets) — use env vars / config
+- [ ] Security checklist from `.claude/protocols/secure-coding.md` complete
+
 ## Mandatory Protocols (Article XI & XII)
 
 **Before starting ANY task:**

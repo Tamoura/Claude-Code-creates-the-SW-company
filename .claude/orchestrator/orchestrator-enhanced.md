@@ -937,6 +937,18 @@ F. CHECK FOR CHECKPOINT
        (Note: testing gate also runs browser verification as Phase 1 with hard exit)
        - Capture the `GATE_REPORT_FILE=...` line from output
        - If FAIL: Run automated diagnosis (see Failure Diagnosis below)
+     - **Code Review Gate (BLOCKING — Constitution Article XIV)**:
+       After tests pass, run the Code Reviewer agent before any CEO checkpoint.
+       The orchestrator MUST NOT present to CEO if the verdict is FAIL.
+       - Invoke: Code Reviewer agent on the feature branch / product
+       - The Code Reviewer returns one of three verdicts:
+         - **PASS**: No P0/P1 issues. Proceed to Audit Gate.
+         - **PASS-WITH-CONDITIONS**: No P0. Max 2 P1 issues noted. Proceed, log P1s as backlog tasks.
+         - **FAIL**: Any P0 issue, OR 3+ P1 issues, OR critical security finding.
+           → Route to Backend/Frontend Engineer to fix all P0/P1 issues.
+           → Re-run Code Review Gate after fixes. Do NOT proceed to Audit Gate on FAIL.
+       - Report file: `products/[product]/docs/quality-reports/code-review-[timestamp].md`
+       - If no report exists within the last task cycle: run Code Reviewer before proceeding.
      - Run Audit Gate: `/audit [product]`
      - If any audit dimension score < 8/10:
        - DO NOT pause for CEO
@@ -960,7 +972,7 @@ F. CHECK FOR CHECKPOINT
        - Warns on sections > 500 words without diagrams
        - HARD BLOCK: must PASS before CEO checkpoint
        - If FAIL: Route to Technical Writer or original agent to add diagrams
-     - **All pass condition**: spec consistency PASS + smoke test PASS + no placeholders + E2E tests exist and pass + testing gate PASS + traceability gate PASS + documentation gate PASS + all audit scores >= 8/10
+     - **All pass condition**: spec consistency PASS + smoke test PASS + no placeholders + E2E tests exist and pass + testing gate PASS + **code review gate PASS or PASS-WITH-CONDITIONS** + traceability gate PASS + documentation gate PASS + all audit scores >= 8/10
      - Once all pass:
        - PAUSE execution loop
        - Generate CEO report with audit scores + smoke test report

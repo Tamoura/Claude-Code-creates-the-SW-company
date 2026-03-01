@@ -364,6 +364,60 @@ Before any product reaches "production" phase:
 
 ---
 
+## Article XIV: Clean & Secure Code Standards (Point-of-Generation Enforcement)
+
+Coding agents MUST produce clean, secure code at the point of generation — not after audit cycles. The gap between "what agents are told to do" and "what tooling forces them to do" is where vulnerabilities and quality failures live.
+
+**Rules:**
+
+### 14.1 Shared ESLint Config (Mandatory)
+Every product app MUST extend `@connectsw/eslint-config`:
+- Backend APIs: extend `@connectsw/eslint-config/backend`
+- Frontend apps: extend `@connectsw/eslint-config/frontend`
+- No product may maintain a minimal ESLint config that omits security plugins
+
+The shared config enforces: complexity limits, security/detect-* rules, no-secrets, no-unsanitized, jsx-a11y.
+
+### 14.2 Pre-Code Protocol Reading
+Before writing any implementation code, Backend Engineer and Frontend Engineer MUST read:
+- `.claude/protocols/clean-code.md` — defines what "clean" means at ConnectSW
+- `.claude/protocols/secure-coding.md` — maps OWASP Top 10 to concrete code patterns
+
+These are enforced via agent brief "Before Writing Any Code" sections.
+
+### 14.3 Local Enforcement Before Every Commit
+Coding agents MUST run in sequence before committing:
+1. `pnpm run lint` — 0 errors required (warnings noted, errors block)
+2. `pnpm run typecheck` — 0 errors required
+3. `pnpm test` — all tests must pass
+4. `git diff --cached` — review staged diff before committing
+
+### 14.4 Clean Code Self-Review Checklist
+Coding agents MUST verify before marking any task complete:
+- No function > 50 lines (frontend: 80 lines, pages: 120 lines)
+- No file > 300 lines
+- Cyclomatic complexity ≤ 10
+- No nesting > 3 levels
+- No `any` types
+- All promises awaited or caught
+- No dead code, no hardcoded secrets/URLs
+
+### 14.5 Blocking SAST (No Advisory-Only Scanners for Security Patterns)
+- Semgrep with `p/owasp-top-ten` MUST be **blocking** (no `continue-on-error`)
+- Trivy CRITICAL severity MUST be **blocking**
+- The `--error` flag MUST be present on all semgrep invocations
+
+### 14.6 Code Review Gate (Hard Gate Before CEO Checkpoint)
+The Code Reviewer agent MUST run after the Testing Gate, before the Audit Gate, at every CEO checkpoint:
+- **PASS or PASS-WITH-CONDITIONS**: proceed to Audit Gate
+- **FAIL**: route to appropriate engineer to fix P0/P1 issues; re-run review
+- The orchestrator MUST NOT present to CEO if the latest code review verdict is FAIL
+- CI enforces this via `.github/workflows/code-review-gate.yml` (called by each product CI)
+
+**Rationale:** The root cause of repeated audit failures was that coding agents had security checklists in their briefs, but ESLint configs had no security rules — agents could write OWASP Top 10 violations and the linter wouldn't flag them. SAST was advisory-only. Code review ran in parallel with testing, not as a hard gate. This article closes all three gaps simultaneously: tooling enforces, agents know the standard, and review blocks rather than advises.
+
+---
+
 ## Governance
 
 ### Amendment Process
@@ -377,7 +431,7 @@ Before any product reaches "production" phase:
 ### Compliance Review
 
 - Agents MUST read the constitution before starting any specification or planning work
-- The orchestrator MUST verify constitution compliance at each checkpoint (all 12 articles)
+- The orchestrator MUST verify constitution compliance at each checkpoint (all 14 articles)
 - `/speckit.analyze` checks constitution alignment as part of its consistency audit
 - Non-compliance MUST be flagged as CRITICAL severity in analysis reports
 

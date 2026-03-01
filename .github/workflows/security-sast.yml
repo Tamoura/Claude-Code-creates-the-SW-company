@@ -50,7 +50,11 @@ jobs:
         with:
           category: '/language:javascript-typescript'
 
-  # ── 2. Semgrep — pattern SAST ──────────────────────────────────────────
+  # ── 2. Semgrep — pattern SAST (BLOCKING) ───────────────────────────────
+  # Findings at error/warning level block the PR — no more continue-on-error.
+  # Rationale: Semgrep p/owasp-top-ten catches real injection + XSS patterns.
+  # False positives should be suppressed with # nosemgrep inline comments,
+  # not by downgrading the entire job to advisory.
   semgrep:
     name: Semgrep SAST
     runs-on: ubuntu-latest
@@ -59,7 +63,7 @@ jobs:
     steps:
       - uses: actions/checkout@v4
 
-      - name: Run Semgrep
+      - name: Run Semgrep (blocking)
         run: |
           semgrep \
             --config p/nodejs \
@@ -75,7 +79,8 @@ jobs:
             --exclude coverage \
             --exclude pnpm-lock.yaml \
             --exclude "*.min.js" \
-            . || true
+            --error \
+            .
 
       - name: Upload Semgrep SARIF
         uses: github/codeql-action/upload-sarif@v3
@@ -163,14 +168,27 @@ jobs:
           flags: "-color"
         continue-on-error: true
 
-  # ── 6. Trivy — SCA + IaC + Dockerfile ─────────────────────────────────
+  # ── 6. Trivy — SCA + IaC + Dockerfile (CRITICAL=blocking, HIGH=advisory)
+  # CRITICAL vulnerabilities block PRs. HIGH severity uploads to Security tab
+  # but does not block — reduces noise while catching the most severe issues.
   trivy:
     name: Trivy (SCA + IaC)
     runs-on: ubuntu-latest
     steps:
       - uses: actions/checkout@v4
 
-      - name: Run Trivy filesystem scan
+      - name: Run Trivy (CRITICAL — blocking)
+        uses: aquasecurity/trivy-action@master
+        with:
+          scan-type: fs
+          scan-ref: .
+          format: table
+          severity: CRITICAL
+          skip-dirs: node_modules,dist,build,coverage,.git
+          ignore-unfixed: true
+          exit-code: '1'
+
+      - name: Run Trivy (HIGH — SARIF upload, advisory)
         uses: aquasecurity/trivy-action@master
         with:
           scan-type: fs
@@ -180,6 +198,7 @@ jobs:
           severity: CRITICAL,HIGH
           skip-dirs: node_modules,dist,build,coverage,.git
           ignore-unfixed: true
+        if: always()
 
       - name: Upload Trivy SARIF
         uses: github/codeql-action/upload-sarif@v3
