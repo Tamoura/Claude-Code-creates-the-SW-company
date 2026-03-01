@@ -1,11 +1,9 @@
 #!/bin/bash
 #
 # Pre-commit safety hook
-# Prevents accidental mass file commits that could delete/overwrite the repo.
-#
-# Thresholds:
-#   - More than 30 files staged → requires ALLOW_LARGE_COMMIT=1
-#   - More than 5000 lines deleted → requires ALLOW_LARGE_COMMIT=1
+# 1. Prevents accidental mass file commits (30 files / 5000 deletions threshold)
+# 2. Scans staged files for secrets (gitleaks)
+# 3. Validates staged GitHub Actions workflows (actionlint)
 #
 
 MAX_FILES=30
@@ -41,4 +39,57 @@ if [ "$deleted_lines" -gt "$MAX_DELETIONS" ] && [ "${ALLOW_LARGE_COMMIT:-0}" != 
   echo "To proceed anyway:  ALLOW_LARGE_COMMIT=1 git commit ..."
   echo ""
   exit 1
+fi
+
+# ── Gitleaks: secrets detection ────────────────────────────────────────────
+#
+# Scans staged files for hardcoded secrets (API keys, tokens, passwords).
+# Install: brew install gitleaks   OR   https://github.com/gitleaks/gitleaks
+# Skip:    SKIP_SECRETS_SCAN=1 git commit ...
+#
+if [ "${SKIP_SECRETS_SCAN:-0}" != "1" ]; then
+  if command -v gitleaks &>/dev/null; then
+    echo "🔍 Scanning staged files for secrets (gitleaks)..."
+    if ! gitleaks protect --staged --no-banner --exit-code 1 2>/dev/null; then
+      echo ""
+      echo "ERROR: Gitleaks detected potential secrets in staged files."
+      echo ""
+      echo "Review the findings above and either:"
+      echo "  1. Remove the secret and use an environment variable instead"
+      echo "  2. Add a .gitleaksignore entry if it is a false positive"
+      echo "  3. Skip scan (NOT recommended): SKIP_SECRETS_SCAN=1 git commit ..."
+      echo ""
+      exit 1
+    fi
+    echo "✅ No secrets detected."
+  else
+    echo "⚠️  gitleaks not installed — secrets scan skipped."
+    echo "   Install: brew install gitleaks"
+  fi
+fi
+
+# ── actionlint: GitHub Actions workflow validation ─────────────────────────
+#
+# Validates staged .github/workflows/*.yml files for syntax errors and
+# expression injection vulnerabilities.
+# Install: brew install actionlint   OR   https://github.com/rhysd/actionlint
+# Skip:    SKIP_ACTIONLINT=1 git commit ...
+#
+if [ "${SKIP_ACTIONLINT:-0}" != "1" ]; then
+  staged_workflows=$(git diff --cached --name-only | grep -E '^\.github/workflows/.*\.ya?ml$' || true)
+  if [ -n "$staged_workflows" ] && command -v actionlint &>/dev/null; then
+    echo "🔍 Validating GitHub Actions workflows (actionlint)..."
+    # shellcheck disable=SC2086
+    if ! actionlint $staged_workflows 2>/dev/null; then
+      echo ""
+      echo "ERROR: actionlint found issues in staged workflow files."
+      echo "Fix the issues above or skip: SKIP_ACTIONLINT=1 git commit ..."
+      echo ""
+      exit 1
+    fi
+    echo "✅ Workflow files valid."
+  elif [ -n "$staged_workflows" ]; then
+    echo "⚠️  actionlint not installed — workflow validation skipped."
+    echo "   Install: brew install actionlint"
+  fi
 fi

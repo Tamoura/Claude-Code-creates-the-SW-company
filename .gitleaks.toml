@@ -1,0 +1,76 @@
+# Gitleaks configuration for ConnectSW
+# https://github.com/gitleaks/gitleaks
+#
+# Extends the default ruleset with ConnectSW-specific patterns.
+# Used by:
+#   - pre-commit hook (gitleaks protect --staged)
+#   - CI secrets scan job (gitleaks detect)
+
+title = "ConnectSW Gitleaks Config"
+
+[extend]
+# Extend the upstream default ruleset
+useDefault = true
+
+# ── Custom rules ──────────────────────────────────────────────────────────
+
+[[rules]]
+id = "connectsw-jwt-secret"
+description = "Hardcoded JWT secret"
+regex = '''(?i)(jwt[_-]?secret|token[_-]?secret)\s*[=:]\s*['"]?[A-Za-z0-9+/]{20,}['"]?'''
+tags = ["secret", "jwt", "connectsw"]
+
+[[rules]]
+id = "connectsw-database-url"
+description = "Hardcoded database connection string"
+regex = '''(?i)(DATABASE_URL|DB_URL|POSTGRES_URL)\s*[=:]\s*['"]?postgresql?://[^'"\s]{10,}['"]?'''
+tags = ["secret", "database", "connectsw"]
+
+[[rules]]
+id = "connectsw-private-key-inline"
+description = "Inline private key material"
+regex = '''-----BEGIN (EC|RSA|OPENSSH|DSA|PGP) PRIVATE KEY-----'''
+tags = ["secret", "key", "connectsw"]
+
+[[rules]]
+id = "connectsw-stripe-key"
+description = "Stripe secret key"
+regex = '''sk_(live|test)_[0-9a-zA-Z]{24,}'''
+tags = ["secret", "stripe", "connectsw"]
+
+[[rules]]
+id = "connectsw-kms-key"
+description = "AWS KMS key ARN hardcoded"
+regex = '''arn:aws:kms:[a-z0-9-]+:\d{12}:key/[0-9a-f-]{36}'''
+tags = ["secret", "aws", "kms", "connectsw"]
+
+# ── Allowlist ─────────────────────────────────────────────────────────────
+
+[allowlist]
+description = "ConnectSW global allowlist — known safe patterns"
+
+# Test/seed data and placeholder values are not real secrets
+regexes = [
+  '''password.*Test\d+[!@#]''',           # Test user passwords in seed scripts
+  '''example\.com''',                      # Example domains in docs
+  '''YOUR_.*_HERE''',                      # Placeholder patterns
+  '''<YOUR_.*>''',                         # Placeholder patterns
+  '''\$\{[A-Z_]+\}''',                    # Shell variable references
+  '''process\.env\.[A-Z_]+''',            # Node.js env var references
+]
+
+# Files that are safe to have credential-like strings
+paths = [
+  '''.gitleaksignore''',
+  '''.*\.example''',
+  '''.*\.sample''',
+  '''.*\.md''',
+  '''docs/.*''',
+  '''notes/.*''',
+  '''.claude/.*''',
+  '''.*test.*''',
+  '''.*spec.*''',
+  '''.*seed.*''',
+  '''.*fixture.*''',
+  '''.*mock.*''',
+]

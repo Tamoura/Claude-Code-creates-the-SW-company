@@ -1,0 +1,16 @@
+# Semgrep configuration for ConnectSW
+# https://semgrep.dev
+#
+# Runs on every PR via .github/workflows/security-sast.yml
+# Rulesets: nodejs security, TypeScript, OWASP Top 10, JWT, secrets
+
+rules: []  # No inline rules — all rules come from registry configs below
+
+# Run with:
+#   semgrep --config .semgrep.yml --config p/nodejs --config p/typescript \
+#           --config p/owasp-top-ten --config p/jwt --config p/secrets \
+#           --sarif --output semgrep.sarif
+
+# ── Path exclusions ───────────────────────────────────────────────────────
+# These are passed via semgrep --exclude flags in CI, not here.
+# Excluded: node_modules, .git, dist, build, coverage, *.min.js, pnpm-lock.yaml

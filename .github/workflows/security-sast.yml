@@ -1,11 +1,29 @@
-name: SAST Security Scanning
+name: Security Scanning
+
+# Runs on every PR and every push to main.
+# All SARIF results upload to the GitHub Security tab.
+#
+# Jobs:
+#   codeql          — deep semantic SAST (required status check)
+#   semgrep         — pattern SAST: nodejs, typescript, owasp-top-ten, jwt, secrets
+#   secrets-history — TruffleHog full git history + live credential verification
+#   secrets-staged  — Gitleaks incremental scan (PRs only)
+#   actionlint      — GitHub Actions expression injection detection
+#   trivy           — SCA + IaC + Dockerfile scanning
+#   dependency-audit— pnpm audit across all products (critical severity)
 
 on:
   push:
     branches: [main]
   pull_request:
 
+permissions:
+  contents: read
+  security-events: write
+  pull-requests: write
+
 jobs:
+  # ── 1. CodeQL — deep semantic SAST ─────────────────────────────────────
   codeql:
     name: CodeQL Analysis
     runs-on: ubuntu-latest
@@ -14,133 +32,187 @@ jobs:
       contents: read
       security-events: write
     steps:
-      - uses: actions/checkout@v6
+      - uses: actions/checkout@v4
+        with:
+          fetch-depth: 0
 
       - name: Initialize CodeQL
-        uses: github/codeql-action/init@v4
+        uses: github/codeql-action/init@v3
         with:
           languages: javascript-typescript
-          queries: security-extended
+          queries: security-extended,security-and-quality
 
       - name: Autobuild
-        uses: github/codeql-action/autobuild@v4
+        uses: github/codeql-action/autobuild@v3
 
       - name: Perform CodeQL Analysis
-        uses: github/codeql-action/analyze@v4
+        uses: github/codeql-action/analyze@v3
         with:
           category: '/language:javascript-typescript'
 
+  # ── 2. Semgrep — pattern SAST ──────────────────────────────────────────
   semgrep:
     name: Semgrep SAST
     runs-on: ubuntu-latest
-    permissions:
-      contents: read
-      pull-requests: write
+    container:
+      image: semgrep/semgrep
     steps:
-      - uses: actions/checkout@v6
+      - uses: actions/checkout@v4
 
       - name: Run Semgrep
-        uses: semgrep/semgrep-action@v1
-        with:
-          config: p/default
-          generateSarif: 'true'
-        env:
-          SEMGREP_TIMEOUT: 300
-        continue-on-error: true
+        run: |
+          semgrep \
+            --config p/nodejs \
+            --config p/typescript \
+            --config p/owasp-top-ten \
+            --config p/jwt \
+            --config p/secrets \
+            --sarif \
+            --output semgrep.sarif \
+            --exclude node_modules \
+            --exclude dist \
+            --exclude build \
+            --exclude coverage \
+            --exclude pnpm-lock.yaml \
+            --exclude "*.min.js" \
+            . || true
 
       - name: Upload Semgrep SARIF
-        uses: github/codeql-action/upload-sarif@v4
+        uses: github/codeql-action/upload-sarif@v3
         with:
           sarif_file: semgrep.sarif
+          category: semgrep
         if: always()
-        continue-on-error: true
 
-      - name: Comment PR with Semgrep findings
+      - name: Comment PR with findings
         if: github.event_name == 'pull_request'
-        uses: actions/github-script@v8
+        uses: actions/github-script@v7
         with:
           script: |
             const fs = require('fs');
             let sarif;
-            try {
-              sarif = JSON.parse(fs.readFileSync('semgrep.sarif', 'utf8'));
-            } catch (e) {
-              console.log('No SARIF file found or parse error:', e.message);
-              return;
-            }
-            const runs = sarif.runs || [];
-            const results = runs.flatMap(r => r.results || []);
-            if (results.length === 0) {
+            try { sarif = JSON.parse(fs.readFileSync('semgrep.sarif', 'utf8')); }
+            catch { return; }
+            const results = (sarif.runs || []).flatMap(r => r.results || []);
+            const high = results.filter(r => ['error','warning'].includes(r.level));
+            if (high.length === 0) {
               await github.rest.issues.createComment({
-                owner: context.repo.owner,
-                repo: context.repo.repo,
+                owner: context.repo.owner, repo: context.repo.repo,
                 issue_number: context.issue.number,
-                body: '## Semgrep SAST\n\nNo findings detected. All checks passed.'
+                body: '## Semgrep SAST\n\n✅ No findings detected.'
               });
               return;
             }
-            const findings = results.slice(0, 20).map(r => {
+            const lines = high.slice(0, 15).map(r => {
               const loc = r.locations?.[0]?.physicalLocation;
               const file = loc?.artifactLocation?.uri || 'unknown';
               const line = loc?.region?.startLine || '?';
-              const msg = r.message?.text || 'No message';
-              const level = r.level || 'warning';
-              return `- **${level.toUpperCase()}** \`${file}:${line}\` — ${msg}`;
-            }).join('\n');
-            const more = results.length > 20 ? `\n\n...and ${results.length - 20} more findings.` : '';
+              return `- \`${file}:${line}\` — ${r.message?.text || ''}`;
+            });
+            const more = high.length > 15 ? `\n\n…and ${high.length - 15} more.` : '';
             await github.rest.issues.createComment({
-              owner: context.repo.owner,
-              repo: context.repo.repo,
+              owner: context.repo.owner, repo: context.repo.repo,
               issue_number: context.issue.number,
-              body: `## Semgrep SAST Findings\n\n${results.length} finding(s) detected:\n\n${findings}${more}\n\nReview the Security tab for full details.`
+              body: `## Semgrep SAST — ${high.length} finding(s)\n\n${lines.join('\n')}${more}\n\nSee the Security tab for full details.`
             });
 
-  npm-audit:
-    name: npm Dependency Audit
+  # ── 3. TruffleHog — full history secrets scan ──────────────────────────
+  secrets-history:
+    name: TruffleHog (Full History)
     runs-on: ubuntu-latest
     steps:
-      - uses: actions/checkout@v6
+      - uses: actions/checkout@v4
+        with:
+          fetch-depth: 0
+
+      - name: Run TruffleHog
+        uses: trufflesecurity/trufflehog@main
+        with:
+          path: ./
+          base: ${{ github.event.repository.default_branch }}
+          head: HEAD
+          extra_args: --only-verified
+        continue-on-error: true
+
+  # ── 4. Gitleaks — incremental PR secrets scan ──────────────────────────
+  secrets-staged:
+    name: Gitleaks (PR Diff)
+    runs-on: ubuntu-latest
+    if: github.event_name == 'pull_request'
+    steps:
+      - uses: actions/checkout@v4
+        with:
+          fetch-depth: 0
+
+      - name: Run Gitleaks on PR diff
+        uses: gitleaks/gitleaks-action@v2
+        env:
+          GITHUB_TOKEN: ${{ secrets.GITHUB_TOKEN }}
+        continue-on-error: true
+
+  # ── 5. actionlint — GitHub Actions security analysis ───────────────────
+  actionlint:
+    name: actionlint
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v4
+
+      - name: Run actionlint
+        uses: rrhysd/actionlint@latest
+        with:
+          flags: "-color"
+        continue-on-error: true
+
+  # ── 6. Trivy — SCA + IaC + Dockerfile ─────────────────────────────────
+  trivy:
+    name: Trivy (SCA + IaC)
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v4
+
+      - name: Run Trivy filesystem scan
+        uses: aquasecurity/trivy-action@master
+        with:
+          scan-type: fs
+          scan-ref: .
+          format: sarif
+          output: trivy.sarif
+          severity: CRITICAL,HIGH
+          skip-dirs: node_modules,dist,build,coverage,.git
+          ignore-unfixed: true
+
+      - name: Upload Trivy SARIF
+        uses: github/codeql-action/upload-sarif@v3
+        with:
+          sarif_file: trivy.sarif
+          category: trivy
+        if: always()
+
+  # ── 7. Dependency audit — pnpm audit across workspace ──────────────────
+  dependency-audit:
+    name: Dependency Audit (pnpm)
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v4
+
+      - uses: pnpm/action-setup@v4
+        with:
+          version: 10
 
       - name: Setup Node.js
         uses: actions/setup-node@v4
         with:
           node-version: '20'
+          cache: 'pnpm'
 
-      - name: Audit all product and package dependencies
+      - name: Install dependencies
+        run: pnpm install --frozen-lockfile
+
+      - name: Run pnpm audit
         run: |
-          echo "Running npm audit across all products and packages..."
-          OVERALL_FAIL=0
-
-          audit_dir() {
-            local dir=$1
-            if [ -f "$dir/package.json" ] && [ -f "$dir/package-lock.json" ]; then
-              echo ""
-              echo "Auditing: $dir"
-              cd "$dir"
-              npm audit --audit-level=critical --omit=dev 2>&1 || {
-                echo "::warning::Critical vulnerability found in $dir"
-                OVERALL_FAIL=1
-              }
-              cd - > /dev/null
-            fi
-          }
-
-          # Audit all product app directories
-          for pkg in products/*/apps/*/package.json; do
-            dir=$(dirname "$pkg")
-            audit_dir "$dir"
-          done
-
-          # Audit all shared packages
-          for pkg in packages/*/package.json; do
-            dir=$(dirname "$pkg")
-            audit_dir "$dir"
-          done
-
-          if [ $OVERALL_FAIL -eq 1 ]; then
-            echo ""
-            echo "::error::One or more critical vulnerabilities found. Run 'npm audit fix' in affected directories."
+          echo "Running pnpm audit across workspace..."
+          pnpm audit --audit-level=critical --prod 2>&1 || {
+            echo "::error::Critical vulnerability found in workspace dependencies."
             exit 1
-          fi
-          echo ""
-          echo "npm audit complete — no critical vulnerabilities found."
+          }
+          echo "pnpm audit complete — no critical vulnerabilities found."
