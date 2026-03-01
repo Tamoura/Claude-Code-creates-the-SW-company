@@ -402,10 +402,10 @@ function MermaidDiagram({ chart, theme }: { chart: string; theme: 'light' | 'dar
   }
 
   return (
-    <div className="my-6 rounded-lg border border-slate-200 dark:border-slate-700 bg-white dark:bg-slate-900/50 p-4 overflow-x-auto">
+    <div className="my-6 rounded-lg border border-gray-700 bg-gray-900 p-4 overflow-x-auto">
       <div
         ref={containerRef}
-        className="flex justify-center [&>svg]:max-w-full"
+        className="flex justify-center [&>svg]:max-w-full [&>svg]:rounded-lg"
         dangerouslySetInnerHTML={{ __html: svg }}
       />
     </div>
