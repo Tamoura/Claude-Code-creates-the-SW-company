@@ -1,7 +1,8 @@
 # Script Registry
 
-**Version**: 1.0.0
+**Version**: 1.1.0
 **Created**: 2026-02-25
+**Updated**: 2026-03-01
 
 All ConnectSW scripts organized by namespace. Use this registry to find the right script — do not browse the scripts directory.
 
@@ -18,6 +19,7 @@ All ConnectSW scripts organized by namespace. Use this registry to find the righ
 | Run smoke/browser tests | `smoke-test-gate.sh` | quality |
 | Run spec consistency check | `spec-consistency-gate.sh` | quality |
 | Run traceability check | `traceability-gate.sh` | quality |
+| Run coverage gate (80% threshold) | `coverage-gate.sh` | quality |
 | Run documentation check | `documentation-gate.sh` | quality |
 | Diagnose a gate failure | `diagnose-gate-failure.sh` | quality |
 | Update gate pass/fail metrics | `update-gate-metrics.sh` | quality |
@@ -31,6 +33,8 @@ All ConnectSW scripts organized by namespace. Use this registry to find the righ
 | Aggregate performance metrics | `aggregate-metrics.sh` | reporting |
 | View audit trail entries | `view-audit-trail.sh` | reporting |
 | Log an audit trail entry | `audit-log.sh` | reporting |
+| Verify spec-kit pipeline before implementation | `speckit-preflight.sh` | quality |
+| Create sprint milestone + GitHub Issues from PRD | `create-sprint.sh` | backlog |
 | Manage agile backlog | `manage-backlog.sh` | backlog |
 | Sync backlog to GitHub issues | `sync-backlog-to-github.sh` | backlog |
 | Set up a new ConnectSW repo | `setup-connectsw.sh` | infra |
@@ -61,6 +65,8 @@ All quality gate scripts. Run before CEO checkpoints.
 | `spec-consistency-gate.sh` | Spec/plan/tasks alignment check | `<product>` |
 | `traceability-gate.sh` | Requirement traceability check | `<product>` |
 | `documentation-gate.sh` | Documentation completeness check | `<product>` |
+| `speckit-preflight.sh` | Verify spec-kit pipeline before implementation | `<product> [--strict]` |
+| `coverage-gate.sh` | Enforce 80% test coverage threshold | `<product> [threshold_percent]` |
 | `diagnose-gate-failure.sh` | Diagnose why a gate failed | `<gate-type> <product> <report_file>` |
 | `update-gate-metrics.sh` | Record gate pass/fail results | `<product> <gate> <result>` |
 
@@ -91,6 +97,7 @@ Scripts for sprint and backlog management.
 
 | Script | Purpose | Args |
 |--------|---------|------|
+| `create-sprint.sh` | Create GitHub milestone + issues per user story from PRD | `<product> <sprint-number> [sprint-name]` |
 | `manage-backlog.sh` | CRUD for backlog items, sprint management | `<action> <product> [args...]` |
 | `sync-backlog-to-github.sh` | Sync backlog items to GitHub issues | `<product>` |
 
@@ -112,12 +119,12 @@ Each agent namespace indicates which scripts an agent should know about:
 
 | Agent Role | Primary Namespaces |
 |-----------|-------------------|
-| Orchestrator | All namespaces |
-| Backend/Frontend/Mobile Engineer | `quality` (testing gate only) |
+| Orchestrator | All namespaces — runs `speckit-preflight.sh` before spawning implementation agents |
+| Backend/Frontend/Mobile Engineer | `quality` (`coverage-gate.sh`, testing gate) |
 | QA Engineer | `quality`, `reporting` |
 | Architect | `task-graph`, `memory` (log-decision) |
 | DevOps Engineer | `infra`, `quality` |
-| Product Manager | `backlog` |
+| Product Manager | `backlog` (`create-sprint.sh`, `manage-backlog.sh`) |
 | All agents | `memory` (post-task-update — mandatory) |
 
 This mapping supports progressive disclosure: agents only need to know about scripts relevant to their role.

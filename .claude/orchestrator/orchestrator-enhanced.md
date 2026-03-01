@@ -291,6 +291,39 @@ Follow: .claude/protocols/verification-before-planning.md
 The plan MUST include an "Implementation Audit" table.
 ```
 
+### Step 2.9: Spec-Kit Pre-Flight Gate (MANDATORY for new-feature, new-product)
+
+**Skip for**: Trivial tasks, bug-fix, hotfix, status-report.
+
+**Required for**: new-product (before spawning implementation agents), new-feature (before architecture/implementation phases).
+
+This is a HARD GATE. The orchestrator MUST NOT spawn implementation agents (backend-engineer, frontend-engineer, mobile-developer, data-engineer) until the spec-kit pipeline is verified complete.
+
+```bash
+# Run the pre-flight check
+bash .claude/scripts/speckit-preflight.sh {PRODUCT}
+# Returns 0 = proceed, 1 = blocked (spec-kit steps incomplete)
+```
+
+**If pre-flight FAILS** (exit code 1):
+1. Do NOT spawn implementation agents
+2. Identify which spec-kit step is missing:
+   - No PRD → spawn Product Manager with `/speckit.specify`
+   - No plan.md → spawn Architect with `/speckit.plan`
+   - No tasks.md → run `/speckit.tasks`
+   - No docs/specs/ → spawn Product Manager for feature specs
+3. Complete missing steps, then re-run pre-flight
+4. Only when pre-flight PASSES, proceed to Step 3
+
+**After sprint setup** (new-product or new-feature with multiple stories):
+```bash
+# Create sprint structure in GitHub
+bash .claude/scripts/create-sprint.sh {PRODUCT} {SPRINT_NUM} "{SPRINT_NAME}"
+# Creates: GitHub Milestone + Issues per US-XX user story
+```
+
+This ensures every user story is tracked as a GitHub Issue in the correct sprint milestone before implementation begins. Agents reference the GitHub Issue number in commits: `feat(auth): add login [US-01] #123`
+
 ### Step 3: Load & Instantiate Task Graph
 
 ```markdown

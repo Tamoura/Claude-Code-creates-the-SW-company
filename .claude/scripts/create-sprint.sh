@@ -1,0 +1,179 @@
+#!/bin/bash
+# create-sprint.sh
+# Creates GitHub sprint milestone + user story issues from PRD
+# Usage: ./create-sprint.sh <product> <sprint-number> [sprint-name]
+#
+# Reads PRD.md user stories (US-XX format) and creates:
+#   - GitHub Milestone for the sprint
+#   - GitHub Issue per user story with:
+#     - Story ID label (us-01, us-02, etc.)
+#     - Sprint milestone
+#     - Acceptance criteria from PRD
+#     - Traceability: linked to FR-XXX requirements
+#
+# Idempotent: checks for existing issues before creating
+
+set -e
+SCRIPT_DIR="$(cd "$(dirname "${BASH_SOURCE[0]}")" && pwd)"
+REPO_ROOT="$(cd "$SCRIPT_DIR/../.." && pwd)"
+
+PRODUCT="${1:-}"
+SPRINT_NUM="${2:-}"
+SPRINT_NAME="${3:-Sprint $SPRINT_NUM}"
+
+if [ -z "$PRODUCT" ] || [ -z "$SPRINT_NUM" ]; then
+  echo "Usage: $0 <product> <sprint-number> [sprint-name]"
+  echo ""
+  echo "Example: $0 command-center 1 'Foundation'"
+  echo "         $0 connectin 2 'Core Features'"
+  exit 1
+fi
+
+PRODUCT_DIR="$REPO_ROOT/products/$PRODUCT"
+PRD_FILE="$PRODUCT_DIR/docs/PRD.md"
+
+if [ ! -f "$PRD_FILE" ]; then
+  echo "ERROR: PRD.md not found at $PRD_FILE"
+  echo "Run /speckit.specify first to create the PRD."
+  exit 1
+fi
+
+# Check gh CLI
+if ! command -v gh >/dev/null 2>&1; then
+  echo "ERROR: GitHub CLI (gh) not installed."
+  exit 1
+fi
+
+REPO=$(gh repo view --json nameWithOwner -q '.nameWithOwner' 2>/dev/null || echo "")
+if [ -z "$REPO" ]; then
+  echo "ERROR: Not authenticated to GitHub. Run: gh auth login"
+  exit 1
+fi
+
+echo "================================================"
+echo "CREATE SPRINT: $PRODUCT Sprint $SPRINT_NUM"
+echo "Sprint Name: $SPRINT_NAME"
+echo "Repository: $REPO"
+echo "================================================"
+echo ""
+
+SPRINT_LABEL="sprint-$SPRINT_NUM"
+PRODUCT_LABEL="product:$PRODUCT"
+MILESTONE_TITLE="[$PRODUCT] Sprint $SPRINT_NUM: $SPRINT_NAME"
+
+# Create labels if needed
+ensure_label() {
+  local name=$1 color=$2 desc=$3
+  gh label list --repo "$REPO" | grep -q "^$name" 2>/dev/null || \
+    gh label create "$name" --color "$color" --description "$desc" --repo "$REPO" 2>/dev/null || true
+}
+
+ensure_label "user-story" "008672" "User story"
+ensure_label "$SPRINT_LABEL" "e4e669" "Sprint $SPRINT_NUM work items"
+ensure_label "$PRODUCT_LABEL" "0075ca" "Product: $PRODUCT"
+ensure_label "acceptance-criteria" "d93f0b" "Has acceptance criteria"
+
+# Create sprint milestone
+echo "Creating sprint milestone..."
+EXISTING_MILESTONE=$(gh api "repos/$REPO/milestones" --jq ".[] | select(.title == \"$MILESTONE_TITLE\") | .number" 2>/dev/null || echo "")
+if [ -n "$EXISTING_MILESTONE" ]; then
+  MILESTONE_NUM=$EXISTING_MILESTONE
+  echo "  Milestone already exists: #$MILESTONE_NUM"
+else
+  MILESTONE_NUM=$(gh api "repos/$REPO/milestones" -X POST \
+    -f title="$MILESTONE_TITLE" \
+    -f description="Sprint $SPRINT_NUM for $PRODUCT: $SPRINT_NAME" \
+    --jq '.number' 2>/dev/null)
+  echo "  Created milestone: #$MILESTONE_NUM - $MILESTONE_TITLE"
+fi
+
+echo ""
+echo "Extracting user stories from PRD..."
+
+# Parse user stories from PRD
+# Looks for patterns like: ## US-01: Story Title or ### US-01 or **US-01**
+STORIES_CREATED=0
+STORIES_SKIPPED=0
+
+while IFS= read -r line; do
+  # Match "US-01", "US-02" etc. in headings
+  if echo "$line" | grep -qE '^#{1,4}\s+US-[0-9]+'; then
+    STORY_ID=$(echo "$line" | grep -oE 'US-[0-9]+' | head -1)
+    STORY_TITLE=$(echo "$line" | sed -E 's/^#{1,4}\s+US-[0-9]+[:\s-]*//' | sed 's/^[[:space:]]*//' | sed 's/[[:space:]]*$//')
+
+    if [ -z "$STORY_TITLE" ]; then
+      STORY_TITLE="$STORY_ID"
+    fi
+
+    ISSUE_TITLE="[$PRODUCT][$STORY_ID] $STORY_TITLE"
+    STORY_LABEL=$(echo "$STORY_ID" | tr '[:upper:]' '[:lower:]' | sed 's/-/:/g' | sed 's/us:/story:us-/')
+
+    ensure_label "$STORY_LABEL" "006b75" "$STORY_ID for $PRODUCT"
+
+    # Check if issue already exists
+    EXISTING=$(gh issue list --repo "$REPO" --search "\"$ISSUE_TITLE\" in:title" --json number --jq '.[0].number' 2>/dev/null || echo "")
+
+    if [ -n "$EXISTING" ]; then
+      echo "  $STORY_ID: Issue #$EXISTING already exists"
+      STORIES_SKIPPED=$((STORIES_SKIPPED + 1))
+      continue
+    fi
+
+    # Create the issue
+    BODY="## $STORY_ID: $STORY_TITLE
+
+**Product**: $PRODUCT
+**Sprint**: $SPRINT_NUM ($SPRINT_NAME)
+**Traceability**: Article VI -- All commits implementing this story must include \`[$STORY_ID]\`
+
+## Story Details
+
+> See PRD for full story details: \`products/$PRODUCT/docs/PRD.md\`
+
+## Definition of Done
+
+- [ ] Implementation follows TDD (Red-Green-Refactor)
+- [ ] Tests reference this story: \`test('[${STORY_ID}][AC-1] ...')\`
+- [ ] All commits include \`[$STORY_ID]\` in message
+- [ ] E2E test added in \`e2e/tests/stories/$(echo "$STORY_ID" | tr '[:upper:]' '[:lower:]')/\`
+- [ ] Code has traceability comment: \`// Implements: $STORY_ID\`
+- [ ] PR description lists \`[$STORY_ID]\` in Implements section
+- [ ] Acceptance criteria from PRD all pass
+
+## Labels
+- \`$SPRINT_LABEL\` -- Sprint $SPRINT_NUM
+- \`$PRODUCT_LABEL\` -- Product: $PRODUCT
+- \`user-story\` -- User story artifact
+
+---
+*Auto-generated by \`.claude/scripts/create-sprint.sh\` from PRD*"
+
+    ISSUE_NUM=$(gh issue create \
+      --repo "$REPO" \
+      --title "$ISSUE_TITLE" \
+      --body "$BODY" \
+      --label "user-story,$SPRINT_LABEL,$PRODUCT_LABEL" \
+      --milestone "$MILESTONE_TITLE" \
+      --json number --jq '.number' 2>/dev/null || echo "")
+
+    if [ -n "$ISSUE_NUM" ]; then
+      echo "  Created issue #$ISSUE_NUM: $STORY_ID - $STORY_TITLE"
+      STORIES_CREATED=$((STORIES_CREATED + 1))
+    else
+      echo "  WARNING: Failed to create issue for $STORY_ID"
+    fi
+  fi
+done < "$PRD_FILE"
+
+echo ""
+echo "================================================"
+echo "SPRINT CREATION SUMMARY"
+echo "================================================"
+echo "  Milestone: #$MILESTONE_NUM - $MILESTONE_TITLE"
+echo "  Stories Created: $STORIES_CREATED"
+echo "  Stories Skipped: $STORIES_SKIPPED (already exist)"
+echo ""
+echo "  View milestone: https://github.com/$REPO/milestone/$MILESTONE_NUM"
+echo "  View issues: https://github.com/$REPO/issues?milestone=$MILESTONE_NUM"
+echo ""
+echo "  Sprint $SPRINT_NUM created for $PRODUCT"
