@@ -29,9 +29,11 @@ jobs:
           ref: ${{ inputs.version }}
 
       - name: Validate version tag
+        env:
+          VERSION: ${{ inputs.version }}
         run: |
-          if ! git rev-parse ${{ inputs.version }} >/dev/null 2>&1; then
-            echo "Error: Version ${{ inputs.version }} does not exist"
+          if ! git rev-parse "$VERSION" >/dev/null 2>&1; then
+            echo "Error: Version $VERSION does not exist"
             exit 1
           fi
 

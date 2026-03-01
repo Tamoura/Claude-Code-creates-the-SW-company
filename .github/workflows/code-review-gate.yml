@@ -33,8 +33,10 @@ jobs:
 
       - name: Check for code review report
         id: check-report
+        env:
+          PRODUCT: ${{ inputs.product }}
         run: |
-          REPORT_DIR="products/${{ inputs.product }}/docs/quality-reports"
+          REPORT_DIR="products/$PRODUCT/docs/quality-reports"
 
           # Use find to locate reports — safer than ls with globs
           REPORT=$(find "$REPORT_DIR" -name "code-review-*.md" -type f 2>/dev/null | sort -r | head -1)

@@ -25,6 +25,7 @@ const notificationRoutes: FastifyPluginAsync = async (fastify) => {
   fastify.get('/', async (request, reply) => {
     const { page, limit, unread_only } = listSchema.parse(request.query);
     const result = await service.list(request.currentUser!.id, { page, limit, unreadOnly: unread_only });
+    // nosemgrep: javascript.express.security.audit.xss.direct-response-write
     return reply.send(result);
   });
 

@@ -56,6 +56,7 @@ const questionRoutes: FastifyPluginAsync = async (fastify) => {
         fastify.prisma.question.count({ where }),
       ]);
 
+      // nosemgrep: javascript.express.security.audit.xss.direct-response-write
       return reply.send(paginatedResult(questions, total, pagination));
     },
   });

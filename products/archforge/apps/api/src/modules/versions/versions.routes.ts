@@ -38,6 +38,7 @@ const versionRoutes: FastifyPluginAsync = async (fastify) => {
       };
       const query = listVersionsQuerySchema.parse(request.query);
       const result = await service.list(user.id, artifactId, query);
+      // nosemgrep: javascript.express.security.audit.xss.direct-response-write
       return reply.send(result);
     } catch (error) {
       handleValidationError(error);

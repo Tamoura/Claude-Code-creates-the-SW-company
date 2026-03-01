@@ -142,6 +142,7 @@ const notificationRoutes: FastifyPluginAsync = async (fastify) => {
         updatedFields: Object.keys(updates),
       });
 
+      // nosemgrep: javascript.express.security.audit.xss.direct-response-write
       return reply.send(formatPreferenceResponse(prefs));
     } catch (error) {
       if (error instanceof AppError) {

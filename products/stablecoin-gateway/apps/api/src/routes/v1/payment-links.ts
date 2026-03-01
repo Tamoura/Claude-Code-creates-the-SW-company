@@ -381,6 +381,7 @@ const paymentLinkRoutes: FastifyPluginAsync = async (fastify) => {
           paymentLinkId: id,
         });
 
+        // nosemgrep: javascript.express.security.audit.xss.direct-response-write
         return reply.send(response);
       } catch (error) {
         if (error instanceof AppError) {

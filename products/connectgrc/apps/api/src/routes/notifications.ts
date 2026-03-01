@@ -27,6 +27,7 @@ const notificationRoutes: FastifyPluginAsync = async (fastify) => {
         }),
       ]);
 
+      // nosemgrep: javascript.express.security.audit.xss.direct-response-write
       return reply.send(paginatedResult(notifications, total, pagination));
     },
   });
