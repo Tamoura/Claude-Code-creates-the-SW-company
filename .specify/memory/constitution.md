@@ -1,8 +1,8 @@
 # ConnectSW Constitution
 
-**Version**: 1.4.0
+**Version**: 1.5.0
 **Ratified**: 2026-02-11
-**Last Amended**: 2026-02-28
+**Last Amended**: 2026-03-01
 
 ## Preamble
 
@@ -305,6 +305,62 @@ All agent interactions MUST follow context engineering principles to minimize to
 - `.claude/protocols/direct-delivery.md` — Telephone game fix with file-based delivery
 
 **Rationale:** Context windows degrade due to attention mechanics, not raw token limits. Models exhibit U-shaped attention curves where middle tokens receive 10-40% less recall. Loading everything into every agent's context wastes the attention budget and causes lost-in-middle degradation. Progressive disclosure and attention-optimized ordering counteract these effects. Direct delivery prevents the ~50% information loss that occurs when the orchestrator re-synthesizes specialist outputs. These principles are adapted from the [Agent-Skills-for-Context-Engineering](https://github.com/muratcankoylan/Agent-Skills-for-Context-Engineering) research, cited in academic work on context engineering.
+
+---
+
+## Article XIII: CI Enforcement (Structural Quality Gates)
+
+All quality standards MUST be enforced by CI pipelines — not just documented. Aspirational rules without mechanical enforcement are not rules.
+
+**Rules:**
+
+### 13.1 Mandatory CI Jobs (per product CI workflow)
+Every product CI workflow MUST include these jobs — none may be omitted:
+- **lint** — TypeScript typechecking + ESLint (blocking)
+- **test** — Unit/integration tests (blocking)
+- **coverage** — 80% minimum; initially warn-mode, becomes blocking after Sprint 2
+- **security** — pnpm audit at `--audit-level=high` (blocking, no `continue-on-error`)
+- **traceability** — `.claude/scripts/traceability-gate.sh` (warn-mode initially, blocking by Sprint 3)
+- **e2e** — Playwright tests (warn-mode until E2E suite is established, then blocking)
+
+### 13.2 Coverage Gate
+- Minimum 80% coverage is constitutionally required (Article III)
+- CI MUST enforce this via `--coverage --coverageThreshold` in test commands
+- Products below threshold get a grace period of one sprint; after that, PRs with declining coverage are blocked
+
+### 13.3 Security Gate (No `continue-on-error`)
+- Security jobs MUST NOT use `continue-on-error: true`
+- High/critical vulnerabilities block merging
+- The quality-gate job MUST fail if security job fails
+- Exception: only with explicit CISO-equivalent (CEO) approval, time-boxed to max 72 hours
+
+### 13.4 Spec-Kit Pre-Flight in Orchestrator
+- The Orchestrator MUST run `.claude/scripts/speckit-preflight.sh` before spawning implementation agents for new-product or new-feature workflows
+- A pre-flight FAIL blocks implementation; the Orchestrator completes missing spec-kit steps first
+- This enforcement is in Step 2.9 of orchestrator-enhanced.md
+
+### 13.5 Sprint & Story Traceability
+- Every new-product and new-feature workflow MUST create GitHub Issues for each US-XX user story via `.claude/scripts/create-sprint.sh`
+- GitHub Issues serve as the sprint backlog
+- Commit messages must reference the GitHub Issue number (`#NNN`) in addition to the story ID (`[US-XX]`)
+- Sprint velocity is tracked via GitHub Milestones
+
+### 13.6 E2E Test Gate
+- Every product MUST have a `e2e/tests/stories/` directory organized by story ID
+- E2E tests are MANDATORY for every user-facing feature (Article III)
+- CI E2E job starts as warn-only but becomes blocking once the E2E suite reaches 5+ tests
+- No product may be presented to CEO as "complete" without passing E2E tests
+
+### 13.7 Production Readiness Gate
+Before any product reaches "production" phase:
+- Health check endpoints (`/health`, `/ready`) MUST exist and return 200
+- Structured logging MUST be enabled (JSON format, with request IDs)
+- Error monitoring MUST be configured (Sentry or equivalent)
+- Graceful shutdown MUST be implemented
+- Database migrations MUST be idempotent and reversible
+- These are checked by the production gate in `.claude/quality-gates/executor.sh`
+
+**Rationale:** ConnectSW previously documented quality standards in the constitution but did not enforce them mechanically. This resulted in the CEO needing multiple audit cycles to find issues. Structural CI enforcement catches issues at the earliest possible moment — during PR review, before code reaches main. The spec-kit pre-flight gate prevents the most common root cause: implementation starting before requirements are clear and traceable.
 
 ---
 
