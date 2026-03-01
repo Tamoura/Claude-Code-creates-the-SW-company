@@ -77,13 +77,13 @@ interface WorkflowsResponse {
 
 const agentColorMap: Record<string, string> = {
   'product-manager': 'text-purple-400',
-  'architect': 'text-indigo-400',
+  'architect': 'text-blue-400',
   'backend-engineer': 'text-green-400',
   'frontend-engineer': 'text-amber-400',
-  'qa-engineer': 'text-rose-400',
+  'qa-engineer': 'text-red-400',
   'devops-engineer': 'text-cyan-400',
   'technical-writer': 'text-indigo-400',
-  'orchestrator': 'text-amber-400',
+  'orchestrator': 'text-yellow-400',
   'business-analyst': 'text-pink-400',
   'code-reviewer': 'text-rose-400',
   'data-engineer': 'text-teal-400',
@@ -91,20 +91,20 @@ const agentColorMap: Record<string, string> = {
   'mobile-developer': 'text-orange-400',
   'performance-engineer': 'text-lime-400',
   'product-strategist': 'text-sky-400',
-  'security-engineer': 'text-rose-300',
+  'security-engineer': 'text-red-300',
   'support-engineer': 'text-emerald-400',
   'ui-ux-designer': 'text-fuchsia-400',
 };
 
 const agentBgMap: Record<string, string> = {
   'product-manager': 'bg-purple-500',
-  'architect': 'bg-indigo-500',
+  'architect': 'bg-blue-500',
   'backend-engineer': 'bg-green-500',
   'frontend-engineer': 'bg-amber-500',
-  'qa-engineer': 'bg-rose-500',
+  'qa-engineer': 'bg-red-500',
   'devops-engineer': 'bg-cyan-500',
   'technical-writer': 'bg-indigo-500',
-  'orchestrator': 'bg-amber-500',
+  'orchestrator': 'bg-yellow-500',
   'business-analyst': 'bg-pink-500',
   'code-reviewer': 'bg-rose-500',
   'data-engineer': 'bg-teal-500',
@@ -112,7 +112,7 @@ const agentBgMap: Record<string, string> = {
   'mobile-developer': 'bg-orange-500',
   'performance-engineer': 'bg-lime-500',
   'product-strategist': 'bg-sky-500',
-  'security-engineer': 'bg-rose-300',
+  'security-engineer': 'bg-red-300',
   'support-engineer': 'bg-emerald-500',
   'ui-ux-designer': 'bg-fuchsia-500',
 };
@@ -148,7 +148,7 @@ export default function Simulate() {
   const [workflowType, setWorkflowType] = useState<WorkflowType>('new-product');
   const { data, loading } = useApi<SimulationResponse>(`/simulations?type=${workflowType}`);
   const [expandedPhase, setExpandedPhase] = useState<number | null>(null);
-  const [fullscreenDiagram, setFullscreenDiagram] = useState<{ title: string; mermaid?: string; timelineData?: { entries: TimelineEntry[]; phases: SimulationPhase[] }; depsPhases?: SimulationPhase[] } | null>(null);
+  const [fullscreenDiagram, setFullscreenDiagram] = useState<{ title: string; mermaid: string } | null>(null);
 
   // Once workflows load, ensure selected type is valid
   useEffect(() => {
@@ -170,12 +170,12 @@ export default function Simulate() {
   // Fullscreen overlay
   if (fullscreenDiagram) {
     return (
-      <div className="fixed inset-0 z-50 bg-slate-950 flex flex-col">
-        <div className="flex items-center justify-between px-6 py-4 border-b border-slate-800 bg-slate-900">
+      <div className="fixed inset-0 z-50 bg-gray-950 flex flex-col">
+        <div className="flex items-center justify-between px-6 py-4 border-b border-gray-800 bg-gray-900">
           <h2 className="text-lg font-semibold text-white">{fullscreenDiagram.title}</h2>
           <button
             onClick={closeFullscreen}
-            className="text-slate-400 hover:text-white transition-colors flex items-center gap-2 px-3 py-1.5 rounded-lg hover:bg-slate-800"
+            className="text-gray-400 hover:text-white transition-colors flex items-center gap-2 px-3 py-1.5 rounded-lg hover:bg-gray-800"
             title="Exit fullscreen (Esc)"
           >
             <svg className="w-5 h-5" fill="none" stroke="currentColor" viewBox="0 0 24 24" strokeWidth={1.5}>
@@ -186,15 +186,7 @@ export default function Simulate() {
         </div>
         <div className="flex-1 overflow-auto p-8">
           <div className="max-w-6xl mx-auto">
-            {fullscreenDiagram.mermaid && (
-              <MarkdownRenderer content={`\`\`\`mermaid\n${fullscreenDiagram.mermaid}\n\`\`\``} />
-            )}
-            {fullscreenDiagram.timelineData && (
-              <ExecutionTimeline timeline={fullscreenDiagram.timelineData.entries} phases={fullscreenDiagram.timelineData.phases} />
-            )}
-            {fullscreenDiagram.depsPhases && (
-              <DependencyGraph phases={fullscreenDiagram.depsPhases} />
-            )}
+            <MarkdownRenderer content={`\`\`\`mermaid\n${fullscreenDiagram.mermaid}\n\`\`\``} />
           </div>
         </div>
       </div>
@@ -205,7 +197,7 @@ export default function Simulate() {
     <div>
       {/* Header */}
       <h1 className="text-2xl font-bold text-white mb-1">Workflow Simulation</h1>
-      <p className="text-slate-500 mb-6">
+      <p className="text-gray-500 mb-6">
         Preview every phase, agent, deliverable, and checkpoint for each workflow type
       </p>
 
@@ -214,7 +206,7 @@ export default function Simulate() {
         {workflowsLoading && (
           <div className="flex gap-2">
             {[...Array(5)].map((_, i) => (
-              <div key={i} className="h-9 w-28 bg-slate-800 rounded-lg animate-pulse" />
+              <div key={i} className="h-9 w-28 bg-gray-800 rounded-lg animate-pulse" />
             ))}
           </div>
         )}
@@ -224,8 +216,8 @@ export default function Simulate() {
             onClick={() => { setWorkflowType(wf.id); setExpandedPhase(null); }}
             className={`px-4 py-2 rounded-lg text-sm font-medium transition-colors ${
               workflowType === wf.id
-                ? 'bg-indigo-600 text-white'
-                : 'bg-slate-800 text-slate-400 hover:text-slate-200 hover:bg-slate-700'
+                ? 'bg-blue-600 text-white'
+                : 'bg-gray-800 text-gray-400 hover:text-gray-200 hover:bg-gray-700'
             }`}
           >
             {wf.label}
@@ -234,7 +226,7 @@ export default function Simulate() {
       </div>
 
       {loading && <LoadingSkeleton />}
-      {!loading && !data && <p className="text-rose-400">Failed to load simulation</p>}
+      {!loading && !data && <p className="text-red-400">Failed to load simulation</p>}
       {!loading && data && (
         <SimulationContent
           simulation={data.simulation}
@@ -255,18 +247,18 @@ interface SimulationContentProps {
   workflowLabel: string;
   expandedPhase: number | null;
   setExpandedPhase: (n: number | null) => void;
-  setFullscreenDiagram: (d: { title: string; mermaid?: string; timelineData?: { entries: TimelineEntry[]; phases: SimulationPhase[] }; depsPhases?: SimulationPhase[] } | null) => void;
+  setFullscreenDiagram: (d: { title: string; mermaid: string } | null) => void;
 }
 
 function SimulationContent({ simulation, workflowLabel, expandedPhase, setExpandedPhase, setFullscreenDiagram }: SimulationContentProps) {
-  const { summary, phases, timeline, deliverables, qualityGates } = simulation;
+  const { summary, phases, deliverables, qualityGates, mermaidDependency, mermaidGantt } = simulation;
 
   return (
     <div>
       {/* Simulation Header */}
       <div className="flex items-center gap-3 mb-6">
         <Badge variant="info">{workflowLabel}</Badge>
-        <span className="text-sm text-slate-500">{summary.totalTasks} tasks across {summary.totalPhases} phases</span>
+        <span className="text-sm text-gray-500">{summary.totalTasks} tasks across {summary.totalPhases} phases</span>
       </div>
 
       {/* Stat Cards */}
@@ -291,15 +283,15 @@ function SimulationContent({ simulation, workflowLabel, expandedPhase, setExpand
 
       {/* Gantt Timeline */}
       <section className="mb-8">
-        <div className="bg-slate-900 border border-slate-800 rounded-xl p-6">
+        <div className="bg-gray-900 border border-gray-800 rounded-xl p-6">
           <div className="flex items-center justify-between mb-4">
             <div>
               <h2 className="text-lg font-semibold text-white">Execution Timeline</h2>
-              <p className="text-sm text-slate-500 mt-1">Critical path highlighted — determines minimum total duration</p>
+              <p className="text-sm text-gray-500 mt-1">Critical path highlighted — determines minimum total duration</p>
             </div>
             <button
-              onClick={() => setFullscreenDiagram({ title: 'Execution Timeline', timelineData: { entries: timeline, phases } })}
-              className="text-slate-400 hover:text-white transition-colors flex items-center gap-1.5 px-2 py-1 rounded hover:bg-slate-800 text-xs"
+              onClick={() => setFullscreenDiagram({ title: 'Execution Timeline', mermaid: mermaidGantt })}
+              className="text-gray-400 hover:text-white transition-colors flex items-center gap-1.5 px-2 py-1 rounded hover:bg-gray-800 text-xs"
             >
               <svg className="w-4 h-4" fill="none" stroke="currentColor" viewBox="0 0 24 24" strokeWidth={1.5}>
                 <path strokeLinecap="round" strokeLinejoin="round" d="M3.75 3.75v4.5m0-4.5h4.5m-4.5 0L9 9M3.75 20.25v-4.5m0 4.5h4.5m-4.5 0L9 15M20.25 3.75h-4.5m4.5 0v4.5m0-4.5L15 9m5.25 11.25h-4.5m4.5 0v-4.5m0 4.5L15 15" />
@@ -307,7 +299,7 @@ function SimulationContent({ simulation, workflowLabel, expandedPhase, setExpand
               Fullscreen
             </button>
           </div>
-          <ExecutionTimeline timeline={timeline} phases={phases} />
+          <MarkdownRenderer content={`\`\`\`mermaid\n${mermaidGantt}\n\`\`\``} />
         </div>
       </section>
 
@@ -328,15 +320,15 @@ function SimulationContent({ simulation, workflowLabel, expandedPhase, setExpand
 
       {/* Dependency Diagram */}
       <section className="mb-8">
-        <div className="bg-slate-900 border border-slate-800 rounded-xl p-6">
+        <div className="bg-gray-900 border border-gray-800 rounded-xl p-6">
           <div className="flex items-center justify-between mb-4">
             <div>
               <h2 className="text-lg font-semibold text-white">Task Dependencies</h2>
-              <p className="text-sm text-slate-500 mt-1">Full dependency graph — agent-colored nodes</p>
+              <p className="text-sm text-gray-500 mt-1">Full dependency graph — agent-colored nodes</p>
             </div>
             <button
-              onClick={() => setFullscreenDiagram({ title: 'Task Dependencies', depsPhases: phases })}
-              className="text-slate-400 hover:text-white transition-colors flex items-center gap-1.5 px-2 py-1 rounded hover:bg-slate-800 text-xs"
+              onClick={() => setFullscreenDiagram({ title: 'Task Dependencies', mermaid: mermaidDependency })}
+              className="text-gray-400 hover:text-white transition-colors flex items-center gap-1.5 px-2 py-1 rounded hover:bg-gray-800 text-xs"
             >
               <svg className="w-4 h-4" fill="none" stroke="currentColor" viewBox="0 0 24 24" strokeWidth={1.5}>
                 <path strokeLinecap="round" strokeLinejoin="round" d="M3.75 3.75v4.5m0-4.5h4.5m-4.5 0L9 9M3.75 20.25v-4.5m0 4.5h4.5m-4.5 0L9 15M20.25 3.75h-4.5m4.5 0v4.5m0-4.5L15 9m5.25 11.25h-4.5m4.5 0v-4.5m0 4.5L15 15" />
@@ -344,24 +336,24 @@ function SimulationContent({ simulation, workflowLabel, expandedPhase, setExpand
               Fullscreen
             </button>
           </div>
-          <DependencyGraph phases={phases} />
+          <MarkdownRenderer content={`\`\`\`mermaid\n${mermaidDependency}\n\`\`\``} />
         </div>
       </section>
 
       {/* Deliverables Summary */}
       <section className="mb-8">
-        <div className="bg-slate-900 border border-slate-800 rounded-xl p-6">
+        <div className="bg-gray-900 border border-gray-800 rounded-xl p-6">
           <h2 className="text-lg font-semibold text-white mb-4">Deliverables</h2>
-          <p className="text-sm text-slate-500 mb-4">All artifacts produced across all phases</p>
+          <p className="text-sm text-gray-500 mb-4">All artifacts produced across all phases</p>
           <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-3">
             {deliverables.map((d, idx) => (
-              <div key={idx} className="flex items-start gap-3 p-3 rounded-lg bg-slate-800/50 border border-slate-700/50">
-                <svg className="w-5 h-5 text-slate-400 flex-shrink-0 mt-0.5" fill="none" stroke="currentColor" viewBox="0 0 24 24" strokeWidth={1.5}>
+              <div key={idx} className="flex items-start gap-3 p-3 rounded-lg bg-gray-800/50 border border-gray-700/50">
+                <svg className="w-5 h-5 text-gray-400 flex-shrink-0 mt-0.5" fill="none" stroke="currentColor" viewBox="0 0 24 24" strokeWidth={1.5}>
                   <path strokeLinecap="round" strokeLinejoin="round" d={deliverableIconMap[d.type] ?? deliverableIconMap.file} />
                 </svg>
                 <div className="min-w-0">
-                  <p className="text-sm font-medium text-slate-200">{d.name}</p>
-                  <p className="text-xs text-slate-500 truncate" title={d.path}>{d.path}</p>
+                  <p className="text-sm font-medium text-gray-200">{d.name}</p>
+                  <p className="text-xs text-gray-500 truncate" title={d.path}>{d.path}</p>
                   <Badge variant={d.type === 'document' ? 'info' : d.type === 'directory' ? 'warning' : 'default'}>
                     {d.type}
                   </Badge>
@@ -374,307 +366,26 @@ function SimulationContent({ simulation, workflowLabel, expandedPhase, setExpand
 
       {/* Quality Gates */}
       <section className="mb-8">
-        <div className="bg-slate-900 border border-slate-800 rounded-xl p-6">
+        <div className="bg-gray-900 border border-gray-800 rounded-xl p-6">
           <h2 className="text-lg font-semibold text-white mb-4">Quality Gates</h2>
-          <p className="text-sm text-slate-500 mb-4">What must pass before CEO review</p>
+          <p className="text-sm text-gray-500 mb-4">What must pass before CEO review</p>
           <div className="space-y-3">
             {qualityGates.map((gate, idx) => (
-              <div key={idx} className="flex items-start gap-3 p-4 rounded-lg bg-slate-800/50 border border-slate-700/50">
-                <div className="w-8 h-8 rounded-full bg-amber-500/20 flex items-center justify-center flex-shrink-0">
-                  <svg className="w-4 h-4 text-amber-400" fill="none" stroke="currentColor" viewBox="0 0 24 24" strokeWidth={1.5}>
+              <div key={idx} className="flex items-start gap-3 p-4 rounded-lg bg-gray-800/50 border border-gray-700/50">
+                <div className="w-8 h-8 rounded-full bg-yellow-500/20 flex items-center justify-center flex-shrink-0">
+                  <svg className="w-4 h-4 text-yellow-400" fill="none" stroke="currentColor" viewBox="0 0 24 24" strokeWidth={1.5}>
                     <path strokeLinecap="round" strokeLinejoin="round" d="M9 12.75L11.25 15 15 9.75m-3-7.036A11.959 11.959 0 013.598 6 11.99 11.99 0 003 9.749c0 5.592 3.824 10.29 9 11.623 5.176-1.332 9-6.03 9-11.622 0-1.31-.21-2.571-.598-3.751h-.152c-3.196 0-6.1-1.248-8.25-3.285z" />
                   </svg>
                 </div>
                 <div>
-                  <p className="text-sm font-medium text-slate-200">{gate.name}</p>
-                  <p className="text-xs text-slate-500 mt-1">{gate.taskId}</p>
+                  <p className="text-sm font-medium text-gray-200">{gate.name}</p>
+                  <p className="text-xs text-gray-500 mt-1">{gate.taskId}</p>
                 </div>
               </div>
             ))}
           </div>
         </div>
       </section>
-    </div>
-  );
-}
-
-// ── Dependency Graph ────────────────────────────────────────────────────
-
-const DNODE_W = 160;
-const DNODE_H = 58;
-const DROW_GAP = 6;
-const DCOL_GAP = 48;
-const DHEADER_H = 24;
-
-function DependencyGraph({ phases }: { phases: SimulationPhase[] }) {
-  const allTasks = phases.flatMap((p) => p.tasks);
-
-  // Map taskId → absolute pixel position (top-left corner of node)
-  const posMap = new Map<string, { x: number; y: number }>();
-  phases.forEach((phase, colIdx) => {
-    phase.tasks.forEach((task, rowIdx) => {
-      posMap.set(task.id, {
-        x: colIdx * (DNODE_W + DCOL_GAP),
-        y: DHEADER_H + rowIdx * (DNODE_H + DROW_GAP),
-      });
-    });
-  });
-
-  const maxRows = Math.max(...phases.map((p) => p.tasks.length), 1);
-  const totalW = phases.length > 0 ? phases.length * (DNODE_W + DCOL_GAP) - DCOL_GAP : DNODE_W;
-  const totalH = DHEADER_H + maxRows * (DNODE_H + DROW_GAP) - DROW_GAP;
-
-  // Collect edges from dependsOn
-  const edges = allTasks.flatMap((task) =>
-    (task.dependsOn ?? [])
-      .filter((depId) => posMap.has(depId))
-      .map((depId) => ({ from: depId, to: task.id })),
-  );
-
-  return (
-    <div className="overflow-x-auto pb-2">
-      <div style={{ position: 'relative', width: totalW, height: totalH }}>
-
-        {/* Phase column headers */}
-        {phases.map((phase, colIdx) => (
-          <div
-            key={phase.number}
-            style={{ position: 'absolute', left: colIdx * (DNODE_W + DCOL_GAP), top: 0, width: DNODE_W }}
-            className="flex items-center justify-center"
-          >
-            <span className="text-[10px] font-semibold uppercase tracking-wider text-slate-500 bg-slate-900 px-2 rounded">
-              Phase {phase.number}
-            </span>
-          </div>
-        ))}
-
-        {/* SVG layer — edges with bezier curves and arrowheads */}
-        <svg
-          style={{ position: 'absolute', left: 0, top: 0, width: totalW, height: totalH, overflow: 'visible' }}
-          className="pointer-events-none"
-        >
-          <defs>
-            <marker id="dep-arrow" viewBox="0 0 8 8" markerWidth="5" markerHeight="5" refX="7" refY="4" orient="auto">
-              <path d="M1,1 L7,4 L1,7 Z" fill="#475569" />
-            </marker>
-          </defs>
-          {edges.map(({ from, to }) => {
-            const fp = posMap.get(from);
-            const tp = posMap.get(to);
-            if (!fp || !tp) return null;
-            const x1 = fp.x + DNODE_W;          // right edge of source
-            const y1 = fp.y + DNODE_H / 2;       // vertical center of source
-            const x2 = tp.x - 4;                 // just before left edge of target
-            const y2 = tp.y + DNODE_H / 2;       // vertical center of target
-            const cpX = (x1 + tp.x) / 2;         // horizontal midpoint for bezier
-            return (
-              <path
-                key={`${from}-${to}`}
-                d={`M ${x1} ${y1} C ${cpX} ${y1}, ${cpX} ${y2}, ${x2} ${y2}`}
-                fill="none"
-                stroke="#475569"
-                strokeWidth={1.5}
-                markerEnd="url(#dep-arrow)"
-              />
-            );
-          })}
-        </svg>
-
-        {/* Task nodes */}
-        {phases.map((phase) =>
-          phase.tasks.map((task) => {
-            const pos = posMap.get(task.id);
-            if (!pos) return null;
-            return (
-              <div
-                key={task.id}
-                style={{ position: 'absolute', left: pos.x, top: pos.y, width: DNODE_W, height: DNODE_H }}
-                className="rounded-lg border border-slate-700 bg-slate-800/90 px-3 py-2 flex flex-col justify-center hover:border-slate-500 transition-colors cursor-default"
-                title={`${task.id}: ${task.name}\n${task.agent}`}
-              >
-                <div className="flex items-center gap-1.5 mb-0.5">
-                  <div className={`w-2 h-2 rounded-full flex-shrink-0 ${agentBgMap[task.agent] ?? 'bg-slate-600'}`} />
-                  <span className="text-[10px] text-slate-500 truncate font-mono">{task.id}</span>
-                  {task.checkpoint && <span className="text-amber-400 text-[10px] ml-auto flex-shrink-0">★</span>}
-                </div>
-                <p className="text-xs font-medium text-slate-200 truncate leading-snug">{task.name}</p>
-                <p className={`text-[10px] truncate ${agentColorMap[task.agent] ?? 'text-slate-500'}`}>{task.agent}</p>
-              </div>
-            );
-          })
-        )}
-      </div>
-    </div>
-  );
-}
-
-// ── Execution Timeline ─────────────────────────────────────────────────
-
-function getTickInterval(totalDuration: number): number {
-  if (totalDuration <= 120) return 15;
-  if (totalDuration <= 480) return 30;
-  if (totalDuration <= 960) return 60;
-  return 120;
-}
-
-function buildTicks(totalDuration: number): number[] {
-  const interval = getTickInterval(totalDuration);
-  const ticks: number[] = [];
-  for (let t = 0; t <= totalDuration; t += interval) {
-    ticks.push(t);
-  }
-  if (ticks[ticks.length - 1] !== totalDuration) {
-    ticks.push(totalDuration);
-  }
-  return ticks;
-}
-
-const LABEL_W = 128; // px — matches w-32
-
-function TimeAxis({ ticks, totalDuration }: { ticks: number[]; totalDuration: number }) {
-  return (
-    <div className="flex" style={{ marginLeft: LABEL_W }}>
-      <div className="flex-1 relative h-5">
-        {ticks.map((t) => (
-          <span
-            key={t}
-            className="absolute text-[10px] text-slate-500 -translate-x-1/2"
-            style={{ left: `${(t / totalDuration) * 100}%` }}
-          >
-            {formatTime(t)}
-          </span>
-        ))}
-      </div>
-    </div>
-  );
-}
-
-function ExecutionTimeline({ timeline, phases }: { timeline: TimelineEntry[]; phases: SimulationPhase[] }) {
-  const totalDuration = Math.max(...timeline.map((e) => e.endMinute), 1);
-  const ticks = buildTicks(totalDuration);
-  const uniqueAgents = [...new Set(timeline.map((e) => e.agent))];
-
-  // Group entries by phase name in phase order
-  const phaseOrder = phases.map((p) => p.name);
-  const entriesByPhase: Record<string, TimelineEntry[]> = {};
-  for (const entry of timeline) {
-    if (!entriesByPhase[entry.phase]) entriesByPhase[entry.phase] = [];
-    entriesByPhase[entry.phase].push(entry);
-  }
-
-  return (
-    <div>
-
-      {/* Legend */}
-      <div className="flex flex-wrap gap-x-4 gap-y-1.5 mb-4">
-          {uniqueAgents.map((agent) => (
-            <div key={agent} className="flex items-center gap-1.5">
-              <span className={`w-3 h-3 rounded-sm flex-shrink-0 ${agentBgMap[agent] ?? 'bg-slate-600'}`} />
-              <span className="text-xs text-slate-400">{agent}</span>
-            </div>
-          ))}
-          <div className="flex items-center gap-1.5 ml-2 pl-2 border-l border-slate-700">
-            <span className="w-3 h-3 rounded-sm flex-shrink-0 bg-white/20 ring-1 ring-white/40" />
-            <span className="text-xs text-slate-400">Critical path</span>
-          </div>
-        </div>
-
-        {/* Top time axis */}
-        <TimeAxis ticks={ticks} totalDuration={totalDuration} />
-
-        {/* Chart body */}
-        <div className="relative mt-1">
-            {/* Vertical grid lines */}
-          <div className="absolute inset-0 flex pointer-events-none" style={{ marginLeft: LABEL_W }}>
-            <div className="flex-1 relative">
-              {ticks.map((t) => (
-                <div
-                  key={t}
-                  className="absolute top-0 bottom-0 border-l border-slate-800/80"
-                  style={{ left: `${(t / totalDuration) * 100}%` }}
-                />
-              ))}
-            </div>
-          </div>
-
-          {/* Phase rows */}
-          {phaseOrder.map((phaseName) => {
-            const phaseObj = phases.find((p) => p.name === phaseName);
-            const entries = entriesByPhase[phaseName];
-            if (!phaseObj || !entries || entries.length === 0) return null;
-
-            return (
-              <div key={phaseName} className="mb-3">
-                {/* Phase header */}
-                <div className="flex items-center mb-1">
-                  <div className="w-32 flex-shrink-0 pr-3 flex justify-end">
-                    <span className="text-[10px] font-semibold uppercase tracking-wide text-slate-500">
-                      Ph.{phaseObj.number}
-                    </span>
-                  </div>
-                  <div className="flex-1 flex items-center gap-2">
-                    <div className="flex-1 h-px bg-slate-800" />
-                    <span className="text-[10px] font-semibold uppercase tracking-wide text-slate-500 whitespace-nowrap px-1">
-                      {phaseName}
-                    </span>
-                    <div className="flex-1 h-px bg-slate-800" />
-                  </div>
-                </div>
-
-                {/* Task rows */}
-                {entries.map((entry) => {
-                  const duration = entry.endMinute - entry.startMinute;
-                  const leftPct = (entry.startMinute / totalDuration) * 100;
-                  const widthPct = Math.max((duration / totalDuration) * 100, 0.8);
-                  const showLabel = widthPct > 8;
-
-                  return (
-                    <div key={entry.taskId} className="flex items-center group/row">
-                      {/* Label column */}
-                      <div className="w-32 flex-shrink-0 pr-3 text-right">
-                        <p className="text-xs text-slate-400 truncate" title={entry.taskName}>
-                          {entry.taskName}
-                        </p>
-                        <p
-                          className={`text-[10px] truncate ${agentColorMap[entry.agent] ?? 'text-slate-500'}`}
-                          title={entry.agent}
-                        >
-                          {entry.agent}
-                        </p>
-                      </div>
-
-                      {/* Bar track */}
-                      <div className="flex-1 relative h-7 flex items-center">
-                        <div
-                          className={`absolute h-5 rounded-sm flex items-center justify-end overflow-hidden ${
-                            agentBgMap[entry.agent] ?? 'bg-slate-600'
-                          } ${
-                            entry.isCriticalPath
-                              ? 'ring-1 ring-white/30 brightness-110'
-                              : 'opacity-70 group-hover/row:opacity-90'
-                          }`}
-                          style={{ left: `${leftPct}%`, width: `${widthPct}%` }}
-                          title={`${entry.taskId}: ${entry.taskName}\nAgent: ${entry.agent}\n${formatTime(entry.startMinute)} → ${formatTime(entry.endMinute)}${entry.isCriticalPath ? '\n⚡ Critical Path' : ''}`}
-                        >
-                          {showLabel && (
-                            <span className="text-[9px] text-white/90 font-medium px-1 truncate">
-                              {formatTime(duration)}
-                            </span>
-                          )}
-                        </div>
-                      </div>
-                    </div>
-                  );
-                })}
-              </div>
-            );
-          })}
-        </div>
-
-        {/* Bottom time axis */}
-        <div className="mt-1">
-          <TimeAxis ticks={ticks} totalDuration={totalDuration} />
-        </div>
     </div>
   );
 }
@@ -689,27 +400,27 @@ interface PhaseCardProps {
 
 function PhaseCard({ phase, expanded, onToggle }: PhaseCardProps) {
   return (
-    <div className="bg-slate-900 border border-slate-800 rounded-xl p-6">
+    <div className="bg-gray-900 border border-gray-800 rounded-xl p-6">
       {/* Collapsed Header */}
       <div className="flex items-center justify-between">
         <div className="flex items-center gap-3">
           <Badge variant="info">Phase {phase.number}</Badge>
           <h3 className="text-base font-semibold text-white">{phase.name}</h3>
           {phase.hasCheckpoint && (
-            <span className="text-amber-400" title="CEO Checkpoint">&#9733;</span>
+            <span className="text-yellow-400" title="CEO Checkpoint">&#9733;</span>
           )}
           {phase.isParallel && (
             <Badge variant="success">Parallel</Badge>
           )}
         </div>
         <div className="flex items-center gap-4">
-          <span className="text-sm text-slate-500">{phase.tasks.length} tasks</span>
-          <span className="text-sm text-slate-500">{formatTime(phase.parallelMinutes)}</span>
+          <span className="text-sm text-gray-500">{phase.tasks.length} tasks</span>
+          <span className="text-sm text-gray-500">{formatTime(phase.parallelMinutes)}</span>
           <div className="flex -space-x-1.5">
             {phase.agents.map((agent, idx) => (
               <div
                 key={idx}
-                className={`w-7 h-7 rounded-full ${agentBgMap[agent] || 'bg-slate-500'} flex items-center justify-center text-white text-[10px] font-semibold border-2 border-slate-900`}
+                className={`w-7 h-7 rounded-full ${agentBgMap[agent] || 'bg-gray-500'} flex items-center justify-center text-white text-[10px] font-semibold border-2 border-gray-900`}
                 title={agent}
               >
                 {agent.charAt(0).toUpperCase()}
@@ -722,7 +433,7 @@ function PhaseCard({ phase, expanded, onToggle }: PhaseCardProps) {
       {/* Toggle */}
       <button
         onClick={onToggle}
-        className="text-sm text-indigo-400 hover:text-indigo-300 transition-colors flex items-center gap-1 mt-3"
+        className="text-sm text-blue-400 hover:text-blue-300 transition-colors flex items-center gap-1 mt-3"
       >
         {expanded ? '\u25BC Collapse' : '\u25B6 Expand tasks & deliverables'}
       </button>
@@ -731,34 +442,34 @@ function PhaseCard({ phase, expanded, onToggle }: PhaseCardProps) {
       {expanded && (
         <div className="mt-6 space-y-6">
           {/* Task Table */}
-          <div className="border-t border-slate-800 pt-6">
+          <div className="border-t border-gray-800 pt-6">
             <h4 className="text-sm font-semibold text-white mb-3">Tasks</h4>
             <div className="overflow-x-auto">
-              <table className="min-w-full divide-y divide-slate-700">
-                <thead className="bg-slate-800">
+              <table className="min-w-full divide-y divide-gray-700">
+                <thead className="bg-gray-800">
                   <tr>
-                    <th className="px-3 py-2 text-left text-xs font-semibold uppercase text-slate-400">ID</th>
-                    <th className="px-3 py-2 text-left text-xs font-semibold uppercase text-slate-400">Task</th>
-                    <th className="px-3 py-2 text-left text-xs font-semibold uppercase text-slate-400">Agent</th>
-                    <th className="px-3 py-2 text-left text-xs font-semibold uppercase text-slate-400">Priority</th>
-                    <th className="px-3 py-2 text-left text-xs font-semibold uppercase text-slate-400">Time</th>
+                    <th className="px-3 py-2 text-left text-xs font-semibold uppercase text-gray-400">ID</th>
+                    <th className="px-3 py-2 text-left text-xs font-semibold uppercase text-gray-400">Task</th>
+                    <th className="px-3 py-2 text-left text-xs font-semibold uppercase text-gray-400">Agent</th>
+                    <th className="px-3 py-2 text-left text-xs font-semibold uppercase text-gray-400">Priority</th>
+                    <th className="px-3 py-2 text-left text-xs font-semibold uppercase text-gray-400">Time</th>
                   </tr>
                 </thead>
-                <tbody className="divide-y divide-slate-700">
+                <tbody className="divide-y divide-gray-700">
                   {phase.tasks.map((task) => (
-                    <tr key={task.id} className="even:bg-slate-900/50 odd:bg-slate-900 hover:bg-slate-800/50 transition-colors">
-                      <td className="px-3 py-2 text-xs text-slate-500">{task.id}</td>
-                      <td className="px-3 py-2 text-sm text-slate-300 flex items-center gap-2">
-                        {task.checkpoint && <span className="text-amber-400" title="Checkpoint">&#9733;</span>}
+                    <tr key={task.id} className="even:bg-gray-900/50 odd:bg-gray-900 hover:bg-gray-800/50 transition-colors">
+                      <td className="px-3 py-2 text-xs text-gray-500">{task.id}</td>
+                      <td className="px-3 py-2 text-sm text-gray-300 flex items-center gap-2">
+                        {task.checkpoint && <span className="text-yellow-400" title="Checkpoint">&#9733;</span>}
                         {task.name}
                       </td>
-                      <td className={`px-3 py-2 text-sm font-medium ${agentColorMap[task.agent] || 'text-slate-400'}`}>{task.agent}</td>
+                      <td className={`px-3 py-2 text-sm font-medium ${agentColorMap[task.agent] || 'text-gray-400'}`}>{task.agent}</td>
                       <td className="px-3 py-2 text-xs">
                         <Badge variant={task.priority === 'critical' ? 'danger' : task.priority === 'high' ? 'warning' : 'default'}>
                           {task.priority}
                         </Badge>
                       </td>
-                      <td className="px-3 py-2 text-xs text-slate-500">{formatTime(task.estimatedMinutes)}</td>
+                      <td className="px-3 py-2 text-xs text-gray-500">{formatTime(task.estimatedMinutes)}</td>
                     </tr>
                   ))}
                 </tbody>
@@ -768,16 +479,16 @@ function PhaseCard({ phase, expanded, onToggle }: PhaseCardProps) {
 
           {/* Deliverables */}
           {phase.tasks.some((t) => t.produces.length > 0) && (
-            <div className="border-t border-slate-800 pt-6">
+            <div className="border-t border-gray-800 pt-6">
               <h4 className="text-sm font-semibold text-white mb-3">Deliverables</h4>
               <div className="grid grid-cols-1 md:grid-cols-2 gap-2">
                 {phase.tasks.flatMap((task) =>
                   task.produces.map((p, idx) => (
-                    <div key={`${task.id}-${idx}`} className="flex items-center gap-2 p-2 rounded bg-slate-800/50">
-                      <svg className="w-4 h-4 text-slate-400 flex-shrink-0" fill="none" stroke="currentColor" viewBox="0 0 24 24" strokeWidth={1.5}>
+                    <div key={`${task.id}-${idx}`} className="flex items-center gap-2 p-2 rounded bg-gray-800/50">
+                      <svg className="w-4 h-4 text-gray-400 flex-shrink-0" fill="none" stroke="currentColor" viewBox="0 0 24 24" strokeWidth={1.5}>
                         <path strokeLinecap="round" strokeLinejoin="round" d={deliverableIconMap[p.type] ?? deliverableIconMap.file} />
                       </svg>
-                      <span className="text-sm text-slate-300">{p.name}</span>
+                      <span className="text-sm text-gray-300">{p.name}</span>
                       <Badge variant={p.type === 'document' ? 'info' : p.type === 'directory' ? 'warning' : 'default'}>
                         {p.type}
                       </Badge>
@@ -790,18 +501,18 @@ function PhaseCard({ phase, expanded, onToggle }: PhaseCardProps) {
 
           {/* Acceptance Criteria */}
           {phase.tasks.some((t) => t.acceptanceCriteria.length > 0) && (
-            <div className="border-t border-slate-800 pt-6">
+            <div className="border-t border-gray-800 pt-6">
               <h4 className="text-sm font-semibold text-white mb-3">Acceptance Criteria</h4>
               <div className="space-y-3">
                 {phase.tasks
                   .filter((t) => t.acceptanceCriteria.length > 0)
                   .map((task) => (
                     <div key={task.id}>
-                      <p className="text-xs text-slate-500 mb-1">{task.id}: {task.name}</p>
+                      <p className="text-xs text-gray-500 mb-1">{task.id}: {task.name}</p>
                       <ul className="space-y-1">
                         {task.acceptanceCriteria.map((criteria, idx) => (
-                          <li key={idx} className="flex items-start gap-2 text-sm text-slate-300">
-                            <svg className="w-4 h-4 text-slate-600 flex-shrink-0 mt-0.5" fill="none" stroke="currentColor" viewBox="0 0 24 24" strokeWidth={1.5}>
+                          <li key={idx} className="flex items-start gap-2 text-sm text-gray-300">
+                            <svg className="w-4 h-4 text-gray-600 flex-shrink-0 mt-0.5" fill="none" stroke="currentColor" viewBox="0 0 24 24" strokeWidth={1.5}>
                               <path strokeLinecap="round" strokeLinejoin="round" d="M9 12.75L11.25 15 15 9.75M21 12a9 9 0 11-18 0 9 9 0 0118 0z" />
                             </svg>
                             {criteria}
@@ -824,14 +535,14 @@ function PhaseCard({ phase, expanded, onToggle }: PhaseCardProps) {
 function LoadingSkeleton() {
   return (
     <div className="animate-pulse">
-      <div className="h-8 bg-slate-800 rounded w-64 mb-2" />
-      <div className="h-4 bg-slate-800 rounded w-96 mb-8" />
+      <div className="h-8 bg-gray-800 rounded w-64 mb-2" />
+      <div className="h-4 bg-gray-800 rounded w-96 mb-8" />
       <div className="grid grid-cols-2 lg:grid-cols-3 gap-4 mb-8">
-        {[...Array(6)].map((_, i) => <div key={i} className="h-28 bg-slate-800 rounded-xl" />)}
+        {[...Array(6)].map((_, i) => <div key={i} className="h-28 bg-gray-800 rounded-xl" />)}
       </div>
-      <div className="h-64 bg-slate-800 rounded-xl mb-8" />
+      <div className="h-64 bg-gray-800 rounded-xl mb-8" />
       <div className="space-y-4">
-        {[...Array(4)].map((_, i) => <div key={i} className="h-24 bg-slate-800 rounded-xl" />)}
+        {[...Array(4)].map((_, i) => <div key={i} className="h-24 bg-gray-800 rounded-xl" />)}
       </div>
     </div>
   );
