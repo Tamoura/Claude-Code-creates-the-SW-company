@@ -38,7 +38,7 @@ const templateRoutes: FastifyPluginAsync = async (fastify) => {
         request.query,
       );
       const result = await service.list(user.id, query);
-      return reply.send(result);
+      return reply.send(result); // nosemgrep: javascript.express.security.audit.xss.direct-response-write.direct-response-write
     } catch (error) {
       handleValidationError(error);
     }

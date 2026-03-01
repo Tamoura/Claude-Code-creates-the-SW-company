@@ -139,7 +139,7 @@ const authRoutes: FastifyPluginAsync = async (fastify) => {
 
     if (!parent) {
       // Constant-time: run a dummy hash to prevent timing-based email enumeration
-      await verifyPassword(password, '$2b$10$N9qo8uLOickgx2ZMRZoMyeIjZAgcfl7p92ldGxad68LJZdL17lhWy');
+      await verifyPassword(password, '$2b$10$N9qo8uLOickgx2ZMRZoMyeIjZAgcfl7p92ldGxad68LJZdL17lhWy'); // nosemgrep: generic.secrets.security.detected-bcrypt-hash.detected-bcrypt-hash — dummy hash for constant-time comparison, prevents timing-based email enumeration
       throw new UnauthorizedError('Invalid email or password');
     }
 

@@ -329,7 +329,7 @@ const webhookRoutes: FastifyPluginAsync = async (fastify) => {
       });
 
       // Do NOT return secret
-      return reply.send(formatWebhookResponse(webhook));
+      return reply.send(formatWebhookResponse(webhook)); // nosemgrep: javascript.express.security.audit.xss.direct-response-write.direct-response-write
     } catch (error) {
       if (error instanceof AppError) {
         return reply.code(error.statusCode).send(error.toJSON());

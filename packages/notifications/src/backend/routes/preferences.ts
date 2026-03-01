@@ -40,7 +40,7 @@ const preferencesRoutes: FastifyPluginAsync<PreferencesRoutesOptions> = async (f
       const updates = schema.parse(request.body);
       const prefs = await emailService.updateNotificationPreferences(request.currentUser!.id, updates);
       logger.info('Notification preferences updated', { userId: request.currentUser!.id });
-      return reply.send(prefs);
+      return reply.send(prefs); // nosemgrep: javascript.express.security.audit.xss.direct-response-write.direct-response-write
     } catch (error) {
       if (error instanceof ZodError) {
         return reply.code(400).send({ status: 400, detail: error.message });

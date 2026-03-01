@@ -76,12 +76,15 @@ jobs:
           DATABASE_URL: ${{ secrets.DATABASE_URL }}
 
       - name: Backup database (pre-migration snapshot)
+        env:
+          VERSION: ${{ inputs.version }}
+          RDS_INSTANCE_ID: ${{ secrets.RDS_INSTANCE_ID }}
         run: |
           echo "Creating pre-migration database backup..."
           # Create an RDS snapshot before running migrations
-          SNAPSHOT_ID="stablecoin-gw-pre-deploy-$(date +%Y%m%d-%H%M%S)-${{ inputs.version }}"
+          SNAPSHOT_ID="stablecoin-gw-pre-deploy-$(date +%Y%m%d-%H%M%S)-$VERSION"
           aws rds create-db-snapshot \
-            --db-instance-identifier ${{ secrets.RDS_INSTANCE_ID }} \
+            --db-instance-identifier "$RDS_INSTANCE_ID" \
             --db-snapshot-identifier "$SNAPSHOT_ID" \
             --region us-east-1 || echo "WARNING: Snapshot creation failed - verify RDS_INSTANCE_ID secret is set"
           aws rds wait db-snapshot-available \
@@ -174,13 +177,17 @@ jobs:
 
       - name: Notify deployment success
         if: success()
+        env:
+          VERSION: ${{ inputs.version }}
         run: |
-          echo "Production deployment of ${{ inputs.version }} succeeded"
+          echo "Production deployment of $VERSION succeeded"
 
       - name: Rollback on failure
         if: failure()
+        env:
+          VERSION: ${{ inputs.version }}
         run: |
-          echo "Production deployment FAILED for version ${{ inputs.version }}"
+          echo "Production deployment FAILED for version $VERSION"
           echo ""
           echo "=== ROLLBACK INSTRUCTIONS ==="
           echo "1. Re-run this workflow with the PREVIOUS stable version tag"

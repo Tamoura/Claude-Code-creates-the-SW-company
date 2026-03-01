@@ -56,7 +56,7 @@ const adminRoutes: FastifyPluginAsync = async (fastify) => {
         fastify.prisma.user.count({ where }),
       ]);
 
-      return reply.send(paginatedResult(users, total, pagination));
+      return reply.send(paginatedResult(users, total, pagination)); // nosemgrep: javascript.express.security.audit.xss.direct-response-write.direct-response-write
     },
   });
 

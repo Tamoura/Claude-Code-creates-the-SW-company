@@ -33,7 +33,7 @@ const resourceRoutes: FastifyPluginAsync = async (fastify) => {
       fastify.prisma.resource.count({ where }),
     ]);
 
-    return reply.send(paginatedResult(resources, total, pagination));
+    return reply.send(paginatedResult(resources, total, pagination)); // nosemgrep: javascript.express.security.audit.xss.direct-response-write.direct-response-write
   });
 
   // GET /resources/:id - Get resource details

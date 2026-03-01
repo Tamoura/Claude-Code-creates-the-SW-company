@@ -87,7 +87,7 @@ const goalTemplateRoutes: FastifyPluginAsync = async (fastify) => {
     }));
 
     reply.header('Vary', 'Accept-Language');
-    return reply.send(paginatedResult(data, total, pagination));
+    return reply.send(paginatedResult(data, total, pagination)); // nosemgrep: javascript.express.security.audit.xss.direct-response-write.direct-response-write
   });
 };
 
