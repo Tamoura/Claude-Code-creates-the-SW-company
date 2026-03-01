@@ -1114,6 +1114,145 @@ Content-Type: application/json
 
 ---
 
+### Admin
+
+#### POST /v1/admin/kms/rotate
+
+Rotate the AWS KMS hot wallet signing key without downtime. Only available to admin users.
+
+**Security**: Requires admin role. Cannot be called by regular merchants.
+
+**Request**:
+```http
+POST /v1/admin/kms/rotate
+Authorization: Bearer sk_live_admin_token
+Content-Type: application/json
+
+{
+  "newKeyId": "arn:aws:kms:us-east-1:123456789012:key/12345678-1234-1234-1234-123456789012"
+}
+```
+
+**Parameters**:
+- `newKeyId` (string, required): AWS KMS key ARN or key ID. Must be a valid, enabled KMS key in the same AWS account.
+
+**Response**: `200 OK`
+```json
+{
+  "success": true,
+  "message": "Key rotation initiated",
+  "keyId": "12345678..."
+}
+```
+
+**Error Responses**:
+
+`400 Bad Request` — Validation error (missing or invalid newKeyId):
+```json
+{
+  "type": "https://gateway.io/errors/validation-error",
+  "title": "Validation Error",
+  "status": 400,
+  "detail": "newKeyId is required"
+}
+```
+
+`401 Unauthorized` — Not authenticated or insufficient privileges:
+```json
+{
+  "type": "https://gateway.io/errors/unauthorized",
+  "title": "Unauthorized",
+  "status": 401,
+  "detail": "Authentication required or insufficient permissions"
+}
+```
+
+`503 Service Unavailable` — KMS key is unhealthy (disabled, not found, or access denied):
+```json
+{
+  "error": "new-key-unhealthy",
+  "message": "AWS KMS health check failed: Key not found or disabled"
+}
+```
+
+**Behavior**:
+- Validates the new KMS key by performing a health check (crypto operation)
+- If health check passes, the new key ID is stored for subsequent signing operations
+- Returns immediately; rotation takes effect within seconds
+- All new signatures use the rotated key; in-flight requests may use old key briefly
+- Audit log entry is created for this operation (queryable via admin audit endpoints)
+
+**When to Use**:
+- Scheduled key rotation (AWS KMS recommended: every 90 days)
+- Emergency key compromise response
+- AWS KMS key policy changes
+
+**Code Examples**:
+
+<details>
+<summary>cURL</summary>
+
+```bash
+curl -X POST https://api.gateway.io/v1/admin/kms/rotate \
+  -H "Authorization: Bearer sk_live_admin_token" \
+  -H "Content-Type: application/json" \
+  -d '{
+    "newKeyId": "arn:aws:kms:us-east-1:123456789012:key/12345678-1234-1234-1234-123456789012"
+  }'
+```
+</details>
+
+<details>
+<summary>Node.js</summary>
+
+```typescript
+const response = await fetch('https://api.gateway.io/v1/admin/kms/rotate', {
+  method: 'POST',
+  headers: {
+    'Authorization': 'Bearer sk_live_admin_token',
+    'Content-Type': 'application/json',
+  },
+  body: JSON.stringify({
+    newKeyId: 'arn:aws:kms:us-east-1:123456789012:key/12345678-1234-1234-1234-123456789012',
+  }),
+});
+
+const result = await response.json();
+if (result.success) {
+  console.log('Key rotation initiated:', result.keyId);
+} else {
+  console.error('Rotation failed:', result);
+}
+```
+</details>
+
+<details>
+<summary>Python</summary>
+
+```python
+import requests
+
+response = requests.post(
+    'https://api.gateway.io/v1/admin/kms/rotate',
+    headers={
+        'Authorization': 'Bearer sk_live_admin_token',
+        'Content-Type': 'application/json',
+    },
+    json={
+        'newKeyId': 'arn:aws:kms:us-east-1:123456789012:key/12345678-1234-1234-1234-123456789012'
+    }
+)
+
+if response.status_code == 200:
+    result = response.json()
+    print(f"Key rotation initiated: {result['keyId']}")
+else:
+    print(f"Rotation failed: {response.json()}")
+```
+</details>
+
+---
+
 ## Idempotency
 
 Prevent duplicate payments by including an `Idempotency-Key` header:

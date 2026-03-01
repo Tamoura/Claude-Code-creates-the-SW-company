@@ -5,6 +5,11 @@ import { hashPassword, verifyPassword } from '../../utils/crypto.js';
 import { AppError } from '../../types/index.js';
 import { logger } from '../../utils/logger.js';
 import { createHash, randomBytes, randomUUID } from 'crypto';
+import {
+  signupRouteSchema, loginRouteSchema, refreshRouteSchema, logoutRouteSchema,
+  sseTokenRouteSchema, changePasswordRouteSchema, sessionsListRouteSchema,
+  sessionRevokeRouteSchema, forgotPasswordRouteSchema, resetPasswordRouteSchema,
+} from '../../schemas/auth.js';
 
 // Account lockout constants (Redis-based, no DB migration needed)
 const LOCKOUT_MAX_ATTEMPTS = 5;
@@ -38,7 +43,7 @@ const authRoutes: FastifyPluginAsync = async (fastify) => {
   };
 
   // POST /v1/auth/signup
-  fastify.post('/signup', authRateLimit, async (request, reply) => {
+  fastify.post('/signup', { ...authRateLimit, schema: signupRouteSchema }, async (request, reply) => {
     try {
       const body = validateBody(signupSchema, request.body);
 
@@ -118,13 +123,15 @@ const authRoutes: FastifyPluginAsync = async (fastify) => {
   });
 
   // POST /v1/auth/login
-  fastify.post('/login', authRateLimit, async (request, reply) => {
+  fastify.post('/login', { ...authRateLimit, schema: loginRouteSchema }, async (request, reply) => {
     const body = validateBody(loginSchema, request.body);
 
     try {
       const redis = fastify.redis;
-      const lockKey = `lockout:${body.email}`;
-      const failKey = `failed:${body.email}`;
+      // PRIVACY: Hash email before using as Redis key to avoid storing PII
+      const emailHash = createHash('sha256').update(body.email.toLowerCase()).digest('hex');
+      const lockKey = `lockout:${emailHash}`;
+      const failKey = `failed:${emailHash}`;
 
       // Check if account is locked (Redis-based, degrades gracefully)
       if (redis) {
@@ -162,7 +169,7 @@ const authRoutes: FastifyPluginAsync = async (fastify) => {
               LOCKOUT_DURATION_MS
             );
             logger.warn('Account locked due to failed login attempts', {
-              email: body.email,
+              emailHash,
               attempts,
             });
             throw new AppError(
@@ -229,7 +236,7 @@ const authRoutes: FastifyPluginAsync = async (fastify) => {
   });
 
   // POST /v1/auth/refresh
-  fastify.post('/refresh', authRateLimit, async (request, reply) => {
+  fastify.post('/refresh', { ...authRateLimit, schema: refreshRouteSchema }, async (request, reply) => {
     try {
       const { refresh_token } = validateBody(logoutSchema, request.body);
 
@@ -325,7 +332,7 @@ const authRoutes: FastifyPluginAsync = async (fastify) => {
   });
 
   // DELETE /v1/auth/logout
-  fastify.delete('/logout', async (request, reply) => {
+  fastify.delete('/logout', { schema: logoutRouteSchema }, async (request, reply) => {
     try {
       // Verify user is authenticated
       await request.jwtVerify();
@@ -396,7 +403,7 @@ const authRoutes: FastifyPluginAsync = async (fastify) => {
   });
 
   // POST /v1/auth/sse-token
-  fastify.post('/sse-token', async (request, reply) => {
+  fastify.post('/sse-token', { schema: sseTokenRouteSchema }, async (request, reply) => {
     try {
       // Verify user is authenticated
       await request.jwtVerify();
@@ -459,7 +466,7 @@ const authRoutes: FastifyPluginAsync = async (fastify) => {
   });
 
   // POST /v1/auth/change-password (authenticated)
-  fastify.post('/change-password', async (request, reply) => {
+  fastify.post('/change-password', { schema: changePasswordRouteSchema }, async (request, reply) => {
     try {
       await request.jwtVerify();
       const userId = (request.user as { userId: string }).userId;
@@ -516,7 +523,7 @@ const authRoutes: FastifyPluginAsync = async (fastify) => {
   // ==================== Session Management ====================
 
   // GET /v1/auth/sessions — list active refresh tokens for current user
-  fastify.get('/sessions', async (request, reply) => {
+  fastify.get('/sessions', { schema: sessionsListRouteSchema }, async (request, reply) => {
     try {
       await request.jwtVerify();
       const userId = (request.user as { userId: string }).userId;
@@ -543,7 +550,7 @@ const authRoutes: FastifyPluginAsync = async (fastify) => {
   });
 
   // DELETE /v1/auth/sessions/:id — revoke a specific session
-  fastify.delete('/sessions/:id', async (request, reply) => {
+  fastify.delete('/sessions/:id', { schema: sessionRevokeRouteSchema }, async (request, reply) => {
     try {
       await request.jwtVerify();
       const userId = (request.user as { userId: string }).userId;
@@ -574,7 +581,7 @@ const authRoutes: FastifyPluginAsync = async (fastify) => {
   const RESET_TOKEN_TTL_SECONDS = 3600;
 
   // POST /v1/auth/forgot-password
-  fastify.post('/forgot-password', authRateLimit, async (request, reply) => {
+  fastify.post('/forgot-password', { ...authRateLimit, schema: forgotPasswordRouteSchema }, async (request, reply) => {
     try {
       const body = validateBody(forgotPasswordSchema, request.body);
       const redis = fastify.redis;
@@ -621,7 +628,7 @@ const authRoutes: FastifyPluginAsync = async (fastify) => {
   });
 
   // POST /v1/auth/reset-password
-  fastify.post('/reset-password', authRateLimit, async (request, reply) => {
+  fastify.post('/reset-password', { ...authRateLimit, schema: resetPasswordRouteSchema }, async (request, reply) => {
     try {
       const body = validateBody(resetPasswordSchema, request.body);
       const redis = fastify.redis;
@@ -641,11 +648,20 @@ const authRoutes: FastifyPluginAsync = async (fastify) => {
       // Hash the new password (same bcrypt rounds as signup)
       const passwordHash = await hashPassword(body.newPassword);
 
-      // Update user's password
-      await fastify.prisma.user.update({
-        where: { id: tokenData.userId },
-        data: { passwordHash },
-      });
+      // Update password and revoke all existing sessions atomically.
+      // MED-01: password reset must invalidate active sessions to prevent
+      // session fixation — an attacker who obtained a refresh token before
+      // the reset can no longer use it after this point.
+      await fastify.prisma.$transaction([
+        fastify.prisma.user.update({
+          where: { id: tokenData.userId },
+          data: { passwordHash },
+        }),
+        fastify.prisma.refreshToken.updateMany({
+          where: { userId: tokenData.userId, revoked: false },
+          data: { revokedAt: new Date(), revoked: true },
+        }),
+      ]);
 
       // Delete the token so it cannot be reused
       await redis.del(`reset:${body.token}`);

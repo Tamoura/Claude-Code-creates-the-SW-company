@@ -15,19 +15,22 @@ jobs:
     runs-on: ubuntu-latest
     steps:
       - uses: actions/checkout@v4
+      - uses: pnpm/action-setup@v4
+        with:
+          version: 10
       - uses: actions/setup-node@v4
         with:
           node-version: '20'
-          cache: 'npm'
-          cache-dependency-path: products/archforge/apps/api/package-lock.json
+          cache: pnpm
       - name: Install API deps
-        run: cd products/archforge/apps/api && npm ci
+        run: archforge/apps/api 
       - name: Generate Prisma client
-        run: cd products/archforge/apps/api && npx prisma generate
+        run: archforge/apps/api && npx prisma generate
       - name: TypeScript check
-        run: cd products/archforge/apps/api && npx tsc --noEmit
+        run: archforge/apps/api && npx tsc --noEmit
       - name: Lint
-        run: cd products/archforge/apps/api && npm run lint || true
+        run: pnpm run lint
+        working-directory: products/archforge/apps/api || true
 
   api-test:
     runs-on: ubuntu-latest
@@ -47,21 +50,24 @@ jobs:
           --health-retries 5
     steps:
       - uses: actions/checkout@v4
+      - uses: pnpm/action-setup@v4
+        with:
+          version: 10
       - uses: actions/setup-node@v4
         with:
           node-version: '20'
-          cache: 'npm'
-          cache-dependency-path: products/archforge/apps/api/package-lock.json
+          cache: pnpm
       - name: Install API deps
-        run: cd products/archforge/apps/api && npm ci
+        run: archforge/apps/api 
       - name: Generate Prisma client
-        run: cd products/archforge/apps/api && npx prisma generate
+        run: archforge/apps/api && npx prisma generate
       - name: Run migrations
-        run: cd products/archforge/apps/api && npx prisma migrate deploy
+        run: archforge/apps/api && npx prisma migrate deploy
         env:
           DATABASE_URL: postgresql://postgres:postgres@localhost:5432/archforge_test
       - name: Run tests with coverage
-        run: cd products/archforge/apps/api && npm run test:coverage -- --forceExit
+        run: pnpm run test:coverage
+        working-directory: products/archforge/apps/api -- --forceExit
         env:
           DATABASE_URL: postgresql://postgres:postgres@localhost:5432/archforge_test
           JWT_SECRET: ci-test-jwt-secret-key-for-testing-only
@@ -78,17 +84,20 @@ jobs:
     runs-on: ubuntu-latest
     steps:
       - uses: actions/checkout@v4
+      - uses: pnpm/action-setup@v4
+        with:
+          version: 10
       - uses: actions/setup-node@v4
         with:
           node-version: '20'
-          cache: 'npm'
-          cache-dependency-path: products/archforge/apps/web/package-lock.json
+          cache: pnpm
       - name: Install Web deps
-        run: cd products/archforge/apps/web && npm ci
+        run: archforge/apps/web 
       - name: TypeScript check
-        run: cd products/archforge/apps/web && npx tsc --noEmit
+        run: archforge/apps/web && npx tsc --noEmit
       - name: Build
-        run: cd products/archforge/apps/web && npm run build
+        run: pnpm run build
+        working-directory: products/archforge/apps/web
         env:
           NEXT_PUBLIC_API_URL: http://localhost:5012
 
@@ -111,19 +120,22 @@ jobs:
           --health-retries 5
     steps:
       - uses: actions/checkout@v4
+      - uses: pnpm/action-setup@v4
+        with:
+          version: 10
       - uses: actions/setup-node@v4
         with:
           node-version: '20'
-          cache: 'npm'
-          cache-dependency-path: products/archforge/apps/api/package-lock.json
+          cache: pnpm
       - name: Install API deps
-        run: cd products/archforge/apps/api && npm ci
+        run: archforge/apps/api 
       - name: Generate Prisma + migrate
-        run: cd products/archforge/apps/api && npx prisma generate && npx prisma migrate deploy
+        run: archforge/apps/api && npx prisma generate && npx prisma migrate deploy
         env:
           DATABASE_URL: postgresql://postgres:postgres@localhost:5432/archforge_smoke
       - name: Start API server
-        run: cd products/archforge/apps/api && npm run dev &
+        run: pnpm run dev
+        working-directory: products/archforge/apps/api &
         env:
           DATABASE_URL: postgresql://postgres:postgres@localhost:5432/archforge_smoke
           JWT_SECRET: ci-smoke-jwt-secret-key-for-testing

@@ -25,15 +25,40 @@ const prismaPlugin: FastifyPluginAsync = async (fastify) => {
     );
   }
 
+  // Slow query threshold in milliseconds (configurable via env)
+  const SLOW_QUERY_THRESHOLD_MS = parseInt(process.env.SLOW_QUERY_THRESHOLD_MS || '500', 10);
+
+  // Use event-based logging so we can inspect query duration for slow-query detection.
+  // In all environments, subscribe to 'query' events to detect slow queries.
+  // 'error' and 'warn' are always emitted as log lines.
   const prisma = new PrismaClient({
-    log: process.env.NODE_ENV === 'development' ? ['query', 'error', 'warn'] : ['error'],
+    log: [
+      { emit: 'event', level: 'query' },
+      { emit: 'stdout', level: 'error' },
+      { emit: 'stdout', level: 'warn' },
+    ],
     datasourceUrl: appendPoolParams(process.env.DATABASE_URL || '', poolSize, poolTimeout),
+  });
+
+  // Log slow queries using the structured logger.
+  // Prisma emits 'query' events with { query, params, duration, target }.
+  prisma.$on('query', (e) => {
+    if (e.duration >= SLOW_QUERY_THRESHOLD_MS) {
+      logger.warn('Slow query detected', {
+        query: e.query,
+        duration_ms: e.duration,
+        threshold_ms: SLOW_QUERY_THRESHOLD_MS,
+        target: e.target,
+      });
+    }
   });
 
   // Test connection
   try {
     await prisma.$connect();
-    logger.info('Database connected successfully');
+    logger.info('Database connected successfully', {
+      slow_query_threshold_ms: SLOW_QUERY_THRESHOLD_MS,
+    });
   } catch (error) {
     logger.error('Failed to connect to database', error);
     throw error;

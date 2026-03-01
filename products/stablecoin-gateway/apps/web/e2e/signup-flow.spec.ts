@@ -75,8 +75,12 @@ test.describe('Signup Flow', () => {
     await page.locator('#confirm-password').fill('Wrong');
     await expect(submitBtn).toBeDisabled();
 
-    // Fill matching confirm — now enabled
+    // Fill matching confirm — still disabled without terms agreement
     await page.locator('#confirm-password').fill('StrongPass123!');
+    await expect(submitBtn).toBeDisabled();
+
+    // Agree to terms — now enabled
+    await page.locator('input[type="checkbox"]').check();
     await expect(submitBtn).toBeEnabled();
   });
 
@@ -101,6 +105,7 @@ test.describe('Signup Flow', () => {
     await page.locator('#email').fill('e2e-signup@test.com');
     await page.locator('#password').fill('StrongPass123!');
     await page.locator('#confirm-password').fill('StrongPass123!');
+    await page.locator('input[type="checkbox"]').check();
 
     await page.locator('button[type="submit"]').click();
 
@@ -128,6 +133,7 @@ test.describe('Signup Flow', () => {
     await page.locator('#email').fill('existing@test.com');
     await page.locator('#password').fill('StrongPass123!');
     await page.locator('#confirm-password').fill('StrongPass123!');
+    await page.locator('input[type="checkbox"]').check();
 
     await page.locator('button[type="submit"]').click();
 

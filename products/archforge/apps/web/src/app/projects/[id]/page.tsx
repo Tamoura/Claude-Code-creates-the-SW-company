@@ -283,7 +283,7 @@ function ArtifactCard({ projectId, artifact }: { projectId: string; artifact: Ar
         </div>
       </div>
       <p className="text-xs text-gray-500">
-        {artifact.type.replace(/_/g, ' ')} &middot; v{artifact.version} &middot; {updatedAt}
+        {artifact.type.replace(/_/g, ' ')} &middot; v{artifact.currentVersion} &middot; {updatedAt}
       </p>
     </Link>
   );
@@ -312,7 +312,7 @@ function ProjectContent() {
         artifactsApi.list(projectId),
       ]);
       setProject(proj);
-      setArtifactList(artsData.artifacts);
+      setArtifactList(artsData.data);
     } catch (err) {
       setError(err instanceof ApiError ? err.message : 'Failed to load project.');
     } finally {
@@ -369,7 +369,7 @@ function ProjectContent() {
         <div>
           <div className="flex items-center gap-3 mb-2">
             <h1 className="text-2xl font-bold text-gray-900">{project.name}</h1>
-            <Badge value={project.framework} variant="framework" />
+            <Badge value={project.frameworkPreference} variant="framework" />
             <Badge value={project.status} variant="status" />
           </div>
           {project.description && (

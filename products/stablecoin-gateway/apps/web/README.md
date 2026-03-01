@@ -89,6 +89,25 @@ src/
 - Add payment dashboard and analytics
 - Implement proper security and error handling
 
+## Accessibility Baseline
+
+WCAG 2.1 AA compliance status (as of 2026-02-27):
+
+| Check | Status |
+|-------|--------|
+| HTML lang attribute | Set to "en" in index.html |
+| Skip navigation link | Present in PublicNav and DashboardLayout |
+| aria-current on nav links | Implemented on all PublicNav links (desktop + mobile) |
+| Mobile menu aria | aria-expanded + aria-controls="mobile-menu" on hamburger button |
+| Form labels | All inputs have associated htmlFor labels with matching ids |
+| Focus indicators | focus:ring-2 on all interactive elements |
+| Image alt text | All decorative SVGs have aria-hidden="true" |
+| Heading hierarchy | h1 -> h2 -> h3 order verified, no skipped levels |
+| Error messages | role="alert" on all form error containers |
+| Keyboard navigation | All interactive elements reachable via keyboard |
+
+Lighthouse Accessibility Score: Pending — run `npx lighthouse http://localhost:3104 --only-categories=accessibility`
+
 ---
 
 **Built in**: ~100 minutes

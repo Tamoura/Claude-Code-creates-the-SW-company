@@ -1,958 +1,1117 @@
-# Stablecoin Gateway — Comprehensive Audit Report
+# Stablecoin Gateway — Professional Audit Report v6.0
 
-**Product:** Stablecoin Gateway
-**Audit Date:** 2026-02-10
-**Auditor:** Code Reviewer Agent (Claude Opus 4.6)
-**Report Version:** 2.0
-**Classification:** Internal — Engineering Leadership
-**Previous Audit:** 2026-02-05 (v1.0)
+**Product**: stablecoin-gateway
+**Audit Date**: 2026-02-28
+**Auditor**: Code Reviewer Agent (6 parallel sub-agents), ConnectSW
+**Audit Type**: Re-Audit v6.0 (Post-Remediation v5 + Verification-Before-Planning Gate)
+**Report Version**: 6.0
+**Previous Score**: 7.6/10 (v5.0)
+**Current Score**: 7.2/10 (adjusted — deterministic anchoring applied)
 
 ---
 
-# PART A: EXECUTIVE MEMO
+## Table of Contents
 
-*This section is intended for CEO, Product, and non-engineering stakeholders. It contains no code snippets or file-line references.*
+**PART A — EXECUTIVE MEMO**
+
+- [Section 0: Methodology and Limitations](#section-0-methodology-and-limitations)
+- [Section 1: Executive Decision Summary](#section-1-executive-decision-summary)
+- [Section 2: Stop / Fix / Continue](#section-2-stop--fix--continue)
+- [Section 3: System Overview](#section-3-system-overview)
+- [Section 4: Critical Issues — Top 10](#section-4-critical-issues--top-10)
+- [Section 5: Risk Register](#section-5-risk-register)
+
+**PART B — ENGINEERING APPENDIX**
+
+- [Section 6: Architecture Assessment](#section-6-architecture-assessment)
+- [Section 7: Security Findings](#section-7-security-findings)
+- [Section 8: Performance and Scalability](#section-8-performance-and-scalability)
+- [Section 9: Testing Assessment](#section-9-testing-assessment)
+- [Section 10: DevOps Assessment](#section-10-devops-assessment)
+- [Section 11: Compliance Readiness](#section-11-compliance-readiness)
+- [Section 11b: Accessibility Assessment](#section-11b-accessibility-assessment)
+- [Section 11c: Privacy and Data Protection Assessment](#section-11c-privacy-and-data-protection-assessment)
+- [Section 11d: Observability Assessment](#section-11d-observability-assessment)
+- [Section 11e: API Design Assessment](#section-11e-api-design-assessment)
+- [Section 12: Technical Debt Map](#section-12-technical-debt-map)
+- [Section 13: Remediation Roadmap](#section-13-remediation-roadmap)
+- [Section 14: Quick Wins](#section-14-quick-wins)
+- [Section 15: AI-Readiness Score](#section-15-ai-readiness-score)
+
+---
+
+# PART A — EXECUTIVE MEMO
 
 ---
 
 ## Section 0: Methodology and Limitations
 
+### Audit Scope Flowchart
+
+```mermaid
+flowchart TD
+    A[Audit Start] --> B[Source Code<br/>apps/api/src · apps/web/src]
+    A --> C[Schema & Config<br/>prisma · .env · docker]
+    A --> D[Tests & CI/CD<br/>tests/ · .github/workflows/]
+    A --> E[Dependencies<br/>package.json · lock files]
+    B --> F[6 Parallel<br/>Analysis Agents]
+    C --> F
+    D --> F
+    E --> F
+    F --> G[Deterministic<br/>Measurements]
+    G --> H[Synthesis]
+    H --> I[Executive Memo<br/>Part A]
+    H --> J[Engineering Appendix<br/>Part B]
+```
+
+### E2E Gate Result
+
+**PASS** — 83/85 Playwright tests passed (2 skipped: flaky webhook delivery timing). Services verified running: API healthy at :5001, Web serving at :3104.
+
 ### Audit Scope
 
-This audit examined the complete Stablecoin Gateway codebase as of 2026-02-10, covering all backend API services, the frontend web application, all test suites, database schema definitions, and CI/CD pipeline configurations.
-
-| Component | Files | Lines of Code |
-|-----------|-------|---------------|
-| Backend API (TypeScript) | 53 | ~11,582 |
-| Frontend Web (TypeScript/TSX) | 111 | ~17,189 |
-| Test Suites | 110 | ~24,874 |
-| **Total** | **274** | **~53,645** |
-
-Additional artifacts reviewed include 11 Prisma database models, 4 Fastify plugins, 12 route modules, 19 service classes, 13 utility modules, 4 CI/CD workflow definitions, and 15 end-to-end test specifications.
+| Metric | Value |
+|--------|-------|
+| Directories scanned | `apps/api/src/`, `apps/api/tests/`, `apps/api/prisma/`, `apps/web/src/`, `e2e/`, `.github/workflows/` |
+| File types | `.ts`, `.tsx`, `.prisma`, `.yml`, `.json`, `.env*`, `Dockerfile` |
+| Total TypeScript source files | 179 |
+| Total lines of code | 31,272 |
+| E2E tests | 83 passing / 2 skipped |
+| Unit/integration tests | 1,559 across 168 files |
 
 ### Methodology
 
-The audit was conducted through the following parallel streams:
-
-- **Static analysis:** Manual code review of all source files across backend, frontend, and test directories
-- **Schema analysis:** Prisma schema models, database indexes, relations, constraints, and migration history
-- **Security analysis:** Authentication flows, encryption implementations, input validation, and access control patterns
-- **Dependency audit:** Review of package.json files and lock files for known vulnerabilities
-- **Configuration review:** Environment files, CI/CD pipeline definitions, and deployment configurations
-- **Test analysis:** Test coverage measurement, test quality assessment, and gap identification
-- **Architecture review:** Dependency graph, layering analysis, coupling assessment, and concurrency safety
+- **Static analysis**: Manual code review of all 179 source files by 6 specialized agents
+- **Schema analysis**: Prisma schema (9 models, 22 indexes), database relations, migration history
+- **Dependency audit**: `npm audit` (26 vulnerabilities — all in dev-dependency chain)
+- **Configuration review**: Environment files, Docker configs, CI/CD pipelines (17 workflow files)
+- **Test analysis**: Coverage measurement, test quality assessment, gap identification
+- **Architecture review**: Dependency graph, layering, coupling, plugin structure
+- **Accessibility review**: WCAG 2.1 AA manual audit of all frontend components
+- **Privacy review**: PII handling, GDPR data subject rights, log scanning
+- **Observability review**: Structured logging, health checks, monitoring, tracing
 
 ### Out of Scope
 
-- Dynamic penetration testing (no live exploit attempts were made)
+- Dynamic penetration testing (no live exploit attempts)
 - Runtime performance profiling (no load tests executed)
-- Third-party SaaS integrations (only code-level integration points reviewed)
-- Infrastructure-level security (cloud IAM, network policies, firewall rules)
-- Generated code (Prisma client) unless it poses a security risk
-- Third-party library internals (but vulnerable versions are noted)
+- Third-party SaaS integrations (only code-level integration points)
+- Infrastructure-level security (cloud IAM, network policies)
+- Generated code (Prisma client) unless security risk
+- Third-party library internals (vulnerable versions noted)
 
 ### Limitations
 
-This audit is based on static code review. Some issues such as memory leaks, race conditions under sustained load, and intermittent failures may only manifest at runtime. Compliance assessments are technical gap analyses, not formal certifications. Scores reflect the state of the code at the time of audit and may change with subsequent commits.
+- Static code review only — some issues (memory leaks, race conditions under load) may only manifest at runtime
+- Compliance assessments are technical gap analyses, not formal certifications
+- Scores reflect the code at the time of audit
+- Previous v5.0 score of 7.6/10 was adjusted downward to 7.2/10 after applying strict deterministic anchoring methodology
+
+### Sub-Agent Reports
+
+Detailed findings from each specialist agent are available in `docs/quality-reports/`:
+
+| Agent | Report File |
+|-------|-------------|
+| Services & Business Logic | `SERVICES-WORKERS-AUDIT-REPORT.md` |
+| Routes & API Layer | `ROUTE-API-AUDIT-REPORT.md` |
+| Plugins, Utils & Schema | `BACKEND-INFRASTRUCTURE-AUDIT.md` |
+| Tests & CI/CD | `TEST-CICD-AUDIT-REPORT.md` |
+| Accessibility & Frontend | `FRONTEND-AUDIT-REPORT.md`, `WCAG-ACCESSIBILITY-AUDIT.md` |
+| Privacy & Observability | `PRIVACY-OBSERVABILITY-AUDIT.md` |
 
 ---
 
 ## Section 1: Executive Decision Summary
 
+### Score Dashboard
+
+```mermaid
+xychart-beta
+    title "Audit Score Dashboard — Stablecoin Gateway v6.0"
+    x-axis ["Security", "Architecture", "Test Cov.", "Code Quality", "Performance", "DevOps", "Runability", "Accessibility", "Privacy", "Observability", "API Design"]
+    y-axis "Score (0-10)" 0 --> 10
+    bar [7, 8, 7, 7, 7, 7, 9, 6, 6, 7, 8]
+    line [8, 8, 8, 8, 8, 8, 8, 8, 8, 8, 8]
+```
+
+*(The horizontal line at 8 marks the production-ready threshold)*
+
+### Executive Decision Table
+
 | Question | Answer |
 |----------|--------|
-| **Can this go to production?** | Conditionally — after Phase 0 remediation (three high-severity fixes) |
-| **Is it salvageable?** | Yes — architecture is sound, all issues are fixable without redesign |
-| **Risk if ignored** | High — timing attack on internal key, unbounded database queries, spending limit bypass |
-| **Recovery effort** | 1 day for Phase 0 (three quick wins), 2 weeks for full hardening |
-| **Enterprise-ready?** | After Phase 0 + Phase 1 — security gaps and pagination bounds need fixing first |
-| **Compliance-ready?** | OWASP: 8/10 controls pass, SOC2: mostly passing, needs timing-safe fix and spending limit fix |
+| **Can this go to production?** | Conditionally — after Phase 0 and Phase 1 fixes (estimated 2 weeks) |
+| **Is it salvageable?** | Yes — strong foundation, well-architected, needs hardening |
+| **Risk if ignored** | High — dev route without auth, missing data retention, accessibility gaps create legal and security exposure |
+| **Recovery effort** | 2-4 weeks with 2 engineers |
+| **Enterprise-ready?** | No — privacy gaps (3/6 GDPR rights), accessibility below WCAG AA, no error tracking |
+| **Compliance-ready?** | OWASP Top 10: Partial (8/10 pass). SOC2: Not ready (observability gaps). WCAG 2.1 AA: Not compliant (47 issues) |
 
 ### Top 5 Risks in Plain Language
 
-1. **An internal API key can be guessed one character at a time.** The health check endpoint compares its secret key using a method that leaks timing information. A patient attacker with network access can reconstruct the key character by character, gaining access to internal monitoring data.
-
-2. **A malicious user can crash the database with a single request.** Five listing endpoints accept an unbounded page offset number. Setting the offset to an extremely large value forces the database to scan millions of rows before returning empty results, consuming CPU and memory that should serve legitimate users.
-
-3. **If our cache system goes down, refund spending limits disappear.** The daily spending limit for refunds is tracked in Redis. When Redis becomes unavailable, the system currently allows refunds through without any limit check, meaning unlimited refunds could be processed during the outage window.
-
-4. **A defined security validation is sitting unused.** A UUID format validation schema was written but never connected to the actual route handlers, meaning route parameters accept any string format rather than strictly enforced UUIDs.
-
-5. **Webhook secrets may be stored unencrypted in some environments.** When the encryption key environment variable is not configured, webhook endpoint secrets could be stored in plaintext in the database, making them readable by anyone with database access.
+1. **A developer debug tool is exposed without any login requirement** — anyone who discovers the URL could simulate payment confirmations on real merchant sessions
+2. **There is no automatic cleanup of old customer data** — if a regulator asks "how long do you keep data?", there is no answer and no mechanism to delete it
+3. **Users with visual impairments cannot fully use the checkout page** — missing labels, poor contrast, and no keyboard navigation on key forms create ADA/WCAG legal exposure
+4. **If the payment system crashes at 3 AM, nobody gets alerted** — there is no error tracking service (Sentry/Datadog) and no alerting rules configured
+5. **The webhook system could be tricked into replaying old payment confirmations** — replay protection exists but the 5-minute window may be too generous for high-value transactions
 
 ---
 
 ## Section 2: Stop / Fix / Continue
 
-| Category | Items |
-|----------|-------|
-| **STOP** | Deploying without fixing the three Phase 0 issues; accepting production traffic before timing-safe comparison is in place |
-| **FIX** | Timing-unsafe health check key comparison; unbounded pagination offsets in five schemas; fail-open spending limit when Redis is down; unused UUID validation schema; unencrypted webhook secrets without key |
-| **CONTINUE** | Excellent dual authentication (JWT + API key); AES-256-GCM encryption for secrets at rest; Zod validation on all endpoints; Decimal.js for financial arithmetic; FOR UPDATE locks for concurrency; HMAC-SHA256 webhook signatures; comprehensive test suite with 1,400+ tests; proper CI/CD pipeline with staging and production environments |
+### Action Priority Flowchart
+
+```mermaid
+flowchart LR
+    subgraph STOP["STOP — Immediate"]
+        S1[Dev route without<br/>authentication]
+        S2[No data retention<br/>policy or mechanism]
+    end
+    subgraph FIX["FIX — Before Production"]
+        F1[WCAG accessibility<br/>47 issues]
+        F2[Error tracking and<br/>alerting setup]
+        F3[GDPR data subject<br/>rights completion]
+        F4[E2E tests in CI<br/>pipeline]
+    end
+    subgraph CONTINUE["CONTINUE — Working Well"]
+        C1[Clean architecture<br/>plugin system]
+        C2[Comprehensive API<br/>validation with Zod]
+        C3[Strong crypto:<br/>AES-256-GCM + KMS]
+        C4[1,559 tests with<br/>real DB integration]
+    end
+    STOP --> FIX --> CONTINUE
+```
+
+| Category | Details |
+|----------|---------|
+| **STOP** | Dev route (`POST /v1/dev/simulate/:id`) has zero authentication — disable or gate behind INTERNAL_API_KEY immediately. No data retention policy exists — define retention periods and build automated cleanup before handling real customer data. |
+| **FIX** | 47 WCAG accessibility issues (8 Critical, 14 High). No error tracking service (Sentry/Datadog) — crashes go unnoticed. GDPR: only 3/6 data subject rights implemented. E2E tests (83 passing) not running in CI — regressions can ship. |
+| **CONTINUE** | Clean Fastify plugin architecture with 11 well-separated plugins. Zod validation on 40/42 routes. AES-256-GCM encryption with KMS key rotation for sensitive data. 1,559 tests using real PostgreSQL (no mocks). Pessimistic locking with ADRs for financial operations. Structured JSON logging via Pino with correlation IDs. OpenTelemetry SDK integrated. |
 
 ---
 
 ## Section 3: System Overview
 
-### Architecture
+### C4 Level 1: Context Diagram
 
-The Stablecoin Gateway follows a three-tier architecture designed for payment processing on blockchain networks.
+```mermaid
+graph TD
+    MERCHANT["Merchant<br/>Business User"]
+    CUSTOMER["Customer<br/>Payer"]
+    GATEWAY["Stablecoin Gateway<br/>Payment Processing System"]
+    DB[("PostgreSQL<br/>Primary Database")]
+    REDIS[("Redis<br/>Cache & Rate Limiting")]
+    BLOCKCHAIN["Blockchain Networks<br/>Ethereum · Polygon · Solana"]
+    EMAIL["Email Service<br/>SMTP / Resend"]
 
-Merchants and administrators interact through the Next.js frontend application (port 3101), which communicates via REST API calls to the Fastify backend service (port 5001). The backend manages persistent state in PostgreSQL through the Prisma ORM, uses Redis for caching, rate limiting, and JWT token revocation, and connects to blockchain RPC endpoints on Polygon and Ethereum networks for on-chain payment monitoring.
+    MERCHANT -->|"Dashboard<br/>API Keys, Analytics"| GATEWAY
+    CUSTOMER -->|"Checkout Page<br/>Pay with USDC/USDT"| GATEWAY
+    GATEWAY -->|"Prisma ORM"| DB
+    GATEWAY -->|"ioredis"| REDIS
+    GATEWAY -->|"Monitor Transactions"| BLOCKCHAIN
+    GATEWAY -->|"Notifications"| EMAIL
+
+    style GATEWAY fill:#1e3a5f,stroke:#4a90d9,color:#fff
+    style DB fill:#2d4a2d,stroke:#5a9a5a,color:#fff
+    style REDIS fill:#2d4a2d,stroke:#5a9a5a,color:#fff
+    style BLOCKCHAIN fill:#4a3a1e,stroke:#c9a050,color:#fff
+    style EMAIL fill:#4a3a1e,stroke:#c9a050,color:#fff
+```
+
+### C4 Level 2: Container Diagram
+
+```mermaid
+graph TD
+    subgraph SYSTEM["Stablecoin Gateway"]
+        WEB["React + Vite Frontend<br/>Port :3104<br/>Merchant Dashboard + Checkout"]
+        API["Fastify API<br/>Port :5001<br/>42 REST Endpoints"]
+        WORKER["Background Workers<br/>Webhook Delivery · Blockchain Monitor"]
+        DB[("PostgreSQL<br/>9 Prisma Models<br/>22 Indexes")]
+        CACHE[("Redis<br/>Rate Limiting · Sessions")]
+    end
+    BROWSER["Browser"] -->|"HTTPS"| WEB
+    WEB -->|"REST /v1/*"| API
+    API -->|"Prisma ORM"| DB
+    API -->|"ioredis"| CACHE
+    WORKER -->|"Prisma ORM"| DB
+    API -->|"Triggers"| WORKER
+
+    style API fill:#1e3a5f,stroke:#4a90d9,color:#fff
+    style WEB fill:#2d1e5f,stroke:#9a4ad9,color:#fff
+    style DB fill:#2d4a2d,stroke:#5a9a5a,color:#fff
+    style CACHE fill:#2d4a2d,stroke:#5a9a5a,color:#fff
+    style WORKER fill:#3a1e3a,stroke:#d94a9a,color:#fff
+```
 
 ### Technology Stack
 
-- **Backend:** Fastify 4, TypeScript 5, Prisma ORM, PostgreSQL 15, Redis (ioredis)
-- **Frontend:** Next.js 14, React 18, Tailwind CSS
-- **Security:** @fastify/helmet, @fastify/cors, @fastify/rate-limit, @fastify/jwt
-- **Encryption:** AES-256-GCM for webhook secrets, bcrypt for passwords, HMAC-SHA256 for webhook signatures
-- **Blockchain:** ethers.js, Decimal.js for precision arithmetic
-- **Testing:** Jest (unit + integration), Playwright (15 E2E specifications)
-- **CI/CD:** 4 GitHub Actions workflows (ci, deploy-production, deploy-staging, security-checks)
-
-### Key Business Flows
-
-1. **Payment:** Merchant creates session via API, customer pays on checkout page, blockchain monitors confirm transaction, webhook notifies merchant of completion
-2. **Authentication:** Signup with password policy, JWT access tokens with JTI blacklist, API key authentication with granular permissions (read, write, refund)
-3. **Webhooks:** Event triggers HMAC-SHA256 signed delivery, exponential backoff retries on failure, idempotency prevents duplicate deliveries
-4. **Refunds:** Merchant requests refund with daily spending limit, on-chain transaction processed, status updates delivered via webhook
+| Layer | Technology |
+|-------|-----------|
+| Frontend | React 18 + Vite + TypeScript + Tailwind CSS |
+| Backend | Fastify 4 + TypeScript 5 |
+| Database | PostgreSQL 15 + Prisma 5 ORM |
+| Cache | Redis (ioredis) |
+| Auth | JWT HS256 + API Keys (sk_live_/sk_test_) |
+| Crypto | AES-256-GCM + KMS key rotation |
+| Monitoring | OpenTelemetry SDK + Pino structured logging |
+| Testing | Jest (1,559 tests) + Playwright (83 E2E) |
+| CI/CD | GitHub Actions (17 workflows) |
+| Containerization | Docker (API + Web Dockerfiles + docker-compose) |
 
 ---
 
-## Section 4: Critical Issues (Top 3)
+## Section 4: Critical Issues — Top 10
 
-### Issue 1: Health Check Key Comparison Vulnerable to Timing Attack
+### Risk Severity Matrix
 
-**Severity:** High | **Likelihood:** Medium | **Blast Radius:** Internal infrastructure
-**Risk Owner:** Backend Engineer | **Category:** Security
-**Business Impact:** An attacker who can measure response times with sufficient precision can reconstruct the internal API key one character at a time. This grants access to the internal health check endpoint, potentially revealing database latency, Redis status, and infrastructure details that aid further attacks.
-**Compliance Impact:** OWASP A05 (Security Misconfiguration)
+```mermaid
+quadrantChart
+    title Risk Severity Matrix — Stablecoin Gateway
+    x-axis Low Likelihood --> High Likelihood
+    y-axis Low Impact --> High Impact
+    quadrant-1 Critical — Act Now
+    quadrant-2 High — Plan Soon
+    quadrant-3 Low — Monitor
+    quadrant-4 Medium — Schedule
+    RISK-001 Dev Route No Auth: [0.85, 0.90]
+    RISK-002 No Data Retention: [0.80, 0.85]
+    RISK-003 Accessibility Gaps: [0.75, 0.70]
+    RISK-004 No Error Tracking: [0.70, 0.80]
+    RISK-005 E2E Not in CI: [0.65, 0.65]
+    RISK-006 GDPR Rights Gap: [0.60, 0.75]
+    RISK-007 Webhook Replay: [0.40, 0.60]
+    RISK-008 EmailService No Tests: [0.50, 0.45]
+    RISK-009 Observability Plugin: [0.35, 0.55]
+    RISK-010 Frontend God Class: [0.30, 0.40]
+```
 
-### Issue 2: Unbounded Pagination Enables Database Denial of Service
+### RISK-001: Dev Route Without Authentication (CRITICAL)
 
-**Severity:** High | **Likelihood:** High | **Blast Radius:** Platform-wide
-**Risk Owner:** Backend Engineer | **Category:** Performance / Security
-**Business Impact:** Five listing endpoints accept arbitrarily large page offset values. An attacker can send requests with extremely large offsets, forcing PostgreSQL to scan and discard millions of rows before returning empty results. Sustained abuse of this pattern can exhaust database connection pools and CPU, denying service to all users.
-**Compliance Impact:** OWASP A04 (Insecure Design)
+- **File/Location**: `apps/api/src/routes/v1/dev.ts` (entire file)
+- **Severity**: Critical
+- **Likelihood**: High — URL discoverable via API scanning
+- **Blast Radius**: Product — attacker can simulate payment confirmations
+- **Risk Owner**: Dev
+- **Category**: Code
+- **Business Impact**: An attacker could mark unpaid orders as "confirmed", causing merchants to ship goods without receiving payment
+- **Exploit Scenario**: Attacker discovers `/v1/dev/simulate/:id`, sends POST to confirm a pending payment session. The route is gated by `NODE_ENV !== 'production'` but has zero authentication — anyone on the network can call it.
+- **Fix**: Add INTERNAL_API_KEY check or remove the route entirely in non-development environments
+- **Compliance Impact**: OWASP A01 (Broken Access Control), OWASP API5 (BFLA)
 
-### Issue 3: Refund Spending Limit Bypassed During Redis Outage
+### RISK-002: No Data Retention Policy or Mechanism (CRITICAL)
 
-**Severity:** High | **Likelihood:** Medium | **Blast Radius:** Financial
-**Risk Owner:** Backend Engineer | **Category:** Security / Financial
-**Business Impact:** The daily spending limit for refunds is tracked in Redis. When Redis becomes unavailable, the system allows refunds to proceed without checking the limit. During a Redis outage, whether caused by infrastructure failure or deliberate attack, unlimited refunds could be processed up to the total balance of each merchant account. This represents a direct financial loss vector.
-**Compliance Impact:** OWASP A01 (Broken Access Control), SOC2 Processing Integrity
+- **File/Location**: No retention mechanism exists anywhere in the codebase
+- **Severity**: Critical
+- **Likelihood**: High — regulatory inquiry is inevitable for a payment processor
+- **Blast Radius**: Organization — GDPR/PDPL violation affects entire business
+- **Risk Owner**: Management + Dev
+- **Category**: Process + Code
+- **Business Impact**: When a regulator asks "how long do you keep customer payment data?", there is no answer. Customer data accumulates forever with no cleanup mechanism.
+- **Fix**: Define per-type retention periods (payment records: 7 years for tax, PII: 2 years post-account deletion), implement automated cleanup cron job
+- **Compliance Impact**: GDPR Art. 5(1)(e) (storage limitation), PDPL
+
+### RISK-003: WCAG Accessibility Failures — 47 Issues (HIGH)
+
+- **File/Location**: Multiple frontend components in `apps/web/src/`
+- **Severity**: High (8 Critical, 14 High sub-issues)
+- **Likelihood**: High — affects every user with disabilities
+- **Blast Radius**: Product — checkout page unusable for screen reader users
+- **Risk Owner**: Frontend Dev
+- **Category**: Code
+- **Business Impact**: ADA/EAA lawsuits, lost customers who cannot complete checkout, brand damage
+- **Fix**: See `WCAG-ACCESSIBILITY-AUDIT.md` for 47 specific fixes — top priority: form labels, color contrast, keyboard navigation
+- **Compliance Impact**: WCAG 2.1 AA, European Accessibility Act
+
+### RISK-004: No Error Tracking Service (HIGH)
+
+- **File/Location**: No Sentry/Datadog/similar integration found in codebase
+- **Severity**: High
+- **Likelihood**: High — production errors will occur
+- **Blast Radius**: Product — errors go unnoticed until customers complain
+- **Risk Owner**: DevOps
+- **Category**: Infrastructure
+- **Business Impact**: Payment failures at 3 AM go undetected. Merchants lose revenue. Customer trust eroded.
+- **Fix**: Integrate Sentry or Datadog with the existing OpenTelemetry SDK. Configure alerting rules for error rate spikes and p95 latency thresholds.
+- **Compliance Impact**: SOC2 (Availability), ISO 27001 A.16
+
+### RISK-005: E2E Tests Not Running in CI Pipeline (HIGH)
+
+- **File/Location**: `.github/workflows/test-stablecoin-gateway.yml` — no Playwright stage
+- **Severity**: High
+- **Likelihood**: High — regressions will ship
+- **Blast Radius**: Product — broken checkout or auth flows reach production
+- **Risk Owner**: DevOps
+- **Category**: Process
+- **Business Impact**: 83 E2E tests exist but only run locally. A developer could merge a PR that breaks the payment flow without CI catching it.
+- **Fix**: Add Playwright stage to CI with PostgreSQL and Redis service containers. Use `npx playwright install --with-deps` in CI.
+- **Compliance Impact**: DORA (Change Failure Rate)
+
+### RISK-006: GDPR Data Subject Rights — 3/6 Implemented (HIGH)
+
+- **File/Location**: `apps/api/src/routes/v1/me.ts` — has export and delete, missing restrict/object/rectify
+- **Severity**: High
+- **Likelihood**: Medium — depends on user geography and regulatory action
+- **Blast Radius**: Organization — GDPR fines up to 4% of global revenue
+- **Risk Owner**: Dev + Management
+- **Category**: Code + Process
+- **Business Impact**: If an EU customer exercises their right to restrict processing or right to object, there is no mechanism to comply
+- **Fix**: Implement `PATCH /v1/me/restrict-processing`, `POST /v1/me/object`, and `PATCH /v1/me/rectify` endpoints
+- **Compliance Impact**: GDPR Articles 16, 18, 21
+
+### RISK-007: Webhook Replay Attack Window (MEDIUM)
+
+- **File/Location**: `apps/api/src/plugins/webhook-verification.ts`
+- **Severity**: Medium
+- **Likelihood**: Medium — requires attacker to intercept a webhook
+- **Blast Radius**: Feature — affects webhook consumers
+- **Risk Owner**: Dev
+- **Category**: Code
+- **Business Impact**: An attacker who intercepts a webhook payload could replay it within the 5-minute window, potentially triggering duplicate processing in merchant systems
+- **Fix**: Reduce replay window to 60 seconds. Add idempotency key tracking in Redis.
+- **Compliance Impact**: OWASP A08 (Software and Data Integrity Failures)
+
+### RISK-008: EmailService Zero Test Coverage (MEDIUM)
+
+- **File/Location**: `apps/api/src/services/email.service.ts`
+- **Severity**: Medium
+- **Likelihood**: Medium — email failures cause silent notification drops
+- **Blast Radius**: Feature — merchants miss payment notifications
+- **Risk Owner**: Dev
+- **Category**: Code
+- **Business Impact**: If the email service silently fails, merchants do not receive payment confirmations or refund notifications
+- **Fix**: Add integration tests with test SMTP server (e.g., Ethereal or MailHog in Docker)
+- **Compliance Impact**: SOC2 (Processing Integrity)
+
+### RISK-009: Observability Plugin Replaces Error Handler (MEDIUM)
+
+- **File/Location**: `apps/api/src/plugins/observability.ts` — `setErrorHandler` call
+- **Severity**: Medium
+- **Likelihood**: Medium — occurs when plugin registration order changes
+- **Blast Radius**: Product — global error handler stops working
+- **Risk Owner**: Dev
+- **Category**: Code
+- **Business Impact**: If the observability plugin registers after the error handler, it silently replaces the error handler. All error responses become generic 500s without proper error formatting.
+- **Fix**: Use `addHook('onError')` instead of `setErrorHandler` in the observability plugin. The global error handler in `app.ts` should be the only `setErrorHandler`.
+- **Compliance Impact**: OWASP A09 (Security Logging and Monitoring Failures)
+
+### RISK-010: Frontend 948-Line God Class (MEDIUM)
+
+- **File/Location**: `apps/web/src/` — largest component file
+- **Severity**: Medium
+- **Likelihood**: Low — affects maintainability, not security
+- **Blast Radius**: Feature — makes changes risky and review difficult
+- **Risk Owner**: Frontend Dev
+- **Category**: Code
+- **Business Impact**: Large monolithic components slow down feature development and increase the risk of introducing bugs when making changes
+- **Fix**: Extract into smaller components following single-responsibility principle. Target max 200 lines per component.
+- **Compliance Impact**: ISO 25010 (Maintainability)
 
 ---
 
-## Section 5: Risk Register (Summary)
+## Section 5: Risk Register
 
-| ID | Title | Severity | Phase | SLA |
-|----|-------|----------|-------|-----|
-| RISK-001 | Timing-unsafe health check key comparison | High | Phase 0 | 48 hours |
-| RISK-002 | Unbounded pagination offset across five schemas | High | Phase 0 | 48 hours |
-| RISK-003 | Daily spending limit fails open when Redis unavailable | High | Phase 0 | 48 hours |
-| RISK-004 | UUID parameter schema defined but unused in routes | Medium | Phase 1 | 1-2 weeks |
-| RISK-005 | Webhook secrets stored unencrypted without encryption key | Medium | Phase 1 | 1-2 weeks |
-| RISK-006 | API key lastUsedAt update is fire-and-forget | Low | Phase 2 | 2-4 weeks |
-| RISK-007 | No explicit request timeout on route handlers | Low | Phase 2 | 2-4 weeks |
+### Risk Dependency Graph
 
-### Remediation Roadmap (Summary)
+```mermaid
+flowchart TD
+    R001["RISK-001<br/>Dev Route No Auth"]:::crit --> R007["RISK-007<br/>Webhook Replay"]:::med
+    R002["RISK-002<br/>No Data Retention"]:::crit --> R006["RISK-006<br/>GDPR Rights Gap"]:::high
+    R004["RISK-004<br/>No Error Tracking"]:::high --> R009["RISK-009<br/>Observability Plugin"]:::med
+    R005["RISK-005<br/>E2E Not in CI"]:::high --> R008["RISK-008<br/>EmailService Tests"]:::med
+    R003["RISK-003<br/>Accessibility"]:::high --> R010["RISK-010<br/>God Class"]:::med
+    R006 --> R011["RISK-011<br/>No Consent Audit"]:::med
+    R004 --> R012["RISK-012<br/>No Alerting Rules"]:::med
+    R002 --> R013["RISK-013<br/>PII in Dev Logs"]:::low
+    R005 --> R014["RISK-014<br/>Checkout No Unit Tests"]:::med
 
-**Phase 0 — Immediate (48 Hours):** Resolve all three high-severity issues. These are one-line to three-line code changes requiring no architectural modifications. The backend engineer should apply timing-safe comparison for the health check API key, add a maximum bound to all five pagination offset schemas, and change the spending limit check to deny refunds when Redis is unavailable in production mode. The quality gate for Phase 0 completion is all technical dimension scores reaching 8/10 or above.
+    classDef crit fill:#7f1d1d,stroke:#ef4444,color:#fff
+    classDef high fill:#7c2d12,stroke:#f97316,color:#fff
+    classDef med fill:#713f12,stroke:#eab308,color:#fff
+    classDef low fill:#1e3a5f,stroke:#60a5fa,color:#fff
+```
 
-**Phase 1 — Stabilize (1-2 Weeks):** Import and enforce UUID validation on critical route handlers. Require the webhook encryption key as a mandatory environment variable in all deployment environments.
+### Full Risk Register
 
-**Phase 2 — Production-Ready (2-4 Weeks):** Add metrics for failed API key updates. Configure explicit request timeouts. Establish centralized alerting for error rate spikes, authentication failures, and spending limit threshold approaches.
+| Issue ID | Title | Domain | Severity | Owner | SLA | Dependency | Verification | Status |
+|----------|-------|--------|----------|-------|-----|------------|--------------|--------|
+| RISK-001 | Dev route without authentication | Security | Critical | Dev | Phase 0 (48h) | None | `curl -X POST localhost:5001/v1/dev/simulate/test` returns 401 or 404 | Open |
+| RISK-002 | No data retention policy or mechanism | Privacy | Critical | Management + Dev | Phase 0 (48h) | None | Retention policy document exists; cron job deletes data older than threshold | Open |
+| RISK-003 | WCAG accessibility failures (47 issues) | Accessibility | High | Frontend Dev | Phase 1 (1-2w) | None | Lighthouse Accessibility score >= 90; 0 Critical WCAG violations | Open |
+| RISK-004 | No error tracking service | Observability | High | DevOps | Phase 1 (1-2w) | None | Sentry/Datadog integration active; test error appears in dashboard | Open |
+| RISK-005 | E2E tests not in CI pipeline | Testing | High | DevOps | Phase 1 (1-2w) | None | `test-stablecoin-gateway.yml` includes Playwright stage; green on main | Open |
+| RISK-006 | GDPR data subject rights 3/6 | Privacy | High | Dev | Phase 1 (1-2w) | RISK-002 | All 6 GDPR endpoints exist and return 200 with valid data | Open |
+| RISK-007 | Webhook replay attack window too wide | Security | Medium | Dev | Phase 2 (2-4w) | RISK-001 | Replay window <= 60s; idempotency key in Redis | Open |
+| RISK-008 | EmailService zero test coverage | Testing | Medium | Dev | Phase 2 (2-4w) | RISK-005 | `email.service.test.ts` exists with >= 80% coverage | Open |
+| RISK-009 | Observability plugin replaces error handler | Architecture | Medium | Dev | Phase 2 (2-4w) | RISK-004 | Plugin uses `addHook('onError')` not `setErrorHandler` | Open |
+| RISK-010 | Frontend 948-line god class | Code Quality | Medium | Frontend Dev | Phase 2 (2-4w) | RISK-003 | No component file > 300 lines | Open |
+| RISK-011 | No consent audit trail mechanism | Privacy | Medium | Dev | Phase 2 (2-4w) | RISK-006 | Consent changes logged with timestamp and IP | Open |
+| RISK-012 | No alerting rules configured | Observability | Medium | DevOps | Phase 2 (2-4w) | RISK-004 | At least 3 alert rules active (error rate, latency, uptime) | Open |
+| RISK-013 | PII potentially in development logs | Privacy | Low | Dev | Phase 3 (4-8w) | RISK-002 | `grep -r "email\|password" src/ \| grep log` returns 0 matches | Open |
+| RISK-014 | Checkout route has no unit tests | Testing | Medium | Dev | Phase 2 (2-4w) | RISK-005 | `checkout.test.ts` exists with >= 80% coverage | Open |
+| RISK-015 | Audit log record() ambiguous return type | Code Quality | Medium | Dev | Phase 2 (2-4w) | None | Return type is explicit `Promise<AuditLog>`, no silent drops | Open |
+| RISK-016 | optionalAuth swallows 503 errors | Security | Medium | Dev | Phase 2 (2-4w) | RISK-009 | 503 from auth service propagates, not silently treated as "no auth" | Open |
+| RISK-017 | npm audit: 26 vulnerabilities (7 high) | Security | Low | Dev | Phase 3 (4-8w) | None | `npm audit` shows 0 high/critical (dev deps excluded from prod) | Open |
+| RISK-018 | No database migration CI validation | DevOps | Medium | DevOps | Phase 2 (2-4w) | RISK-005 | CI runs `prisma migrate deploy --dry-run` on PRs | Open |
+| RISK-019 | Missing API rate limit per-endpoint tuning | Security | Low | Dev | Phase 3 (4-8w) | RISK-007 | Auth endpoints: 5/min, payment creation: 20/min, reads: 100/min | Open |
+| RISK-020 | No circuit breaker for external services | Architecture | Low | Dev | Phase 3 (4-8w) | RISK-009 | Circuit breaker on blockchain and email service calls | Open |
 
 ---
 
-# PART B: ENGINEERING APPENDIX
+# PART B — ENGINEERING APPENDIX
 
-*This section is intended for engineering staff. It contains file paths, line numbers, code snippets, and detailed technical analysis.*
-
----
-
-## Section 6: Strong Findings (What Is Working Well)
-
-This section documents the security controls and engineering patterns that are correctly implemented and must be preserved during any remediation work.
-
-### 6.1 Authentication and Authorization
-
-The auth plugin (`apps/api/src/plugins/auth.ts`) implements a dual authentication mechanism supporting both JWT bearer tokens and API key authentication. The JWT implementation pins the signing algorithm to prevent algorithm confusion attacks. A JTI (JWT ID) blacklist backed by Redis enables token revocation. The plugin enforces granular permissions (read, write, refund) at the route level.
-
-The Redis circuit breaker pattern for authentication is noteworthy. When Redis becomes unavailable for JTI blacklist lookups, the auth plugin fails closed — it rejects the token rather than allowing it through. This is the correct behavior for an authentication system and is referenced as RISK-051 in previous audit documentation.
-
-### 6.2 Encryption at Rest
-
-The encryption utility (`apps/api/src/utils/encryption.ts`) implements AES-256-GCM correctly:
-
-- Each encryption operation generates a fresh initialization vector using `crypto.randomBytes()`
-- The authentication tag is validated during decryption, preventing tampering
-- The encryption key undergoes entropy validation during initialization to reject weak keys
-- Webhook endpoint secrets are encrypted before storage in the database
-
-### 6.3 Input Validation
-
-Every API endpoint uses Zod schemas for request validation. The schemas are defined centrally in `apps/api/src/utils/validation.ts` and imported by route handlers. Key schemas include `createPaymentSessionSchema`, `createRefundSchema`, `createWebhookSchema`, and pagination schemas for all list endpoints. All schemas enforce type constraints, length limits, and format validation. The Zod schemas are also used to generate TypeScript types, ensuring compile-time and runtime validation stay in sync.
-
-### 6.4 Webhook Security
-
-Webhook deliveries are signed using HMAC-SHA256 with timing-safe verification:
-
-```typescript
-// Webhook signature uses HMAC-SHA256 with timing-safe comparison
-// This is correctly implemented in the delivery verification flow
-```
-
-The signature is computed over the raw payload body and included in the delivery headers. Merchants verify deliveries using `crypto.timingSafeEqual()` for the signature comparison. The delivery system includes retry logic with exponential backoff for failed deliveries.
-
-### 6.5 Financial Arithmetic
-
-All monetary calculations use `Decimal.js` rather than native JavaScript floating-point numbers. The Zod schemas enforce a maximum of six decimal places at the input validation layer. Database columns use PostgreSQL's `DECIMAL` type with appropriate precision. This eliminates the entire class of floating-point rounding errors that commonly affect financial systems.
-
-### 6.6 Concurrency Safety
-
-The payment service (`apps/api/src/services/`) uses PostgreSQL `SELECT ... FOR UPDATE` locks when modifying payment session state. This prevents race conditions where two concurrent requests could process the same payment session simultaneously, which could lead to double-spending or inconsistent state transitions.
-
-### 6.7 Rate Limiting
-
-Rate limiting is implemented using the `@fastify/rate-limit` plugin with a Redis-backed distributed store. This ensures rate limits are enforced across multiple server instances. Per-endpoint rate limit configurations allow tighter limits on sensitive operations like authentication and refund processing.
-
-### 6.8 HTTP Security
-
-The `@fastify/helmet` plugin sets comprehensive HTTP security headers including Content-Security-Policy, X-Content-Type-Options, X-Frame-Options, and Strict-Transport-Security. The `@fastify/cors` plugin is configured with an explicit origin allowlist, with proper distinction between production and development configurations. A 1MB body size limit prevents oversized payload attacks.
-
-### 6.9 ID Parameter Validation
-
-A preValidation hook at the application level (`apps/api/src/app.ts`, lines 236-247) validates all `:id` route parameters against a safe regular expression pattern (`SAFE_ID_RE: [a-zA-Z0-9_-]{1,128}`). This provides a baseline defense against injection attacks through URL parameters, even if individual route handlers lack their own validation.
-
-### 6.10 Idempotency
-
-Payment sessions and refunds support idempotency through composite unique constraints in the database schema. Webhook deliveries also enforce idempotency via a unique constraint on the combination of `(endpointId, eventType, resourceId)`. This prevents duplicate processing of the same operation, which is essential for a financial system.
-
-### 6.11 Development vs Production Separation
-
-Development-only routes are gated behind an explicit `NODE_ENV !== 'production'` check. Swagger UI is only exposed in non-production environments. These controls prevent accidental exposure of development utilities in production.
-
-### 6.12 Password Policy
-
-User passwords must be at least 12 characters and include at least one uppercase letter, one lowercase letter, one number, and one special character. Passwords are hashed using bcrypt before storage.
-
-### 6.13 URL Validation
-
-Redirect URLs and webhook endpoint URLs are validated to require HTTPS, with a localhost exception for development environments. This prevents merchants from accidentally or maliciously configuring unencrypted HTTP callback URLs.
-
-### 6.14 Database Schema Design
-
-The Prisma schema defines 11 models with proper foreign key relationships, cascading deletes where appropriate, composite unique constraints for idempotency, mapped column names using `@map`, created and updated timestamps on all models, and appropriate use of enums for status fields. Recent migrations demonstrate active attention to precision requirements and audit trail capabilities.
+*(This section contains file:line references, code examples, and technical detail. For engineering team only.)*
 
 ---
 
-## Section 7: Issue Details — Critical and High Severity
+## Section 6: Architecture Assessment
 
-### ISSUE-001: Health Check Key Comparison Not Timing-Safe
+### Architecture Layer Diagram
 
-**File:** `apps/api/src/app.ts`, line 321
-**Severity:** High
-**CVSS Estimate:** 5.9 (Medium-High, network-exploitable with low complexity)
-**OWASP Category:** A05 Security Misconfiguration
+```mermaid
+graph TD
+    subgraph PRESENTATION["Presentation Layer"]
+        WEB["React + Vite<br/>apps/web/src/"]
+        PAGES["Pages & Components<br/>apps/web/src/pages/"]
+    end
+    subgraph APPLICATION["Application Layer"]
+        ROUTES["Fastify Routes<br/>apps/api/src/routes/ (42 endpoints)"]
+        MIDDLEWARE["Auth & Validation<br/>Zod schemas + JWT"]
+    end
+    subgraph DOMAIN["Domain / Business Logic"]
+        SERVICES["Services<br/>apps/api/src/services/ (8 service files)"]
+        WORKERS["Workers<br/>apps/api/src/workers/"]
+    end
+    subgraph INFRA["Infrastructure Layer"]
+        DB[("PostgreSQL<br/>9 Prisma Models · 22 Indexes")]
+        PLUGINS["11 Fastify Plugins<br/>apps/api/src/plugins/"]
+        CACHE[("Redis<br/>Rate Limiting · Sessions")]
+    end
 
-**Description:**
+    WEB -->|"REST"| ROUTES
+    PAGES --> WEB
+    ROUTES --> MIDDLEWARE
+    MIDDLEWARE --> SERVICES
+    SERVICES --> WORKERS
+    SERVICES --> DB
+    PLUGINS --> DB
+    PLUGINS --> CACHE
 
-The internal health check endpoint compares the provided API key to the expected `INTERNAL_API_KEY` environment variable using a standard JavaScript strict equality operator:
-
-```typescript
-const isAuthorized = internalKey && providedKey && internalKey === providedKey;
+    style PRESENTATION fill:#1e1e3f,stroke:#6366f1,color:#fff
+    style APPLICATION fill:#1e3a1e,stroke:#22c55e,color:#fff
+    style DOMAIN fill:#3f2d1e,stroke:#f59e0b,color:#fff
+    style INFRA fill:#1e1e1e,stroke:#94a3b8,color:#fff
 ```
 
-String comparison in JavaScript (and most languages) short-circuits on the first differing character. An attacker who can measure response times with sufficient precision can determine the correct key one character at a time. While this requires network proximity and many thousands of requests to exploit reliably, it is a well-documented attack class with proven tooling available.
+### Architecture Strengths
 
-**Impact:**
+- **Clean plugin system**: 11 Fastify plugins with clear separation (auth, prisma, redis, observability, etc.)
+- **Service layer isolation**: Business logic in dedicated service files, not in route handlers
+- **Type safety**: Zod schemas validate 40/42 route inputs with TypeScript type inference
+- **Financial safety**: Decimal.js for monetary calculations (no floating-point), pessimistic locking with ADRs
+- **Crypto design**: AES-256-GCM with IV per record, KMS key rotation support
 
-An attacker who recovers the `INTERNAL_API_KEY` gains access to the internal health check endpoint. Depending on what information the health check returns (database latency, Redis status, error messages) and what other internal endpoints share this key, this could provide reconnaissance data useful for planning further attacks.
+### Architecture Issues
 
-**Remediation:**
+**RISK-009: Observability plugin replaces global error handler**
+- `apps/api/src/plugins/observability.ts` calls `setErrorHandler`, which replaces any previously registered error handler
+- Since `app.ts:127` registers observability first, the global error handler at `app.ts:383` re-registers after — currently safe by accident of ordering
+- Fix: Use `addHook('onError')` in the observability plugin
 
-Replace the equality comparison with `crypto.timingSafeEqual`, which compares all bytes in constant time regardless of differences:
+**RISK-010: Frontend component exceeds 900 lines**
+- Violates single-responsibility principle
+- Extract sub-components for form sections, table displays, and modal dialogs
 
-```typescript
-import { timingSafeEqual } from 'crypto';
+**RISK-020: No circuit breaker for external service calls**
+- Blockchain monitoring and email service calls have no circuit breaker
+- A downstream outage cascades into the gateway
 
-const isAuthorized =
-  internalKey &&
-  providedKey &&
-  internalKey.length === providedKey.length &&
-  timingSafeEqual(Buffer.from(internalKey), Buffer.from(providedKey));
-```
-
-The length check before `timingSafeEqual` is necessary because the function throws if the buffers have different lengths. The length comparison itself leaks only the key length, not its content, which is an acceptable trade-off.
-
-**Verification:**
-
-After the fix, write a test that confirms the endpoint returns 401 for an incorrect key and 200 for the correct key. Optionally, run a timing analysis tool to confirm that response times do not correlate with the number of correct prefix characters in the provided key.
+**Architecture Score: 8/10**
+Evidence:
+- Clean 4-layer architecture with plugin system (11 plugins, well-separated)
+- 42 routes with consistent handler patterns
+- One ordering-dependent bug (RISK-009) and one oversized component (RISK-010)
+- Score justification: Strong separation of concerns and consistent patterns; docked for plugin ordering fragility and missing circuit breakers
 
 ---
 
-### ISSUE-002: Unbounded Pagination Offset in Five List Schemas
+## Section 7: Security Findings
 
-**File:** `apps/api/src/utils/validation.ts`, lines 137, 166, 217, 222
-**File:** `apps/api/src/routes/payment-links.ts`, line 81
-**Severity:** High
-**CVSS Estimate:** 5.3 (Medium, availability impact)
-**OWASP Category:** A04 Insecure Design
+### Attack Path Sequence — Worst Case
 
-**Description:**
+```mermaid
+sequenceDiagram
+    actor Attacker
+    participant DevRoute as /v1/dev/simulate/:id
+    participant API as Fastify API
+    participant DB as PostgreSQL
+    participant Merchant as Merchant System
 
-Five pagination schemas define an `offset` parameter with `.min(0).default(0)` but no upper bound:
+    Note over Attacker,Merchant: Attack Path: Dev Route Payment Simulation (RISK-001)
 
-```typescript
-offset: z.coerce.number().int().min(0).default(0),
+    Attacker->>DevRoute: POST /v1/dev/simulate/sess_abc123
+    Note right of DevRoute: No authentication check<br/>Only NODE_ENV gate
+    DevRoute->>DB: UPDATE payment_sessions<br/>SET status = 'CONFIRMED'
+    DB-->>DevRoute: Updated
+    DevRoute->>API: Trigger webhook delivery
+    API->>Merchant: POST /webhook<br/>{"status": "confirmed"}
+    Note over Merchant: Merchant ships goods<br/>thinking payment received
+    Merchant-->>Attacker: Goods delivered without payment
 ```
 
-This pattern appears in the following schemas:
-1. Payment sessions list schema (validation.ts, line 137)
-2. Webhooks list schema (validation.ts, line 166)
-3. Refunds list schema (validation.ts, line 217)
-4. Transactions list schema (validation.ts, line 222)
-5. Payment links list schema (payment-links.ts, line 81)
+### Security Findings by Category
 
-When Prisma translates a large offset value into a SQL `OFFSET` clause, PostgreSQL must scan and discard all rows up to the offset position before returning results. An attacker can set `offset=999999999` to force the database to perform a sequential scan of the entire table before returning zero results.
+**Authentication & Authorization**
 
-**Impact:**
+| Finding | Severity | Location | Compliance |
+|---------|----------|----------|------------|
+| Dev route zero auth (RISK-001) | Critical | `routes/v1/dev.ts` | OWASP A01, API5 |
+| optionalAuth swallows 503 (RISK-016) | Medium | `plugins/auth.ts` | OWASP A07 |
+| JWT algorithm pinned to HS256 | Pass | `app.ts:120-124` | OWASP A02 |
+| API key hashing with SHA-256 | Pass | `services/api-key.service.ts` | OWASP A02 |
 
-A sustained attack sending requests with very large offset values to multiple list endpoints simultaneously can exhaust PostgreSQL connection pool capacity and CPU, degrading or denying service to all legitimate users. The attack is trivial to execute and requires only standard HTTP requests.
+**Data Security**
 
-**Remediation:**
+| Finding | Severity | Location | Compliance |
+|---------|----------|----------|------------|
+| AES-256-GCM encryption with per-record IV | Pass | `utils/encryption.ts` | OWASP A02 |
+| KMS key rotation support | Pass | `services/kms.service.ts` | SOC2 |
+| Wallet addresses encrypted at rest | Pass | `services/payment.service.ts` | GDPR Art. 32 |
+| Bcrypt password hashing (cost 12) | Pass | `services/auth.service.ts` | OWASP ASVS V2 |
 
-Add a maximum bound to all five offset schemas:
+**API Security**
 
-```typescript
-offset: z.coerce.number().int().min(0).max(10000).default(0),
-```
+| Finding | Severity | Location | Compliance |
+|---------|----------|----------|------------|
+| CORS origin whitelist (no wildcard) | Pass | `app.ts:83-115` | OWASP A05 |
+| Rate limiting with Redis store | Pass | `app.ts:131-190` | API4 |
+| Helmet security headers | Pass | `app.ts:65-79` | OWASP A05 |
+| ID path parameter validation | Pass | `app.ts:262-276` | OWASP A03 |
+| Webhook replay window 5 min (RISK-007) | Medium | `plugins/webhook-verification.ts` | OWASP A08 |
+| Timing-safe comparison for internal keys | Pass | `app.ts:351-353` | CWE-208 |
 
-The value of 10,000 is a reasonable upper bound that supports legitimate deep pagination while preventing abuse. For use cases requiring access to data beyond 10,000 records, cursor-based pagination should be implemented as a future enhancement.
-
-**Verification:**
-
-For each of the five list endpoints, send a request with `offset=10001` and confirm a 400 Bad Request response is returned with a Zod validation error. Send a request with `offset=10000` and confirm it succeeds. Send a request with `offset=0` and confirm it succeeds (regression check).
+**Security Score: 7/10**
+Evidence:
+- npm audit: 26 vulnerabilities (7 high) — all in `typescript-eslint` dev dependency chain, not shipped to production
+- `any` type usage: 20 instances in API source (potential type safety gaps)
+- 1 Critical finding (dev route), 1 Medium (webhook replay), 1 Medium (optionalAuth)
+- 18 security patterns implemented correctly (JWT pinning, CORS, rate limiting, encryption, CSRF, HSTS)
+- Score justification: Strong security fundamentals (encryption, auth, rate limiting) but dev route exposure is a critical gap that caps the score
 
 ---
 
-### ISSUE-003: Daily Spending Limit Fails Open When Redis Unavailable
+## Section 8: Performance and Scalability
 
-**File:** `apps/api/src/services/blockchain-transaction.service.ts`, lines 258-264
-**Severity:** High
-**CVSS Estimate:** 7.5 (High, financial integrity impact)
-**OWASP Category:** A01 Broken Access Control
+### Database Performance
 
-**Description:**
+- **22 database indexes** across 9 models — good index coverage
+- **Prisma query optimization**: Uses `select` and `include` judiciously, no blanket `findMany` without pagination
+- **Potential N+1**: No N+1 patterns detected in route handlers (services use explicit includes)
+- **Connection pooling**: Prisma default pool (configurable via `DATABASE_URL` params)
 
-The daily spending limit check queries Redis for the current day's total refund amount. If the Redis query fails for any reason (connection issues, timeout, memory exhaustion, or any other error), the catch block logs a warning and returns `true`, indicating the spending limit has not been exceeded:
+### Caching Strategy
 
-```typescript
-catch (error) {
-  logger.warn('Failed to check daily spending limit', { error });
-  return true; // Allows the refund to proceed
-}
-```
+- **Redis for rate limiting**: Distributed store via `RedisRateLimitStore` class
+- **No application-level caching**: Frequently-read data (e.g., merchant config, API key lookups) hits DB every time
+- **Recommendation**: Add Redis caching for API key validation (called on every authenticated request)
 
-This is a fail-open pattern. If Redis becomes unavailable — whether due to infrastructure failure, network partition, memory exhaustion, intentional restart, or deliberate attack — all spending limit checks will pass, and refunds can be processed without any daily cap.
+### Performance Risks
 
-This is in contrast to the authentication plugin, which correctly fails closed when Redis is unavailable for JTI blacklist lookups. The inconsistency between these two Redis-dependent security controls suggests the spending limit behavior was an oversight rather than a deliberate design decision.
+- **No bundle size budget**: Frontend Vite build has no configured size limits
+- **No API response time monitoring**: OpenTelemetry SDK integrated but no p95/p99 dashboards or alerts
+- **No load testing**: No k6, Artillery, or similar load test configuration
 
-**Impact:**
-
-During a Redis outage, an attacker or a compromised merchant account could process unlimited refunds up to the total balance of their account. The financial impact is proportional to the total funds under management across all merchant accounts. Combined with the fact that Redis outages are a common operational event, this represents a material financial risk.
-
-**Remediation:**
-
-Change the catch block to fail closed in production environments:
-
-```typescript
-catch (error) {
-  logger.warn('Failed to check daily spending limit', { error });
-  if (process.env.NODE_ENV === 'production') {
-    return false; // Deny refund when spending limit cannot be verified
-  }
-  return true; // Allow in development for convenience
-}
-```
-
-This ensures that refunds are blocked when the spending limit cannot be verified in production, while preserving developer convenience in local development environments where Redis may not always be running.
-
-**Verification:**
-
-Write a test that simulates Redis unavailability in production mode (`NODE_ENV=production`) and confirms the spending limit check returns `false` (refund denied). Write a second test simulating Redis failure in development mode and confirming it returns `true` (refund allowed for convenience). Verify that the warning log message is emitted in both cases.
+**Performance Score: 7/10**
+Evidence:
+- 22 database indexes across 9 models (good coverage)
+- Redis-backed distributed rate limiting (production-ready pattern)
+- No N+1 query patterns detected
+- Missing: Application-level caching, bundle budgets, load testing, response time monitoring
+- Score justification: Database design is solid with proper indexing and pagination; docked for missing caching layer, no load testing, and no performance monitoring dashboards
 
 ---
 
-## Section 8: Issue Details — Medium Severity
+## Section 9: Testing Assessment
 
-### ISSUE-004: uuidParamSchema Defined But Never Used in Routes
+### Test Coverage Summary
 
-**File:** `apps/api/src/utils/validation.ts`, lines 258-260
-**Severity:** Medium
-**OWASP Category:** A04 Insecure Design (defense in depth gap)
+| Metric | Value |
+|--------|-------|
+| Total test files | 168 |
+| Total test cases | 1,559 |
+| E2E test cases | 83 (Playwright) |
+| E2E pass rate | 83/85 (97.6%) |
+| Test quality score | 8.2/10 |
 
-**Description:**
+### Coverage Gaps
 
-A Zod schema for validating UUID route parameters is defined in the validation utilities:
+| Area | Status | Impact |
+|------|--------|--------|
+| EmailService | Zero coverage (RISK-008) | Silent notification failures |
+| Checkout routes | Zero unit tests (RISK-014) | Regression risk on payment flow |
+| E2E in CI | Not configured (RISK-005) | Regressions can ship to production |
+| Blockchain monitor worker | Minimal coverage | Transaction detection failures |
+| Error handler edge cases | Partial | Unexpected error formats leak |
 
-```typescript
-export const uuidParamSchema = z.object({
-  id: z.string().uuid(),
-});
-```
+### Test Strengths
 
-However, this schema is not imported or used in any route handler. The application-level preValidation hook at `apps/api/src/app.ts` line 236 provides baseline protection by validating that all `:id` parameters match the `SAFE_ID_RE` pattern `[a-zA-Z0-9_-]{1,128}`, but this pattern accepts any alphanumeric string up to 128 characters, not just valid UUIDs.
+- Real PostgreSQL database for all integration tests (no mocks)
+- Database state verification (checking DB records, not just API responses)
+- 83 E2E Playwright tests covering auth, payments, checkout, webhooks, analytics
+- Consistent test patterns across all route files
 
-**Impact:**
-
-If the application uses UUIDs as primary keys (which Prisma's default `cuid()` or `uuid()` generators produce), accepting non-UUID strings will simply result in a "not found" response from the database. The existing `SAFE_ID_RE` hook blocks injection payloads effectively. The risk is low, but enforcing strict UUID format provides defense in depth against any future endpoint that might interpret non-UUID identifiers differently.
-
-**Remediation:**
-
-Import `uuidParamSchema` in route modules that accept entity IDs and apply it to the route's `params` schema:
-
-```typescript
-import { uuidParamSchema } from '../utils/validation';
-
-fastify.get('/:id', {
-  schema: { params: uuidParamSchema },
-  handler: async (request, reply) => { /* ... */ }
-});
-```
-
-Apply this to GET, PUT, PATCH, and DELETE routes for payment sessions, refunds, webhooks, payment links, and any other entity-specific endpoints.
-
-**Verification:**
-
-Send a request to each entity endpoint with a non-UUID string (e.g., `GET /v1/payment-sessions/not-a-uuid`) and confirm a 400 Bad Request response is returned. Send a request with a valid UUID and confirm it succeeds (or returns 404 if the entity does not exist).
+**Test Coverage Score: 7/10**
+Evidence:
+- 1,559 test cases across 168 files (substantial suite)
+- E2E: 83/85 passing (97.6%)
+- EmailService has zero tests (RISK-008); checkout routes have zero unit tests (RISK-014)
+- E2E not in CI pipeline (RISK-005)
+- Score justification: Large, real-database test suite with strong E2E coverage, but critical service (email) and critical flow (checkout) have zero tests, and E2E doesn't run in CI
 
 ---
 
-### ISSUE-005: Webhook Endpoint Secret Stored Unencrypted When Encryption Key Not Set
+## Section 10: DevOps Assessment
 
-**File:** `apps/api/src/utils/encryption.ts` (initialization), webhook route handlers
-**Severity:** Medium
-**OWASP Category:** A02 Cryptographic Failures
+### CI/CD Pipeline
 
-**Description:**
+| Check | Status |
+|-------|--------|
+| CI workflow exists | Yes — `test-stablecoin-gateway.yml` + 16 other workflows |
+| Unit tests in CI | Yes |
+| E2E tests in CI | No (RISK-005) |
+| Docker builds | Yes — API and Web Dockerfiles |
+| docker-compose | Yes — full stack orchestration |
+| .env.example | Yes — documented environment variables |
+| Database migrations in CI | No (RISK-018) |
+| Secret scanning | Not configured |
 
-The `initializeEncryption()` function throws an error if the `WEBHOOK_ENCRYPTION_KEY` environment variable is not set. However, depending on how the webhook route handler catches this initialization error, webhook endpoint secrets may be stored in plaintext in the database when the encryption key is not configured. This situation is most likely to occur in development and staging environments where the encryption key may not be set.
+### DORA Metrics Assessment
 
-**Impact:**
+| Metric | Estimated Value | Tier |
+|--------|----------------|------|
+| Deployment Frequency | Weekly (manual) | Medium |
+| Lead Time for Changes | 2-5 days | Medium |
+| Change Failure Rate | Unknown (no tracking) | Unknown |
+| Time to Restore | Unknown (no alerting) | Unknown |
 
-Webhook secrets stored in plaintext are readable by anyone with database access. In a development or staging environment, this is a moderate risk if the database is shared, accessible from less-secured networks, or backed up to a location with weaker access controls. In production, the encryption key should always be set, but there is no deployment-time enforcement to guarantee this.
-
-**Remediation:**
-
-1. Add `WEBHOOK_ENCRYPTION_KEY` as a required environment variable in all deployment environment configurations (staging and production)
-2. Add a startup check in the application entry point that refuses to start if the key is missing in non-development environments:
-
-```typescript
-if (process.env.NODE_ENV !== 'development' && !process.env.WEBHOOK_ENCRYPTION_KEY) {
-  throw new Error('WEBHOOK_ENCRYPTION_KEY is required in non-development environments');
-}
-```
-
-3. Audit existing webhook endpoint records in staging to determine if any secrets were stored unencrypted and re-encrypt them if found
-
-**Verification:**
-
-Attempt to start the application in staging mode without the `WEBHOOK_ENCRYPTION_KEY` environment variable and confirm the application refuses to start with a clear error message. Verify the application starts successfully when the key is provided.
-
----
-
-## Section 9: Issue Details — Low Severity
-
-### ISSUE-006: API Key lastUsedAt Update Is Fire-and-Forget
-
-**File:** `apps/api/src/plugins/auth.ts`, lines 103-106
-**Severity:** Low
-
-**Description:**
-
-After successful API key authentication, the plugin updates the `lastUsedAt` timestamp on the API key record. This database write uses a fire-and-forget pattern where the `.catch()` handler only logs at the debug level:
-
-```typescript
-prisma.apiKey.update({
-  where: { id: apiKey.id },
-  data: { lastUsedAt: new Date() },
-}).catch((err) => {
-  request.log.debug('Failed to update lastUsedAt', err);
-});
-```
-
-**Impact:**
-
-If the database update fails persistently (due to connection issues, schema drift, or other errors), the `lastUsedAt` field will become stale without any visible indication to operators. This is primarily an audit trail concern — the API key was still used successfully, but the usage timestamp was not recorded. The fire-and-forget pattern itself is acceptable for a non-critical metadata update, as it avoids adding latency to the authentication path.
-
-**Remediation:**
-
-Add an error counter metric that increments when the update fails. This allows monitoring systems to alert on persistent failures without blocking the request path:
-
-```typescript
-prisma.apiKey.update({
-  where: { id: apiKey.id },
-  data: { lastUsedAt: new Date() },
-}).catch((err) => {
-  request.log.debug('Failed to update lastUsedAt', err);
-  metrics.increment('api_key.last_used_at_update_failed');
-});
-```
-
-**Verification:**
-
-Verify the metric counter is exposed through the application's metrics endpoint. Simulate a database error during the update and confirm the counter increments while the authentication request still succeeds.
+**DevOps Score: 7/10**
+Evidence:
+- 17 CI workflow files including product-specific test workflow
+- Docker: Both API and Web Dockerfiles present, docker-compose.yml for orchestration, .env.example documented
+- Missing: E2E in CI (RISK-005), database migration validation in CI (RISK-018), secret scanning, alerting
+- Score justification: Good CI foundation with Docker and workflows, but critical gaps in E2E CI integration and migration validation reduce production confidence
 
 ---
 
-### ISSUE-007: No Explicit Request Timeout on Route Handlers
+## Section 11: Compliance Readiness
 
-**File:** Application-wide (Fastify server configuration)
-**Severity:** Low
+### OWASP Top 10 (2021) — Control-by-Control
 
-**Description:**
+| Control | Status | Evidence |
+|---------|--------|----------|
+| A01: Broken Access Control | Partial | Dev route has no auth (RISK-001). All other routes properly guarded with JWT or API key. RBAC for admin endpoints. |
+| A02: Cryptographic Failures | Pass | AES-256-GCM encryption, bcrypt cost 12, JWT HS256 pinned, KMS key rotation |
+| A03: Injection | Pass | Prisma ORM parameterized queries, Zod input validation on 40/42 routes, ID path parameter regex validation |
+| A04: Insecure Design | Pass | Pessimistic locking for financial operations, spending limits, ADR documentation for design decisions |
+| A05: Security Misconfiguration | Pass | Helmet security headers, CORS origin whitelist, rate limiting, no default credentials |
+| A06: Vulnerable Components | Partial | npm audit: 26 vulnerabilities (7 high) in dev dependency chain. Not shipped to production but should be resolved. |
+| A07: Authentication Failures | Pass | JWT with HS256, token rotation, secure cookie flags, account lockout after failed attempts |
+| A08: Software Integrity Failures | Partial | Webhook replay window is 5 minutes (RISK-007). HMAC signature verification present. |
+| A09: Logging and Monitoring | Partial | Structured logging via Pino present, but no error tracking service (RISK-004), no alerting (RISK-012) |
+| A10: SSRF | Pass | URL validation in blockchain service, allowlist for external endpoints |
 
-Route handlers do not configure explicit request timeouts. Fastify uses its default connection timeout, which may be insufficient for routes that call external blockchain RPC endpoints via ethers.js. A slow or unresponsive RPC endpoint could cause the request handler to hold the connection for an extended period, potentially indefinitely if the default timeout is very long.
+### OWASP API Security Top 10 (2023)
 
-**Impact:**
+| Risk | Status | Evidence |
+|------|--------|----------|
+| API1: BOLA | Pass | Object-level authorization checks in all resource endpoints. Users can only access their own resources. |
+| API2: Broken Authentication | Pass | JWT with algorithm pinning, API key hashing, token rotation |
+| API3: Broken Object Property Auth | Pass | Zod schemas restrict which properties can be set per role |
+| API4: Unrestricted Resource Consumption | Pass | Rate limiting via Redis with per-user/key tracking, body size limit 1MB |
+| API5: BFLA | Partial | Admin endpoints properly guarded, but dev route has no auth (RISK-001) |
+| API6: Sensitive Business Flows | Pass | Pessimistic locking, spending limits, idempotency checks |
+| API7: SSRF | Pass | URL allowlisting for blockchain and external service calls |
+| API8: Security Misconfiguration | Pass | Helmet headers, CORS whitelist, no debug info in production errors |
+| API9: Improper Inventory Management | Pass | OpenAPI/Swagger docs for all endpoints, dev route gated by NODE_ENV |
+| API10: Unsafe Consumption of APIs | Partial | No circuit breaker for external service calls (RISK-020) |
 
-Under sustained RPC latency or outage conditions, connection pool exhaustion could occur as handlers wait for blockchain responses. This would degrade or deny service to all users, not just those making blockchain-related requests. The impact is proportional to the number of concurrent blockchain-interacting requests during the RPC slowdown.
-
-**Remediation:**
-
-Configure Fastify's `connectionTimeout` and `requestTimeout` at the server level with appropriate values:
-
-```typescript
-const server = Fastify({
-  connectionTimeout: 30000,  // 30 seconds for standard routes
-  requestTimeout: 60000,     // 60 seconds overall request timeout
-});
-```
-
-For routes that call blockchain RPC endpoints specifically, add explicit timeouts on the ethers.js provider calls:
-
-```typescript
-const provider = new ethers.JsonRpcProvider(rpcUrl, undefined, {
-  timeout: 15000,  // 15 second timeout for blockchain calls
-});
-```
-
-**Verification:**
-
-Write a test that simulates a slow RPC response (using a mock server with artificial delay) and confirm the request is terminated within the configured timeout period with an appropriate error response.
-
----
-
-## Section 10: Architecture Assessment
-
-### 10.1 Layering and Separation of Concerns
-
-The codebase follows a clean three-layer architecture:
-
-1. **Route handlers** (`apps/api/src/routes/`) — HTTP request/response handling, input validation via Zod schemas, delegation to services
-2. **Service classes** (`apps/api/src/services/`) — Business logic, database operations via Prisma, external service calls
-3. **Data access** (Prisma ORM) — Parameterized queries, schema enforcement, migration management
-
-The 4 Fastify plugins (`apps/api/src/plugins/`) handle cross-cutting concerns:
-- `auth.ts` — JWT and API key authentication with permission enforcement
-- `cors.ts` — Cross-origin request handling with environment-specific configuration
-- `rate-limit.ts` — Redis-backed distributed rate limiting
-- `swagger.ts` — OpenAPI documentation (non-production only)
-
-This separation is well-maintained throughout the codebase. Routes do not contain business logic. Services do not handle HTTP concerns. The plugin system is used appropriately for cross-cutting concerns.
-
-### 10.2 Database Architecture
-
-The 11 Prisma models cover the complete payment lifecycle with proper relationships:
-
-| Model | Purpose | Key Constraints |
-|-------|---------|----------------|
-| User | Merchant accounts | email (unique) |
-| ApiKey | API authentication keys | keyHash (unique), userId FK |
-| PaymentSession | Payment lifecycle tracking | externalId (unique per merchant), status enum |
-| BlockchainTransaction | On-chain transaction records | txHash (unique), chain+address composite |
-| Refund | Refund processing | idempotencyKey (unique per session) |
-| WebhookEndpoint | Merchant webhook configuration | userId FK, url |
-| WebhookDelivery | Delivery tracking and idempotency | (endpointId, eventType, resourceId) unique |
-| PaymentLink | Shareable payment URLs | shortCode (unique), merchantId FK |
-| AuditLog | System audit trail | userId FK, action, createdAt |
-| Session | User sessions | token (unique), userId FK |
-| PasswordReset | Password reset tokens | token (unique), userId FK |
-
-The schema demonstrates good practices: proper foreign key relationships with cascading deletes, composite unique constraints for idempotency, mapped column names, timestamps on all models, and appropriate use of enums for status fields.
-
-### 10.3 Security Architecture
-
-The security architecture follows defense-in-depth principles:
-
-- **Network layer:** CORS allowlist, Helmet headers, rate limiting
-- **Authentication layer:** JWT with JTI blacklist (fail-closed on Redis down), API key with HMAC verification, granular permissions
-- **Input layer:** Zod validation on all endpoints, preValidation hook for ID parameters, body size limit (1MB)
-- **Data layer:** AES-256-GCM encryption for secrets, bcrypt for passwords, HMAC-SHA256 for webhook signatures
-- **Transport layer:** HTTPS-only URLs enforced for redirects and webhooks (with localhost exception)
-
-The one inconsistency is the fail-open behavior in the spending limit check (ISSUE-003), which contradicts the fail-closed pattern used in the authentication plugin.
-
----
-
-## Section 11: Compliance Mapping
-
-### 11.1 OWASP Top 10 (2021)
-
-| Category | Status | Evidence |
-|----------|--------|----------|
-| A01: Broken Access Control | **PARTIAL** | Authentication and authorization are solid with JWT, API keys, and permission enforcement. The spending limit fail-open (ISSUE-003) is an access control gap because it allows operations that should be denied when the limit cannot be verified. |
-| A02: Cryptographic Failures | **PASS** | AES-256-GCM with proper IV generation for secrets at rest. Bcrypt for password hashing with appropriate cost factor. HMAC-SHA256 for webhook signatures. Proper key entropy validation during initialization. |
-| A03: Injection | **PASS** | Zod validation on all inputs prevents malformed data from reaching business logic. Prisma ORM generates parameterized queries, preventing SQL injection. The preValidation hook sanitizes URL parameters against a safe regex pattern. |
-| A04: Insecure Design | **PASS** | Defense in depth with multiple validation layers. Rate limiting on all endpoints. Idempotency keys prevent duplicate processing. FOR UPDATE locks prevent race conditions on payment state transitions. |
-| A05: Security Misconfiguration | **PARTIAL** | Development and production configurations are properly separated. Swagger UI is gated to non-production. However, the timing-unsafe comparison (ISSUE-001) is a misconfiguration that weakens an otherwise correct implementation. |
-| A06: Vulnerable Components | **PASS** | No known vulnerable dependencies were flagged during the audit. Dependencies are current. |
-| A07: Authentication Failures | **PASS** | JWT implementation pins the signing algorithm. JTI blacklist enables token revocation. Redis circuit breaker fails closed for auth. Password policy enforces complexity requirements (12+ chars, uppercase, lowercase, number, special character). |
-| A08: Software and Data Integrity | **PASS** | Webhook deliveries are signed with HMAC-SHA256 and verified with timing-safe comparison. Idempotency keys prevent replay-style attacks. Database constraints enforce data integrity at the schema level. |
-| A09: Logging and Monitoring | **PARTIAL** | Structured logging is comprehensive with contextual data (request IDs, user IDs, operation types). However, no centralized alerting is configured, no metrics are collected for security events, and no distributed tracing is implemented. |
-| A10: Server-Side Request Forgery | **PASS** | Webhook URLs are validated to require HTTPS. The application does not fetch arbitrary user-supplied URLs. Blockchain RPC endpoints are configured server-side, not user-supplied. |
-
-**OWASP Summary: 7 Pass, 3 Partial, 0 Fail**
-
-### 11.2 SOC 2 Trust Service Criteria
+### SOC2 Type II — Trust Service Principles
 
 | Principle | Status | Evidence |
 |-----------|--------|----------|
-| **Security** | **PARTIAL** | Strong authentication, encryption, and input validation throughout. Gaps in timing-safe comparison (ISSUE-001) and fail-open spending limit (ISSUE-003) reduce the assessment. Both are fixable within 48 hours. |
-| **Availability** | **PASS** | Redis graceful degradation for non-critical paths. Health check endpoint for monitoring. Rate limiting protects against abuse. CI/CD pipelines with staging environment for safe deployments. |
-| **Processing Integrity** | **PASS** | Decimal.js eliminates floating-point errors in financial calculations. FOR UPDATE locks prevent concurrent modification of payment state. Idempotency keys prevent duplicate processing. Database constraints enforce referential integrity with cascading deletes. |
-| **Confidentiality** | **PASS** | AES-256-GCM encryption for webhook secrets at rest. HTTPS-only URLs enforced for redirects and webhooks. No sensitive data in logs (keys and secrets are redacted). Proper cascading deletes ensure data removal when parent records are deleted. |
-| **Privacy** | **PASS** | Minimal PII collection (only email addresses for merchant accounts). Proper cascading deletes ensure complete data removal. No PII is logged. No PII is transmitted to third parties beyond what is necessary for payment processing. |
+| Security | Partial | Strong auth and encryption, but dev route gap (RISK-001) and no error tracking (RISK-004) |
+| Availability | Partial | Health checks present, but no alerting (RISK-012), no circuit breakers (RISK-020) |
+| Processing Integrity | Pass | Decimal.js for monetary calculations, pessimistic locking, webhook signatures |
+| Confidentiality | Pass | AES-256-GCM encryption at rest, TLS in transit, API key hashing |
+| Privacy | Partial | Password hashing and encryption present, but GDPR gaps (RISK-006), no retention (RISK-002) |
 
-**SOC 2 Summary: 3 Pass, 2 Partial**
+### WCAG 2.1 AA Summary
 
----
+| Principle | Status | Details |
+|-----------|--------|---------|
+| 1. Perceivable | Partial | Color contrast failures in dark mode, missing alt text on decorative SVGs, missing aria-hidden |
+| 2. Operable | Partial | Keyboard navigation incomplete on checkout form, missing focus indicators on some buttons |
+| 3. Understandable | Partial | Missing form error descriptions (role="alert"), inconsistent error messaging |
+| 4. Robust | Partial | Missing ARIA roles on dynamic content, screen reader compatibility not tested |
 
-## Section 12: Performance and Scalability
+Full details: `WCAG-ACCESSIBILITY-AUDIT.md` (47 findings: 8 Critical, 14 High, 17 Medium, 8 Low)
 
-### 12.1 Database Performance
+### GDPR/PDPL
 
-**Strengths:**
-- Proper indexes on all foreign keys and frequently queried columns
-- Composite unique constraints serve double duty as indexes and integrity checks
-- `FOR UPDATE` locks prevent concurrent modification without table-level locking
-- Prisma generates efficient parameterized queries
-
-**Concern:**
-- Unbounded pagination offsets (ISSUE-002) allow expensive sequential scans
-- No explicit query timeout configured in Prisma client options
-
-### 12.2 Caching Strategy
-
-**Strengths:**
-- Redis-backed rate limiting distributes state across server instances
-- JTI blacklist in Redis enables efficient token revocation lookups
-- Daily spending limit tracking in Redis avoids database load for frequent checks
-
-**Concern:**
-- No explicit TTL management documented for spending limit keys
-- No fallback caching strategy for non-security-critical data when Redis is unavailable
-
-### 12.3 Connection Management
-
-**Strengths:**
-- Prisma connection pooling is used
-- Redis connections are managed through ioredis with reconnection support
-
-**Concern:**
-- No explicit request timeout on route handlers (ISSUE-007)
-- Blockchain RPC calls via ethers.js have no documented timeout configuration
-- Under sustained RPC latency, connection pool exhaustion is possible
+| Requirement | Status | Evidence |
+|-------------|--------|----------|
+| Consent capture | Partial | Registration consent exists but not granular or withdrawable |
+| Right of Access (Art. 15) | Implemented | `GET /v1/me/export` returns user data |
+| Right to Rectification (Art. 16) | Missing | No endpoint to correct personal data |
+| Right to Erasure (Art. 17) | Implemented | `DELETE /v1/me` with cascade |
+| Right to Restrict Processing (Art. 18) | Missing | No restriction mechanism |
+| Right to Data Portability (Art. 20) | Implemented | `GET /v1/me/export` JSON export |
+| Right to Object (Art. 21) | Missing | No objection mechanism |
+| Data Minimization | Pass | Only necessary fields collected per Prisma schema |
+| Retention Policies | Missing (RISK-002) | No per-type retention periods defined |
+| Encryption at Rest | Pass | AES-256-GCM for sensitive fields |
+| No PII in Logs | Partial (RISK-013) | Structured logging configured but dev-mode may log request bodies |
+| Breach Notification | Missing | No documented 72-hour notification process |
 
 ---
 
-## Section 13: Testing Assessment
+## Section 11b: Accessibility Assessment
 
-### 13.1 Test Coverage Summary
+**Score: 6/10**
+Evidence:
+- Manual WCAG 2.1 AA audit: 47 issues (8 Critical, 14 High, 17 Medium, 8 Low)
+- No Lighthouse score available (requires browser automation in CI)
+- Critical issues: Missing form labels on checkout inputs, color contrast failures below 4.5:1 in dark mode, no keyboard navigation on payment method selector
+- Score justification: Basic HTML semantics present but significant gaps in form accessibility, color contrast, and keyboard navigation make the checkout unusable for assistive technology users
 
-| Category | Files | Approximate Test Cases |
-|----------|-------|----------------------|
-| Unit Tests | ~85 | ~1,200 |
-| Integration Tests | ~10 | ~150 |
-| End-to-End Tests (Playwright) | 15 | ~50 |
-| **Total** | **~110** | **~1,400+** |
-
-The project enforces an 80% code coverage threshold. Test files total approximately 24,874 lines of code, representing roughly 47% of the total codebase — a healthy ratio indicating thorough test coverage.
-
-### 13.2 Testing Strengths
-
-- Tests use real database instances rather than mocks, providing high confidence that the code works with actual PostgreSQL behavior
-- End-to-end tests use Playwright to verify complete user flows through the frontend and API
-- The test suite covers both happy paths and error conditions, including authentication failures, validation errors, and edge cases in financial calculations
-- Integration tests verify the full request/response cycle through Fastify's injection mechanism
-- The 80% coverage threshold is enforced automatically, preventing coverage regression
-
-### 13.3 Testing Gaps
-
-The following test scenarios were not found during the audit and should be added as part of remediation:
-
-| Missing Test | Priority | Related Issue |
-|-------------|----------|---------------|
-| Spending limit behavior when Redis is unavailable | High | ISSUE-003 |
-| Pagination with offset at the maximum bound | High | ISSUE-002 |
-| Pagination with offset exceeding the maximum bound | High | ISSUE-002 |
-| Health check key comparison with incorrect key | Medium | ISSUE-001 |
-| Route parameter rejection for non-UUID strings | Medium | ISSUE-004 |
-| Application startup failure without encryption key | Medium | ISSUE-005 |
-| Request timeout under slow blockchain RPC | Low | ISSUE-007 |
+Full report: `WCAG-ACCESSIBILITY-AUDIT.md`
 
 ---
 
-## Section 14: CI/CD Pipeline Review
+## Section 11c: Privacy and Data Protection Assessment
 
-### 14.1 Workflow Inventory
+**Score: 6/10**
+Evidence:
+- GDPR data subject rights: 3/6 implemented (access, erasure, portability), 0 partial, 3 missing (rectification, restrict, object)
+- No data retention policy or automated cleanup mechanism (RISK-002)
+- Encryption at rest with AES-256-GCM for wallet addresses and sensitive fields
+- Consent capture exists at registration but not granular or withdrawable
+- Score justification: Strong encryption and some data rights implemented, but missing retention policy and 3/6 GDPR rights is a significant compliance gap for a payment processor
 
-| Workflow | Trigger | Purpose |
-|----------|---------|---------|
-| `ci.yml` | Push, PR to main | Lint, type-check, unit tests, integration tests, build verification |
-| `deploy-production.yml` | Manual or tag | Production deployment with approval gates |
-| `deploy-staging.yml` | Push to staging branch | Automated staging deployment |
-| `security-checks.yml` | Scheduled, PR | Dependency vulnerability scanning, secret detection |
-
-### 14.2 Pipeline Strengths
-
-The CI pipeline runs a comprehensive set of checks including linting, TypeScript type-checking, unit tests, integration tests against a real database, and build verification. The production deployment workflow includes manual approval gates to prevent accidental production releases. The security checks workflow runs on a schedule and on pull requests, ensuring continuous vulnerability monitoring between audits.
-
-### 14.3 Pipeline Recommendations
-
-Consider adding the following to the CI pipeline in future iterations:
-
-1. **Coverage threshold enforcement with failure on regression** — The 80% threshold exists but should be enforced in CI to block merges that decrease coverage
-2. **E2E test execution in CI** — The 15 Playwright specifications exist but may not be running in CI; verify and enable if not
-3. **SAST integration** — Add static application security testing tooling to catch security issues before code review
-4. **Pagination boundary tests in CI** — After fixing ISSUE-002, add specific tests for offset boundaries to prevent regression
+Full report: `PRIVACY-OBSERVABILITY-AUDIT.md`
 
 ---
 
-## Section 15: Detailed Risk Register and Remediation Plan
+## Section 11d: Observability Assessment
 
-### 15.1 Full Risk Register
+| Signal | Monitored | Tool/Method | Alert Threshold |
+|--------|-----------|-------------|-----------------|
+| Latency (p50/p95/p99) | Partial | OpenTelemetry SDK initialized | No thresholds configured |
+| Traffic (req/sec) | No | Not configured | N/A |
+| Errors (error rate %) | Partial | Pino structured logging | No alerting rules |
+| Saturation (CPU/mem/disk) | No | Not configured | N/A |
 
-| ID | Title | Severity | CVSS | Owner | Phase | SLA | Verification Method |
-|----|-------|----------|------|-------|-------|-----|-------------------|
-| RISK-001 | Timing-unsafe health check key comparison | High | 5.9 | Backend Engineer | Phase 0 | 48 hours | Test with correct and incorrect keys; optionally run timing analysis tool to confirm constant-time behavior |
-| RISK-002 | Unbounded pagination offset across five schemas | High | 5.3 | Backend Engineer | Phase 0 | 48 hours | Send request with offset=10001, verify 400 response; send offset=10000, verify success |
-| RISK-003 | Daily spending limit fails open when Redis unavailable | High | 7.5 | Backend Engineer | Phase 0 | 48 hours | Simulate Redis unavailability in production mode and verify refund is denied |
-| RISK-004 | uuidParamSchema defined but unused in routes | Medium | 3.1 | Backend Engineer | Phase 1 | 1-2 weeks | Import and apply to critical routes; verify non-UUID strings return 400 |
-| RISK-005 | Webhook secrets unencrypted without encryption key | Medium | 4.2 | DevOps + Backend | Phase 1 | 1-2 weeks | Verify WEBHOOK_ENCRYPTION_KEY is set in all environments; audit existing records |
-| RISK-006 | API key lastUsedAt update is fire-and-forget | Low | 2.0 | Backend Engineer | Phase 2 | 2-4 weeks | Add error counter metric; verify metric increments on simulated failure |
-| RISK-007 | No explicit request timeout on route handlers | Low | 3.0 | Backend Engineer | Phase 2 | 2-4 weeks | Configure Fastify timeouts; test with simulated slow RPC endpoint |
-
-### 15.2 Remediation Roadmap — Detailed
-
-#### Phase 0: Immediate (48 Hours)
-
-**Objective:** Resolve all high-severity issues. All technical dimension scores should reach 8/10 or above after completion.
-
-**Owner:** Backend Engineer
-
-**Task 1: Fix timing-unsafe health check key comparison (RISK-001)**
-- Open `apps/api/src/app.ts`, line 321
-- Import `timingSafeEqual` from the Node.js `crypto` module
-- Replace the `===` comparison with a length check followed by `timingSafeEqual` using Buffer-wrapped strings
-- Add a unit test verifying correct key returns 200 and incorrect key returns 401
-- Estimated effort: 30 minutes
-
-**Task 2: Add maximum bound to pagination offset schemas (RISK-002)**
-- Open `apps/api/src/utils/validation.ts`
-- Locate all four offset schema definitions at lines 137, 166, 217, and 222
-- Open `apps/api/src/routes/payment-links.ts`, line 81
-- Add `.max(10000)` to each offset schema
-- Add tests verifying offset=10001 returns 400 and offset=10000 succeeds for each endpoint
-- Estimated effort: 1 hour
-
-**Task 3: Change spending limit to fail-closed in production (RISK-003)**
-- Open `apps/api/src/services/blockchain-transaction.service.ts`, lines 258-264
-- Change the catch block to return `false` when `NODE_ENV === 'production'`
-- Keep returning `true` in non-production environments for developer convenience
-- Add a test simulating Redis failure in production mode, asserting the spending limit check returns false
-- Add a test simulating Redis failure in development mode, asserting it returns true
-- Estimated effort: 1 hour
-
-**Phase 0 Gate:** All three high-severity issues resolved. All technical dimension scores at 8/10 or above. No unresolved high-severity issues.
-
-#### Phase 1: Stabilize (1-2 Weeks)
-
-**Objective:** Strengthen defense in depth and ensure encryption is enforced across all environments.
-
-**Owner:** Backend Engineer + DevOps
-
-**Task 4: Enforce UUID validation on route parameters (RISK-004)**
-- Import `uuidParamSchema` from validation utilities in route modules that accept entity IDs
-- Apply as the `params` schema on GET, PUT, PATCH, and DELETE routes for payment sessions, refunds, webhooks, and payment links
-- Add tests verifying non-UUID strings return 400
-- Estimated effort: 2-3 hours
-
-**Task 5: Require webhook encryption key in all environments (RISK-005)**
-- Add `WEBHOOK_ENCRYPTION_KEY` to required environment variables in staging and production deployment configurations
-- Add a startup validation check that prevents the application from starting without the key in non-development environments
-- Audit existing webhook endpoint records in staging to determine if any secrets are stored unencrypted; re-encrypt if found
-- Estimated effort: 2-3 hours
-
-**Phase 1 Gate:** All medium-severity issues resolved. Defense in depth strengthened across all critical paths.
-
-#### Phase 2: Production-Ready (2-4 Weeks)
-
-**Objective:** Complete all remaining improvements and establish production-grade observability.
-
-**Owner:** Backend Engineer + DevOps
-
-**Task 6: Add metrics for API key update failures (RISK-006)**
-- Add an error counter that increments when the `lastUsedAt` update fails
-- Expose the counter through the application's metrics endpoint or integrate with the chosen metrics system
-- Estimated effort: 1 hour
-
-**Task 7: Configure explicit request timeouts (RISK-007)**
-- Set Fastify's `connectionTimeout` and `requestTimeout` to appropriate values (e.g., 30 seconds for standard routes, 60 seconds overall)
-- Add timeout configuration to ethers.js provider instances used for blockchain RPC calls
-- Add a test verifying that a simulated slow response is terminated within the timeout period
-- Estimated effort: 2 hours
-
-**Task 8: Establish centralized alerting**
-- Configure alerts for authentication failure rate spikes, spending limit threshold approaches (e.g., 80% of daily limit), error rate increases, and response time degradation
-- Integrate with the team's existing notification system (Slack, PagerDuty, or similar)
-- Estimated effort: 4-8 hours
-
-**Phase 2 Gate:** All issues resolved. Centralized alerting operational. All technical dimension scores at 8/10 or above.
-
-### 15.3 Quick Wins (Implementable in One Day)
-
-These three changes can be implemented, tested, and deployed within a single working day:
-
-1. **Add `.max(10000)` to all five pagination offset schemas** — One-line change per schema in `apps/api/src/utils/validation.ts` (lines 137, 166, 217, 222) and `apps/api/src/routes/payment-links.ts` (line 81)
-2. **Replace `===` with `crypto.timingSafeEqual`** — Four-line change in `apps/api/src/app.ts` at line 321
-3. **Change spending limit catch block to fail-closed** — Three-line change in `apps/api/src/services/blockchain-transaction.service.ts` at lines 258-264
+**Score: 7/10**
+Evidence:
+- Structured JSON logging via Pino with correlation IDs (request_id) — present in `app.ts:51-52`
+- OpenTelemetry SDK initialized (`plugins/observability.ts`)
+- Health check endpoint with deep dependency verification (`/health` and `/ready`)
+- No error tracking service (no Sentry/Datadog) (RISK-004)
+- No alerting rules configured (RISK-012)
+- No SLO-based monitoring or runbooks
+- Score justification: Good logging foundation (structured JSON, correlation IDs, OTel SDK, health checks) but no error tracking, no alerting, and no dashboards means production issues go undetected
 
 ---
 
-## Scores
+## Section 11e: API Design Assessment
 
-### A. Technical Dimension Scores
+| Check | Status | Details |
+|-------|--------|---------|
+| OpenAPI/Swagger documentation | Yes (95%) | 40/42 routes have OpenAPI schemas. Swagger UI at `/docs` in non-production. |
+| API versioning strategy | Implemented | URL path versioning (`/v1/`) |
+| Consistent error format (RFC 7807) | Yes | `{ type, title, status, detail, request_id }` across all error responses |
+| Pagination on all list endpoints | Yes | `limit/offset` with `has_more` flag |
+| BOLA protection | Pass | Object-level auth checks on all resource endpoints |
+| BFLA protection | Partial | Admin endpoints guarded; dev route unprotected (RISK-001) |
+| Rate limiting configured | Yes | Redis-backed, per-user/key with IP fallback |
+| CORS properly configured | Yes | Origin whitelist, no wildcard, case-insensitive |
+| Request/response schema validation | Yes (95%) | Zod validation on 40/42 routes |
+| Deprecated endpoints marked | N/A | No deprecated endpoints |
 
-| Dimension | Score | Rationale |
-|-----------|-------|-----------|
-| Security | 7/10 | Strong authentication (JWT + API key), AES-256-GCM encryption, Zod validation on all endpoints, HMAC-SHA256 webhooks. Reduced by timing-unsafe comparison (ISSUE-001) and fail-open spending limit (ISSUE-003). |
-| Architecture | 8/10 | Clean three-layer architecture with proper separation of concerns. Plugin system for cross-cutting concerns. Good database schema with proper indexes and constraints. Consistent patterns across all 12 route modules and 19 services. |
-| Test Coverage | 8/10 | 110 test files with over 1,400 test cases. 80% coverage threshold enforced. Real database testing with minimal mocking. 15 Playwright E2E specifications. Missing tests for some failure modes. |
-| Code Quality | 8/10 | TypeScript used consistently across all 274 files. Clear naming conventions. Structured logging with contextual data. Consistent error response format. Well-documented Zod schemas with descriptive field names. |
-| Performance | 7/10 | Good database indexing strategy with composite indexes. Redis-backed distributed rate limiting. Decimal.js for financial precision. Reduced by unbounded pagination offsets (ISSUE-002) and lack of explicit request timeouts (ISSUE-007). |
-| DevOps | 8/10 | Multi-stage CI pipeline with lint, type-check, and test steps. Separate staging and production deployment workflows. Dedicated security checks workflow with scheduled runs. Proper environment separation. |
-| Runability | 8/10 | Full stack starts cleanly. Health check endpoint works. Frontend loads real data from the API. No placeholder or mock data visible in the UI. All 15 E2E tests execute against the running application. |
+**Score: 8/10**
+Evidence:
+- 42 routes with OpenAPI schemas on 40/42 (95%)
+- Consistent RFC 7807 error format across all endpoints
+- Pagination, rate limiting, CORS, versioning all implemented
+- Zod validation on 40/42 routes with TypeScript type inference
+- Score justification: Comprehensive API design with documentation, validation, and security controls; docked for 2 routes missing schema validation and dev route BFLA gap
 
-**Technical Score: 7.7/10**
+---
 
-### B. Readiness Scores
+## Section 12: Technical Debt Map
 
-| Dimension | Score | Rationale |
-|-----------|-------|-----------|
-| Security Readiness | 7/10 | Needs timing-safe fix (ISSUE-001) and fail-closed spending limit (ISSUE-003) before accepting production traffic. Both are quick fixes. |
-| Product Potential | 8/10 | Solid domain logic covering the complete payment lifecycle from session creation through blockchain monitoring to webhook delivery. Well-designed API with comprehensive merchant-facing features. |
-| Enterprise Readiness | 7/10 | Security gaps (ISSUE-001, ISSUE-003) and unbounded pagination (ISSUE-002) must be fixed for enterprise customer requirements and external compliance audits. |
+### Technical Debt Quadrant
 
-### C. AI-Readiness Score
+```mermaid
+quadrantChart
+    title Technical Debt Quadrant — Stablecoin Gateway
+    x-axis Low Effort to Fix --> High Effort to Fix
+    y-axis Low Cost of Delay --> High Cost of Delay
+    quadrant-1 Pay Now — High Impact Quick Win
+    quadrant-2 Schedule — Strategic Investment
+    quadrant-3 Deprioritize — Low Value
+    quadrant-4 Quick Wins — Do First
+    Dev route auth: [0.10, 0.95]
+    Data retention: [0.55, 0.90]
+    Error tracking: [0.30, 0.85]
+    E2E in CI: [0.35, 0.75]
+    GDPR rights: [0.60, 0.80]
+    Accessibility: [0.70, 0.70]
+    God class refactor: [0.50, 0.30]
+    Circuit breakers: [0.45, 0.50]
+    npm audit fixes: [0.15, 0.20]
+    Bundle budgets: [0.20, 0.25]
+```
+
+| Priority | Debt Item | Interest (cost of delay) | Owner | Payoff |
+|----------|-----------|--------------------------|-------|--------|
+| HIGH | Dev route authentication | Security breach, payment fraud | Dev | Eliminates critical attack vector |
+| HIGH | Data retention mechanism | GDPR violation, regulatory fines | Management + Dev | Compliance, reduced storage costs |
+| HIGH | Error tracking integration | Undetected production failures | DevOps | Faster incident detection and response |
+| HIGH | E2E tests in CI | Regressions ship to production | DevOps | Catches breaking changes before merge |
+| HIGH | GDPR data subject rights | Regulatory fines up to 4% revenue | Dev | Full GDPR compliance |
+| MEDIUM | Accessibility remediation | Legal exposure, lost customers | Frontend Dev | WCAG 2.1 AA compliance |
+| MEDIUM | Circuit breakers | Cascade failures from downstream | Dev | Resilience under partial outages |
+| MEDIUM | Observability plugin fix | Error handler silently replaced | Dev | Reliable error handling |
+| LOW | God class refactor | Slower development velocity | Frontend Dev | Better maintainability |
+| LOW | npm audit dev dep fixes | Minimal (dev only) | Dev | Clean audit report |
+
+---
+
+## Section 13: Remediation Roadmap
+
+### Remediation Gantt Chart
+
+```mermaid
+gantt
+    title Remediation Roadmap — Stablecoin Gateway
+    dateFormat  YYYY-MM-DD
+    axisFormat  %b %d
+
+    section Phase 0 — Immediate (48h)
+    Gate dev route behind INTERNAL_API_KEY  :crit, p0a, 2026-03-01, 1d
+    Define data retention policy document   :crit, p0b, 2026-03-01, 1d
+
+    section Phase 1 — Stabilize (1-2 weeks)
+    Integrate Sentry error tracking         :active, p1a, after p0b, 3d
+    Add E2E Playwright stage to CI          :p1b, after p0a, 2d
+    Fix 8 Critical WCAG violations          :p1c, after p0b, 4d
+    Implement 3 missing GDPR endpoints      :p1d, after p0b, 3d
+    Add alerting rules for errors and latency :p1e, after p1a, 2d
+
+    section Phase 2 — Production-Ready (2-4 weeks)
+    Fix 14 High WCAG violations             :p2a, after p1c, 5d
+    Implement data retention cron job       :p2b, after p1d, 3d
+    Add EmailService tests                  :p2c, after p1b, 2d
+    Add checkout route unit tests           :p2d, after p1b, 2d
+    Fix observability plugin error handler  :p2e, after p1a, 1d
+    Reduce webhook replay window to 60s     :p2f, after p0a, 1d
+    Add DB migration validation to CI       :p2g, after p1b, 1d
+    Add consent audit trail                 :p2h, after p1d, 2d
+
+    section Phase 3 — Excellence (4-8 weeks)
+    Fix remaining WCAG Medium/Low issues    :p3a, after p2a, 7d
+    Add circuit breakers for external calls :p3b, after p2e, 3d
+    Refactor frontend god class             :p3c, after p2a, 3d
+    Add application-level Redis caching     :p3d, after p2b, 3d
+    Per-endpoint rate limit tuning          :p3e, after p2f, 2d
+    Resolve npm audit dev vulnerabilities   :p3f, after p2c, 1d
+    Add load testing with k6                :p3g, after p3d, 3d
+```
+
+### Phase Details
+
+**Phase 0 — Immediate (48 hours)**
+- RISK-001: Add INTERNAL_API_KEY check to dev route, or delete the route entirely
+- RISK-002: Write data retention policy document with per-type periods
+- **Gate**: Both items resolved. No deployment until dev route is gated.
+
+**Phase 1 — Stabilize (1-2 weeks)**
+- RISK-004: Integrate Sentry with OpenTelemetry SDK
+- RISK-005: Add Playwright CI stage with service containers
+- RISK-003: Fix 8 Critical WCAG violations (form labels, contrast, keyboard nav)
+- RISK-006: Implement rectification, restrict, object endpoints
+- RISK-012: Configure alerting for error rate > 1% and p95 > 1s
+- **Gate**: All dimension scores >= 7/10. No Critical issues remaining.
+
+**Phase 2 — Production-Ready (2-4 weeks)**
+- RISK-003: Fix 14 High WCAG violations
+- RISK-002: Implement automated data cleanup cron
+- RISK-008: EmailService integration tests
+- RISK-014: Checkout route unit tests
+- RISK-009: Fix observability plugin to use addHook
+- RISK-007: Reduce replay window, add idempotency keys
+- RISK-018: Add migration dry-run to CI
+- RISK-011: Consent change audit logging
+- **Gate**: All dimension scores >= 8/10. Compliance gaps addressed.
+
+**Phase 3 — Excellence (4-8 weeks)**
+- Remaining WCAG Medium/Low fixes
+- Circuit breakers for external services
+- Frontend god class refactor
+- Application-level Redis caching
+- Per-endpoint rate limit tuning
+- npm audit dev dependency cleanup
+- Load testing with k6
+- **Gate**: All dimension scores >= 9/10. External audit ready.
+
+---
+
+## Section 14: Quick Wins (1-Day Fixes)
+
+1. **Gate dev route** — Add `INTERNAL_API_KEY` header check to `routes/v1/dev.ts` (30 minutes, RISK-001)
+2. **Fix observability plugin** — Replace `setErrorHandler` with `addHook('onError')` in `plugins/observability.ts` (1 hour, RISK-009)
+3. **Reduce webhook replay window** — Change 5-minute window to 60 seconds in `plugins/webhook-verification.ts` (15 minutes, RISK-007)
+4. **Add aria-hidden to decorative SVGs** — Add `aria-hidden="true"` to all decorative SVG icons in `apps/web/src/` (2 hours, RISK-003 partial)
+5. **Add form labels to checkout inputs** — Associate `<label>` elements with form inputs in checkout page (2 hours, RISK-003 partial)
+6. **Fix color contrast in dark mode** — Adjust text colors to meet 4.5:1 ratio (2 hours, RISK-003 partial)
+7. **Add migration dry-run to CI** — Add `npx prisma migrate deploy --dry-run` step to GitHub Actions workflow (30 minutes, RISK-018)
+8. **Define retention policy** — Create `docs/DATA-RETENTION-POLICY.md` with per-type periods (2 hours, RISK-002 partial)
+9. **Fix optionalAuth 503 handling** — Propagate 503 errors instead of treating as unauthenticated in `plugins/auth.ts` (1 hour, RISK-016)
+10. **Add audit log return type** — Make `record()` return type explicit `Promise<AuditLog>` in audit service (30 minutes, RISK-015)
+
+---
+
+## Section 15: AI-Readiness Score
+
+### AI-Readiness Profile
+
+```mermaid
+xychart-beta
+    title "AI-Readiness Score — Stablecoin Gateway"
+    x-axis ["Modularity", "API Design", "Testability", "Observability", "Documentation"]
+    y-axis "Score (0-2)" 0 --> 2
+    bar [1.8, 1.7, 1.5, 1.2, 1.5]
+    line [2, 2, 2, 2, 2]
+```
 
 | Sub-dimension | Score | Notes |
 |---------------|-------|-------|
-| Modularity | 2/2 | Clean plugin architecture with 4 isolated plugins. 19 services fully separated from 12 route handlers. Each concern is isolated and testable independently. |
-| API Design | 2/2 | RESTful conventions followed consistently. Consistent error response format across all endpoints. Pagination support on all list endpoints. Zod schemas provide self-documenting validation. |
-| Testability | 2/2 | Real database testing with no excessive mocking. Comprehensive end-to-end coverage with Playwright. Integration tests use Fastify injection for full request/response cycle verification. |
-| Observability | 1/2 | Good structured logging with Pino, including contextual data (request IDs, user IDs, operation types). However, no metrics collection, distributed tracing, or centralized alerting is configured. |
-| Documentation | 1/2 | Swagger/OpenAPI available in non-production environments. Architecture decision records exist. No standalone API documentation for external consumers. No runbook for operations. |
+| Modularity | 1.8/2 | Clean plugin architecture, service layer isolation, well-separated concerns. Minor: one oversized component. |
+| API Design | 1.7/2 | 42 REST endpoints with OpenAPI docs, Zod validation, consistent RFC 7807 errors. Minor: 2 routes missing schemas. |
+| Testability | 1.5/2 | 1,559 tests with real DB, strong patterns. Gaps: EmailService and checkout untested. |
+| Observability | 1.2/2 | Structured logging and OTel present. Missing: error tracking, alerting, dashboards. |
+| Documentation | 1.5/2 | OpenAPI docs, ADRs, PRD present. Missing: runbooks, retention policy, architecture diagrams in README. |
 
-**AI-Readiness Score: 8/10**
+**AI-Readiness Total: 7.7/10**
 
-### D. Overall Score
-
-**Overall Score: 7.5/10 — Good Foundation, Needs Phase 0 Fixes Before Production**
-
-Weighted calculation: Technical Score (7.7, weight 1.0) + Security Readiness (7.0, weight 1.5) + Product Potential (8.0, weight 1.0) + Enterprise Readiness (7.0, weight 1.0) = 33.2 / 4.5 = 7.4, rounded to **7.5/10**.
-
-Security carries a 1.5x weight multiplier due to the financial nature of the application.
-
-### E. Expected Scores After Remediation
-
-| Phase | Expected Overall Score | Notes |
-|-------|----------------------|-------|
-| After Phase 0 (48h) | 8.5/10 | All high-severity issues resolved. Security jumps from 7 to 8.5. Performance jumps from 7 to 8. |
-| After Phase 1 (1-2w) | 9.0/10 | Defense in depth strengthened. UUID validation and encryption enforcement close medium-severity gaps. |
-| After Phase 2 (2-4w) | 9.5/10 | Observability, metrics, and alerting bring the platform to production-grade maturity. |
+The codebase is well-structured for AI-assisted development. Clean module boundaries, consistent patterns, and comprehensive test suite make it easy for AI agents to understand and modify. The main gap is observability — AI agents need feedback loops (error tracking, metrics) to verify their changes work in production.
 
 ---
 
-## Appendix A: Files Reviewed
+## Score Summary
 
-### Backend API (`apps/api/src/`)
+### Dimension Scores (Deterministic Anchoring)
 
-**Application Setup:**
-- `app.ts` — Application setup, plugin registration, preValidation hooks, health check endpoint
+**Security: 7/10**
+Evidence:
+- npm audit: 26 vulnerabilities (7 high) — all in dev dependency chain, not shipped
+- `any` type usage: 20 instances in API source
+- 1 Critical finding (dev route no auth), 2 Medium findings
+- 18 security patterns correctly implemented
+- Score justification: Strong crypto and auth fundamentals, but dev route exposure is a critical gap
 
-**Plugins (4):**
-- `plugins/auth.ts` — JWT and API key authentication with permission enforcement
-- `plugins/cors.ts` — CORS configuration with environment-specific origin allowlist
-- `plugins/rate-limit.ts` — Redis-backed distributed rate limiting
-- `plugins/swagger.ts` — OpenAPI documentation (non-production only)
+**Architecture: 8/10**
+Evidence:
+- 11 Fastify plugins with clear separation
+- 42 routes with consistent handler patterns
+- Service layer properly isolated from route handlers
+- Plugin ordering fragility (RISK-009), one oversized component (RISK-010)
+- Score justification: Clean 4-layer architecture; minor issues do not affect core structure
 
-**Routes (12):**
-- Route modules covering auth, payment sessions, refunds, webhooks, webhook deliveries, payment links, blockchain transactions, checkout, health, admin, API keys, and analytics
+**Test Coverage: 7/10**
+Evidence:
+- 1,559 tests across 168 files
+- E2E: 83/85 passing (97.6%)
+- Zero-coverage gaps: EmailService, checkout routes
+- E2E not in CI pipeline
+- Score justification: Large suite with real DB, but critical gaps in email and checkout coverage
 
-**Services (19):**
-- Service classes covering payment sessions, refunds, blockchain transactions, webhook delivery, webhook management, payment links, analytics, user management, API key management, audit logging, and supporting utilities
+**Code Quality: 7/10**
+Evidence:
+- 20 `any` type instances in API source
+- 179 TypeScript files, 31,272 lines
+- Consistent patterns, Zod validation, proper error handling
+- One 948-line component, audit log ambiguous return type
+- Score justification: Good TypeScript discipline and consistent patterns; docked for `any` usage and oversized component
 
-**Utilities (13):**
-- `utils/validation.ts` — Zod schemas for all endpoints including pagination
-- `utils/encryption.ts` — AES-256-GCM encryption utilities with key validation
-- Additional utilities for logging, error handling, ID generation, and configuration
+**Performance: 7/10**
+Evidence:
+- 22 database indexes, no N+1 patterns detected
+- Redis-backed rate limiting
+- No application caching, no bundle budgets, no load testing
+- Score justification: Solid database design but missing performance monitoring and caching layer
 
-**Database:**
-- `prisma/schema.prisma` — 11 models with indexes, constraints, and relations
-- 4 migration files covering precision increases, audit log table, idempotency indexes, and webhook delivery idempotency
+**DevOps: 7/10**
+Evidence:
+- 17 CI workflow files, Docker setup complete, .env.example present
+- E2E not in CI (RISK-005), no migration validation in CI (RISK-018)
+- Score justification: Good CI foundation but critical E2E gap reduces production confidence
 
-### Frontend Web (`apps/web/`)
-- 111 TypeScript/TSX files covering pages, components, hooks, API client utilities, and configuration
+**Runability: 9/10**
+Evidence:
+- API starts and responds healthy at :5001 (`{"status":"healthy"}`)
+- Web frontend serves HTML at :3104
+- Full stack runs via docker-compose
+- Health check with deep dependency verification (DB + Redis)
+- Score justification: Full stack starts, health checks pass, real data served, production build works
 
-### Test Suites
-- 110 test files across unit, integration, and end-to-end categories totaling approximately 24,874 lines
+**Accessibility: 6/10**
+Evidence:
+- Manual WCAG 2.1 AA audit: 47 issues (8 Critical, 14 High)
+- Missing form labels, color contrast below 4.5:1, keyboard navigation gaps
+- Score justification: Below threshold due to 8 Critical and 14 High accessibility violations
 
-### CI/CD
-- `.github/workflows/ci.yml` — Continuous integration pipeline
-- `.github/workflows/deploy-production.yml` — Production deployment with approval gates
-- `.github/workflows/deploy-staging.yml` — Automated staging deployment
-- `.github/workflows/security-checks.yml` — Scheduled and PR-triggered security scanning
+**Privacy: 6/10**
+Evidence:
+- GDPR rights: 3/6 implemented
+- No data retention policy (RISK-002)
+- AES-256-GCM encryption at rest for sensitive fields
+- Score justification: Good encryption but 3 missing GDPR rights and no retention policy
+
+**Observability: 7/10**
+Evidence:
+- Pino structured JSON logging with correlation IDs
+- OpenTelemetry SDK initialized
+- Health check endpoints (/health and /ready)
+- No error tracking service, no alerting rules
+- Score justification: Good logging foundation but no error tracking or alerting means issues go undetected
+
+**API Design: 8/10**
+Evidence:
+- 42 routes, 40/42 with OpenAPI schemas (95%)
+- RFC 7807 error format, pagination, rate limiting, CORS
+- Zod validation on 40/42 routes
+- Score justification: Comprehensive API design meeting all major criteria
+
+### Readiness Scores
+
+| Score | Value | Calculation |
+|-------|-------|-------------|
+| Security Readiness | 7.4/10 | Security (7) x 40% + API Design (8) x 20% + DevOps (7) x 20% + Architecture (8) x 20% |
+| Product Potential | 7.55/10 | Code Quality (7) x 30% + Architecture (8) x 25% + Runability (9) x 25% + Accessibility (6) x 20% |
+| Enterprise Readiness | 6.55/10 | Security (7) x 30% + Privacy (6) x 25% + Observability (7) x 20% + DevOps (7) x 15% + Compliance (5) x 10% |
+
+### Overall Score
+
+| Category | Score |
+|----------|-------|
+| Technical Score (avg of 11 dimensions) | 7.18/10 |
+| Security Readiness | 7.4/10 |
+| Product Potential | 7.55/10 |
+| Enterprise Readiness | 6.55/10 |
+| **Overall Score** | **7.2/10 — Fair** |
 
 ---
 
-## Appendix B: Scoring Methodology
-
-Technical dimension scores are assigned on a 1-10 scale where:
-
-| Range | Assessment | Description |
-|-------|-----------|-------------|
-| 9-10 | Exemplary | No issues found. Could serve as a reference implementation for other products. |
-| 7-8 | Strong | Minor issues identified. Safe for production with awareness of known limitations. |
-| 5-6 | Adequate | Issues found that should be addressed before production deployment. |
-| 3-4 | Concerning | Significant issues that present material risk to operations or security. |
-| 1-2 | Critical | Fundamental problems requiring immediate attention before any deployment. |
-
-The overall score uses a weighted average. Security carries a 1.5x weight multiplier due to the financial nature of the Stablecoin Gateway application. This reflects the higher impact of security failures in a system that processes financial transactions on blockchain networks.
-
----
-
-## Appendix C: Comparison with Previous Audit (v1.0, 2026-02-05)
-
-The previous audit (v1.0, dated 2026-02-05) identified 33 risk items across Critical, High, Medium, and Low severities. As of that report's final update, 30 of 33 items were closed through Phase 0, Phase 1, and Phase 2 remediation, bringing the overall score from 6.7/10 to 9.0/10.
-
-This v2.0 audit examines the codebase in its current state after those remediations and identifies seven new or residual issues. The three high-severity findings in this audit (timing-unsafe comparison, unbounded pagination, fail-open spending limit) represent newly discovered patterns or previously undetected edge cases rather than regressions of previously fixed issues.
-
-The overall trajectory is positive. The codebase has improved significantly since the initial audit, with most prior security and infrastructure concerns resolved. The remaining issues are straightforward to fix and do not require architectural changes.
-
----
-
-*End of audit report. Generated by Code Reviewer Agent on 2026-02-10.*
+*Report generated by ConnectSW Code Reviewer Agent v6.0 with deterministic score anchoring. Sub-agent reports available in `docs/quality-reports/`.*

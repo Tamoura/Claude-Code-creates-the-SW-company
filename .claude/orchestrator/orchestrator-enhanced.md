@@ -57,6 +57,7 @@ For detailed execution instructions, see: `.claude/orchestrator/claude-code-exec
 6. **Checkpoint at milestones** - Pause for CEO approval at defined points
 7. **Retry 3x then escalate** - Don't get stuck, but don't give up too easily
 8. **GitNexus before every implementation task** - See protocol below
+9. **Verify before planning** - Check what already exists before creating tasks. See Step 2.7 and `.claude/protocols/verification-before-planning.md`.
 
 ## GitNexus Protocol (MANDATORY for all implementation tasks)
 
@@ -239,6 +240,55 @@ Fast Track benefits:
 - **SKIPPED for**: bug-fix, hotfix, Trivial, Simple — the task graph itself tracks all work; adding backlog items for a single fix creates overhead without value
 - Templates with `fast_track: true` + `skip_steps` including "3.3" automatically skip backlog
 - If in doubt: skip backlog for anything that fits in a single task graph execution
+```
+
+### Step 2.7: Verification-Before-Planning Gate
+
+**Skip for**: Trivial tasks, greenfield new-product workflows (no existing code to check), status-report workflow.
+
+**Required for**: new-feature, bug-fix, release, prototype-first, hotfix — any workflow on an existing product.
+
+Before instantiating the task graph (Step 3), verify that planned capabilities are not already implemented. This prevents phantom tasks that waste agent time. Follow `.claude/protocols/verification-before-planning.md`.
+
+```markdown
+1. Identify the target product: products/{PRODUCT}/
+
+2. If GitNexus index exists (.gitnexus/ in repo root):
+   - For each major capability in the CEO request or spec:
+     gitnexus_query({ query: "<capability>", goal: "check if already implemented" })
+   - For infrastructure items (CI/CD, logging, auth, etc.):
+     Check for config files, plugin registrations, workflow files
+
+3. If no GitNexus index (or greenfield product): Use Grep and file system checks:
+   - Grep for function names, route paths, plugin registrations
+   - Check config files: .github/workflows/, docker-compose.yml, etc.
+
+4. Classify findings:
+   | Status              | Action                      |
+   |---------------------|-----------------------------|
+   | NOT_IMPLEMENTED     | Include in task graph        |
+   | PARTIALLY_IMPLEMENTED | Include only gaps          |
+   | FULLY_IMPLEMENTED   | EXCLUDE from task graph      |
+   | NEEDS_UPGRADE       | Include as upgrade task      |
+
+5. Log the audit as a comment block at the top of the instantiated task graph:
+   # Implementation Audit (Step 2.7)
+   # Date: {TIMESTAMP}
+   # Excluded (already implemented): [list]
+   # Included (verified as new): [list]
+   # Reduced scope: [list with gap details]
+
+6. If ALL capabilities are already implemented: Do not instantiate a task graph.
+   Report to CEO: "All requested capabilities are already implemented. Here's the evidence: [list]."
+```
+
+**Inject into sub-agent prompts**: When spawning the Architect for `/speckit.plan` or yourself for `/speckit.tasks`, include this directive:
+
+```
+## Verification-Before-Planning (MANDATORY)
+Before listing any capability in the plan/tasks, verify it is not already implemented.
+Follow: .claude/protocols/verification-before-planning.md
+The plan MUST include an "Implementation Audit" table.
 ```
 
 ### Step 3: Load & Instantiate Task Graph

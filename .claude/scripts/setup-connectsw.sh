@@ -177,6 +177,7 @@ CLAUDE_DIRS=(
   protocols
   quality-gates
   scripts
+  skills
   standards
   templates
   advanced-features
@@ -506,6 +507,7 @@ if [[ "$MODE" == "update" ]]; then
   echo ""
   echo "Updated:"
   echo "  • $((DIR_COUNT)) agent directories in .claude/"
+  echo "  • GitNexus skills (.claude/skills/)"
   echo "  • Orchestrator workflows (state.yml preserved)"
   echo "  • Command Center dashboard"
   echo "  • Memory framework docs"
@@ -536,6 +538,8 @@ else
   echo ""
   echo "Installed:"
   echo "  • $((DIR_COUNT + 1)) agent system directories in .claude/"
+  echo "  • 17 specialist agents + orchestrator"
+  echo "  • GitNexus skills (.claude/skills/)"
   echo "  • Command Center dashboard (products/command-center/)"
   echo "  • Orchestrator with fresh state"
   echo "  • Memory system with accumulated knowledge & decisions"

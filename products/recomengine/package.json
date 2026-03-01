@@ -9,9 +9,9 @@
     "apps/sdk"
   ],
   "scripts": {
-    "dev": "npm run dev --workspaces --if-present",
-    "build": "npm run build --workspaces --if-present",
-    "test": "npm run test --workspaces --if-present",
-    "lint": "npm run lint --workspaces --if-present"
+    "dev": "pnpm run dev --workspaces --if-present",
+    "build": "pnpm run build --workspaces --if-present",
+    "test": "pnpm run test --workspaces --if-present",
+    "lint": "pnpm run lint --workspaces --if-present"
   }
 }

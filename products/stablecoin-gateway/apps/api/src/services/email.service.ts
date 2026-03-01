@@ -18,6 +18,7 @@
  */
 
 import { PrismaClient } from '@prisma/client';
+import { logger } from '../utils/logger.js';
 
 export interface SendPaymentReceiptParams {
   to: string;
@@ -106,7 +107,7 @@ export class EmailService {
 
       return await this.sendEmail(message);
     } catch (error) {
-      console.error('Failed to send payment receipt', error);
+      logger.error('Failed to send payment receipt', error);
       return false;
     }
   }
@@ -145,7 +146,7 @@ export class EmailService {
 
       return await this.sendEmail(message);
     } catch (error) {
-      console.error('Failed to send merchant notification', error);
+      logger.error('Failed to send merchant notification', error);
       return false;
     }
   }
@@ -524,12 +525,12 @@ export class EmailService {
    */
   private async sendEmail(message: EmailMessage): Promise<boolean> {
     try {
-      // Development: Log to console
+      // Development: Log via structured logger
       // Production: Use SMTP via nodemailer or service like Resend/SendGrid
-      console.log('\n--- EMAIL SENT ---');
-      console.log(`To: ${message.to}`);
-      console.log(`Subject: ${message.subject}`);
-      console.log('---\n');
+      logger.info('Email sent', {
+        to: message.to,
+        subject: message.subject,
+      });
 
       // In production, you would do:
       // const transporter = nodemailer.createTransport({ ... });
@@ -537,7 +538,7 @@ export class EmailService {
 
       return true;
     } catch (error) {
-      console.error('Failed to send email', error);
+      logger.error('Failed to send email', error);
       return false;
     }
   }

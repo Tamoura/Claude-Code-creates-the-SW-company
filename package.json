@@ -21,5 +21,25 @@
   },
   "engines": {
     "node": ">=20.0.0"
+  },
+  "pnpm": {
+    "onlyBuiltDependencies": [
+      "@parcel/watcher",
+      "@prisma/client",
+      "@prisma/engines",
+      "@reown/appkit",
+      "@sentry/cli",
+      "@swc/core",
+      "bcrypt",
+      "bufferutil",
+      "core-js",
+      "esbuild",
+      "msgpackr-extract",
+      "prisma",
+      "protobufjs",
+      "sharp",
+      "unrs-resolver",
+      "utf-8-validate"
+    ]
   }
 }

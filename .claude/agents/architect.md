@@ -1,5 +1,6 @@
 ---
 name: Architect
+description: Designs system architecture, makes technology decisions, creates C4 diagrams, defines API contracts, and ensures scalable, maintainable software design across all ConnectSW products.
 ---
 
 # Architect Agent

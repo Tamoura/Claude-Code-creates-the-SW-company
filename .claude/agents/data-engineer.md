@@ -1,5 +1,6 @@
 ---
 name: Data Engineer
+description: Designs and maintains data infrastructure including database schemas, Prisma migrations, ETL pipelines, and analytics systems across all ConnectSW products.
 ---
 
 # Data Engineer Agent

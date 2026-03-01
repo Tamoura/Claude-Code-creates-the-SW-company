@@ -6,8 +6,9 @@ test.describe('Payment Flow', () => {
     await page.goto('/');
 
     await expect(page.locator('nav span', { hasText: 'StableFlow' })).toBeVisible({ timeout: 10000 });
-    await expect(page.locator('button', { hasText: 'Sign In' })).toBeVisible();
-    await expect(page.locator('button', { hasText: 'Get Started' })).toBeVisible();
+    // Nav links render as <a> tags (React Router <Link>), not <button>
+    await expect(page.locator('a', { hasText: 'Sign In' })).toBeVisible();
+    await expect(page.locator('a', { hasText: 'Get Started' })).toBeVisible();
 
     // Feature cards
     await expect(page.locator('h3', { hasText: '0.5% Fees' })).toBeVisible();
@@ -45,10 +46,10 @@ test.describe('Payment Flow', () => {
     await expect(page.getByRole('heading', { name: 'Payment Not Found' })).toBeVisible({ timeout: 10000 });
   });
 
-  test('homepage footer shows network info', async ({ page }) => {
+  test('homepage footer shows copyright', async ({ page }) => {
     await page.goto('/');
 
-    // Footer with network info (uses middle-dot separators)
-    await expect(page.getByText(/Polygon\s*·\s*Ethereum\s*·\s*USDC\s*·\s*USDT/)).toBeVisible();
+    // Footer with copyright text
+    await expect(page.getByText(/StableFlow.*Stablecoin Payment Infrastructure/)).toBeVisible();
   });
 });

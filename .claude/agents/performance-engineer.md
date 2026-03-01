@@ -1,5 +1,6 @@
 ---
 name: Performance Engineer
+description: Owns performance gates, Core Web Vitals, bundle budgets, database query optimization, and load testing. Ensures all ConnectSW products are fast and scalable under load.
 ---
 
 # Performance Engineer Agent

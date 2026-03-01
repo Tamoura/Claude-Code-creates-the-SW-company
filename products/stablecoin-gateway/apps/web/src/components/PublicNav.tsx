@@ -35,7 +35,14 @@ export default function PublicNav() {
   }, [isMobileMenuOpen]);
 
   return (
-    <nav className="border-b border-card-border">
+    <>
+      <a
+        href="#main-content"
+        className="sr-only focus:not-sr-only focus:absolute focus:z-50 focus:top-4 focus:left-4 focus:bg-white focus:text-black focus:px-4 focus:py-2 focus:rounded focus:outline-none focus:ring-2 focus:ring-blue-500"
+      >
+        Skip to main content
+      </a>
+      <nav className="border-b border-card-border">
       <div className="max-w-6xl mx-auto px-6 py-4">
         <div className="flex items-center justify-between">
           <div className="flex items-center gap-2">
@@ -49,6 +56,7 @@ export default function PublicNav() {
           <div className="hidden md:flex items-center gap-6">
             <Link
               to="/"
+              aria-current={isActive('/') ? 'page' : undefined}
               className={`text-sm font-medium transition-colors ${
                 isActive('/')
                   ? 'text-accent-pink'
@@ -59,6 +67,7 @@ export default function PublicNav() {
             </Link>
             <Link
               to="/pricing"
+              aria-current={isActive('/pricing') ? 'page' : undefined}
               className={`text-sm font-medium transition-colors ${
                 isActive('/pricing')
                   ? 'text-accent-pink'
@@ -69,6 +78,7 @@ export default function PublicNav() {
             </Link>
             <Link
               to="/docs"
+              aria-current={location.pathname.startsWith('/docs') ? 'page' : undefined}
               className={`text-sm font-medium transition-colors ${
                 location.pathname.startsWith('/docs')
                   ? 'text-accent-pink'
@@ -99,6 +109,7 @@ export default function PublicNav() {
             className="md:hidden p-2 rounded-lg text-text-primary hover:bg-sidebar-hover focus-visible:outline-2 focus-visible:outline-accent-blue focus-visible:outline-offset-2"
             aria-label="Toggle navigation menu"
             aria-expanded={isMobileMenuOpen}
+            aria-controls="mobile-menu"
           >
             <svg className="w-6 h-6" fill="none" viewBox="0 0 24 24" stroke="currentColor" strokeWidth={2}>
               {isMobileMenuOpen ? (
@@ -112,11 +123,12 @@ export default function PublicNav() {
 
         {/* Mobile menu dropdown */}
         {isMobileMenuOpen && (
-          <div className="md:hidden mt-4 pb-4 space-y-3">
+          <div id="mobile-menu" className="md:hidden mt-4 pb-4 space-y-3">
             <Link
               ref={firstMenuItemRef}
               to="/"
               onClick={() => setIsMobileMenuOpen(false)}
+              aria-current={isActive('/') ? 'page' : undefined}
               className={`block px-4 py-2 text-sm font-medium rounded-lg transition-colors ${
                 isActive('/')
                   ? 'bg-accent-pink/10 text-accent-pink'
@@ -128,6 +140,7 @@ export default function PublicNav() {
             <Link
               to="/pricing"
               onClick={() => setIsMobileMenuOpen(false)}
+              aria-current={isActive('/pricing') ? 'page' : undefined}
               className={`block px-4 py-2 text-sm font-medium rounded-lg transition-colors ${
                 isActive('/pricing')
                   ? 'bg-accent-pink/10 text-accent-pink'
@@ -139,6 +152,7 @@ export default function PublicNav() {
             <Link
               to="/docs"
               onClick={() => setIsMobileMenuOpen(false)}
+              aria-current={location.pathname.startsWith('/docs') ? 'page' : undefined}
               className={`block px-4 py-2 text-sm font-medium rounded-lg transition-colors ${
                 location.pathname.startsWith('/docs')
                   ? 'bg-accent-pink/10 text-accent-pink'
@@ -167,5 +181,6 @@ export default function PublicNav() {
         )}
       </div>
     </nav>
+    </>
   );
 }

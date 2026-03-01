@@ -19,6 +19,9 @@ import { RefundService } from '../../services/refund.service.js';
 import { AppError } from '../../types/index.js';
 import { logger } from '../../utils/logger.js';
 import { z } from 'zod';
+import {
+  createRefundRouteSchema, listRefundsRouteSchema, getRefundRouteSchema,
+} from '../../schemas/refunds.js';
 
 // Validation schemas
 const createRefundSchema = z.object({
@@ -51,6 +54,7 @@ const refundRoutes: FastifyPluginAsync = async (fastify) => {
     '/',
     {
       onRequest: [fastify.authenticate, fastify.requirePermission('refund')],
+      schema: createRefundRouteSchema,
       config: {
         rateLimit: {
           max: 10,
@@ -110,6 +114,7 @@ const refundRoutes: FastifyPluginAsync = async (fastify) => {
     '/',
     {
       onRequest: [fastify.authenticate, fastify.requirePermission('read')],
+      schema: listRefundsRouteSchema,
     },
     async (request, reply) => {
       try {
@@ -158,6 +163,7 @@ const refundRoutes: FastifyPluginAsync = async (fastify) => {
     '/:id',
     {
       onRequest: [fastify.authenticate, fastify.requirePermission('read')],
+      schema: getRefundRouteSchema,
     },
     async (request, reply) => {
       try {

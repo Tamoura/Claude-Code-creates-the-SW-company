@@ -258,18 +258,18 @@ function WireframeBlock({ code, dark }: { code: string; dark: boolean }) {
   const boxDrawn = asciiToBoxDrawing(code);
   const lines = boxDrawn.split('\n');
   // Delimiter color — nearly invisible so brackets/braces fade out
-  const dim = dark ? 'text-gray-700' : 'text-gray-300';
+  const dim = dark ? 'text-slate-700' : 'text-slate-300';
 
   function renderToken(t: WireToken, key: number) {
     switch (t.type) {
       case 'border':
-        return <span key={key} className={dark ? 'text-gray-600' : 'text-gray-300'}>{t.raw}</span>;
+        return <span key={key} className={dark ? 'text-slate-600' : 'text-slate-300'}>{t.raw}</span>;
       case 'input': {
         const inner = t.raw.slice(1, -1);
         return (
           <span key={key}>
             <span className={dim}>{t.raw[0]}</span>
-            <span className={dark ? 'text-gray-300' : 'text-gray-700'}
+            <span className={dark ? 'text-slate-300' : 'text-slate-700'}
               style={{ boxShadow: `inset 0 -1.5px 0 ${dark ? 'rgba(156,163,175,0.5)' : 'rgba(107,114,128,0.4)'}` }}>
               {inner}
             </span>
@@ -282,7 +282,7 @@ function WireframeBlock({ code, dark }: { code: string; dark: boolean }) {
         return (
           <span key={key}>
             <span className={dim}>{t.raw[0]}</span>
-            <span className={`font-semibold ${dark ? 'bg-gray-600 text-white' : 'bg-gray-800 text-white'}`}>{inner}</span>
+            <span className={`font-semibold ${dark ? 'bg-slate-600 text-white' : 'bg-slate-800 text-white'}`}>{inner}</span>
             <span className={dim}>{t.raw[t.raw.length - 1]}</span>
           </span>
         );
@@ -292,7 +292,7 @@ function WireframeBlock({ code, dark }: { code: string; dark: boolean }) {
         return (
           <span key={key}>
             <span className={dim}>{t.raw[0]}</span>
-            <span className={`underline ${dark ? 'text-gray-400' : 'text-gray-500'}`}>{inner}</span>
+            <span className={`underline ${dark ? 'text-slate-400' : 'text-slate-500'}`}>{inner}</span>
             <span className={dim}>{t.raw[t.raw.length - 1]}</span>
           </span>
         );
@@ -302,27 +302,27 @@ function WireframeBlock({ code, dark }: { code: string; dark: boolean }) {
         return (
           <span key={key}>
             <span className={dim}>{t.raw[0]}</span>
-            <span className={`italic ${dark ? 'text-gray-500' : 'text-gray-400'}`}>{inner}</span>
+            <span className={`italic ${dark ? 'text-slate-500' : 'text-slate-400'}`}>{inner}</span>
             <span className={dim}>{t.raw[t.raw.length - 1]}</span>
           </span>
         );
       }
       case 'radio':
-        return <span key={key} className={`font-bold ${dark ? 'text-gray-200' : 'text-gray-800'}`}>{t.raw}</span>;
+        return <span key={key} className={`font-bold ${dark ? 'text-slate-200' : 'text-slate-800'}`}>{t.raw}</span>;
       case 'checkbox':
-        return <span key={key} className={`font-bold ${dark ? 'text-gray-200' : 'text-gray-800'}`}>{t.raw}</span>;
+        return <span key={key} className={`font-bold ${dark ? 'text-slate-200' : 'text-slate-800'}`}>{t.raw}</span>;
       case 'toggle':
         return (
           <span key={key} className={`font-semibold ${
-            t.active ? (dark ? 'bg-gray-500 text-white' : 'bg-gray-700 text-white') : (dark ? 'text-gray-600' : 'text-gray-400')
+            t.active ? (dark ? 'bg-slate-500 text-white' : 'bg-slate-700 text-white') : (dark ? 'text-slate-600' : 'text-slate-400')
           }`}>{t.raw}</span>
         );
       case 'progress':
         return (
           <span key={key}>
             {[...t.raw].map((c, ci) => {
-              if (c === '=') return <span key={ci} className={`font-bold ${dark ? 'text-gray-200' : 'text-gray-700'}`}>{c}</span>;
-              if (c === '-') return <span key={ci} className={dark ? 'text-gray-700' : 'text-gray-300'}>{c}</span>;
+              if (c === '=') return <span key={ci} className={`font-bold ${dark ? 'text-slate-200' : 'text-slate-700'}`}>{c}</span>;
+              if (c === '-') return <span key={ci} className={dark ? 'text-slate-700' : 'text-slate-300'}>{c}</span>;
               return <span key={ci} className={dim}>{c}</span>;
             })}
           </span>
@@ -334,20 +334,20 @@ function WireframeBlock({ code, dark }: { code: string; dark: boolean }) {
 
   return (
     <div className={`my-6 rounded-xl overflow-hidden border ${
-      dark ? 'border-gray-700 bg-gray-950' : 'border-gray-200 bg-white'
+      dark ? 'border-slate-700 bg-slate-950' : 'border-slate-200 bg-white'
     }`} style={{ boxShadow: dark ? 'none' : '0 1px 3px rgba(0,0,0,0.06)' }}>
       <div className={`flex items-center gap-2 px-4 py-2.5 border-b text-xs font-semibold tracking-wide uppercase ${
-        dark ? 'bg-gray-900 border-gray-800 text-gray-500' : 'bg-gray-50 border-gray-200 text-gray-400'
+        dark ? 'bg-slate-900 border-slate-800 text-slate-500' : 'bg-slate-50 border-slate-200 text-slate-400'
       }`}>
         <svg className="w-4 h-4" fill="none" stroke="currentColor" viewBox="0 0 24 24">
           <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={1.5} d="M9 17V7m0 10a2 2 0 01-2 2H5a2 2 0 01-2-2V7a2 2 0 012-2h2a2 2 0 012 2m0 10a2 2 0 002 2h2a2 2 0 002-2M9 7a2 2 0 012-2h2a2 2 0 012 2m0 10V7m0 10a2 2 0 002 2h2a2 2 0 002-2V7a2 2 0 00-2-2h-2a2 2 0 00-2 2" />
         </svg>
         Wireframe
       </div>
-      <div className={`p-6 overflow-x-auto ${dark ? 'bg-gray-950' : 'bg-white'}`}>
+      <div className={`p-6 overflow-x-auto ${dark ? 'bg-slate-950' : 'bg-white'}`}>
         <div
           style={{ fontFamily: "'SF Mono', 'Cascadia Code', 'Fira Code', Menlo, monospace", fontSize: '13px', lineHeight: 1.5 }}
-          className={dark ? 'text-gray-300' : 'text-gray-700'}
+          className={dark ? 'text-slate-300' : 'text-slate-700'}
         >
           {lines.map((ln, li) => (
             <div key={li} className="whitespace-pre">
@@ -386,23 +386,23 @@ function MermaidDiagram({ chart, theme }: { chart: string; theme: 'light' | 'dar
 
   if (error) {
     return (
-      <div className="my-4 rounded-lg border border-red-300 dark:border-red-700 bg-red-50 dark:bg-red-900/20 p-4">
-        <p className="text-red-600 dark:text-red-400 text-sm mb-2">Failed to render diagram</p>
-        <pre className="text-xs text-gray-500 dark:text-gray-400 overflow-x-auto">{chart}</pre>
+      <div className="my-4 rounded-lg border border-rose-300 dark:border-rose-700 bg-rose-50 dark:bg-rose-900/20 p-4">
+        <p className="text-rose-600 dark:text-rose-400 text-sm mb-2">Failed to render diagram</p>
+        <pre className="text-xs text-slate-500 dark:text-slate-400 overflow-x-auto">{chart}</pre>
       </div>
     );
   }
 
   if (!svg) {
     return (
-      <div className="my-4 rounded-lg border border-gray-200 dark:border-gray-700 bg-gray-50 dark:bg-gray-900 p-8 flex justify-center">
-        <span className="text-gray-400 dark:text-gray-500 text-sm">Rendering diagram...</span>
+      <div className="my-4 rounded-lg border border-slate-200 dark:border-slate-700 bg-slate-50 dark:bg-slate-900 p-8 flex justify-center">
+        <span className="text-slate-400 dark:text-slate-500 text-sm">Rendering diagram...</span>
       </div>
     );
   }
 
   return (
-    <div className="my-6 rounded-lg border border-gray-200 dark:border-gray-700 bg-white dark:bg-gray-900/50 p-4 overflow-x-auto">
+    <div className="my-6 rounded-lg border border-slate-200 dark:border-slate-700 bg-white dark:bg-slate-900/50 p-4 overflow-x-auto">
       <div
         ref={containerRef}
         className="flex justify-center [&>svg]:max-w-full"
@@ -447,38 +447,38 @@ export default function MarkdownRenderer({ content, theme = 'dark' }: MarkdownRe
 
   const components: Components = {
     h1: ({ children, id }) => (
-      <h1 id={id as string | undefined} className={`text-3xl font-bold mt-8 mb-4 first:mt-0 scroll-mt-20 ${dark ? 'text-white' : 'text-gray-900'}`}>
+      <h1 id={id as string | undefined} className={`text-3xl font-bold mt-8 mb-4 first:mt-0 scroll-mt-20 ${dark ? 'text-white' : 'text-slate-900'}`}>
         {children}
       </h1>
     ),
     h2: ({ children, id }) => (
-      <h2 id={id as string | undefined} className={`text-2xl font-bold mt-8 mb-3 scroll-mt-20 pb-2 border-b ${dark ? 'text-white border-gray-800' : 'text-gray-900 border-gray-200'}`}>
+      <h2 id={id as string | undefined} className={`text-2xl font-bold mt-8 mb-3 scroll-mt-20 pb-2 border-b ${dark ? 'text-white border-slate-800' : 'text-slate-900 border-slate-200'}`}>
         {children}
       </h2>
     ),
     h3: ({ children, id }) => (
-      <h3 id={id as string | undefined} className={`text-xl font-semibold mt-6 mb-3 scroll-mt-20 ${dark ? 'text-white' : 'text-gray-900'}`}>
+      <h3 id={id as string | undefined} className={`text-xl font-semibold mt-6 mb-3 scroll-mt-20 ${dark ? 'text-white' : 'text-slate-900'}`}>
         {children}
       </h3>
     ),
     h4: ({ children, id }) => (
-      <h4 id={id as string | undefined} className={`text-lg font-semibold mt-5 mb-2 scroll-mt-20 ${dark ? 'text-gray-200' : 'text-gray-800'}`}>
+      <h4 id={id as string | undefined} className={`text-lg font-semibold mt-5 mb-2 scroll-mt-20 ${dark ? 'text-slate-200' : 'text-slate-800'}`}>
         {children}
       </h4>
     ),
     h5: ({ children, id }) => (
-      <h5 id={id as string | undefined} className={`text-base font-semibold mt-4 mb-2 scroll-mt-20 ${dark ? 'text-gray-300' : 'text-gray-700'}`}>
+      <h5 id={id as string | undefined} className={`text-base font-semibold mt-4 mb-2 scroll-mt-20 ${dark ? 'text-slate-300' : 'text-slate-700'}`}>
         {children}
       </h5>
     ),
     h6: ({ children, id }) => (
-      <h6 id={id as string | undefined} className={`text-sm font-semibold mt-3 mb-2 scroll-mt-20 ${dark ? 'text-gray-400' : 'text-gray-600'}`}>
+      <h6 id={id as string | undefined} className={`text-sm font-semibold mt-3 mb-2 scroll-mt-20 ${dark ? 'text-slate-400' : 'text-slate-600'}`}>
         {children}
       </h6>
     ),
 
     p: ({ children }) => (
-      <p className={`leading-relaxed mb-4 ${dark ? 'text-gray-300' : 'text-gray-700'}`}>
+      <p className={`leading-relaxed mb-4 ${dark ? 'text-slate-300' : 'text-slate-700'}`}>
         {children}
       </p>
     ),
@@ -486,7 +486,7 @@ export default function MarkdownRenderer({ content, theme = 'dark' }: MarkdownRe
     a: ({ href, children }) => (
       <a
         href={href}
-        className={`hover:underline transition-colors ${dark ? 'text-blue-400 hover:text-blue-300' : 'text-blue-600 hover:text-blue-500'}`}
+        className={`hover:underline transition-colors ${dark ? 'text-indigo-400 hover:text-indigo-300' : 'text-indigo-600 hover:text-indigo-500'}`}
         target={href?.startsWith('http') ? '_blank' : undefined}
         rel={href?.startsWith('http') ? 'noopener noreferrer' : undefined}
       >
@@ -495,19 +495,19 @@ export default function MarkdownRenderer({ content, theme = 'dark' }: MarkdownRe
     ),
 
     table: ({ children }) => (
-      <div className={`overflow-x-auto my-6 rounded-lg border ${dark ? 'border-gray-700' : 'border-gray-200'}`}>
-        <table className={`min-w-full divide-y ${dark ? 'divide-gray-700' : 'divide-gray-200'}`}>
+      <div className={`overflow-x-auto my-6 rounded-lg border ${dark ? 'border-slate-700' : 'border-slate-200'}`}>
+        <table className={`min-w-full divide-y ${dark ? 'divide-slate-700' : 'divide-slate-200'}`}>
           {children}
         </table>
       </div>
     ),
     thead: ({ children }) => (
-      <thead className={dark ? 'bg-gray-800' : 'bg-gray-50'}>
+      <thead className={dark ? 'bg-slate-800' : 'bg-slate-50'}>
         {children}
       </thead>
     ),
     tbody: ({ children }) => (
-      <tbody className={`divide-y ${dark ? 'divide-gray-700' : 'divide-gray-200'}`}>
+      <tbody className={`divide-y ${dark ? 'divide-slate-700' : 'divide-slate-200'}`}>
         {children}
       </tbody>
     ),
@@ -515,20 +515,20 @@ export default function MarkdownRenderer({ content, theme = 'dark' }: MarkdownRe
       const isHeader = (props as any).isHeader;
       return (
         <tr className={isHeader ? '' : (dark
-          ? 'even:bg-gray-900/50 odd:bg-gray-900 hover:bg-gray-800/50 transition-colors'
-          : 'even:bg-gray-50 odd:bg-white hover:bg-blue-50/50 transition-colors'
+          ? 'even:bg-slate-900/50 odd:bg-slate-900 hover:bg-slate-800/50 transition-colors'
+          : 'even:bg-slate-50 odd:bg-white hover:bg-indigo-50/50 transition-colors'
         )}>
           {children}
         </tr>
       );
     },
     th: ({ children }) => (
-      <th className={`px-4 py-3 text-left text-xs font-semibold uppercase tracking-wider ${dark ? 'text-white' : 'text-gray-700'}`}>
+      <th className={`px-4 py-3 text-left text-xs font-semibold uppercase tracking-wider ${dark ? 'text-white' : 'text-slate-700'}`}>
         {children}
       </th>
     ),
     td: ({ children }) => (
-      <td className={`px-4 py-3 text-sm ${dark ? 'text-gray-300' : 'text-gray-700'}`}>
+      <td className={`px-4 py-3 text-sm ${dark ? 'text-slate-300' : 'text-slate-700'}`}>
         {children}
       </td>
     ),
@@ -553,8 +553,8 @@ export default function MarkdownRenderer({ content, theme = 'dark' }: MarkdownRe
         }
       }
       return (
-        <div className={`my-4 rounded-lg overflow-hidden border ${dark ? 'border-gray-700' : 'border-gray-200'}`}>
-          <pre className={`p-4 overflow-x-auto ${dark ? 'bg-gray-900' : 'bg-gray-50'}`}>
+        <div className={`my-4 rounded-lg overflow-hidden border ${dark ? 'border-slate-700' : 'border-slate-200'}`}>
+          <pre className={`p-4 overflow-x-auto ${dark ? 'bg-slate-900' : 'bg-slate-50'}`}>
             {children}
           </pre>
         </div>
@@ -566,26 +566,26 @@ export default function MarkdownRenderer({ content, theme = 'dark' }: MarkdownRe
 
       if (lang) {
         return (
-          <code className={`text-sm font-mono leading-relaxed whitespace-pre ${className ?? ''} ${dark ? 'text-gray-300' : 'text-gray-800'}`}>
+          <code className={`text-sm font-mono leading-relaxed whitespace-pre ${className ?? ''} ${dark ? 'text-slate-300' : 'text-slate-800'}`}>
             {children}
           </code>
         );
       }
 
       return (
-        <code className={`px-1.5 py-0.5 rounded text-sm font-mono ${dark ? 'bg-gray-800 text-blue-300' : 'bg-gray-100 text-blue-700'}`}>
+        <code className={`px-1.5 py-0.5 rounded text-sm font-mono ${dark ? 'bg-slate-800 text-indigo-300' : 'bg-slate-100 text-indigo-700'}`}>
           {children}
         </code>
       );
     },
 
     ul: ({ children }) => (
-      <ul className={`list-disc list-inside space-y-2 mb-4 ml-4 ${dark ? 'text-gray-300' : 'text-gray-700'}`}>
+      <ul className={`list-disc list-inside space-y-2 mb-4 ml-4 ${dark ? 'text-slate-300' : 'text-slate-700'}`}>
         {children}
       </ul>
     ),
     ol: ({ children }) => (
-      <ol className={`list-decimal list-inside space-y-2 mb-4 ml-4 ${dark ? 'text-gray-300' : 'text-gray-700'}`}>
+      <ol className={`list-decimal list-inside space-y-2 mb-4 ml-4 ${dark ? 'text-slate-300' : 'text-slate-700'}`}>
         {children}
       </ol>
     ),
@@ -596,30 +596,30 @@ export default function MarkdownRenderer({ content, theme = 'dark' }: MarkdownRe
     ),
 
     blockquote: ({ children }) => (
-      <blockquote className={`border-l-4 border-blue-500 pl-4 py-2 my-4 italic rounded-r ${dark ? 'text-gray-400 bg-gray-900/50' : 'text-gray-600 bg-blue-50/50'}`}>
+      <blockquote className={`border-l-4 border-indigo-500 pl-4 py-2 my-4 italic rounded-r ${dark ? 'text-slate-400 bg-slate-900/50' : 'text-slate-600 bg-indigo-50/50'}`}>
         {children}
       </blockquote>
     ),
 
     hr: () => (
-      <hr className={`my-8 ${dark ? 'border-gray-800' : 'border-gray-200'}`} />
+      <hr className={`my-8 ${dark ? 'border-slate-800' : 'border-slate-200'}`} />
     ),
 
     img: ({ src, alt }) => (
       <img
         src={src}
         alt={alt}
-        className={`max-w-full h-auto rounded-lg border my-4 ${dark ? 'border-gray-700' : 'border-gray-200'}`}
+        className={`max-w-full h-auto rounded-lg border my-4 ${dark ? 'border-slate-700' : 'border-slate-200'}`}
       />
     ),
 
     strong: ({ children }) => (
-      <strong className={`font-semibold ${dark ? 'text-white' : 'text-gray-900'}`}>
+      <strong className={`font-semibold ${dark ? 'text-white' : 'text-slate-900'}`}>
         {children}
       </strong>
     ),
     em: ({ children }) => (
-      <em className={`italic ${dark ? 'text-gray-300' : 'text-gray-600'}`}>
+      <em className={`italic ${dark ? 'text-slate-300' : 'text-slate-600'}`}>
         {children}
       </em>
     ),

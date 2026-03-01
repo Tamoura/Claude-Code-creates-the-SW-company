@@ -19,43 +19,113 @@ jobs:
     steps:
       - uses: actions/checkout@v6
 
+      - uses: pnpm/action-setup@v4
+        with:
+          version: 10
       - name: Setup Node.js
         uses: actions/setup-node@v4
         with:
           node-version: '20'
-          cache: 'npm'
-          cache-dependency-path: products/stablecoin-gateway/apps/api/package-lock.json
+          cache: pnpm
 
       - name: Install dependencies
-        run: npm ci
+        run: pnpm install --frozen-lockfile
 
       - name: Run lint
-        run: npm run lint --if-present
+        run: pnpm run lint --if-present
 
       - name: Run typecheck
-        run: npx tsc --noEmit --pretty
+        run: pnpm exec tsc --noEmit --pretty
 
   security:
     runs-on: ubuntu-latest
-    continue-on-error: true
     defaults:
       run:
         working-directory: products/stablecoin-gateway/apps/api
     steps:
       - uses: actions/checkout@v6
 
+      - uses: pnpm/action-setup@v4
+        with:
+          version: 10
       - name: Setup Node.js
         uses: actions/setup-node@v4
         with:
           node-version: '20'
-          cache: 'npm'
-          cache-dependency-path: products/stablecoin-gateway/apps/api/package-lock.json
+          cache: pnpm
 
       - name: Install dependencies
-        run: npm ci
+        run: pnpm install --frozen-lockfile
 
       - name: Run security audit
-        run: npm audit --audit-level=critical --omit=dev || echo "::warning::Security vulnerabilities found - review npm audit output"
+        run: pnpm audit --audit-level=high --omit=dev
+
+  test-api:
+    runs-on: ubuntu-latest
+    defaults:
+      run:
+        working-directory: products/stablecoin-gateway/apps/api
+
+    services:
+      postgres:
+        image: postgres:15-alpine
+        env:
+          POSTGRES_USER: postgres
+          POSTGRES_PASSWORD: postgres
+          POSTGRES_DB: stablecoin_gateway_test
+        ports:
+          - 5432:5432
+        options: >-
+          --health-cmd pg_isready
+          --health-interval 10s
+          --health-timeout 5s
+          --health-retries 5
+
+      redis:
+        image: redis:7-alpine
+        ports:
+          - 6379:6379
+        options: >-
+          --health-cmd "redis-cli ping"
+          --health-interval 10s
+          --health-timeout 5s
+          --health-retries 5
+
+    env:
+      DATABASE_URL: postgresql://postgres:postgres@localhost:5432/stablecoin_gateway_test
+      REDIS_URL: redis://localhost:6379
+      NODE_ENV: test
+      JWT_SECRET: test-jwt-secret-ci
+      JWT_EXPIRES_IN: 15m
+      REFRESH_TOKEN_EXPIRES_IN: 7d
+      FRONTEND_URL: http://localhost:3104
+      ALLOWED_ORIGINS: http://localhost:3104
+      USE_KMS: "false"
+      LOG_LEVEL: warn
+
+    steps:
+      - uses: actions/checkout@v6
+
+      - uses: pnpm/action-setup@v4
+        with:
+          version: 10
+      - name: Setup Node.js
+        uses: actions/setup-node@v4
+        with:
+          node-version: '20'
+          cache: pnpm
+
+      - name: Install dependencies
+        run: pnpm install --frozen-lockfile
+
+      - name: Generate Prisma client
+        run: pnpm exec prisma generate
+
+      - name: Run database migrations
+        run: pnpm exec prisma migrate deploy
+
+      - name: Run API tests
+        run: pnpm test -- --forceExit --testTimeout=30000
 
   test-frontend:
     runs-on: ubuntu-latest
@@ -65,21 +135,36 @@ jobs:
     steps:
       - uses: actions/checkout@v6
 
+      - uses: pnpm/action-setup@v4
+        with:
+          version: 10
       - name: Setup Node.js
         uses: actions/setup-node@v4
         with:
           node-version: '20'
-          cache: 'npm'
-          cache-dependency-path: products/stablecoin-gateway/apps/web/package-lock.json
+          cache: pnpm
 
       - name: Install dependencies
-        run: npm ci
+        run: pnpm install --frozen-lockfile
 
       - name: Run frontend tests
-        run: npm test
+        run: pnpm test
+
+  secrets-scan:
+    name: Secrets Scan
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v4
+        with:
+          fetch-depth: 0
+      - name: Run Gitleaks
+        uses: gitleaks/gitleaks-action@v2
+        env:
+          GITHUB_TOKEN: ${{ secrets.GITHUB_TOKEN }}
+          GITLEAKS_LICENSE: ${{ secrets.GITLEAKS_LICENSE }}
 
   quality-gate:
-    needs: [lint, security, test-frontend]
+    needs: [lint, security, test-api, test-frontend, secrets-scan]
     runs-on: ubuntu-latest
     if: always()
     steps:
@@ -88,14 +173,15 @@ jobs:
           echo "Job results:"
           echo "  lint:           ${{ needs.lint.result }}"
           echo "  security:       ${{ needs.security.result }}"
+          echo "  test-api:       ${{ needs.test-api.result }}"
           echo "  test-frontend:  ${{ needs.test-frontend.result }}"
-          # Core jobs must pass; security audit is advisory
+          echo "  secrets-scan:   ${{ needs.secrets-scan.result }}"
           if [ "${{ needs.lint.result }}" != "success" ] || \
-             [ "${{ needs.test-frontend.result }}" != "success" ]; then
-            echo "Quality gate FAILED: one or more core jobs did not succeed"
+             [ "${{ needs.security.result }}" != "success" ] || \
+             [ "${{ needs.test-api.result }}" != "success" ] || \
+             [ "${{ needs.test-frontend.result }}" != "success" ] || \
+             [ "${{ needs.secrets-scan.result }}" != "success" ]; then
+            echo "Quality gate FAILED: one or more jobs did not succeed"
             exit 1
-          fi
-          if [ "${{ needs.security.result }}" != "success" ]; then
-            echo "::warning::Security audit reported issues - review recommended"
           fi
           echo "All quality gates passed for stablecoin-gateway"

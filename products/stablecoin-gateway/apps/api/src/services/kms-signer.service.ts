@@ -17,6 +17,7 @@
  */
 
 import { ethers } from 'ethers';
+import { AppError } from '../types/index.js';
 import { logger } from '../utils/logger.js';
 import { createKMSService, KMSService } from './kms.service.js';
 
@@ -86,7 +87,9 @@ export class EnvVarSignerProvider implements SignerProvider {
 
   async getWallet(network: Network): Promise<ethers.Wallet> {
     if (process.env.NODE_ENV === 'production') {
-      throw new Error(
+      throw new AppError(
+        500,
+        'kms-not-configured',
         'Raw private key in env vars not allowed in production. Set USE_KMS=true'
       );
     }
@@ -98,7 +101,7 @@ export class EnvVarSignerProvider implements SignerProvider {
 
     const key = process.env.MERCHANT_WALLET_PRIVATE_KEY;
     if (!key) {
-      throw new Error('MERCHANT_WALLET_PRIVATE_KEY not configured');
+      throw new AppError(500, 'kms-not-configured', 'Merchant wallet private key not configured');
     }
 
     // Create wallet without logging the key
@@ -109,10 +112,22 @@ export class EnvVarSignerProvider implements SignerProvider {
 /**
  * Factory function to create the appropriate signer provider
  * based on the USE_KMS environment variable.
+ *
+ * Startup guard: throws immediately in production when USE_KMS is not 'true'
+ * so the application refuses to start rather than failing on first payment.
  */
 export function createSignerProvider(): SignerProvider {
   if (process.env.USE_KMS === 'true') {
     return new KMSSignerProvider();
   }
+
+  if (process.env.NODE_ENV === 'production') {
+    throw new AppError(
+      500,
+      'kms-not-configured',
+      'KMS is required in production. Set USE_KMS=true and KMS_KEY_ID.'
+    );
+  }
+
   return new EnvVarSignerProvider();
 }

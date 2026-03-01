@@ -45,12 +45,22 @@ This is a **read-only consistency audit**. It validates alignment across specifi
    | **Constitution Alignment** | Violations of ConnectSW principles (TDD, reuse, TypeScript, etc.) |
    | **Coverage Gaps** | Spec requirements with no corresponding tasks or tests |
    | **Inconsistency** | Conflicts between spec, plan, and tasks (e.g., different entity names) |
+   | **Already Implemented** | Plan/task items for capabilities that already exist in the codebase |
 
 4. **Assign severity** to each finding:
-   - **CRITICAL**: Missing requirement coverage, constitution violation, spec-plan conflict
-   - **HIGH**: Ambiguous acceptance criteria, missing test for requirement
+   - **CRITICAL**: Missing requirement coverage, constitution violation, spec-plan conflict, tasks duplicating already-implemented code
+   - **HIGH**: Ambiguous acceptance criteria, missing test for requirement, missing Implementation Audit table in plan
    - **MEDIUM**: Terminology inconsistency, minor coverage gap
    - **LOW**: Style issues, documentation gaps
+
+   **Already Implemented Detection (Pass 7)**:
+   - For each task in `tasks.md`, extract the primary capability it implements
+   - Query the codebase using GitNexus or Grep to check if the capability already exists
+   - Cross-reference against the plan's Implementation Audit table:
+     - If the plan has an audit table: verify tasks match the audit (no FULLY_IMPLEMENTED items snuck through)
+     - If the plan has NO audit table: flag as CRITICAL ("Plan missing Implementation Audit — Verification-Before-Planning gate not run")
+   - Flag any task whose target file already exists AND contains the described functionality
+   - Severity: CRITICAL for tasks that would duplicate existing, working code; HIGH for missing audit table
 
 5. **Produce report** (Markdown format):
 
@@ -81,13 +91,22 @@ This is a **read-only consistency audit**. It validates alignment across specifi
    | Article | Requirement | Status |
    |---------|------------|--------|
    | I. Spec-First | Spec exists | PASS |
-   | II. Component Reuse | Registry checked | PASS |
+   | II. Component Reuse + Implementation Verification | Registry checked, Implementation Audit present | PASS |
    | III. TDD | Tests before impl | FAIL (T023 before T020) |
+
+   ### Implementation Audit Alignment
+
+   | Planned Capability | Audit Status | Tasks Generated | Verdict |
+   |-------------------|-------------|-----------------|---------|
+   | [Capability 1] | FULLY_IMPLEMENTED | None | CORRECT |
+   | [Capability 2] | NOT_IMPLEMENTED | T023, T024 | CORRECT |
+   | [Capability 3] | FULLY_IMPLEMENTED | T030 | VIOLATION — task for implemented feature |
 
    ### Metrics
    - Requirements: X total, Y covered, Z gaps
    - Tasks: X total, Y mapped to requirements, Z orphan
-   - Constitution compliance: X/11 articles satisfied
+   - Constitution compliance: X/12 articles satisfied
+   - Implementation audit: X verified, Y excluded, Z violations
    ```
 
 6. **Suggest next actions** based on findings:

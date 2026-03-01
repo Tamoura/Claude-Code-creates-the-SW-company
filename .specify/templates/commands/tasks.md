@@ -33,6 +33,16 @@ Generate a traceable task list from the implementation plan. Tasks are organized
    - API endpoints and contracts
    - Architectural decisions
 
+2b. **Pre-Task Verification (Verification-Before-Planning Gate)**:
+   - Read the Implementation Audit table from `products/[product]/docs/plan.md`
+   - If the plan has NO Implementation Audit table: **ERROR** → run `/speckit.plan` with verification first
+   - For each capability marked `FULLY_IMPLEMENTED`: confirm NO tasks are generated for it
+   - For each capability marked `PARTIALLY_IMPLEMENTED`: generate tasks ONLY for the documented gaps
+   - For any NEW capability not in the audit (added during task generation): run a quick verification
+     - `gitnexus_query({ query: "<new capability>" })` or Grep
+     - Classify and document inline
+   - Output a "Pre-verified Exclusions" section at the top of the task file listing excluded capabilities
+
 3. **Generate task list** using `.specify/templates/tasks-template.md`:
    - **Phase 1: Setup** — Project initialization, TypeScript config, linting, port registration
    - **Phase 2: Foundation** — Database schema, server config, health endpoints, test infrastructure

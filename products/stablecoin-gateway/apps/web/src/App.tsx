@@ -8,6 +8,7 @@ import { TokenManager } from './lib/token-manager';
 import ProtectedRoute from './components/ProtectedRoute';
 import ErrorBoundary from './components/ErrorBoundary';
 import DashboardLayout from './pages/dashboard/DashboardLayout';
+import CookieConsentBanner from './components/CookieConsentBanner';
 
 // Lazy load page components for code splitting
 const HomePage = lazy(() => import('./pages/HomePageNew'));
@@ -96,6 +97,7 @@ function App() {
             </Suspense>
           </Router>
         </QueryClientProvider>
+        <CookieConsentBanner />
       </WagmiProvider>
     </ErrorBoundary>
   );

@@ -17,6 +17,58 @@ const MIN_ENTROPY_THRESHOLD = 3.0;
 const MIN_UNIQUE_CHARS = 16;
 
 /**
+ * Exact-match placeholders: the value IS this string (case-insensitive).
+ * These are too common as substrings to use with includes().
+ */
+const EXACT_PLACEHOLDER_VALUES = [
+  'secret',
+  'password',
+  'default',
+  'example',
+  'todo',
+  'fixme',
+  'test',
+  'xxxxxx',
+  'aaaaaa',
+  '123456',
+];
+
+/**
+ * Substring-match placeholders: if the value CONTAINS this string,
+ * it is a placeholder. These are specific enough to not false-positive
+ * on real secrets.
+ */
+const SUBSTRING_PLACEHOLDER_PATTERNS = [
+  'change_me',
+  'changeme',
+  'change-me',
+  'your-secret',
+  'your-jwt-secret',
+  'replace-me',
+  'replaceme',
+  'test-secret',
+  'in-production',
+  'insert-your',
+  'put-your',
+  'enter-your',
+];
+
+/**
+ * Check if a value looks like a placeholder that was never replaced.
+ * Uses exact match for short/common words (to avoid false positives on
+ * long random strings) and substring match for distinctive phrases.
+ */
+export function isPlaceholderValue(value: string): boolean {
+  const lower = value.toLowerCase().trim();
+  if (EXACT_PLACEHOLDER_VALUES.includes(lower)) {
+    return true;
+  }
+  return SUBSTRING_PLACEHOLDER_PATTERNS.some(
+    (pattern) => lower.includes(pattern)
+  );
+}
+
+/**
  * Calculate Shannon entropy of a string (bits per character).
  *
  * Shannon entropy measures the average information content per character.
@@ -124,10 +176,8 @@ function validateJWT(): ValidationResult {
 
   if (!jwtSecret) {
     errors.push('JWT_SECRET environment variable is required');
-  } else if (jwtSecret === 'your-jwt-secret-change-in-production' ||
-             jwtSecret === 'change-this-secret-in-production' ||
-             jwtSecret === 'your-secret-key-change-in-production') {
-    errors.push('JWT_SECRET must not be the default value');
+  } else if (isPlaceholderValue(jwtSecret)) {
+    errors.push('JWT_SECRET contains a placeholder value - set a real secret');
     errors.push(
       'Generate a strong secret: openssl rand -hex 64'
     );
@@ -295,6 +345,9 @@ function validateApiKeyHmac(): ValidationResult {
       errors.push('API key hashing without HMAC is vulnerable to rainbow table attacks');
       errors.push('Generate a secret: openssl rand -hex 64');
     }
+  } else if (isPlaceholderValue(hmacSecret)) {
+    errors.push('API_KEY_HMAC_SECRET contains a placeholder value - set a real secret');
+    errors.push('Generate a secret: openssl rand -hex 64');
   } else if (hmacSecret.length < 32) {
     warnings.push(`API_KEY_HMAC_SECRET is short (${hmacSecret.length} chars) - recommend at least 32 characters`);
     warnings.push('Generate a strong secret: openssl rand -hex 64');

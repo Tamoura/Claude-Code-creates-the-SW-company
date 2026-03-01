@@ -105,6 +105,41 @@ describe('KMS Signer Service', () => {
 
       expect(provider).toBeInstanceOf(EnvVarSignerProvider);
     });
+
+    it('[US-KMS-01][AC-2] createSignerProvider throws AppError in production without USE_KMS=true', () => {
+      process.env.NODE_ENV = 'production';
+      delete process.env.USE_KMS;
+
+      expect(() => createSignerProvider()).toThrow();
+      try {
+        createSignerProvider();
+      } catch (err: any) {
+        expect(err.constructor.name).toBe('AppError');
+        expect(err.code).toBe('kms-not-configured');
+        expect(err.statusCode).toBe(500);
+      }
+    });
+
+    it('[US-KMS-01][AC-2] createSignerProvider throws AppError in production when USE_KMS=false', () => {
+      process.env.NODE_ENV = 'production';
+      process.env.USE_KMS = 'false';
+
+      expect(() => createSignerProvider()).toThrow();
+      try {
+        createSignerProvider();
+      } catch (err: any) {
+        expect(err.constructor.name).toBe('AppError');
+        expect(err.code).toBe('kms-not-configured');
+      }
+    });
+
+    it('[US-KMS-01][AC-2] createSignerProvider allows KMS in production when USE_KMS=true', () => {
+      process.env.NODE_ENV = 'production';
+      process.env.USE_KMS = 'true';
+      process.env.KMS_KEY_ID = 'test-key-id';
+
+      expect(() => createSignerProvider()).not.toThrow();
+    });
   });
 
   describe('KMSSignerProvider', () => {
@@ -162,6 +197,25 @@ describe('KMS Signer Service', () => {
       );
     });
 
+    it('[US-KMS-01][AC-2] EnvVarSignerProvider throws AppError not plain Error when key disallowed in production', async () => {
+      process.env.NODE_ENV = 'production';
+      process.env.MERCHANT_WALLET_PRIVATE_KEY = '0x' + 'a'.repeat(64);
+
+      const provider = new EnvVarSignerProvider();
+
+      let caught: any;
+      try {
+        await provider.getWallet('polygon');
+      } catch (err) {
+        caught = err;
+      }
+
+      expect(caught).toBeDefined();
+      expect(caught.constructor.name).toBe('AppError');
+      expect(caught.code).toBe('kms-not-configured');
+      expect(caught.statusCode).toBe(500);
+    });
+
     it('should warn but allow in development mode', async () => {
       process.env.NODE_ENV = 'development';
       process.env.MERCHANT_WALLET_PRIVATE_KEY = '0x' + 'a'.repeat(64);
@@ -193,7 +247,7 @@ describe('KMS Signer Service', () => {
       const provider = new EnvVarSignerProvider();
 
       await expect(provider.getWallet('polygon')).rejects.toThrow(
-        'MERCHANT_WALLET_PRIVATE_KEY not configured'
+        'Merchant wallet private key not configured'
       );
     });
 

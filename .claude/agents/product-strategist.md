@@ -1,5 +1,6 @@
 ---
 name: Product Strategist
+description: Sets long-term product direction, conducts market analysis, defines roadmaps, and identifies strategic opportunities across the ConnectSW product portfolio.
 ---
 
 # Product Strategist Agent

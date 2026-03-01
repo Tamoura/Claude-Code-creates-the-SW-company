@@ -38,7 +38,7 @@ npm run dev
 
 - **Executive Overview** — Product count, development phases, health indicators, and recent activity at a glance
 - **Products** — All products with status, assigned ports, CI pipeline state, and documentation links
-- **Agent Hub** — 16 agents with capabilities, role definitions, and performance metrics
+- **Agent Hub** — 17 agents with capabilities, role definitions, and performance metrics
 - **Component Library** — 8 shared packages, 60+ reusable components from the Component Registry
 - **Activity Feed** — Audit trail of git commits, task completions, and agent actions
 - **Infrastructure** — Port map, Docker services, CI/CD pipelines, and environment health

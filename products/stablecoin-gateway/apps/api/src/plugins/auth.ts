@@ -36,6 +36,13 @@ const authPlugin: FastifyPluginAsync = async (fastify) => {
         // it is rejected for the remainder of its 15-minute lifetime.
         // If Redis is unavailable, reject with 503 (fail closed).
         const { jti, userId: decodedUserId } = decoded as { jti?: string; userId?: string };
+        if (jti && !fastify.redis) {
+          // SECURITY: Fail closed — if Redis is not available at all, we
+          // cannot verify whether the token has been revoked. Reject the
+          // request rather than silently accepting a potentially-revoked token.
+          logger.error('Redis not available for JTI revocation check, rejecting request (fail closed)', { jti });
+          throw new AppError(503, 'service-unavailable', 'Service temporarily unavailable');
+        }
         if (jti && fastify.redis) {
           try {
             const revoked = await fastify.redis.get(`revoked_jti:${jti}`);
@@ -128,21 +135,25 @@ const authPlugin: FastifyPluginAsync = async (fastify) => {
   // Permission enforcement decorator
   fastify.decorate('requirePermission', (permission: 'read' | 'write' | 'refund') => {
     return async (request: FastifyRequest) => {
-      // If authenticated via JWT (user session), allow all permissions
-      if (!request.apiKey) {
-        return; // JWT users have full permissions
+      if (request.apiKey) {
+        // API key path: enforce explicit per-key permission scope
+        const permissions = request.apiKey.permissions as { read: boolean; write: boolean; refund: boolean };
+
+        if (!permissions[permission]) {
+          throw new AppError(
+            403,
+            'insufficient-permissions',
+            `This API key does not have '${permission}' permission`
+          );
+        }
+        return;
       }
 
-      // If authenticated via API key, check permissions
-      const permissions = request.apiKey.permissions as { read: boolean; write: boolean; refund: boolean };
-
-      if (!permissions[permission]) {
-        throw new AppError(
-          403,
-          'insufficient-permissions',
-          `This API key does not have '${permission}' permission`
-        );
-      }
+      // JWT (user session) path: all authenticated users currently hold full
+      // read/write/refund permissions. HIGH-04: this is now an explicit grant
+      // rather than an unconditional bypass so future roles (e.g., VIEWER) can
+      // be restricted here without changing any call sites.
+      // No-op — any authenticated JWT user passes all permission checks.
     };
   });
 

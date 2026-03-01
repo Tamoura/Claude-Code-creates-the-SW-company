@@ -1,5 +1,6 @@
 ---
 name: Security Engineer
+description: Integrates security throughout the development lifecycle (DevSecOps). Handles threat modeling, OWASP audits, auth security, secrets management, and security gate reviews.
 ---
 
 # Security Engineer (DevSecOps) Agent

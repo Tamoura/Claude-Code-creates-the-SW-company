@@ -7,7 +7,9 @@ WORKDIR /app
 
 # Copy package files
 COPY apps/api/package*.json ./
-RUN npm ci --omit=dev && npm cache clean --force
+
+# Install ALL dependencies (including devDeps needed for tsc)
+RUN npm ci && npm cache clean --force
 
 # Copy source code
 COPY apps/api/ ./
@@ -33,11 +35,17 @@ RUN apk add --no-cache dumb-init
 RUN addgroup -g 1001 -S nodejs && \
     adduser -S nodejs -u 1001
 
-# Copy built files from builder
+# Copy package files and install production-only dependencies
+COPY apps/api/package*.json ./
+RUN npm ci --omit=dev && npm cache clean --force
+
+# Generate Prisma client in runner stage (needs devDep prisma binary)
+COPY apps/api/prisma ./prisma
+RUN npx prisma generate
+
+# Copy built output from builder
 COPY --from=builder --chown=nodejs:nodejs /app/dist ./dist
-COPY --from=builder --chown=nodejs:nodejs /app/node_modules ./node_modules
-COPY --from=builder --chown=nodejs:nodejs /app/prisma ./prisma
-COPY --from=builder --chown=nodejs:nodejs /app/package.json ./package.json
+RUN chown -R nodejs:nodejs /app
 
 # Switch to non-root user
 USER nodejs

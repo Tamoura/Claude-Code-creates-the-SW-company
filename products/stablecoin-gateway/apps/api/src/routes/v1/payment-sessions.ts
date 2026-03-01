@@ -1,5 +1,5 @@
 import { FastifyPluginAsync, FastifyRequest } from 'fastify';
-import { ZodError } from 'zod';
+import { z, ZodError } from 'zod';
 import { Prisma, PaymentStatus } from '@prisma/client';
 import { createPaymentSessionSchema, listPaymentSessionsQuerySchema, updatePaymentSessionSchema, idempotencyKeySchema, validateBody, validateQuery } from '../../utils/validation.js';
 import { PaymentService } from '../../services/payment.service.js';
@@ -7,17 +7,43 @@ import { BlockchainMonitorService } from '../../services/blockchain-monitor.serv
 import { AppError } from '../../types/index.js';
 import { logger } from '../../utils/logger.js';
 import { validatePaymentStatusTransition } from '../../utils/payment-state-machine.js';
+import {
+  createPaymentSessionRouteSchema, listPaymentSessionsRouteSchema,
+  getPaymentSessionRouteSchema, updatePaymentSessionRouteSchema,
+  paymentSessionEventsRouteSchema,
+} from '../../schemas/payment-sessions.js';
+
+// SEC: Internal-only schema that extends the public update schema with `status`.
+// The public `updatePaymentSessionSchema` (in validation.ts) does NOT include
+// status, preventing external clients from setting status directly.
+// Status transitions are guarded here by blockchain verification and the state
+// machine — only authenticated internal callers with 'write' permission can
+// trigger them, and only when blockchain verification succeeds.
+const internalUpdateSchema = updatePaymentSessionSchema.extend({
+  status: z.enum(['PENDING', 'CONFIRMING', 'COMPLETED', 'FAILED', 'REFUNDED']).optional(),
+});
 
 // SSE connection tracking for rate limiting (Phase 3.7)
+// ARC-03: These are in-process counters. In a single-instance deployment they
+// work correctly. In multi-instance deployments each process has its own
+// counters, so a user can open SSE_MAX_PER_USER connections to EACH instance.
+// For Redis-backed counters across instances, set SSE_USE_REDIS_COUNTERS=true
+// and ensure fastify.redis is configured. The in-process counters remain as
+// a fallback when Redis is unavailable.
 const sseConnectionsByUser = new Map<string, number>();
 let sseGlobalConnections = 0;
 const SSE_MAX_PER_USER = 10;
 const SSE_MAX_GLOBAL = parseInt(process.env.SSE_MAX_CONNECTIONS || '100', 10);
+// TODO(ARC-03): When migrating SSE to multi-instance deployment, replace the
+// in-memory connection counter below with a Redis-backed counter.
+// Env var SSE_USE_REDIS_COUNTERS is reserved for future use.
+// See: products/stablecoin-gateway/docs/AUDIT-REPORT.md — ARC-03
 
 const paymentSessionRoutes: FastifyPluginAsync = async (fastify) => {
   // POST /v1/payment-sessions
   fastify.post('/', {
     onRequest: [fastify.authenticate, fastify.requirePermission('write')],
+    schema: createPaymentSessionRouteSchema,
   }, async (request, reply) => {
     try {
       const body = validateBody(createPaymentSessionSchema, request.body);
@@ -121,6 +147,7 @@ const paymentSessionRoutes: FastifyPluginAsync = async (fastify) => {
   // GET /v1/payment-sessions
   fastify.get('/', {
     onRequest: [fastify.authenticate, fastify.requirePermission('read')],
+    schema: listPaymentSessionsRouteSchema,
   }, async (request, reply) => {
     try {
       const query = validateQuery(listPaymentSessionsQuerySchema, request.query);
@@ -168,6 +195,7 @@ const paymentSessionRoutes: FastifyPluginAsync = async (fastify) => {
   // GET /v1/payment-sessions/:id
   fastify.get('/:id', {
     onRequest: [fastify.authenticate, fastify.requirePermission('read')],
+    schema: getPaymentSessionRouteSchema,
   }, async (request, reply) => {
     try {
       const { id } = request.params as { id: string };
@@ -200,13 +228,15 @@ const paymentSessionRoutes: FastifyPluginAsync = async (fastify) => {
   // PATCH /v1/payment-sessions/:id
   fastify.patch('/:id', {
     onRequest: [fastify.authenticate, fastify.requirePermission('write')],
+    schema: updatePaymentSessionRouteSchema,
   }, async (request, reply) => {
     try {
       const { id } = request.params as { id: string };
       const userId = request.currentUser!.id;
 
-      // Validate request body
-      const updates = validateBody(updatePaymentSessionSchema, request.body);
+      // Validate request body using internal schema (includes status for
+      // server-side state transitions guarded by blockchain verification).
+      const updates = validateBody(internalUpdateSchema, request.body);
 
       const paymentService = new PaymentService(fastify.prisma);
 
@@ -430,6 +460,7 @@ const paymentSessionRoutes: FastifyPluginAsync = async (fastify) => {
 
   // GET /v1/payment-sessions/:id/events (SSE)
   fastify.get('/:id/events', {
+    schema: paymentSessionEventsRouteSchema,
     config: {
       rateLimit: {
         max: 10,

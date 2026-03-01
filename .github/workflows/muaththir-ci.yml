@@ -22,14 +22,16 @@ jobs:
         working-directory: products/muaththir/apps/api
     steps:
       - uses: actions/checkout@v6
+      - uses: pnpm/action-setup@v4
+        with:
+          version: 10
       - uses: actions/setup-node@v4
         with:
           node-version: ${{ env.NODE_VERSION }}
-          cache: npm
-          cache-dependency-path: products/muaththir/apps/api/package-lock.json
-      - run: npm ci
-      - run: npx prisma generate
-      - run: npx tsc --noEmit
+          cache: pnpm
+      - run: pnpm install --frozen-lockfile
+      - run: pnpm exec prisma generate
+      - run: pnpm exec tsc --noEmit
 
   api-test:
     name: API - Tests
@@ -57,15 +59,17 @@ jobs:
       NODE_ENV: test
     steps:
       - uses: actions/checkout@v6
+      - uses: pnpm/action-setup@v4
+        with:
+          version: 10
       - uses: actions/setup-node@v4
         with:
           node-version: ${{ env.NODE_VERSION }}
-          cache: npm
-          cache-dependency-path: products/muaththir/apps/api/package-lock.json
-      - run: npm ci
-      - run: npx prisma generate
-      - run: npx prisma migrate deploy
-      - run: npm test
+          cache: pnpm
+      - run: pnpm install --frozen-lockfile
+      - run: pnpm exec prisma generate
+      - run: pnpm exec prisma migrate deploy
+      - run: pnpm test
 
   web-build:
     name: Web - Build
@@ -75,13 +79,15 @@ jobs:
         working-directory: products/muaththir/apps/web
     steps:
       - uses: actions/checkout@v6
+      - uses: pnpm/action-setup@v4
+        with:
+          version: 10
       - uses: actions/setup-node@v4
         with:
           node-version: ${{ env.NODE_VERSION }}
-          cache: npm
-          cache-dependency-path: products/muaththir/apps/web/package-lock.json
-      - run: npm ci
-      - run: npm run build
+          cache: pnpm
+      - run: pnpm install --frozen-lockfile
+      - run: pnpm run build
     env:
       NEXT_PUBLIC_API_URL: http://localhost:5005
 
@@ -93,13 +99,15 @@ jobs:
         working-directory: products/muaththir/apps/web
     steps:
       - uses: actions/checkout@v6
+      - uses: pnpm/action-setup@v4
+        with:
+          version: 10
       - uses: actions/setup-node@v4
         with:
           node-version: ${{ env.NODE_VERSION }}
-          cache: npm
-          cache-dependency-path: products/muaththir/apps/web/package-lock.json
-      - run: npm ci
-      - run: npm test
+          cache: pnpm
+      - run: pnpm install --frozen-lockfile
+      - run: pnpm test
 
   e2e-test:
     name: E2E - Playwright
@@ -110,22 +118,25 @@ jobs:
         working-directory: products/muaththir/e2e
     steps:
       - uses: actions/checkout@v6
+      - uses: pnpm/action-setup@v4
+        with:
+          version: 10
       - uses: actions/setup-node@v4
         with:
           node-version: ${{ env.NODE_VERSION }}
       - name: Install E2E dependencies
         run: |
           if [ -f "package-lock.json" ]; then
-            npm ci
+            pnpm install --frozen-lockfile
           else
-            npm install
+            pnpm install --frozen-lockfile
           fi
       - name: Install web app dependencies
         working-directory: products/muaththir/apps/web
-        run: npm ci
-      - run: npx playwright install --with-deps chromium
+        run: pnpm install --frozen-lockfile
+      - run: pnpm exec playwright install --with-deps chromium
       - name: Run Playwright tests
-        run: npx playwright test
+        run: pnpm exec playwright test
         env:
           CI: true
           NEXT_PUBLIC_API_URL: http://localhost:5005

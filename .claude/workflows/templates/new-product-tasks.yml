@@ -241,6 +241,12 @@ tasks:
       TRACEABILITY: Map every API endpoint to the FR-XXX / US-XX it serves.
       Include a traceability matrix in architecture.md showing:
       US-XX → FR-XXX → API endpoint → DB table
+
+      SPECKIT PLAN: After completing architecture.md, generate the implementation
+      plan using /speckit.plan methodology:
+      Read and follow: .specify/templates/commands/plan.md
+      Read constitution: .specify/memory/constitution.md
+      Output plan to: products/{PRODUCT}/docs/plan.md
     agent: "architect"
     depends_on: ["PRD-01"]
     story_ids: ["ALL — maps PRD stories to architecture"]
@@ -269,6 +275,9 @@ tasks:
       - name: "Traceability Matrix"
         type: "section"
         description: "US-XX → FR-XXX → endpoint → table mapping in architecture.md"
+      - name: "Implementation Plan"
+        type: "document"
+        path: "products/{PRODUCT}/docs/plan.md"
     context_output: ""
     parallel_ok: false
     checkpoint: true
@@ -283,6 +292,53 @@ tasks:
       - "Tech stack confirmed and documented"
       - "Traceability matrix included: US → FR → endpoint → table"
       - "Contains >= 2 Mermaid diagrams (C4 context + container minimum)"
+      - "plan.md generated via speckit.plan methodology"
+      - "plan.md maps every US-XX and FR-XXX to implementation sections"
+    status: "pending"
+
+  - id: "TASKS-01"
+    name: "Generate Agent Task List"
+    description: |
+      Generate a dependency-ordered, agent-assignable task list from the
+      implementation plan using /speckit.tasks methodology:
+      Read and follow: .specify/templates/commands/tasks.md
+      Read constitution: .specify/memory/constitution.md
+      Input: products/{PRODUCT}/docs/plan.md and products/{PRODUCT}/docs/specs/{PRODUCT}-foundation.md
+      Output: products/{PRODUCT}/docs/tasks.md
+
+      Break the plan into tasks with:
+      - Task IDs, descriptions, assigned agents
+      - depends_on lists (dependency order)
+      - Story IDs and requirement IDs (from spec)
+      - TDD ordering enforced: test tasks before implementation tasks
+      - parallel_ok flags for foundation tasks
+    agent: "orchestrator"
+    depends_on: ["ARCH-01"]
+    story_ids: ["ALL — derives tasks from all PRD stories"]
+    requirement_ids: ["ALL — every requirement becomes traceable tasks"]
+    epic: "EP-{PRODUCT}-INCEPTION"
+    consumes:
+      - name: "Implementation Plan"
+        required_from_task: "ARCH-01"
+      - name: "Feature Specification"
+        required_from_task: "SPEC-01"
+    produces:
+      - name: "Agent Task List"
+        type: "document"
+        path: "products/{PRODUCT}/docs/tasks.md"
+    context_output: ""
+    parallel_ok: false
+    checkpoint: false
+    priority: "critical"
+    estimated_time_minutes: 30
+    acceptance_criteria:
+      - "Every plan section maps to at least one task"
+      - "All tasks have assigned agent roles"
+      - "TDD ordering: test tasks precede implementation tasks"
+      - "Dependencies correctly reflect execution order"
+      - "Parallel opportunities flagged (parallel_ok: true)"
+      - "Story IDs and requirement IDs populated per task"
+      - "Output written to products/{PRODUCT}/docs/tasks.md"
     status: "pending"
 
   # ============================================================================
@@ -301,7 +357,7 @@ tasks:
       TRACEABILITY: Include [NFR-INFRA] in commits. CI pipeline must
       enforce traceability checks (see .githooks/commit-msg).
     agent: "devops-engineer"
-    depends_on: ["ARCH-01"]
+    depends_on: ["TASKS-01"]
     story_ids: []
     requirement_ids: ["NFR-INFRA"]
     epic: "EP-{PRODUCT}-FOUNDATION"
@@ -345,7 +401,7 @@ tasks:
       Every commit must include [US-XX] or [FR-XXX]. Test names must
       reference acceptance criteria: test('[US-01][AC-1] user can register', ...).
     agent: "backend-engineer"
-    depends_on: ["ARCH-01"]
+    depends_on: ["TASKS-01"]
     story_ids: ["{FOUNDATION_STORY_IDS}"]
     requirement_ids: ["{FOUNDATION_REQUIREMENT_IDS}"]
     epic: "EP-{PRODUCT}-FOUNDATION"
@@ -396,7 +452,7 @@ tasks:
       TRACEABILITY: Link to UI stories from PRD. Every commit must include
       [US-XX] or [FR-XXX]. Test names must reference acceptance criteria.
     agent: "frontend-engineer"
-    depends_on: ["ARCH-01"]
+    depends_on: ["TASKS-01"]
     story_ids: ["{FOUNDATION_STORY_IDS}"]
     requirement_ids: ["{FOUNDATION_REQUIREMENT_IDS}"]
     epic: "EP-{PRODUCT}-FOUNDATION"

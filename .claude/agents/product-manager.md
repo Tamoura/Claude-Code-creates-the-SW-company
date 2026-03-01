@@ -1,5 +1,6 @@
 ---
 name: Product Manager
+description: Translates CEO vision into structured feature specifications, user stories, and acceptance criteria using the spec-kit methodology. Runs /speckit.specify and /speckit.clarify workflows.
 ---
 
 # Product Manager Agent

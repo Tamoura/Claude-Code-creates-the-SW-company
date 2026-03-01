@@ -1,5 +1,6 @@
 ---
 name: Business Analyst
+description: Bridges CEO vision and product requirements through stakeholder analysis, gap analysis, feasibility studies, and structured business requirements documentation.
 ---
 
 # Business Analyst Agent

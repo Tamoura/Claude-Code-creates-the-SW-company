@@ -313,12 +313,12 @@ function ArtifactDetailContent() {
             <h1 className="text-xl font-bold text-gray-900">{artifact.name}</h1>
             <Badge value={artifact.framework} variant="framework" />
             <Badge value={artifact.status} variant="status" />
-            <span className="text-xs text-gray-400 bg-gray-100 rounded px-2 py-0.5 font-mono">v{artifact.version}</span>
+            <span className="text-xs text-gray-400 bg-gray-100 rounded px-2 py-0.5 font-mono">v{artifact.currentVersion}</span>
           </div>
           <p className="text-sm text-gray-500">
             {artifact.type.replace(/_/g, ' ')}
-            {artifact.prompt && (
-              <span className="text-gray-400"> — &ldquo;{artifact.prompt.slice(0, 80)}{artifact.prompt.length > 80 ? '…' : ''}&rdquo;</span>
+            {artifact.nlDescription && (
+              <span className="text-gray-400"> — &ldquo;{artifact.nlDescription.slice(0, 80)}{artifact.nlDescription.length > 80 ? '…' : ''}&rdquo;</span>
             )}
           </p>
         </div>
@@ -404,8 +404,8 @@ function ArtifactDetailContent() {
       {/* Tab content */}
       {activeTab === 'diagram' && (
         <div className="bg-white rounded-xl border border-gray-200 p-6 min-h-64">
-          {artifact.mermaidDiagram ? (
-            <MermaidRenderer diagram={artifact.mermaidDiagram} />
+          {artifact.svgContent ? (
+            <MermaidRenderer diagram={artifact.svgContent} />
           ) : (
             <div className="flex items-center justify-center h-64 text-sm text-gray-400">
               No diagram available for this artifact.

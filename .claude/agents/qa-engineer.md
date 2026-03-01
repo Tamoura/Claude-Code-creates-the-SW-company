@@ -1,5 +1,6 @@
 ---
 name: QA Engineer
+description: Ensures product quality through comprehensive test strategies, E2E Playwright suites, dynamic test generation, and the Testing Gate before every release checkpoint.
 ---
 
 # QA Engineer Agent

@@ -1,20 +1,13 @@
 import { useState } from 'react';
-import { codeSnippet, apiKey } from '../../data/dashboard-mock';
+import { codeSnippet } from '../../data/dashboard-mock';
 
 export default function DeveloperIntegration() {
   const [codeCopied, setCodeCopied] = useState(false);
-  const [keyCopied, setKeyCopied] = useState(false);
 
   const copyCode = async () => {
     await navigator.clipboard.writeText(codeSnippet);
     setCodeCopied(true);
     setTimeout(() => setCodeCopied(false), 2000);
-  };
-
-  const copyKey = async () => {
-    await navigator.clipboard.writeText(apiKey);
-    setKeyCopied(true);
-    setTimeout(() => setKeyCopied(false), 2000);
   };
 
   return (
@@ -72,18 +65,21 @@ export default function DeveloperIntegration() {
       </div>
 
       <div className="mt-4">
-        <div className="text-sm text-text-muted mb-2">Live API Key</div>
+        <div className="text-sm text-text-muted mb-2">API Key</div>
         <div className="flex items-center gap-3">
-          <code className="px-3 py-1.5 bg-code-bg border border-card-border rounded text-sm text-accent-green font-mono">
-            {apiKey}
+          <code className="px-3 py-1.5 bg-code-bg border border-card-border rounded text-sm text-text-muted font-mono">
+            sk_live_••••••••••••••••
           </code>
-          <button
-            onClick={copyKey}
+          <a
+            href="/dashboard/api-keys"
             className="px-3 py-1.5 text-xs font-medium text-text-primary bg-accent-blue rounded hover:bg-blue-600 transition-colors"
           >
-            {keyCopied ? 'Copied!' : 'Copy'}
-          </button>
+            Manage Keys
+          </a>
         </div>
+        <p className="text-xs text-text-muted mt-1">
+          Generate and manage API keys in the API Keys section.
+        </p>
       </div>
     </div>
   );

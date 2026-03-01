@@ -34,7 +34,7 @@ function TitleSlide({ slide, accentColor }: { slide: TitleSlideData; accentColor
         <h1 className="text-7xl font-bold text-white mb-6 tracking-tight">
           {slide.title}
         </h1>
-        <p className="text-2xl text-gray-300 mb-8 leading-relaxed">
+        <p className="text-2xl text-slate-300 mb-8 leading-relaxed">
           {slide.subtitle}
         </p>
         <div
@@ -61,7 +61,7 @@ function TextSlide({ slide, accentColor }: { slide: TextSlideData; accentColor: 
         <h2 className="text-5xl font-bold text-white mb-6 tracking-tight">
           {slide.heading}
         </h2>
-        <p className="text-2xl text-gray-300 mb-10 leading-relaxed max-w-3xl">
+        <p className="text-2xl text-slate-300 mb-10 leading-relaxed max-w-3xl">
           {slide.statement}
         </p>
 
@@ -81,7 +81,7 @@ function TextSlide({ slide, accentColor }: { slide: TextSlideData; accentColor: 
                   style={{ backgroundColor: accentColor }}
                 />
               )}
-              <p className="text-lg text-gray-300 leading-relaxed">{item}</p>
+              <p className="text-lg text-slate-300 leading-relaxed">{item}</p>
             </div>
           ))}
         </div>

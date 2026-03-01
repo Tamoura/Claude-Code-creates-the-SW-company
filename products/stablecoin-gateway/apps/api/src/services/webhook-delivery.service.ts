@@ -7,6 +7,7 @@
  * All public API methods remain identical to preserve consumer imports.
  */
 
+import crypto from 'crypto';
 import { PrismaClient, WebhookStatus } from '@prisma/client';
 import { logger } from '../utils/logger.js';
 import { WebhookCircuitBreakerService, RedisLike } from './webhook-circuit-breaker.service.js';
@@ -115,7 +116,7 @@ export class WebhookDeliveryService {
     }
 
     const payload: WebhookPayload = {
-      id: `evt_${Date.now()}_${Math.random().toString(36).substring(7)}`,
+      id: `evt_${crypto.randomUUID()}`,
       type: eventType,
       created_at: new Date().toISOString(),
       data,
@@ -185,43 +186,64 @@ export class WebhookDeliveryService {
   async processQueue(concurrencyLimit = 10): Promise<void> {
     const now = new Date();
 
-    const deliveries: any[] = await this.prisma.$queryRaw`
-      SELECT
-        wd.id,
-        wd.endpoint_id as "endpointId",
-        wd.event_type as "eventType",
-        wd.resource_id as "resourceId",
-        wd.payload,
-        wd.attempts,
-        wd.status,
-        wd.last_attempt_at as "lastAttemptAt",
-        wd.next_attempt_at as "nextAttemptAt",
-        we.id as "endpoint.id",
-        we.url as "endpoint.url",
-        we.secret as "endpoint.secret",
-        we.user_id as "endpoint.userId"
-      FROM webhook_deliveries wd
-      INNER JOIN webhook_endpoints we ON wd.endpoint_id = we.id
-      WHERE (
-        wd.status = 'PENDING'
-        OR (
-          wd.status = 'FAILED'
-          AND wd.next_attempt_at <= ${now}
-          AND wd.attempts < ${this.maxRetries}
+    // Claim deliveries inside a transaction so that FOR UPDATE SKIP LOCKED
+    // row locks are effective. We mark claimed rows as IN_PROGRESS inside
+    // the transaction, then process them outside to avoid holding the
+    // transaction open during HTTP delivery (which can be slow).
+    const claimedDeliveries = await this.prisma.$transaction(async (tx) => {
+      const deliveries: any[] = await tx.$queryRaw`
+        SELECT
+          wd.id,
+          wd.endpoint_id as "endpointId",
+          wd.event_type as "eventType",
+          wd.resource_id as "resourceId",
+          wd.payload,
+          wd.attempts,
+          wd.status,
+          wd.last_attempt_at as "lastAttemptAt",
+          wd.next_attempt_at as "nextAttemptAt",
+          we.id as "endpoint.id",
+          we.url as "endpoint.url",
+          we.secret as "endpoint.secret",
+          we.user_id as "endpoint.userId"
+        FROM webhook_deliveries wd
+        INNER JOIN webhook_endpoints we ON wd.endpoint_id = we.id
+        WHERE (
+          wd.status = 'PENDING'
+          OR (
+            wd.status = 'FAILED'
+            AND wd.next_attempt_at <= ${now}
+            AND wd.attempts < ${this.maxRetries}
+          )
         )
-      )
-      ORDER BY wd.next_attempt_at ASC NULLS FIRST
-      LIMIT ${concurrencyLimit}
-      FOR UPDATE SKIP LOCKED
-    `;
+        ORDER BY wd.next_attempt_at ASC NULLS FIRST
+        LIMIT ${concurrencyLimit}
+        FOR UPDATE OF wd SKIP LOCKED
+      `;
 
-    if (deliveries.length === 0) {
+      if (deliveries.length === 0) {
+        return [];
+      }
+
+      // Mark claimed rows so other workers skip them even after
+      // this transaction commits.
+      const claimedIds = deliveries.map((d) => d.id);
+      await tx.$executeRaw`
+        UPDATE webhook_deliveries
+        SET status = 'DELIVERING'
+        WHERE id = ANY(${claimedIds}::text[])
+      `;
+
+      return deliveries;
+    });
+
+    if (claimedDeliveries.length === 0) {
       return;
     }
 
-    logger.info('Processing webhook queue', { count: deliveries.length });
+    logger.info('Processing webhook queue', { count: claimedDeliveries.length });
 
-    const transformedDeliveries = deliveries.map((d) => ({
+    const transformedDeliveries = claimedDeliveries.map((d: any) => ({
       id: d.id,
       endpointId: d.endpointId,
       eventType: d.eventType,

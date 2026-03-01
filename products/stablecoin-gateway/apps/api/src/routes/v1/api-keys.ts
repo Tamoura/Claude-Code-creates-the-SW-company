@@ -4,11 +4,16 @@ import { createApiKeySchema, listApiKeysQuerySchema, validateBody, validateQuery
 import { generateApiKey, hashApiKey, getApiKeyPrefix } from '../../utils/crypto.js';
 import { AppError, ApiKeyResponse } from '../../types/index.js';
 import { logger } from '../../utils/logger.js';
+import {
+  createApiKeyRouteSchema, listApiKeysRouteSchema,
+  getApiKeyRouteSchema, deleteApiKeyRouteSchema,
+} from '../../schemas/api-keys.js';
 
 const apiKeyRoutes: FastifyPluginAsync = async (fastify) => {
   // POST /v1/api-keys - Create new API key (requires write permission)
   fastify.post('/', {
     onRequest: [fastify.authenticate, fastify.requirePermission('write')],
+    schema: createApiKeyRouteSchema,
   }, async (request, reply) => {
     try {
       const body = validateBody(createApiKeySchema, request.body);
@@ -68,6 +73,7 @@ const apiKeyRoutes: FastifyPluginAsync = async (fastify) => {
   // GET /v1/api-keys - List user's API keys (paginated)
   fastify.get('/', {
     onRequest: [fastify.authenticate],
+    schema: listApiKeysRouteSchema,
   }, async (request, reply) => {
     try {
       const query = validateQuery(listApiKeysQuerySchema, request.query);
@@ -124,6 +130,7 @@ const apiKeyRoutes: FastifyPluginAsync = async (fastify) => {
   // GET /v1/api-keys/:id - Get specific API key
   fastify.get('/:id', {
     onRequest: [fastify.authenticate],
+    schema: getApiKeyRouteSchema,
   }, async (request, reply) => {
     try {
       const { id } = request.params as { id: string };
@@ -159,6 +166,7 @@ const apiKeyRoutes: FastifyPluginAsync = async (fastify) => {
   // DELETE /v1/api-keys/:id - Revoke/delete API key (requires write permission)
   fastify.delete('/:id', {
     onRequest: [fastify.authenticate, fastify.requirePermission('write')],
+    schema: deleteApiKeyRouteSchema,
   }, async (request, reply) => {
     try {
       const { id } = request.params as { id: string };
