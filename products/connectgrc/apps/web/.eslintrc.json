@@ -1,4 +1,8 @@
 {
   "root": true,
-  "extends": "next/core-web-vitals"
+  "extends": [
+    "next/core-web-vitals",
+    "@connectsw/eslint-config/frontend"
+  ],
+  "ignorePatterns": [".next/", "node_modules/", "out/", "coverage/"]
 }

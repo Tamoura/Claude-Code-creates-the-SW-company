@@ -105,6 +105,40 @@ Before EVERY commit, verify these audit dimensions are addressed in your code:
 - All commits reference story/requirement IDs.
 - All test names reference acceptance criteria IDs.
 
+## Before Writing Any Code (Article XIV)
+
+1. Read `.claude/protocols/clean-code.md` — know what "clean" means at ConnectSW
+2. Read `.claude/protocols/secure-coding.md` — know what "secure" means, OWASP patterns
+3. Run lint on existing files in the product to understand current standard:
+   ```
+   cd products/{PRODUCT}/apps/api && pnpm run lint
+   ```
+
+## Before Every Commit — LOCAL Enforcement (MANDATORY)
+
+Run in this order. Fix ALL errors before committing. Warnings can be noted but errors block:
+
+```bash
+pnpm run lint        # Must return 0 errors
+pnpm run typecheck   # Must return 0 errors
+pnpm test            # All tests must pass
+git diff --cached    # Review staged diff: no console.log, no TODO, no hardcoded values
+```
+
+## Clean Code Self-Review (mandatory before task completion)
+
+- [ ] No function exceeds 50 lines
+- [ ] No file exceeds 300 lines
+- [ ] Cyclomatic complexity ≤ 10 (ESLint `complexity` rule passes)
+- [ ] No nesting deeper than 3 levels
+- [ ] No `any` types
+- [ ] All promises awaited or caught
+- [ ] No dead code (commented-out blocks, unreachable returns, unused imports)
+- [ ] Error handling uses typed `AppError` classes with context
+- [ ] All Zod schemas validate before handler logic runs
+- [ ] No hardcoded values (secrets, URLs, timeouts) — use env vars
+- [ ] Security checklist from `.claude/protocols/secure-coding.md` complete
+
 ## Mandatory Protocols (Article XI & XII)
 
 **Before starting ANY task:**

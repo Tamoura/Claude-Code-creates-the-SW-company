@@ -187,9 +187,16 @@ jobs:
             echo "::warning::No E2E tests found for connectgrc. Add e2e/ directory with Playwright tests."
           fi
 
+  code-review-gate:
+    name: Code Review Gate
+    needs: [test-api, test-web, lint]
+    uses: ./.github/workflows/code-review-gate.yml
+    with:
+      product: connectgrc
+
   quality-gate:
     name: Quality Gate
-    needs: [test-api, test-web, lint, security, e2e]
+    needs: [test-api, test-web, lint, security, e2e, code-review-gate]
     runs-on: ubuntu-latest
     if: always()
     steps:

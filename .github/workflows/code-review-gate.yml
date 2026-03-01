@@ -1,0 +1,110 @@
+name: Code Review Gate
+
+# Reusable workflow — called by product CI workflows after tests pass.
+# Checks whether a Code Reviewer agent report exists for the PR and
+# blocks merge if any P0 or CRITICAL issues were found.
+#
+# Usage in product CI:
+#   code-review-gate:
+#     needs: [test-api, test-web, lint]
+#     uses: ./.github/workflows/code-review-gate.yml
+#     with:
+#       product: connectgrc
+#
+# The Code Reviewer agent must have been run before the PR is ready for merge.
+# If no report exists, the gate warns but does NOT block (advisory for new PRs).
+# If a FAIL verdict report exists, the gate blocks with exit code 1.
+
+on:
+  workflow_call:
+    inputs:
+      product:
+        description: 'Product name (e.g., connectgrc, connectin, stablecoin-gateway)'
+        required: true
+        type: string
+
+jobs:
+  check-code-review-verdict:
+    name: Code Review Gate (${{ inputs.product }})
+    runs-on: ubuntu-latest
+    if: github.event_name == 'pull_request'
+    steps:
+      - uses: actions/checkout@v4
+
+      - name: Check for code review report
+        id: check-report
+        run: |
+          REPORT_DIR="products/${{ inputs.product }}/docs/quality-reports"
+
+          # Use find to locate reports — safer than ls with globs
+          REPORT=$(find "$REPORT_DIR" -name "code-review-*.md" -type f 2>/dev/null | sort -r | head -1)
+
+          if [ -z "$REPORT" ]; then
+            echo "::warning::No code review report found in $REPORT_DIR"
+            echo "::warning::Run the Code Reviewer agent before marking this PR ready."
+            echo "verdict=missing" >> "$GITHUB_OUTPUT"
+            exit 0
+          fi
+          echo "Found code review report: $REPORT"
+
+          # Extract verdict line — must be one of: PASS, PASS-WITH-CONDITIONS, FAIL
+          VERDICT=$(grep -E "^## Verdict:" "$REPORT" | head -1 | sed 's/## Verdict: //')
+          echo "Verdict: $VERDICT"
+          echo "verdict=$VERDICT" >> "$GITHUB_OUTPUT"
+
+          # Check for P0 or CRITICAL findings regardless of verdict line
+          if grep -qE "\bP0\b|CRITICAL" "$REPORT"; then
+            P0_LINES=$(grep -nE "\bP0\b|CRITICAL" "$REPORT" | head -5)
+            echo "::error::Code review report contains P0/CRITICAL issues:"
+            echo "${P0_LINES}"
+            echo "Fix all P0/CRITICAL issues before merging."
+            exit 1
+          fi
+
+          if [ "$VERDICT" = "FAIL" ]; then
+            echo "::error::Code Reviewer returned FAIL verdict. Fix all P0/P1 issues before merging."
+            echo "Report: $REPORT"
+            exit 1
+          fi
+
+          if [ "$VERDICT" = "PASS-WITH-CONDITIONS" ]; then
+            echo "::warning::Code Reviewer returned PASS-WITH-CONDITIONS. P1 issues logged as backlog tasks."
+            P1_LINES=$(grep -nE "\bP1\b" "$REPORT" | head -5)
+            echo "P1 issues:"
+            echo "${P1_LINES}"
+            exit 0
+          fi
+
+          echo "Code review gate: PASS (verdict: $VERDICT)"
+
+      - name: Comment verdict on PR
+        if: github.event_name == 'pull_request'
+        uses: actions/github-script@v7
+        with:
+          script: |
+            const verdict = '${{ steps.check-report.outputs.verdict }}';
+            const product = '${{ inputs.product }}';
+
+            const icons = {
+              'PASS': '✅',
+              'PASS-WITH-CONDITIONS': '⚠️',
+              'FAIL': '❌',
+              'missing': '🔍',
+            };
+
+            const messages = {
+              'PASS': 'Code review passed — no P0/P1 issues.',
+              'PASS-WITH-CONDITIONS': 'Code review passed with conditions — P1 issues logged as backlog tasks.',
+              'FAIL': 'Code review FAILED — fix P0/P1 issues before merging.',
+              'missing': 'No code review report found. Run the Code Reviewer agent before marking this PR ready.',
+            };
+
+            const icon = icons[verdict] || '❓';
+            const message = messages[verdict] || `Unknown verdict: ${verdict}`;
+
+            await github.rest.issues.createComment({
+              owner: context.repo.owner,
+              repo: context.repo.repo,
+              issue_number: context.issue.number,
+              body: `## Code Review Gate — ${product}\n\n${icon} ${message}`,
+            });
