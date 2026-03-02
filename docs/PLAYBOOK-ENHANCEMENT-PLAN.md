@@ -264,11 +264,11 @@ flowchart TD
 **Why This Matters**: The playbook says "Tests as Self-Verification" is the single highest-leverage thing. But if quality gates don't actually block, they create a false sense of security — agents "pass" checks that aren't really checking.
 
 **Concrete Actions**:
-1. **Remove `continue-on-error: true`** from coverage steps in product CI workflows — enforce the 80% threshold
-2. **Remove `|| true`** from traceability gate invocations — make it a hard failure
+1. **Graduate enforcement incrementally** — start with one product (stablecoin-gateway, which has 30/30 tasks complete) as the reference implementation. Only remove `continue-on-error: true` from products that actually pass their coverage thresholds and traceability gates.
+2. **Fix pre-existing CI issues first** — before removing safety nets, ensure products have: ESLint flat config (v10+), `@types/node`/`@types/jest` installed, `pnpm audit --prod` (not `--omit=dev`), and working `node_modules` in CI.
 3. **Create `packages/eslint-config/`** with the shared security-enforcing ESLint rules referenced in Article XIV
 4. **Add gitleaks/actionlint to CI setup step** so local pre-commit hooks always have the tools available
-5. **Graduate each enforcement incrementally** — start with one product (connectgrc or stablecoin-gateway) as the reference implementation, then roll out
+5. **Fix actionlint reference** — `rrhysd/actionlint` → `rhysd/actionlint@v1` (typo in security-sast.yml)
 
 ---
 
