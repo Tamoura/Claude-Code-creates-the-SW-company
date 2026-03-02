@@ -620,10 +620,10 @@ erDiagram
 
 ---
 
-## Open Questions
+## Resolved Clarifications (CLARIFY-01)
 
-| # | Question | Impact if Unresolved | Owner | Status |
-|---|----------|---------------------|-------|--------|
-| 1 | [NEEDS CLARIFICATION] Does Anthropic's CC BY-NC-SA 4.0 license permit commercial use of framework-derived assessment content, or only the educational materials? | Blocks product launch if commercial use is prohibited; may need custom licensing agreement | CEO / Legal | Open |
-| 2 | [NEEDS CLARIFICATION] What is the minimum viable question count per dimension for a statistically reliable assessment? Proposed: 8 questions per dimension (32 total) — is this sufficient? | Affects assessment length, completion rate, and scoring validity | Architect / QA | Open |
-| 3 | [NEEDS CLARIFICATION] Should the self-report scores for unobservable behaviors be weighted equally with observed-behavior scores in the overall fluency score, or displayed as a separate sub-score? | Affects scoring algorithm design and profile display | Product Manager / CEO | Open |
+| # | Question | Resolution | Decided By | Date |
+|---|----------|-----------|------------|------|
+| 1 | Does Anthropic's CC BY-NC-SA 4.0 license permit commercial use of framework-derived assessment content? | **Proceed assuming commercial OK.** The CC BY-NC-SA license covers educational materials, not the concept of assessing the 4 dimensions. Our assessment questions are original work. Seek formal Anthropic clarification in parallel but do not block development. | CEO | 2026-03-02 |
+| 2 | What is the minimum viable question count per dimension? | **8 questions per dimension (32 total, ~25 minutes).** Provides adequate statistical reliability for prevalence-weighted scoring across 11 observable + 13 unobservable behaviors while keeping the assessment under 30 minutes to maximize completion rate. | CEO | 2026-03-02 |
+| 3 | Should self-report scores be combined with observed-behavior scores or kept separate? | **Separate sub-scores.** Display "Observed Fluency Score" and "Self-Reported Fluency Score" independently. More transparent, avoids mixing validated behavioral measurement with self-assessment, and is easier to defend scientifically. | CEO | 2026-03-02 |
