@@ -25,6 +25,7 @@ All ConnectSW scripts organized by namespace. Use this registry to find the righ
 | Update gate pass/fail metrics | `update-gate-metrics.sh` | quality |
 | Update agent memory after task | `post-task-update.sh` | memory |
 | Update agent experience file | `update-agent-memory.sh` | memory |
+| Look up relevant past experiences for a task | `memory/experience-lookup.sh` | memory |
 | Log a decision to decision log | `log-decision.sh` | memory |
 | Extract patterns from codebase | `extract-patterns.sh` | memory |
 | Backfill history from past work | `backfill-history.sh` | memory |
@@ -80,6 +81,7 @@ Scripts for managing the agent memory system.
 | `log-decision.sh` | Log an architectural decision | `<product> "<title>" "<rationale>"` |
 | `extract-patterns.sh` | Extract reusable patterns from code | `<product>` |
 | `backfill-history.sh` | Populate memory from past git history | `<product>` |
+| `memory/experience-lookup.sh` | Search agent experiences for task-relevant history | `<agent_name> "<task_keywords>"` |
 
 ### `reporting` — Dashboards & Metrics
 Scripts for generating reports, dashboards, and aggregating metrics.

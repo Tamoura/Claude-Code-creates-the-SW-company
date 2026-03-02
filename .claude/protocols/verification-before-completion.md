@@ -24,6 +24,33 @@ These unverified claims waste downstream time — the QA Engineer, Code Reviewer
 
 Before marking ANY task as complete, agents MUST complete all five steps in order. No step may be skipped.
 
+### Step 0: Context Health Check (Pre-Gate)
+
+Before entering the verification steps, assess your own context health. Context degradation causes missed checks and false completions.
+
+```
+CONTEXT CHECK:
+
+1. File count: Estimate how many files you have read this session.
+   - <= 15 files: Proceed normally.
+   - > 15 files: FLAG — you may be losing attention on earlier context.
+     Review the original task objective and acceptance criteria before continuing.
+
+2. Task clarity: Can you state the original task objective in one sentence
+   without re-reading it? If not, re-read the task description now.
+
+3. Degradation signals: Have you experienced any of these?
+   - Re-reading files you already read earlier
+   - Losing track of which requirements are met vs. remaining
+   - Repeating work you already completed
+   - Forgetting conventions established earlier in the session
+
+   If YES to any: Write your current progress and remaining work to
+   products/{PRODUCT}/.claude/scratch/{TASK-ID}-handoff.md, then use the
+   Agent tool to spawn a sub-agent with clean context. Pass the scratch
+   file path as the state handoff. Do NOT continue with degraded context.
+```
+
 ### Step 1: Identify the Verification Command
 
 Before claiming completion, explicitly state what command or action will prove the work is correct.

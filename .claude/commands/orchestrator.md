@@ -137,6 +137,11 @@ Follow Red-Green-Refactor strictly for ALL implementation tasks:
 
 Include `tdd_evidence` in your completion report: `[{test_commit, impl_commit, test_file, impl_file}]`
 
+## Context Management
+- If you have read more than 10 files, pause and assess whether you still need all the context you have accumulated. Re-read the task objective to anchor yourself.
+- Write intermediate results to `products/{PRODUCT}/.claude/scratch/` before your context becomes overloaded — do not wait until you forget what you have done.
+- If your task requires reading >20 files, stop and split into sub-tasks via the Agent tool. Pass state via a scratch file, not via prompt repetition.
+
 ## Constraints
 - Work in: `products/{PRODUCT}/`
 - Stage specific files only (never `git add .` or `git add -A`)

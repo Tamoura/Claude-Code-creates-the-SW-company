@@ -163,7 +163,7 @@ jobs:
       - uses: actions/checkout@v4
 
       - name: Run actionlint
-        uses: rrhysd/actionlint@latest
+        uses: rhysd/actionlint@v1
         with:
           flags: "-color"
         continue-on-error: true
