@@ -442,10 +442,17 @@ function patchSvgTheme(svgString: string, theme: 'light' | 'dark'): string {
   const labelFill  = isDark ? '#1e293b' : '#eff6ff';
   const activeFill = isDark ? '#1e3a5f' : '#bfdbfe';
 
-  // Set background on SVG root, removing any pre-existing inline style
+  // Append background to the SVG root's existing style — do NOT remove existing
+  // style properties (Mermaid sets max-width, height, overflow there; stripping
+  // them breaks diagram sizing and causes nodes/text to overlap).
   const withBg = svgString.replace(/<svg([^>]*)>/, (_m, attrs) => {
-    const cleaned = attrs.replace(/\sstyle="[^"]*"/g, '').replace(/\sstyle='[^']*'/g, '');
-    return `<svg${cleaned} style="background:${bg}">`;
+    if (/\sstyle="[^"]*"/.test(attrs)) {
+      return `<svg${attrs.replace(/(\sstyle=")([^"]*)(")/,  `$1$2;background:${bg}$3`)}>`;
+    }
+    if (/\sstyle='[^']*'/.test(attrs)) {
+      return `<svg${attrs.replace(/(\sstyle=')([^']*)(')/,  `$1$2;background:${bg}$3`)}>`;
+    }
+    return `<svg${attrs} style="background:${bg}">`;
   });
 
   // Sequence-diagram element overrides (targeted, won't affect flowcharts)

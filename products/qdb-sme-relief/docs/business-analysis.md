@@ -183,26 +183,28 @@ mindmap
 ### 3.3 Power/Interest Grid
 
 ```mermaid
-quadrantChart
-    title Stakeholder Power vs Interest Grid
-    x-axis Low Interest --> High Interest
-    y-axis Low Power --> High Power
-    quadrant-1 Manage Closely
-    quadrant-2 Keep Satisfied
-    quadrant-3 Monitor
-    quadrant-4 Keep Informed
-    "NAS/Tawtheeq": [0.25, 0.95]
-    MOCI: [0.25, 0.90]
-    "QDB Board": [0.35, 0.95]
-    "QDB Relationship Manager": [0.90, 0.80]
-    "Credit Risk Officer": [0.70, 0.85]
-    "SME Owner": [0.95, 0.60]
-    "QDB Operations Team": [0.85, 0.55]
-    "Compliance Officer": [0.75, 0.60]
-    "Ministry of Labor": [0.30, 0.75]
-    "External Auditors": [0.40, 0.50]
-    "IT Systems Team": [0.65, 0.45]
-    "SME Employees": [0.60, 0.25]
+flowchart LR
+    subgraph MC["Manage Closely — High Power, High Interest"]
+        rm["QDB Relationship Manager"]
+        cro["Credit Risk Officer"]
+        smeo["SME Owner"]
+        ops["QDB Operations Team"]
+        comp["Compliance Officer"]
+    end
+    subgraph KS["Keep Satisfied — High Power, Low Interest"]
+        nas["NAS / Tawtheeq"]
+        moci_n["MOCI"]
+        board["QDB Board"]
+        mol["Ministry of Labor"]
+        ext["External Auditors"]
+    end
+    subgraph KI["Keep Informed — Low Power, High Interest"]
+        it["IT Systems Team"]
+        emp["SME Employees"]
+    end
+    subgraph MO["Monitor — Low Power, Low Interest"]
+        mo1["No stakeholders in this quadrant"]
+    end
 ```
 
 ---
@@ -570,29 +572,30 @@ Note: Specific cap figures require QDB Credit Risk sign-off. These are placehold
 ### 8.2 Gap Visualization
 
 ```mermaid
-quadrantChart
-    title Capability Gap: Priority vs Implementation Effort
-    x-axis Low Effort --> High Effort
-    y-axis Lower Priority --> Higher Priority
-    quadrant-1 Implement First - Quick Wins
-    quadrant-2 Strategic Investment
-    quadrant-3 Defer
-    quadrant-4 Plan Carefully
-    "NRGP List Check": [0.15, 0.92]
-    "Audit Trail": [0.20, 0.90]
-    "CRM Case Creation": [0.45, 0.90]
-    "Authentication NAS": [0.40, 0.88]
-    "Eligibility Engine": [0.45, 0.88]
-    "MOCI Integration": [0.40, 0.85]
-    "Document Upload": [0.40, 0.82]
-    "Document Storage": [0.25, 0.78]
-    "Status Visibility": [0.25, 0.70]
-    "Bilingual UI": [0.45, 0.65]
-    "Management Dashboard": [0.45, 0.60]
-    "WPS Integration": [0.80, 0.88]
-    "Duplicate Detection": [0.20, 0.45]
-    "Program Lifecycle": [0.25, 0.40]
-    "Configurable Criteria": [0.75, 0.35]
+flowchart LR
+    subgraph SI["Strategic Investment — High Priority, Low Effort"]
+        si1["NRGP List Check"]
+        si2["Audit Trail"]
+        si3["CRM Case Creation"]
+        si4["Authentication — NAS"]
+        si5["Eligibility Engine"]
+        si6["MOCI Integration"]
+        si7["Document Upload"]
+        si8["Document Storage"]
+        si9["Status Visibility"]
+        si10["Bilingual UI"]
+        si11["Management Dashboard"]
+    end
+    subgraph QW["Implement First — High Priority, High Effort"]
+        qw1["WPS Integration"]
+    end
+    subgraph DE["Defer — Low Priority, Low Effort"]
+        de1["Duplicate Detection"]
+        de2["Program Lifecycle"]
+    end
+    subgraph PC["Plan Carefully — Low Priority, High Effort"]
+        pc1["Configurable Criteria"]
+    end
 ```
 
 **Reading the chart**: WPS Integration is the only P0 capability with high effort — it requires government API negotiation and data sharing agreements. All other P0 items are medium-to-low effort individually. The project's critical path runs through WPS and CRM integration confirmation.
