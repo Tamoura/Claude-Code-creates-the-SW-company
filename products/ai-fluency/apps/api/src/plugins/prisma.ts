@@ -36,7 +36,7 @@ const prismaPlugin: FastifyPluginAsync = async (fastify) => {
   });
 
   // Log slow queries for performance monitoring
-  prisma.$on('query', (e) => {
+  prisma.$on('query', (e: { query: string; params: string; duration: number; target: string }) => {
     if (e.duration >= SLOW_QUERY_THRESHOLD_MS) {
       logger.warn('Slow query detected', {
         query: e.query,

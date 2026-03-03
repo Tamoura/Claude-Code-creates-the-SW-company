@@ -118,7 +118,7 @@ export async function buildApp(): Promise<FastifyInstance> {
       const detail =
         error instanceof ZodError
           ? error.issues.map((i) => `${i.path.join('.')}: ${i.message}`).join('; ')
-          : error.message;
+          : (error as { message?: string }).message ?? 'Validation error';
       return reply
         .code(400)
         .send(buildProblemDetails('validation-error', 400, detail, request.id));
@@ -132,7 +132,7 @@ export async function buildApp(): Promise<FastifyInstance> {
           buildProblemDetails(
             'validation-error',
             400,
-            error.message || 'Request validation failed',
+            (error as { message?: string }).message || 'Request validation failed',
             request.id
           )
         );
