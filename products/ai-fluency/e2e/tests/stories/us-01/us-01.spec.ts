@@ -26,6 +26,7 @@ import { test, expect } from '@playwright/test';
 import { createTestUser, loginViaUI } from '../../../helpers/auth.js';
 
 const API_BASE = 'http://localhost:5014';
+const SCREENSHOTS = 'test-results/screenshots';
 
 /**
  * Check if auth API endpoints are available.
@@ -63,6 +64,9 @@ test('[US-01][AC-1] authenticated user can navigate to /assessment [REQUIRES-AUT
   // Navigate to assessment page
   await page.goto('/assessment');
   await page.waitForLoadState('networkidle');
+
+  // Screenshot: assessment page initial state when authenticated
+  await page.screenshot({ path: `${SCREENSHOTS}/US-01-AC1-assessment-page-authenticated.png`, fullPage: true });
 
   // Should be on /assessment and not redirected to /login
   await expect(page).not.toHaveURL(/\/login/);
@@ -109,6 +113,9 @@ test('[US-01][AC-2] assessment page displays 4 dimension names [REQUIRES-AUTH-AP
   await page.goto('/assessment');
   await page.waitForLoadState('networkidle');
 
+  // Screenshot: assessment page showing 4D framework dimensions
+  await page.screenshot({ path: `${SCREENSHOTS}/US-01-AC2-assessment-4d-dimensions.png`, fullPage: true });
+
   // The 4D framework dimensions must be visible
   const expectedDimensions = [
     'Conceptual',
@@ -147,6 +154,9 @@ test('[US-01][AC-3] assessment page has a CTA to start the assessment [REQUIRES-
     .or(page.getByRole('link', { name: /start|begin/i }));
 
   await expect(startCTA).toBeVisible();
+
+  // Screenshot: assessment page with start CTA visible
+  await page.screenshot({ path: `${SCREENSHOTS}/US-01-AC3-assessment-start-cta.png`, fullPage: true });
 });
 
 // ─────────────────────────────────────────────────────────────────────────────

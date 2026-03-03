@@ -23,6 +23,7 @@ import { test, expect } from '@playwright/test';
 import { createTestUser, loginViaUI } from '../../../helpers/auth.js';
 
 const API_BASE = 'http://localhost:5014';
+const SCREENSHOTS = 'test-results/screenshots';
 
 /**
  * Check if auth API endpoints are available.
@@ -52,6 +53,9 @@ test('[US-02][AC-1] authenticated user can access /profile [REQUIRES-AUTH-API]',
 
   await page.goto('/profile');
   await page.waitForLoadState('networkidle');
+
+  // Screenshot: profile page for authenticated user
+  await page.screenshot({ path: `${SCREENSHOTS}/US-02-AC1-profile-authenticated.png`, fullPage: true });
 
   // Must be on /profile, not redirected to /login
   await expect(page).not.toHaveURL(/\/login/);
@@ -84,6 +88,9 @@ test('[US-02][AC-2] profile page references the 4-dimension framework [REQUIRES-
 
   await page.goto('/profile');
   await page.waitForLoadState('networkidle');
+
+  // Screenshot: profile showing 4D framework context
+  await page.screenshot({ path: `${SCREENSHOTS}/US-02-AC2-profile-4d-context.png`, fullPage: true });
 
   // Profile page should mention the 4D dimensions in some form
   // (may show empty state if no assessment taken yet)
