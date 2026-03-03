@@ -422,6 +422,52 @@ function WireframeBlock({ code, dark }: { code: string; dark: boolean }) {
 }
 
 // ---------------------------------------------------------------------------
+// patchSvgTheme — post-processes Mermaid's SVG output after rendering.
+// Two-layer approach: themeVariables handle the first pass; this function
+// injects CSS class overrides as a second layer to catch sequence diagram
+// elements (messageText, actorLine, note, loopText, activation boxes) that
+// don't fully honour themeVariables in Mermaid v11.
+// Also explicitly sets background on the SVG root element.
+// ---------------------------------------------------------------------------
+
+function patchSvgTheme(svgString: string, theme: 'light' | 'dark'): string {
+  const isDark = theme === 'dark';
+  const bg         = isDark ? '#0f172a' : '#ffffff';
+  const text       = isDark ? '#e2e8f0' : '#1e293b';
+  const arrow      = isDark ? '#94a3b8' : '#475569';
+  const actorFill  = isDark ? '#1e3a5f' : '#dbeafe';
+  const actorText  = isDark ? '#e2e8f0' : '#1e3a5f';
+  const accent     = isDark ? '#3b82f6' : '#2563eb';
+  const noteFill   = isDark ? '#1e293b' : '#f0f9ff';
+  const labelFill  = isDark ? '#1e293b' : '#eff6ff';
+  const activeFill = isDark ? '#1e3a5f' : '#bfdbfe';
+
+  // Set background on SVG root, removing any pre-existing inline style
+  const withBg = svgString.replace(/<svg([^>]*)>/, (_m, attrs) => {
+    const cleaned = attrs.replace(/\sstyle="[^"]*"/g, '').replace(/\sstyle='[^']*'/g, '');
+    return `<svg${cleaned} style="background:${bg}">`;
+  });
+
+  // Sequence-diagram element overrides (targeted, won't affect flowcharts)
+  const css = `<style>
+    .actor rect,.actor-top rect,.actor-bottom rect{fill:${actorFill}!important;stroke:${accent}!important}
+    .actor text,.actor-top text,.actor-bottom text{fill:${actorText}!important}
+    .actor-line{stroke:${arrow}!important}
+    .messageLine0,.messageLine1{stroke:${arrow}!important}
+    .messageText{fill:${text}!important}
+    .note rect{fill:${noteFill}!important;stroke:${accent}!important}
+    .note text,.noteText{fill:${text}!important}
+    .labelBox{fill:${labelFill}!important;stroke:${accent}!important}
+    .labelText,text.labelText{fill:${actorText}!important}
+    .loopText,text.loopText{fill:${text}!important}
+    .loopLine{stroke:${arrow}!important}
+    .activation0,.activation1,.activation2{fill:${activeFill}!important;stroke:${accent}!important}
+  </style>`;
+
+  return withBg.replace('</svg>', `${css}</svg>`);
+}
+
+// ---------------------------------------------------------------------------
 // MermaidDiagram — renders a single Mermaid chart via the serialized queue
 // ---------------------------------------------------------------------------
 
@@ -435,7 +481,7 @@ function MermaidDiagram({ chart, theme }: { chart: string; theme: 'light' | 'dar
 
     enqueueRender(chart, theme).then(
       (renderedSvg) => {
-        if (!cancelled) { setSvg(renderedSvg); setError(''); }
+        if (!cancelled) { setSvg(patchSvgTheme(renderedSvg, theme)); setError(''); }
       },
       (err) => {
         if (!cancelled) setError(String(err));
@@ -463,10 +509,14 @@ function MermaidDiagram({ chart, theme }: { chart: string; theme: 'light' | 'dar
   }
 
   return (
-    <div className="my-6 rounded-lg border border-gray-700 bg-gray-900 p-4 overflow-x-auto">
+    <div className={`my-6 rounded-xl border p-4 overflow-x-auto ${
+      theme === 'dark'
+        ? 'border-slate-700 bg-slate-900'
+        : 'border-slate-200 bg-white shadow-sm'
+    }`}>
       <div
         ref={containerRef}
-        className="flex justify-center [&>svg]:max-w-full [&>svg]:rounded-lg"
+        className="flex justify-center [&>svg]:max-w-full [&>svg]:rounded-lg [&>svg]:h-auto"
         dangerouslySetInnerHTML={{ __html: svg }}
       />
     </div>
