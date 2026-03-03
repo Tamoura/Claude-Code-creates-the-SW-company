@@ -949,48 +949,48 @@ flowchart TD
     START([SME Owner visits QDB SME Relief Portal]) --> LANG[Select language: Arabic or English]
     LANG --> CLICK[Click 'Apply for Relief']
     CLICK --> NAS_REDIRECT[Redirect to NAS / Tawtheeq login]
-    NAS_REDIRECT -->|Auth failure| AUTH_FAIL[Display error + QDB Operations contact\nNo session created]
+    NAS_REDIRECT -->|Auth failure| AUTH_FAIL["Display error + QDB Operations contact<br/>No session created"]
     NAS_REDIRECT -->|No Tawtheeq account| NO_ACCOUNT[Display NAS registration guide]
-    NAS_REDIRECT -->|NAS unavailable| NAS_DOWN[Display: Try again in 30 min\nQDB Operations contact]
-    NAS_REDIRECT -->|Auth success| SESSION_START[Portal creates session\nQID received from NAS]
+    NAS_REDIRECT -->|NAS unavailable| NAS_DOWN["Display: Try again in 30 min<br/>QDB Operations contact"]
+    NAS_REDIRECT -->|Auth success| SESSION_START["Portal creates session<br/>QID received from NAS"]
     SESSION_START --> CR_ENTRY[SME enters 10-digit CR number]
     CR_ENTRY --> MOCI_QUERY[System queries MOCI API]
-    MOCI_QUERY -->|CR not found| CR_NOT_FOUND[Display: CR not found, link to MOCI\nRetry entry]
+    MOCI_QUERY -->|CR not found| CR_NOT_FOUND["Display: CR not found, link to MOCI<br/>Retry entry"]
     MOCI_QUERY -->|CR inactive| CR_INACTIVE[Display: CR inactive, application blocked]
-    MOCI_QUERY -->|MOCI unavailable| MOCI_DOWN[Display: Verification unavailable\nSaved progress, retry later]
-    MOCI_QUERY -->|CR found and active| CR_FOUND[Display verified company data\nRead-only review by applicant]
-    CR_FOUND --> SIGNATORY_CHECK{Is authenticated QID\nan authorized signatory?}
-    SIGNATORY_CHECK -->|Not authorized via MOCI| AUTH_BLOCK[Block: Not authorized\nQDB Operations contact]
-    SIGNATORY_CHECK -->|MOCI data gap| DECLARATION[Prompt statutory declaration\nAudit trail records declaration]
-    SIGNATORY_CHECK -->|Authorized| ELIG_ENGINE[Run Eligibility Engine\nEC-001 through EC-007]
+    MOCI_QUERY -->|MOCI unavailable| MOCI_DOWN["Display: Verification unavailable<br/>Saved progress, retry later"]
+    MOCI_QUERY -->|CR found and active| CR_FOUND["Display verified company data<br/>Read-only review by applicant"]
+    CR_FOUND --> SIGNATORY_CHECK{"Is authenticated QID<br/>an authorized signatory?"}
+    SIGNATORY_CHECK -->|Not authorized via MOCI| AUTH_BLOCK["Block: Not authorized<br/>QDB Operations contact"]
+    SIGNATORY_CHECK -->|MOCI data gap| DECLARATION["Prompt statutory declaration<br/>Audit trail records declaration"]
+    SIGNATORY_CHECK -->|Authorized| ELIG_ENGINE["Run Eligibility Engine<br/>EC-001 through EC-007"]
     DECLARATION --> ELIG_ENGINE
-    ELIG_ENGINE -->|Any criterion fails| INELIGIBLE[Display: Ineligible\nPer-criterion reason codes in Arabic + English\nEmail notification sent]
-    ELIG_ENGINE -->|All criteria pass| ELIGIBLE_RESULT[Display: Eligible\nAuto-advance to NRGP check]
-    ELIGIBLE_RESULT --> DEDUP_CHECK{Duplicate application\nfor this CR in this period?}
-    DEDUP_CHECK -->|Duplicate found| DUPLICATE[Display: Existing case reference\nNo new application]
-    DEDUP_CHECK -->|No duplicate| NRGP_LOOKUP[NRGP Beneficiary List Lookup\nby CR number]
-    NRGP_LOOKUP -->|CR found in NRGP list| AUTO_CRM[Create auto_nrgp CRM case\nCase ID returned]
-    NRGP_LOOKUP -->|CR not in NRGP list| MANUAL_CRM[Create manual_review CRM case\nCase ID returned]
-    AUTO_CRM --> DOC_UPLOAD[Proceed to Document Upload\nCase ID displayed as reference]
+    ELIG_ENGINE -->|Any criterion fails| INELIGIBLE["Display: Ineligible<br/>Per-criterion reason codes in Arabic + English<br/>Email notification sent"]
+    ELIG_ENGINE -->|All criteria pass| ELIGIBLE_RESULT["Display: Eligible<br/>Auto-advance to NRGP check"]
+    ELIGIBLE_RESULT --> DEDUP_CHECK{"Duplicate application<br/>for this CR in this period?"}
+    DEDUP_CHECK -->|Duplicate found| DUPLICATE["Display: Existing case reference<br/>No new application"]
+    DEDUP_CHECK -->|No duplicate| NRGP_LOOKUP["NRGP Beneficiary List Lookup<br/>by CR number"]
+    NRGP_LOOKUP -->|CR found in NRGP list| AUTO_CRM["Create auto_nrgp CRM case<br/>Case ID returned"]
+    NRGP_LOOKUP -->|CR not in NRGP list| MANUAL_CRM["Create manual_review CRM case<br/>Case ID returned"]
+    AUTO_CRM --> DOC_UPLOAD["Proceed to Document Upload<br/>Case ID displayed as reference"]
     MANUAL_CRM --> DOC_UPLOAD
-    DOC_UPLOAD --> UPLOAD_SALARY[Upload Salary Payment Evidence\nPDF/JPEG/PNG/TIFF up to 10 MB]
-    UPLOAD_SALARY --> UPLOAD_WPS[Upload WPS File\nCSV format]
-    UPLOAD_WPS --> UPLOAD_RENT[Upload Rent Evidence\nOptional - skip if no commercial lease]
+    DOC_UPLOAD --> UPLOAD_SALARY["Upload Salary Payment Evidence<br/>PDF/JPEG/PNG/TIFF up to 10 MB"]
+    UPLOAD_SALARY --> UPLOAD_WPS["Upload WPS File<br/>CSV format"]
+    UPLOAD_WPS --> UPLOAD_RENT["Upload Rent Evidence<br/>Optional - skip if no commercial lease"]
     UPLOAD_RENT --> UPLOAD_COMPANY[Upload CR Copy + Business Licenses]
-    UPLOAD_COMPANY --> DOC_VALIDATE{Document Validation\nFormat, size, virus scan}
-    DOC_VALIDATE -->|Any document fails| DOC_ERROR[Display per-document error\nRetry upload\nSubmit button disabled]
+    UPLOAD_COMPANY --> DOC_VALIDATE{"Document Validation<br/>Format, size, virus scan"}
+    DOC_VALIDATE -->|Any document fails| DOC_ERROR["Display per-document error<br/>Retry upload<br/>Submit button disabled"]
     DOC_ERROR --> DOC_UPLOAD
-    DOC_VALIDATE -->|All required docs pass| WPS_VAL[System runs WPS Validation\nAPI query + file cross-check]
-    WPS_VAL -->|WPS passes - no discrepancy| WPS_PASS[WPS: Validated\nConfirmation shown]
-    WPS_VAL -->|WPS discrepancy >10%| WPS_FLAG[Warning: WPS discrepancy\nCase flagged for manual review\nNot blocked]
-    WPS_VAL -->|WPS unavailable| WPS_FALLBACK[Warning: WPS unavailable\nManual salary verification flag set]
+    DOC_VALIDATE -->|All required docs pass| WPS_VAL["System runs WPS Validation<br/>API query + file cross-check"]
+    WPS_VAL -->|WPS passes - no discrepancy| WPS_PASS["WPS: Validated<br/>Confirmation shown"]
+    WPS_VAL -->|"WPS discrepancy >10%"| WPS_FLAG["Warning: WPS discrepancy<br/>Case flagged for manual review<br/>Not blocked"]
+    WPS_VAL -->|WPS unavailable| WPS_FALLBACK["Warning: WPS unavailable<br/>Manual salary verification flag set"]
     WPS_PASS --> SUBMIT
     WPS_FLAG --> SUBMIT
     WPS_FALLBACK --> SUBMIT
-    SUBMIT[Applicant clicks Submit Application] --> AUDIT_WRITE[Audit trail written\nAll steps, decisions, sources logged]
-    AUDIT_WRITE --> CRM_UPDATE[CRM case updated with\ndocument IDs and WPS result]
-    CRM_UPDATE --> CONFIRM[Display: Application submitted\nCase ID, expected timeline, status URL]
-    CONFIRM --> STATUS_TRACK([Applicant monitors status via portal\nEmail + SMS notifications on changes])
+    SUBMIT[Applicant clicks Submit Application] --> AUDIT_WRITE["Audit trail written<br/>All steps, decisions, sources logged"]
+    AUDIT_WRITE --> CRM_UPDATE["CRM case updated with<br/>document IDs and WPS result"]
+    CRM_UPDATE --> CONFIRM["Display: Application submitted<br/>Case ID, expected timeline, status URL"]
+    CONFIRM --> STATUS_TRACK(["Applicant monitors status via portal<br/>Email + SMS notifications on changes"])
 
     style START fill:#ffa94d,color:#000
     style STATUS_TRACK fill:#51cf66,color:#000
@@ -1014,32 +1014,32 @@ flowchart TD
 
 ```mermaid
 stateDiagram-v2
-    [*] --> DRAFT : Applicant starts session\nAuthenticated via NAS
+    [*] --> DRAFT : Applicant starts session; authenticated via NAS
 
-    DRAFT --> COMPANY_VERIFIED : CR lookup succeeds\nSignatory confirmed
+    DRAFT --> COMPANY_VERIFIED : CR lookup succeeds; signatory confirmed
 
-    DRAFT --> ABANDONED : Session expires\nor applicant leaves
+    DRAFT --> ABANDONED : Session expires or applicant leaves
 
     COMPANY_VERIFIED --> INELIGIBLE : Eligibility check fails
     COMPANY_VERIFIED --> ELIGIBLE : Eligibility check passes
 
-    INELIGIBLE --> [*] : Notification sent\nApplication closed
+    INELIGIBLE --> [*] : Notification sent; application closed
 
-    ELIGIBLE --> DOCS_PENDING : CRM case created\n(auto or manual path)
+    ELIGIBLE --> DOCS_PENDING : CRM case created (auto or manual path)
 
-    DOCS_PENDING --> DOCS_SUBMITTED : All required documents\nuploaded and validated
+    DOCS_PENDING --> DOCS_SUBMITTED : All required documents uploaded and validated
 
-    DOCS_SUBMITTED --> WPS_VALIDATED : WPS validation passes\nNo discrepancy
+    DOCS_SUBMITTED --> WPS_VALIDATED : WPS validation passes; no discrepancy
 
-    DOCS_SUBMITTED --> WPS_FLAGGED : WPS discrepancy >10%\nor WPS unavailable
+    DOCS_SUBMITTED --> WPS_FLAGGED : WPS discrepancy or WPS unavailable
 
-    WPS_VALIDATED --> SUBMITTED : Applicant clicks Submit\nAudit trail complete
+    WPS_VALIDATED --> SUBMITTED : Applicant clicks Submit; audit trail complete
 
-    WPS_FLAGGED --> SUBMITTED : Applicant clicks Submit\nManual review flag set on CRM
+    WPS_FLAGGED --> SUBMITTED : Applicant clicks Submit; manual review flag set
 
-    SUBMITTED --> UNDER_REVIEW : QDB RM picks up case\n(manual_review path only)
+    SUBMITTED --> UNDER_REVIEW : QDB RM picks up case (manual path only)
 
-    SUBMITTED --> APPROVED : Auto path — no manual review\nNRGP pre-vetted
+    SUBMITTED --> APPROVED : Auto path — NRGP pre-vetted; no manual review
 
     UNDER_REVIEW --> APPROVED : QDB RM approves
     UNDER_REVIEW --> REJECTED : QDB RM rejects
@@ -1048,9 +1048,9 @@ stateDiagram-v2
 
     REJECTED --> [*] : Rejection notification sent
 
-    DISBURSED --> [*] : Disbursement confirmed\nSME receives relief funds
+    DISBURSED --> [*] : Disbursement confirmed; SME receives relief funds
 
-    ABANDONED --> [*] : Application data purged\nafter 30 days
+    ABANDONED --> [*] : Application data purged after 30 days
 ```
 
 ---
@@ -1071,7 +1071,7 @@ sequenceDiagram
     Portal->>Portal: Generate PKCE code_verifier + code_challenge
     Portal->>Portal: Generate state parameter (CSRF token)
     Portal-->>SME: Redirect to NAS Authorization Endpoint
-    Note over Portal,NAS: GET /authorize?client_id=...&redirect_uri=...&scope=openid+qid&code_challenge=...&state=...
+    Note over Portal,NAS: PKCE Authorization Request (code_challenge + state)
 
     SME->>NAS: Authenticate with Tawtheeq (QID + biometric/OTP)
     NAS-->>SME: Authentication challenge presented
@@ -1184,7 +1184,7 @@ sequenceDiagram
     Portal->>AuditLog: Log: eligibility_result {cr, eligible, criteria_results, criteria_snapshot, timestamp}
 
     alt Ineligible
-        Portal-->>SME: Display: Ineligible\nPer-criterion reasons in Arabic + English
+        Portal-->>SME: Display: Ineligible - per-criterion reasons in Arabic + English
         Portal->>Portal: Send ineligibility email notification
     end
 
@@ -1202,18 +1202,18 @@ sequenceDiagram
         alt Exact CR match found
             NRGP-->>Portal: {match: true, nrgp_list_version: "v3", matched_entry: {...}}
             Portal->>AuditLog: Log: nrgp_check {cr, match: true, list_version}
-            Portal->>CRM: POST /api/data/v9.2/qdb_disbursement_cases\n{type: "auto_nrgp", status: "pending_disbursement", cr, company_name, ...}
+            Portal->>CRM: POST /api/data/v9.2/qdb_disbursement_cases {type: "auto_nrgp", status: "pending_disbursement", cr, ...}
             CRM-->>Portal: {case_id: "CAS-2026-00412", created_at: ...}
             Portal->>AuditLog: Log: crm_case_created {case_id, type: auto_nrgp, cr}
-            Portal-->>SME: Display: NRGP listed — auto-disbursement path\nCase ID: CAS-2026-00412
+            Portal-->>SME: Display: NRGP listed - auto-disbursement path, Case ID: CAS-2026-00412
 
         else No CR match (or fuzzy match flagged)
             NRGP-->>Portal: {match: false}
             Portal->>AuditLog: Log: nrgp_check {cr, match: false, list_version}
-            Portal->>CRM: POST /api/data/v9.2/qdb_disbursement_cases\n{type: "manual_review", status: "pending_review", cr, company_name, ...}
+            Portal->>CRM: POST /api/data/v9.2/qdb_disbursement_cases {type: "manual_review", status: "pending_review", cr, ...}
             CRM-->>Portal: {case_id: "CAS-2026-00413", created_at: ...}
             Portal->>AuditLog: Log: crm_case_created {case_id, type: manual_review, cr}
-            Portal-->>SME: Display: New applicant — QDB review required\nCase ID: CAS-2026-00413\nExpected: 5 business days
+            Portal-->>SME: Display: New applicant - QDB review required, Case ID: CAS-2026-00413, ETA: 5 business days
 
         else CRM API unavailable
             Portal->>Portal: Queue case creation for retry (exponential back-off)
@@ -1236,10 +1236,10 @@ sequenceDiagram
 
     Portal->>Portal: Parse uploaded WPS CSV file
     Portal->>Portal: Extract: employee_count, monthly_payroll[], payment_dates[]
-    Portal-->>SME: Display WPS file summary:\nEmployee count, Total 90-day payroll, Date range
+    Portal-->>SME: Display WPS file summary: Employee count, Total 90-day payroll, Date range
 
     Portal->>WPS: GET /payroll/{cr_number}?period=last_90_days
-    Note over Portal,WPS: Auth: MOU-secured service account\nData freshness requirement: ≤ 90 days
+    Note over Portal,WPS: Auth: MOU-secured service account (data freshness: 90 days)
 
     alt WPS API responds
         WPS-->>Portal: {employee_count, monthly_records: [{month, total_amount, payment_date}]}
@@ -1252,7 +1252,7 @@ sequenceDiagram
 
         else Discrepancy > 10%
             Portal->>AuditLog: Log: wps_validation {cr, result: discrepancy_flag, discrepancy_pct: X%, api_amount, declared_amount}
-            Portal-->>SME: Display warning (non-blocking):\n"Discrepancy detected. Case flagged for QDB review."
+            Portal-->>SME: Display warning (non-blocking): Discrepancy detected. Case flagged for QDB review.
             Portal->>Portal: Set wps_discrepancy flag on CRM case note
         end
 
@@ -1278,36 +1278,36 @@ sequenceDiagram
 
 ```mermaid
 flowchart TD
-    START_UPLOAD([Applicant arrives at Document Upload step\nCase ID already assigned]) --> UPLOAD_GRID[Display upload grid:\nSalary Evidence, WPS File, Rent Evidence, Company Docs]
+    START_UPLOAD(["Applicant arrives at Document Upload step<br/>Case ID already assigned"]) --> UPLOAD_GRID["Display upload grid:<br/>Salary Evidence, WPS File, Rent Evidence, Company Docs"]
 
     UPLOAD_GRID --> ADD_FILE[Applicant selects or drags a file]
-    ADD_FILE --> FORMAT_CHECK{File format check:\nPDF, JPEG, PNG, TIFF, CSV?}
-    FORMAT_CHECK -->|Invalid format| FORMAT_ERR[Display inline error:\nSupported formats listed\nFile rejected]
+    ADD_FILE --> FORMAT_CHECK{"File format check:<br/>PDF, JPEG, PNG, TIFF, CSV?"}
+    FORMAT_CHECK -->|Invalid format| FORMAT_ERR["Display inline error:<br/>Supported formats listed<br/>File rejected"]
     FORMAT_ERR --> ADD_FILE
 
-    FORMAT_CHECK -->|Valid format| SIZE_CHECK{File size check:\n≤ 10 MB per file?\n≤ 50 MB total?}
-    SIZE_CHECK -->|Exceeds limit| SIZE_ERR[Display inline error:\nFile too large\nCompress or contact QDB]
+    FORMAT_CHECK -->|Valid format| SIZE_CHECK{"File size check:<br/>10 MB per file max?<br/>50 MB total max?"}
+    SIZE_CHECK -->|Exceeds limit| SIZE_ERR["Display inline error:<br/>File too large<br/>Compress or contact QDB"]
     SIZE_ERR --> ADD_FILE
 
-    SIZE_CHECK -->|Within limits| VIRUS_SCAN[Upload to staging area\nVirus scan runs]
-    VIRUS_SCAN -->|Infected| QUARANTINE[Quarantine file\nDisplay: File failed security check\nApplicant notified\nAudit event logged]
+    SIZE_CHECK -->|Within limits| VIRUS_SCAN["Upload to staging area<br/>Virus scan runs"]
+    VIRUS_SCAN -->|Infected| QUARANTINE["Quarantine file<br/>Display: File failed security check<br/>Applicant notified<br/>Audit event logged"]
     QUARANTINE --> ADD_FILE
 
-    VIRUS_SCAN -->|Clean| ENCRYPT[Encrypt file AES-256\nStore to object storage\n{case_id/doc_type/timestamp_filename}]
-    ENCRYPT --> CONFIRM_FILE[Display file in upload grid:\nFilename, size, green checkmark\nUpload timestamp]
+    VIRUS_SCAN -->|Clean| ENCRYPT["Encrypt file AES-256<br/>Store to object storage"]
+    ENCRYPT --> CONFIRM_FILE["Display file in upload grid:<br/>Filename, size, green checkmark<br/>Upload timestamp"]
 
-    CONFIRM_FILE --> MORE_FILES{More documents\nto upload?}
+    CONFIRM_FILE --> MORE_FILES{"More documents<br/>to upload?"}
     MORE_FILES -->|Yes| ADD_FILE
-    MORE_FILES -->|No| CHECK_REQUIRED{All required documents\nuploaded and validated?}
+    MORE_FILES -->|No| CHECK_REQUIRED{"All required documents<br/>uploaded and validated?"}
 
-    CHECK_REQUIRED -->|Missing required docs| SHOW_MISSING[Highlight missing items in grid\nSubmit button remains disabled]
+    CHECK_REQUIRED -->|Missing required docs| SHOW_MISSING["Highlight missing items in grid<br/>Submit button remains disabled"]
     SHOW_MISSING --> ADD_FILE
 
-    CHECK_REQUIRED -->|All required docs present| SUBMIT_ACTIVE[Submit Application button\nbecomes active]
+    CHECK_REQUIRED -->|All required docs present| SUBMIT_ACTIVE["Submit Application button<br/>becomes active"]
     SUBMIT_ACTIVE --> SUBMIT_CLICK[Applicant clicks Submit]
-    SUBMIT_CLICK --> LINK_CRM[Document IDs linked to CRM case\nvia PATCH /cases/{case_id}]
-    LINK_CRM --> AUDIT_WRITE[Audit event written:\ndocument_uploaded for each file\nchecksum, doc_type, case_id]
-    AUDIT_WRITE --> WPS_VAL_STEP[Trigger WPS Validation\nSee Sequence 6.6]
+    SUBMIT_CLICK --> LINK_CRM["Document IDs linked to CRM case<br/>via PATCH /cases/{case_id}"]
+    LINK_CRM --> AUDIT_WRITE["Audit event written:<br/>document_uploaded for each file<br/>checksum, doc_type, case_id"]
+    AUDIT_WRITE --> WPS_VAL_STEP["Trigger WPS Validation<br/>See Sequence 6.6"]
 
     style START_UPLOAD fill:#339af0,color:#fff
     style QUARANTINE fill:#ff6b6b,color:#fff

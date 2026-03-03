@@ -191,18 +191,18 @@ quadrantChart
     quadrant-2 Keep Satisfied
     quadrant-3 Monitor
     quadrant-4 Keep Informed
-    NAS/Tawtheeq: [0.25, 0.95]
+    "NAS/Tawtheeq": [0.25, 0.95]
     MOCI: [0.25, 0.90]
-    QDB Board: [0.35, 0.95]
-    QDB Relationship Manager: [0.90, 0.80]
-    Credit Risk Officer: [0.70, 0.85]
-    SME Owner: [0.95, 0.60]
-    QDB Operations Team: [0.85, 0.55]
-    Compliance Officer: [0.75, 0.60]
-    Ministry of Labor: [0.30, 0.75]
-    External Auditors: [0.40, 0.50]
-    IT Systems Team: [0.65, 0.45]
-    SME Employees: [0.60, 0.25]
+    "QDB Board": [0.35, 0.95]
+    "QDB Relationship Manager": [0.90, 0.80]
+    "Credit Risk Officer": [0.70, 0.85]
+    "SME Owner": [0.95, 0.60]
+    "QDB Operations Team": [0.85, 0.55]
+    "Compliance Officer": [0.75, 0.60]
+    "Ministry of Labor": [0.30, 0.75]
+    "External Auditors": [0.40, 0.50]
+    "IT Systems Team": [0.65, 0.45]
+    "SME Employees": [0.60, 0.25]
 ```
 
 ---
@@ -273,22 +273,22 @@ flowchart TD
     A([SME Owner Aware of Relief Program]) --> B[Contacts QDB by phone or email]
     B --> C[QDB Operations sends paper/PDF application form]
     C --> D[SME fills out form manually]
-    D --> E[SME collects supporting documents\nSalary evidence, rent receipts, CR copy, licenses]
+    D --> E["SME collects supporting documents<br/>Salary evidence, rent receipts, CR copy, licenses"]
     E --> F[SME submits package by email or in person]
-    F --> G{QDB Operations\nreceives submission}
-    G -->|Incomplete documents| H[QDB requests missing documents\nby email/phone]
+    F --> G{"QDB Operations<br/>receives submission"}
+    G -->|Incomplete documents| H["QDB requests missing documents<br/>by email/phone"]
     H --> E
-    G -->|Complete submission| I[QDB staff manually verify CR# with MOCI\nby phone or portal]
-    I --> J[QDB staff manually check NRGP beneficiary list\nin spreadsheet]
-    J --> K{On NRGP\nlist?}
-    K -->|Yes| L[QDB Relationship Manager reviews\nand approves]
-    K -->|No| M[QDB Credit Risk review\nFull eligibility assessment]
+    G -->|Complete submission| I["QDB staff manually verify CR# with MOCI<br/>by phone or portal"]
+    I --> J["QDB staff manually check NRGP beneficiary list<br/>in spreadsheet"]
+    J --> K{"On NRGP<br/>list?"}
+    K -->|Yes| L["QDB Relationship Manager reviews<br/>and approves"]
+    K -->|No| M["QDB Credit Risk review<br/>Full eligibility assessment"]
     M --> N{Eligible?}
-    N -->|No| O[Rejection letter sent by email/post\nAppeal process unclear]
+    N -->|No| O["Rejection letter sent by email/post<br/>Appeal process unclear"]
     N -->|Yes| L
-    L --> P[Manual entry into Dynamics CRM\nby QDB Operations staff]
-    P --> Q[Disbursement processing begins\nin CRM/banking system]
-    Q --> R[SME notified by phone or email\nNo status portal]
+    L --> P["Manual entry into Dynamics CRM<br/>by QDB Operations staff"]
+    P --> Q["Disbursement processing begins<br/>in CRM/banking system"]
+    Q --> R["SME notified by phone or email<br/>No status portal"]
     R --> S([SME receives funds])
 
     style A fill:#ffa94d,color:#000
@@ -314,32 +314,32 @@ flowchart TD
 flowchart TD
     A([SME Owner Learns of Portal]) --> B[Navigates to QDB SME Relief Portal]
     B --> C[Clicks 'Apply for Relief']
-    C --> D[Tawtheeq / NAS Authentication\nOIDC/SAML redirect]
-    D -->|Auth failed / no account| AUTHFAIL[Guided to NAS registration\nor QDB Operations contact]
+    C --> D["Tawtheeq / NAS Authentication<br/>OIDC/SAML redirect"]
+    D -->|"Auth failed / no account"| AUTHFAIL["Guided to NAS registration<br/>or QDB Operations contact"]
     D -->|Auth success| E[Portal receives QID and NAS identity claim]
     E --> F[SME enters Commercial Registration Number]
-    F --> G[System queries MOCI API\nReturns company name, status, sector, shareholders]
-    G -->|CR not found or inactive| CRERROR[Error shown: CR invalid or inactive\nInstructions to resolve at MOCI]
-    G -->|CR found and active| H{QDB Authorization Check\nIs NAS identity authorized signatory for this CR?}
-    H -->|Not authorized| AUTHZ_FAIL[Error: You are not authorized to apply on behalf of this company\nContact QDB Operations]
-    H -->|Authorized| I[Eligibility Engine evaluates SME against NRGP criteria\nSector, size, WPS enrollment, impact evidence]
-    I -->|Not eligible| INELIGIBLE[Ineligibility result displayed with reasons\nEmail notification sent]
-    I -->|Eligible| J[System checks NRGP beneficiary list\nLookup by CR number]
-    J -->|On NRGP list| K[Auto-disbursement case created in Dynamics CRM\nCase ID returned to portal]
-    J -->|Not on NRGP list| L[Manual review case created in Dynamics CRM\nCase ID returned to portal]
+    F --> G["System queries MOCI API<br/>Returns company name, status, sector, shareholders"]
+    G -->|CR not found or inactive| CRERROR["Error shown: CR invalid or inactive<br/>Instructions to resolve at MOCI"]
+    G -->|CR found and active| H{"QDB Authorization Check<br/>Is NAS identity authorized signatory for this CR?"}
+    H -->|Not authorized| AUTHZ_FAIL["Error: You are not authorized to apply on behalf of this company<br/>Contact QDB Operations"]
+    H -->|Authorized| I["Eligibility Engine evaluates SME against NRGP criteria<br/>Sector, size, WPS enrollment, impact evidence"]
+    I -->|Not eligible| INELIGIBLE["Ineligibility result displayed with reasons<br/>Email notification sent"]
+    I -->|Eligible| J["System checks NRGP beneficiary list<br/>Lookup by CR number"]
+    J -->|On NRGP list| K["Auto-disbursement case created in Dynamics CRM<br/>Case ID returned to portal"]
+    J -->|Not on NRGP list| L["Manual review case created in Dynamics CRM<br/>Case ID returned to portal"]
     K --> M[Applicant proceeds to document upload]
     L --> M
-    M --> N[SME uploads documents\nSalary evidence, Rent evidence, CR copy, Licenses]
-    N --> O{Document validation\nFormat, size, completeness check}
-    O -->|Validation fails| P[Error messages shown per document\nRetry upload]
+    M --> N["SME uploads documents<br/>Salary evidence, Rent evidence, CR copy, Licenses"]
+    N --> O{"Document validation<br/>Format, size, completeness check"}
+    O -->|Validation fails| P["Error messages shown per document<br/>Retry upload"]
     P --> N
-    O -->|Validation passes| Q[System queries WPS API\nValidates salary obligations against payroll data]
-    Q -->|WPS mismatch or query fails| WPSWARN[Warning shown: WPS data discrepancy\nManual review flag set on CRM case]
-    Q -->|WPS validated| R[Application marked complete\nAll documents attached to CRM case]
+    O -->|Validation passes| Q["System queries WPS API<br/>Validates salary obligations against payroll data"]
+    Q -->|WPS mismatch or query fails| WPSWARN["Warning shown: WPS data discrepancy<br/>Manual review flag set on CRM case"]
+    Q -->|WPS validated| R["Application marked complete<br/>All documents attached to CRM case"]
     WPSWARN --> R
-    R --> S[Audit trail entry created\nAll steps, decisions, data sources logged]
-    S --> T[Applicant receives confirmation\nCase ID, expected timeline, status URL]
-    T --> U([SME monitors status via portal\nEmail/SMS notifications on status changes])
+    R --> S["Audit trail entry created<br/>All steps, decisions, data sources logged"]
+    S --> T["Applicant receives confirmation<br/>Case ID, expected timeline, status URL"]
+    T --> U(["SME monitors status via portal<br/>Email/SMS notifications on status changes"])
 
     style A fill:#ffa94d,color:#000
     style U fill:#51cf66,color:#000
@@ -497,19 +497,19 @@ The following criteria define whether an SME qualifies for NRGP relief. These cr
 
 ```mermaid
 flowchart TD
-    START([SME Eligibility Check Starts]) --> C1{C1: Valid active CR\nin Qatar?}
-    C1 -->|No| FAIL1[INELIGIBLE\nReason: No active Qatar CR]
-    C1 -->|Yes| C2{C2: Company registered\nfor 12+ months?}
-    C2 -->|No| FAIL2[INELIGIBLE\nReason: Company too new\nMinimum 12 months operating history]
-    C2 -->|Yes| C3{C3: SME by QDB definition?\nEmployee count or revenue threshold}
-    C3 -->|No - Large enterprise| FAIL3[INELIGIBLE\nReason: Company exceeds SME threshold\nRefer to QDB Corporate Financing]
-    C3 -->|Yes| C4{C4: Active WPS enrollment?\nAt least 1 employee in WPS}
-    C4 -->|No| FAIL4[INELIGIBLE\nReason: No WPS-enrolled employees\nNo payroll obligation to relieve]
-    C4 -->|Yes| C5{C5: Demonstrable impact\nfrom geopolitical situation?\nSector exposure OR revenue decline declaration}
-    C5 -->|No| FAIL5[INELIGIBLE\nReason: No demonstrable impact\nInsufficient evidence of geopolitical effect]
-    C5 -->|Yes| C6{C6: No active QDB loan\nin default or restructuring?}
-    C6 -->|In default| FAIL6[INELIGIBLE\nReason: Existing QDB obligation in default\nRefer to Relationship Manager]
-    C6 -->|No default| ELIGIBLE[ELIGIBLE\nProceed to NRGP List Check]
+    START([SME Eligibility Check Starts]) --> C1{"C1: Valid active CR<br/>in Qatar?"}
+    C1 -->|No| FAIL1["INELIGIBLE<br/>Reason: No active Qatar CR"]
+    C1 -->|Yes| C2{"C2: Company registered<br/>for 12+ months?"}
+    C2 -->|No| FAIL2["INELIGIBLE<br/>Reason: Company too new<br/>Minimum 12 months operating history"]
+    C2 -->|Yes| C3{"C3: SME by QDB definition?<br/>Employee count or revenue threshold"}
+    C3 -->|No - Large enterprise| FAIL3["INELIGIBLE<br/>Reason: Company exceeds SME threshold<br/>Refer to QDB Corporate Financing"]
+    C3 -->|Yes| C4{"C4: Active WPS enrollment?<br/>At least 1 employee in WPS"}
+    C4 -->|No| FAIL4["INELIGIBLE<br/>Reason: No WPS-enrolled employees<br/>No payroll obligation to relieve"]
+    C4 -->|Yes| C5{"C5: Demonstrable impact<br/>from geopolitical situation?<br/>Sector exposure OR revenue decline declaration"}
+    C5 -->|No| FAIL5["INELIGIBLE<br/>Reason: No demonstrable impact<br/>Insufficient evidence of geopolitical effect"]
+    C5 -->|Yes| C6{"C6: No active QDB loan<br/>in default or restructuring?"}
+    C6 -->|In default| FAIL6["INELIGIBLE<br/>Reason: Existing QDB obligation in default<br/>Refer to Relationship Manager"]
+    C6 -->|No default| ELIGIBLE["ELIGIBLE<br/>Proceed to NRGP List Check"]
 
     style START fill:#ffa94d,color:#000
     style ELIGIBLE fill:#51cf66,color:#000
@@ -578,21 +578,21 @@ quadrantChart
     quadrant-2 Strategic Investment
     quadrant-3 Defer
     quadrant-4 Plan Carefully
-    NRGP List Check: [0.15, 0.92]
-    Audit Trail: [0.20, 0.90]
-    CRM Case Creation: [0.45, 0.90]
-    Authentication NAS: [0.40, 0.88]
-    Eligibility Engine: [0.45, 0.88]
-    MOCI Integration: [0.40, 0.85]
-    Document Upload: [0.40, 0.82]
-    Document Storage: [0.25, 0.78]
-    Status Visibility: [0.25, 0.70]
-    Bilingual UI: [0.45, 0.65]
-    Management Dashboard: [0.45, 0.60]
-    WPS Integration: [0.80, 0.88]
-    Duplicate Detection: [0.20, 0.45]
-    Program Lifecycle: [0.25, 0.40]
-    Configurable Criteria: [0.75, 0.35]
+    "NRGP List Check": [0.15, 0.92]
+    "Audit Trail": [0.20, 0.90]
+    "CRM Case Creation": [0.45, 0.90]
+    "Authentication NAS": [0.40, 0.88]
+    "Eligibility Engine": [0.45, 0.88]
+    "MOCI Integration": [0.40, 0.85]
+    "Document Upload": [0.40, 0.82]
+    "Document Storage": [0.25, 0.78]
+    "Status Visibility": [0.25, 0.70]
+    "Bilingual UI": [0.45, 0.65]
+    "Management Dashboard": [0.45, 0.60]
+    "WPS Integration": [0.80, 0.88]
+    "Duplicate Detection": [0.20, 0.45]
+    "Program Lifecycle": [0.25, 0.40]
+    "Configurable Criteria": [0.75, 0.35]
 ```
 
 **Reading the chart**: WPS Integration is the only P0 capability with high effort — it requires government API negotiation and data sharing agreements. All other P0 items are medium-to-low effort individually. The project's critical path runs through WPS and CRM integration confirmation.
@@ -825,13 +825,13 @@ Evidence:
 
 ```mermaid
 graph TD
-    PORTAL[QDB SME Relief Portal] -->|OIDC/SAML| NAS[NAS / Tawtheeq]
+    PORTAL[QDB SME Relief Portal] -->|"OIDC/SAML"| NAS["NAS / Tawtheeq"]
     PORTAL -->|REST API| MOCI[MOCI CR Registry]
-    PORTAL -->|API / File Feed| WPS[WPS System\nMinistry of Labor]
-    PORTAL -->|Dynamics 365 Web API| CRM[Microsoft Dynamics CRM]
-    PORTAL -->|Object Storage API| DOCS[Document Storage\nEncrypted Blob Store]
-    PORTAL -->|Internal DB Query| NRGPLIST[(NRGP Beneficiary List\nPostgreSQL)]
-    PORTAL -->|Internal Write| AUDITLOG[(Audit Log\nPostgreSQL - Immutable)]
+    PORTAL -->|"API / File Feed"| WPS["WPS System<br/>Ministry of Labor"]
+    PORTAL -->|"Dynamics 365 Web API"| CRM[Microsoft Dynamics CRM]
+    PORTAL -->|"Object Storage API"| DOCS["Document Storage<br/>Encrypted Blob Store"]
+    PORTAL -->|"Internal DB Query"| NRGPLIST[("NRGP Beneficiary List<br/>PostgreSQL")]
+    PORTAL -->|"Internal Write"| AUDITLOG[("Audit Log<br/>PostgreSQL - Immutable")]
 
     NAS -.->|QID claim| PORTAL
     MOCI -.->|Company data| PORTAL
@@ -862,7 +862,7 @@ stateDiagram-v2
     Authenticated --> CR_Verified : MOCI lookup success
     CR_Verified --> Ineligible : Eligibility check fails
     CR_Verified --> Eligible : Eligibility check passes
-    Ineligible --> [*] : Application closed\nNotification sent
+    Ineligible --> [*] : Application closed; notification sent
     Eligible --> NRGP_Listed : CR found in NRGP list
     Eligible --> NRGP_Unlisted : CR not in NRGP list
     NRGP_Listed --> Auto_Case : CRM auto-disbursement case created
@@ -872,8 +872,8 @@ stateDiagram-v2
     Docs_Pending --> Docs_Submitted : All documents uploaded and validated
     Docs_Submitted --> WPS_Validated : WPS validation passes
     Docs_Submitted --> WPS_Flagged : WPS discrepancy detected
-    WPS_Validated --> Complete : Audit trail written\nConfirmation sent
-    WPS_Flagged --> Complete : Audit trail written\nManual review flag set
+    WPS_Validated --> Complete : Audit trail written; confirmation sent
+    WPS_Flagged --> Complete : Audit trail written; manual review flag set
     Complete --> Under_Review : QDB reviews (manual path only)
     Complete --> Approved : Auto path — no manual review needed
     Under_Review --> Approved : QDB approves
