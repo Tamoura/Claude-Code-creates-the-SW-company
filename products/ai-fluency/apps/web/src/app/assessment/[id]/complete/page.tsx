@@ -8,7 +8,7 @@ export const metadata: Metadata = {
 };
 
 interface Props {
-  params: { id: string };
+  params: Promise<{ id: string }>;
 }
 
 const dimensionResults = [
@@ -18,7 +18,8 @@ const dimensionResults = [
   { name: 'Collaborative', score: 72 },
 ];
 
-export default function AssessmentCompletePage({ params }: Props) {
+export default async function AssessmentCompletePage({ params }: Props) {
+  const { id } = await params;
   const overallScore = Math.round(
     dimensionResults.reduce((sum, d) => sum + d.score, 0) /
       dimensionResults.length,
@@ -41,7 +42,7 @@ export default function AssessmentCompletePage({ params }: Props) {
             {t('assessment.complete.description')}
           </p>
           <p className="mt-1 text-xs text-gray-400">
-            Session ID: {params.id}
+            Session ID: {id}
           </p>
         </div>
 

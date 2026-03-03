@@ -8,10 +8,11 @@ export const metadata: Metadata = {
 };
 
 interface Props {
-  params: { pathId: string; moduleId: string };
+  params: Promise<{ pathId: string; moduleId: string }>;
 }
 
-export default function ModulePage({ params }: Props) {
+export default async function ModulePage({ params }: Props) {
+  const { pathId, moduleId } = await params;
   return (
     <div className="flex min-h-[calc(100vh-64px)]">
       <Sidebar />
@@ -19,7 +20,7 @@ export default function ModulePage({ params }: Props) {
         <div className="mx-auto max-w-3xl">
           <div className="mb-4">
             <Link
-              href={`/learning/${params.pathId}`}
+              href={`/learning/${pathId}`}
               className="text-sm text-gray-500 hover:text-gray-700 focus:outline-none focus:ring-2 focus:ring-brand-500 rounded"
             >
               &larr; Back to Path
@@ -27,10 +28,10 @@ export default function ModulePage({ params }: Props) {
           </div>
 
           <h1 className="mb-2 text-2xl font-bold text-gray-900 capitalize">
-            {params.moduleId.replace(/-/g, ' ')}
+            {moduleId.replace(/-/g, ' ')}
           </h1>
           <p className="mb-8 text-sm text-gray-500">
-            Path: <span className="capitalize">{params.pathId.replace(/-/g, ' ')}</span>
+            Path: <span className="capitalize">{pathId.replace(/-/g, ' ')}</span>
           </p>
 
           <Card padding="lg" className="mb-6">

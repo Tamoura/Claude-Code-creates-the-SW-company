@@ -281,7 +281,10 @@ jobs:
 
       - name: Run security audit
         if: steps.check.outputs.exists == 'true'
-        run: pnpm audit --audit-level=high --prod
+        run: |
+          PKG_NAME=$(node -p "require('./${{ matrix.app }}/package.json').name")
+          pnpm --filter "$PKG_NAME" audit --audit-level=high --prod
+        working-directory: .
 
   build:
     name: Docker Build Validation

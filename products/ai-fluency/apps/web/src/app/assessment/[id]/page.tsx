@@ -8,10 +8,11 @@ export const metadata: Metadata = {
 };
 
 interface Props {
-  params: { id: string };
+  params: Promise<{ id: string }>;
 }
 
-export default function AssessmentSessionPage({ params }: Props) {
+export default async function AssessmentSessionPage({ params }: Props) {
+  const { id } = await params;
   return (
     <div className="flex min-h-[calc(100vh-64px)] items-center justify-center px-4 py-8">
       <div className="w-full max-w-2xl">
@@ -62,7 +63,7 @@ export default function AssessmentSessionPage({ params }: Props) {
                 >
                   <input
                     type="radio"
-                    name={`question-${params.id}`}
+                    name={`question-${id}`}
                     value={i.toString()}
                     className="mt-0.5 h-4 w-4 accent-brand-600"
                   />

@@ -8,7 +8,7 @@ export const metadata: Metadata = {
 };
 
 interface Props {
-  params: { pathId: string };
+  params: Promise<{ pathId: string }>;
 }
 
 const modules = [
@@ -25,7 +25,8 @@ const typeIcons: Record<string, string> = {
   quiz: '◉',
 };
 
-export default function LearningPathPage({ params }: Props) {
+export default async function LearningPathPage({ params }: Props) {
+  const { pathId } = await params;
   return (
     <div className="flex min-h-[calc(100vh-64px)]">
       <Sidebar />
@@ -41,7 +42,7 @@ export default function LearningPathPage({ params }: Props) {
           </div>
 
           <h1 className="mb-2 text-2xl font-bold text-gray-900 capitalize">
-            {params.pathId.replace(/-/g, ' ')}
+            {pathId.replace(/-/g, ' ')}
           </h1>
           <p className="mb-8 text-gray-600">
             Work through the modules below at your own pace.
@@ -92,7 +93,7 @@ export default function LearningPathPage({ params }: Props) {
                   </p>
                 </div>
                 <Link
-                  href={`/learning/${params.pathId}/modules/${mod.id}`}
+                  href={`/learning/${pathId}/modules/${mod.id}`}
                   className="rounded-lg border border-gray-200 px-3 py-1.5 text-sm font-medium text-gray-700 hover:bg-gray-50 focus:outline-none focus:ring-2 focus:ring-brand-500 focus:ring-offset-2 min-h-[48px] flex items-center transition-colors"
                 >
                   Start

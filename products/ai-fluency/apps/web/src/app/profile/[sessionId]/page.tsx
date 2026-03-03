@@ -8,7 +8,7 @@ export const metadata: Metadata = {
 };
 
 interface Props {
-  params: { sessionId: string };
+  params: Promise<{ sessionId: string }>;
 }
 
 const dimensionResults = [
@@ -18,7 +18,8 @@ const dimensionResults = [
   { name: 'Collaborative', score: 72 },
 ];
 
-export default function SessionResultPage({ params }: Props) {
+export default async function SessionResultPage({ params }: Props) {
+  const { sessionId } = await params;
   const overallScore = Math.round(
     dimensionResults.reduce((sum, d) => sum + d.score, 0) /
       dimensionResults.length,
@@ -42,7 +43,7 @@ export default function SessionResultPage({ params }: Props) {
             Assessment Result
           </h1>
           <p className="mb-8 text-sm text-gray-500">
-            Session: {params.sessionId}
+            Session: {sessionId}
           </p>
 
           <Card padding="lg" className="mb-6 text-center">
