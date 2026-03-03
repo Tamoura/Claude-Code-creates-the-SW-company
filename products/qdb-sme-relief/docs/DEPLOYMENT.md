@@ -84,7 +84,7 @@ graph TD
 
     subgraph "Azure Region: Qatar North"
         subgraph "Application Tier — Azure App Service or AKS"
-            LB["Azure Application Gateway<br/>Layer 7 load balancer<br/>Health probes<br/>SSL termination ("TLS 1.3 min")"]
+            LB["Azure Application Gateway<br/>Layer 7 load balancer<br/>Health probes<br/>SSL termination (TLS 1.3 min)"]
             WEB1["Next.js App<br/>Instance 1<br/>Port 3120<br/>Container: node:20-alpine"]
             WEB2["Next.js App<br/>Instance 2<br/>Auto-scale: CPU > 70%"]
             API1["Fastify API<br/>Instance 1<br/>Port 5014<br/>Container: node:20-alpine"]
@@ -94,11 +94,11 @@ graph TD
         subgraph "Data Tier"
             PG_PRIMARY["Azure Database for PostgreSQL<br/>Flexible Server<br/>General Purpose: 4 vCores 16GB RAM<br/>Storage: 512 GB<br/>High Availability: Zone-redundant"]
             PG_STANDBY["Standby Replica<br/>Same region<br/>Automatic failover < 60s"]
-            REDIS["Azure Cache for Redis<br/>C2 Standard ("6 GB")<br/>HA with replica<br/>TLS 1.3 required"]
+            REDIS["Azure Cache for Redis<br/>C2 Standard (6 GB)<br/>HA with replica<br/>TLS 1.3 required"]
         end
 
         subgraph "Storage Tier"
-            BLOB["Azure Blob Storage<br/>Document container<br/>GRS ("Geo-redundant")<br/>Lifecycle: Archive after 1 year<br/>Retention: 7 years minimum"]
+            BLOB["Azure Blob Storage<br/>Document container<br/>GRS (Geo-redundant)<br/>Lifecycle: Archive after 1 year<br/>Retention: 7 years minimum"]
             KV["Azure Key Vault<br/>Encryption keys<br/>Secrets<br/>Access via Managed Identity"]
         end
 
@@ -367,7 +367,7 @@ flowchart TD
 
     CI --> LINT["Lint<br/>ESLint + TypeScript"]
     CI --> TEST_UNIT["Unit Tests<br/>Jest"]
-    CI --> TEST_E2E["E2E Tests<br/>Playwright<br/>("against staging")"]
+    CI --> TEST_E2E["E2E Tests<br/>Playwright<br/>(against staging)"]
     CI --> SEMGREP["Semgrep SAST<br/>Security scan"]
     CI --> TRIVY["Trivy<br/>Container scan"]
 

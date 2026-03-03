@@ -46,7 +46,7 @@ incorrectly routing an unlisted company to the auto path.
 
 ```mermaid
 flowchart TD
-    START("["Eligible Application"]") --> DUP{Duplicate CR in this relief period?}
+    START(["Eligible Application"]) --> DUP{Duplicate CR in this relief period?}
     DUP -->|Yes| BLOCK["Block: Show existing Case ID<br/>No new application created"]
     DUP -->|No| NRGP_LOOKUP["Query NRGP List<br/>Exact CR number match"]
 

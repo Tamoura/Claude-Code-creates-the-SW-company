@@ -56,7 +56,7 @@ that drive technology selection:
 
 ```mermaid
 graph TD
-    BROWSER["Browser"] --> NEXTJS["Next.js<br/>App Router<br/>("frontend + API Routes")"]
+    BROWSER["Browser"] --> NEXTJS["Next.js<br/>App Router<br/>(frontend + API Routes)"]
     NEXTJS --> PG["PostgreSQL"]
     NEXTJS --> NAS["NAS API"]
     NEXTJS --> MOCI["MOCI API"]

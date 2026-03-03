@@ -162,7 +162,7 @@ not block the application — an SME should not be denied the opportunity to exp
 
 ```mermaid
 graph TD
-    A["Applicant declares salary amount<br/>("text input only")"] --> B["No validation<br/>CRM case with declared amount"]
+    A["Applicant declares salary amount<br/>(text input only)"] --> B["No validation<br/>CRM case with declared amount"]
     B --> C["QDB RM manually verifies<br/>every single application"]
 
     style A fill:#ff9900,color:#fff

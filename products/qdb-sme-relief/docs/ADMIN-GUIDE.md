@@ -38,12 +38,12 @@ Three internal roles interact with the portal and its downstream systems.
 ```mermaid
 graph TD
     subgraph "Portal Admin Dashboard /admin"
-        ADMIN["QDB Administrator<br/>("Mohammed — Program Manager")<br/>Full admin access"]
+        ADMIN["QDB Administrator<br/>(Mohammed — Program Manager)<br/>Full admin access"]
         COMP["QDB Compliance Officer<br/>Audit export + read-only"]
     end
 
     subgraph "Dynamics 365 CRM"
-        RM["QDB Relationship Manager<br/>("Fatima")<br/>Manual case review + decision"]
+        RM["QDB Relationship Manager<br/>(Fatima)<br/>Manual case review + decision"]
         CR["QDB Credit Risk Officer<br/>Borderline case escalation"]
     end
 
@@ -110,7 +110,7 @@ Login uses QDB Azure AD credentials. MFA is mandatory.
 
 ```mermaid
 graph TD
-    LOGIN["Admin Login<br/>Azure AD + MFA"] --> DASH["Admin Dashboard Home<br/>/admin"]
+    LOGIN["Admin Login<br/>Azure AD + MFA] --> DASH[Admin Dashboard Home<br/>/admin"]
 
     DASH --> APPS["Applications Overview<br/>/admin/applications<br/>Table + filters + KPIs"]
     DASH --> NRGP_MGT["NRGP List Management<br/>/admin/nrgp-list<br/>Upload + activate"]
@@ -155,7 +155,7 @@ to resolution, and where admin or RM intervention is required.
 
 ```mermaid
 flowchart TD
-    SUB("["Application Submitted<br/>by SME via Portal"]") --> ROUTE{"NRGP List<br/>Match?"}
+    SUB(["Application Submitted<br/>by SME via Portal"]) --> ROUTE{"NRGP List<br/>Match?"}
 
     ROUTE -->|"CR found in NRGP list"| AUTO["Auto CRM Case Created<br/>Type: auto_nrgp<br/>Status: pending_disbursement"]
     ROUTE -->|"CR NOT in NRGP list"| MANUAL["Manual Review CRM Case Created<br/>Type: manual_review<br/>Status: pending_review"]
@@ -235,7 +235,7 @@ Total application package limit: **50 MB**.
 
 ```mermaid
 flowchart TD
-    REC["RM receives CRM case<br/>Document links visible in case record"] --> OPEN["Click document link<br/>Signed URL opens secure browser view<br/>("1-hour expiry")"]
+    REC["RM receives CRM case<br/>Document links visible in case record"] --> OPEN["Click document link<br/>Signed URL opens secure browser view<br/>(1-hour expiry)"]
 
     OPEN --> CHECK_SALARY{"Salary evidence<br/>verified?"}
     CHECK_SALARY -->|"Bank statement shows<br/>consistent payroll"| SAL_OK["Salary: Accepted"]
@@ -251,7 +251,7 @@ flowchart TD
 
     CR_OK --> CHECK_RENT{"Rent evidence<br/>applicable?"}
     CHECK_RENT -->|"Commercial lease<br/>and rent receipts present"| RENT_OK["Rent Evidence: Accepted"]
-    CHECK_RENT -->|"Not applicable<br/>("no commercial lease")"| RENT_NA["Rent: Not Applicable<br/>Rent relief = QAR 0"]
+    CHECK_RENT -->|"Not applicable (no commercial lease)"| RENT_NA["Rent: Not Applicable<br/>Rent relief = QAR 0"]
 
     SAL_FAIL --> CONTACT_APP
     WPS_DOC_FAIL --> CONTACT_APP
@@ -260,7 +260,7 @@ flowchart TD
     RENT_NA --> ALL_DOCS_OK
     ALL_DOCS_OK --> DECISION
 
-    CONTACT_APP["Contact applicant via<br/>CRM case contact details<br/>Request resubmission"] --> WAIT["Wait for resubmission<br/>monitor case in CRM"]
+    CONTACT_APP["Contact applicant via<br/>CRM case contact details<br/>Request resubmission] --> WAIT[Wait for resubmission<br/>monitor case in CRM"]
     WAIT --> REC
 
     style ALL_DOCS_OK fill:#51cf66,color:#000
@@ -316,16 +316,16 @@ The portal automatically validates salary claims against Ministry of Labor WPS
 
 ```mermaid
 flowchart TD
-    START("["WPS Validation Runs<br/>After Document Upload"]") --> API{"WPS API<br/>Available?"}
+    START(["WPS Validation Runs<br/>After Document Upload"]) --> API{"WPS API<br/>Available?"}
 
-    API -->|"API responds"| COMPARE["Compare:<br/>Declared salary amount<br/>vs WPS payroll figure<br/>("last 90 days")"]
+    API -->|"API responds"| COMPARE["Compare:<br/>Declared salary amount<br/>vs WPS payroll figure<br/>(last 90 days)"]
     API -->|"API unavailable"| FALLBACK["Use uploaded WPS file only<br/>Flag: wps_api_fallback<br/>Manual salary verification required"]
 
     COMPARE --> DIFF{"Discrepancy<br/>>10%?"}
     DIFF -->|"Within 10%<br/>cleaned"| PASS["WPS Status: PASS<br/>No manual review needed"]
     DIFF -->|"Exceeds 10%"| FLAG["WPS Status: DISCREPANCY<br/>Flag: wps_discrepancy<br/>Discrepancy % shown in CRM"]
 
-    API_NO_REC["WPS returns no records<br/>for this CR number"] --> NO_REC["WPS Status: NO_RECORDS<br/>Flag: wps_no_records<br/>Manual salary verification required"]
+    API_NO_REC["WPS returns no records<br/>for this CR number] --> NO_REC[WPS Status: NO_RECORDS<br/>Flag: wps_no_records<br/>Manual salary verification required"]
 
     style PASS fill:#51cf66,color:#000
     style FLAG fill:#ffd43b,color:#000
@@ -399,7 +399,7 @@ with the approver's name, QID, and rationale.
 
 ```mermaid
 flowchart TD
-    ELIG_FAIL("["Eligibility Result:<br/>INELIGIBLE<br/>or borderline case"]") --> RM_ASSESS["RM assesses<br/>whether override criteria apply"]
+    ELIG_FAIL(["Eligibility Result:<br/>INELIGIBLE<br/>or borderline case"]) --> RM_ASSESS["RM assesses<br/>whether override criteria apply"]
 
     RM_ASSESS -->|"Override not applicable"| REJECT_FINAL["Reject application<br/>REJ-003: Not eligible<br/>under current NRGP criteria"]
 
@@ -407,9 +407,9 @@ flowchart TD
 
     DOC_REASON --> AUTH{"Required<br/>authority?"}
 
-    AUTH -->|"EC-001, EC-004, EC-006<br/>("mandatory criteria")"| BLOCK["CANNOT be overridden<br/>These are NRGP policy mandates<br/>Reject or resolve data issue"]
+    AUTH -->|"EC-001, EC-004, EC-006 (mandatory criteria)"| BLOCK["CANNOT be overridden<br/>These are NRGP policy mandates<br/>Reject or resolve data issue"]
 
-    AUTH -->|"EC-002, EC-003, EC-005, EC-007<br/>("configurable criteria")"| SECOND_SIGN["Obtain second sign-off:<br/>Credit Risk Officer<br/>or Compliance Officer"]
+    AUTH -->|"EC-002, EC-003, EC-005, EC-007 (configurable criteria)"| SECOND_SIGN["Obtain second sign-off:<br/>Credit Risk Officer<br/>or Compliance Officer"]
 
     SECOND_SIGN --> APPROVE_OVERRIDE["Credit Risk updates<br/>CRM status to 'approved'<br/>with override documentation"]
 
@@ -536,7 +536,7 @@ cr_number
 
 ```mermaid
 flowchart TD
-    A["Admin navigates to<br/>/admin/nrgp-list"] --> B["Click: Upload New NRGP List"]
+    A["Admin navigates to<br/>/admin/nrgp-list] --> B[Click: Upload New NRGP List"]
     B --> C["Select CSV file from computer"]
     C --> D{"Format validation"}
     D -->|"Invalid format<br/>or invalid CR numbers"| E["Error displayed:<br/>Row number + error type<br/>Existing list UNCHANGED"]
@@ -701,8 +701,8 @@ raised to QDB IT and the application is placed in a manual review hold.
 
 ```mermaid
 flowchart TD
-    A["Admin navigates to<br/>/admin/users"] --> B["Click: Add User"]
-    B --> C["Enter staff QDB email address<br/>("must be @qdb.com.qa domain")"]
+    A["Admin navigates to<br/>/admin/users] --> B[Click: Add User"]
+    B --> C["Enter staff QDB email address<br/>(must be @qdb.com.qa domain)"]
     C --> D["Select role:<br/>admin or compliance"]
     D --> E["Click: Send Invitation"]
     E --> F["Staff receives email<br/>with access instructions"]
