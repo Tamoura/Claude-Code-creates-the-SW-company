@@ -21,6 +21,10 @@ const cspHeader = [
 const nextConfig = {
   output: 'standalone',
   reactStrictMode: true,
+  eslint: {
+    // ESLint runs as a dedicated CI job (lint-and-typecheck); skip during Docker build
+    ignoreDuringBuilds: true,
+  },
   async headers() {
     return [
       {
