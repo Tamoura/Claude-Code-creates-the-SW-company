@@ -183,28 +183,40 @@ mindmap
 ### 3.3 Power/Interest Grid
 
 ```mermaid
-flowchart LR
-    subgraph MC["Manage Closely — High Power, High Interest"]
-        rm["QDB Relationship Manager"]
-        cro["Credit Risk Officer"]
-        smeo["SME Owner"]
-        ops["QDB Operations Team"]
-        comp["Compliance Officer"]
+graph TB
+    subgraph HIGH["▲  HIGH POWER"]
+        direction LR
+        subgraph KS["Keep Satisfied — Low Interest"]
+            ks1["NAS / Tawtheeq"]
+            ks2["MOCI"]
+            ks3["QDB Board"]
+            ks4["Ministry of Labor"]
+            ks5["External Auditors"]
+        end
+        subgraph MC["Manage Closely — High Interest"]
+            mc1["QDB Relationship Manager"]
+            mc2["Credit Risk Officer"]
+            mc3["SME Owner"]
+            mc4["QDB Operations Team"]
+            mc5["Compliance Officer"]
+        end
     end
-    subgraph KS["Keep Satisfied — High Power, Low Interest"]
-        nas["NAS / Tawtheeq"]
-        moci_n["MOCI"]
-        board["QDB Board"]
-        mol["Ministry of Labor"]
-        ext["External Auditors"]
+    subgraph LOW["▼  LOW POWER"]
+        direction LR
+        subgraph MO["Monitor — Low Interest"]
+            mo1["No stakeholders"]
+        end
+        subgraph KI["Keep Informed — High Interest"]
+            ki1["IT Systems Team"]
+            ki2["SME Employees"]
+        end
     end
-    subgraph KI["Keep Informed — Low Power, High Interest"]
-        it["IT Systems Team"]
-        emp["SME Employees"]
-    end
-    subgraph MO["Monitor — Low Power, Low Interest"]
-        mo1["No stakeholders in this quadrant"]
-    end
+    style HIGH fill:#0f172a,stroke:#475569,color:#94a3b8
+    style LOW fill:#0f172a,stroke:#475569,color:#94a3b8
+    style KS fill:#1e3a5f,stroke:#3b82f6,color:#e2e8f0
+    style MC fill:#14532d,stroke:#22c55e,color:#e2e8f0
+    style MO fill:#1e293b,stroke:#334155,color:#64748b
+    style KI fill:#3b1f2b,stroke:#f43f5e,color:#e2e8f0
 ```
 
 ---
@@ -572,30 +584,42 @@ Note: Specific cap figures require QDB Credit Risk sign-off. These are placehold
 ### 8.2 Gap Visualization
 
 ```mermaid
-flowchart LR
-    subgraph SI["Strategic Investment — High Priority, Low Effort"]
-        si1["NRGP List Check"]
-        si2["Audit Trail"]
-        si3["CRM Case Creation"]
-        si4["Authentication — NAS"]
-        si5["Eligibility Engine"]
-        si6["MOCI Integration"]
-        si7["Document Upload"]
-        si8["Document Storage"]
-        si9["Status Visibility"]
-        si10["Bilingual UI"]
-        si11["Management Dashboard"]
+graph TB
+    subgraph HIGH["▲  HIGH PRIORITY"]
+        direction LR
+        subgraph SI["Strategic Investment — Low Effort"]
+            si1["NRGP List Check"]
+            si2["Audit Trail"]
+            si3["CRM Case Creation"]
+            si4["Authentication — NAS"]
+            si5["Eligibility Engine"]
+            si6["MOCI Integration"]
+            si7["Document Upload"]
+            si8["Document Storage"]
+            si9["Status Visibility"]
+            si10["Bilingual UI"]
+            si11["Management Dashboard"]
+        end
+        subgraph QW["Implement First — High Effort"]
+            qw1["WPS Integration"]
+        end
     end
-    subgraph QW["Implement First — High Priority, High Effort"]
-        qw1["WPS Integration"]
+    subgraph LOW["▼  LOW PRIORITY"]
+        direction LR
+        subgraph DE["Defer — Low Effort"]
+            de1["Duplicate Detection"]
+            de2["Program Lifecycle"]
+        end
+        subgraph PC["Plan Carefully — High Effort"]
+            pc1["Configurable Criteria"]
+        end
     end
-    subgraph DE["Defer — Low Priority, Low Effort"]
-        de1["Duplicate Detection"]
-        de2["Program Lifecycle"]
-    end
-    subgraph PC["Plan Carefully — Low Priority, High Effort"]
-        pc1["Configurable Criteria"]
-    end
+    style HIGH fill:#0f172a,stroke:#475569,color:#94a3b8
+    style LOW fill:#0f172a,stroke:#475569,color:#94a3b8
+    style SI fill:#14532d,stroke:#22c55e,color:#e2e8f0
+    style QW fill:#1e3a5f,stroke:#3b82f6,color:#e2e8f0
+    style DE fill:#1e293b,stroke:#334155,color:#64748b
+    style PC fill:#451a03,stroke:#f97316,color:#e2e8f0
 ```
 
 **Reading the chart**: WPS Integration is the only P0 capability with high effort — it requires government API negotiation and data sharing agreements. All other P0 items are medium-to-low effort individually. The project's critical path runs through WPS and CRM integration confirmation.
