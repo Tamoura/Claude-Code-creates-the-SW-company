@@ -56,7 +56,7 @@ that drive technology selection:
 
 ```mermaid
 graph TD
-    BROWSER["Browser"] --> NEXTJS["Next.js\nApp Router\n(frontend + API Routes)"]
+    BROWSER["Browser"] --> NEXTJS["Next.js<br/>App Router<br/>("frontend + API Routes")"]
     NEXTJS --> PG["PostgreSQL"]
     NEXTJS --> NAS["NAS API"]
     NEXTJS --> MOCI["MOCI API"]
@@ -74,11 +74,11 @@ security logic.
 
 ```mermaid
 graph TD
-    BROWSER["Browser"] --> NEXTJS["Next.js 14\nFrontend\nSSR + Client\nPort 3120"]
-    NEXTJS -->|"JSON REST\nBearerJWT"| FASTIFY["Fastify 4\nBackend API\nPort 5014"]
-    FASTIFY --> PG["PostgreSQL 15\nPrisma 5 ORM"]
-    FASTIFY --> REDIS["Redis 7\nSessions + Cache"]
-    FASTIFY --> NAS["NAS / Tawtheeq\nOIDC PKCE"]
+    BROWSER["Browser"] --> NEXTJS["Next.js 14<br/>Frontend<br/>SSR + Client<br/>Port 3120"]
+    NEXTJS -->|"JSON REST<br/>BearerJWT"| FASTIFY["Fastify 4<br/>Backend API<br/>Port 5014"]
+    FASTIFY --> PG["PostgreSQL 15<br/>Prisma 5 ORM"]
+    FASTIFY --> REDIS["Redis 7<br/>Sessions + Cache"]
+    FASTIFY --> NAS["NAS / Tawtheeq<br/>OIDC PKCE"]
     FASTIFY --> MOCI["MOCI API"]
     FASTIFY --> WPS["WPS API"]
     FASTIFY --> CRM["Dynamics 365 CRM"]
@@ -151,11 +151,11 @@ Arabic RTL is a first-class requirement, not an afterthought. The following deci
 ```mermaid
 graph TD
     LANG_SELECT["User selects Arabic"] --> SET_DIR["Set html dir=rtl lang=ar"]
-    SET_DIR --> TAILWIND_LOGICAL["Tailwind logical properties\nps, pe, ms, me, start, end\nauto-mirror in RTL"]
-    SET_DIR --> FORM_DIR["Form inputs: text-align: start\nPlaceholders right-aligned in RTL"]
-    SET_DIR --> ICON_FLIP["Directional icons flipped\narrow-right becomes arrow-left in RTL"]
-    SET_DIR --> NOTIFY_RTL["Email templates: dir=rtl\nArabic font stack: Noto Naskh Arabic"]
-    SET_DIR --> NUMBER_FORMAT["Numbers: left-to-right even in Arabic\nQAR 287,500 not reversed"]
+    SET_DIR --> TAILWIND_LOGICAL["Tailwind logical properties<br/>ps, pe, ms, me, start, end<br/>auto-mirror in RTL"]
+    SET_DIR --> FORM_DIR["Form inputs: text-align: start<br/>Placeholders right-aligned in RTL"]
+    SET_DIR --> ICON_FLIP["Directional icons flipped<br/>arrow-right becomes arrow-left in RTL"]
+    SET_DIR --> NOTIFY_RTL["Email templates: dir=rtl<br/>Arabic font stack: Noto Naskh Arabic"]
+    SET_DIR --> NUMBER_FORMAT["Numbers: left-to-right even in Arabic<br/>QAR 287,500 not reversed"]
 
     style LANG_SELECT fill:#339af0,color:#fff
 ```

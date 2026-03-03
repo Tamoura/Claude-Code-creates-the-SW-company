@@ -29,38 +29,38 @@
 ```mermaid
 graph TD
     subgraph "Internet (Public)"
-        USERS["SME Applicants\nBrowsers"]
-        ADMIN_USERS["QDB Admin Staff\nQDB Internal Network"]
+        USERS["SME Applicants<br/>Browsers"]
+        ADMIN_USERS["QDB Admin Staff<br/>QDB Internal Network"]
     end
 
     subgraph "Azure Front Door (Global)"
-        AFD["Azure Front Door + WAF\nDDoS protection\nGeo-restriction: Qatar + allow-listed IPs\nSSL offloading\nRate limiting: 100 req/min per IP"]
-        CDN["Azure CDN\nStatic asset caching\nNext.js build outputs\nCache-Control headers"]
+        AFD["Azure Front Door + WAF<br/>DDoS protection<br/>Geo-restriction: Qatar + allow-listed IPs<br/>SSL offloading<br/>Rate limiting: 100 req/min per IP"]
+        CDN["Azure CDN<br/>Static asset caching<br/>Next.js build outputs<br/>Cache-Control headers"]
     end
 
     subgraph "Azure Region: Qatar North"
         subgraph "Application Tier — Azure App Service or AKS"
-            LB["Azure Application Gateway\nLayer 7 load balancer\nHealth probes\nSSL termination (TLS 1.3 min)"]
-            WEB1["Next.js App\nInstance 1\nPort 3120\nContainer: node:20-alpine"]
-            WEB2["Next.js App\nInstance 2\nAuto-scale: CPU > 70%"]
-            API1["Fastify API\nInstance 1\nPort 5014\nContainer: node:20-alpine"]
-            API2["Fastify API\nInstance 2\nAuto-scale: CPU > 70%"]
+            LB["Azure Application Gateway<br/>Layer 7 load balancer<br/>Health probes<br/>SSL termination ("TLS 1.3 min")"]
+            WEB1["Next.js App<br/>Instance 1<br/>Port 3120<br/>Container: node:20-alpine"]
+            WEB2["Next.js App<br/>Instance 2<br/>Auto-scale: CPU > 70%"]
+            API1["Fastify API<br/>Instance 1<br/>Port 5014<br/>Container: node:20-alpine"]
+            API2["Fastify API<br/>Instance 2<br/>Auto-scale: CPU > 70%"]
         end
 
         subgraph "Data Tier"
-            PG_PRIMARY["Azure Database for PostgreSQL\nFlexible Server\nGeneral Purpose: 4 vCores 16GB RAM\nStorage: 512 GB\nHigh Availability: Zone-redundant"]
-            PG_STANDBY["Standby Replica\nSame region\nAutomatic failover < 60s"]
-            REDIS["Azure Cache for Redis\nC2 Standard (6 GB)\nHA with replica\nTLS 1.3 required"]
+            PG_PRIMARY["Azure Database for PostgreSQL<br/>Flexible Server<br/>General Purpose: 4 vCores 16GB RAM<br/>Storage: 512 GB<br/>High Availability: Zone-redundant"]
+            PG_STANDBY["Standby Replica<br/>Same region<br/>Automatic failover < 60s"]
+            REDIS["Azure Cache for Redis<br/>C2 Standard ("6 GB")<br/>HA with replica<br/>TLS 1.3 required"]
         end
 
         subgraph "Storage Tier"
-            BLOB["Azure Blob Storage\nDocument container\nGRS (Geo-redundant)\nLifecycle: Archive after 1 year\nRetention: 7 years minimum"]
-            KV["Azure Key Vault\nEncryption keys\nSecrets\nAccess via Managed Identity"]
+            BLOB["Azure Blob Storage<br/>Document container<br/>GRS ("Geo-redundant")<br/>Lifecycle: Archive after 1 year<br/>Retention: 7 years minimum"]
+            KV["Azure Key Vault<br/>Encryption keys<br/>Secrets<br/>Access via Managed Identity"]
         end
 
         subgraph "Monitoring"
-            AI["Azure Application Insights\nAPM\nDistributed tracing\nPerformance monitoring"]
-            LA["Log Analytics Workspace\nCentralised logs\nAudit export\nAlert rules\nRetention: 2 years"]
+            AI["Azure Application Insights<br/>APM<br/>Distributed tracing<br/>Performance monitoring"]
+            LA["Log Analytics Workspace<br/>Centralised logs<br/>Audit export<br/>Alert rules<br/>Retention: 2 years"]
         end
     end
 
@@ -72,7 +72,7 @@ graph TD
     end
 
     USERS -->|"HTTPS/443"| AFD
-    ADMIN_USERS -->|"HTTPS/443\nQDB VPN required"| AFD
+    ADMIN_USERS -->|"HTTPS/443<br/>QDB VPN required"| AFD
     AFD --> CDN
     CDN --> LB
     LB --> WEB1
@@ -319,13 +319,13 @@ The portal uses GitHub Actions for continuous integration and deployment.
 
 ```mermaid
 flowchart TD
-    PR["Developer opens\nPull Request"] --> CI["CI Pipeline\ngithub/workflows/ci.yml"]
+    PR["Developer opens<br/>Pull Request"] --> CI["CI Pipeline<br/>github/workflows/ci.yml"]
 
-    CI --> LINT["Lint\nESLint + TypeScript"]
-    CI --> TEST_UNIT["Unit Tests\nJest"]
-    CI --> TEST_E2E["E2E Tests\nPlaywright\n(against staging)"]
-    CI --> SEMGREP["Semgrep SAST\nSecurity scan"]
-    CI --> TRIVY["Trivy\nContainer scan"]
+    CI --> LINT["Lint<br/>ESLint + TypeScript"]
+    CI --> TEST_UNIT["Unit Tests<br/>Jest"]
+    CI --> TEST_E2E["E2E Tests<br/>Playwright<br/>("against staging")"]
+    CI --> SEMGREP["Semgrep SAST<br/>Security scan"]
+    CI --> TRIVY["Trivy<br/>Container scan"]
 
     LINT --> GATE{All checks pass?}
     TEST_UNIT --> GATE
@@ -333,19 +333,19 @@ flowchart TD
     SEMGREP --> GATE
     TRIVY --> GATE
 
-    GATE -->|Fail| BLOCK_MERGE["PR blocked\nfrom merging"]
-    GATE -->|Pass| REVIEW["Code review\nrequired"]
+    GATE -->|Fail| BLOCK_MERGE["PR blocked<br/>from merging"]
+    GATE -->|Pass| REVIEW["Code review<br/>required"]
 
     REVIEW --> MERGE["Merge to main"]
-    MERGE --> STAGING_DEPLOY["Deploy to Staging\nAuto-deploy on merge to main"]
-    STAGING_DEPLOY --> STAGING_VERIFY["Automated smoke tests\nagainst staging"]
-    STAGING_VERIFY -->|Pass| PROD_GATE["Production deploy gate\nManual approval required"]
-    STAGING_VERIFY -->|Fail| ALERT["Alert engineering team\nRollback staging"]
+    MERGE --> STAGING_DEPLOY["Deploy to Staging<br/>Auto-deploy on merge to main"]
+    STAGING_DEPLOY --> STAGING_VERIFY["Automated smoke tests<br/>against staging"]
+    STAGING_VERIFY -->|Pass| PROD_GATE["Production deploy gate<br/>Manual approval required"]
+    STAGING_VERIFY -->|Fail| ALERT["Alert engineering team<br/>Rollback staging"]
 
-    PROD_GATE --> PROD_DEPLOY["Deploy to Production\nBlue-green deployment"]
-    PROD_DEPLOY --> HEALTH_CHECK["Health checks\nall instances pass"]
-    HEALTH_CHECK -->|Pass| COMPLETE["Deploy complete\nMonitoring active"]
-    HEALTH_CHECK -->|Fail| ROLLBACK["Automatic rollback\nto previous version"]
+    PROD_GATE --> PROD_DEPLOY["Deploy to Production<br/>Blue-green deployment"]
+    PROD_DEPLOY --> HEALTH_CHECK["Health checks<br/>all instances pass"]
+    HEALTH_CHECK -->|Pass| COMPLETE["Deploy complete<br/>Monitoring active"]
+    HEALTH_CHECK -->|Fail| ROLLBACK["Automatic rollback<br/>to previous version"]
 
     style GATE fill:#ffd43b,color:#000
     style PROD_GATE fill:#ff9900,color:#fff

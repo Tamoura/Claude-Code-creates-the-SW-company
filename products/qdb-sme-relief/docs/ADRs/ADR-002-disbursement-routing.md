@@ -46,27 +46,27 @@ incorrectly routing an unlisted company to the auto path.
 
 ```mermaid
 flowchart TD
-    START([Eligible Application]) --> DUP{Duplicate CR\nin this relief period?}
-    DUP -->|Yes| BLOCK[Block: Show existing Case ID\nNo new application created]
-    DUP -->|No| NRGP_LOOKUP[Query NRGP List\nExact CR number match]
+    START("["Eligible Application"]") --> DUP{Duplicate CR in this relief period?}
+    DUP -->|Yes| BLOCK["Block: Show existing Case ID<br/>No new application created"]
+    DUP -->|No| NRGP_LOOKUP["Query NRGP List<br/>Exact CR number match"]
 
-    NRGP_LOOKUP -->|Exact match| AUTO_PATH[AUTO-DISBURSEMENT PATH\nCreate CRM case: auto_nrgp\nStatus: pending_disbursement\nNo RM review required]
+    NRGP_LOOKUP -->|Exact match| AUTO_PATH["AUTO-DISBURSEMENT PATH<br/>Create CRM case: auto_nrgp<br/>Status: pending_disbursement<br/>No RM review required"]
 
-    NRGP_LOOKUP -->|Fuzzy match only\nLevenshtein ≤ 1| FUZZY_FLAG[Flag as possible match\nCreate CRM case: auto_nrgp\nFlag: fuzzy_match_review\nAdmin notified]
+    NRGP_LOOKUP -->|Fuzzy match only Levenshtein ≤ 1| FUZZY_FLAG["Flag as possible match<br/>Create CRM case: auto_nrgp<br/>Flag: fuzzy_match_review<br/>Admin notified"]
 
-    NRGP_LOOKUP -->|No match| MANUAL_PATH[MANUAL REVIEW PATH\nCreate CRM case: manual_review\nStatus: pending_review\nQDB RM assigned]
+    NRGP_LOOKUP -->|No match| MANUAL_PATH["MANUAL REVIEW PATH<br/>Create CRM case: manual_review<br/>Status: pending_review<br/>QDB RM assigned"]
 
-    AUTO_PATH --> CRM_AUTO[CRM Case Created\ncase_type: auto_nrgp\nCase ID returned to portal\nSME shown: Automatic processing]
+    AUTO_PATH --> CRM_AUTO["CRM Case Created<br/>case_type: auto_nrgp<br/>Case ID returned to portal<br/>SME shown: Automatic processing"]
 
-    FUZZY_FLAG --> CRM_AUTO_REVIEW[CRM Case Created\ncase_type: auto_nrgp\nfuzzy_match_review: true\nQDB Admin reviews before disbursement]
+    FUZZY_FLAG --> CRM_AUTO_REVIEW["CRM Case Created<br/>case_type: auto_nrgp<br/>fuzzy_match_review: true<br/>QDB Admin reviews before disbursement"]
 
-    MANUAL_PATH --> CRM_MANUAL[CRM Case Created\ncase_type: manual_review\nCase ID returned to portal\nSME shown: 5 business days review]
+    MANUAL_PATH --> CRM_MANUAL["CRM Case Created<br/>case_type: manual_review<br/>Case ID returned to portal<br/>SME shown: 5 business days review"]
 
     AUTO_PATH --> DOC_UPLOAD[Proceed to Document Upload]
     FUZZY_FLAG --> DOC_UPLOAD
     MANUAL_PATH --> DOC_UPLOAD
 
-    CRM_AUTO --> CRM_UPDATE[CRM case updated\nwith document IDs\nafter upload]
+    CRM_AUTO --> CRM_UPDATE["CRM case updated<br/>with document IDs<br/>after upload"]
     CRM_AUTO_REVIEW --> CRM_UPDATE
     CRM_MANUAL --> CRM_UPDATE
 

@@ -60,9 +60,9 @@ sequenceDiagram
 
     SME->>Portal: Upload WPS CSV file (Ministry of Labour standard format)
     Portal->>Portal: Parse CSV: extract employee_count, monthly_payroll, payment_dates
-    Portal-->>SME: Display parsed summary:\n42 employees | QAR 350,000/month | Last payroll: Feb 2026
+    Portal-->>SME: Display parsed summary: 42 employees | QAR 350,000/month | Last payroll: Feb 2026
 
-    Portal->>WPS: GET /payroll/{cr_number}?period=last_90_days\nAuth: MOU service token
+    Portal->>WPS: GET /payroll/{cr_number}?period=last_90_days Auth: MOU service token
     Note over Portal,WPS: Timeout: 10 seconds
 
     alt WPS API responds with records
@@ -90,7 +90,7 @@ sequenceDiagram
 
     else WPS API unavailable (timeout or 5xx)
         Portal->>Audit: Log: wps_validation {result: unavailable, error_code}
-        Portal-->>SME: WPS verification temporarily unavailable — application continues\nManual verification will be performed by QDB
+        Portal-->>SME: WPS verification temporarily unavailable — application continues Manual verification will be performed by QDB
         Portal->>CRM: PATCH case: wps_api_fallback_flag=true
         Note over Portal: File-only validation — uploaded CSV is the sole source
     end
@@ -162,8 +162,8 @@ not block the application — an SME should not be denied the opportunity to exp
 
 ```mermaid
 graph TD
-    A["Applicant declares salary amount\n(text input only)"] --> B["No validation\nCRM case with declared amount"]
-    B --> C["QDB RM manually verifies\nevery single application"]
+    A["Applicant declares salary amount<br/>("text input only")"] --> B["No validation<br/>CRM case with declared amount"]
+    B --> C["QDB RM manually verifies<br/>every single application"]
 
     style A fill:#ff9900,color:#fff
     style B fill:#ff6b6b,color:#fff
@@ -174,11 +174,11 @@ graph TD
 
 ```mermaid
 graph TD
-    A["Applicant uploads WPS CSV\n+ declares relief amount"] --> B{WPS API\navailable?}
-    B -->|Yes| C["API cross-check\n≤10%: pass\n>10%: flag"]
-    B -->|No| D["File-only validation\nwps_api_fallback flag"]
-    C -->|Pass| E["Auto path proceeds\nValidation confirmed"]
-    C -->|Flag| F["CRM flagged\nQDB RM reviews salary"]
+    A["Applicant uploads WPS CSV<br/>+ declares relief amount"] --> B{WPS API available?}
+    B -->|Yes| C["API cross-check<br/>≤10%: pass<br/>>10%: flag"]
+    B -->|No| D["File-only validation<br/>wps_api_fallback flag"]
+    C -->|Pass| E["Auto path proceeds<br/>Validation confirmed"]
+    C -->|Flag| F["CRM flagged<br/>QDB RM reviews salary"]
     D --> F
 
     style E fill:#51cf66,color:#000
