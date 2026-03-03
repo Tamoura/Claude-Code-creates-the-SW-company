@@ -1,0 +1,84 @@
+@tailwind base;
+@tailwind components;
+@tailwind utilities;
+
+@import url('https://fonts.googleapis.com/css2?family=Inter:wght@400;500;600;700;900&family=Noto+Sans+Arabic:wght@400;500;600;700;900&display=swap');
+
+:root {
+  --qdb-navy: #003366;
+  --qdb-gold: #C8922A;
+}
+
+body {
+  font-family: 'Inter', 'Noto Sans Arabic', sans-serif;
+  background-color: #f5f7fa;
+  color: #1a1a2e;
+}
+
+[dir="rtl"] body,
+[dir="rtl"] * {
+  font-family: 'Noto Sans Arabic', 'Inter', sans-serif;
+}
+
+.font-arabic {
+  font-family: 'Noto Sans Arabic', sans-serif;
+}
+
+/* Government portal form style */
+.gov-input {
+  @apply w-full border border-gray-300 rounded-md px-3 py-2 text-sm focus:outline-none focus:ring-2 focus:ring-qdb-navy focus:border-transparent transition-all;
+}
+
+.gov-btn-primary {
+  @apply bg-qdb-navy text-white font-semibold px-6 py-3 rounded-md hover:bg-qdb-navy-light transition-colors disabled:opacity-50 disabled:cursor-not-allowed;
+}
+
+.gov-btn-secondary {
+  @apply bg-white text-qdb-navy font-semibold px-6 py-3 rounded-md border border-qdb-navy hover:bg-blue-50 transition-colors;
+}
+
+.gov-card {
+  @apply bg-white border border-gray-200 rounded-lg shadow-sm p-6;
+}
+
+/* Step page container */
+.step-page {
+  @apply min-h-screen bg-gray-50;
+}
+
+/* Animated checkmark */
+@keyframes scaleIn {
+  0% { transform: scale(0); opacity: 0; }
+  70% { transform: scale(1.2); }
+  100% { transform: scale(1); opacity: 1; }
+}
+
+.checkmark-animate {
+  animation: scaleIn 0.5s ease-out forwards;
+}
+
+/* Spinner */
+.spinner {
+  @apply w-8 h-8 border-4 border-gray-200 border-t-qdb-navy rounded-full animate-spin;
+}
+
+/* Status badge */
+.badge-auto {
+  @apply bg-blue-100 text-blue-800 text-xs font-medium px-2.5 py-0.5 rounded-full;
+}
+
+.badge-manual {
+  @apply bg-yellow-100 text-yellow-800 text-xs font-medium px-2.5 py-0.5 rounded-full;
+}
+
+.badge-disbursed {
+  @apply bg-green-100 text-green-800 text-xs font-medium px-2.5 py-0.5 rounded-full;
+}
+
+.badge-rejected {
+  @apply bg-red-100 text-red-800 text-xs font-medium px-2.5 py-0.5 rounded-full;
+}
+
+.badge-pending {
+  @apply bg-gray-100 text-gray-700 text-xs font-medium px-2.5 py-0.5 rounded-full;
+}
