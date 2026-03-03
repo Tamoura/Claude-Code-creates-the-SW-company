@@ -1,28 +1,72 @@
 # QDB SME Relief Portal — Deployment Guide
 
 **Product**: QDB SME Relief Portal
-**Version**: 1.0
-**Date**: March 2026
-**Classification**: Confidential — QDB Internal Use Only
-**Audience**: DevOps Engineer, QDB IT Infrastructure
+**Version**: 1.1 | March 2026
+**Classification**: Confidential — QDB Internal / DevOps Use Only
+**Audience**: DevOps Engineer, QDB IT Infrastructure, Backend Engineers
+
+> **Prototype Notice**: The QDB SME Relief Portal is currently a **Next.js prototype**
+> (port 3120) with no backend implemented. This document describes the **planned
+> production deployment architecture** as defined in the PRD. Backend components
+> (PostgreSQL database, Fastify API, CRM connector, WPS service, document storage,
+> audit service, notification service) are **planned but not yet built**. Sections
+> covering planned-only components are labelled **[PLANNED]**.
 
 ---
 
 ## Table of Contents
 
-1. [Deployment Architecture](#1-deployment-architecture)
-2. [Environment Variables Reference](#2-environment-variables-reference)
+1. [Environment Overview](#1-environment-overview)
+2. [Deployment Architecture](#2-deployment-architecture)
 3. [Infrastructure Requirements](#3-infrastructure-requirements)
-4. [Pre-Deployment Checklist](#4-pre-deployment-checklist)
-5. [Database Migration Steps](#5-database-migration-steps)
+4. [Environment Variables Reference](#4-environment-variables-reference)
+5. [Docker Setup](#5-docker-setup)
 6. [CI/CD Pipeline](#6-cicd-pipeline)
-7. [Health Check Endpoints](#7-health-check-endpoints)
-8. [Rollback Procedure](#8-rollback-procedure)
-9. [Post-Deployment Verification](#9-post-deployment-verification)
+7. [Database Migration Process](#7-database-migration-process)
+8. [Integration Configuration](#8-integration-configuration)
+9. [Health Checks and Monitoring](#9-health-checks-and-monitoring)
+10. [Rollback Procedure](#10-rollback-procedure)
+11. [Secrets Management](#11-secrets-management)
+12. [Pre-Deployment Checklist](#12-pre-deployment-checklist)
+13. [Post-Deployment Verification](#13-post-deployment-verification)
+14. [Current Prototype Setup](#14-current-prototype-setup)
 
 ---
 
-## 1. Deployment Architecture
+## 1. Environment Overview
+
+### 1.1 Environment Progression
+
+Three environments are used from development through production release.
+
+```mermaid
+flowchart LR
+    DEV["Development<br/>localhost:3120<br/>Prototype only<br/>No integrations<br/>Mocked responses"] -->|"PR merged<br/>CI passes"| STAGING
+
+    STAGING["Staging<br/>Azure App Service<br/>staging-sme-relief.qdb.com.qa<br/>Sandbox integrations<br/>Full stack"] -->|"QDB sign-off<br/>Release tag created"| PROD
+
+    PROD["Production<br/>sme-relief.qdb.com.qa<br/>Live integrations<br/>High availability<br/>99.5% uptime SLA"]
+
+    style DEV fill:#339af0,color:#fff
+    style STAGING fill:#ffd43b,color:#000
+    style PROD fill:#51cf66,color:#000
+```
+
+| Attribute | Development | Staging | Production |
+|-----------|-------------|---------|------------|
+| URL | `http://localhost:3120` | `https://staging-sme-relief.qdb.com.qa` | `https://sme-relief.qdb.com.qa` |
+| NAS / Tawtheeq | Mocked (prototype) | Sandbox NAS endpoint | Live NAS endpoint |
+| MOCI API | Mocked (prototype) | MOCI sandbox API | Live MOCI API |
+| WPS System | Mocked (prototype) | WPS sandbox / test data | Live WPS API |
+| Dynamics CRM | Mocked (prototype) | Dynamics 365 sandbox org | Dynamics 365 production org |
+| Document Storage | Local filesystem | Azure Blob (staging container) | Azure Blob (production container) |
+| Database | None (prototype) | Azure PostgreSQL Flexible Server | Azure PostgreSQL Flexible Server (HA) |
+| Monitoring | None | Azure Application Insights | Azure Application Insights + PagerDuty |
+| Admin access | Local | QDB VPN + Azure AD | QDB VPN + Azure AD + MFA enforced |
+
+---
+
+## 2. Deployment Architecture
 
 ### Production Architecture Diagram
 
@@ -492,6 +536,450 @@ Run this verification checklist after every production deployment.
 - [ ] Log Analytics is receiving logs
 - [ ] Alert rules are active (test by checking alert configurations, do not trigger alerts in production)
 - [ ] Redis cache is populated (check hit rate via Azure portal metrics)
+
+---
+
+---
+
+## 11. Secrets Management
+
+### 11.1 Secret Inventory
+
+| Secret | Storage | Rotation | Who Rotates |
+|--------|---------|----------|------------|
+| NAS client secret | Azure Key Vault | As directed by NAS (minimum annually) | QDB IT |
+| MOCI API key | Azure Key Vault | As directed by MOCI | QDB IT |
+| WPS API key | Azure Key Vault | As directed by Ministry of Labor | QDB IT |
+| CRM service principal secret | Azure Key Vault | Every 90 days (mandatory — NFR) | QDB IT |
+| Admin AAD app secret | Azure Key Vault | Every 90 days | QDB IT |
+| Storage connection string | Azure Key Vault | Annually or on compromise | QDB IT |
+| JWT signing secret | Azure Key Vault | Every 6 months | QDB IT |
+| SMTP password | Azure Key Vault | Annually | QDB IT |
+| SMS gateway API key | Azure Key Vault | Annually | QDB IT |
+| Database password | Azure Key Vault | Every 90 days | QDB IT |
+
+### 11.2 Key Vault Access Pattern
+
+The portal API accesses Key Vault using the App Service **managed identity** — no
+credentials are stored in code, configuration files, or environment variables checked
+into source control.
+
+```
+App Service Managed Identity
+  → Azure Key Vault: Get (specific named secrets only)
+  → No List permission — principle of least privilege
+```
+
+### 11.3 Secret Rotation Procedure
+
+```bash
+# Step 1: Generate new secret in the source system
+
+# Step 2: Add new version to Azure Key Vault
+az keyvault secret set \
+  --vault-name qdb-sme-relief-kv \
+  --name CRM_CLIENT_SECRET \
+  --value "new-secret-value"
+
+# Step 3: Portal picks up new version within 5 minutes (Key Vault SDK cache TTL)
+#         Restart App Service instances if immediate take-up is required:
+az webapp restart --resource-group qdb-sme-relief-prod-rg --name qdb-sme-relief-api
+
+# Step 4: Verify integration is functional
+curl https://sme-relief.qdb.com.qa/api/v1/health/integrations
+
+# Step 5: Deactivate the old secret version in Key Vault
+az keyvault secret set-attributes \
+  --vault-name qdb-sme-relief-kv \
+  --name CRM_CLIENT_SECRET \
+  --version OLD_VERSION_ID \
+  --enabled false
+
+# Step 6: Record rotation in the QDB IT secret rotation log
+```
+
+### 11.4 Where Secrets Must Never Appear
+
+- Git repositories (including `.env` files — always include `.env*` in `.gitignore`)
+- Application logs (log summaries must never contain raw secret values or tokens)
+- Error messages returned to any user or external system
+- CRM case fields, notes, or attachments
+- Slack, email, or any messaging platform (even internal)
+- Azure Monitor logs or Application Insights traces
+
+---
+
+## 12. Pre-Deployment Checklist
+
+Complete all items before deploying to production. Items marked **BLOCKER** must be
+resolved before any production deployment can proceed.
+
+### Integration Agreements
+
+- [ ] **BLOCKER**: NAS / Tawtheeq client credentials issued by QDB IT for production
+- [ ] **BLOCKER**: NAS production redirect URI registered and confirmed with NAS team
+- [ ] **BLOCKER**: MOCI API key provisioned for production use
+- [ ] **BLOCKER**: Dynamics CRM Azure AD service principal created with required permissions
+- [ ] **BLOCKER**: CRM schema customisation (`qdb_disbursementcases` entity) deployed by QDB IT
+- [ ] WPS API MOU signed between QDB and Ministry of Labor (or documented decision to use file-only fallback at launch)
+- [ ] SMS gateway API key provisioned
+- [ ] SMTP relay configured and verified for portal sender domain
+
+### Security and Compliance
+
+- [ ] **BLOCKER**: PDPA compliance assessment completed and signed off by QDB Data Protection Officer
+- [ ] **BLOCKER**: QDB IT security review completed and sign-off received
+- [ ] **BLOCKER**: Azure Key Vault provisioned with all secrets; managed identity configured
+- [ ] Azure Front Door WAF policy enabled with Qatar geo-restriction
+- [ ] Admin portal IP restriction configured (QDB VPN range only)
+- [ ] Penetration test completed and all critical findings resolved
+- [ ] Document encryption (AES-256) verified on Azure Blob Storage
+
+### Infrastructure
+
+- [ ] DNS record configured: `sme-relief.qdb.com.qa` resolves to Azure Front Door
+- [ ] SSL certificate issued and validated (Azure-managed or imported)
+- [ ] PostgreSQL Flexible Server provisioned with zone-redundant HA standby
+- [ ] Azure Blob Storage container created with no public access
+- [ ] Log Analytics workspace and Application Insights configured
+- [ ] PagerDuty integration configured for critical alerts (production)
+- [ ] Alert rules set and verified (test with intentional health check failure in staging)
+- [ ] Database backup policy confirmed (35-day retention minimum; 7-year audit data)
+
+### Application
+
+- [ ] All environment variables set in Azure App Service Application Settings (not in code)
+- [ ] Database migrations run against production database (`npx prisma migrate deploy`)
+- [ ] Audit table tamper-protection SQL constraints applied
+- [ ] Initial QDB Admin user seeded in database
+- [ ] NRGP beneficiary list uploaded and activated via admin interface
+- [ ] Eligibility criteria confirmed and active in database
+- [ ] Program lifecycle configured: state = OPEN, end date set
+- [ ] Full smoke test completed against staging environment (with real sandbox integrations)
+
+---
+
+## 5. Docker Setup
+
+> **[PLANNED]**: The prototype does not use Docker. The following configuration is
+> planned for staging and production deployments.
+
+### 5.1 Next.js Web App Dockerfile
+
+```dockerfile
+# Stage 1: Install dependencies
+FROM node:20-alpine AS deps
+WORKDIR /app
+COPY package.json package-lock.json ./
+RUN npm ci --only=production
+
+# Stage 2: Build
+FROM node:20-alpine AS builder
+WORKDIR /app
+COPY --from=deps /app/node_modules ./node_modules
+COPY . .
+ENV NEXT_TELEMETRY_DISABLED=1
+RUN npm run build
+
+# Stage 3: Production runner
+FROM node:20-alpine AS runner
+WORKDIR /app
+ENV NODE_ENV=production
+ENV NEXT_TELEMETRY_DISABLED=1
+ENV PORT=3120
+
+RUN addgroup --system --gid 1001 nodejs
+RUN adduser --system --uid 1001 nextjs
+
+COPY --from=builder /app/public ./public
+COPY --from=builder --chown=nextjs:nodejs /app/.next/standalone ./
+COPY --from=builder --chown=nextjs:nodejs /app/.next/static ./.next/static
+
+USER nextjs
+EXPOSE 3120
+CMD ["node", "server.js"]
+```
+
+### 5.2 Fastify API Dockerfile [PLANNED]
+
+```dockerfile
+FROM node:20-alpine AS deps
+WORKDIR /app
+COPY package.json package-lock.json ./
+RUN npm ci --only=production
+
+FROM node:20-alpine AS runner
+WORKDIR /app
+ENV NODE_ENV=production
+ENV PORT=5014
+
+RUN addgroup --system --gid 1001 nodejs
+RUN adduser --system --uid 1001 apiuser
+
+COPY --from=deps /app/node_modules ./node_modules
+COPY --chown=apiuser:nodejs . .
+
+USER apiuser
+EXPOSE 5014
+CMD ["node", "src/server.js"]
+```
+
+### 5.3 Docker Compose — Local Development Reference [PLANNED]
+
+```yaml
+version: '3.9'
+services:
+  web:
+    build:
+      context: ./apps/web
+    ports:
+      - "3120:3120"
+    environment:
+      - NODE_ENV=development
+      - NEXT_PUBLIC_APP_URL=http://localhost:3120
+      - NEXT_PUBLIC_API_URL=http://localhost:5014/api/v1
+    depends_on:
+      - api
+
+  api:
+    build:
+      context: ./apps/api
+    ports:
+      - "5014:5014"
+    environment:
+      - NODE_ENV=development
+      - DATABASE_URL=postgresql://postgres:localdev@db:5432/qdb_sme_relief
+    depends_on:
+      - db
+
+  db:
+    image: postgres:15-alpine
+    environment:
+      POSTGRES_DB: qdb_sme_relief
+      POSTGRES_USER: postgres
+      POSTGRES_PASSWORD: localdev
+    ports:
+      - "5432:5432"
+    volumes:
+      - pgdata:/var/lib/postgresql/data
+
+volumes:
+  pgdata:
+```
+
+---
+
+## 8. Integration Configuration
+
+> **[PLANNED]**: All integration configuration applies to the planned production backend.
+> The current prototype mocks all external integrations.
+
+### 8.1 Integration Overview
+
+```mermaid
+sequenceDiagram
+    participant Portal as QDB SME Relief Portal
+    participant KV as Azure Key Vault
+    participant NAS as NAS Tawtheeq OIDC
+    participant MOCI as MOCI CR API
+    participant WPS as WPS System
+    participant DocStore as Azure Blob Storage
+    participant CRM as Dynamics 365 CRM
+
+    Note over Portal,KV: Startup: Portal loads secrets from Key Vault via Managed Identity
+    Portal->>KV: Get secrets
+    KV-->>Portal: Credentials returned
+
+    Note over Portal,NAS: Applicant authentication
+    Portal->>NAS: OIDC Authorization Request
+    NAS-->>Portal: ID Token (QID claim)
+
+    Note over Portal,MOCI: Company verification
+    Portal->>MOCI: GET /company/cr_number
+    MOCI-->>Portal: Company name, status, shareholders
+
+    Note over Portal,WPS: Salary validation
+    Portal->>WPS: GET /payroll/cr_number?period=last_90_days
+    WPS-->>Portal: Payroll records, employee count
+
+    Note over Portal,DocStore: Document storage
+    Portal->>DocStore: PUT document (AES-256, TLS 1.3)
+    DocStore-->>Portal: Document URL + checksum
+
+    Note over Portal,CRM: Case creation
+    Portal->>CRM: POST disbursement case
+    CRM-->>Portal: Case ID
+```
+
+### 8.2 NAS / Tawtheeq OIDC
+
+**Protocol**: OIDC Authorization Code Flow with PKCE (preferred) or SAML 2.0.
+
+| Attribute | Detail |
+|-----------|--------|
+| Assurance level | NAS Level 2 minimum; request Level 3 if available |
+| Identity claim | QID (Qatar Identification Number) |
+| Token validation | ID Token signature verified against NAS JWKS endpoint |
+| Session model | Portal issues its own JWT after NAS validation; NAS session not maintained |
+| Failure handling | NAS unavailable: display "try again in 30 minutes" with QDB Operations contact |
+| Reference | QDB One ADR-002 (NAS via Keycloak gateway, SAML 2.0/OIDC, QID mapper) |
+
+**Provisioning steps**:
+1. QDB IT submits service registration request to NAS integration team
+2. NAS provides `client_id`, `client_secret`, issuer URL, JWKS endpoint
+3. Store credentials in Azure Key Vault; configure via `NAS_*` env vars
+4. Register production and staging redirect URIs with NAS
+
+### 8.3 MOCI CR API
+
+**Protocol**: REST (JSON) — SOAP alternative may be required; confirm with MOCI.
+
+| Attribute | Detail |
+|-----------|--------|
+| Authentication | API key in header: `X-API-Key: {MOCI_API_KEY}` |
+| CR lookup endpoint | `GET /company/{cr_number}` |
+| Response fields | Company name (Arabic + English), CR status, sector, registration date, authorised signatories |
+| Latency requirement | Response within 3 seconds end-to-end (NFR-003) |
+| Cache policy | Company data cached for current session only; not persisted post-submission |
+| Error handling | CR not found: display not-found error. API down: display temporary error. Never allow manual bypass. |
+| Retry policy | 2 retries with 1-second delay on 5xx errors |
+
+**Provisioning steps**:
+1. QDB IT requests API access from MOCI integration team
+2. MOCI provides API key and CR endpoint documentation
+3. Store API key in Key Vault; set `MOCI_API_BASE_URL` and `MOCI_API_KEY`
+
+### 8.4 WPS System
+
+> **Note**: The WPS integration mechanism must be confirmed with the Ministry of Labor.
+> A data-sharing MOU between QDB and the Ministry of Labor is a prerequisite (PRD
+> Assumption ASM-008). REST API is assumed; SFTP file transfer may be required as
+> an alternative.
+
+| Attribute | Detail |
+|-----------|--------|
+| Integration type | REST API or secure SFTP (TBC with Ministry of Labor) |
+| Query key | CR number |
+| Data returned | Employee count, total payroll (last 90 days), per-month breakdown, payment dates |
+| Data age limit | WPS data must not be older than 90 days (BR-010) |
+| Discrepancy threshold | 10% variance triggers `wps_discrepancy` flag; configurable via `WPS_DISCREPANCY_THRESHOLD_PCT` |
+| Failure mode | API unavailable: use uploaded WPS CSV only; set `wps_api_fallback` flag on CRM case |
+| Legal prerequisite | Data sharing MOU between QDB and Ministry of Labor (ASM-008) must be confirmed before integration work begins |
+
+### 8.5 Dynamics 365 CRM
+
+**Protocol**: Dynamics 365 Web API (REST/OData v4), OAuth 2.0 with Azure AD service principal.
+
+| Attribute | Detail |
+|-----------|--------|
+| Authentication | Azure AD service principal — OAuth 2.0 client credentials flow |
+| Case entity | `qdb_disbursementcases` (custom entity — QDB IT CRM admin must create before go-live) |
+| Auto case | `case_type: auto_nrgp`, `status: pending_disbursement` |
+| Manual case | `case_type: manual_review`, `status: pending_review` |
+| Status polling | Portal polls CRM every 5 minutes for active application status changes |
+| Retry on write failure | 3 retries with exponential backoff (base delay: 1 second); failures queued in Azure Service Bus |
+| Secret rotation | CRM service principal client secret must be rotated every 90 days |
+
+**Provisioning steps**:
+1. QDB IT creates an Azure AD App Registration for the portal API
+2. Generates client secret (90-day expiry; calendar reminder for rotation)
+3. QDB CRM admin grants app registration access to Dynamics 365 environment
+4. QDB CRM admin creates `qdb_disbursementcases` custom entity with all required fields
+5. Test case creation in staging CRM before production go-live
+6. Store `CRM_CLIENT_ID` and `CRM_CLIENT_SECRET` in Key Vault
+
+### 8.6 Document Storage
+
+**Azure Blob Storage container setup**:
+
+```bash
+# Create storage container (run once per environment)
+az storage container create \
+  --name qdb-sme-relief-documents \
+  --account-name "${AZURE_STORAGE_ACCOUNT}" \
+  --public-access off \
+  --auth-mode login
+
+# Apply lifecycle management policy (7-year retention per BR-008)
+az storage account management-policy create \
+  --account-name "${AZURE_STORAGE_ACCOUNT}" \
+  --policy '{
+    "rules": [{
+      "name": "move-to-cool-tier",
+      "enabled": true,
+      "type": "Lifecycle",
+      "definition": {
+        "filters": {"blobTypes": ["blockBlob"]},
+        "actions": {
+          "baseBlob": {"tierToCool": {"daysAfterModificationGreaterThan": 180}}
+        }
+      }
+    }]
+  }'
+```
+
+---
+
+## 14. Current Prototype Setup
+
+### 14.1 Prototype State
+
+The current QDB SME Relief Portal is a **Next.js 14 prototype** running on port 3120.
+It demonstrates the applicant-facing UI flow and admin dashboard layout, but has no
+backend, database, or live integrations.
+
+| Component | Status |
+|-----------|--------|
+| Next.js frontend — applicant flow | Prototype — functional UI |
+| Next.js admin dashboard UI | Prototype — functional UI |
+| NAS / Tawtheeq OIDC | Not implemented — mocked |
+| MOCI API integration | Not implemented — mocked |
+| WPS API integration | Not implemented — mocked |
+| Dynamics 365 CRM integration | Not implemented — mocked |
+| PostgreSQL database | Not implemented |
+| Document storage (Azure Blob) | Not implemented — local simulation |
+| Fastify API backend | Not implemented |
+| Audit trail service | Not implemented |
+| Notification service (email/SMS) | Not implemented |
+| CI/CD pipeline | Not configured |
+| Docker containers | Not configured |
+
+### 14.2 Running the Prototype Locally
+
+**Prerequisites**: Node.js 20+, npm 10+
+
+```bash
+# Navigate to the web app
+cd products/qdb-sme-relief/apps/web
+
+# Install dependencies
+npm install
+
+# Copy the environment template
+# No real credentials are needed for the prototype
+cp .env.example .env.local
+
+# Start the development server
+npm run dev
+```
+
+The prototype runs at `http://localhost:3120`. All integration responses are mocked
+within the Next.js app. No external services or credentials are required.
+
+### 14.3 Path to Production
+
+Work required to move from prototype to production:
+
+1. **Fastify API backend**: Implement API service with database, integration clients, session management, audit service, document handling, and notification service
+2. **PostgreSQL schema**: Prisma schema for `applications`, `audit_events`, `nrgp_list`, `eligibility_criteria`, `users` tables
+3. **NAS OIDC**: Provision credentials; implement OIDC Authorization Code flow with PKCE
+4. **MOCI integration**: Obtain API access; implement CR lookup with retry and session caching
+5. **WPS integration**: Confirm MOU with Ministry of Labor; implement after legal clearance
+6. **CRM integration**: QDB IT provisions service principal and custom entity; implement Web API client with Service Bus retry queue
+7. **Document storage**: Provision Azure Blob Storage; implement virus scanning pipeline
+8. **CI/CD pipeline**: Configure GitHub Actions workflows and Azure App Service deployment slots
+9. **Monitoring**: Configure Azure Application Insights and PagerDuty alert rules
+10. **Secrets management**: Provision Azure Key Vault; configure App Service managed identity
 
 ---
 
