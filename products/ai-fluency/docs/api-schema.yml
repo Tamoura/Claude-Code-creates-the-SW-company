@@ -1,0 +1,2188 @@
+openapi: 3.0.3
+info:
+  title: AI Fluency Platform API
+  version: 1.0.0
+  description: |
+    Enterprise AI Fluency Assessment & Development Platform API.
+    Implements Anthropic's 4D Framework (Delegation, Description, Discernment, Diligence).
+
+    **Authentication**: Bearer JWT access token (15 min expiry) required on all protected endpoints.
+    Refresh tokens are managed via httpOnly cookies.
+
+    **Multi-tenancy**: All tenant-scoped endpoints enforce PostgreSQL RLS.
+    The orgId is derived from the JWT — never passed as a parameter on protected endpoints.
+
+    **Error format**: RFC 7807 Problem Details for all error responses.
+
+servers:
+  - url: http://localhost:5014/api/v1
+    description: Local development
+  - url: https://api.ai-fluency.connectsw.com/api/v1
+    description: Production
+
+tags:
+  - name: health
+    description: Health check
+  - name: auth
+    description: Authentication — register, login, refresh, logout, SSO
+  - name: organizations
+    description: Organization management (admin)
+  - name: users
+    description: User profile, GDPR export/delete
+  - name: teams
+    description: Team management within an organization
+  - name: assessment-templates
+    description: Assessment template CRUD and role library
+  - name: assessment-sessions
+    description: Assessment lifecycle — start, answer, complete, resume
+  - name: fluency-profiles
+    description: Fluency profile retrieval and history
+  - name: learning-paths
+    description: Personalized learning path management
+  - name: certificates
+    description: Digital certificates and Open Badges
+  - name: dashboard
+    description: Aggregate dashboards for org and team
+  - name: admin
+    description: Platform-level admin (SUPER_ADMIN role required)
+
+paths:
+  # ─────────────────────────────────────
+  # HEALTH
+  # ─────────────────────────────────────
+  /health:
+    get:
+      tags: [health]
+      summary: Health check
+      description: |
+        Returns 200 if all dependencies are healthy, 503 if any dependency is down.
+        Used by load balancer health checks.
+      security: []
+      operationId: getHealth
+      responses:
+        '200':
+          description: All systems healthy
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/HealthResponse'
+        '503':
+          description: One or more dependencies are unhealthy
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/HealthResponse'
+
+  # ─────────────────────────────────────
+  # AUTH
+  # ─────────────────────────────────────
+  /auth/register:
+    post:
+      tags: [auth]
+      summary: Register a new user account
+      description: |
+        Creates a new user. The org must exist and be in ACTIVE status.
+        Sends email verification. Account is in PENDING_VERIFICATION state until verified.
+        Maps to: FR-001 (user prerequisite)
+      security: []
+      operationId: authRegister
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              $ref: '#/components/schemas/RegisterRequest'
+      responses:
+        '201':
+          description: Account created — verification email sent
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/AuthResponse'
+        '400':
+          $ref: '#/components/responses/ValidationError'
+        '409':
+          $ref: '#/components/responses/ConflictError'
+        '429':
+          $ref: '#/components/responses/RateLimitError'
+
+  /auth/login:
+    post:
+      tags: [auth]
+      summary: Login with email and password
+      description: |
+        Returns JWT access token in body and refresh token as httpOnly Secure cookie.
+        Rate limited to 5 attempts per IP per minute, lockout after 10 failures.
+        Maps to: US-01 (user must be authenticated to take assessment)
+      security: []
+      operationId: authLogin
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              $ref: '#/components/schemas/LoginRequest'
+      responses:
+        '200':
+          description: Login successful
+          headers:
+            Set-Cookie:
+              description: httpOnly Secure SameSite=Strict refresh token cookie
+              schema:
+                type: string
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/AuthResponse'
+        '400':
+          $ref: '#/components/responses/ValidationError'
+        '401':
+          $ref: '#/components/responses/UnauthorizedError'
+        '423':
+          $ref: '#/components/responses/AccountLockedError'
+        '429':
+          $ref: '#/components/responses/RateLimitError'
+
+  /auth/refresh:
+    post:
+      tags: [auth]
+      summary: Refresh access token
+      description: |
+        Reads refresh token from httpOnly cookie. Issues new access+refresh token pair (rotation).
+        Old refresh token is immediately invalidated.
+      security: []
+      operationId: authRefresh
+      responses:
+        '200':
+          description: Tokens refreshed
+          headers:
+            Set-Cookie:
+              description: New refresh token cookie
+              schema:
+                type: string
+          content:
+            application/json:
+              schema:
+                type: object
+                properties:
+                  accessToken:
+                    type: string
+        '401':
+          $ref: '#/components/responses/UnauthorizedError'
+
+  /auth/logout:
+    post:
+      tags: [auth]
+      summary: Logout — invalidate session
+      description: Clears refresh token cookie and removes session from DB.
+      operationId: authLogout
+      responses:
+        '204':
+          description: Logged out successfully
+        '401':
+          $ref: '#/components/responses/UnauthorizedError'
+
+  /auth/verify-email:
+    post:
+      tags: [auth]
+      summary: Verify email address
+      security: []
+      operationId: authVerifyEmail
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              type: object
+              required: [token]
+              properties:
+                token:
+                  type: string
+      responses:
+        '200':
+          description: Email verified
+        '400':
+          $ref: '#/components/responses/ValidationError'
+        '410':
+          $ref: '#/components/responses/GoneError'
+
+  /auth/forgot-password:
+    post:
+      tags: [auth]
+      summary: Request password reset email
+      security: []
+      operationId: authForgotPassword
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              type: object
+              required: [email]
+              properties:
+                email:
+                  type: string
+                  format: email
+      responses:
+        '202':
+          description: Reset email sent if account exists (always 202 to prevent user enumeration)
+
+  /auth/reset-password:
+    post:
+      tags: [auth]
+      summary: Reset password with token
+      security: []
+      operationId: authResetPassword
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              type: object
+              required: [token, newPassword]
+              properties:
+                token:
+                  type: string
+                newPassword:
+                  type: string
+                  minLength: 10
+      responses:
+        '204':
+          description: Password reset successfully
+        '400':
+          $ref: '#/components/responses/ValidationError'
+        '410':
+          $ref: '#/components/responses/GoneError'
+
+  /auth/sessions:
+    get:
+      tags: [auth]
+      summary: List active sessions (for session management UI)
+      operationId: authListSessions
+      responses:
+        '200':
+          description: Active sessions list
+          content:
+            application/json:
+              schema:
+                type: array
+                items:
+                  $ref: '#/components/schemas/Session'
+
+  /auth/sessions/{sessionId}:
+    delete:
+      tags: [auth]
+      summary: Revoke a specific session
+      operationId: authRevokeSession
+      parameters:
+        - $ref: '#/components/parameters/SessionId'
+      responses:
+        '204':
+          description: Session revoked
+        '404':
+          $ref: '#/components/responses/NotFoundError'
+
+  /auth/saml/init:
+    get:
+      tags: [auth]
+      summary: Initiate SAML SSO (redirect to IdP)
+      security: []
+      operationId: authSamlInit
+      parameters:
+        - name: orgId
+          in: query
+          required: true
+          schema:
+            type: string
+            format: uuid
+      responses:
+        '302':
+          description: Redirect to Identity Provider
+
+  /auth/saml/callback:
+    post:
+      tags: [auth]
+      summary: SAML SSO callback (from IdP)
+      security: []
+      operationId: authSamlCallback
+      requestBody:
+        required: true
+        content:
+          application/x-www-form-urlencoded:
+            schema:
+              type: object
+              properties:
+                SAMLResponse:
+                  type: string
+      responses:
+        '302':
+          description: Redirect to app with access token
+
+  /auth/oidc/callback:
+    get:
+      tags: [auth]
+      summary: OIDC SSO callback
+      security: []
+      operationId: authOidcCallback
+      parameters:
+        - name: code
+          in: query
+          required: true
+          schema:
+            type: string
+        - name: state
+          in: query
+          required: true
+          schema:
+            type: string
+      responses:
+        '302':
+          description: Redirect to app with tokens
+
+  # ─────────────────────────────────────
+  # ORGANIZATIONS
+  # ─────────────────────────────────────
+  /organizations:
+    post:
+      tags: [organizations]
+      summary: Create a new organization
+      description: ADMIN/SUPER_ADMIN only. Creates org with default settings.
+      operationId: createOrganization
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              $ref: '#/components/schemas/CreateOrganizationRequest'
+      responses:
+        '201':
+          description: Organization created
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/Organization'
+        '400':
+          $ref: '#/components/responses/ValidationError'
+        '403':
+          $ref: '#/components/responses/ForbiddenError'
+
+  /organizations/{orgId}:
+    get:
+      tags: [organizations]
+      summary: Get organization details
+      description: Members of the org can view their own org. ADMIN can view any.
+      operationId: getOrganization
+      parameters:
+        - $ref: '#/components/parameters/OrgId'
+      responses:
+        '200':
+          description: Organization details
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/Organization'
+        '403':
+          $ref: '#/components/responses/ForbiddenError'
+        '404':
+          $ref: '#/components/responses/NotFoundError'
+    put:
+      tags: [organizations]
+      summary: Update organization settings
+      description: MANAGER or ADMIN role required. Includes SSO config, data retention settings.
+      operationId: updateOrganization
+      parameters:
+        - $ref: '#/components/parameters/OrgId'
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              $ref: '#/components/schemas/UpdateOrganizationRequest'
+      responses:
+        '200':
+          description: Organization updated
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/Organization'
+        '403':
+          $ref: '#/components/responses/ForbiddenError'
+
+  # ─────────────────────────────────────
+  # USERS
+  # ─────────────────────────────────────
+  /users/me:
+    get:
+      tags: [users]
+      summary: Get current user profile
+      description: Returns authenticated user's profile including role and org.
+      operationId: getMyProfile
+      responses:
+        '200':
+          description: User profile
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/User'
+    put:
+      tags: [users]
+      summary: Update current user profile
+      operationId: updateMyProfile
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              $ref: '#/components/schemas/UpdateUserRequest'
+      responses:
+        '200':
+          description: Profile updated
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/User'
+    delete:
+      tags: [users]
+      summary: Delete own account (GDPR right to erasure)
+      description: |
+        Soft-deletes the account (deletedAt set). A background worker performs
+        hard delete after 30 days per GDPR Article 17.
+        Maps to: GDPR right to erasure
+      operationId: deleteMyAccount
+      responses:
+        '202':
+          description: Account scheduled for deletion
+        '401':
+          $ref: '#/components/responses/UnauthorizedError'
+
+  /users/me/export:
+    get:
+      tags: [users]
+      summary: Export all personal data (GDPR data portability)
+      description: |
+        Returns a ZIP file containing all user data: profile, assessment sessions,
+        fluency profiles, responses, certificates, learning progress.
+        Maps to: GDPR Article 20 (data portability)
+      operationId: exportMyData
+      responses:
+        '200':
+          description: ZIP archive of all user data
+          content:
+            application/zip:
+              schema:
+                type: string
+                format: binary
+        '202':
+          description: Export queued — download link sent via email (for large exports)
+
+  # ─────────────────────────────────────
+  # TEAMS
+  # ─────────────────────────────────────
+  /teams:
+    get:
+      tags: [teams]
+      summary: List teams in organization
+      operationId: listTeams
+      parameters:
+        - $ref: '#/components/parameters/PageParam'
+        - $ref: '#/components/parameters/LimitParam'
+      responses:
+        '200':
+          description: Paginated teams list
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/PaginatedTeams'
+    post:
+      tags: [teams]
+      summary: Create a team
+      description: MANAGER or ADMIN role required.
+      operationId: createTeam
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              $ref: '#/components/schemas/CreateTeamRequest'
+      responses:
+        '201':
+          description: Team created
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/Team'
+
+  /teams/{teamId}:
+    get:
+      tags: [teams]
+      summary: Get team details and members
+      operationId: getTeam
+      parameters:
+        - $ref: '#/components/parameters/TeamId'
+      responses:
+        '200':
+          description: Team with members
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/TeamWithMembers'
+    put:
+      tags: [teams]
+      summary: Update team
+      operationId: updateTeam
+      parameters:
+        - $ref: '#/components/parameters/TeamId'
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              $ref: '#/components/schemas/UpdateTeamRequest'
+      responses:
+        '200':
+          description: Team updated
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/Team'
+    delete:
+      tags: [teams]
+      summary: Delete team
+      description: MANAGER or ADMIN required. Members are not deleted.
+      operationId: deleteTeam
+      parameters:
+        - $ref: '#/components/parameters/TeamId'
+      responses:
+        '204':
+          description: Team deleted
+
+  /teams/{teamId}/members:
+    post:
+      tags: [teams]
+      summary: Add member to team
+      operationId: addTeamMember
+      parameters:
+        - $ref: '#/components/parameters/TeamId'
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              type: object
+              required: [userId]
+              properties:
+                userId:
+                  type: string
+                  format: uuid
+      responses:
+        '201':
+          description: Member added
+    delete:
+      tags: [teams]
+      summary: Remove member from team
+      operationId: removeTeamMember
+      parameters:
+        - $ref: '#/components/parameters/TeamId'
+        - name: userId
+          in: query
+          required: true
+          schema:
+            type: string
+            format: uuid
+      responses:
+        '204':
+          description: Member removed
+
+  # ─────────────────────────────────────
+  # ASSESSMENT TEMPLATES
+  # ─────────────────────────────────────
+  /assessment-templates:
+    get:
+      tags: [assessment-templates]
+      summary: List assessment templates
+      description: Lists org's own templates plus ConnectSW-provided role templates.
+      operationId: listTemplates
+      parameters:
+        - name: role
+          in: query
+          description: Filter by role profile (developer, analyst, manager, marketer)
+          schema:
+            $ref: '#/components/schemas/RoleProfile'
+        - $ref: '#/components/parameters/PageParam'
+        - $ref: '#/components/parameters/LimitParam'
+      responses:
+        '200':
+          description: Paginated templates list
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/PaginatedTemplates'
+    post:
+      tags: [assessment-templates]
+      summary: Create custom assessment template
+      description: |
+        MANAGER or ADMIN. Custom templates can override dimension weights
+        for specific role profiles. Maps to: role-specific templates requirement.
+      operationId: createTemplate
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              $ref: '#/components/schemas/CreateTemplateRequest'
+      responses:
+        '201':
+          description: Template created
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/AssessmentTemplate'
+
+  /assessment-templates/{templateId}:
+    get:
+      tags: [assessment-templates]
+      summary: Get template details (including questions)
+      operationId: getTemplate
+      parameters:
+        - $ref: '#/components/parameters/TemplateId'
+      responses:
+        '200':
+          description: Template with question set
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/AssessmentTemplateDetail'
+    put:
+      tags: [assessment-templates]
+      summary: Update template (custom templates only)
+      operationId: updateTemplate
+      parameters:
+        - $ref: '#/components/parameters/TemplateId'
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              $ref: '#/components/schemas/UpdateTemplateRequest'
+      responses:
+        '200':
+          description: Template updated
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/AssessmentTemplate'
+    delete:
+      tags: [assessment-templates]
+      summary: Delete custom template
+      operationId: deleteTemplate
+      parameters:
+        - $ref: '#/components/parameters/TemplateId'
+      responses:
+        '204':
+          description: Template deleted
+
+  /assessment-templates/library:
+    get:
+      tags: [assessment-templates]
+      summary: Browse global role template library
+      description: Platform-provided templates for Developer, Analyst, Manager, Marketer roles.
+      security: []
+      operationId: getTemplateLibrary
+      responses:
+        '200':
+          description: Role template library
+          content:
+            application/json:
+              schema:
+                type: array
+                items:
+                  $ref: '#/components/schemas/AssessmentTemplate'
+
+  # ─────────────────────────────────────
+  # ASSESSMENT SESSIONS
+  # ─────────────────────────────────────
+  /assessment-sessions:
+    post:
+      tags: [assessment-sessions]
+      summary: Start a new assessment session
+      description: |
+        Creates a new session for the authenticated user using the specified template.
+        Returns the first batch of questions. Session is in IN_PROGRESS state.
+        Maps to: US-01, FR-001, FR-004 (save-and-resume enabled by default)
+      operationId: startSession
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              $ref: '#/components/schemas/StartSessionRequest'
+      responses:
+        '201':
+          description: Session started
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/SessionStartResponse'
+        '409':
+          description: User already has an in-progress session for this template
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/ProblemDetails'
+
+  /assessment-sessions/active:
+    get:
+      tags: [assessment-sessions]
+      summary: Get current user's in-progress sessions
+      description: Used for save-and-resume UX. Maps to FR-004.
+      operationId: getActiveSessions
+      responses:
+        '200':
+          description: List of in-progress sessions
+          content:
+            application/json:
+              schema:
+                type: array
+                items:
+                  $ref: '#/components/schemas/AssessmentSession'
+
+  /assessment-sessions/{sessionId}:
+    get:
+      tags: [assessment-sessions]
+      summary: Get session state (for resume)
+      description: |
+        Returns session state including answered questions for resume flow.
+        Ownership verified via RLS (userId + orgId). Maps to FR-004.
+      operationId: getSession
+      parameters:
+        - $ref: '#/components/parameters/SessionId'
+      responses:
+        '200':
+          description: Session with answered questions
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/AssessmentSessionDetail'
+        '403':
+          $ref: '#/components/responses/ForbiddenError'
+        '404':
+          $ref: '#/components/responses/NotFoundError'
+
+  /assessment-sessions/{sessionId}/responses:
+    put:
+      tags: [assessment-sessions]
+      summary: Submit answers (batch or single)
+      description: |
+        Saves one or more question responses. Idempotent — re-submitting an answer
+        for the same question updates it (UPSERT). Supports Likert (1-5) for self-report
+        questions and A/B/C/D for scenario questions.
+        Maps to: US-01, US-04, FR-004 (save-and-resume), FR-005 (self-report)
+      operationId: submitResponses
+      parameters:
+        - $ref: '#/components/parameters/SessionId'
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              $ref: '#/components/schemas/SubmitResponsesRequest'
+      responses:
+        '200':
+          description: Responses saved
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/SessionProgressResponse'
+        '400':
+          $ref: '#/components/responses/ValidationError'
+        '403':
+          $ref: '#/components/responses/ForbiddenError'
+        '409':
+          description: Session already completed
+
+  /assessment-sessions/{sessionId}/complete:
+    post:
+      tags: [assessment-sessions]
+      summary: Complete assessment and trigger scoring
+      description: |
+        Finalizes the session, runs prevalence-weighted scoring algorithm,
+        creates fluency profile, and generates personalized learning path.
+        Requires all 32 questions answered (configurable minimum: 28).
+        Maps to: US-03 (scoring), FR-002 (algorithm), FR-003 (profile), FR-007 (learning path)
+      operationId: completeSession
+      parameters:
+        - $ref: '#/components/parameters/SessionId'
+      responses:
+        '200':
+          description: Assessment scored
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/SessionCompleteResponse'
+        '400':
+          description: Insufficient answers to complete
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/ProblemDetails'
+        '409':
+          description: Session already completed
+
+  # ─────────────────────────────────────
+  # FLUENCY PROFILES
+  # ─────────────────────────────────────
+  /fluency-profiles/{profileId}:
+    get:
+      tags: [fluency-profiles]
+      summary: Get fluency profile
+      description: |
+        Returns full profile with overall score, per-dimension scores,
+        behavioral indicator breakdown, self-report scores (separate track),
+        and discernment gap flag. Ownership: user sees own; manager sees team's.
+        Maps to: US-02, FR-003, FR-006
+      operationId: getProfile
+      parameters:
+        - name: profileId
+          in: path
+          required: true
+          schema:
+            type: string
+            format: uuid
+      responses:
+        '200':
+          description: Fluency profile
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/FluencyProfile'
+        '403':
+          $ref: '#/components/responses/ForbiddenError'
+        '404':
+          $ref: '#/components/responses/NotFoundError'
+
+  /users/me/fluency-profiles:
+    get:
+      tags: [fluency-profiles]
+      summary: Get current user's profile history
+      description: Returns all fluency profiles for the authenticated user, ordered newest first.
+      operationId: getMyProfiles
+      parameters:
+        - $ref: '#/components/parameters/PageParam'
+        - $ref: '#/components/parameters/LimitParam'
+      responses:
+        '200':
+          description: Paginated profile history
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/PaginatedProfiles'
+
+  # ─────────────────────────────────────
+  # LEARNING PATHS
+  # ─────────────────────────────────────
+  /learning-paths:
+    post:
+      tags: [learning-paths]
+      summary: Generate personalized learning path
+      description: |
+        Creates a learning path from a fluency profile. Ordered by weakest dimension first.
+        Discernment gap triggers "Question AI Reasoning" module prepended.
+        Maps to: US-05, FR-007
+      operationId: generateLearningPath
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              type: object
+              required: [profileId]
+              properties:
+                profileId:
+                  type: string
+                  format: uuid
+      responses:
+        '201':
+          description: Learning path generated
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/LearningPath'
+
+  /learning-paths/{pathId}:
+    get:
+      tags: [learning-paths]
+      summary: Get learning path with modules and progress
+      description: Maps to US-06 (track progress).
+      operationId: getLearningPath
+      parameters:
+        - $ref: '#/components/parameters/PathId'
+      responses:
+        '200':
+          description: Learning path with module progress
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/LearningPathDetail'
+        '403':
+          $ref: '#/components/responses/ForbiddenError'
+        '404':
+          $ref: '#/components/responses/NotFoundError'
+
+  /learning-paths/{pathId}/modules/{moduleId}/complete:
+    put:
+      tags: [learning-paths]
+      summary: Mark module as completed
+      description: |
+        Records module completion with optional score (for quizzed modules).
+        Updates path progress percentage. Maps to: US-06.
+      operationId: completeModule
+      parameters:
+        - $ref: '#/components/parameters/PathId'
+        - name: moduleId
+          in: path
+          required: true
+          schema:
+            type: string
+            format: uuid
+      requestBody:
+        required: false
+        content:
+          application/json:
+            schema:
+              type: object
+              properties:
+                score:
+                  type: number
+                  minimum: 0
+                  maximum: 100
+                  description: Optional quiz score for this module
+                timeSpentMinutes:
+                  type: integer
+                  minimum: 0
+      responses:
+        '200':
+          description: Module completed
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/ModuleCompletion'
+        '404':
+          $ref: '#/components/responses/NotFoundError'
+
+  # ─────────────────────────────────────
+  # CERTIFICATES
+  # ─────────────────────────────────────
+  /certificates/{certificateId}:
+    get:
+      tags: [certificates]
+      summary: Get certificate details
+      operationId: getCertificate
+      parameters:
+        - name: certificateId
+          in: path
+          required: true
+          schema:
+            type: string
+            format: uuid
+      responses:
+        '200':
+          description: Certificate details
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/Certificate'
+
+  /certificates/{certificateId}/verify:
+    get:
+      tags: [certificates]
+      summary: Publicly verify a certificate (no auth required)
+      description: Verifiable by anyone. Used for embedding in LinkedIn, email signatures.
+      security: []
+      operationId: verifyCertificate
+      parameters:
+        - name: certificateId
+          in: path
+          required: true
+          schema:
+            type: string
+            format: uuid
+      responses:
+        '200':
+          description: Certificate is valid
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/CertificateVerification'
+        '404':
+          $ref: '#/components/responses/NotFoundError'
+
+  /certificates/{certificateId}/pdf:
+    get:
+      tags: [certificates]
+      summary: Download certificate as PDF
+      operationId: downloadCertificatePdf
+      parameters:
+        - name: certificateId
+          in: path
+          required: true
+          schema:
+            type: string
+            format: uuid
+      responses:
+        '200':
+          description: PDF file
+          content:
+            application/pdf:
+              schema:
+                type: string
+                format: binary
+        '403':
+          $ref: '#/components/responses/ForbiddenError'
+
+  # ─────────────────────────────────────
+  # DASHBOARD
+  # ─────────────────────────────────────
+  /organizations/{orgId}/dashboard:
+    get:
+      tags: [dashboard]
+      summary: Organization-level AI fluency dashboard
+      description: |
+        Aggregate metrics: average fluency by dimension, completion rate,
+        at-risk learner count (discernment gap), top/bottom performers.
+        MANAGER or ADMIN required. Maps to: David (C-Suite) persona.
+      operationId: getOrgDashboard
+      parameters:
+        - $ref: '#/components/parameters/OrgId'
+        - name: period
+          in: query
+          schema:
+            type: string
+            enum: [7d, 30d, 90d, 1y]
+            default: 30d
+      responses:
+        '200':
+          description: Organization dashboard metrics
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/OrgDashboard'
+        '403':
+          $ref: '#/components/responses/ForbiddenError'
+
+  /teams/{teamId}/dashboard:
+    get:
+      tags: [dashboard]
+      summary: Team-level fluency dashboard
+      description: Team aggregate metrics and individual member scores. MANAGER required.
+      operationId: getTeamDashboard
+      parameters:
+        - $ref: '#/components/parameters/TeamId'
+        - name: period
+          in: query
+          schema:
+            type: string
+            enum: [7d, 30d, 90d, 1y]
+            default: 30d
+      responses:
+        '200':
+          description: Team dashboard metrics
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/TeamDashboard'
+        '403':
+          $ref: '#/components/responses/ForbiddenError'
+
+  # ─────────────────────────────────────
+  # ADMIN (SUPER_ADMIN only)
+  # ─────────────────────────────────────
+  /admin/organizations:
+    get:
+      tags: [admin]
+      summary: List all organizations (platform admin)
+      description: SUPER_ADMIN role required.
+      operationId: adminListOrgs
+      parameters:
+        - $ref: '#/components/parameters/PageParam'
+        - $ref: '#/components/parameters/LimitParam'
+        - name: status
+          in: query
+          schema:
+            $ref: '#/components/schemas/OrgStatus'
+      responses:
+        '200':
+          description: Paginated organizations list
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/PaginatedOrganizations'
+        '403':
+          $ref: '#/components/responses/ForbiddenError'
+
+  /admin/organizations/{orgId}/suspend:
+    post:
+      tags: [admin]
+      summary: Suspend an organization
+      description: SUPER_ADMIN role required. Blocks all logins for this org.
+      operationId: adminSuspendOrg
+      parameters:
+        - $ref: '#/components/parameters/OrgId'
+      responses:
+        '200':
+          description: Organization suspended
+
+  /admin/organizations/{orgId}/algorithm-versions:
+    get:
+      tags: [admin]
+      summary: List scoring algorithm versions
+      description: Shows which algorithm version is active and historical versions.
+      operationId: adminListAlgorithmVersions
+      parameters:
+        - $ref: '#/components/parameters/OrgId'
+      responses:
+        '200':
+          description: Algorithm versions
+
+# ─────────────────────────────────────────────────
+# COMPONENTS
+# ─────────────────────────────────────────────────
+components:
+  securitySchemes:
+    bearerAuth:
+      type: http
+      scheme: bearer
+      bearerFormat: JWT
+
+  parameters:
+    OrgId:
+      name: orgId
+      in: path
+      required: true
+      schema:
+        type: string
+        format: uuid
+    TeamId:
+      name: teamId
+      in: path
+      required: true
+      schema:
+        type: string
+        format: uuid
+    SessionId:
+      name: sessionId
+      in: path
+      required: true
+      schema:
+        type: string
+        format: uuid
+    TemplateId:
+      name: templateId
+      in: path
+      required: true
+      schema:
+        type: string
+        format: uuid
+    PathId:
+      name: pathId
+      in: path
+      required: true
+      schema:
+        type: string
+        format: uuid
+    PageParam:
+      name: page
+      in: query
+      schema:
+        type: integer
+        minimum: 1
+        default: 1
+    LimitParam:
+      name: limit
+      in: query
+      schema:
+        type: integer
+        minimum: 1
+        maximum: 100
+        default: 20
+
+  schemas:
+    # ── Enums ──
+    Dimension:
+      type: string
+      enum: [DELEGATION, DESCRIPTION, DISCERNMENT, DILIGENCE]
+    InteractionMode:
+      type: string
+      enum: [AUTOMATION, AUGMENTATION, AGENCY]
+    QuestionType:
+      type: string
+      enum: [SCENARIO, SELF_REPORT]
+    SessionStatus:
+      type: string
+      enum: [IN_PROGRESS, COMPLETED, ABANDONED, EXPIRED]
+    UserRole:
+      type: string
+      enum: [LEARNER, MANAGER, ADMIN, SUPER_ADMIN]
+    OrgStatus:
+      type: string
+      enum: [ACTIVE, SUSPENDED, TRIAL, ARCHIVED]
+    RoleProfile:
+      type: string
+      enum: [DEVELOPER, ANALYST, MANAGER, MARKETER, GENERIC]
+
+    # ── Problem Details (RFC 7807) ──
+    ProblemDetails:
+      type: object
+      required: [type, title, status]
+      properties:
+        type:
+          type: string
+          format: uri
+          example: https://api.ai-fluency.connectsw.com/errors/validation-error
+        title:
+          type: string
+          example: validation-error
+        status:
+          type: integer
+          example: 400
+        detail:
+          type: string
+          example: Email is required
+        instance:
+          type: string
+          description: Request ID for tracing
+        errors:
+          type: array
+          description: Field-level validation errors
+          items:
+            type: object
+            properties:
+              field:
+                type: string
+              message:
+                type: string
+
+    # ── Auth ──
+    RegisterRequest:
+      type: object
+      required: [email, password, firstName, lastName, orgId]
+      properties:
+        email:
+          type: string
+          format: email
+        password:
+          type: string
+          minLength: 10
+          description: Min 10 chars, must include uppercase, digit, special char
+        firstName:
+          type: string
+          maxLength: 100
+        lastName:
+          type: string
+          maxLength: 100
+        orgId:
+          type: string
+          format: uuid
+        inviteToken:
+          type: string
+          description: Optional invite token from team invitation email
+
+    LoginRequest:
+      type: object
+      required: [email, password]
+      properties:
+        email:
+          type: string
+          format: email
+        password:
+          type: string
+
+    AuthResponse:
+      type: object
+      required: [accessToken, user]
+      properties:
+        accessToken:
+          type: string
+          description: JWT access token (15 min expiry)
+        user:
+          $ref: '#/components/schemas/User'
+
+    Session:
+      type: object
+      properties:
+        id:
+          type: string
+          format: uuid
+        createdAt:
+          type: string
+          format: date-time
+        lastUsedAt:
+          type: string
+          format: date-time
+        ipAddress:
+          type: string
+        userAgent:
+          type: string
+        isCurrent:
+          type: boolean
+
+    # ── User ──
+    User:
+      type: object
+      properties:
+        id:
+          type: string
+          format: uuid
+        email:
+          type: string
+          format: email
+        firstName:
+          type: string
+        lastName:
+          type: string
+        role:
+          $ref: '#/components/schemas/UserRole'
+        orgId:
+          type: string
+          format: uuid
+        teamId:
+          type: string
+          format: uuid
+          nullable: true
+        avatarUrl:
+          type: string
+          format: uri
+          nullable: true
+        emailVerified:
+          type: boolean
+        createdAt:
+          type: string
+          format: date-time
+
+    UpdateUserRequest:
+      type: object
+      properties:
+        firstName:
+          type: string
+          maxLength: 100
+        lastName:
+          type: string
+          maxLength: 100
+        avatarUrl:
+          type: string
+          format: uri
+
+    # ── Organization ──
+    Organization:
+      type: object
+      properties:
+        id:
+          type: string
+          format: uuid
+        name:
+          type: string
+        slug:
+          type: string
+        status:
+          $ref: '#/components/schemas/OrgStatus'
+        plan:
+          type: string
+          enum: [TRIAL, STARTER, PROFESSIONAL, ENTERPRISE]
+        ssoEnabled:
+          type: boolean
+        dataRetentionDays:
+          type: integer
+          description: Days before hard delete (GDPR). Min 30, max 3650.
+        createdAt:
+          type: string
+          format: date-time
+
+    CreateOrganizationRequest:
+      type: object
+      required: [name, plan]
+      properties:
+        name:
+          type: string
+          maxLength: 200
+        plan:
+          type: string
+          enum: [TRIAL, STARTER, PROFESSIONAL, ENTERPRISE]
+        adminEmail:
+          type: string
+          format: email
+          description: Initial admin user email
+
+    UpdateOrganizationRequest:
+      type: object
+      properties:
+        name:
+          type: string
+        dataRetentionDays:
+          type: integer
+          minimum: 30
+          maximum: 3650
+        ssoConfig:
+          $ref: '#/components/schemas/SSOConfig'
+
+    SSOConfig:
+      type: object
+      properties:
+        provider:
+          type: string
+          enum: [SAML, OIDC]
+        entityId:
+          type: string
+          description: SAML entity ID or OIDC issuer URL
+        ssoUrl:
+          type: string
+          format: uri
+        certificate:
+          type: string
+          description: SAML X.509 certificate (stored encrypted)
+
+    # ── Team ──
+    Team:
+      type: object
+      properties:
+        id:
+          type: string
+          format: uuid
+        name:
+          type: string
+        orgId:
+          type: string
+          format: uuid
+        memberCount:
+          type: integer
+        createdAt:
+          type: string
+          format: date-time
+
+    TeamWithMembers:
+      allOf:
+        - $ref: '#/components/schemas/Team'
+        - type: object
+          properties:
+            members:
+              type: array
+              items:
+                $ref: '#/components/schemas/User'
+
+    CreateTeamRequest:
+      type: object
+      required: [name]
+      properties:
+        name:
+          type: string
+          maxLength: 200
+
+    UpdateTeamRequest:
+      type: object
+      properties:
+        name:
+          type: string
+
+    PaginatedTeams:
+      allOf:
+        - $ref: '#/components/schemas/PaginationMeta'
+        - type: object
+          properties:
+            data:
+              type: array
+              items:
+                $ref: '#/components/schemas/Team'
+
+    # ── Assessment Template ──
+    AssessmentTemplate:
+      type: object
+      properties:
+        id:
+          type: string
+          format: uuid
+        name:
+          type: string
+        description:
+          type: string
+        roleProfile:
+          $ref: '#/components/schemas/RoleProfile'
+        orgId:
+          type: string
+          format: uuid
+          nullable: true
+          description: null for platform-provided templates
+        isCustom:
+          type: boolean
+        dimensionWeights:
+          type: object
+          description: Override weights per dimension (must sum to 1.0)
+          properties:
+            delegation:
+              type: number
+            description:
+              type: number
+            discernment:
+              type: number
+            diligence:
+              type: number
+        questionCount:
+          type: integer
+        createdAt:
+          type: string
+          format: date-time
+
+    AssessmentTemplateDetail:
+      allOf:
+        - $ref: '#/components/schemas/AssessmentTemplate'
+        - type: object
+          properties:
+            questions:
+              type: array
+              items:
+                $ref: '#/components/schemas/Question'
+
+    CreateTemplateRequest:
+      type: object
+      required: [name, roleProfile]
+      properties:
+        name:
+          type: string
+        description:
+          type: string
+        roleProfile:
+          $ref: '#/components/schemas/RoleProfile'
+        dimensionWeights:
+          type: object
+          properties:
+            delegation:
+              type: number
+            description:
+              type: number
+            discernment:
+              type: number
+            diligence:
+              type: number
+
+    UpdateTemplateRequest:
+      type: object
+      properties:
+        name:
+          type: string
+        description:
+          type: string
+        dimensionWeights:
+          type: object
+
+    PaginatedTemplates:
+      allOf:
+        - $ref: '#/components/schemas/PaginationMeta'
+        - type: object
+          properties:
+            data:
+              type: array
+              items:
+                $ref: '#/components/schemas/AssessmentTemplate'
+
+    # ── Questions ──
+    Question:
+      type: object
+      properties:
+        id:
+          type: string
+          format: uuid
+        dimension:
+          $ref: '#/components/schemas/Dimension'
+        interactionMode:
+          $ref: '#/components/schemas/InteractionMode'
+        questionType:
+          $ref: '#/components/schemas/QuestionType'
+        text:
+          type: string
+        options:
+          type: array
+          description: For SCENARIO type — A/B/C/D options
+          items:
+            type: object
+            properties:
+              key:
+                type: string
+                enum: [A, B, C, D]
+              text:
+                type: string
+        scale:
+          type: object
+          description: For SELF_REPORT type — Likert scale labels
+          properties:
+            min:
+              type: integer
+              example: 1
+            max:
+              type: integer
+              example: 5
+            labels:
+              type: array
+              items:
+                type: string
+        indicatorId:
+          type: string
+          description: Which of the 24 behavioral indicators this question measures
+        prevalenceWeight:
+          type: number
+          description: How rare/difficult this behavior is (used in scoring)
+
+    # ── Assessment Session ──
+    StartSessionRequest:
+      type: object
+      required: [templateId]
+      properties:
+        templateId:
+          type: string
+          format: uuid
+        ltiContextId:
+          type: string
+          description: LTI context ID if launched from LMS
+
+    SessionStartResponse:
+      type: object
+      properties:
+        sessionId:
+          type: string
+          format: uuid
+        questions:
+          type: array
+          items:
+            $ref: '#/components/schemas/Question'
+        totalQuestions:
+          type: integer
+          example: 32
+        expiresAt:
+          type: string
+          format: date-time
+          description: Session expires (abandoned) after 7 days
+
+    AssessmentSession:
+      type: object
+      properties:
+        id:
+          type: string
+          format: uuid
+        userId:
+          type: string
+          format: uuid
+        orgId:
+          type: string
+          format: uuid
+        templateId:
+          type: string
+          format: uuid
+        status:
+          $ref: '#/components/schemas/SessionStatus'
+        progressPct:
+          type: number
+          minimum: 0
+          maximum: 100
+        algorithmVersion:
+          type: integer
+        startedAt:
+          type: string
+          format: date-time
+        completedAt:
+          type: string
+          format: date-time
+          nullable: true
+
+    AssessmentSessionDetail:
+      allOf:
+        - $ref: '#/components/schemas/AssessmentSession'
+        - type: object
+          properties:
+            answeredQuestions:
+              type: array
+              items:
+                type: object
+                properties:
+                  questionId:
+                    type: string
+                    format: uuid
+                  answer:
+                    type: string
+
+    SubmitResponsesRequest:
+      type: object
+      required: [responses]
+      properties:
+        responses:
+          type: array
+          minItems: 1
+          maxItems: 32
+          items:
+            type: object
+            required: [questionId, answer]
+            properties:
+              questionId:
+                type: string
+                format: uuid
+              answer:
+                oneOf:
+                  - type: string
+                    enum: [A, B, C, D]
+                    description: For SCENARIO questions
+                  - type: integer
+                    minimum: 1
+                    maximum: 5
+                    description: For SELF_REPORT (Likert) questions
+              elapsedSeconds:
+                type: integer
+                description: Time spent on this question (optional, for analytics)
+
+    SessionProgressResponse:
+      type: object
+      properties:
+        saved:
+          type: boolean
+        progressPct:
+          type: number
+        answeredCount:
+          type: integer
+        totalCount:
+          type: integer
+
+    SessionCompleteResponse:
+      type: object
+      properties:
+        sessionId:
+          type: string
+          format: uuid
+        profileId:
+          type: string
+          format: uuid
+        learningPathId:
+          type: string
+          format: uuid
+        scores:
+          $ref: '#/components/schemas/DimensionScores'
+
+    # ── Fluency Profile ──
+    FluencyProfile:
+      type: object
+      properties:
+        id:
+          type: string
+          format: uuid
+        userId:
+          type: string
+          format: uuid
+        sessionId:
+          type: string
+          format: uuid
+        overallScore:
+          type: number
+          minimum: 0
+          maximum: 100
+          description: Prevalence-weighted composite score
+        dimensionScores:
+          $ref: '#/components/schemas/DimensionScores'
+        selfReportScores:
+          $ref: '#/components/schemas/DimensionScores'
+          description: Separate self-report track (Likert-based, unobservable behaviors)
+        indicatorBreakdown:
+          type: object
+          description: Per-indicator pass/fail/score for all 24 behavioral indicators
+          additionalProperties:
+            type: object
+            properties:
+              score:
+                type: number
+              status:
+                type: string
+                enum: [PASS, PARTIAL, FAIL]
+              trackType:
+                type: string
+                enum: [OBSERVABLE, SELF_REPORT]
+        discernmentGap:
+          type: boolean
+          description: |
+            True when both "Question AI reasoning" AND "Identify missing context"
+            indicators are FAIL. Triggers priority learning path ordering.
+        algorithmVersion:
+          type: integer
+        createdAt:
+          type: string
+          format: date-time
+
+    DimensionScores:
+      type: object
+      properties:
+        delegation:
+          type: number
+          minimum: 0
+          maximum: 100
+        description:
+          type: number
+          minimum: 0
+          maximum: 100
+        discernment:
+          type: number
+          minimum: 0
+          maximum: 100
+        diligence:
+          type: number
+          minimum: 0
+          maximum: 100
+
+    PaginatedProfiles:
+      allOf:
+        - $ref: '#/components/schemas/PaginationMeta'
+        - type: object
+          properties:
+            data:
+              type: array
+              items:
+                $ref: '#/components/schemas/FluencyProfile'
+
+    # ── Learning Path ──
+    LearningPath:
+      type: object
+      properties:
+        id:
+          type: string
+          format: uuid
+        userId:
+          type: string
+          format: uuid
+        profileId:
+          type: string
+          format: uuid
+        status:
+          type: string
+          enum: [ACTIVE, COMPLETED, PAUSED]
+        progressPct:
+          type: number
+        estimatedHours:
+          type: number
+        moduleCount:
+          type: integer
+        completedModuleCount:
+          type: integer
+        createdAt:
+          type: string
+          format: date-time
+
+    LearningPathDetail:
+      allOf:
+        - $ref: '#/components/schemas/LearningPath'
+        - type: object
+          properties:
+            modules:
+              type: array
+              items:
+                $ref: '#/components/schemas/LearningPathModule'
+
+    LearningPathModule:
+      type: object
+      properties:
+        sequence:
+          type: integer
+        module:
+          $ref: '#/components/schemas/LearningModule'
+        status:
+          type: string
+          enum: [NOT_STARTED, IN_PROGRESS, COMPLETED, SKIPPED]
+        completedAt:
+          type: string
+          format: date-time
+          nullable: true
+
+    LearningModule:
+      type: object
+      properties:
+        id:
+          type: string
+          format: uuid
+        title:
+          type: string
+        description:
+          type: string
+        dimension:
+          $ref: '#/components/schemas/Dimension'
+        interactionMode:
+          $ref: '#/components/schemas/InteractionMode'
+          nullable: true
+        contentType:
+          type: string
+          enum: [VIDEO, ARTICLE, EXERCISE, QUIZ, SIMULATION]
+        estimatedMinutes:
+          type: integer
+        difficulty:
+          type: string
+          enum: [BEGINNER, INTERMEDIATE, ADVANCED]
+        contentUrl:
+          type: string
+          format: uri
+
+    ModuleCompletion:
+      type: object
+      properties:
+        id:
+          type: string
+          format: uuid
+        pathId:
+          type: string
+          format: uuid
+        moduleId:
+          type: string
+          format: uuid
+        score:
+          type: number
+          nullable: true
+        timeSpentMinutes:
+          type: integer
+        completedAt:
+          type: string
+          format: date-time
+
+    # ── Certificate ──
+    Certificate:
+      type: object
+      properties:
+        id:
+          type: string
+          format: uuid
+        userId:
+          type: string
+          format: uuid
+        profileId:
+          type: string
+          format: uuid
+        badgeUrl:
+          type: string
+          format: uri
+          description: Open Badges v3 assertion URL
+        pdfUrl:
+          type: string
+          format: uri
+          nullable: true
+        verificationUrl:
+          type: string
+          format: uri
+        issuedAt:
+          type: string
+          format: date-time
+        expiresAt:
+          type: string
+          format: date-time
+          nullable: true
+
+    CertificateVerification:
+      type: object
+      properties:
+        valid:
+          type: boolean
+        certificate:
+          $ref: '#/components/schemas/Certificate'
+        holder:
+          type: object
+          properties:
+            name:
+              type: string
+            orgName:
+              type: string
+
+    # ── Dashboard ──
+    OrgDashboard:
+      type: object
+      properties:
+        orgId:
+          type: string
+          format: uuid
+        period:
+          type: string
+        assessmentsCompleted:
+          type: integer
+        avgOverallScore:
+          type: number
+        dimensionAverages:
+          $ref: '#/components/schemas/DimensionScores'
+        completionRate:
+          type: number
+          description: Percentage of started assessments that are completed
+        discernmentGapCount:
+          type: integer
+          description: Number of learners with discernment gap flag
+        scoreDistribution:
+          type: array
+          description: Histogram buckets (0-20, 21-40, 41-60, 61-80, 81-100)
+          items:
+            type: object
+            properties:
+              range:
+                type: string
+              count:
+                type: integer
+        teamBreakdown:
+          type: array
+          items:
+            type: object
+            properties:
+              teamId:
+                type: string
+                format: uuid
+              teamName:
+                type: string
+              avgScore:
+                type: number
+              memberCount:
+                type: integer
+
+    TeamDashboard:
+      type: object
+      properties:
+        teamId:
+          type: string
+          format: uuid
+        period:
+          type: string
+        avgOverallScore:
+          type: number
+        dimensionAverages:
+          $ref: '#/components/schemas/DimensionScores'
+        memberScores:
+          type: array
+          items:
+            type: object
+            properties:
+              userId:
+                type: string
+                format: uuid
+              name:
+                type: string
+              overallScore:
+                type: number
+              dimensionScores:
+                $ref: '#/components/schemas/DimensionScores'
+              discernmentGap:
+                type: boolean
+
+    # ── Health ──
+    HealthResponse:
+      type: object
+      properties:
+        status:
+          type: string
+          enum: [ok, degraded, down]
+        timestamp:
+          type: string
+          format: date-time
+        checks:
+          type: object
+          properties:
+            database:
+              type: string
+              enum: [ok, down]
+            redis:
+              type: string
+              enum: [ok, down, degraded]
+            storage:
+              type: string
+              enum: [ok, down]
+
+    # ── Pagination ──
+    PaginationMeta:
+      type: object
+      properties:
+        total:
+          type: integer
+        page:
+          type: integer
+        limit:
+          type: integer
+        totalPages:
+          type: integer
+
+    PaginatedOrganizations:
+      allOf:
+        - $ref: '#/components/schemas/PaginationMeta'
+        - type: object
+          properties:
+            data:
+              type: array
+              items:
+                $ref: '#/components/schemas/Organization'
+
+  responses:
+    ValidationError:
+      description: Request validation failed
+      content:
+        application/json:
+          schema:
+            $ref: '#/components/schemas/ProblemDetails'
+          example:
+            type: https://api.ai-fluency.connectsw.com/errors/validation-error
+            title: validation-error
+            status: 400
+            detail: Email is required
+
+    UnauthorizedError:
+      description: Missing or invalid authentication
+      content:
+        application/json:
+          schema:
+            $ref: '#/components/schemas/ProblemDetails'
+          example:
+            type: https://api.ai-fluency.connectsw.com/errors/unauthorized
+            title: unauthorized
+            status: 401
+            detail: Invalid or expired token
+
+    ForbiddenError:
+      description: Insufficient permissions
+      content:
+        application/json:
+          schema:
+            $ref: '#/components/schemas/ProblemDetails'
+          example:
+            type: https://api.ai-fluency.connectsw.com/errors/forbidden
+            title: forbidden
+            status: 403
+            detail: MANAGER role required
+
+    NotFoundError:
+      description: Resource not found
+      content:
+        application/json:
+          schema:
+            $ref: '#/components/schemas/ProblemDetails'
+
+    ConflictError:
+      description: Resource already exists
+      content:
+        application/json:
+          schema:
+            $ref: '#/components/schemas/ProblemDetails'
+
+    GoneError:
+      description: Resource expired (e.g., verification token)
+      content:
+        application/json:
+          schema:
+            $ref: '#/components/schemas/ProblemDetails'
+
+    AccountLockedError:
+      description: Account locked due to too many failed login attempts
+      content:
+        application/json:
+          schema:
+            $ref: '#/components/schemas/ProblemDetails'
+
+    RateLimitError:
+      description: Rate limit exceeded
+      headers:
+        Retry-After:
+          schema:
+            type: integer
+          description: Seconds until the rate limit resets
+      content:
+        application/json:
+          schema:
+            $ref: '#/components/schemas/ProblemDetails'
+
+security:
+  - bearerAuth: []
