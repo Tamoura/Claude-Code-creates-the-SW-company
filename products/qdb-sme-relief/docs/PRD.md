@@ -1014,32 +1014,32 @@ flowchart TD
 
 ```mermaid
 stateDiagram-v2
-    [*] --> DRAFT : Applicant starts session; authenticated via NAS
+    [*] --> DRAFT : Authenticated via NAS
 
-    DRAFT --> COMPANY_VERIFIED : CR lookup succeeds; signatory confirmed
+    DRAFT --> COMPANY_VERIFIED : CR found, signatory confirmed
 
     DRAFT --> ABANDONED : Session expires or applicant leaves
 
     COMPANY_VERIFIED --> INELIGIBLE : Eligibility check fails
     COMPANY_VERIFIED --> ELIGIBLE : Eligibility check passes
 
-    INELIGIBLE --> [*] : Notification sent; application closed
+    INELIGIBLE --> [*] : Notification sent, application closed
 
     ELIGIBLE --> DOCS_PENDING : CRM case created (auto or manual path)
 
     DOCS_PENDING --> DOCS_SUBMITTED : All required documents uploaded and validated
 
-    DOCS_SUBMITTED --> WPS_VALIDATED : WPS validation passes; no discrepancy
+    DOCS_SUBMITTED --> WPS_VALIDATED : WPS passes, no discrepancy
 
     DOCS_SUBMITTED --> WPS_FLAGGED : WPS discrepancy or WPS unavailable
 
-    WPS_VALIDATED --> SUBMITTED : Applicant clicks Submit; audit trail complete
+    WPS_VALIDATED --> SUBMITTED : Submit clicked, audit trail complete
 
-    WPS_FLAGGED --> SUBMITTED : Applicant clicks Submit; manual review flag set
+    WPS_FLAGGED --> SUBMITTED : Submit clicked, flagged for manual review
 
-    SUBMITTED --> UNDER_REVIEW : QDB RM picks up case (manual path only)
+    SUBMITTED --> UNDER_REVIEW : QDB RM picks up case (manual path)
 
-    SUBMITTED --> APPROVED : Auto path — NRGP pre-vetted; no manual review
+    SUBMITTED --> APPROVED : NRGP pre-vetted, auto-approved
 
     UNDER_REVIEW --> APPROVED : QDB RM approves
     UNDER_REVIEW --> REJECTED : QDB RM rejects
@@ -1048,7 +1048,7 @@ stateDiagram-v2
 
     REJECTED --> [*] : Rejection notification sent
 
-    DISBURSED --> [*] : Disbursement confirmed; SME receives relief funds
+    DISBURSED --> [*] : Confirmed, SME receives relief funds
 
     ABANDONED --> [*] : Application data purged after 30 days
 ```

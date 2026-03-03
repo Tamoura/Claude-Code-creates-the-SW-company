@@ -862,7 +862,7 @@ stateDiagram-v2
     Authenticated --> CR_Verified : MOCI lookup success
     CR_Verified --> Ineligible : Eligibility check fails
     CR_Verified --> Eligible : Eligibility check passes
-    Ineligible --> [*] : Application closed; notification sent
+    Ineligible --> [*] : Application closed, notification sent
     Eligible --> NRGP_Listed : CR found in NRGP list
     Eligible --> NRGP_Unlisted : CR not in NRGP list
     NRGP_Listed --> Auto_Case : CRM auto-disbursement case created
@@ -872,10 +872,10 @@ stateDiagram-v2
     Docs_Pending --> Docs_Submitted : All documents uploaded and validated
     Docs_Submitted --> WPS_Validated : WPS validation passes
     Docs_Submitted --> WPS_Flagged : WPS discrepancy detected
-    WPS_Validated --> Complete : Audit trail written; confirmation sent
-    WPS_Flagged --> Complete : Audit trail written; manual review flag set
+    WPS_Validated --> Complete : Audit trail written, confirmation sent
+    WPS_Flagged --> Complete : Audit trail written, flagged for manual review
     Complete --> Under_Review : QDB reviews (manual path only)
-    Complete --> Approved : Auto path — no manual review needed
+    Complete --> Approved : Auto path, no manual review needed
     Under_Review --> Approved : QDB approves
     Under_Review --> Rejected : QDB rejects
     Approved --> Disbursed : Funds transferred
