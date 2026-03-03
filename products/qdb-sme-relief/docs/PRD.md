@@ -1305,7 +1305,7 @@ flowchart TD
 
     CHECK_REQUIRED -->|All required docs present| SUBMIT_ACTIVE["Submit Application button<br/>becomes active"]
     SUBMIT_ACTIVE --> SUBMIT_CLICK[Applicant clicks Submit]
-    SUBMIT_CLICK --> LINK_CRM["Document IDs linked to CRM case<br/>via PATCH /cases/{case_id}"]
+    SUBMIT_CLICK --> LINK_CRM["Document IDs linked to CRM case<br/>via PATCH /cases/:case_id"]
     LINK_CRM --> AUDIT_WRITE["Audit event written:<br/>document_uploaded for each file<br/>checksum, doc_type, case_id"]
     AUDIT_WRITE --> WPS_VAL_STEP["Trigger WPS Validation<br/>See Sequence 6.6"]
 
