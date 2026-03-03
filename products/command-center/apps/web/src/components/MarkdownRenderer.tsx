@@ -13,26 +13,87 @@ import mermaid from 'mermaid';
 // ---------------------------------------------------------------------------
 
 let mermaidCounter = 0;
-let currentTheme: 'light' | 'dark' = 'dark';
+let currentTheme: 'light' | 'dark' | null = null;
+
+const MERMAID_DARK_VARS = {
+  background: '#0f172a',
+  primaryColor: '#1e3a5f',
+  primaryTextColor: '#e2e8f0',
+  primaryBorderColor: '#3b82f6',
+  secondaryColor: '#1e293b',
+  tertiaryColor: '#0f172a',
+  lineColor: '#94a3b8',
+  textColor: '#e2e8f0',
+  mainBkg: '#1e293b',
+  nodeBorder: '#3b82f6',
+  clusterBkg: '#0f172a',
+  clusterBorder: '#334155',
+  titleColor: '#e2e8f0',
+  edgeLabelBackground: '#1e293b',
+  actorBkg: '#1e3a5f',
+  actorBorder: '#3b82f6',
+  actorTextColor: '#e2e8f0',
+  actorLineColor: '#94a3b8',
+  signalColor: '#94a3b8',
+  signalTextColor: '#e2e8f0',
+  labelBoxBkgColor: '#1e293b',
+  labelBoxBorderColor: '#3b82f6',
+  labelTextColor: '#e2e8f0',
+  loopTextColor: '#e2e8f0',
+  noteBorderColor: '#3b82f6',
+  noteBkgColor: '#1e293b',
+  noteTextColor: '#e2e8f0',
+};
+
+const MERMAID_LIGHT_VARS = {
+  background: '#ffffff',
+  primaryColor: '#dbeafe',
+  primaryTextColor: '#1e3a5f',
+  primaryBorderColor: '#2563eb',
+  secondaryColor: '#f0f9ff',
+  tertiaryColor: '#eff6ff',
+  lineColor: '#475569',
+  textColor: '#1e293b',
+  mainBkg: '#dbeafe',
+  nodeBorder: '#2563eb',
+  clusterBkg: '#f8fafc',
+  clusterBorder: '#cbd5e1',
+  titleColor: '#1e3a5f',
+  edgeLabelBackground: '#f8fafc',
+  actorBkg: '#dbeafe',
+  actorBorder: '#2563eb',
+  actorTextColor: '#1e3a5f',
+  actorLineColor: '#475569',
+  signalColor: '#475569',
+  signalTextColor: '#1e293b',
+  labelBoxBkgColor: '#eff6ff',
+  labelBoxBorderColor: '#2563eb',
+  labelTextColor: '#1e293b',
+  loopTextColor: '#1e293b',
+  noteBorderColor: '#2563eb',
+  noteBkgColor: '#f0f9ff',
+  noteTextColor: '#1e293b',
+};
 
 function ensureMermaidTheme(theme: 'light' | 'dark') {
-  if (currentTheme !== theme) {
-    currentTheme = theme;
-    mermaid.initialize({
-      startOnLoad: false,
-      theme: theme === 'dark' ? 'dark' : 'default',
-      flowchart: { useMaxWidth: true, htmlLabels: true },
-      sequence: { useMaxWidth: true },
-    });
-  }
+  if (currentTheme === theme) return;
+  currentTheme = theme;
+  mermaid.initialize({
+    startOnLoad: false,
+    theme: 'base',
+    themeVariables: theme === 'dark' ? MERMAID_DARK_VARS : MERMAID_LIGHT_VARS,
+    flowchart: { useMaxWidth: true, htmlLabels: true, curve: 'basis' },
+    sequence: { useMaxWidth: true, mirrorActors: false },
+  });
 }
 
-// Initialize once at module load
+// Initialize with light theme as neutral base
 mermaid.initialize({
   startOnLoad: false,
-  theme: 'dark',
-  flowchart: { useMaxWidth: true, htmlLabels: true },
-  sequence: { useMaxWidth: true },
+  theme: 'base',
+  themeVariables: MERMAID_LIGHT_VARS,
+  flowchart: { useMaxWidth: true, htmlLabels: true, curve: 'basis' },
+  sequence: { useMaxWidth: true, mirrorActors: false },
 });
 
 type QueueItem = {
