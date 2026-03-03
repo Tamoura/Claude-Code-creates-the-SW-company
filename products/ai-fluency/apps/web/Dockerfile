@@ -2,13 +2,19 @@
 FROM node:20-alpine AS deps
 WORKDIR /app
 
+# Install pnpm
+RUN corepack enable && corepack prepare pnpm@9 --activate
+
 # Install dependencies (separate layer for caching)
-COPY package*.json ./
-RUN npm ci && npm cache clean --force
+COPY package.json pnpm-lock.yaml ./
+RUN pnpm install --frozen-lockfile && pnpm store prune
 
 # Stage 2: Build
 FROM node:20-alpine AS builder
 WORKDIR /app
+
+# Install pnpm
+RUN corepack enable && corepack prepare pnpm@9 --activate
 
 COPY --from=deps /app/node_modules ./node_modules
 COPY . .
@@ -16,7 +22,7 @@ COPY . .
 # Disable telemetry during build
 ENV NEXT_TELEMETRY_DISABLED=1
 
-RUN npm run build
+RUN pnpm run build
 
 # Stage 3: Production
 FROM node:20-alpine AS production

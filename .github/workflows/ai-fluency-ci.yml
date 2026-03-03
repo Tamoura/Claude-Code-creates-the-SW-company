@@ -14,6 +14,7 @@ on:
 
 env:
   NODE_VERSION: '20'
+  PNPM_VERSION: '9'
 
 jobs:
   lint-and-typecheck:
@@ -46,29 +47,36 @@ jobs:
           fi
         working-directory: .
 
+      - name: Setup pnpm
+        if: steps.check.outputs.exists == 'true'
+        uses: pnpm/action-setup@v4
+        with:
+          version: ${{ env.PNPM_VERSION }}
+
       - name: Setup Node.js
         if: steps.check.outputs.exists == 'true'
         uses: actions/setup-node@v4
         with:
           node-version: ${{ env.NODE_VERSION }}
-          cache: npm
-          cache-dependency-path: ${{ matrix.app.path }}/package-lock.json
+          cache: pnpm
+          cache-dependency-path: pnpm-lock.yaml
 
       - name: Install dependencies
         if: steps.check.outputs.exists == 'true'
-        run: npm ci
+        run: pnpm install --frozen-lockfile
+        working-directory: .
 
       - name: Generate Prisma client
         if: steps.check.outputs.exists == 'true' && matrix.app.needs-prisma
-        run: npx prisma generate
+        run: pnpm exec prisma generate
 
       - name: Run lint
         if: steps.check.outputs.exists == 'true'
-        run: npm run lint
+        run: pnpm run lint
 
       - name: Run type check
         if: steps.check.outputs.exists == 'true'
-        run: npm run typecheck
+        run: pnpm run typecheck
 
   test-api:
     name: API Tests
@@ -122,29 +130,36 @@ jobs:
           fi
         working-directory: .
 
+      - name: Setup pnpm
+        if: steps.check.outputs.exists == 'true'
+        uses: pnpm/action-setup@v4
+        with:
+          version: ${{ env.PNPM_VERSION }}
+
       - name: Setup Node.js
         if: steps.check.outputs.exists == 'true'
         uses: actions/setup-node@v4
         with:
           node-version: ${{ env.NODE_VERSION }}
-          cache: npm
-          cache-dependency-path: products/ai-fluency/apps/api/package-lock.json
+          cache: pnpm
+          cache-dependency-path: pnpm-lock.yaml
 
       - name: Install dependencies
         if: steps.check.outputs.exists == 'true'
-        run: npm ci
+        run: pnpm install --frozen-lockfile
+        working-directory: .
 
       - name: Generate Prisma client
         if: steps.check.outputs.exists == 'true'
-        run: npx prisma generate
+        run: pnpm exec prisma generate
 
       - name: Push schema to test database
         if: steps.check.outputs.exists == 'true'
-        run: npx prisma db push --force-reset
+        run: pnpm exec prisma db push --force-reset
 
       - name: Run tests with coverage
         if: steps.check.outputs.exists == 'true'
-        run: npm test -- --coverage --runInBand
+        run: pnpm test -- --coverage --runInBand
 
       - name: Upload coverage report
         if: always() && steps.check.outputs.exists == 'true'
@@ -178,25 +193,32 @@ jobs:
           fi
         working-directory: .
 
+      - name: Setup pnpm
+        if: steps.check.outputs.exists == 'true'
+        uses: pnpm/action-setup@v4
+        with:
+          version: ${{ env.PNPM_VERSION }}
+
       - name: Setup Node.js
         if: steps.check.outputs.exists == 'true'
         uses: actions/setup-node@v4
         with:
           node-version: ${{ env.NODE_VERSION }}
-          cache: npm
-          cache-dependency-path: products/ai-fluency/apps/web/package-lock.json
+          cache: pnpm
+          cache-dependency-path: pnpm-lock.yaml
 
       - name: Install dependencies
         if: steps.check.outputs.exists == 'true'
-        run: npm ci
+        run: pnpm install --frozen-lockfile
+        working-directory: .
 
       - name: Run tests with coverage
         if: steps.check.outputs.exists == 'true'
-        run: npm test -- --coverage
+        run: pnpm test -- --coverage
 
       - name: Build
         if: steps.check.outputs.exists == 'true'
-        run: npm run build
+        run: pnpm run build
 
       - name: Upload coverage report
         if: always() && steps.check.outputs.exists == 'true'
@@ -232,21 +254,28 @@ jobs:
           fi
         working-directory: .
 
+      - name: Setup pnpm
+        if: steps.check.outputs.exists == 'true'
+        uses: pnpm/action-setup@v4
+        with:
+          version: ${{ env.PNPM_VERSION }}
+
       - name: Setup Node.js
         if: steps.check.outputs.exists == 'true'
         uses: actions/setup-node@v4
         with:
           node-version: ${{ env.NODE_VERSION }}
-          cache: npm
-          cache-dependency-path: ${{ matrix.app }}/package-lock.json
+          cache: pnpm
+          cache-dependency-path: pnpm-lock.yaml
 
       - name: Install dependencies
         if: steps.check.outputs.exists == 'true'
-        run: npm ci
+        run: pnpm install --frozen-lockfile
+        working-directory: .
 
       - name: Run security audit
         if: steps.check.outputs.exists == 'true'
-        run: npm audit --audit-level=high --omit=dev
+        run: pnpm audit --audit-level=high --prod
 
   build:
     name: Docker Build Validation

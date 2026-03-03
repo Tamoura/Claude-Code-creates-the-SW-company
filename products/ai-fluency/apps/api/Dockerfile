@@ -2,27 +2,33 @@
 FROM node:20-alpine AS builder
 WORKDIR /app
 
+# Install pnpm
+RUN corepack enable && corepack prepare pnpm@9 --activate
+
 # Install dependencies first (layer cache optimization)
-COPY package*.json ./
+COPY package.json pnpm-lock.yaml ./
 COPY prisma ./prisma/
-RUN npm ci --include=dev
+RUN pnpm install --frozen-lockfile
 
 # Copy source and build
 COPY . .
-RUN npx prisma generate
-RUN npm run build
+RUN pnpm exec prisma generate
+RUN pnpm run build
 
 # Stage 2: Production
 FROM node:20-alpine AS production
 WORKDIR /app
+
+# Install pnpm
+RUN corepack enable && corepack prepare pnpm@9 --activate
 
 # Non-root user for security
 RUN addgroup -g 1001 -S nodejs && \
     adduser -S fastify -u 1001
 
 # Install only production dependencies in a clean layer
-COPY --chown=fastify:nodejs package*.json ./
-RUN npm ci --omit=dev && npm cache clean --force
+COPY --chown=fastify:nodejs package.json pnpm-lock.yaml ./
+RUN pnpm install --frozen-lockfile --prod && pnpm store prune
 
 # Copy compiled output and Prisma artifacts
 COPY --from=builder --chown=fastify:nodejs /app/dist ./dist
