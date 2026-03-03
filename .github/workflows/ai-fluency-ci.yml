@@ -293,26 +293,36 @@ jobs:
 
       - name: Build Docker images
         run: |
-          if [ ! -f "products/ai-fluency/docker-compose.yml" ]; then
-            echo "::notice::docker-compose.yml not found — skipping Docker build"
-            exit 0
-          fi
+          # Use docker buildx build directly so the build context is unambiguously
+          # the workspace root (.), making pnpm-lock.yaml accessible to the Dockerfiles.
+          # docker compose resolves context: ../.. differently depending on invocation
+          # directory; docker buildx build with explicit '.' avoids that ambiguity.
 
-          SERVICES=()
+          BUILT=0
+
           if [ -f "products/ai-fluency/apps/api/Dockerfile" ]; then
-            SERVICES+=("api")
+            echo "Building api..."
+            docker buildx build \
+              --target production \
+              --file products/ai-fluency/apps/api/Dockerfile \
+              --tag ai-fluency-api:ci \
+              .
+            BUILT=$((BUILT+1))
           fi
+
           if [ -f "products/ai-fluency/apps/web/Dockerfile" ]; then
-            SERVICES+=("web")
+            echo "Building web..."
+            docker buildx build \
+              --target production \
+              --file products/ai-fluency/apps/web/Dockerfile \
+              --tag ai-fluency-web:ci \
+              .
+            BUILT=$((BUILT+1))
           fi
 
-          if [ "${#SERVICES[@]}" -eq 0 ]; then
+          if [ "$BUILT" -eq 0 ]; then
             echo "::notice::No Dockerfiles found — skipping Docker build"
-            exit 0
           fi
-
-          echo "Building services: ${SERVICES[*]}"
-          docker compose -f products/ai-fluency/docker-compose.yml build "${SERVICES[@]}"
 
   quality-gate:
     name: Quality Gate
