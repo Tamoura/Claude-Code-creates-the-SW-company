@@ -48,6 +48,15 @@ export interface ScoredProfile {
 export type DimensionWeights = Record<'DELEGATION' | 'DESCRIPTION' | 'DISCERNMENT' | 'DILIGENCE', number>;
 
 /**
+ * Named constants for discernment gap indicator short codes.
+ * Avoids magic strings in business logic.
+ */
+const DISCERNMENT_GAP_INDICATORS = {
+  DELEGATION_REASONING: 'DELEGATION_REASONING',
+  DISCERNMENT_MISSING_CONTEXT: 'DISCERNMENT_MISSING_CONTEXT',
+} as const;
+
+/**
  * Compute score for a single indicator answer.
  * - SCENARIO: maps A/B/C/D to 0.0, 0.5, or 1.0 based on isCorrect and partial flags
  * - SELF_REPORT: normalizes Likert 1–5 → 0.0–1.0 via (n-1)/4
@@ -155,8 +164,10 @@ export function scoreAssessment(
     dimensions.reduce((s, dim) => s + dimensionScores[dim] * dimensionWeights[dim], 0) * 100;
 
   // Discernment gap detection
-  const delegationReasoning = indicatorBreakdown['DELEGATION_REASONING'];
-  const discernmentMissingContext = indicatorBreakdown['DISCERNMENT_MISSING_CONTEXT'];
+  const delegationReasoning =
+    indicatorBreakdown[DISCERNMENT_GAP_INDICATORS.DELEGATION_REASONING];
+  const discernmentMissingContext =
+    indicatorBreakdown[DISCERNMENT_GAP_INDICATORS.DISCERNMENT_MISSING_CONTEXT];
   const discernmentGap =
     delegationReasoning?.status === 'FAIL' &&
     discernmentMissingContext?.status === 'FAIL';

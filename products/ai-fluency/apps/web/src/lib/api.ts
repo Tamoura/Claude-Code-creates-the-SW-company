@@ -1,26 +1,9 @@
 // API client for AI Fluency
 // - Always uses credentials: "include" for httpOnly cookie auth
-// - Fetches CSRF token from GET /api/v1/csrf-token on first mutation
-// - Sends x-csrf-token header on all state-changing requests
+// - Backend uses SameSite=Strict cookies — no explicit CSRF token needed
 
 const API_BASE = process.env.NEXT_PUBLIC_API_URL || 'http://localhost:5014';
 const API_PREFIX = `${API_BASE}/api/v1`;
-
-const MUTATION_METHODS = new Set(['POST', 'PUT', 'PATCH', 'DELETE']);
-
-let csrfToken: string | null = null;
-
-async function fetchCsrfToken(): Promise<string> {
-  const res = await fetch(`${API_PREFIX}/csrf-token`, {
-    method: 'GET',
-    credentials: 'include',
-  });
-  if (!res.ok) {
-    throw new ApiError(res.status, 'csrf-error', 'Failed to fetch CSRF token');
-  }
-  const data = await res.json() as { csrfToken: string };
-  return data.csrfToken;
-}
 
 export class ApiError extends Error {
   constructor(
@@ -45,45 +28,12 @@ async function request<T>(
     ...(options.headers as Record<string, string> | undefined),
   };
 
-  // Attach CSRF token for all mutating requests
-  if (MUTATION_METHODS.has(method)) {
-    if (!csrfToken) {
-      csrfToken = await fetchCsrfToken();
-    }
-    headers['x-csrf-token'] = csrfToken;
-  }
-
   const response = await fetch(url, {
     ...options,
     method,
     headers,
     credentials: 'include',
   });
-
-  // If CSRF token is rejected, refresh and retry once
-  if (response.status === 403 && MUTATION_METHODS.has(method)) {
-    csrfToken = await fetchCsrfToken();
-    headers['x-csrf-token'] = csrfToken;
-    const retryResponse = await fetch(url, {
-      ...options,
-      method,
-      headers,
-      credentials: 'include',
-    });
-    if (!retryResponse.ok) {
-      const errorBody = await retryResponse.json().catch(() => ({})) as {
-        code?: string;
-        detail?: string;
-      };
-      throw new ApiError(
-        retryResponse.status,
-        errorBody.code ?? 'api-error',
-        errorBody.detail ?? 'An error occurred',
-      );
-    }
-    if (retryResponse.status === 204) return undefined as T;
-    return retryResponse.json() as Promise<T>;
-  }
 
   if (!response.ok) {
     const errorBody = await response.json().catch(() => ({})) as {

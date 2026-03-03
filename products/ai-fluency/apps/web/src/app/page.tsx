@@ -29,10 +29,10 @@ const features = [
 ];
 
 const dimensions = [
-  { name: 'Conceptual', score: 78, description: 'Understanding AI fundamentals and concepts' },
-  { name: 'Practical', score: 65, description: 'Applying AI tools in real workflows' },
-  { name: 'Critical', score: 82, description: 'Evaluating AI outputs and risks' },
-  { name: 'Collaborative', score: 70, description: 'Working with AI as a team' },
+  { name: 'DELEGATION', score: 78, description: 'Knowing when and how to delegate to AI' },
+  { name: 'DESCRIPTION', score: 65, description: 'Describing tasks clearly to AI tools' },
+  { name: 'DISCERNMENT', score: 82, description: 'Evaluating AI outputs and spotting errors' },
+  { name: 'DILIGENCE', score: 70, description: 'Verifying AI work and maintaining oversight' },
 ];
 
 export default function HomePage() {

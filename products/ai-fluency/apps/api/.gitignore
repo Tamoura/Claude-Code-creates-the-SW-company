@@ -1,0 +1,7 @@
+.env
+.env.test
+.env.local
+.env.*.local
+.env.production
+dist/
+coverage/

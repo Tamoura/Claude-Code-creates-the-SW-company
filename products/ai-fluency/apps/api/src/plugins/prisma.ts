@@ -59,6 +59,36 @@ const prismaPlugin: FastifyPluginAsync = async (fastify) => {
 
   fastify.decorate('prisma', prisma);
 
+  // RLS session hook — sets app.current_org_id from JWT payload
+  // so PostgreSQL Row Level Security automatically filters tenant data
+  fastify.addHook('onRequest', async (request) => {
+    const orgId = (request as { user?: { orgId?: string } }).user?.orgId;
+    if (
+      orgId &&
+      /^[0-9a-f]{8}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{12}$/i.test(orgId)
+    ) {
+      (fastify as { rlsOrgId?: string | null }).rlsOrgId = orgId;
+    } else {
+      (fastify as { rlsOrgId?: string | null }).rlsOrgId = null;
+    }
+  });
+
+  // withRls() decorator — wraps queries in a transaction that sets the RLS variable
+  fastify.decorate(
+    'withRls',
+    async <T>(orgId: string, callback: (tx: PrismaClient) => Promise<T>): Promise<T> => {
+      return prisma.$transaction(async (tx) => {
+        await tx.$executeRawUnsafe(
+          `SELECT set_config('app.current_org_id', $1, true)`,
+          orgId
+        );
+        return callback(tx as unknown as PrismaClient);
+      });
+    }
+  );
+
+  fastify.decorate('rlsOrgId', null as string | null);
+
   fastify.addHook('onClose', async () => {
     await prisma.$disconnect();
     logger.info('Database connection closed');

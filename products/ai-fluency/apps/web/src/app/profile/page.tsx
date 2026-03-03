@@ -9,10 +9,10 @@ export const metadata: Metadata = {
 };
 
 const dimensions = [
-  { key: 'conceptual', label: t('profile.dimensions.conceptual'), score: null },
-  { key: 'practical', label: t('profile.dimensions.practical'), score: null },
-  { key: 'critical', label: t('profile.dimensions.critical'), score: null },
-  { key: 'collaborative', label: t('profile.dimensions.collaborative'), score: null },
+  { key: 'DELEGATION', label: t('profile.dimensions.DELEGATION'), score: null },
+  { key: 'DESCRIPTION', label: t('profile.dimensions.DESCRIPTION'), score: null },
+  { key: 'DISCERNMENT', label: t('profile.dimensions.DISCERNMENT'), score: null },
+  { key: 'DILIGENCE', label: t('profile.dimensions.DILIGENCE'), score: null },
 ];
 
 export default function ProfilePage() {
