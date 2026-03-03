@@ -29,7 +29,7 @@ jobs:
     runs-on: ubuntu-latest
     if: github.event_name == 'pull_request'
     steps:
-      - uses: actions/checkout@v4
+      - uses: actions/checkout@v6
 
       - name: Check for code review report
         id: check-report
@@ -81,7 +81,7 @@ jobs:
 
       - name: Comment verdict on PR
         if: github.event_name == 'pull_request'
-        uses: actions/github-script@v7
+        uses: actions/github-script@v8
         with:
           script: |
             const verdict = '${{ steps.check-report.outputs.verdict }}';
