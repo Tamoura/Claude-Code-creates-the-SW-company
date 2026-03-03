@@ -8,7 +8,7 @@
 
 import { FastifyInstance } from 'fastify';
 import { buildApp } from '../../src/app';
-import { AppError } from '../../src/utils/errors';
+import { AppError, buildProblemDetails } from '../../src/utils/errors';
 
 describe('[BACKEND-01] Global Error Handler', () => {
   let app: FastifyInstance;
@@ -128,7 +128,6 @@ describe('[BACKEND-01] Global Error Handler', () => {
 
 describe('[BACKEND-01] buildProblemDetails utility', () => {
   test('[BACKEND-01] buildProblemDetails produces correct RFC 7807 shape', () => {
-    const { buildProblemDetails } = require('../../src/utils/errors');
     const details = buildProblemDetails('validation-error', 400, 'Field is required', 'req-001');
 
     expect(details.type).toBe(
@@ -141,7 +140,6 @@ describe('[BACKEND-01] buildProblemDetails utility', () => {
   });
 
   test('[BACKEND-01] buildProblemDetails without instance omits field', () => {
-    const { buildProblemDetails } = require('../../src/utils/errors');
     const details = buildProblemDetails('not-found', 404, 'Resource not found');
 
     expect(details).not.toHaveProperty('instance');

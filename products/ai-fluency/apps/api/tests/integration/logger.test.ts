@@ -7,10 +7,10 @@
  */
 
 describe('[BACKEND-01] Logger Utility', () => {
-  // eslint-disable-next-line @typescript-eslint/no-require-imports
+  // eslint-disable-next-line @typescript-eslint/no-var-requires
   const getLogger = () => {
     jest.resetModules();
-    // eslint-disable-next-line @typescript-eslint/no-require-imports
+    // eslint-disable-next-line @typescript-eslint/no-var-requires
     return require('../../src/utils/logger').logger;
   };
 

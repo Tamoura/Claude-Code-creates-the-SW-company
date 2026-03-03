@@ -114,6 +114,7 @@ jobs:
       REDIS_URL: redis://localhost:6379
       JWT_SECRET: test-jwt-secret-min-32-chars-for-ci
       JWT_REFRESH_SECRET: test-refresh-secret-different-min-32
+      INTERNAL_API_KEY: test-internal-api-key-for-ci
       NODE_ENV: test
       PORT: 5014
     steps:
@@ -147,6 +148,11 @@ jobs:
       - name: Install dependencies
         if: steps.check.outputs.exists == 'true'
         run: pnpm install --frozen-lockfile
+        working-directory: .
+
+      - name: Build native dependencies
+        if: steps.check.outputs.exists == 'true'
+        run: pnpm rebuild argon2
         working-directory: .
 
       - name: Generate Prisma client

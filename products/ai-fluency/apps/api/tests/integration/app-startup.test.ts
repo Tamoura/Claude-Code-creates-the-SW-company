@@ -11,6 +11,7 @@
 import { FastifyInstance } from 'fastify';
 import { buildApp } from '../../src/app';
 import { AppError } from '../../src/utils/errors';
+import { safeCompare, hashToken, verifyHashedToken, generateSecureToken } from '../../src/utils/crypto';
 
 describe('[BACKEND-01] App Startup and Configuration', () => {
   let app: FastifyInstance;
@@ -89,22 +90,18 @@ describe('[BACKEND-01] App Startup and Configuration', () => {
 
 describe('[BACKEND-01] Crypto Utilities', () => {
   test('[BACKEND-01] safeCompare returns true for equal strings', () => {
-    const { safeCompare } = require('../../src/utils/crypto');
     expect(safeCompare('hello', 'hello')).toBe(true);
   });
 
   test('[BACKEND-01] safeCompare returns false for different strings', () => {
-    const { safeCompare } = require('../../src/utils/crypto');
     expect(safeCompare('hello', 'world')).toBe(false);
   });
 
   test('[BACKEND-01] safeCompare returns false for different length strings', () => {
-    const { safeCompare } = require('../../src/utils/crypto');
     expect(safeCompare('short', 'muchlonger')).toBe(false);
   });
 
   test('[BACKEND-01] hashToken produces consistent 64-char hex output', () => {
-    const { hashToken } = require('../../src/utils/crypto');
     const hash1 = hashToken('test-token-value');
     const hash2 = hashToken('test-token-value');
     expect(hash1).toBe(hash2);
@@ -113,25 +110,21 @@ describe('[BACKEND-01] Crypto Utilities', () => {
   });
 
   test('[BACKEND-01] hashToken produces different hashes for different tokens', () => {
-    const { hashToken } = require('../../src/utils/crypto');
     expect(hashToken('token-a')).not.toBe(hashToken('token-b'));
   });
 
   test('[BACKEND-01] verifyHashedToken accepts correct token', () => {
-    const { hashToken, verifyHashedToken } = require('../../src/utils/crypto');
     const token = 'my-secret-token';
     const hash = hashToken(token);
     expect(verifyHashedToken(token, hash)).toBe(true);
   });
 
   test('[BACKEND-01] verifyHashedToken rejects wrong token', () => {
-    const { hashToken, verifyHashedToken } = require('../../src/utils/crypto');
     const hash = hashToken('correct-token');
     expect(verifyHashedToken('wrong-token', hash)).toBe(false);
   });
 
   test('[BACKEND-01] generateSecureToken produces unique tokens', () => {
-    const { generateSecureToken } = require('../../src/utils/crypto');
     const t1 = generateSecureToken();
     const t2 = generateSecureToken();
     expect(t1).not.toBe(t2);
