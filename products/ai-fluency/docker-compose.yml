@@ -51,7 +51,8 @@ services:
 
   api:
     build:
-      context: ./apps/api
+      context: ../..
+      dockerfile: products/ai-fluency/apps/api/Dockerfile
       target: production
     ports:
       - "5014:5014"
@@ -81,7 +82,8 @@ services:
 
   web:
     build:
-      context: ./apps/web
+      context: ../..
+      dockerfile: products/ai-fluency/apps/web/Dockerfile
       target: production
     ports:
       - "3118:3118"

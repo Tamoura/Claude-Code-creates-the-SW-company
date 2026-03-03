@@ -1,43 +1,53 @@
+# Build context: workspace root (required for pnpm monorepo lockfile)
+# Usage: docker build -f products/ai-fluency/apps/api/Dockerfile ../..
+
 # Stage 1: Build
 FROM node:20-alpine AS builder
-WORKDIR /app
+WORKDIR /workspace
 
-# Install pnpm
 RUN corepack enable && corepack prepare pnpm@9 --activate
 
-# Install dependencies first (layer cache optimization)
-COPY package.json pnpm-lock.yaml ./
-COPY prisma ./prisma/
-RUN pnpm install --frozen-lockfile
+# Copy workspace manifests (pnpm-lock.yaml is at workspace root)
+COPY package.json pnpm-workspace.yaml pnpm-lock.yaml ./
+
+# Copy app package.json and prisma schema
+COPY products/ai-fluency/apps/api/package.json ./products/ai-fluency/apps/api/
+COPY products/ai-fluency/apps/api/prisma/ ./products/ai-fluency/apps/api/prisma/
+
+# Install only this app's dependencies
+RUN pnpm install --frozen-lockfile --filter "@ai-fluency/api..."
 
 # Copy source and build
-COPY . .
-RUN pnpm exec prisma generate
-RUN pnpm run build
+COPY products/ai-fluency/apps/api/src/ ./products/ai-fluency/apps/api/src/
+COPY products/ai-fluency/apps/api/tsconfig.json ./products/ai-fluency/apps/api/
+
+WORKDIR /workspace/products/ai-fluency/apps/api
+RUN pnpm exec prisma generate && pnpm run build
 
 # Stage 2: Production
 FROM node:20-alpine AS production
 WORKDIR /app
 
-# Install pnpm
 RUN corepack enable && corepack prepare pnpm@9 --activate
 
 # Non-root user for security
 RUN addgroup -g 1001 -S nodejs && \
     adduser -S fastify -u 1001
 
-# Install only production dependencies in a clean layer
-COPY --chown=fastify:nodejs package.json pnpm-lock.yaml ./
-RUN pnpm install --frozen-lockfile --prod && pnpm store prune
+# Install production dependencies only
+COPY --chown=fastify:nodejs package.json pnpm-workspace.yaml pnpm-lock.yaml ./
+COPY --chown=fastify:nodejs products/ai-fluency/apps/api/package.json ./products/ai-fluency/apps/api/
+RUN pnpm install --frozen-lockfile --prod --filter "@ai-fluency/api..." && pnpm store prune
 
 # Copy compiled output and Prisma artifacts
-COPY --from=builder --chown=fastify:nodejs /app/dist ./dist
-COPY --from=builder --chown=fastify:nodejs /app/node_modules/.prisma ./node_modules/.prisma
-COPY --from=builder --chown=fastify:nodejs /app/node_modules/@prisma ./node_modules/@prisma
-COPY --from=builder --chown=fastify:nodejs /app/prisma ./prisma
+COPY --from=builder --chown=fastify:nodejs /workspace/products/ai-fluency/apps/api/dist ./products/ai-fluency/apps/api/dist
+COPY --from=builder --chown=fastify:nodejs /workspace/node_modules/.prisma ./node_modules/.prisma
+COPY --from=builder --chown=fastify:nodejs /workspace/node_modules/@prisma ./node_modules/@prisma
+COPY --from=builder --chown=fastify:nodejs /workspace/products/ai-fluency/apps/api/prisma ./products/ai-fluency/apps/api/prisma
 
 USER fastify
 
+WORKDIR /app/products/ai-fluency/apps/api
 EXPOSE 5014
 
 HEALTHCHECK --interval=30s --timeout=10s --start-period=40s --retries=3 \
