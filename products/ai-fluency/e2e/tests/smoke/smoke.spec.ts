@@ -12,6 +12,7 @@
 import { test, expect } from '@playwright/test';
 
 const API_BASE = 'http://localhost:5014';
+const SCREENSHOTS = 'test-results/screenshots';
 
 // ─────────────────────────────────────────────────────────────────────────────
 // API smoke tests (backend only — fast, no frontend required)
@@ -51,6 +52,9 @@ test('[SMOKE-04] Home page loads at http://localhost:3118', async ({ page }) => 
 
   // Main content area must be present
   await expect(page.locator('main')).toBeVisible();
+
+  // Screenshot: home page full page view
+  await page.screenshot({ path: `${SCREENSHOTS}/SMOKE-04-home-page.png`, fullPage: true });
 });
 
 test('[SMOKE-05] Home page has correct title', async ({ page }) => {
@@ -71,6 +75,9 @@ test('[SMOKE-06] Login page renders without errors', async ({ page }) => {
 
   // Submit button must be present
   await expect(page.getByRole('button', { name: /sign in/i })).toBeVisible();
+
+  // Screenshot: login page smoke check
+  await page.screenshot({ path: `${SCREENSHOTS}/SMOKE-06-login-page.png`, fullPage: true });
 });
 
 test('[SMOKE-07] Register page renders without errors', async ({ page }) => {
@@ -83,6 +90,9 @@ test('[SMOKE-07] Register page renders without errors', async ({ page }) => {
   // Submit button must be present
   const submitBtn = page.getByRole('button', { name: /create account/i });
   await expect(submitBtn).toBeVisible();
+
+  // Screenshot: register page smoke check
+  await page.screenshot({ path: `${SCREENSHOTS}/SMOKE-07-register-page.png`, fullPage: true });
 });
 
 test('[SMOKE-08] Dashboard redirects unauthenticated users', async ({ page }) => {
