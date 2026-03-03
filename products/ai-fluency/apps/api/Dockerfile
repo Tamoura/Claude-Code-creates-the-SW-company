@@ -7,8 +7,9 @@ WORKDIR /workspace
 
 RUN corepack enable && corepack prepare pnpm@9 --activate
 
-# Copy workspace manifests (pnpm-lock.yaml is at workspace root)
-COPY package.json pnpm-workspace.yaml pnpm-lock.yaml ./
+# Copy workspace manifests (pnpm-lock.yaml and .npmrc are at workspace root)
+# .npmrc must be copied so pnpm picks up shamefully-hoist=true
+COPY package.json pnpm-workspace.yaml pnpm-lock.yaml .npmrc ./
 
 # Copy app package.json and prisma schema
 COPY products/ai-fluency/apps/api/package.json ./products/ai-fluency/apps/api/
@@ -35,7 +36,7 @@ RUN addgroup -g 1001 -S nodejs && \
     adduser -S fastify -u 1001
 
 # Install production dependencies only
-COPY --chown=fastify:nodejs package.json pnpm-workspace.yaml pnpm-lock.yaml ./
+COPY --chown=fastify:nodejs package.json pnpm-workspace.yaml pnpm-lock.yaml .npmrc ./
 COPY --chown=fastify:nodejs products/ai-fluency/apps/api/package.json ./products/ai-fluency/apps/api/
 RUN pnpm install --frozen-lockfile --prod --filter "@ai-fluency/api..." && pnpm store prune
 
