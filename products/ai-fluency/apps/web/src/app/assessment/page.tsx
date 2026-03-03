@@ -10,27 +10,27 @@ export const metadata: Metadata = {
 
 const dimensions = [
   {
-    name: 'Conceptual Understanding',
+    name: 'DELEGATION',
     description:
-      'Tests your knowledge of AI concepts, models, limitations, and ethical considerations.',
+      'Tests your ability to delegate tasks appropriately to AI, including reasoning about when and how to use AI assistance.',
     questionCount: 15,
   },
   {
-    name: 'Practical Application',
+    name: 'DESCRIPTION',
     description:
-      'Evaluates how well you apply AI tools in your daily work and workflows.',
+      'Evaluates how well you describe tasks and context to AI tools to get accurate, useful outputs.',
     questionCount: 15,
   },
   {
-    name: 'Critical Thinking',
+    name: 'DISCERNMENT',
     description:
-      'Assesses your ability to evaluate AI outputs, identify biases, and spot errors.',
+      'Assesses your ability to evaluate AI outputs, identify missing context, and spot errors or hallucinations.',
     questionCount: 12,
   },
   {
-    name: 'Collaborative Use',
+    name: 'DILIGENCE',
     description:
-      'Measures how effectively you work alongside AI as part of a team or organisation.',
+      'Measures how effectively you verify AI work, maintain accountability, and apply ethical oversight.',
     questionCount: 8,
   },
 ];

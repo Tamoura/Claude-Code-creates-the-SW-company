@@ -52,6 +52,8 @@ declare module 'fastify' {
     requireRole: (
       role: 'LEARNER' | 'MANAGER' | 'ADMIN' | 'SUPER_ADMIN'
     ) => (request: import('fastify').FastifyRequest) => Promise<void>;
+    withRls: <T>(orgId: string, callback: (tx: any) => Promise<T>) => Promise<T>;
+    rlsOrgId: string | null;
   }
 
   interface FastifyRequest {
@@ -63,5 +65,6 @@ declare module 'fastify' {
       role: string;
       status: string;
     };
+    rlsOrgId?: string | null;
   }
 }

@@ -37,10 +37,10 @@ export interface FluencyProfile {
   userId: string;
   overallScore: number;
   dimensions: {
-    conceptual: number;
-    practical: number;
-    critical: number;
-    collaborative: number;
+    DELEGATION: number;
+    DESCRIPTION: number;
+    DISCERNMENT: number;
+    DILIGENCE: number;
   };
   lastAssessedAt: string;
 }

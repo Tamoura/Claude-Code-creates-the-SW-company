@@ -18,6 +18,7 @@
 
 import Fastify, { FastifyInstance } from 'fastify';
 import cors from '@fastify/cors';
+import helmet from '@fastify/helmet';
 import jwt from '@fastify/jwt';
 import { ZodError } from 'zod';
 
@@ -77,6 +78,10 @@ export async function buildApp(): Promise<FastifyInstance> {
     credentials: true,
     methods: ['GET', 'HEAD', 'POST', 'PUT', 'PATCH', 'DELETE', 'OPTIONS'],
   });
+
+  // ── HELMET ────────────────────────────────────────────────────────────────
+  // Register security headers before routes and auth
+  await fastify.register(helmet, { contentSecurityPolicy: false });
 
   // ── JWT ───────────────────────────────────────────────────────────────────
   await fastify.register(jwt, {
