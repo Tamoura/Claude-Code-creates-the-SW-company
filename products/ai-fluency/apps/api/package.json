@@ -1,0 +1,54 @@
+{
+  "name": "@ai-fluency/api",
+  "version": "0.1.0",
+  "description": "AI Fluency Platform — Backend API",
+  "main": "dist/index.js",
+  "scripts": {
+    "dev": "ts-node-dev --respawn --transpile-only src/index.ts",
+    "build": "tsc",
+    "start": "node dist/index.js",
+    "test": "jest --runInBand",
+    "test:coverage": "jest --runInBand --coverage",
+    "test:watch": "jest --runInBand --watch",
+    "lint": "eslint src tests --ext .ts",
+    "typecheck": "tsc --noEmit",
+    "db:migrate": "prisma migrate dev",
+    "db:deploy": "prisma migrate deploy",
+    "db:generate": "prisma generate",
+    "db:studio": "prisma studio",
+    "db:reset": "prisma migrate reset"
+  },
+  "dependencies": {
+    "@fastify/cookie": "^11.0.0",
+    "@fastify/cors": "^11.0.0",
+    "@fastify/csrf-protection": "^7.0.0",
+    "@fastify/helmet": "^13.0.0",
+    "@fastify/jwt": "^10.0.0",
+    "@fastify/rate-limit": "^10.0.0",
+    "@prisma/client": "^5.0.0",
+    "argon2": "^0.31.0",
+    "fastify": "^5.0.0",
+    "fastify-plugin": "^5.0.0",
+    "ioredis": "^5.0.0",
+    "pino": "^8.0.0",
+    "pino-pretty": "^10.0.0",
+    "zod": "^3.0.0"
+  },
+  "devDependencies": {
+    "@types/jest": "^29.0.0",
+    "@types/node": "^20.0.0",
+    "@typescript-eslint/eslint-plugin": "^7.0.0",
+    "@typescript-eslint/parser": "^7.0.0",
+    "dotenv": "^16.0.0",
+    "eslint": "^8.0.0",
+    "jest": "^29.0.0",
+    "prisma": "^5.0.0",
+    "ts-jest": "^29.0.0",
+    "ts-node": "^10.0.0",
+    "ts-node-dev": "^2.0.0",
+    "typescript": "^5.0.0"
+  },
+  "engines": {
+    "node": ">=20.0.0"
+  }
+}

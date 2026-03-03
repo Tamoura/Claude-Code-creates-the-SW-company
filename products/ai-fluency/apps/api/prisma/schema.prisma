@@ -1,0 +1,588 @@
+// AI Fluency Platform — Prisma Schema
+// Multi-tenant: PostgreSQL Row Level Security (RLS) enforced on all tenant-scoped models
+// Indexes tuned for NFR-004: 10,000 concurrent sessions, 1M+ assessment records
+
+generator client {
+  provider = "prisma-client-js"
+  previewFeatures = ["postgresqlExtensions"]
+}
+
+datasource db {
+  provider   = "postgresql"
+  url        = env("DATABASE_URL")
+  extensions = [uuid_ossp(map: "uuid-ossp"), pgcrypto]
+}
+
+// ─────────────────────────────────────
+// ENUMS
+// ─────────────────────────────────────
+
+enum OrgStatus {
+  TRIAL
+  ACTIVE
+  SUSPENDED
+  ARCHIVED
+}
+
+enum OrgPlan {
+  TRIAL
+  STARTER
+  PROFESSIONAL
+  ENTERPRISE
+}
+
+enum UserRole {
+  LEARNER
+  MANAGER
+  ADMIN
+  SUPER_ADMIN
+}
+
+enum UserStatus {
+  PENDING_VERIFICATION
+  ACTIVE
+  LOCKED
+  DEACTIVATED
+}
+
+enum SSOProvider {
+  SAML
+  OIDC
+}
+
+enum Dimension {
+  DELEGATION
+  DESCRIPTION
+  DISCERNMENT
+  DILIGENCE
+}
+
+enum InteractionMode {
+  AUTOMATION
+  AUGMENTATION
+  AGENCY
+}
+
+enum QuestionType {
+  SCENARIO    // Observable behaviors — A/B/C/D scenario
+  SELF_REPORT // Unobservable behaviors — Likert 1-5
+}
+
+enum IndicatorTrack {
+  OBSERVABLE    // 11 observable indicators
+  SELF_REPORT   // 13 unobservable indicators
+}
+
+enum IndicatorStatus {
+  PASS
+  PARTIAL
+  FAIL
+}
+
+enum SessionStatus {
+  IN_PROGRESS
+  COMPLETED
+  ABANDONED
+  EXPIRED
+}
+
+enum LearningPathStatus {
+  ACTIVE
+  COMPLETED
+  PAUSED
+}
+
+enum ModuleStatus {
+  NOT_STARTED
+  IN_PROGRESS
+  COMPLETED
+  SKIPPED
+}
+
+enum ContentType {
+  VIDEO
+  ARTICLE
+  EXERCISE
+  QUIZ
+  SIMULATION
+}
+
+enum Difficulty {
+  BEGINNER
+  INTERMEDIATE
+  ADVANCED
+}
+
+enum RoleProfile {
+  DEVELOPER
+  ANALYST
+  MANAGER
+  MARKETER
+  GENERIC
+}
+
+enum AuditAction {
+  CREATE
+  UPDATE
+  DELETE
+  LOGIN
+  LOGOUT
+  EXPORT
+  SAML_LOGIN
+}
+
+// ─────────────────────────────────────
+// GLOBAL ENTITIES (no RLS)
+// ─────────────────────────────────────
+
+/// Top-level tenant. Not RLS-scoped — accessible to SUPER_ADMIN role only.
+model Organization {
+  id                String      @id @default(dbgenerated("uuid_generate_v4()")) @db.Uuid
+  name              String      @db.VarChar(200)
+  slug              String      @unique @db.VarChar(100)
+  status            OrgStatus   @default(TRIAL)
+  plan              OrgPlan     @default(TRIAL)
+  dataRetentionDays Int         @default(365) // GDPR: 30 min, 3650 max
+  ssoEnabled        Boolean     @default(false)
+  logoUrl           String?
+  createdAt         DateTime    @default(now())
+  updatedAt         DateTime    @updatedAt
+
+  // Relations
+  users             User[]
+  teams             Team[]
+  templates         AssessmentTemplate[]
+  ssoConfigs        SSOConfig[]
+
+  @@index([status])
+  @@index([slug])
+  @@map("organizations")
+}
+
+/// Behavioral indicator definitions (platform-level, no RLS needed)
+/// 24 total: 11 observable + 13 self-report
+model BehavioralIndicator {
+  id                String          @id @default(dbgenerated("uuid_generate_v4()")) @db.Uuid
+  shortCode         String          @unique @db.VarChar(50) // e.g. "DELEGATION_01"
+  name              String          // e.g. "Identify task suitability"
+  description       String          @db.Text
+  dimension         Dimension
+  track             IndicatorTrack
+  prevalenceWeight  Float           // Rarity weight for scoring (0.0-1.0)
+  sortOrder         Int
+  createdAt         DateTime        @default(now())
+  updatedAt         DateTime        @updatedAt
+
+  questions         Question[]
+
+  @@index([dimension])
+  @@index([track])
+  @@map("behavioral_indicators")
+}
+
+/// Question bank — platform-wide, no RLS
+/// 32 questions per default assessment (8/dimension)
+model Question {
+  id                String          @id @default(dbgenerated("uuid_generate_v4()")) @db.Uuid
+  dimension         Dimension
+  interactionMode   InteractionMode
+  questionType      QuestionType
+  indicatorId       String          @db.Uuid
+  text              String          @db.Text
+  /// JSON: [{key: "A", text: "...", isCorrect: bool, score: 0.0-1.0}] for SCENARIO
+  /// JSON: {min: 1, max: 5, labels: [...]} for SELF_REPORT
+  optionsJson       Json            @map("options_json")
+  isActive          Boolean         @default(true)
+  createdAt         DateTime        @default(now())
+  updatedAt         DateTime        @updatedAt
+
+  indicator         BehavioralIndicator @relation(fields: [indicatorId], references: [id])
+  responses         Response[]
+
+  @@index([dimension])
+  @@index([questionType])
+  @@index([indicatorId])
+  @@map("questions")
+}
+
+/// Learning content modules — platform-wide catalog, no RLS
+model LearningModule {
+  id                String          @id @default(dbgenerated("uuid_generate_v4()")) @db.Uuid
+  title             String          @db.VarChar(300)
+  description       String          @db.Text
+  dimension         Dimension
+  interactionMode   InteractionMode?
+  contentType       ContentType
+  estimatedMinutes  Int
+  difficulty        Difficulty
+  contentUrl        String
+  isActive          Boolean         @default(true)
+  createdAt         DateTime        @default(now())
+  updatedAt         DateTime        @updatedAt
+
+  pathModules       LearningPathModule[]
+
+  @@index([dimension])
+  @@index([difficulty])
+  @@map("learning_modules")
+}
+
+/// Scoring algorithm version tracking
+/// Allows algorithm upgrades without invalidating historical scores
+model AlgorithmVersion {
+  id                Int             @id @default(autoincrement())
+  version           Int             @unique
+  description       String
+  isActive          Boolean         @default(false)
+  activatedAt       DateTime?
+  createdAt         DateTime        @default(now())
+
+  sessions          AssessmentSession[]
+
+  @@map("algorithm_versions")
+}
+
+// ─────────────────────────────────────
+// TENANT-SCOPED ENTITIES (RLS enforced)
+// All tenant-scoped tables have RLS policies applied via migration SQL:
+//   ALTER TABLE <table> ENABLE ROW LEVEL SECURITY;
+//   CREATE POLICY org_isolation ON <table>
+//     USING (org_id = current_setting('app.current_org_id')::uuid);
+// ─────────────────────────────────────
+
+/// User account. Soft-deletable for GDPR right to erasure.
+/// GDPR: deletedAt set on request; background worker hard-deletes after dataRetentionDays.
+/// RLS: org_id = current_setting('app.current_org_id')::uuid
+model User {
+  id                    String      @id @default(dbgenerated("uuid_generate_v4()")) @db.Uuid
+  orgId                 String      @db.Uuid
+  teamId                String?     @db.Uuid
+  email                 String      @db.VarChar(255)
+  firstName             String      @db.VarChar(100)
+  lastName              String      @db.VarChar(100)
+  passwordHash          String?     /// Argon2id hash — nullable for SSO-only users
+  role                  UserRole    @default(LEARNER)
+  status                UserStatus  @default(PENDING_VERIFICATION)
+  avatarUrl             String?
+  /// SHA-256 hash of email verification token — never store plaintext
+  verificationTokenHash String?     @db.VarChar(64)
+  verificationTokenExp  DateTime?
+  /// SHA-256 hash of password reset token
+  resetTokenHash        String?     @db.VarChar(64)
+  resetTokenExp         DateTime?
+  loginFailureCount     Int         @default(0)
+  lockedUntil           DateTime?
+  lastLoginAt           DateTime?
+  emailVerifiedAt       DateTime?
+  /// GDPR soft delete — background worker hard-deletes after dataRetentionDays
+  deletedAt             DateTime?
+  createdAt             DateTime    @default(now())
+  updatedAt             DateTime    @updatedAt
+
+  // Relations
+  org                   Organization     @relation(fields: [orgId], references: [id])
+  team                  Team?            @relation(fields: [teamId], references: [id])
+  sessions              UserSession[]
+  assessmentSessions    AssessmentSession[]
+  learningPaths         LearningPath[]
+  certificates          Certificate[]
+  auditLogs             AuditLog[]       @relation("actor")
+
+  @@unique([orgId, email]) // Email unique per org, not globally
+  @@index([orgId])
+  @@index([email])
+  @@index([status])
+  @@index([deletedAt]) // Partial index in migration: WHERE deletedAt IS NULL
+  @@map("users")
+}
+
+/// Refresh token sessions. Stores SHA-256 hash of token — never plaintext.
+/// RLS: org_id derived via user relation
+model UserSession {
+  id              String    @id @default(dbgenerated("uuid_generate_v4()")) @db.Uuid
+  userId          String    @db.Uuid
+  orgId           String    @db.Uuid // Denormalized for RLS
+  refreshTokenHash String   @unique @db.VarChar(64) // SHA-256 hex
+  userAgent       String?   @db.VarChar(500)
+  ipAddress       String?   @db.VarChar(45)
+  lastUsedAt      DateTime  @default(now())
+  expiresAt       DateTime
+  createdAt       DateTime  @default(now())
+
+  user            User      @relation(fields: [userId], references: [id], onDelete: Cascade)
+
+  @@index([userId])
+  @@index([orgId])
+  @@index([expiresAt]) // For cleanup job
+  @@map("user_sessions")
+}
+
+/// Per-organization SSO configuration (SAML 2.0 or OIDC)
+/// certificate field stored AES-256-GCM encrypted at app layer
+/// RLS: org_id = current_setting('app.current_org_id')::uuid
+model SSOConfig {
+  id              String      @id @default(dbgenerated("uuid_generate_v4()")) @db.Uuid
+  orgId           String      @db.Uuid
+  provider        SSOProvider
+  entityId        String      // SAML entityId or OIDC issuer
+  ssoUrl          String      // IdP SSO URL or OIDC authorization endpoint
+  /// AES-256-GCM encrypted SAML certificate or OIDC client secret
+  encryptedSecret String      @db.Text
+  isActive        Boolean     @default(true)
+  createdAt       DateTime    @default(now())
+  updatedAt       DateTime    @updatedAt
+
+  org             Organization @relation(fields: [orgId], references: [id])
+
+  @@unique([orgId, provider])
+  @@index([orgId])
+  @@map("sso_configs")
+}
+
+/// Team within an organization
+/// RLS: org_id = current_setting('app.current_org_id')::uuid
+model Team {
+  id              String    @id @default(dbgenerated("uuid_generate_v4()")) @db.Uuid
+  orgId           String    @db.Uuid
+  name            String    @db.VarChar(200)
+  createdAt       DateTime  @default(now())
+  updatedAt       DateTime  @updatedAt
+
+  org             Organization @relation(fields: [orgId], references: [id])
+  members         User[]
+
+  @@index([orgId])
+  @@map("teams")
+}
+
+/// Assessment templates — org-specific or platform-provided (orgId = null for platform)
+/// RLS: org_id = current_setting('app.current_org_id')::uuid OR org_id IS NULL
+model AssessmentTemplate {
+  id                String      @id @default(dbgenerated("uuid_generate_v4()")) @db.Uuid
+  orgId             String?     @db.Uuid // null = platform-provided template
+  name              String      @db.VarChar(300)
+  description       String?     @db.Text
+  roleProfile       RoleProfile @default(GENERIC)
+  isCustom          Boolean     @default(false)
+  /// JSON: {delegation: 0.25, description: 0.25, discernment: 0.25, diligence: 0.25}
+  /// Must sum to 1.0. Used to weight dimension scores differently per role.
+  dimensionWeights  Json
+  isActive          Boolean     @default(true)
+  createdAt         DateTime    @default(now())
+  updatedAt         DateTime    @updatedAt
+
+  org               Organization?       @relation(fields: [orgId], references: [id])
+  sessions          AssessmentSession[]
+
+  @@index([orgId])
+  @@index([roleProfile])
+  @@map("assessment_templates")
+}
+
+/// Assessment session — one per user per template attempt
+/// Soft-deletable (deletedAt) for GDPR
+/// RLS: org_id = current_setting('app.current_org_id')::uuid
+model AssessmentSession {
+  id                String          @id @default(dbgenerated("uuid_generate_v4()")) @db.Uuid
+  orgId             String          @db.Uuid
+  userId            String          @db.Uuid
+  templateId        String          @db.Uuid
+  algorithmVersionId Int
+  status            SessionStatus   @default(IN_PROGRESS)
+  progressPct       Float           @default(0)
+  /// LTI context for grade passback integration
+  ltiContextId      String?         @db.VarChar(255)
+  ltiLineItemUrl    String?         // LTI 1.3 grade passback endpoint
+  startedAt         DateTime        @default(now())
+  completedAt       DateTime?
+  expiresAt         DateTime        // Abandoned if not completed by expiresAt
+  /// GDPR soft delete
+  deletedAt         DateTime?
+  createdAt         DateTime        @default(now())
+  updatedAt         DateTime        @updatedAt
+
+  user              User            @relation(fields: [userId], references: [id])
+  template          AssessmentTemplate @relation(fields: [templateId], references: [id])
+  algorithmVersion  AlgorithmVersion @relation(fields: [algorithmVersionId], references: [version])
+  responses         Response[]
+  fluencyProfile    FluencyProfile?
+
+  // Partial index (add in migration): WHERE status = 'IN_PROGRESS' AND deleted_at IS NULL
+  @@index([orgId])
+  @@index([userId])
+  @@index([status])
+  @@index([expiresAt])
+  @@index([deletedAt])
+  @@map("assessment_sessions")
+}
+
+/// Individual question responses within a session
+/// UPSERT on (sessionId, questionId) for save-and-resume
+/// RLS: org_id = current_setting('app.current_org_id')::uuid
+model Response {
+  id              String    @id @default(dbgenerated("uuid_generate_v4()")) @db.Uuid
+  orgId           String    @db.Uuid
+  sessionId       String    @db.Uuid
+  questionId      String    @db.Uuid
+  /// For SCENARIO: "A"|"B"|"C"|"D" — For SELF_REPORT: "1"|"2"|"3"|"4"|"5"
+  answer          String    @db.VarChar(10)
+  elapsedSeconds  Int?      // Time on this question (analytics only)
+  createdAt       DateTime  @default(now())
+  updatedAt       DateTime  @updatedAt
+
+  session         AssessmentSession @relation(fields: [sessionId], references: [id], onDelete: Cascade)
+  question        Question          @relation(fields: [questionId], references: [id])
+
+  @@unique([sessionId, questionId]) // Idempotent save-and-resume
+  @@index([sessionId])
+  @@index([orgId])
+  @@index([questionId])
+  @@map("responses")
+}
+
+/// Computed fluency profile from a completed assessment session
+/// Stores both observable and self-report score tracks
+/// RLS: org_id = current_setting('app.current_org_id')::uuid
+model FluencyProfile {
+  id                    String    @id @default(dbgenerated("uuid_generate_v4()")) @db.Uuid
+  orgId                 String    @db.Uuid
+  userId                String    @db.Uuid
+  sessionId             String    @unique @db.Uuid
+  algorithmVersion      Int
+  overallScore          Float     // 0-100 prevalence-weighted composite
+  /// JSON: {delegation: 72.5, description: 68.0, discernment: 45.2, diligence: 81.0}
+  dimensionScores       Json
+  /// JSON: {delegation: 80.0, description: 75.0, discernment: 55.0, diligence: 85.0}
+  /// Separate track for unobservable self-report behaviors (Likert average per dimension)
+  selfReportScores      Json
+  /// JSON: {"DELEGATION_01": {score: 0.85, status: "PASS", track: "OBSERVABLE"}, ...}
+  /// Breakdown for all 24 behavioral indicators
+  indicatorBreakdown    Json
+  /// True when "Question AI reasoning" + "Identify missing context" both FAIL
+  /// Triggers priority Discernment modules in learning path
+  discernmentGap        Boolean   @default(false)
+  createdAt             DateTime  @default(now())
+
+  session               AssessmentSession @relation(fields: [sessionId], references: [id])
+  learningPath          LearningPath?
+  certificate           Certificate?
+
+  @@index([orgId])
+  @@index([userId])
+  @@index([createdAt]) // BRIN index in migration for time-range queries
+  @@map("fluency_profiles")
+}
+
+/// Personalized learning path generated from a fluency profile
+/// Modules ordered weakest dimension first
+/// RLS: org_id = current_setting('app.current_org_id')::uuid
+model LearningPath {
+  id                String              @id @default(dbgenerated("uuid_generate_v4()")) @db.Uuid
+  orgId             String              @db.Uuid
+  userId            String              @db.Uuid
+  profileId         String              @unique @db.Uuid
+  status            LearningPathStatus  @default(ACTIVE)
+  progressPct       Float               @default(0)
+  estimatedHours    Float
+  createdAt         DateTime            @default(now())
+  updatedAt         DateTime            @updatedAt
+
+  profile           FluencyProfile      @relation(fields: [profileId], references: [id])
+  user              User                @relation(fields: [userId], references: [id])
+  modules           LearningPathModule[]
+
+  @@index([orgId])
+  @@index([userId])
+  @@index([status])
+  @@map("learning_paths")
+}
+
+/// Junction table: learning path to module with ordering and status
+/// RLS: org_id = current_setting('app.current_org_id')::uuid
+model LearningPathModule {
+  id              String          @id @default(dbgenerated("uuid_generate_v4()")) @db.Uuid
+  orgId           String          @db.Uuid
+  pathId          String          @db.Uuid
+  moduleId        String          @db.Uuid
+  sequence        Int             // 1-based ordering (weakest dimension first)
+  status          ModuleStatus    @default(NOT_STARTED)
+  createdAt       DateTime        @default(now())
+  updatedAt       DateTime        @updatedAt
+
+  path            LearningPath    @relation(fields: [pathId], references: [id], onDelete: Cascade)
+  module          LearningModule  @relation(fields: [moduleId], references: [id])
+  completion      ModuleCompletion?
+
+  @@unique([pathId, moduleId])
+  @@index([pathId])
+  @@index([orgId])
+  @@map("learning_path_modules")
+}
+
+/// Module completion record — one per learner per module per path
+/// RLS: org_id = current_setting('app.current_org_id')::uuid
+model ModuleCompletion {
+  id                String          @id @default(dbgenerated("uuid_generate_v4()")) @db.Uuid
+  orgId             String          @db.Uuid
+  pathModuleId      String          @unique @db.Uuid
+  score             Float?          // Optional quiz score (0-100)
+  timeSpentMinutes  Int?
+  completedAt       DateTime        @default(now())
+
+  pathModule        LearningPathModule @relation(fields: [pathModuleId], references: [id], onDelete: Cascade)
+
+  @@index([orgId])
+  @@map("module_completions")
+}
+
+/// Digital certificate issued on passing threshold (default: overallScore >= 80)
+/// Open Badges v3 assertion stored as reference URL
+/// RLS: org_id = current_setting('app.current_org_id')::uuid
+model Certificate {
+  id                String    @id @default(dbgenerated("uuid_generate_v4()")) @db.Uuid
+  orgId             String    @db.Uuid
+  userId            String    @db.Uuid
+  profileId         String    @unique @db.Uuid
+  /// Open Badges v3 assertion URL (Badgr or Credly)
+  badgeUrl          String
+  /// S3 URL of generated PDF certificate
+  pdfUrl            String?
+  /// Public verification URL (no auth required)
+  verificationUrl   String    @unique
+  issuedAt          DateTime  @default(now())
+  expiresAt         DateTime? // Optional — set based on org config
+
+  user              User      @relation(fields: [userId], references: [id])
+  profile           FluencyProfile @relation(fields: [profileId], references: [id])
+
+  @@index([orgId])
+  @@index([userId])
+  @@map("certificates")
+}
+
+/// Immutable audit log for all sensitive operations
+/// Written to append-only by application layer
+/// RLS: org_id = current_setting('app.current_org_id')::uuid
+model AuditLog {
+  id              String      @id @default(dbgenerated("uuid_generate_v4()")) @db.Uuid
+  orgId           String      @db.Uuid
+  actorId         String?     @db.Uuid // null for system-initiated actions
+  action          AuditAction
+  resourceType    String      @db.VarChar(100) // e.g. "User", "AssessmentSession"
+  resourceId      String?     @db.Uuid
+  /// JSON snapshot of resource state before change (null for CREATE)
+  beforeState     Json?
+  /// JSON snapshot of resource state after change (null for DELETE)
+  afterState      Json?
+  ipAddress       String?     @db.VarChar(45)
+  userAgent       String?     @db.VarChar(500)
+  createdAt       DateTime    @default(now())
+
+  actor           User?       @relation("actor", fields: [actorId], references: [id])
+
+  // BRIN index on createdAt added via migration for time-range queries on large table
+  @@index([orgId])
+  @@index([actorId])
+  @@index([resourceType, resourceId])
+  @@map("audit_logs")
+}

@@ -1,0 +1,62 @@
+@tailwind base;
+@tailwind components;
+@tailwind utilities;
+
+@layer base {
+  *,
+  *::before,
+  *::after {
+    box-sizing: border-box;
+  }
+
+  html {
+    font-size: 16px;
+    -webkit-text-size-adjust: 100%;
+  }
+
+  body {
+    @apply bg-gray-50 text-gray-900 antialiased;
+    font-family: Inter, system-ui, sans-serif;
+    line-height: 1.5;
+  }
+
+  /* Accessible focus styles */
+  :focus-visible {
+    @apply outline-none ring-2 ring-brand-500 ring-offset-2;
+  }
+
+  /* Skip link */
+  .skip-link:focus {
+    @apply not-sr-only absolute left-4 top-4 z-50 rounded-md bg-white px-4 py-2 text-brand-700 shadow-lg ring-2 ring-brand-500 ring-offset-2;
+  }
+}
+
+@layer components {
+  .page-container {
+    @apply mx-auto max-w-7xl px-4 py-8 sm:px-6 lg:px-8;
+  }
+
+  .page-heading {
+    @apply text-2xl font-bold text-gray-900 sm:text-3xl;
+  }
+
+  .section-heading {
+    @apply text-xl font-semibold text-gray-800;
+  }
+
+  .form-group {
+    @apply flex flex-col gap-4;
+  }
+
+  .empty-state {
+    @apply flex flex-col items-center justify-center gap-4 rounded-lg border-2 border-dashed border-gray-300 p-12 text-center;
+  }
+
+  .empty-state-title {
+    @apply text-lg font-semibold text-gray-700;
+  }
+
+  .empty-state-description {
+    @apply text-sm text-gray-500;
+  }
+}

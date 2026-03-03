@@ -1,0 +1,21 @@
+# Exclude heavy directories from Docker build context
+# (workspace root is used as context for pnpm monorepo builds)
+
+.git
+.github
+.claude
+node_modules
+**/node_modules
+**/.next
+**/dist
+**/build
+**/coverage
+**/.turbo
+**/tsconfig.tsbuildinfo
+
+# Docs and non-source files
+docs
+notes
+*.md
+*.sarif
+gitleaks-results.sarif/

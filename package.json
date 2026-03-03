@@ -30,6 +30,7 @@
       "@reown/appkit",
       "@sentry/cli",
       "@swc/core",
+      "argon2",
       "bcrypt",
       "bufferutil",
       "core-js",

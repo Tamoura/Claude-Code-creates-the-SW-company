@@ -1,0 +1,789 @@
+# New Product Workflow Task Graph Template
+# Placeholders: ai-fluency, AI fluency assessment and training platform based on Anthropic 4D framework
+#
+# TRACEABILITY RULES (Constitution Article VI):
+#   - Every task MUST have story_ids and/or requirement_ids once PRD exists
+#   - Planning tasks (PRD-01, ARCH-01) create stories — they link to epics instead
+#   - Foundation tasks link to foundation stories defined in the PRD
+#   - Commits MUST include [US-XX] or [FR-XXX] in the message
+#   - Tests MUST reference acceptance criteria IDs in test names
+#   - E2E tests MUST be organized by story: e2e/tests/stories/{story-id}/
+
+# ─────────────────────────────────────────────────────────────────
+# PROTOCOL ENFORCEMENT (ConnectSW Constitution Articles XI & XII)
+# ─────────────────────────────────────────────────────────────────
+# ALL AGENTS must follow BEFORE starting any task:
+#   - Read .claude/protocols/anti-rationalization.md (Article XI)
+#   - Apply the 1% Rule: if a quality step might apply, invoke it
+#
+# ALL AGENTS must follow BEFORE marking any task done:
+#   - Verification-Before-Completion 5-Step Gate (Article XI):
+#     1. Identify what "done" looks like (specific, testable)
+#     2. Execute the actual verification command
+#     3. Read the actual output (do NOT assume success)
+#     4. Compare output to acceptance criteria literally
+#     5. Claim done only when evidence matches
+#
+# FOR DELIVERABLES (Article XII):
+#   - Write all outputs to files (direct-delivery.md)
+#   - Compress context if >60% full (context-compression.md)
+# ─────────────────────────────────────────────────────────────────
+
+metadata:
+  product: "ai-fluency"
+  version: "3.0.0"
+  workflow_type: "new-product"
+  created_at: "2026-03-02T09:19:34Z"
+  updated_at: "2026-03-02T09:19:34Z"
+  traceability:
+    brd_ref: "products/ai-fluency/docs/PRD.md"
+    epic: "EP-ai-fluency-FOUNDATION"
+    sprint: "Sprint 0 — Foundation"
+
+tasks:
+  # ============================================================================
+  # PHASE 0: BUSINESS ANALYSIS & SPECIFICATION
+  # ============================================================================
+
+  - id: "BA-01"
+    name: "Conduct Business Analysis"
+    description: |
+      Analyze CEO brief: AI fluency assessment and training platform based on Anthropic 4D framework
+      Conduct comprehensive business analysis:
+      - Market research and competitive landscape
+      - Stakeholder identification and analysis
+      - Process modeling (as-is and to-be flows)
+      - Gap analysis (current vs. desired capabilities)
+      - Feasibility assessment (technical, market, resource)
+      - Define quantified success metrics and KPIs
+      - Create risk register with mitigations
+      - Map business needs (BN-XXX) to suggested user stories
+
+      Output: Business Analysis Report with stakeholder map, process flows,
+      gap analysis, competitive analysis, and feasibility assessment.
+    agent: "business-analyst"
+    depends_on: []
+    story_ids: []
+    requirement_ids: []
+    epic: "EP-ai-fluency-INCEPTION"
+    produces:
+      - name: "Business Analysis Report"
+        type: "document"
+        path: "products/ai-fluency/docs/business-analysis.md"
+    context_output: ""
+    parallel_ok: false
+    checkpoint: false
+    priority: "critical"
+    estimated_time_minutes: 90
+    acceptance_criteria:
+      - "Stakeholder map included (Mermaid mindmap)"
+      - "As-is and to-be process flows included (Mermaid flowcharts)"
+      - "Gap analysis matrix with priorities and effort estimates"
+      - "Competitive analysis covers at least 3 competitors (or justifies greenfield)"
+      - "Feasibility assessed across technical, market, and resource dimensions"
+      - "Success metrics are quantified and measurable"
+      - "Risk register has at least 3 risks with mitigations"
+      - "Business needs mapped to suggested user stories (BN-XXX → US-XX)"
+    status: "pending"
+
+  - id: "SPEC-01"
+    name: "Create Structured Specification"
+    description: |
+      Using the Business Analysis Report, create a structured feature specification
+      via /speckit.specify methodology:
+      - Follow the spec template at .specify/templates/spec-template.md
+      - Incorporate business needs, stakeholder analysis, and gap analysis from BA-01
+      - Define user stories (US-XX) with Given/When/Then acceptance criteria
+      - Include C4 context diagram and ER diagram
+      - Include edge cases table (minimum 5 entries)
+      - Fill Component Reuse Check table from .claude/COMPONENT-REGISTRY.md
+      - Mark uncertain areas with [NEEDS CLARIFICATION] tags
+
+      Read and follow: .specify/templates/commands/specify.md
+      Read constitution: .specify/memory/constitution.md
+    agent: "product-manager"
+    depends_on: ["BA-01"]
+    story_ids: []
+    requirement_ids: []
+    epic: "EP-ai-fluency-INCEPTION"
+    consumes:
+      - name: "Business Analysis Report"
+        required_from_task: "BA-01"
+    produces:
+      - name: "Feature Specification"
+        type: "document"
+        path: "products/ai-fluency/docs/specs/ai-fluency-foundation.md"
+    context_output: ""
+    parallel_ok: false
+    checkpoint: false
+    priority: "critical"
+    estimated_time_minutes: 60
+    acceptance_criteria:
+      - "Follows spec-template.md structure completely"
+      - "All sections filled (no empty placeholders)"
+      - "C4 context diagram included (Mermaid)"
+      - "ER diagram included (Mermaid)"
+      - "User stories have unique IDs (US-XX) with Given/When/Then"
+      - "Edge cases table has at least 5 entries"
+      - "Component Reuse Check table filled"
+      - "Uncertain areas marked with [NEEDS CLARIFICATION]"
+    status: "pending"
+
+  - id: "CLARIFY-01"
+    name: "Resolve Specification Ambiguities"
+    description: |
+      Review the specification from SPEC-01 and resolve all ambiguities:
+      - Scan for all [NEEDS CLARIFICATION] tags
+      - Generate up to 5 targeted clarification questions
+      - For each question, provide 2-3 options with trade-off analysis
+      - Resolve ambiguities with CEO input or documented assumptions
+      - Update the specification file with resolved answers
+      - Maximum 3 [NEEDS CLARIFICATION] tags may remain (documented as assumptions)
+
+      Read and follow: .specify/templates/commands/clarify.md
+      Read constitution: .specify/memory/constitution.md
+    agent: "product-manager"
+    depends_on: ["SPEC-01"]
+    story_ids: []
+    requirement_ids: []
+    epic: "EP-ai-fluency-INCEPTION"
+    consumes:
+      - name: "Feature Specification"
+        required_from_task: "SPEC-01"
+    produces:
+      - name: "Clarified Specification"
+        type: "document"
+        path: "products/ai-fluency/docs/specs/ai-fluency-foundation.md"
+    context_output: ""
+    parallel_ok: false
+    checkpoint: false
+    priority: "critical"
+    estimated_time_minutes: 30
+    acceptance_criteria:
+      - "All [NEEDS CLARIFICATION] tags reviewed"
+      - "Maximum 3 remaining (documented as assumptions with risk-if-wrong)"
+      - "Resolved answers written back into the spec file"
+      - "Clarification questions had concrete options (not open-ended)"
+    status: "pending"
+
+  # ============================================================================
+  # PHASE 1: INCEPTION & PLANNING
+  # ============================================================================
+
+  - id: "PRD-01"
+    name: "Create Product Requirements Document"
+    description: |
+      Analyze CEO brief: AI fluency assessment and training platform based on Anthropic 4D framework
+      Create comprehensive PRD with:
+      - User personas and stories (each with unique ID: US-01, US-02, etc.)
+      - Core features and MVP scope
+      - Functional requirements (FR-001, FR-002, etc.)
+      - Non-functional requirements (NFR-001, NFR-002, etc.)
+      - Success metrics
+      - Technical constraints
+      - Create product addendum (.claude/addendum.md)
+
+      TRACEABILITY: This task CREATES the requirement IDs. Every user story
+      must have a unique ID (US-XX) and every requirement must have a unique
+      ID (FR-XXX / NFR-XXX). These IDs are used by ALL downstream tasks.
+    agent: "product-manager"
+    depends_on: ["CLARIFY-01"]
+    story_ids: []
+    requirement_ids: []
+    epic: "EP-ai-fluency-INCEPTION"
+    consumes:
+      - name: "Business Analysis Report"
+        required_from_task: "BA-01"
+      - name: "Clarified Specification"
+        required_from_task: "CLARIFY-01"
+    produces:
+      - name: "PRD"
+        type: "document"
+        path: "products/ai-fluency/docs/PRD.md"
+      - name: "Product Addendum"
+        type: "document"
+        path: "products/ai-fluency/.claude/addendum.md"
+      - name: "Requirement Index"
+        type: "index"
+        description: "US-XX and FR-XXX IDs defined in PRD, used by all downstream tasks"
+    context_output: ""
+    parallel_ok: false
+    checkpoint: true
+    priority: "critical"
+    estimated_time_minutes: 120
+    acceptance_criteria:
+      - "PRD follows template structure"
+      - "All user stories have unique IDs (US-XX) and acceptance criteria (Given/When/Then)"
+      - "All functional requirements have unique IDs (FR-XXX)"
+      - "All non-functional requirements have unique IDs (NFR-XXX)"
+      - "Success metrics are measurable"
+      - "MVP scope is clearly defined with story IDs listed"
+      - "Product addendum created with tech stack and conventions"
+      - "Contains >= 3 Mermaid diagrams (C4, ER, sequence/flowchart)"
+      - "Uses >= 3 distinct Mermaid diagram types"
+    status: "pending"
+
+  # ============================================================================
+  # PHASE 2: ARCHITECTURE
+  # ============================================================================
+
+  - id: "ARCH-01"
+    name: "Design System Architecture"
+    description: |
+      Create system design based on PRD:
+      - API contracts and endpoints
+      - Database schema (ERD)
+      - Architecture decisions (ADRs)
+      - Technology stack confirmation
+      - Security considerations
+      - Update product addendum with architecture details
+
+      TRACEABILITY: Map every API endpoint to the FR-XXX / US-XX it serves.
+      Include a traceability matrix in architecture.md showing:
+      US-XX → FR-XXX → API endpoint → DB table
+
+      SPECKIT PLAN: After completing architecture.md, generate the implementation
+      plan using /speckit.plan methodology:
+      Read and follow: .specify/templates/commands/plan.md
+      Read constitution: .specify/memory/constitution.md
+      Output plan to: products/ai-fluency/docs/plan.md
+    agent: "architect"
+    depends_on: ["PRD-01"]
+    story_ids: ["ALL — maps PRD stories to architecture"]
+    requirement_ids: ["ALL — maps PRD requirements to technical design"]
+    epic: "EP-ai-fluency-ARCHITECTURE"
+    consumes:
+      - name: "PRD"
+        required_from_task: "PRD-01"
+      - name: "Product Addendum"
+        required_from_task: "PRD-01"
+      - name: "Requirement Index"
+        required_from_task: "PRD-01"
+    produces:
+      - name: "Architecture Document"
+        type: "document"
+        path: "products/ai-fluency/docs/architecture.md"
+      - name: "API Schema"
+        type: "file"
+        path: "products/ai-fluency/docs/api-schema.yml"
+      - name: "Database Schema"
+        type: "file"
+        path: "products/ai-fluency/docs/db-schema.sql"
+      - name: "ADRs"
+        type: "directory"
+        path: "products/ai-fluency/docs/ADRs/"
+      - name: "Traceability Matrix"
+        type: "section"
+        description: "US-XX → FR-XXX → endpoint → table mapping in architecture.md"
+      - name: "Implementation Plan"
+        type: "document"
+        path: "products/ai-fluency/docs/plan.md"
+    context_output: ""
+    parallel_ok: false
+    checkpoint: true
+    priority: "critical"
+    estimated_time_minutes: 180
+    acceptance_criteria:
+      - "API contracts define all MVP endpoints"
+      - "Every API endpoint maps to at least one FR-XXX or US-XX"
+      - "Database schema is normalized"
+      - "At least 2 ADRs documenting key decisions"
+      - "Security considerations documented"
+      - "Tech stack confirmed and documented"
+      - "Traceability matrix included: US → FR → endpoint → table"
+      - "Contains >= 2 Mermaid diagrams (C4 context + container minimum)"
+      - "plan.md generated via speckit.plan methodology"
+      - "plan.md maps every US-XX and FR-XXX to implementation sections"
+    status: "pending"
+
+  - id: "TASKS-01"
+    name: "Generate Agent Task List"
+    description: |
+      Generate a dependency-ordered, agent-assignable task list from the
+      implementation plan using /speckit.tasks methodology:
+      Read and follow: .specify/templates/commands/tasks.md
+      Read constitution: .specify/memory/constitution.md
+      Input: products/ai-fluency/docs/plan.md and products/ai-fluency/docs/specs/ai-fluency-foundation.md
+      Output: products/ai-fluency/docs/tasks.md
+
+      Break the plan into tasks with:
+      - Task IDs, descriptions, assigned agents
+      - depends_on lists (dependency order)
+      - Story IDs and requirement IDs (from spec)
+      - TDD ordering enforced: test tasks before implementation tasks
+      - parallel_ok flags for foundation tasks
+    agent: "orchestrator"
+    depends_on: ["ARCH-01"]
+    story_ids: ["ALL — derives tasks from all PRD stories"]
+    requirement_ids: ["ALL — every requirement becomes traceable tasks"]
+    epic: "EP-ai-fluency-INCEPTION"
+    consumes:
+      - name: "Implementation Plan"
+        required_from_task: "ARCH-01"
+      - name: "Feature Specification"
+        required_from_task: "SPEC-01"
+    produces:
+      - name: "Agent Task List"
+        type: "document"
+        path: "products/ai-fluency/docs/tasks.md"
+    context_output: ""
+    parallel_ok: false
+    checkpoint: false
+    priority: "critical"
+    estimated_time_minutes: 30
+    acceptance_criteria:
+      - "Every plan section maps to at least one task"
+      - "All tasks have assigned agent roles"
+      - "TDD ordering: test tasks precede implementation tasks"
+      - "Dependencies correctly reflect execution order"
+      - "Parallel opportunities flagged (parallel_ok: true)"
+      - "Story IDs and requirement IDs populated per task"
+      - "Output written to products/ai-fluency/docs/tasks.md"
+    status: "pending"
+
+  # ============================================================================
+  # PHASE 3: FOUNDATION (Parallel)
+  # ============================================================================
+
+  - id: "DEVOPS-01"
+    name: "Setup CI/CD Pipeline"
+    description: |
+      Configure deployment infrastructure:
+      - GitHub Actions workflows (build, test, deploy)
+      - Docker configuration
+      - Environment setup (dev, staging, prod)
+      - Database provisioning scripts
+
+      TRACEABILITY: Include [NFR-INFRA] in commits. CI pipeline must
+      enforce traceability checks (see .githooks/commit-msg).
+    agent: "devops-engineer"
+    depends_on: ["TASKS-01"]
+    story_ids: []
+    requirement_ids: ["NFR-INFRA"]
+    epic: "EP-ai-fluency-FOUNDATION"
+    consumes:
+      - name: "Architecture Document"
+        required_from_task: "ARCH-01"
+    produces:
+      - name: "GitHub Actions Workflow"
+        type: "file"
+        path: ".github/workflows/ai-fluency-ci.yml"
+      - name: "Dockerfile"
+        type: "file"
+        path: "products/ai-fluency/Dockerfile"
+      - name: "Docker Compose"
+        type: "file"
+        path: "products/ai-fluency/docker-compose.yml"
+    context_output: ""
+    shared_files: [".github/workflows/ai-fluency-ci.yml"]
+    parallel_ok: true
+    checkpoint: false
+    priority: "high"
+    estimated_time_minutes: 90
+    acceptance_criteria:
+      - "CI workflow runs on PR"
+      - "Docker build succeeds"
+      - "Environment variables documented"
+    status: "pending"
+
+  - id: "BACKEND-01"
+    name: "Implement Backend Foundation"
+    description: |
+      Setup backend API foundation:
+      - Fastify application structure
+      - Prisma ORM setup with schema
+      - Database migrations
+      - Basic middleware (logging, cors, error handling)
+      - Health check endpoint
+      - Unit test setup with Jest
+
+      TRACEABILITY: Link to auth stories (US-01) and foundation requirements.
+      Every commit must include [US-XX] or [FR-XXX]. Test names must
+      reference acceptance criteria: test('[US-01][AC-1] user can register', ...).
+    agent: "backend-engineer"
+    depends_on: ["TASKS-01"]
+    story_ids: ["TBD"]
+    requirement_ids: ["TBD"]
+    epic: "EP-ai-fluency-FOUNDATION"
+    consumes:
+      - name: "API Schema"
+        required_from_task: "ARCH-01"
+      - name: "Database Schema"
+        required_from_task: "ARCH-01"
+      - name: "Traceability Matrix"
+        required_from_task: "ARCH-01"
+    produces:
+      - name: "Backend App"
+        type: "directory"
+        path: "products/ai-fluency/apps/api"
+      - name: "Prisma Schema"
+        type: "file"
+        path: "products/ai-fluency/apps/api/prisma/schema.prisma"
+      - name: "Unit Tests"
+        type: "directory"
+        path: "products/ai-fluency/apps/api/tests"
+    context_output: ""
+    shared_files: ["products/ai-fluency/apps/api/prisma/schema.prisma", "products/ai-fluency/apps/api/package.json"]
+    parallel_ok: true
+    checkpoint: false
+    priority: "high"
+    estimated_time_minutes: 150
+    acceptance_criteria:
+      - "Fastify server starts successfully"
+      - "Database connection works"
+      - "Health check endpoint returns 200"
+      - "At least 10 unit tests passing"
+      - "Test coverage > 80%"
+      - "All commits reference story/requirement IDs"
+      - "Test names include acceptance criteria IDs"
+    status: "pending"
+
+  - id: "FRONTEND-01"
+    name: "Implement Frontend Foundation"
+    description: |
+      Setup frontend application foundation:
+      - Next.js 14+ app with App Router
+      - Tailwind CSS configuration
+      - Layout components (header, footer, navigation)
+      - Routing structure
+      - Basic pages (home, 404, error)
+      - Unit test setup with React Testing Library
+
+      TRACEABILITY: Link to UI stories from PRD. Every commit must include
+      [US-XX] or [FR-XXX]. Test names must reference acceptance criteria.
+    agent: "frontend-engineer"
+    depends_on: ["TASKS-01"]
+    story_ids: ["TBD"]
+    requirement_ids: ["TBD"]
+    epic: "EP-ai-fluency-FOUNDATION"
+    consumes:
+      - name: "Architecture Document"
+        required_from_task: "ARCH-01"
+      - name: "Traceability Matrix"
+        required_from_task: "ARCH-01"
+    produces:
+      - name: "Frontend App"
+        type: "directory"
+        path: "products/ai-fluency/apps/web"
+      - name: "Layout Components"
+        type: "directory"
+        path: "products/ai-fluency/apps/web/src/components/layout"
+      - name: "Unit Tests"
+        type: "directory"
+        path: "products/ai-fluency/apps/web/tests"
+    context_output: ""
+    shared_files: ["products/ai-fluency/apps/web/package.json"]
+    parallel_ok: true
+    checkpoint: false
+    priority: "high"
+    estimated_time_minutes: 120
+    acceptance_criteria:
+      - "Next.js dev server starts on port 3100+"
+      - "Home page renders without errors"
+      - "Tailwind CSS styles apply correctly"
+      - "Layout is responsive"
+      - "At least 5 component tests passing"
+      - "All commits reference story/requirement IDs"
+      - "Test names include acceptance criteria IDs"
+    status: "pending"
+
+  # ============================================================================
+  # PHASE 4: INTEGRATION & TESTING
+  # ============================================================================
+
+  - id: "QA-01"
+    name: "Setup E2E Test Framework"
+    description: |
+      Configure end-to-end testing infrastructure:
+      - Playwright configuration
+      - Test utilities and helpers
+      - Page Object Models
+      - Database seeding for tests
+      - Basic smoke tests organized by user story
+
+      TRACEABILITY: E2E tests MUST be organized by story ID:
+        e2e/tests/stories/{story-id}/*.spec.ts
+      Test descriptions MUST include story ID:
+        test('[US-01][AC-1] user can register with email', ...)
+    agent: "qa-engineer"
+    depends_on: ["FRONTEND-01"]
+    story_ids: ["TBD"]
+    requirement_ids: ["TBD"]
+    epic: "EP-ai-fluency-FOUNDATION"
+    consumes:
+      - name: "Frontend App"
+        required_from_task: "FRONTEND-01"
+      - name: "Traceability Matrix"
+        required_from_task: "ARCH-01"
+    produces:
+      - name: "E2E Test Setup"
+        type: "directory"
+        path: "products/ai-fluency/e2e"
+      - name: "Playwright Config"
+        type: "file"
+        path: "products/ai-fluency/e2e/playwright.config.ts"
+      - name: "Smoke Tests"
+        type: "directory"
+        path: "products/ai-fluency/e2e/tests/smoke"
+      - name: "Story-Based Tests"
+        type: "directory"
+        path: "products/ai-fluency/e2e/tests/stories"
+    context_output: ""
+    parallel_ok: false
+    checkpoint: false
+    priority: "high"
+    estimated_time_minutes: 60
+    acceptance_criteria:
+      - "Playwright installed and configured"
+      - "At least 3 smoke tests created"
+      - "Tests organized by story ID in e2e/tests/stories/"
+      - "Test descriptions include [US-XX][AC-X] IDs"
+      - "Tests can run headless and headed"
+      - "Test data seeding works"
+    status: "pending"
+
+  - id: "QA-02"
+    name: "Run Testing Gate - Foundation"
+    description: |
+      Execute complete Testing Gate before CEO review:
+      - Run all unit tests (backend + frontend)
+      - Run all E2E tests
+      - Start dev server and verify app loads
+      - Visual verification (buttons, forms, layout)
+      - Check for console errors
+      - Generate test report with traceability section
+
+      TRACEABILITY: Test report MUST include a "Requirement Coverage" section:
+      | US/FR ID | Acceptance Criteria | Test File | Status |
+    agent: "qa-engineer"
+    depends_on: ["BACKEND-01", "FRONTEND-01", "DEVOPS-01", "QA-01"]
+    story_ids: ["TBD"]
+    requirement_ids: ["TBD"]
+    epic: "EP-ai-fluency-FOUNDATION"
+    consumes:
+      - name: "Backend App"
+        required_from_task: "BACKEND-01"
+      - name: "Frontend App"
+        required_from_task: "FRONTEND-01"
+    produces:
+      - name: "Test Report"
+        type: "document"
+        path: "products/ai-fluency/docs/test-reports/foundation.md"
+    context_output: ""
+    parallel_ok: false
+    checkpoint: false
+    priority: "critical"
+    estimated_time_minutes: 45
+    acceptance_criteria:
+      - "All unit tests pass (backend + frontend)"
+      - "All E2E tests pass"
+      - "App loads without errors on http://localhost:3100+"
+      - "All UI elements visible and styled"
+      - "No console errors"
+      - "Test report includes requirement coverage matrix"
+      - "Every MVP acceptance criterion has at least one test"
+    status: "pending"
+
+  - id: "DOCS-01"
+    name: "Create Initial Documentation"
+    description: |
+      Document the foundation:
+      - README with setup instructions
+      - API documentation (endpoints mapped to FR-XXX IDs)
+      - Development guide
+      - Deployment guide (basic)
+
+      TRACEABILITY: API docs must map endpoints → FR-XXX.
+      README must reference the PRD and architecture docs.
+    agent: "technical-writer"
+    depends_on: ["BACKEND-01", "FRONTEND-01", "DEVOPS-01"]
+    story_ids: []
+    requirement_ids: []
+    epic: "EP-ai-fluency-FOUNDATION"
+    consumes:
+      - name: "Backend App"
+        required_from_task: "BACKEND-01"
+      - name: "Frontend App"
+        required_from_task: "FRONTEND-01"
+    produces:
+      - name: "README"
+        type: "file"
+        path: "products/ai-fluency/README.md"
+      - name: "API Docs"
+        type: "file"
+        path: "products/ai-fluency/docs/API.md"
+      - name: "Development Guide"
+        type: "file"
+        path: "products/ai-fluency/docs/DEVELOPMENT.md"
+    context_output: ""
+    parallel_ok: true
+    checkpoint: false
+    priority: "normal"
+    estimated_time_minutes: 60
+    acceptance_criteria:
+      - "README has clear setup instructions"
+      - "API endpoints documented with requirement IDs (FR-XXX)"
+      - "Development guide covers common tasks"
+    status: "pending"
+
+  # ============================================================================
+  # PHASE 5: SECURITY GATE & CODE REVIEW
+  # ============================================================================
+
+  - id: "GATE-SECURITY-01"
+    name: "Run Security Gate - Foundation"
+    description: |
+      Run security checks before CEO review:
+      - npm audit for backend and frontend (no HIGH/CRITICAL vulnerabilities)
+      - Secret scanning (no hardcoded keys, tokens, passwords)
+      - Dependency vulnerability check
+      - OWASP Top 10 review of implemented endpoints
+      - Input validation coverage check
+
+      Command: .claude/quality-gates/executor.sh security ai-fluency
+    agent: "security-engineer"
+    depends_on: ["BACKEND-01", "FRONTEND-01"]
+    story_ids: []
+    requirement_ids: ["NFR-SECURITY"]
+    epic: "EP-ai-fluency-FOUNDATION"
+    consumes:
+      - name: "Backend App"
+        required_from_task: "BACKEND-01"
+      - name: "Frontend App"
+        required_from_task: "FRONTEND-01"
+    produces:
+      - name: "Security Report"
+        type: "document"
+        path: "products/ai-fluency/docs/quality-reports/security-foundation.md"
+    context_output: ""
+    parallel_ok: true
+    checkpoint: false
+    priority: "critical"
+    estimated_time_minutes: 30
+    acceptance_criteria:
+      - "No HIGH or CRITICAL npm vulnerabilities"
+      - "No hardcoded secrets in codebase"
+      - "Input validation on all endpoints"
+      - "Auth endpoints follow OWASP guidelines"
+    status: "pending"
+
+  - id: "CODE-REVIEW-01"
+    name: "Code Review - Foundation"
+    description: |
+      Comprehensive code review of foundation implementation:
+      - Architecture compliance (matches ARCH-01 design)
+      - Code quality (TypeScript strict mode, no any types)
+      - Security review (OWASP Top 10, CWE patterns)
+      - Performance review (N+1 queries, bundle size)
+      - Test quality review (real DB, no mocks, coverage)
+      - Tech debt assessment
+      - Constitution compliance (Articles III-VI)
+    agent: "code-reviewer"
+    depends_on: ["BACKEND-01", "FRONTEND-01"]
+    story_ids: ["TBD"]
+    requirement_ids: ["TBD"]
+    epic: "EP-ai-fluency-FOUNDATION"
+    consumes:
+      - name: "Backend App"
+        required_from_task: "BACKEND-01"
+      - name: "Frontend App"
+        required_from_task: "FRONTEND-01"
+      - name: "Architecture Document"
+        required_from_task: "ARCH-01"
+    produces:
+      - name: "Code Review Report"
+        type: "document"
+        path: "products/ai-fluency/docs/quality-reports/code-review-foundation.md"
+    context_output: ""
+    parallel_ok: true
+    checkpoint: false
+    priority: "high"
+    estimated_time_minutes: 45
+    acceptance_criteria:
+      - "No critical code quality issues"
+      - "Architecture compliance verified"
+      - "Security patterns followed (OWASP)"
+      - "Test quality acceptable (real DB, no mocks)"
+      - "Tech debt items catalogued"
+    status: "pending"
+
+  # ============================================================================
+  # PHASE 6: SPEC CONSISTENCY GATE
+  # ============================================================================
+
+  - id: "ANALYZE-01"
+    name: "Run Spec Consistency Gate"
+    description: |
+      Validate consistency across all documentation and implementation:
+      - Spec-to-Plan alignment: every US-XX and FR-XXX has implementation
+      - Plan-to-Tasks alignment: every plan section maps to tasks
+      - Requirement coverage: every acceptance criterion has tests (>= 90%)
+      - Traceability chain: BN-XXX → US-XX → FR-XXX → Tasks → Tests
+      - Constitution compliance: Articles I, III, VI, IX verified
+      - No orphaned requirements (defined but never implemented)
+
+      Read and follow: .specify/templates/commands/analyze.md
+      Read constitution: .specify/memory/constitution.md
+
+      Output: Consistency Report with traceability matrix and recommendations.
+    agent: "qa-engineer"
+    depends_on: ["QA-02", "DOCS-01", "GATE-SECURITY-01", "CODE-REVIEW-01"]
+    story_ids: ["TBD"]
+    requirement_ids: ["TBD"]
+    epic: "EP-ai-fluency-FOUNDATION"
+    consumes:
+      - name: "PRD"
+        required_from_task: "PRD-01"
+      - name: "Architecture Document"
+        required_from_task: "ARCH-01"
+      - name: "Feature Specification"
+        required_from_task: "SPEC-01"
+      - name: "Test Report"
+        required_from_task: "QA-02"
+    produces:
+      - name: "Spec Consistency Report"
+        type: "document"
+        path: "products/ai-fluency/docs/quality-reports/spec-consistency.md"
+    context_output: ""
+    parallel_ok: false
+    checkpoint: false
+    priority: "critical"
+    estimated_time_minutes: 30
+    acceptance_criteria:
+      - "Spec/plan/tasks alignment verified: PASS"
+      - "Requirement coverage >= 90%"
+      - "No orphaned requirements"
+      - "Traceability matrix complete (BN → US → FR → Task → Test)"
+      - "Constitution compliance verified (Articles I, III, VI, IX)"
+    status: "pending"
+
+  # ============================================================================
+  # CHECKPOINT: FOUNDATION COMPLETE
+  # ============================================================================
+
+  - id: "CHECKPOINT-FOUNDATION"
+    name: "Foundation Complete - CEO Review"
+    description: |
+      Foundation is complete, tested, and spec-consistency verified. Ready for CEO to review:
+      - Business analysis complete
+      - Specification created and clarified
+      - Product structure in place
+      - Backend API running
+      - Frontend app running
+      - All tests passing
+      - Documentation complete
+      - Spec consistency gate PASSED
+
+      CEO can now test the foundation before feature development begins.
+    agent: "orchestrator"
+    depends_on: ["ANALYZE-01"]
+    parallel_ok: false
+    checkpoint: true
+    priority: "critical"
+    estimated_time_minutes: 0
+    status: "pending"
+
+# Execution estimates:
+# - Sequential time: ~900 minutes (~15 hours)
+# - Parallel optimized: ~500 minutes (~8.5 hours)
+# - Savings from parallelization: ~44%
