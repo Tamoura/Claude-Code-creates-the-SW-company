@@ -52,9 +52,9 @@ Give CEO instant visibility into:
 │ Product                        │ Phase    │ Health    │
 ├────────────────────────────────┼──────────┼───────────┤
 │ stablecoin-gateway             │ Active   │ 🟢 Healthy│
-│ deal-flow-platform             │ Active   │ 🟢 OnTrack│
-│ meetingmind                    │ Planned  │ 🔵 Planned│
-│ quantum-computing-usecases     │ Planned  │ 🔵 Planned│
+│ connectin                      │ Active   │ 🟢 OnTrack│
+│ connectgrc                     │ Dev      │ 🔵 InDev  │
+│ quantum-computing-usecases     │ Prototype│ 🔵 Planned│
 └────────────────────────────────┴──────────┴───────────┘
 
 ## ⚠️ Alerts
@@ -84,8 +84,8 @@ Give CEO instant visibility into:
 - Progress: 65% (based on estimated time)
 
 ### Frontend Engineer #1
-- Product: deal-flow-platform
-- Task: FRONTEND-12 - D2C incident detail page
+- Product: connectin
+- Task: FRONTEND-12 - Profile page layout
 - Started: 14:15 (15 min ago)
 - Estimated completion: 15:00 (30 min)
 - Progress: 33%
@@ -99,7 +99,7 @@ Give CEO instant visibility into:
 
 ## 📋 Queue (2 tasks)
 
-1. **HIGH** - Backend Engineer for meetingmind
+1. **HIGH** - Backend Engineer for connectgrc
    - Task: Implement auth middleware
    - Waiting: 12 min
    - Expected start: 14:45 (when Backend #1 finishes)
@@ -115,7 +115,7 @@ No tasks currently blocked.
 ## ✅ Recently Completed (last hour)
 - 14:15 - Frontend Engineer: Calculator page layout (45 min)
 - 14:00 - Architect: API contract for analytics (90 min)
-- 13:45 - DevOps: CI pipeline for meetingmind (60 min)
+- 13:45 - DevOps: CI pipeline for connectgrc (60 min)
 ```
 
 ### 3. Performance View
@@ -208,10 +208,10 @@ DevOps      ██████████████░░░░░░░ 71%
 ┌──────────────────────┬───────┬─────────┬──────────┬─────────┐
 │ Product              │ Tasks │ Tokens  │ Cost     │ % Total │
 ├──────────────────────┼───────┼─────────┼──────────┼─────────┤
-│ analytics-dashboard  │ 6     │ 720K    │ $36.00   │ 45%     │
-│ deal-flow-platform      │ 5     │ 560K    │ $28.00   │ 35%     │
-│ stablecoin-gateway       │ 2     │ 160K    │ $8.00    │ 10%     │
-│ meetingmind     │ 2     │ 160K    │ $8.00    │ 10%     │
+│ connectin            │ 6     │ 720K    │ $36.00   │ 45%     │
+│ connectgrc           │ 5     │ 560K    │ $28.00   │ 35%     │
+│ stablecoin-gateway   │ 2     │ 160K    │ $8.00    │ 10%     │
+│ ai-fluency           │ 2     │ 160K    │ $8.00    │ 10%     │
 └──────────────────────┴───────┴─────────┴──────────┴─────────┘
 
 ## 🤖 By Agent Type
@@ -266,19 +266,19 @@ $100 ┤
   - Dashboard UI rebuilt
 - **Resource usage**: 40% of company total
 
-## 📦 deal-flow-platform
+## 📦 connectin
 **Status**: 🟢 Active | **Health**: On Track
 
 - **Phase**: Active development
 - **Recent activity**:
-  - Platform under development
+  - Profile and feed features complete
 - **Resource usage**: 30% of company total
 
-## 📦 meetingmind
-**Status**: 🔵 Planned | **Health**: Not Started
+## 📦 connectgrc
+**Status**: 🔵 Development | **Health**: In Progress
 
-- **Phase**: Planning
-- **Resource usage**: 0%
+- **Phase**: Development
+- **Resource usage**: 10%
 
 ## 📦 quantum-computing-usecases
 **Status**: 🔵 Planned | **Health**: Not Started
@@ -321,7 +321,7 @@ CHECKPOINT ⏳ Pending (CEO review after Testing Gate)
 **Status**: 2/10 tasks complete (20%)
 **ETA**: Foundation complete in 2 hours
 
-## deal-flow-platform
+## connectin
 
 ### Active Tasks
 ```

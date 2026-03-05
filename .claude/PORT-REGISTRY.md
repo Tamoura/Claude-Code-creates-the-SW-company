@@ -2,7 +2,7 @@
 
 **Purpose**: Centralized port allocation to prevent conflicts when running multiple products simultaneously.
 
-**Last Updated**: 2026-02-18
+**Last Updated**: 2026-03-05
 
 ## Port Allocation Rules
 
@@ -26,10 +26,12 @@
 | 3112 | recomengine | Active | http://localhost:3112 |
 | 3113 | command-center | Active | http://localhost:3113 |
 | 3114 | linkedin-agent | Active | http://localhost:3114 |
-| 3115 | codeguardian | Active | http://localhost:3115 |
+| 3115 | codeguardian | Concept | http://localhost:3115 |
 | 3116 | archforge | Active | http://localhost:3116 |
 | 3117 | humanid | Active | http://localhost:3117 |
-| 3118-3199 | *Available* | Free | - |
+| 3118 | ai-fluency | Active | http://localhost:3118 |
+| 3119 | qdb-sme-relief | Active | http://localhost:3119 |
+| 3120-3199 | *Available* | Free | - |
 
 ### Backend APIs (5000-5099)
 
@@ -42,10 +44,15 @@
 | 5008 | recomengine | Active | http://localhost:5008 |
 | 5009 | command-center | Active | http://localhost:5009 |
 | 5010 | linkedin-agent | Active | http://localhost:5010 |
-| 5011 | codeguardian | Active | http://localhost:5011 |
+| 5011 | codeguardian | Concept | http://localhost:5011 |
 | 5012 | archforge | Active | http://localhost:5012 |
 | 5013 | humanid | Active | http://localhost:5013 |
-| 5014-5099 | *Available* | Free | - |
+| 5014 | ai-fluency | Active | http://localhost:5014 |
+| 5015-5099 | *Available* | Free | - |
+
+> **Note**: `qdb-one` (3102) is frontend-only — it proxies QDB's existing APIs, no dedicated backend.
+> **Note**: `qdb-sme-relief` (3119) is frontend-only — it uses a lightweight serverless backend, no dedicated API port.
+> **Note**: `codeguardian` ports are reserved but no code exists yet (Concept tier).
 
 ### Mobile Development (8081-8099)
 
@@ -70,7 +77,8 @@ When creating a new product, agents must:
 1. **Check this registry** for next available port
 2. **Assign port** in product configuration
 3. **Update this registry** with new assignment
-4. **Commit registry** with product code
+4. **Update PRODUCT-REGISTRY.md** with new product entry
+5. **Commit both registries** with product code
 
 ### For Orchestrator
 
@@ -90,7 +98,7 @@ When initiating new product workflows:
 
 **Backend Engineer**:
 - Check registry for assigned port
-- Configure Fastify/Express to use that port
+- Configure Fastify to use that port
 - Update API docs with port number
 
 **Mobile Developer**:
@@ -105,20 +113,32 @@ When initiating new product workflows:
 
 ## Quick Reference Commands
 
-### Start All Products
+### Start All Active Products
 
 ```bash
 # Frontend apps
 cd products/stablecoin-gateway/apps/web && npm run dev &        # :3104
 cd products/muaththir/apps/web && npm run dev &                 # :3108
 cd products/connectgrc/apps/web && npm run dev &                # :3110
+cd products/connectin/apps/web && npm run dev &                 # :3111
+cd products/recomengine/apps/web && npm run dev &               # :3112
+cd products/command-center/apps/web && npm run dev &            # :3113
 cd products/linkedin-agent/apps/web && npm run dev &            # :3114
+cd products/archforge/apps/web && npm run dev &                 # :3116
+cd products/humanid/apps/web && npm run dev &                   # :3117
+cd products/ai-fluency/apps/web && npm run dev &                # :3118
 
 # Backend APIs
 cd products/stablecoin-gateway/apps/api && npm run dev &        # :5001
 cd products/muaththir/apps/api && npm run dev &                 # :5005
 cd products/connectgrc/apps/api && npm run dev &                # :5006
+cd products/connectin/apps/api && npm run dev &                 # :5007
+cd products/recomengine/apps/api && npm run dev &               # :5008
+cd products/command-center/apps/api && npm run dev &            # :5009
 cd products/linkedin-agent/apps/api && npm run dev &            # :5010
+cd products/archforge/apps/api && npm run dev &                 # :5012
+cd products/humanid/apps/api && npm run dev &                   # :5013
+cd products/ai-fluency/apps/api && npm run dev &                # :5014
 ```
 
 ### Check Port Availability
@@ -126,7 +146,6 @@ cd products/linkedin-agent/apps/api && npm run dev &            # :5010
 ```bash
 # Check if a port is in use
 lsof -i :3104
-netstat -an | grep 3104
 
 # Kill process on port
 lsof -ti:3104 | xargs kill -9
@@ -135,13 +154,9 @@ lsof -ti:3104 | xargs kill -9
 ### Stop All Development Servers
 
 ```bash
-# Kill all node processes (use with caution)
 pkill -f "vite"
 pkill -f "next dev"
 pkill -f "fastify"
-
-# Or kill by port
-lsof -ti:3104,3108,3110,5001,5005,5006 | xargs kill -9
 ```
 
 ## Port Conflict Resolution
@@ -157,9 +172,9 @@ If you encounter "Port already in use" errors:
 
 - **Never reuse ports** between products
 - **Always update registry** when adding/removing products
-- **Ports are permanent** - don't change once assigned
-- **Document in product README** - include assigned port
-- **CI/CD uses different ports** - these are for local development only
+- **Ports are permanent** — don't change once assigned
+- **Document in product README** — include assigned port
+- **CI/CD uses different ports** — these are for local development only
 
 ---
 

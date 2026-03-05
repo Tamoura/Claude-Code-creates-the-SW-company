@@ -28,6 +28,7 @@ CEO
       ├── Architect (system design)
       ├── Backend Engineer (API, business logic)
       ├── Frontend Engineer (UI, UX)
+      ├── AI/ML Engineer (prompts, model routing, evals, embeddings, vector search)
       ├── Mobile Developer (iOS, Android, React Native)
       ├── Data Engineer (schemas, migrations, pipelines)
       ├── Performance Engineer (optimization, load testing)
@@ -41,7 +42,7 @@ CEO
       └── Code Reviewer (audits, security assessment)
 ```
 
-## Context Engineering (NEW — Constitution Article XII)
+## Context Engineering (Constitution Article XII)
 
 ConnectSW applies context engineering principles to maximize agent effectiveness and minimize token waste. Context windows degrade due to attention mechanics, not raw token limits.
 
@@ -130,6 +131,7 @@ release/[product]/v[X.Y.Z]       # Releases
 | `direct-delivery.md` | Context Engineering | Always — write deliverables to files — Article XII |
 | `parallel-execution.md` | Execution | When spawning multiple sub-agents |
 | `repository-back-translation.md` | Testing | Post-MVP — create agent learning exemplars |
+| `i18n.md` | Internationalisation | Any product with Arabic/RTL or multi-language requirements |
 | `agent-message.schema.yml` | Agent Communication | Orchestrator + inter-agent messaging |
 | `message-router.ts` | Agent Communication | Infrastructure — orchestrator routing |
 
@@ -230,6 +232,7 @@ This rule exists because ConnectSW maintains a growing library of production-tes
 **Key registries:**
 - `.claude/COMPONENT-REGISTRY.md` — Reusable code components
 - `.claude/PORT-REGISTRY.md` — Port assignments
+- `.claude/PRODUCT-REGISTRY.md` — All products with tier, stack, ports, CI, and docs
 
 ### Specification-Driven Development (spec-kit)
 
@@ -249,7 +252,7 @@ ConnectSW uses [GitHub's spec-kit](https://github.com/github/spec-kit) methodolo
 | `/speckit.implement` | Orchestrator | Execute tasks via specialist agents |
 
 **Key files:**
-- `.specify/memory/constitution.md` — Governing principles (12 articles)
+- `.specify/memory/constitution.md` — Governing principles (14 articles, v1.5.0)
 - `.specify/templates/` — Spec, plan, tasks, checklist templates
 - `.specify/templates/commands/` — Command definitions
 - `products/[product]/docs/specs/` — Feature specifications
