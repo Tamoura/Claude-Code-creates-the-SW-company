@@ -366,7 +366,7 @@ Every new feature MUST have a spec before design begins:
 
 ### 7.3 Spec-Kit Files
 
-- **Constitution**: `.specify/memory/constitution.md` — 12 articles, read before all spec work
+- **Constitution**: `.specify/memory/constitution.md` — 14 articles (v1.5.0), read before all spec work
 - **Templates**: `.specify/templates/` — spec, plan, tasks, checklist templates
 - **Command definitions**: `.specify/templates/commands/` — full command methodology
 - **Output locations**: `products/[product]/docs/specs/`, `plan.md`, `tasks.md`

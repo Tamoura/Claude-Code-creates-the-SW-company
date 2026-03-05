@@ -75,7 +75,7 @@ Spec Consistency Checks:
   - Every spec requirement (FR-xxx) maps to at least one task
   - Every task maps back to a spec requirement (no orphan tasks)
   - TDD ordering verified (test tasks before implementation tasks)
-  - Constitution compliance (all 11 articles checked)
+  - Constitution compliance (all 14 articles checked)
   - Component reuse table references valid registry entries
   - Terminology consistent across spec, plan, and tasks
   - No conflicts between spec entities and data model
@@ -103,7 +103,7 @@ Spec Consistency Checks:
 ```
 ✅ PASS if:
 - All spec requirements covered by tasks
-- Constitution compliance: 11/11 articles satisfied
+- Constitution compliance: 14/14 articles satisfied
 - No CRITICAL or HIGH findings
 - Terminology consistent across artifacts
 
