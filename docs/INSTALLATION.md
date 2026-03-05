@@ -262,7 +262,7 @@ ConnectSW uses Claude Code agents for all development work. The agent system is 
 
 ```
 .claude/
-  agents/           # 14 specialist agent definitions
+  agents/           # 18 specialist agent definitions
   commands/          # Slash commands (/orchestrator, /audit, /status, etc.)
   engine/            # Task graph executor (TypeScript)
   dashboard/         # Executive dashboard server

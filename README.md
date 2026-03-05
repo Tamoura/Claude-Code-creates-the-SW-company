@@ -1,8 +1,8 @@
 # ConnectSW
 
-**An AI-native software company where 17 specialist Claude Code agents build, test, and ship production software — directed by a single CEO.**
+**An AI-native software company where 18 specialist Claude Code agents build, test, and ship production software — directed by a single CEO.**
 
-ConnectSW is not a framework, library, or boilerplate. It is a fully operational software company running inside a git repository. The CEO gives natural language commands. The Orchestrator breaks them into tasks. Specialist agents — Product Manager, Architect, Backend Engineer, Frontend Engineer, QA Engineer, and 12 others — execute those tasks across a multi-product portfolio.
+ConnectSW is not a framework, library, or boilerplate. It is a fully operational software company running inside a git repository. The CEO gives natural language commands. The Orchestrator breaks them into tasks. Specialist agents — Product Manager, Architect, Backend Engineer, Frontend Engineer, QA Engineer, and 13 others — execute those tasks across a multi-product portfolio.
 
 The result: **14 products in development, 60+ reusable components, 10 shared packages, 20+ CI/CD pipelines, and a self-improving agent memory system** — all built by AI agents, governed by a 14-article constitution, and verified through 6 quality gates.
 
@@ -238,11 +238,11 @@ Inspired by [FullStack-Agent](https://arxiv.org/abs/2602.03798) research: produc
 │   └── saas-kit/                      @connectsw/saas-kit — full product scaffold CLI
 │
 ├── .claude/                         Agent operating system
-│   ├── agents/                        17 specialist definitions (200-300 lines each)
+│   ├── agents/                        18 specialist definitions (200-300 lines each)
 │   ├── orchestrator/                  Task graph engine, state management
 │   ├── workflows/                     new-product, new-feature, bug-fix, release
 │   ├── quality-gates/                 6-gate system + DB state verification
-│   ├── protocols/                     12 protocol files (dev-test, context engineering, etc.)
+│   ├── protocols/                     15 protocol files (dev-test, context engineering, etc.)
 │   ├── memory/                        Agent experience, company knowledge, metrics
 │   ├── engine/                        Task graph execution, parallel scheduling
 │   ├── commands/                      /orchestrator, /audit, /dashboard, /status

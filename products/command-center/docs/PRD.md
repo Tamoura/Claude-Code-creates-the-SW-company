@@ -16,7 +16,7 @@ Command Center is ConnectSW's internal company management dashboard. It provides
 
 ### 1.2 Problem Statement
 
-ConnectSW operates as an AI-first software company with 10+ products, 16 specialist AI agents, 60+ shared components, and continuous git/audit activity. Without a centralized dashboard, understanding company health requires manually inspecting disparate data sources: filesystem directories, git logs, JSONL audit trails, port registries, CI pipeline configs, and agent definition files. This is unsustainable as the portfolio grows.
+ConnectSW operates as an AI-first software company with 14 products, 18 specialist AI agents, 60+ shared components, and continuous git/audit activity. Without a centralized dashboard, understanding company health requires manually inspecting disparate data sources: filesystem directories, git logs, JSONL audit trails, port registries, CI pipeline configs, and agent definition files. This is unsustainable as the portfolio grows.
 
 ### 1.3 Solution
 
@@ -67,7 +67,7 @@ A read-only dashboard backed by a Fastify API that scans the monorepo filesystem
 | `/overview` | Executive Overview | Company health at a glance | KPI stat cards (Products, Packages, Agents, Files), Phase breakdown badges, Recent Activity feed, Recent Commits feed |
 | `/products` | Products List | Browse all products in the portfolio | Product cards with display name, description, phase badge, capability tags (API/Web/Docker/CI), port numbers, file count, doc count; Links to detail pages |
 | `/products/:name` | Product Detail | Deep-dive into a single product | Breadcrumb navigation, Product metadata (phase, doc count, ports), Categorized document sidebar (PRD/Architecture/API/Audit/ADR/Other), Collapsible categories, Document index grid, Inline Markdown viewer with light/dark theme toggle, Fullscreen document mode with Escape key exit |
-| `/agents` | Agent Hub | View all 16 specialist AI agents | Agent cards with name, description, responsibilities (top 3 + overflow count), Training status badge, Performance stats (tasks completed, success rate) |
+| `/agents` | Agent Hub | View all 18 specialist AI agents | Agent cards with name, description, responsibilities (top 3 + overflow count), Training status badge, Performance stats (tasks completed, success rate) |
 | `/components` | Component Library | Browse shared @connectsw/* packages | Summary stat cards (Packages, Total Files, With Prisma), Package table with name, location, description, Backend/Frontend/Prisma indicators, file count |
 | `/activity` | Activity Feed | Unified audit trail and commit history | Chronological feed with type indicators (audit/commit), Commit hash badges, Author/product/agent metadata, Timestamps; Supports `?limit=` query param (max 100) |
 | `/infrastructure` | Infrastructure | Port assignments and CI/CD pipelines | Stat cards (Frontend Ports, Backend Ports, CI Pipelines, Port Range), Port assignment grid with product name and color-coded port badges, CI pipeline list with filenames and associated products |
