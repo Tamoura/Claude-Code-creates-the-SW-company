@@ -62,33 +62,44 @@ describe('[ASSESSMENTS] Assessment Routes', () => {
     questionIds = [];
 
     for (const dim of dimensions) {
-      const indicator = await prisma.behavioralIndicator.create({
-        data: {
-          shortCode: `${dim}_TEST_01`,
-          name: `Test indicator for ${dim}`,
-          description: `Test indicator description for ${dim}`,
-          dimension: dim,
-          track: 'OBSERVABLE',
-          prevalenceWeight: 1.0,
-          sortOrder: 1,
-        },
+      // Upsert indicator to avoid conflicts with other test suites
+      let indicator = await prisma.behavioralIndicator.findUnique({
+        where: { shortCode: `${dim}_TEST_01` },
       });
+      if (!indicator) {
+        indicator = await prisma.behavioralIndicator.create({
+          data: {
+            shortCode: `${dim}_TEST_01`,
+            name: `Test indicator for ${dim}`,
+            description: `Test indicator description for ${dim}`,
+            dimension: dim,
+            track: 'OBSERVABLE',
+            prevalenceWeight: 1.0,
+            sortOrder: 1,
+          },
+        });
+      }
 
-      const question = await prisma.question.create({
-        data: {
-          dimension: dim,
-          interactionMode: 'AUTOMATION',
-          questionType: 'SCENARIO',
-          indicatorId: indicator.id,
-          text: `Test question for ${dim}?`,
-          optionsJson: [
-            { key: 'A', text: 'Best answer', isCorrect: true, score: 1.0 },
-            { key: 'B', text: 'Partial answer', isCorrect: false, score: 0.5 },
-            { key: 'C', text: 'Wrong answer', isCorrect: false, score: 0.0 },
-          ],
-          isActive: true,
-        },
+      let question = await prisma.question.findFirst({
+        where: { indicatorId: indicator.id },
       });
+      if (!question) {
+        question = await prisma.question.create({
+          data: {
+            dimension: dim,
+            interactionMode: 'AUTOMATION',
+            questionType: 'SCENARIO',
+            indicatorId: indicator.id,
+            text: `Test question for ${dim}?`,
+            optionsJson: [
+              { key: 'A', text: 'Best answer', isCorrect: true, score: 1.0 },
+              { key: 'B', text: 'Partial answer', isCorrect: false, score: 0.5 },
+              { key: 'C', text: 'Wrong answer', isCorrect: false, score: 0.0 },
+            ],
+            isActive: true,
+          },
+        });
+      }
       questionIds.push(question.id);
     }
   });
