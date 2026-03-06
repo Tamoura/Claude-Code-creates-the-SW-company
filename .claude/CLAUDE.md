@@ -118,6 +118,37 @@ release/[product]/v[X.Y.Z]       # Releases
 - **Anti-Rationalization**: 12 TDD + 5 process rationalizations with explicit counters
 - **The 1% Rule**: If a check *might* apply, it MUST be run
 
+### Phase 0 — Mandatory Context Discovery
+
+Before writing ANY code on a task, the assigned agent MUST:
+
+1. **Inspect the target area** — Glob/grep to understand the files and modules involved.
+2. **Identify the stack context** — Confirm frameworks, dependencies, and patterns in use for this specific product.
+3. **Detect existing problems** — Partial migrations, inconsistent patterns, missing tests, type gaps, stale imports.
+4. **Check the component registry** — Verify if reusable components already solve part of the task.
+5. **Report findings** — Summarize what you found to the Orchestrator before proposing changes.
+
+If you skip this step, your implementation will likely conflict with existing code. Do not skip it.
+
+### When In Doubt — Default Agent Behavior
+
+When any agent encounters ambiguity, undefined requirements, or uncertain decisions:
+
+- **Read the code first.** Do not assume. Inspect the actual state.
+- **Escalate, don't guess.** Surface the ambiguity to the Orchestrator or CEO. Never make product decisions autonomously.
+- **Propose a plan, don't just implement.** Present options with trade-offs. Wait for confirmation.
+- **Keep changes small and reversible.** If you must proceed under uncertainty, make the minimal safe change.
+
+### Review Pattern Automation
+
+When any agent notices the same review feedback recurring across tasks or PRs, it must not keep repeating the feedback manually. Instead:
+
+1. **Identify the pattern** — Same issue flagged 2+ times (e.g., missing error boundaries, inconsistent naming, missing input validation).
+2. **Automate it** — Add a lint rule, type constraint, pre-commit check, or test template that catches it automatically.
+3. **Stop reviewing for it** — Once automated, the guardrail handles it. Agent attention moves to new issues.
+
+Goal: The review surface shrinks over time. Every repeated review comment is a missing guardrail.
+
 ### Protocol Library (`.claude/protocols/`)
 
 | Protocol | Category | When to Apply |
