@@ -35,6 +35,7 @@ All ConnectSW scripts organized by namespace. Use this registry to find the righ
 | View audit trail entries | `view-audit-trail.sh` | reporting |
 | Log an audit trail entry | `audit-log.sh` | reporting |
 | Verify spec-kit pipeline before implementation | `speckit-preflight.sh` | quality |
+| Run CI preflight checks before pushing | `ci-preflight.sh` | quality |
 | Create sprint milestone + GitHub Issues from PRD | `create-sprint.sh` | backlog |
 | Manage agile backlog | `manage-backlog.sh` | backlog |
 | Sync backlog to GitHub issues | `sync-backlog-to-github.sh` | backlog |
@@ -70,6 +71,7 @@ All quality gate scripts. Run before CEO checkpoints.
 | `coverage-gate.sh` | Enforce 80% test coverage threshold | `<product> [threshold_percent]` |
 | `diagnose-gate-failure.sh` | Diagnose why a gate failed | `<gate-type> <product> <report_file>` |
 | `update-gate-metrics.sh` | Record gate pass/fail results | `<product> <gate> <result>` |
+| `ci-preflight.sh` | Run CI preflight checks before pushing | `[product]` |
 
 ### `memory` — Knowledge & Memory
 Scripts for managing the agent memory system.

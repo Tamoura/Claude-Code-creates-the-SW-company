@@ -155,16 +155,19 @@ jobs:
         continue-on-error: true
 
   # ── 5. actionlint — GitHub Actions security analysis ───────────────────
+  # Note: rhysd/actionlint-action@v1 no longer exists (CI-001 in known-issues.yml).
+  # Using inline installation instead.
   actionlint:
     name: actionlint
     runs-on: ubuntu-latest
     steps:
       - uses: actions/checkout@v6
 
+      - name: Install actionlint
+        run: bash <(curl -s https://raw.githubusercontent.com/rhysd/actionlint/main/scripts/download-actionlint.bash)
+
       - name: Run actionlint
-        uses: rhysd/actionlint-action@v1
-        with:
-          flags: "-color"
+        run: ./actionlint -color
         continue-on-error: true
 
   # ── 6. Trivy — SCA + IaC + Dockerfile (CRITICAL=blocking, HIGH=advisory)

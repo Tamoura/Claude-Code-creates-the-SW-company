@@ -15,11 +15,50 @@ Spec → Spec Consistency Gate → Documentation Gate → Browser Gate → Secur
           Aligned?             Article IX?          Works?          Issues          Issues             Issues          Readiness
 
    ┌─────────────────────────────────────────────────────────────────────────────────────────────────────┐
+   │  CI Preflight Gate (runs before EVERY push — prevents CI failures proactively)                      │
+   │  Script: .claude/scripts/ci-preflight.sh  |  Known Issues: .claude/ci/known-issues.yml              │
+   ├─────────────────────────────────────────────────────────────────────────────────────────────────────┤
    │  Verification-Before-Completion Gate (runs at EVERY individual task, not just milestones)           │
    │  Protocol: .claude/protocols/verification-before-completion.md                                      │
    │  Enforcement: Anti-Rationalization Framework (.claude/protocols/anti-rationalization.md)             │
    └─────────────────────────────────────────────────────────────────────────────────────────────────────┘
 ```
+
+### Task-Level Gate: CI Preflight
+
+**When**: Before ANY agent pushes code or reports an implementation task as complete.
+**Purpose**: Prevent CI failures by validating locally what CI will check remotely. Catches lockfile drift, broken action references, TypeScript errors, and lint violations before they reach GitHub Actions.
+**Script**: `.claude/scripts/ci-preflight.sh [product]`
+**Known Issues**: `.claude/ci/known-issues.yml`
+**Protocol**: `.claude/protocols/ci-preflight.md`
+
+#### Pass Criteria
+
+```
+PASS if:
+- Lockfile in sync with all package.json files
+- No broken GitHub Action references
+- TypeScript compiles (if product specified)
+- Lint passes (if product specified)
+- Tests pass (if product specified)
+- No secrets in staged files
+- Git safety checks pass (file count, no .env files)
+
+FAIL if:
+- Lockfile out of sync (most common failure)
+- Broken action references detected
+- TypeScript or lint errors
+- Test failures
+- Secrets detected
+```
+
+#### Enforcement
+
+- **Pre-push hook** (`.githooks/pre-push`): Runs ci-preflight automatically before every `git push`
+- **Orchestrator**: Checks for `ci_preflight: PASS` in agent completion reports
+- **Agent prompts**: CI Preflight directive injected into every implementation agent's prompt
+
+---
 
 ### Task-Level Gate: Verification-Before-Completion
 
