@@ -65,7 +65,7 @@ jobs:
 
       - name: Run lint
         if: steps.check.outputs.exists == 'true'
-        run: pnpm run lint --if-present
+        run: pnpm run --if-present lint
 
       - name: Run type check
         if: steps.check.outputs.exists == 'true'
@@ -248,7 +248,7 @@ jobs:
 
       - name: Run security audit
         if: steps.check.outputs.exists == 'true'
-        run: pnpm audit --audit-level=critical --omit=dev
+        run: pnpm audit --audit-level=critical --prod
 
   test-e2e:
     name: E2E Tests (Playwright)
