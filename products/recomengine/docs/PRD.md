@@ -1,8 +1,8 @@
 # RecomEngine - Product Requirements Document
 
-**Version**: 1.0
-**Status**: Draft
-**Last Updated**: 2026-02-12
+**Version**: 2.0
+**Status**: Approved
+**Last Updated**: 2026-03-06
 **Product Manager**: Claude Product Manager
 
 ---
@@ -11,7 +11,7 @@
 
 ### 1.1 Vision
 
-RecomEngine is a B2B SaaS product recommendation orchestrator that empowers e-commerce businesses to deliver personalized product recommendations via embeddable widgets and APIs. By combining real-time behavioral event ingestion, configurable recommendation algorithms (collaborative filtering + content-based), and a built-in A/B testing framework, RecomEngine enables merchants to increase average order value, click-through rates, and revenue per visitor without building recommendation infrastructure from scratch.
+RecomEngine is a B2B SaaS product recommendation orchestrator that empowers e-commerce businesses to deliver personalized product recommendations via embeddable widgets and APIs. By combining real-time behavioral event ingestion, configurable recommendation algorithms (collaborative filtering, content-based, trending, frequently bought together), and a built-in A/B testing framework, RecomEngine enables merchants to increase average order value, click-through rates, and revenue per visitor without building recommendation infrastructure from scratch.
 
 ### 1.2 Problem Statement
 
@@ -41,400 +41,821 @@ Mid-market e-commerce businesses ($1M-$100M annual revenue) face a critical gap 
 ### 1.4 Success Metrics
 
 **Business KPIs**:
-- **Tenants Onboarded**: 50 tenants in first 3 months
-- **Events Ingested**: 100M+ events per month by end of quarter 2
-- **Tenant Retention**: 85%+ after 90 days
-- **Revenue**: $25k MRR by month 6 (usage-based pricing)
+
+| Metric | Target | Measurement Method |
+|--------|--------|--------------------|
+| Tenants Onboarded | 50 tenants in first 3 months | Count of active tenants in database |
+| Events Ingested | 100M+ events/month by end of Q2 | Sum of events table rows per month |
+| Tenant Retention | 85%+ after 90 days | Cohort analysis of active tenants at day 90 |
+| Revenue | $25k MRR by month 6 | Usage-based billing totals |
 
 **Product KPIs**:
-- **Recommendation Latency**: p95 response time <100ms for recommendation requests
-- **Event Ingestion Throughput**: >10,000 events/second sustained per tenant
-- **SDK Load Time**: JavaScript SDK loads and renders first recommendation in <500ms
-- **SDK Bundle Size**: <10KB gzipped
-- **A/B Test Statistical Significance**: Framework detects 5% lift at 95% confidence within 7 days for tenants with 10k+ daily visitors
-- **API Uptime**: 99.9%
-- **Time to First Recommendation**: <30 minutes from signup to live recommendations on tenant's site
+
+| Metric | Target | Measurement Method |
+|--------|--------|--------------------|
+| Recommendation Latency | p95 < 100ms | API response time percentiles from observability |
+| Event Ingestion Throughput | 10,000 events/second sustained | Load test with k6 or similar |
+| SDK Bundle Size | < 10KB gzipped | gzip -c recomengine.v1.js and wc -c |
+| SDK Time to Render | < 500ms from page load | Lighthouse / RUM measurement |
+| A/B Test Detection | 5% lift at 95% confidence in 7 days (10k+ daily visitors) | Statistical power analysis |
+| API Uptime | 99.9% | Uptime monitoring (Pingdom / UptimeRobot) |
+| Time to First Recommendation | < 30 minutes from signup | Onboarding funnel timing |
 
 **User Experience KPIs**:
-- **Dashboard Page Load**: <2 seconds (LCP) for analytics dashboard
-- **Widget Render Time**: <200ms from API response to visible recommendations
-- **Integration Completion Rate**: >80% of tenants complete SDK integration within first session
-- **Tenant NPS**: >50
+
+| Metric | Target | Measurement Method |
+|--------|--------|--------------------|
+| Dashboard Page Load (LCP) | < 2 seconds | Lighthouse / Core Web Vitals |
+| Widget Render Time | < 200ms | SDK performance instrumentation |
+| Integration Completion Rate | 80%+ complete SDK integration in first session | Funnel analytics |
+| Tenant NPS | > 50 | Quarterly survey |
 
 ---
 
 ## 2. User Personas
 
-### Persona 1: Elena - E-Commerce Growth Manager
+### Persona 1: Elena - E-Commerce Growth Manager (Merchant)
 
-**Demographics**:
-- Age: 34
-- Role: Head of Growth at a DTC fashion brand
-- Business: Online clothing store, $8M annual revenue
-- Technical Skill: Medium (comfortable with analytics tools, basic HTML/CSS, no backend experience)
+- **Role**: Head of Growth at a DTC fashion brand ($8M annual revenue)
+- **Technical Skill**: Medium (comfortable with analytics tools, basic HTML/CSS, no backend experience)
+- **Goals**:
+  - Increase average order value by 15% through cross-sell recommendations
+  - Reduce bounce rate on product pages by showing relevant alternatives
+  - Run A/B tests comparing recommendation strategies without engineering support
+  - Prove ROI of recommendation engine to CFO with concrete revenue attribution data
+- **Pain Points**:
+  - Current "related products" section is manually curated and stale within days
+  - Previous vendor (Nosto) cost $2k/month with no algorithm visibility
+  - Cannot run proper A/B tests without engineering resources
+  - Analytics are disconnected from recommendation performance
+- **Usage Context**: Logs into dashboard 3-5x/week to review performance, adjust strategies, export reports
 
-**Goals**:
-- Increase average order value by 15% through cross-sell recommendations
-- Reduce bounce rate on product pages by showing relevant alternatives
-- Run A/B tests comparing recommendation strategies without engineering support
-- Prove ROI of recommendation engine to the CFO with concrete revenue attribution data
+### Persona 2: Raj - Platform Engineering Lead (Developer)
 
-**Pain Points**:
-- Current "related products" section is manually curated and stale within days of a new product launch
-- Previous recommendation vendor (Nosto) cost $2k/month with no visibility into algorithm performance
-- Cannot run proper A/B tests without engineering resources
-- Analytics are disconnected from recommendation performance (separate tools for site analytics vs. recommendation metrics)
+- **Role**: Senior Backend Engineer at a multi-vendor marketplace ($30M GMV, 500+ sellers)
+- **Technical Skill**: High (full-stack, distributed systems)
+- **Goals**:
+  - Provide per-seller personalized recommendations across the marketplace
+  - Integrate recommendation API into product detail and search pages
+  - Ensure data isolation between sellers
+  - Handle Black Friday traffic spikes (10x normal) without degradation
+- **Pain Points**:
+  - In-house recommendation system requires constant maintenance
+  - Multi-tenant data isolation is complex and error-prone
+  - No built-in A/B testing; recommendation changes are blind rollouts
+  - Custom dashboards for monitoring are always outdated
+- **Usage Context**: Integrates via REST API and SDK, manages tenants programmatically, monitors via metrics
 
-**Usage Context**:
-- Logs into RecomEngine dashboard 3-5 times per week
-- Reviews recommendation performance metrics and A/B test results
-- Adjusts recommendation strategies based on seasonal campaigns
-- Exports reports for weekly growth team meetings
+### Persona 3: Sophie - SaaS Platform Product Manager (Data Analyst)
 
-**What Elena Says**:
-_"I need to prove that recommendations drive revenue, not just clicks. Show me the dollars, and let me test different approaches without filing an engineering ticket."_
+- **Role**: Director of Product at a headless commerce SaaS (200+ store owners)
+- **Technical Skill**: Medium-High (understands APIs, reads code)
+- **Goals**:
+  - Offer "AI-powered recommendations" as a premium platform feature
+  - Customize widget appearance per store brand
+  - Provide store owners with self-service analytics
+  - Differentiate platform from Shopify/BigCommerce
+- **Pain Points**:
+  - Amazon Personalize quoted $120k/year for multi-tenant setup
+  - Each store needs isolated models and analytics
+  - Cannot build a dashboard for every store
+- **Usage Context**: Evaluates during trial, integrates once at platform level, provisions tenants per store
 
----
+### Persona 4: Marcus - Platform Administrator
 
-### Persona 2: Raj - Platform Engineering Lead
-
-**Demographics**:
-- Age: 29
-- Role: Senior Backend Engineer at a multi-vendor marketplace
-- Business: Online marketplace with 500+ sellers, $30M GMV
-- Technical Skill: High (full-stack, distributed systems experience)
-
-**Goals**:
-- Provide per-seller personalized recommendations across the marketplace
-- Integrate recommendation API into existing product detail and search results pages
-- Ensure data isolation between sellers (seller A cannot see seller B's customer behavior)
-- Handle Black Friday traffic spikes (10x normal volume) without degradation
-
-**Pain Points**:
-- Built an in-house recommendation system that requires constant maintenance
-- Multi-tenant data isolation is complex and error-prone with current custom solution
-- No built-in A/B testing means recommendation changes are deployed as blind rollouts
-- Monitoring recommendation quality requires custom dashboards that are always outdated
-
-**Usage Context**:
-- Integrates via REST API and JavaScript SDK
-- Manages tenant provisioning via API (automated onboarding for new sellers)
-- Monitors system health via API metrics endpoints
-- Needs comprehensive API documentation and SDKs
-
-**What Raj Says**:
-_"I need an API that handles multi-tenancy correctly out of the box. Per-tenant data isolation, per-tenant rate limits, and per-tenant analytics -- without me building any of that."_
-
----
-
-### Persona 3: Sophie - Product Manager at a SaaS E-Commerce Platform
-
-**Demographics**:
-- Age: 38
-- Role: Director of Product at a headless commerce SaaS
-- Business: Headless commerce platform serving 200+ store owners
-- Technical Skill: Medium-High (understands APIs, reads code, does not write production code)
-
-**Goals**:
-- Offer "AI-powered recommendations" as a premium feature to her platform's store owners
-- White-label the recommendation widget to match each store's brand
-- Provide store owners with self-service analytics (no support tickets for "how are my recommendations doing?")
-- Differentiate her platform from competitors (Shopify, BigCommerce) with superior personalization
-
-**Pain Points**:
-- Amazon Personalize quoted $120k/year for multi-tenant setup -- exceeds her feature budget
-- Existing Shopify recommendation apps do not work with her headless architecture
-- Store owners demand recommendation analytics but her team cannot build a dashboard for every store
-- Each store has different product catalogs and customer bases, requiring isolated recommendation models
-
-**Usage Context**:
-- Evaluates RecomEngine during a 14-day trial
-- Integrates once at the platform level, provisions tenants for each store owner
-- Store owners access analytics through embedded dashboard widgets
-- Needs reliable API with clear SLAs for her platform's uptime guarantees
-
-**What Sophie Says**:
-_"I need a recommendation engine I can offer to my 200 stores without hiring an ML team. Each store needs its own data silo, its own widget styles, and its own analytics -- and I need one API to manage all of them."_
+- **Role**: RecomEngine internal operations / customer success
+- **Technical Skill**: High
+- **Goals**:
+  - Monitor system health across all tenants
+  - Identify and suspend abusive tenants
+  - Ensure data isolation compliance
+  - Track platform-wide usage metrics
+- **Pain Points**:
+  - Need visibility into per-tenant resource consumption
+  - Must quickly respond to tenant issues
+- **Usage Context**: Monitors system health dashboard, manages tenant lifecycle, reviews platform metrics
 
 ---
 
-## 3. Features
+## 3. System Context
 
-### 3.1 MVP Features (Must Have)
+### 3.1 C4 Level 1: System Context Diagram
 
-| ID | Feature | User Story | Priority | Phase |
-|----|---------|------------|----------|-------|
-| F-001 | Tenant Management | As a platform operator, I want to create and manage tenants with isolated data so that each merchant's behavioral data and recommendations remain private | P0 | MVP |
-| F-002 | API Key Provisioning | As a developer, I want to generate and manage API keys per tenant so that I can authenticate requests and control access | P0 | MVP |
-| F-003 | Event Ingestion API | As a developer, I want to send user behavior events (views, clicks, add-to-cart, purchases) in real-time so that recommendation models have fresh data | P0 | MVP |
-| F-004 | Catalog Management API | As a developer, I want to upload and sync my product catalog so that recommendations reference accurate product data | P0 | MVP |
-| F-005 | Recommendation Engine | As a merchant, I want to receive personalized product recommendations based on user behavior so that I can increase conversions | P0 | MVP |
-| F-006 | Configurable Strategies | As a growth manager, I want to choose between recommendation strategies (collaborative filtering, content-based, trending, frequently bought together) so that I can optimize for different business goals | P0 | MVP |
-| F-007 | Embeddable JavaScript SDK | As a developer, I want to embed a lightweight (<10KB) recommendation widget on my site with a single script tag so that integration takes less than 30 minutes | P0 | MVP |
-| F-008 | A/B Testing Framework | As a growth manager, I want to split traffic between recommendation strategies and compare conversion rates so that I can make data-driven decisions about which strategy performs best | P0 | MVP |
-| F-009 | Analytics Dashboard | As a merchant, I want to view real-time metrics (impressions, clicks, CTR, conversions, revenue attribution) so that I can measure the ROI of recommendations | P0 | MVP |
-| F-010 | REST API | As a developer, I want full CRUD endpoints for catalogs, events, recommendations, experiments, and tenants so that I can integrate RecomEngine into any architecture | P0 | MVP |
-| F-011 | Experiment Results API | As a developer, I want to query A/B test results programmatically so that I can build custom reporting or trigger automated strategy switches | P0 | MVP |
-| F-012 | Widget Customization | As a merchant, I want to customize recommendation widget appearance (layout, colors, number of items) so that it matches my site's design | P0 | MVP |
+```mermaid
+graph TD
+    subgraph Users
+        Merchant["Merchant / Growth Manager<br/>(Elena)"]
+        Developer["Developer<br/>(Raj)"]
+        Analyst["Data Analyst / PM<br/>(Sophie)"]
+        PlatAdmin["Platform Admin<br/>(Marcus)"]
+    end
 
-### 3.2 Phase 2 Features (Should Have)
+    subgraph External
+        MerchantSite["Merchant E-Commerce Site"]
+        CDN["CDN<br/>(SDK Distribution)"]
+        EmailService["Email Service<br/>(Phase 2)"]
+    end
 
-| ID | Feature | User Story | Priority | Phase |
-|----|---------|------------|----------|-------|
-| F-013 | Email Recommendations | As a merchant, I want to include personalized product recommendations in transactional emails (order confirmation, abandoned cart) so that I can increase repeat purchases | P1 | Phase 2 |
-| F-014 | Segmentation Engine | As a growth manager, I want to create user segments (new visitors, returning customers, high-value shoppers) and apply different recommendation strategies per segment | P1 | Phase 2 |
-| F-015 | Webhook Notifications | As a developer, I want to receive webhook events when experiments reach statistical significance or recommendation model retraining completes | P1 | Phase 2 |
-| F-016 | White-Label Dashboard | As a platform operator, I want to embed analytics dashboards within my own platform's UI so that store owners do not leave my application | P1 | Phase 2 |
-| F-017 | Bulk Event Import | As a developer, I want to upload historical event data (CSV/JSON) so that new tenants have recommendation models from day one | P1 | Phase 2 |
-| F-018 | Custom Algorithm Plugins | As an advanced user, I want to define custom recommendation logic (e.g., business rules like "never recommend out-of-stock items") alongside algorithmic recommendations | P1 | Phase 2 |
+    RecomEngine["RecomEngine<br/>B2B SaaS Recommendation Platform<br/><br/>Provides personalized product<br/>recommendations via API and<br/>embeddable widgets"]
 
-### 3.3 Future Considerations (Nice to Have)
+    Merchant -->|Views analytics,<br/>configures strategies,<br/>runs A/B tests| RecomEngine
+    Developer -->|Integrates API,<br/>manages tenants,<br/>uploads catalogs| RecomEngine
+    Analyst -->|Reviews performance,<br/>exports reports| RecomEngine
+    PlatAdmin -->|Monitors health,<br/>manages tenants| RecomEngine
 
-- ML model marketplace (swap in custom models trained externally)
-- Visual recommendation editor (drag-and-drop widget builder)
-- Search-powered recommendations (integrate with site search)
-- Mobile SDK (iOS/Android native)
-- Real-time collaborative filtering on streaming data (Flink/Kafka integration)
-- Automated recommendation strategy optimization (multi-armed bandit)
-- GraphQL API
-- Shopify app, WooCommerce plugin, Magento extension
-- GDPR consent management for behavioral tracking
-- Revenue forecasting (predicted uplift from enabling recommendations)
+    MerchantSite -->|Sends events,<br/>requests recommendations| RecomEngine
+    RecomEngine -->|Serves SDK bundle| CDN
+    RecomEngine -.->|Sends notifications<br/>(Phase 2)| EmailService
+
+    style RecomEngine fill:#2563EB,stroke:#1e40af,color:#fff
+    style MerchantSite fill:#f59e0b,stroke:#d97706,color:#000
+    style CDN fill:#10b981,stroke:#059669,color:#fff
+    style EmailService fill:#6b7280,stroke:#4b5563,color:#fff
+```
+
+### 3.2 C4 Level 2: Container Diagram
+
+```mermaid
+graph TD
+    subgraph RecomEnginePlatform["RecomEngine Platform"]
+        WebApp["Web Dashboard<br/>(Next.js 14, React 18)<br/>Port 3112"]
+        API["Backend API<br/>(Fastify 4, TypeScript)<br/>Port 5008"]
+        SDK["JavaScript SDK<br/>(Vanilla JS, esbuild)<br/>less than 10KB gzipped"]
+        DB["PostgreSQL 15+<br/>(Prisma ORM)<br/>Events partitioned by month"]
+        Cache["Redis 7<br/>(Recommendations, Counters,<br/>Rate Limits, Widget Config)"]
+    end
+
+    Merchant["Merchant"] -->|HTTPS| WebApp
+    Developer["Developer"] -->|REST API| API
+    MerchantSite["Merchant Site"] -->|Events + Reco Requests| API
+    MerchantSite -->|Loads| SDK
+
+    WebApp -->|API calls| API
+    SDK -->|API calls| API
+    API -->|Queries / Writes| DB
+    API -->|Cache / Counters| Cache
+
+    style WebApp fill:#3b82f6,stroke:#2563eb,color:#fff
+    style API fill:#8b5cf6,stroke:#7c3aed,color:#fff
+    style SDK fill:#f59e0b,stroke:#d97706,color:#000
+    style DB fill:#10b981,stroke:#059669,color:#fff
+    style Cache fill:#ef4444,stroke:#dc2626,color:#fff
+```
 
 ---
 
-## 4. User Flows
+## 4. User Stories
 
-### 4.1 Tenant Onboarding Flow
+### US-01: Admin Registration and Authentication
+
+**As** Elena (Growth Manager),
+**I want** to register an account with my email and password,
+**So that** I can access the RecomEngine dashboard and manage my recommendation setup.
+
+**Priority**: P0 | **MVP Scope**: Yes | **Feature**: F-001
+
+**Acceptance Criteria**:
+- Given a new user, when they POST to `/api/v1/auth/signup` with valid email and password (8+ chars, 1 uppercase, 1 number), then a 201 response is returned with a JWT access token (1hr) and HttpOnly refresh cookie (7d)
+- Given an existing email, when signup is attempted, then a 409 response is returned with "Email already registered"
+- Given valid credentials, when POST to `/api/v1/auth/login`, then a 200 response is returned with JWT access token and refresh cookie
+- Given invalid credentials, when login is attempted, then a 401 response is returned with "Invalid email or password" (no indication of which is wrong)
+- Given an expired access token, when POST to `/api/v1/auth/refresh` with valid refresh cookie, then a new access token and rotated refresh token are returned
+
+---
+
+### US-02: Tenant Creation and Management
+
+**As** Raj (Developer),
+**I want** to create and manage tenants representing merchants on my platform,
+**So that** each merchant has isolated data and independent recommendation models.
+
+**Priority**: P0 | **MVP Scope**: Yes | **Feature**: F-001
+
+**Acceptance Criteria**:
+- Given a logged-in admin, when they POST to `/api/v1/tenants` with `{ name: "Acme Store" }`, then a 201 response is returned with tenant object including `id`, `name`, `status: "active"`, `config`, `createdAt`
+- Given an active tenant, when admin PUTs to `/api/v1/tenants/:id` with `{ status: "suspended" }`, then all API requests using that tenant's keys return 403 "Tenant suspended" and existing data is preserved
+- Given a suspended tenant, when admin PUTs to `/api/v1/tenants/:id` with `{ status: "active" }`, then API access is restored immediately
+- Given a tenant marked as deleted, when 30 days elapse, then tenant data is eligible for purging
+- Given an admin with multiple tenants, when GET `/api/v1/tenants?status=active&limit=20`, then only active tenants are returned with pagination metadata
+
+---
+
+### US-03: API Key Provisioning
+
+**As** Raj (Developer),
+**I want** to generate API keys with specific permissions per tenant,
+**So that** I can authenticate SDK requests (read-only) and server-to-server requests (read-write) separately.
+
+**Priority**: P0 | **MVP Scope**: Yes | **Feature**: F-002
+
+**Acceptance Criteria**:
+- Given an active tenant, when admin POSTs to `/api/v1/tenants/:id/api-keys` with `{ name: "Production SDK", permissions: "read" }`, then a 201 response returns the full API key (shown only once) with prefix `rk_live_`
+- Given the returned API key, when stored in the database, then only the HMAC-SHA256 hash is persisted (never plaintext)
+- Given an API key with `read` permissions, when POST to `/api/v1/events`, then a 403 "Insufficient permissions: write access required" is returned
+- Given a tenant with 10 active keys, when a new key creation is attempted, then a 409 "Maximum active keys (10) reached" is returned
+- Given an API key, when DELETE `/api/v1/tenants/:id/api-keys/:keyId`, then the key is revoked immediately and subsequent requests with that key return 401
+
+---
+
+### US-04: Product Catalog Management
+
+**As** Raj (Developer),
+**I want** to upload and sync my product catalog via API,
+**So that** recommendations reference accurate product data with names, images, and prices.
+
+**Priority**: P0 | **MVP Scope**: Yes | **Feature**: F-004
+
+**Acceptance Criteria**:
+- Given a valid API key with write permissions, when POST to `/api/v1/catalog` with `{ productId: "SKU-001", name: "Blue Sneakers", category: "Shoes", price: 89.99, imageUrl: "https://..." }`, then a 201 response returns the created catalog item
+- Given a batch of 500 items, when POST to `/api/v1/catalog/batch`, then all valid items are created and a response includes counts of accepted and rejected items
+- Given an existing catalog item, when PUT to `/api/v1/catalog/:productId` with `{ available: false }`, then the item is marked unavailable and excluded from all future recommendations
+- Given a catalog with 1000+ items, when GET `/api/v1/catalog?category=Shoes&limit=20`, then paginated results are returned filtered by category
+
+---
+
+### US-05: Single Event Ingestion
+
+**As** Raj (Developer),
+**I want** to send real-time behavioral events (views, clicks, purchases) via API,
+**So that** recommendation models have fresh data to generate relevant suggestions.
+
+**Priority**: P0 | **MVP Scope**: Yes | **Feature**: F-003
+
+**Acceptance Criteria**:
+- Given a valid API key with write permissions, when POST to `/api/v1/events` with `{ eventType: "product_viewed", userId: "user-123", productId: "SKU-001" }`, then a 202 response is returned within 50ms (p95)
+- Given an event with a productId not in the catalog, when submitted, then the event is accepted (202) and a warning is logged (event is still persisted)
+- Given a duplicate event (same tenantId + userId + eventType + productId + timestamp), when submitted, then a 200 response is returned without creating a duplicate record
+- Given an event with invalid schema (missing userId), when submitted, then a 400 response with field-level error details is returned
+- Given 7 supported event types (product_viewed, product_clicked, add_to_cart, remove_from_cart, purchase, recommendation_clicked, recommendation_impressed), when an unknown event type is submitted, then a 400 is returned
+
+---
+
+### US-06: Batch Event Ingestion
+
+**As** Raj (Developer),
+**I want** to submit up to 100 events in a single API call,
+**So that** I can efficiently ingest high-volume event streams from my backend.
+
+**Priority**: P0 | **MVP Scope**: Yes | **Feature**: F-003
+
+**Acceptance Criteria**:
+- Given a batch of 100 valid events, when POST to `/api/v1/events/batch`, then a 202 response is returned within 200ms (p95) with `{ accepted: 100, rejected: 0 }`
+- Given a batch with 3 invalid events out of 50, when submitted, then a 202 response returns `{ accepted: 47, rejected: 3, errors: [{index: 5, ...}, ...] }`
+- Given a batch exceeding 100 events, when submitted, then a 400 response is returned with "Batch size exceeds maximum of 100"
+
+---
+
+### US-07: Personalized Recommendations
+
+**As** Elena (Growth Manager),
+**I want** my site visitors to see personalized product recommendations,
+**So that** they discover relevant products and I increase average order value.
+
+**Priority**: P0 | **MVP Scope**: Yes | **Feature**: F-005
+
+**Acceptance Criteria**:
+- Given a user with 10+ behavioral events, when GET `/api/v1/recommendations?userId=user-123&limit=8`, then a 200 response with 8 products is returned within 100ms (p95), each including `productId`, `name`, `imageUrl`, `price`, `score` (0-1), `reason` (human-readable)
+- Given a new user with 0 events (cold start), when recommendations are requested, then trending products are returned with `meta.strategy: "trending"` and `meta.isFallback: true`
+- Given a tenant with `config.defaultStrategy: "content_based"`, when recommendations are requested without a strategy override, then content-based recommendations are returned
+- Given `?strategy=frequently_bought_together&productId=SKU-001`, when processed, then products frequently co-purchased with SKU-001 are returned
+- Given cached recommendations for a user, when requested again within 5 minutes, then cached results are returned with `meta.cached: true` and response time < 20ms
+
+---
+
+### US-08: Recommendation Strategy Configuration
+
+**As** Elena (Growth Manager),
+**I want** to choose between recommendation strategies per tenant,
+**So that** I can optimize for different business goals (cross-sell vs. trending vs. similar items).
+
+**Priority**: P0 | **MVP Scope**: Yes | **Feature**: F-006
+
+**Acceptance Criteria**:
+- Given 4 available strategies (collaborative, content_based, trending, frequently_bought_together), when admin updates tenant config with `defaultStrategy: "collaborative"`, then all recommendation requests without an explicit strategy use collaborative filtering
+- Given collaborative filtering requires 1,000+ users with 5+ events each, when data is insufficient, then the system falls back to content-based or trending with `meta.isFallback: true`
+- Given content-based strategy, when the user has viewed products in "Electronics", then similar electronics products are recommended based on catalog attributes
+
+---
+
+### US-09: A/B Testing Framework
+
+**As** Elena (Growth Manager),
+**I want** to create experiments comparing two recommendation strategies,
+**So that** I can make data-driven decisions about which strategy maximizes revenue.
+
+**Priority**: P0 | **MVP Scope**: Yes | **Feature**: F-008
+
+**Acceptance Criteria**:
+- Given a logged-in admin, when POST to `/api/v1/tenants/:id/experiments` with `{ name: "Collab vs Trending", controlStrategy: "collaborative", variantStrategy: "trending", trafficSplit: 50, metric: "ctr" }`, then a 201 response returns the experiment in `draft` state
+- Given a running experiment, when recommendation requests arrive, then users are deterministically assigned to control or variant via SHA-256 hash of (userId + experimentId)
+- Given user-123 assigned to "variant", when user-123 makes multiple requests across sessions, then user-123 always receives the variant strategy
+- Given a placement with an active running experiment, when a second experiment is created for the same placement, then a 409 "Only one running experiment per placement" is returned
+- Given experiment states (draft, running, paused, completed), when a draft experiment is started, then its status transitions to "running" and traffic splitting begins immediately
+
+---
+
+### US-10: A/B Test Results and Statistical Analysis
+
+**As** Elena (Growth Manager),
+**I want** to view experiment results with statistical significance indicators,
+**So that** I can confidently decide which strategy to promote.
+
+**Priority**: P0 | **MVP Scope**: Yes | **Feature**: F-011
+
+**Acceptance Criteria**:
+- Given a running experiment with data, when GET `/api/v1/tenants/:id/experiments/:expId/results`, then results include `controlMetric`, `variantMetric`, `lift`, `pValue`, `isSignificant` (alpha=0.05), `sampleSize` per variant
+- Given an experiment where either variant has < 500 users, when results are displayed, then a "Low confidence" badge is shown and `meta.lowSampleSize: true` is returned
+- Given CTR as the metric, when computing results, then a two-proportion z-test is used; for revenue per visitor, Welch's t-test is used
+
+---
+
+### US-11: Analytics Dashboard
+
+**As** Elena (Growth Manager),
+**I want** to view recommendation performance metrics on a visual dashboard,
+**So that** I can measure ROI and report to stakeholders.
+
+**Priority**: P0 | **MVP Scope**: Yes | **Feature**: F-009
+
+**Acceptance Criteria**:
+- Given a logged-in admin viewing tenant analytics, when the dashboard loads, then KPI cards display impressions, clicks, CTR, conversions, and attributed revenue for the selected date range, and page loads in < 2 seconds (LCP)
+- Given a date range filter set to "Last 30 days", when the time-series chart renders, then daily data points are shown for impressions, clicks, and conversions
+- Given the admin clicks "Export CSV", when the export completes, then a CSV file downloads containing all metrics visible on the dashboard
+- Given real-time events flowing, when the dashboard is open, then data refreshes every 60 seconds without full page reload
+- Given the top products section, when loaded, then the top 10 most-recommended and top 10 most-clicked products are displayed
+
+---
+
+### US-12: Embeddable JavaScript SDK
+
+**As** Raj (Developer),
+**I want** to embed a single `<script>` tag on my site that auto-initializes and renders recommendations,
+**So that** integration takes less than 30 minutes without custom UI development.
+
+**Priority**: P0 | **MVP Scope**: Yes | **Feature**: F-007
+
+**Acceptance Criteria**:
+- Given a script tag with data-api-key attribute on a page, when the page loads, then the SDK initializes and renders recommendation widgets within 500ms, and the bundle is < 10KB gzipped
+- Given a div with data-recomengine-placement attribute, when it enters the viewport, then the SDK fetches recommendations and renders product cards, and a recommendation_impressed event is auto-tracked
+- Given the RecomEngine API is unreachable, when the SDK attempts to load, then the widget container remains empty (no errors in console, host page unaffected)
+- Given a user clicks a recommended product, then a recommendation_clicked event is auto-tracked before navigation occurs
+- Given a programmatic integration, when RecomEngine.getRecommendations is called with userId and limit, then a Promise resolving to recommendation data is returned
+
+---
+
+### US-13: Widget Customization
+
+**As** Elena (Growth Manager),
+**I want** to customize how recommendation widgets look on my site,
+**So that** they match my brand's design language.
+
+**Priority**: P0 | **MVP Scope**: Yes | **Feature**: F-012
+
+**Acceptance Criteria**:
+- Given a tenant's widget configuration, when admin sets layout to carousel with columns 4, showPrice true, ctaText "Add to Cart", and primaryColor "#ff6600", then the SDK renders recommendations using the specified layout and styling
+- Given a widget config change saved via API, when 60 seconds pass, then the SDK fetches updated config and re-renders with new styles without page reload
+- Given layout options (grid, carousel, list), when each is selected, then the widget renders in the corresponding format
+- Given maxItems set to 12, when recommendations are displayed, then exactly 12 items (or fewer if catalog is smaller) are shown
+
+---
+
+### US-14: Revenue Attribution
+
+**As** Elena (Growth Manager),
+**I want** purchases attributed to recommendation clicks,
+**So that** I can measure the dollar value of the recommendation engine.
+
+**Priority**: P0 | **MVP Scope**: Yes | **Feature**: F-009
+
+**Acceptance Criteria**:
+- Given a user clicks a recommendation for product SKU-001, when the same user purchases SKU-001 within 30 minutes, then the purchase revenue is attributed to the recommendation
+- Given the 30-minute attribution window, when a purchase occurs at minute 31, then no attribution is recorded
+- Given multiple recommendation clicks for different products, when a purchase matches one of them, then only the matching product's click is attributed (last-click model)
+- Given the analytics dashboard, when attributed revenue is displayed, then it sums all revenue_attribution records for the selected date range
+
+---
+
+### US-15: Platform Admin System Health Monitoring
+
+**As** Marcus (Platform Admin),
+**I want** to monitor system health and manage tenants across the platform,
+**So that** I can ensure service reliability and respond to issues quickly.
+
+**Priority**: P0 | **MVP Scope**: Yes | **Feature**: F-001, F-010
+
+**Acceptance Criteria**:
+- Given the health endpoint, when GET `/api/v1/health`, then a 200 with `{ status: "ok" }` is returned if all dependencies are healthy
+- Given the readiness endpoint, when GET `/api/v1/ready`, then it checks database and Redis connectivity and returns 200 or 503
+- Given a misbehaving tenant, when admin suspends the tenant, then all their API traffic is blocked immediately and the SDK gracefully hides widgets
+
+---
+
+### US-16: API Documentation Pages
+
+**As** Raj (Developer),
+**I want** comprehensive API documentation available on the platform,
+**So that** I can integrate RecomEngine without contacting support.
+
+**Priority**: P0 | **MVP Scope**: Yes | **Feature**: F-010
+
+**Acceptance Criteria**:
+- Given the docs site, when navigating to `/docs`, then an overview page with links to quickstart, SDK, API reference, events, and experiments guides is displayed
+- Given the quickstart guide at `/docs/quickstart`, when followed step-by-step, then a developer achieves live recommendations in < 30 minutes
+- Given the API reference at `/docs/api-reference`, then every endpoint is documented with request/response examples, authentication requirements, and error codes
+
+---
+
+## 5. User Flows
+
+### 5.1 Tenant Onboarding Flow
 
 ```mermaid
 flowchart TD
     A[Admin signs up] --> B[Creates first tenant]
-    B --> C[Generates API key]
-    C --> D[Uploads product catalog via API]
-    D --> E[Integrates JS SDK on site]
-    E --> F[Events begin flowing]
-    F --> G[Recommendation model trains]
-    G --> H[Live recommendations appear on site]
-    H --> I[Reviews analytics dashboard]
+    B --> C[Generates API keys]
+    C --> D{Integration method?}
+    D -->|SDK| E[Adds script tag to site]
+    D -->|API| F[Integrates REST API in backend]
+    E --> G[Uploads product catalog via API]
+    F --> G
+    G --> H[Events begin flowing from site]
+    H --> I[Recommendation model trains on events]
+    I --> J[Live recommendations appear on site]
+    J --> K[Reviews analytics dashboard]
+    K --> L{Satisfied with results?}
+    L -->|No| M[Creates A/B test experiment]
+    M --> N[Compares strategies]
+    N --> L
+    L -->|Yes| O[Promotes winning strategy]
 ```
 
-**Time to Complete**: <30 minutes from signup to live recommendations
+**Time to Complete**: < 30 minutes from signup to live recommendations
 
----
+### 5.2 Recommendation Request Flow (Sequence Diagram)
 
-### 4.2 Event Ingestion Flow
+```mermaid
+sequenceDiagram
+    participant Site as Merchant Site
+    participant SDK as JS SDK
+    participant API as RecomEngine API
+    participant Cache as Redis Cache
+    participant DB as PostgreSQL
+    participant Engine as Recommendation Engine
+
+    Site->>SDK: Page load via script tag
+    SDK->>API: GET /recommendations userId=U1 limit=8
+    API->>API: Authenticate API key via HMAC lookup
+    API->>API: Check tenant status is active
+
+    alt A/B Test Active
+        API->>API: Hash userId+expId to assign variant
+    end
+
+    API->>Cache: Check reco tenantId userId strategy
+    alt Cache Hit
+        Cache-->>API: Cached recommendations
+    else Cache Miss
+        API->>DB: Fetch user events and catalog
+        DB-->>API: Events and products
+        API->>Engine: Compute recommendations for strategy
+        Engine-->>API: Ranked product list with scores
+        API->>Cache: Store with 5 min TTL
+    end
+
+    API-->>SDK: 200 JSON with data and meta
+    SDK->>Site: Render widget grid or carousel or list
+    SDK->>API: POST /events recommendation_impressed
+    Note over Site,SDK: User clicks a product
+    SDK->>API: POST /events recommendation_clicked
+    SDK->>Site: Navigate to product page
+```
+
+### 5.3 Event Ingestion Flow
 
 ```mermaid
 flowchart TD
-    A[User visits product page] --> B[SDK fires 'product_viewed' event]
-    B --> C[Event sent to Ingestion API]
-    C --> D{Validate event schema}
-    D -->|Valid| E[Store in event log]
-    D -->|Invalid| F[Return 400 with error details]
-    E --> G[Update user profile in real-time]
-    G --> H[Increment analytics counters]
+    A[User action on merchant site] --> B[SDK or Backend sends event]
+    B --> C[API receives POST /events]
+    C --> D{Validate schema}
+    D -->|Invalid| E[Return 400 with field errors]
+    D -->|Valid| F{Check deduplication}
+    F -->|Duplicate| G[Return 200 no action]
+    F -->|New| H[Persist to events table]
+    H --> I[Increment Redis counters]
+    I --> J[Check revenue attribution]
+    J --> K{recommendation_clicked<br/>within 30 min?}
+    K -->|Yes| L[Create revenue attribution record]
+    K -->|No| M[No attribution]
+    L --> N[Return 202 Accepted]
+    M --> N
 ```
 
-**Latency Target**: Event accepted and acknowledged in <50ms (p95)
-
----
-
-### 4.3 Recommendation Request Flow
+### 5.4 A/B Test Lifecycle
 
 ```mermaid
-flowchart TD
-    A[SDK requests recommendations] --> B[API receives request with user ID + context]
-    B --> C{A/B test active?}
-    C -->|Yes| D[Assign user to experiment variant]
-    C -->|No| E[Use default strategy]
-    D --> F[Execute assigned strategy]
-    E --> F
-    F --> G[Filter by business rules]
-    G --> H[Return ranked product list]
-    H --> I[SDK renders widget]
-    I --> J[User clicks recommendation]
-    J --> K[SDK fires 'recommendation_clicked' event]
+stateDiagram-v2
+    [*] --> Draft: Create experiment
+    Draft --> Running: Start experiment
+    Running --> Paused: Pause experiment
+    Paused --> Running: Resume experiment
+    Running --> Completed: Complete experiment
+    Paused --> Completed: Complete while paused
+    Completed --> [*]: Results retained 90 days
+
+    state Running {
+        [*] --> SplittingTraffic
+        SplittingTraffic --> CollectingData
+        CollectingData --> ComputingResults
+        ComputingResults --> SplittingTraffic
+    }
 ```
 
-**Latency Target**: API response in <100ms (p95)
-
----
-
-### 4.4 A/B Test Creation Flow
-
-```mermaid
-flowchart TD
-    A[Growth manager logs in] --> B[Navigates to Experiments]
-    B --> C[Clicks 'New Experiment']
-    C --> D[Selects control strategy]
-    D --> E[Selects variant strategy]
-    E --> F[Sets traffic split percentage]
-    F --> G[Sets success metric: CTR, conversion, or revenue]
-    G --> H[Clicks 'Launch Experiment']
-    H --> I[Experiment begins splitting traffic]
-    I --> J[Dashboard shows live results]
-    J --> K{Statistical significance reached?}
-    K -->|Yes| L[Dashboard highlights winner]
-    K -->|No| M[Continue collecting data]
-    L --> N[Manager promotes winner as default]
-```
-
-**Time to Complete**: <5 minutes to create and launch an experiment
-
----
-
-### 4.5 Analytics Review Flow
+### 5.5 Analytics Review Flow
 
 ```mermaid
 flowchart TD
     A[Merchant logs in] --> B[Dashboard shows KPI cards]
     B --> C[Views recommendation performance over time]
-    C --> D[Filters by date range / strategy / placement]
+    C --> D[Filters by date range and strategy and placement]
     D --> E[Drills into specific widget placement]
     E --> F[Views top-performing recommended products]
-    F --> G[Exports report as CSV]
+    F --> G{Need to share?}
+    G -->|Yes| H[Exports report as CSV]
+    G -->|No| I[Adjusts strategy or creates experiment]
 ```
 
-**Time to Complete**: <2 minutes to find key metrics
+---
+
+## 6. Data Model
+
+### 6.1 Entity-Relationship Diagram
+
+```mermaid
+erDiagram
+    Admin ||--o{ Tenant : "owns"
+    Tenant ||--o{ ApiKey : "has"
+    Tenant ||--o{ CatalogItem : "has"
+    Tenant ||--o{ Event : "has"
+    Tenant ||--o{ Experiment : "has"
+    Tenant ||--o{ AnalyticsDaily : "has"
+    Tenant ||--o{ WidgetConfig : "has"
+    Tenant ||--o{ RevenueAttribution : "has"
+    Experiment ||--o{ ExperimentResult : "has"
+
+    Admin {
+        string id PK
+        string email UK
+        string passwordHash
+        enum role "admin or super_admin"
+        datetime createdAt
+        datetime updatedAt
+    }
+
+    Tenant {
+        string id PK
+        string name
+        enum status "active or suspended or deleted"
+        json config
+        string ownerId FK
+        datetime createdAt
+        datetime updatedAt
+    }
+
+    ApiKey {
+        string id PK
+        string tenantId FK
+        string name
+        string keyHash UK
+        string keyPrefix
+        enum permissions "read or read_write"
+        datetime lastUsedAt
+        datetime revokedAt
+    }
+
+    CatalogItem {
+        string id PK
+        string tenantId FK
+        string productId
+        string name
+        string category
+        decimal price
+        string imageUrl
+        json attributes
+        boolean available
+    }
+
+    Event {
+        string id PK
+        string tenantId FK
+        enum eventType
+        string userId
+        string productId
+        string sessionId
+        json metadata
+        datetime timestamp
+    }
+
+    Experiment {
+        string id PK
+        string tenantId FK
+        string name
+        enum controlStrategy
+        enum variantStrategy
+        int trafficSplit
+        enum metric
+        enum status
+        string placementId
+    }
+
+    ExperimentResult {
+        string id PK
+        string experimentId FK
+        string variant
+        int impressions
+        int clicks
+        int conversions
+        decimal revenue
+        int sampleSize
+    }
+
+    AnalyticsDaily {
+        string id PK
+        string tenantId FK
+        date date
+        int impressions
+        int clicks
+        int conversions
+        decimal revenue
+        string placementId
+        string strategy
+    }
+
+    WidgetConfig {
+        string id PK
+        string tenantId FK
+        string placementId
+        enum layout
+        int columns
+        json theme
+        int maxItems
+        boolean showPrice
+        string ctaText
+    }
+
+    RevenueAttribution {
+        string id PK
+        string tenantId FK
+        string userId
+        string productId
+        string clickEventId
+        string purchaseEventId
+        decimal revenue
+        datetime clickTimestamp
+        datetime purchaseTimestamp
+        int attributionWindowMs
+    }
+```
 
 ---
 
-## 5. Requirements
+## 7. Functional Requirements
 
-### 5.1 Functional Requirements
+### Tenant Management
+- **FR-001**: Admins MUST be able to create tenants with a unique name and configuration
+- **FR-002**: Each tenant MUST have isolated data storage; all queries scoped by tenantId
+- **FR-003**: Tenants MUST support status lifecycle: active, suspended, deleted (soft delete with 30-day data retention)
+- **FR-004**: Tenant configuration MUST include: default recommendation strategy, widget defaults, CORS origins, rate limit overrides
+- **FR-005**: Admin MUST be able to list tenants with pagination and filtering by status
 
-**Tenant Management**:
-- FR-001: Admins can create tenants with a unique name and configuration
-- FR-002: Each tenant receives isolated data storage (events, catalog, recommendations, experiments)
-- FR-003: Tenants can be activated, suspended, or deleted via API
-- FR-004: Tenant configuration includes: default recommendation strategy, widget defaults, rate limits
-- FR-005: Admin can list all tenants with pagination and filtering by status
+### API Key Management
+- **FR-006**: Admins MUST be able to generate API keys scoped to a specific tenant with rk_live_ or rk_test_ prefix
+- **FR-007**: API keys MUST support two permission levels: read (SDK/frontend) and read_write (backend)
+- **FR-008**: API keys MUST be revocable without affecting other keys for the same tenant
+- **FR-009**: API key usage MUST be tracked (lastUsedAt timestamp updated on each request)
+- **FR-010**: Each tenant MUST have a maximum of 10 active (non-revoked) API keys
 
-**API Key Management**:
-- FR-006: Admins can generate API keys scoped to a specific tenant
-- FR-007: API keys support two permission levels: read-only (for SDK/frontend) and read-write (for backend integration)
-- FR-008: API keys can be revoked without affecting other keys for the same tenant
-- FR-009: API key usage is tracked (last used timestamp, request count)
-- FR-010: Each tenant can have a maximum of 10 active API keys
+### Event Ingestion
+- **FR-011**: API MUST accept individual events via POST /api/v1/events
+- **FR-012**: API MUST accept batch events (up to 100 per request) via POST /api/v1/events/batch
+- **FR-013**: System MUST support 7 event types: product_viewed, product_clicked, add_to_cart, remove_from_cart, purchase, recommendation_clicked, recommendation_impressed
+- **FR-014**: Each event MUST include: eventType, userId (1-256 chars), productId (1-256 chars); optional: timestamp (ISO 8601), sessionId, metadata (JSON, max 4KB)
+- **FR-015**: Invalid events MUST return 400 with field-level error details
+- **FR-016**: Events MUST be deduplicated on (tenantId + userId + eventType + productId + timestamp); duplicates return 200
+- **FR-017**: SDK MUST auto-capture recommendation_clicked and recommendation_impressed events
 
-**Event Ingestion**:
-- FR-011: API accepts individual events via POST `/api/v1/events`
-- FR-012: API accepts batch events (up to 100 per request) via POST `/api/v1/events/batch`
-- FR-013: Supported event types: `product_viewed`, `product_clicked`, `add_to_cart`, `remove_from_cart`, `purchase`, `recommendation_clicked`, `recommendation_impressed`
-- FR-014: Each event includes: `event_type`, `user_id`, `product_id`, `timestamp`, optional `session_id`, optional `metadata` (JSON, max 4KB)
-- FR-015: Events are validated against schema; invalid events return 400 with field-level error details
-- FR-016: Events are idempotent: duplicate events (same user_id + event_type + product_id + timestamp) are ignored with 200 response
-- FR-017: JavaScript SDK auto-captures `recommendation_clicked` and `recommendation_impressed` events for recommendations it renders
+### Catalog Management
+- **FR-018**: API MUST accept catalog items via POST /api/v1/catalog
+- **FR-019**: API MUST accept batch catalog uploads (up to 500 items) via POST /api/v1/catalog/batch
+- **FR-020**: Each catalog item MUST include: productId, name; optional: description, category, price, imageUrl, attributes (JSON), available (boolean, default true)
+- **FR-021**: Catalog items MUST be updatable via PUT /api/v1/catalog/:productId
+- **FR-022**: Unavailable catalog items (available=false) MUST be excluded from all recommendation results
+- **FR-023**: Catalog MUST support querying with pagination, filtering by category, and search by name
 
-**Catalog Management**:
-- FR-018: API accepts product catalog items via POST `/api/v1/catalog`
-- FR-019: API accepts batch catalog uploads (up to 500 items per request) via POST `/api/v1/catalog/batch`
-- FR-020: Each catalog item includes: `product_id`, `name`, `description`, `category`, `price`, `image_url`, `attributes` (JSON), `available` (boolean)
-- FR-021: Catalog items can be updated via PUT `/api/v1/catalog/:productId`
-- FR-022: Catalog items can be soft-deleted (marked unavailable); unavailable items are excluded from recommendations
-- FR-023: Catalog supports querying with pagination, filtering by category, and search by name
+### Recommendation Engine
+- **FR-024**: API MUST return recommendations via GET /api/v1/recommendations
+- **FR-025**: Request parameters: userId (required), limit (default 8, max 50), strategy (optional override), productId (required for FBT)
+- **FR-026**: Collaborative filtering: recommends products based on similar user behavior via cosine similarity; requires 1,000+ users with 5+ events
+- **FR-027**: Content-based: recommends products with similar catalog attributes; works with 50+ products
+- **FR-028**: Trending: ranks products by interaction velocity (views=1, clicks=2, add-to-cart=3, purchases=5) in last 24 hours; global to tenant
+- **FR-029**: Frequently bought together: co-occurrence analysis of products purchased in same session or by same user within 7 days; requires productId parameter
+- **FR-030**: Each recommendation MUST include: productId, name, imageUrl, price, score (0-1), reason (human-readable)
+- **FR-031**: Recommendations MUST exclude products the user has already purchased (configurable via tenant config excludePurchased)
+- **FR-032**: Cold-start handling: users with 0-4 events receive trending fallback; new products with 0 interactions use content-based from catalog attributes; response includes meta.isFallback: true
 
-**Recommendation Engine**:
-- FR-024: API returns recommendations via GET `/api/v1/recommendations`
-- FR-025: Request parameters: `user_id` (required), `context` (optional: product page, cart page, homepage), `limit` (default 8, max 50), `strategy` (optional override)
-- FR-026: Collaborative filtering strategy: recommends products based on behavior patterns of similar users
-- FR-027: Content-based strategy: recommends products with similar attributes to items the user has viewed or purchased
-- FR-028: Trending strategy: recommends products with the highest interaction velocity in the last 24 hours
-- FR-029: Frequently bought together strategy: recommends products commonly purchased alongside a given product
-- FR-030: Each recommendation response includes: `product_id`, `name`, `image_url`, `price`, `score` (0-1 confidence), `reason` (human-readable explanation)
-- FR-031: Recommendations exclude products the user has already purchased (configurable per tenant)
-- FR-032: Cold-start handling: for new users with <5 events, fall back to trending or category-popular recommendations
+### JavaScript SDK
+- **FR-033**: SDK MUST load via single script tag with async attribute and data-api-key attribute
+- **FR-034**: SDK MUST initialize automatically, reading API key from script tag
+- **FR-035**: SDK MUST render product cards with image, name, price, and configurable CTA button
+- **FR-036**: SDK MUST support multiple placements on the same page via data-recomengine-placement attributes
+- **FR-037**: SDK MUST auto-track impressions (IntersectionObserver when widget enters viewport) and clicks
+- **FR-038**: SDK MUST expose RecomEngine.getRecommendations(options) for programmatic access (returns Promise)
+- **FR-039**: SDK MUST fail silently if API is unreachable (no console errors, widget container hidden)
+- **FR-040**: SDK MUST expose RecomEngine.onRecommendations(callback) for headless/custom rendering
+- **FR-041**: SDK bundle MUST NOT exceed 10KB gzipped
 
-**JavaScript SDK**:
-- FR-033: SDK is loadable via a single `<script>` tag with async loading
-- FR-034: SDK initializes with tenant API key and optional configuration (placement ID, user ID, widget style)
-- FR-035: SDK renders recommendation widgets with product image, name, price, and configurable CTA
-- FR-036: SDK supports multiple widget placements on the same page (e.g., "You May Also Like" + "Trending Now")
-- FR-037: SDK auto-tracks impressions (when widget enters viewport) and clicks
-- FR-038: SDK provides a JavaScript API for programmatic access: `RecomEngine.getRecommendations(options)`
-- FR-039: SDK gracefully degrades if API is unreachable (hides widget, does not break host page)
-- FR-040: SDK supports custom rendering via callback: `RecomEngine.onRecommendations(callback)` for headless integration
-- FR-041: SDK bundle size does not exceed 10KB gzipped
+### A/B Testing Framework
+- **FR-042**: Admins MUST be able to create experiments via POST /api/v1/tenants/:id/experiments
+- **FR-043**: Each experiment MUST define: name, controlStrategy, variantStrategy, trafficSplit (1-99%), metric (CTR, conversion_rate, revenue_per_visitor)
+- **FR-044**: User assignment MUST be deterministic via SHA-256 hash of (userId + experimentId) ensuring consistent variant across sessions
+- **FR-045**: Experiment results MUST include: sampleSize, metric per variant, lift, pValue, isSignificant (alpha=0.05)
+- **FR-046**: Experiments MUST support states: draft, running, paused, completed
+- **FR-047**: MUST enforce max 1 running experiment per placement per tenant
+- **FR-048**: Completed experiment results MUST be retained for 90 days
 
-**A/B Testing Framework**:
-- FR-042: Admins can create experiments via POST `/api/v1/experiments`
-- FR-043: Each experiment defines: name, control strategy, variant strategy, traffic split (1-99%), success metric (CTR, conversion rate, revenue per visitor), tenant scope
-- FR-044: Users are assigned to control or variant deterministically based on a hash of user_id + experiment_id (consistent assignment across sessions)
-- FR-045: Experiment results are computed in real-time: sample size, metric value per variant, confidence interval, p-value, statistical significance (alpha = 0.05)
-- FR-046: Experiments can be in states: `draft`, `running`, `paused`, `completed`
-- FR-047: Only one experiment can be running per recommendation placement at a time
-- FR-048: Completed experiments retain results for 90 days before archiving
+### Analytics Dashboard
+- **FR-049**: Dashboard MUST display KPI cards: impressions, clicks, CTR, conversions, attributed revenue
+- **FR-050**: Dashboard MUST display time-series chart with daily granularity
+- **FR-051**: Dashboard MUST display top 10 most-recommended and top 10 most-clicked products
+- **FR-052**: Dashboard MUST support date range filtering (7d, 30d, 90d, custom)
+- **FR-053**: Dashboard MUST display per-placement breakdown
+- **FR-054**: Dashboard MUST display experiment results with control vs variant comparison
+- **FR-055**: Dashboard data MUST refresh every 60 seconds without full page reload
+- **FR-056**: Dashboard MUST support CSV export of all displayed metrics
 
-**Analytics Dashboard**:
-- FR-049: Dashboard displays KPI cards: total impressions, total clicks, CTR, total conversions, revenue attributed (last 7/30/90 days)
-- FR-050: Dashboard displays time-series chart of recommendation performance (impressions, clicks, conversions) with daily granularity
-- FR-051: Dashboard displays top 10 most-recommended products and top 10 most-clicked recommended products
-- FR-052: Dashboard supports date range filtering (preset: 7d, 30d, 90d; custom range)
-- FR-053: Dashboard displays per-placement breakdown (which widget position performs best)
-- FR-054: Dashboard displays experiment results with visual comparison of control vs. variant
-- FR-055: Dashboard data refreshes every 60 seconds without full page reload
-- FR-056: Dashboard supports CSV export of all displayed metrics
+### REST API Standards
+- **FR-057**: All endpoints MUST be versioned under /api/v1/
+- **FR-058**: All responses MUST follow envelope: { data, meta, errors }
+- **FR-059**: All list endpoints MUST support pagination (limit, offset, max 100)
+- **FR-060**: All errors MUST follow RFC 7807 Problem Details format
+- **FR-061**: API MUST support CORS for browser-based SDK requests (origins from tenant config)
+- **FR-062**: API MUST expose OpenAPI 3.0 specification
 
-**REST API**:
-- FR-057: All endpoints are versioned under `/api/v1/`
-- FR-058: All responses follow JSON:API-style envelope: `{ data: ..., meta: { pagination }, errors: [...] }`
-- FR-059: All list endpoints support pagination (`limit`, `offset`) with maximum page size of 100
-- FR-060: All endpoints return RFC 7807-compliant error responses
-- FR-061: API supports CORS for browser-based SDK requests
-- FR-062: API documentation is auto-generated from route schemas (OpenAPI 3.0)
-
-### 5.2 Non-Functional Requirements
-
-**Performance**:
-- NFR-001: Recommendation API responds in <100ms (p95) for requests with <50 items
-- NFR-002: Event ingestion API acknowledges events in <50ms (p95)
-- NFR-003: Batch event ingestion (100 events) completes in <200ms (p95)
-- NFR-004: Dashboard initial page load completes in <2 seconds (LCP)
-- NFR-005: SDK JavaScript bundle is <10KB gzipped
-- NFR-006: SDK renders recommendation widget within 200ms of receiving API response
-- NFR-007: Analytics aggregation queries complete in <500ms for tenants with up to 100M events
-
-**Security**:
-- NFR-008: All API communication uses HTTPS with TLS 1.2+
-- NFR-009: API keys are stored as HMAC-SHA256 hashes (never plaintext)
-- NFR-010: Tenant data is logically isolated at the database level (all queries scoped by tenant_id)
-- NFR-011: Rate limiting per API key: 1,000 requests/minute for read operations, 500 requests/minute for write operations
-- NFR-012: CSRF protection on all dashboard state-changing endpoints
-- NFR-013: SDK communicates only with the configured API domain (no third-party requests)
-- NFR-014: Admin authentication uses JWT with 1-hour access tokens and 7-day refresh tokens
-- NFR-015: Password hashing uses bcrypt with cost factor 12
-- NFR-016: All user input is validated with Zod schemas before processing
-
-**Reliability**:
-- NFR-017: API uptime SLA of 99.9% (8.7 hours downtime/year maximum)
-- NFR-018: Event ingestion is at-least-once delivery; duplicate events are idempotently handled
-- NFR-019: Database backups run daily with 30-day retention
-- NFR-020: Recommendation engine returns cached results if model service is temporarily unavailable (stale data preferred over no data)
-- NFR-021: SDK fails silently if API is unreachable (does not throw errors, does not break host page)
-
-**Scalability**:
-- NFR-022: System supports 1,000 concurrent tenants
-- NFR-023: System ingests 10,000 events/second sustained (aggregate across all tenants)
-- NFR-024: System serves 5,000 recommendation requests/second (aggregate)
-- NFR-025: Database design supports 1B+ events and 10M+ catalog items
-- NFR-026: Horizontal scaling: API layer is stateless, scales via additional instances behind load balancer
-
-**Accessibility**:
-- NFR-027: Analytics dashboard meets WCAG 2.1 Level AA
-- NFR-028: Dashboard supports keyboard navigation for all interactive elements
-- NFR-029: Color contrast ratio >=4.5:1 for all text in dashboard
-- NFR-030: Screen reader compatible (ARIA labels on charts, data tables)
-
-**Observability**:
-- NFR-031: All API requests logged with correlation ID (X-Request-ID header)
-- NFR-032: System emits metrics: recommendation latency, event ingestion throughput, error rate, cache hit ratio
-- NFR-033: Alerting for: API error rate >5%, recommendation latency p95 >500ms, event ingestion backlog >10,000
-- NFR-034: Centralized logging with 90-day retention
+### Revenue Attribution
+- **FR-063**: A purchase event within 30 minutes of a recommendation_clicked event for the same user and product MUST be attributed to the recommendation
+- **FR-064**: Attribution MUST use last-click model (a purchase can only be attributed to one recommendation click)
+- **FR-065**: Attribution records MUST store click event ID, purchase event ID, revenue amount, timestamps
 
 ---
 
-## 6. Site Map
+## 8. Non-Functional Requirements
+
+### Performance
+- **NFR-001**: Recommendation API MUST respond in < 100ms (p95) for requests with limit <= 50
+- **NFR-002**: Single event ingestion MUST acknowledge in < 50ms (p95)
+- **NFR-003**: Batch event ingestion (100 events) MUST complete in < 200ms (p95)
+- **NFR-004**: Dashboard initial page load MUST complete in < 2 seconds (LCP)
+- **NFR-005**: SDK JavaScript bundle MUST be < 10KB gzipped
+- **NFR-006**: SDK MUST render recommendation widget within 200ms of receiving API response
+- **NFR-007**: Analytics aggregation queries MUST complete in < 500ms for 30-day range
+
+### Security
+- **NFR-008**: All API communication MUST use HTTPS with TLS 1.2+
+- **NFR-009**: API keys MUST be stored as HMAC-SHA256 hashes (never plaintext)
+- **NFR-010**: All queries MUST be scoped by tenantId (enforced via Prisma middleware)
+- **NFR-011**: Rate limiting: 1,000 reads/min, 500 writes/min per API key (distributed via Redis)
+- **NFR-012**: CSRF protection on dashboard state-changing endpoints (SameSite cookies + double-submit cookie)
+- **NFR-013**: SDK MUST communicate only with configured API domain (no third-party requests)
+- **NFR-014**: JWT access tokens (1hr), HttpOnly refresh token cookies (7d), bcrypt cost factor 12
+- **NFR-015**: All user input MUST be validated with Zod schemas
+
+### Reliability
+- **NFR-016**: API uptime 99.9% (8.7 hours max downtime/year)
+- **NFR-017**: Event ingestion at-least-once delivery; duplicates handled idempotently
+- **NFR-018**: Database backups daily with 30-day retention
+- **NFR-019**: Recommendation engine MUST return cached/stale results if computation service is unavailable
+- **NFR-020**: SDK MUST fail silently (no thrown errors, no host page breakage)
+
+### Scalability
+- **NFR-021**: Support 1,000 concurrent tenants
+- **NFR-022**: Ingest 10,000 events/second sustained (aggregate)
+- **NFR-023**: Serve 5,000 recommendation requests/second (aggregate)
+- **NFR-024**: Database design supports 1B+ events and 10M+ catalog items (monthly partitioning)
+- **NFR-025**: API layer is stateless; horizontally scalable via load balancer
+
+### Accessibility
+- **NFR-026**: Dashboard MUST meet WCAG 2.1 Level AA
+- **NFR-027**: Dashboard MUST support keyboard navigation for all interactive elements
+- **NFR-028**: Color contrast ratio >= 4.5:1 for all text
+- **NFR-029**: Screen reader compatible (ARIA labels on charts, data tables)
+
+### Observability
+- **NFR-030**: All API requests MUST be logged with correlation ID (X-Request-ID)
+- **NFR-031**: System MUST emit metrics: recommendation latency, event throughput, error rate, cache hit ratio
+- **NFR-032**: Structured logging with PII redaction and 90-day retention
+
+---
+
+## 9. Site Map
 
 | Route | Status | Description |
 |-------|--------|-------------|
@@ -443,10 +864,10 @@ flowchart TD
 | `/login` | MVP | Admin login |
 | `/forgot-password` | MVP | Password reset request |
 | `/reset-password` | MVP | Password reset with token |
-| `/dashboard` | MVP | Main dashboard (KPI overview, quick stats across all tenants) |
+| `/dashboard` | MVP | Main dashboard (KPI overview across all tenants) |
 | `/dashboard/tenants` | MVP | Tenant list (create, manage, suspend) |
 | `/dashboard/tenants/:id` | MVP | Tenant detail (config, API keys, usage stats) |
-| `/dashboard/tenants/:id/analytics` | MVP | Per-tenant analytics (impressions, clicks, CTR, conversions) |
+| `/dashboard/tenants/:id/analytics` | MVP | Per-tenant analytics (impressions, clicks, CTR, conversions, revenue) |
 | `/dashboard/tenants/:id/catalog` | MVP | Per-tenant product catalog browser |
 | `/dashboard/tenants/:id/events` | MVP | Per-tenant event stream viewer (recent events, search) |
 | `/dashboard/tenants/:id/experiments` | MVP | Per-tenant experiment list |
@@ -454,10 +875,10 @@ flowchart TD
 | `/dashboard/tenants/:id/experiments/:expId` | MVP | Experiment detail (results, traffic split, status) |
 | `/dashboard/tenants/:id/widgets` | MVP | Widget configuration and preview |
 | `/dashboard/tenants/:id/api-keys` | MVP | API key management for the tenant |
-| `/dashboard/settings` | MVP | Account settings (profile, password, email preferences) |
-| `/dashboard/settings/billing` | Phase 2 | Subscription and usage billing (Coming Soon) |
-| `/dashboard/settings/team` | Phase 2 | Team member management (Coming Soon) |
-| `/docs` | MVP | API documentation (auto-generated OpenAPI) |
+| `/dashboard/settings` | MVP | Account settings (profile, password change) |
+| `/dashboard/settings/billing` | Deferred | Subscription and usage billing (page skeleton with empty state) |
+| `/dashboard/settings/team` | Deferred | Team member management (page skeleton with empty state) |
+| `/docs` | MVP | API documentation overview |
 | `/docs/quickstart` | MVP | Quick start integration guide |
 | `/docs/sdk` | MVP | JavaScript SDK reference |
 | `/docs/api-reference` | MVP | REST API endpoint reference |
@@ -465,188 +886,82 @@ flowchart TD
 | `/docs/experiments` | MVP | A/B testing guide |
 | `/pricing` | MVP | Pricing tiers and usage calculator |
 
----
+**API Endpoints**:
 
-## 7. Acceptance Criteria
-
-### F-001: Tenant Management
-
-**Given** a logged-in admin
-**When** they POST to `/api/v1/tenants` with `{ name: "Acme Store", config: { defaultStrategy: "collaborative" } }`
-**Then** API returns 201 with tenant object including `id`, `name`, `status: "active"`, `createdAt`
-**And** the tenant's data is isolated from all other tenants
-
-**Given** an active tenant
-**When** admin PUTs to `/api/v1/tenants/:id` with `{ status: "suspended" }`
-**Then** all API requests using that tenant's API keys return 403 with message "Tenant suspended"
-**And** existing data is preserved (not deleted)
-
----
-
-### F-002: API Key Provisioning
-
-**Given** an active tenant
-**When** admin POSTs to `/api/v1/tenants/:id/api-keys` with `{ name: "Production SDK", permissions: "read" }`
-**Then** API returns 201 with full API key (shown only once) and key prefix
-**And** the key is stored as an HMAC-SHA256 hash in the database
-
-**Given** an API key with read-only permissions
-**When** a request is made to POST `/api/v1/events` using that key
-**Then** API returns 403 with message "Insufficient permissions: write access required"
-
----
-
-### F-003: Event Ingestion API
-
-**Given** a valid API key with write permissions
-**When** a POST is sent to `/api/v1/events` with `{ eventType: "product_viewed", userId: "user-123", productId: "prod-456", timestamp: "2026-02-12T10:00:00Z" }`
-**Then** API returns 202 (Accepted) within 50ms
-**And** the event is persisted and available for analytics within 5 seconds
-
-**Given** a batch of 100 events
-**When** POST is sent to `/api/v1/events/batch` with the array
-**Then** API returns 202 with count of accepted events and any rejected events with error details
-**And** total processing time is <200ms
-
-**Given** a duplicate event (same user_id + event_type + product_id + timestamp)
-**When** the event is submitted
-**Then** API returns 200 (OK) without creating a duplicate record
+| Endpoint | Method | Auth | Description |
+|----------|--------|------|-------------|
+| /api/v1/auth/signup | POST | None | Admin registration |
+| /api/v1/auth/login | POST | None | Admin login |
+| /api/v1/auth/logout | POST | JWT | Admin logout |
+| /api/v1/auth/refresh | POST | Cookie | Token refresh |
+| /api/v1/auth/forgot-password | POST | None | Password reset request |
+| /api/v1/auth/reset-password | POST | None | Password reset with token |
+| /api/v1/tenants | GET, POST | JWT | Tenant list and creation |
+| /api/v1/tenants/:id | GET, PUT, DELETE | JWT | Tenant detail, update, delete |
+| /api/v1/tenants/:id/api-keys | GET, POST | JWT | API key list and creation |
+| /api/v1/tenants/:id/api-keys/:keyId | DELETE | JWT | Revoke API key |
+| /api/v1/events | POST | API Key (write) | Single event ingestion |
+| /api/v1/events/batch | POST | API Key (write) | Batch event ingestion |
+| /api/v1/catalog | GET, POST | API Key | Catalog list and creation |
+| /api/v1/catalog/batch | POST | API Key (write) | Batch catalog upload |
+| /api/v1/catalog/:productId | GET, PUT, DELETE | API Key | Catalog item CRUD |
+| /api/v1/recommendations | GET | API Key (read) | Get recommendations |
+| /api/v1/tenants/:id/experiments | GET, POST | JWT | Experiment list and creation |
+| /api/v1/tenants/:id/experiments/:expId | GET, PUT | JWT | Experiment detail and update |
+| /api/v1/tenants/:id/experiments/:expId/results | GET | JWT | Experiment results |
+| /api/v1/tenants/:id/analytics/overview | GET | JWT | KPI overview |
+| /api/v1/tenants/:id/analytics/timeseries | GET | JWT | Time-series data |
+| /api/v1/tenants/:id/analytics/top-products | GET | JWT | Top products |
+| /api/v1/tenants/:id/analytics/export | GET | JWT | CSV export |
+| /api/v1/tenants/:id/widgets | GET, POST | JWT or API Key | Widget config list and creation |
+| /api/v1/tenants/:id/widgets/:placementId | GET, PUT, DELETE | JWT or API Key | Widget config CRUD |
+| /api/v1/health | GET | None | Liveness check |
+| /api/v1/ready | GET | None | Readiness check |
 
 ---
 
-### F-004: Catalog Management API
+## 10. MVP Scope Summary
 
-**Given** a valid API key with write permissions
-**When** POST is sent to `/api/v1/catalog` with product data
-**Then** API returns 201 with the created catalog item
-**And** the product is available for recommendation within 30 seconds
+**MVP includes user stories**: US-01 through US-16
 
-**Given** a catalog item marked as unavailable
-**When** recommendations are requested
-**Then** the unavailable item is excluded from all recommendation results
+**MVP Features (F-001 through F-012)**:
 
----
-
-### F-005: Recommendation Engine
-
-**Given** a user with 10+ behavioral events
-**When** GET `/api/v1/recommendations?userId=user-123&limit=8` is called
-**Then** API returns 200 with 8 product recommendations within 100ms
-**And** each recommendation includes `productId`, `name`, `imageUrl`, `price`, `score`, `reason`
-
-**Given** a new user with 0 events (cold start)
-**When** recommendations are requested
-**Then** API returns trending products as fallback within 100ms
-**And** response includes `meta.strategy: "trending_fallback"`
+| ID | Feature | Stories |
+|----|---------|---------|
+| F-001 | Tenant Management | US-01, US-02, US-15 |
+| F-002 | API Key Provisioning | US-03 |
+| F-003 | Event Ingestion API | US-05, US-06 |
+| F-004 | Catalog Management API | US-04 |
+| F-005 | Recommendation Engine | US-07 |
+| F-006 | Configurable Strategies | US-08 |
+| F-007 | Embeddable JavaScript SDK | US-12 |
+| F-008 | A/B Testing Framework | US-09 |
+| F-009 | Analytics Dashboard | US-11, US-14 |
+| F-010 | REST API | US-15, US-16 |
+| F-011 | Experiment Results API | US-10 |
+| F-012 | Widget Customization | US-13 |
 
 ---
 
-### F-006: Configurable Strategies
+## 11. Phase 2 Features (Post-MVP)
 
-**Given** a tenant with `defaultStrategy: "content_based"`
-**When** recommendations are requested without a strategy override
-**Then** content-based recommendations are returned
-
-**Given** a recommendation request with `?strategy=frequently_bought_together&productId=prod-456`
-**When** the request is processed
-**Then** products frequently purchased with prod-456 are returned
-**And** response includes `meta.strategy: "frequently_bought_together"`
-
----
-
-### F-007: Embeddable JavaScript SDK
-
-**Given** a developer adds `<script src="https://sdk.recomengine.com/v1.js" data-api-key="rk_..." async></script>` to their page
-**When** the page loads
-**Then** SDK initializes and renders recommendation widgets within 500ms
-**And** the SDK bundle is <10KB gzipped
-
-**Given** SDK is loaded on a page with a `<div data-recomengine-placement="product-page" data-product-id="prod-456"></div>` element
-**When** the element enters the viewport
-**Then** SDK fetches recommendations and renders product cards within the container
-**And** an `recommendation_impressed` event is automatically tracked
-
-**Given** the RecomEngine API is unreachable
-**When** SDK attempts to load recommendations
-**Then** the widget container remains empty (no error displayed to user)
-**And** the host page continues functioning without errors in the browser console
+| ID | Feature | User Story | Priority |
+|----|---------|------------|----------|
+| F-013 | Email Recommendations | As a merchant, I want personalized recommendations in transactional emails to increase repeat purchases | P1 |
+| F-014 | User Segmentation | As a growth manager, I want to apply different strategies per user segment (new, returning, high-value) | P1 |
+| F-015 | Webhook Notifications | As a developer, I want webhook events when experiments reach significance or models retrain | P1 |
+| F-016 | White-Label Dashboard | As a platform operator, I want embeddable analytics dashboards within my own platform | P1 |
+| F-017 | Bulk Historical Import | As a developer, I want to upload historical events so new tenants have models from day one | P1 |
+| F-018 | Custom Algorithm Plugins | As an advanced user, I want custom recommendation logic alongside algorithmic recommendations | P1 |
+| F-019 | Subscription Billing | As a merchant, I want to manage my subscription and view usage-based billing | P1 |
+| F-020 | Team Management | As an admin, I want to invite team members with role-based access | P1 |
 
 ---
 
-### F-008: A/B Testing Framework
+## 12. Out of Scope
 
-**Given** a logged-in admin for a tenant
-**When** they POST to `/api/v1/experiments` with `{ name: "Collab vs Content", control: "collaborative", variant: "content_based", trafficSplit: 50, metric: "ctr" }`
-**Then** API returns 201 with experiment in `running` state
-**And** subsequent recommendation requests for that tenant's users are split 50/50
+The following are explicitly NOT part of MVP or Phase 2:
 
-**Given** a running experiment
-**When** admin views experiment detail on dashboard
-**Then** they see: sample size per variant, metric value per variant, confidence interval, p-value, and whether statistical significance is reached (alpha = 0.05)
-
-**Given** user-123 is assigned to the "variant" group
-**When** user-123 makes multiple recommendation requests across sessions
-**Then** user-123 always receives the variant strategy (consistent assignment)
-
----
-
-### F-009: Analytics Dashboard
-
-**Given** a logged-in admin viewing a tenant's analytics
-**When** the dashboard loads
-**Then** KPI cards display: total impressions, total clicks, CTR (clicks/impressions), conversions, and attributed revenue for the selected date range
-**And** page loads in <2 seconds (LCP)
-
-**Given** a date range filter set to "Last 30 days"
-**When** the time-series chart renders
-**Then** it displays daily data points for impressions, clicks, and conversions
-**And** data refreshes every 60 seconds without a full page reload
-
-**Given** the admin clicks "Export CSV"
-**When** the export completes
-**Then** a CSV file downloads containing all metrics visible on the dashboard
-**And** the file includes column headers matching the displayed metric names
-
----
-
-### F-010: REST API
-
-**Given** a request to any API endpoint without authentication
-**When** the request is processed
-**Then** API returns 401 with RFC 7807-compliant error body: `{ type, title, status, detail }`
-
-**Given** a request to a list endpoint
-**When** the response contains more items than the requested limit
-**Then** the response includes `meta.pagination: { total, limit, offset, hasMore }`
-
----
-
-### F-011: Experiment Results API
-
-**Given** a completed experiment
-**When** GET `/api/v1/experiments/:id/results` is called
-**Then** API returns: `controlMetric`, `variantMetric`, `lift`, `pValue`, `isSignificant`, `sampleSize`, `duration`
-
----
-
-### F-012: Widget Customization
-
-**Given** a tenant's widget configuration
-**When** admin sets `{ layout: "carousel", columns: 4, showPrice: true, ctaText: "Add to Cart", theme: { primaryColor: "#ff6600" } }`
-**Then** SDK renders recommendations using the specified layout and styling
-**And** the configuration is applied within 60 seconds of saving (no page reload required on the merchant's site)
-
----
-
-## 8. Out of Scope
-
-**Explicitly NOT included in MVP**:
-- Email recommendation generation (personalized product emails)
-- User segmentation engine (segment-specific strategies)
-- Webhook delivery for experiment/model events
-- White-label embeddable dashboard for platform operators
-- Bulk historical event import (CSV/JSON upload)
-- Custom algorithm plugin system
 - Mobile native SDKs (iOS/Android)
 - GraphQL API
 - Shopify/WooCommerce/Magento plugins
@@ -657,178 +972,75 @@ flowchart TD
 - Real-time streaming data pipeline (Kafka/Flink)
 - Custom ML model hosting
 - Search-powered recommendations
-- Subscription billing management (Phase 2)
-- Team/role management (Phase 2)
+- Multi-language / i18n support
 
 ---
 
-## 9. Dependencies
+## 13. Dependencies
 
-**External Services**:
-- **Database**: PostgreSQL 15+ for tenant data, catalog, events, experiments, analytics
-- **Cache**: Redis for recommendation caching, rate limiting, session management
-- **Authentication**: Custom JWT implementation (following ConnectSW Auth Plugin pattern)
-- **CDN**: Cloudflare or similar for SDK distribution
-- **Monitoring**: Structured logging + observability plugin (ConnectSW pattern)
-
-**Internal Dependencies (ConnectSW Shared Components)**:
-- Auth Plugin (PATTERN-012: JWT + API Keys)
-- AppError with RFC 7807 (PATTERN-013)
-- Zod Input Validation (PATTERN-015)
-- Fastify Plugin Registration Order (PATTERN-009)
-- Prisma Plugin (database connection management)
-- Redis Plugin (caching and rate limiting)
-- Logger (structured logging with PII redaction)
-- Crypto Utils (API key hashing, HMAC)
-- Observability Plugin (metrics, correlation IDs)
-- Redis Rate Limit Store (distributed rate limiting)
-
-**Third-Party Libraries**:
-- Fastify (API server)
-- Prisma ORM (database access)
-- Next.js + React (dashboard frontend)
-- Zod (input validation)
-- ioredis (Redis client)
-- bcrypt (password hashing)
-- date-fns (date handling)
-- Tailwind CSS (dashboard styling)
+| Dependency | Type | Purpose |
+|-----------|------|---------|
+| PostgreSQL 15+ | Infrastructure | Primary data store (events partitioned by month) |
+| Redis 7 | Infrastructure | Recommendation cache, rate limits, real-time counters, widget config |
+| CDN | Infrastructure | SDK distribution (recomengine.v1.js) |
+| SMTP / Email Service | External (Phase 2) | Password reset emails, experiment notifications |
+| DNS / TLS Certificates | Infrastructure | HTTPS for API and dashboard |
 
 ---
 
-## 10. Risks and Mitigations
+## 14. Risks and Mitigations
 
 | Risk | Impact | Likelihood | Mitigation |
 |------|--------|------------|------------|
-| Cold start problem: new tenants have no behavioral data, recommendations are irrelevant | High - tenant churns before seeing value | High | Implement trending/popular fallback strategy; support catalog-attribute-based recommendations from day one; consider offering historical data import in Phase 2 |
-| Recommendation latency exceeds 100ms under load causing poor user experience on merchant sites | High - merchants remove widget | Medium | Pre-compute recommendations on event ingestion (materialized views); Redis caching with 5-minute TTL; horizontal API scaling |
-| Multi-tenant data leakage: tenant A sees tenant B's data due to missing tenant_id filter | Critical - trust destruction, potential legal liability | Low | Enforce tenant_id scoping at the ORM/query level (Prisma middleware); integration tests verify isolation for every endpoint; security review by Security Engineer |
-| Event ingestion throughput bottleneck during peak traffic (Black Friday) | High - lost behavioral data, degraded recommendations | Medium | Async event processing with write-ahead buffer; batch ingestion API; horizontal scaling of ingestion workers; backpressure monitoring with alerts |
-| A/B test statistical validity challenged by merchants with low traffic volumes | Medium - merchants distrust results | High | Display minimum sample size warnings; show confidence intervals alongside p-values; recommend minimum test duration based on traffic volume; document statistical methodology |
-| JavaScript SDK conflicts with merchant's existing scripts or frameworks | Medium - integration failures, support burden | Medium | SDK uses isolated scope (IIFE); no global namespace pollution beyond `RecomEngine`; shadow DOM for widget rendering; comprehensive compatibility testing across top 10 e-commerce platforms |
-| Low adoption: merchants do not see sufficient ROI from recommendations | High - product failure | Medium | Provide clear revenue attribution in analytics; offer 14-day free trial; case study with early adopters; proactive onboarding support |
-| Recommendation model quality is poor for niche product catalogs (small catalog, specialized products) | Medium - irrelevant recommendations reduce trust | Medium | Content-based strategy works well with small catalogs; trending strategy does not require collaborative data; clearly communicate minimum catalog size (50+ products) for collaborative filtering |
+| Cold-start problem: new tenants have no events for collaborative filtering | High | High | Trending and content-based fallbacks for users with < 5 events; onboarding flow encourages catalog upload first |
+| Redis failure degrades recommendation latency and rate limiting | High | Low | In-memory fallback for rate limiting; synchronous DB computation on cache miss |
+| Event storage volume exceeds PostgreSQL capacity | Medium | Medium | Monthly table partitioning (ADR-002); old partitions detachable/archivable; monitor with alerts at 80% disk |
+| SDK errors break merchant site | Critical | Low | SDK wrapped in try/catch; fails silently; no console errors; zero external dependencies |
+| Multi-tenant data leak | Critical | Low | All queries scoped by tenantId via Prisma middleware; integration tests verify isolation; security audit before launch |
+| A/B test results misleading with small sample sizes | Medium | Medium | Dashboard shows Low confidence badge for variants with < 500 users |
+| Recommendation quality perception | Medium | Medium | Human-readable reason field in every recommendation; transparency builds trust |
+| API key leaked in client-side code | High | Medium | Read-only keys for SDK; key rotation supported; monitoring for unusual usage patterns |
 
 ---
 
-## 11. Technical Constraints
+## 15. Technical Constraints
 
-### Recommendation Algorithm Constraints
-
-**Collaborative Filtering**:
-- Requires minimum 1,000 unique users with 5+ events each before generating meaningful recommendations
-- Model retraining latency: incremental updates every 15 minutes, full retrain daily
-- Memory footprint: ~1KB per user-item pair in the interaction matrix
-- **Implication**: New tenants must start with content-based or trending strategies
-
-**Content-Based Filtering**:
-- Requires product catalog with at least 3 populated attributes per item (category, description, price)
-- Similarity computation is O(n^2) on catalog size; optimized with approximate nearest neighbors for catalogs >10,000 items
-- **Implication**: Catalog quality directly determines recommendation quality
-
-**A/B Testing**:
-- Minimum sample size for 5% lift detection at 95% confidence: ~1,600 users per variant
-- Experiments with <500 users per variant display a "low confidence" warning
-- **Implication**: Small merchants may need 2-4 weeks to reach significance
-
-### Infrastructure Constraints
-
-**Event Storage**:
-- 100M events/month = ~50GB raw storage per month at average 500 bytes/event
-- Events older than 90 days are aggregated (daily summaries) and raw events archived
-- **Implication**: Need time-partitioned tables; PostgreSQL table partitioning by month
-
-**SDK Distribution**:
-- SDK must be served from CDN with <50ms latency globally
-- Version pinning: merchants include version in script URL (`/v1.js`) for stability
-- **Implication**: SDK updates must be backward-compatible within major version
-
-**Rate Limiting**:
-- Per-API-key limits must be enforced across all API instances (distributed rate limiting via Redis)
-- Burst allowance: 2x sustained rate for 10 seconds
-- **Implication**: Redis is a hard dependency for rate limiting in production
-
-### Port Assignments
-
-- **Frontend (Dashboard)**: 3112 (http://localhost:3112)
-- **Backend (API)**: 5008 (http://localhost:5008)
-- **Database**: 5432 (shared PostgreSQL instance, database name: `recomengine_dev`)
-- **Redis**: 6379 (shared Redis instance)
+- **Runtime**: Node.js 20+ / TypeScript 5+
+- **Backend**: Fastify 4 (modular monolith architecture per ADR-001)
+- **Frontend**: Next.js 14 + React 18 (App Router)
+- **Database**: PostgreSQL 15+ with Prisma ORM; events table partitioned by month
+- **Cache**: Redis 7 for recommendations (5-min TTL), counters, rate limits
+- **SDK**: Vanilla JS/TS, esbuild bundler, < 10KB gzipped, no framework dependencies
+- **Ports**: Frontend 3112, Backend 5008 (per PORT-REGISTRY)
+- **Auth**: JWT (1hr access) + HttpOnly refresh cookies (7d) + bcrypt cost 12
+- **API Keys**: HMAC-SHA256 hashed storage, rk_live_ / rk_test_ prefixes
 
 ---
 
-## 12. Timeline
+## 16. Glossary
 
-**MVP Development** (8 weeks):
-- Week 1-2: Foundation (tenant model, auth, API key provisioning, database schema, Prisma setup)
-- Week 3-4: Event ingestion pipeline + catalog management API + recommendation engine (collaborative + content-based + trending)
-- Week 5-6: JavaScript SDK + A/B testing framework + widget rendering
-- Week 7: Analytics dashboard + experiment results visualization
-- Week 8: Integration testing, E2E testing, documentation, polish
-
-**MVP Launch** (Week 9):
-- Deploy to production
-- Onboard first 10 tenants (closed beta)
-- Collect feedback on SDK integration experience and recommendation quality
-
-**Phase 2** (Weeks 10-16):
-- Email recommendations
-- User segmentation engine
-- Webhook notifications for experiments
-- Bulk historical event import
-- White-label dashboard embedding
-
-**Milestones**:
-- **Week 2**: Tenant management + auth + API key provisioning operational
-- **Week 4**: End-to-end flow: event ingestion -> recommendation generation -> API response
-- **Week 6**: SDK renders live recommendations on a test e-commerce page
-- **Week 7**: A/B testing framework with live experiment results on dashboard
-- **Week 8**: All MVP features complete, tests passing, documentation published
-- **Week 9**: Closed beta with 10 tenants
-- **Week 16**: 50 tenants, $10k MRR
+| Term | Definition |
+|------|-----------|
+| Tenant | A merchant or store whose data is isolated within RecomEngine |
+| Placement | A location on a merchant site where recommendations are displayed |
+| Strategy | An algorithm used to generate recommendations (collaborative, content-based, trending, FBT) |
+| Cold Start | A user or product with insufficient data for personalized recommendations |
+| CTR | Click-through rate: clicks / impressions |
+| Revenue Attribution | Linking a purchase to a prior recommendation click within 30 minutes |
+| Traffic Split | Percentage of users assigned to the variant vs control in an A/B test |
+| SDK | JavaScript library embedded on merchant sites to display recommendations and track events |
 
 ---
 
-## 13. Open Questions
+## 17. Timeline
 
-**For Architect**:
-- [ ] Should event storage use PostgreSQL partitioned tables or a dedicated time-series store (TimescaleDB)?
-- [ ] Should recommendation model computation run in-process (Node.js) or as a separate worker service?
-- [ ] How should SDK versioning work -- CDN-based immutable versions or auto-updating with cache-busting?
-- [ ] Should the analytics aggregation use materialized views or a pre-computed OLAP layer?
+**MVP Milestones** (features, not dates):
+- **Milestone 1 - Foundation**: Auth, tenant CRUD, API key management (US-01, US-02, US-03)
+- **Milestone 2 - Data Pipeline**: Event ingestion, catalog management (US-04, US-05, US-06)
+- **Milestone 3 - Core Engine**: Recommendation strategies, caching (US-07, US-08)
+- **Milestone 4 - Experimentation**: A/B testing framework, results (US-09, US-10)
+- **Milestone 5 - Dashboard**: Analytics UI, KPI cards, time-series, CSV export (US-11, US-14)
+- **Milestone 6 - SDK**: JavaScript SDK, widget rendering, auto-tracking (US-12, US-13)
+- **Milestone 7 - Docs and Polish**: API docs, quickstart guide, health checks (US-15, US-16)
 
-**For CEO**:
-- [ ] Should we offer a self-serve free tier, or start with sales-led onboarding only?
-- [ ] What is the pricing model: per-event, per-recommendation-request, per-tenant flat fee, or usage tiers?
-- [ ] Should we prioritize Shopify app store listing in Phase 2?
-- [ ] Is white-labeling for platform operators a priority (Phase 2 vs. future)?
-
-**For Security Engineer**:
-- [ ] Should tenant data isolation be enforced at the PostgreSQL row-level security (RLS) level or application level?
-- [ ] What is the SDK's content security policy (CSP) guidance for merchants?
-- [ ] Should API keys support IP whitelisting for write operations?
-
----
-
-## 14. Glossary
-
-- **Tenant**: A customer organization using RecomEngine (e.g., an e-commerce store or marketplace)
-- **Event**: A user behavior signal (product view, click, add-to-cart, purchase) sent to RecomEngine
-- **Catalog**: The product inventory for a tenant, including product attributes used for content-based recommendations
-- **Collaborative Filtering**: Recommendation algorithm that finds users with similar behavior patterns and recommends what similar users liked
-- **Content-Based Filtering**: Recommendation algorithm that recommends products with similar attributes to ones a user has interacted with
-- **Cold Start**: The challenge of making recommendations for new users or new products with insufficient behavioral data
-- **A/B Test (Experiment)**: A controlled experiment comparing two recommendation strategies by splitting traffic and measuring a success metric
-- **Statistical Significance**: A measure of confidence that observed differences in A/B test metrics are not due to random chance (alpha = 0.05)
-- **CTR (Click-Through Rate)**: The ratio of recommendation clicks to recommendation impressions
-- **Revenue Attribution**: Tracking revenue from purchases that occurred after a user clicked a recommendation
-- **Impression**: An instance of a recommendation being displayed to a user (visible in viewport)
-- **SDK**: Software Development Kit -- in this context, the JavaScript library embedded on merchant websites
-- **Widget**: The visual component rendered by the SDK that displays product recommendations
-- **Placement**: A specific location on a merchant's page where a recommendation widget is rendered (e.g., "product page sidebar", "cart page bottom")
-- **Strategy**: The algorithm used to generate recommendations (collaborative, content-based, trending, frequently bought together)
-- **Traffic Split**: The percentage of users assigned to each variant in an A/B test
-- **Lift**: The percentage improvement of the variant metric over the control metric in an A/B test
-
----
-
-**End of Document**
+**Phase 2**: F-013 through F-020 (billing, team management, webhooks, segmentation)
