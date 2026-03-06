@@ -78,10 +78,7 @@ const prismaPlugin: FastifyPluginAsync = async (fastify) => {
     'withRls',
     async <T>(orgId: string, callback: (tx: PrismaClient) => Promise<T>): Promise<T> => {
       return prisma.$transaction(async (tx) => {
-        await tx.$executeRawUnsafe(
-          `SELECT set_config('app.current_org_id', $1, true)`,
-          orgId
-        );
+        await tx.$executeRaw`SELECT set_config('app.current_org_id', ${orgId}, true)`;
         return callback(tx as unknown as PrismaClient);
       });
     }

@@ -1,9 +1,29 @@
 // API client for AI Fluency
-// - Always uses credentials: "include" for httpOnly cookie auth
-// - Backend uses SameSite=Strict cookies — no explicit CSRF token needed
+// Uses in-memory token storage with Authorization header injection
 
 const API_BASE = process.env.NEXT_PUBLIC_API_URL || 'http://localhost:5014';
 const API_PREFIX = `${API_BASE}/api/v1`;
+
+let accessToken: string | null = null;
+let refreshToken: string | null = null;
+
+export function setTokens(access: string, refresh: string): void {
+  accessToken = access;
+  refreshToken = refresh;
+}
+
+export function clearTokens(): void {
+  accessToken = null;
+  refreshToken = null;
+}
+
+export function getAccessToken(): string | null {
+  return accessToken;
+}
+
+export function getRefreshToken(): string | null {
+  return refreshToken;
+}
 
 export class ApiError extends Error {
   constructor(
@@ -28,12 +48,24 @@ async function request<T>(
     ...(options.headers as Record<string, string> | undefined),
   };
 
-  const response = await fetch(url, {
+  if (accessToken) {
+    headers['Authorization'] = `Bearer ${accessToken}`;
+  }
+
+  let response = await fetch(url, {
     ...options,
     method,
     headers,
-    credentials: 'include',
   });
+
+  // If 401 and we have a refresh token, try to refresh
+  if (response.status === 401 && refreshToken && !endpoint.includes('/auth/refresh')) {
+    const refreshed = await attemptRefresh();
+    if (refreshed) {
+      headers['Authorization'] = `Bearer ${accessToken}`;
+      response = await fetch(url, { ...options, method, headers });
+    }
+  }
 
   if (!response.ok) {
     const errorBody = await response.json().catch(() => ({})) as {
@@ -49,6 +81,28 @@ async function request<T>(
 
   if (response.status === 204) return undefined as T;
   return response.json() as Promise<T>;
+}
+
+async function attemptRefresh(): Promise<boolean> {
+  try {
+    const response = await fetch(`${API_PREFIX}/auth/refresh`, {
+      method: 'POST',
+      headers: { 'Content-Type': 'application/json' },
+      body: JSON.stringify({ refreshToken }),
+    });
+
+    if (!response.ok) {
+      clearTokens();
+      return false;
+    }
+
+    const data = await response.json() as { accessToken: string };
+    accessToken = data.accessToken;
+    return true;
+  } catch {
+    clearTokens();
+    return false;
+  }
 }
 
 export const api = {

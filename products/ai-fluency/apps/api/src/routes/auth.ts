@@ -22,7 +22,11 @@ const registerSchema = z.object({
   password: z
     .string()
     .min(8, 'Password must be at least 8 characters')
-    .max(128, 'Password must be at most 128 characters'),
+    .max(128, 'Password must be at most 128 characters')
+    .regex(/[A-Z]/, 'Password must contain at least one uppercase letter')
+    .regex(/[a-z]/, 'Password must contain at least one lowercase letter')
+    .regex(/[0-9]/, 'Password must contain at least one digit')
+    .regex(/[^A-Za-z0-9]/, 'Password must contain at least one special character'),
   firstName: z.string().min(1, 'First name is required').max(100),
   lastName: z.string().min(1, 'Last name is required').max(100),
   orgId: z.string().uuid('Invalid organization ID'),
@@ -101,6 +105,33 @@ export async function authRoutes(fastify: FastifyInstance): Promise<void> {
 
       const result = await authService.refresh(parsed.data.refreshToken);
       return reply.code(200).send(result);
+    }
+  );
+
+  // GET /me — Get current user from JWT (requires authentication)
+  fastify.get(
+    '/me',
+    { preHandler: [fastify.authenticate] },
+    async (request: FastifyRequest, reply: FastifyReply) => {
+      const user = request.currentUser!;
+
+      const fullUser = await fastify.prisma.user.findFirst({
+        where: { id: user.id, orgId: user.orgId, deletedAt: null },
+        select: {
+          id: true,
+          email: true,
+          firstName: true,
+          lastName: true,
+          role: true,
+          orgId: true,
+        },
+      });
+
+      if (!fullUser) {
+        throw new AppError('user-not-found', 404, 'User not found');
+      }
+
+      return reply.code(200).send({ user: fullUser });
     }
   );
 

@@ -2,7 +2,7 @@
  * routes/profiles.ts — Fluency profile routes
  *
  * GET /me      — Current user's latest fluency profile
- * GET /history — All assessment history for current user
+ * GET /history — All assessment history for current user (paginated)
  *
  * All routes require authentication.
  */
@@ -21,7 +21,7 @@ export async function profileRoutes(fastify: FastifyInstance): Promise<void> {
       const user = request.currentUser!;
 
       const profile = await fastify.prisma.fluencyProfile.findFirst({
-        where: { userId: user.id },
+        where: { userId: user.id, orgId: user.orgId },
         orderBy: { createdAt: 'desc' },
       });
 
@@ -41,34 +41,47 @@ export async function profileRoutes(fastify: FastifyInstance): Promise<void> {
     }
   );
 
-  // GET /history — All profiles for current user
+  // GET /history — All profiles for current user (paginated)
   fastify.get(
     '/history',
     async (request: FastifyRequest, reply: FastifyReply) => {
       const user = request.currentUser!;
 
-      const profiles = await fastify.prisma.fluencyProfile.findMany({
-        where: { userId: user.id },
-        orderBy: { createdAt: 'desc' },
-        select: {
-          id: true,
-          overallScore: true,
-          dimensionScores: true,
-          discernmentGap: true,
-          algorithmVersion: true,
-          createdAt: true,
-          session: {
-            select: {
-              id: true,
-              template: { select: { name: true, roleProfile: true } },
+      const { page = '1', limit = '20' } = request.query as Record<string, string>;
+      const take = Math.min(Math.max(1, parseInt(limit, 10) || 20), 100);
+      const skip = (Math.max(1, parseInt(page, 10) || 1) - 1) * take;
+
+      const [profiles, total] = await Promise.all([
+        fastify.prisma.fluencyProfile.findMany({
+          where: { userId: user.id, orgId: user.orgId },
+          orderBy: { createdAt: 'desc' },
+          take,
+          skip,
+          select: {
+            id: true,
+            overallScore: true,
+            dimensionScores: true,
+            discernmentGap: true,
+            algorithmVersion: true,
+            createdAt: true,
+            session: {
+              select: {
+                id: true,
+                template: { select: { name: true, roleProfile: true } },
+              },
             },
           },
-        },
-      });
+        }),
+        fastify.prisma.fluencyProfile.count({
+          where: { userId: user.id, orgId: user.orgId },
+        }),
+      ]);
 
       return reply.code(200).send({
         data: profiles,
-        total: profiles.length,
+        total,
+        page: Math.max(1, parseInt(page, 10) || 1),
+        limit: take,
       });
     }
   );

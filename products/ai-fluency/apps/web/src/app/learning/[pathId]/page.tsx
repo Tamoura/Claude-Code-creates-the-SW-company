@@ -7,11 +7,22 @@ import { api } from '@/lib/api';
 import { Card } from '@/components/ui/Card';
 import { Sidebar } from '@/components/layout/Sidebar';
 import { t } from '@/lib/i18n';
-import type { LearningPath, LearningModule } from '@/types/index';
+interface DisplayModule {
+  id: string;
+  title: string;
+  type: string;
+  durationMinutes: number;
+  completedAt?: string;
+}
+
+interface DisplayPath {
+  title: string;
+  description: string;
+}
 
 interface PathData {
-  path: LearningPath;
-  modules: LearningModule[];
+  path: DisplayPath;
+  modules: DisplayModule[];
 }
 
 interface Props {

@@ -6,7 +6,7 @@ import { api } from '@/lib/api';
 import { Card } from '@/components/ui/Card';
 import { Sidebar } from '@/components/layout/Sidebar';
 import { t } from '@/lib/i18n';
-import type { LearningPath, FluencyProfile } from '@/types/index';
+import type { FluencyProfile } from '@/types/index';
 
 const levelColors: Record<string, string> = {
   Beginner: 'bg-success-50 text-success-700',
@@ -14,8 +14,18 @@ const levelColors: Record<string, string> = {
   Advanced: 'bg-danger-50 text-danger-700',
 };
 
+interface PathWithLevel {
+  id: string;
+  title: string;
+  description: string;
+  estimatedHours: number;
+  moduleCount: number;
+  completionPercent: number;
+  level: string;
+}
+
 // Fallback paths for when API has no data yet
-const defaultPaths = [
+const defaultPaths: PathWithLevel[] = [
   {
     id: 'ai-foundations',
     title: 'AI Foundations',
@@ -47,10 +57,6 @@ const defaultPaths = [
     level: 'Intermediate',
   },
 ];
-
-interface PathWithLevel extends LearningPath {
-  level?: string;
-}
 
 export default function LearningPage() {
   const [paths, setPaths] = useState<PathWithLevel[]>([]);

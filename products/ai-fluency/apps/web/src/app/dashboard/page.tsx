@@ -127,7 +127,7 @@ export default function DashboardPage() {
                   ] as const
                 ).map(([key, label]) => {
                   const score = Math.round(
-                    profile.dimensions[key] ?? 0,
+                    profile.dimensionScores[key] ?? 0,
                   );
                   return (
                     <div key={key}>

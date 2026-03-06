@@ -9,11 +9,14 @@ interface AuthContextValue {
   isAuthenticated: boolean;
   isLoading: boolean;
   error: string | null;
-  login: (credentials: { email: string; password: string }) => Promise<void>;
+  login: (credentials: { email: string; password: string; orgId?: string }) => Promise<void>;
   register: (credentials: {
-    name: string;
+    name?: string;
+    firstName?: string;
+    lastName?: string;
     email: string;
     password: string;
+    orgId?: string;
   }) => Promise<void>;
   logout: () => Promise<void>;
 }

@@ -14,10 +14,10 @@ import type {
 } from '@/types/index';
 
 const DIMENSIONS: { key: Dimension; label: string }[] = [
-  { key: 'DELEGATION', label: t('profile.dimensions.DELEGATION') },
-  { key: 'DESCRIPTION', label: t('profile.dimensions.DESCRIPTION') },
-  { key: 'DISCERNMENT', label: t('profile.dimensions.DISCERNMENT') },
-  { key: 'DILIGENCE', label: t('profile.dimensions.DILIGENCE') },
+  { key: 'DELEGATION', label: t('profile.dimensionScores.DELEGATION') },
+  { key: 'DESCRIPTION', label: t('profile.dimensionScores.DESCRIPTION') },
+  { key: 'DISCERNMENT', label: t('profile.dimensionScores.DISCERNMENT') },
+  { key: 'DILIGENCE', label: t('profile.dimensionScores.DILIGENCE') },
 ];
 
 export default function ProfilePage() {
@@ -114,14 +114,14 @@ export default function ProfilePage() {
                 <h2 className="mb-4 text-lg font-semibold text-gray-900">
                   Dimension Overview
                 </h2>
-                <DimensionRadarChart dimensions={profile.dimensions} />
+                <DimensionRadarChart dimensions={profile.dimensionScores} />
               </Card>
 
               {/* Dimension breakdown cards */}
               <div className="grid gap-4 sm:grid-cols-2">
                 {DIMENSIONS.map((dim) => {
                   const score = Math.round(
-                    profile.dimensions[dim.key] ?? 0,
+                    profile.dimensionScores[dim.key] ?? 0,
                   );
                   return (
                     <Card key={dim.key} padding="md">

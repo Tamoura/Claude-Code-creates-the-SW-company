@@ -8,11 +8,27 @@
 import { PrismaClient } from '@prisma/client';
 import { AppError } from '../utils/errors.js';
 import { scoreAssessment, IndicatorInput, DimensionWeights } from './scoring.js';
+import { AIFeedbackGenerator, FeedbackResult } from './ai-feedback.js';
+import { OpenRouterClient } from './openrouter.js';
+import { config } from '../config.js';
 
 const SESSION_EXPIRY_HOURS = 24;
 
 export class AssessmentService {
-  constructor(private readonly prisma: PrismaClient) {}
+  private feedbackGenerator: AIFeedbackGenerator | null = null;
+
+  constructor(private readonly prisma: PrismaClient) {
+    if (config.OPENROUTER_API_KEY) {
+      const client = new OpenRouterClient({
+        apiKey: config.OPENROUTER_API_KEY,
+        model: config.OPENROUTER_MODEL,
+        baseUrl: config.OPENROUTER_BASE_URL,
+        maxTokens: config.OPENROUTER_MAX_TOKENS,
+        temperature: config.OPENROUTER_TEMPERATURE,
+      });
+      this.feedbackGenerator = new AIFeedbackGenerator(client);
+    }
+  }
 
   async createSession(
     userId: string,
@@ -135,13 +151,21 @@ export class AssessmentService {
     answer: string,
     elapsedSeconds?: number
   ) {
-    // Verify session exists and is in progress
+    // Verify session exists, is in progress, and not expired
     const session = await this.prisma.assessmentSession.findFirst({
       where: { id: sessionId, userId, status: 'IN_PROGRESS', deletedAt: null },
     });
 
     if (!session) {
       throw new AppError('session-not-found', 404, 'Session not found or not in progress');
+    }
+
+    if (session.expiresAt && session.expiresAt < new Date()) {
+      await this.prisma.assessmentSession.update({
+        where: { id: sessionId },
+        data: { status: 'EXPIRED' },
+      });
+      throw new AppError('session-expired', 410, 'Assessment session has expired');
     }
 
     // Upsert response (idempotent on sessionId + questionId)
@@ -204,6 +228,14 @@ export class AssessmentService {
       );
     }
 
+    if (session.expiresAt && session.expiresAt < new Date()) {
+      await this.prisma.assessmentSession.update({
+        where: { id: sessionId },
+        data: { status: 'EXPIRED' },
+      });
+      throw new AppError('session-expired', 410, 'Assessment session has expired');
+    }
+
     // Get responses with question + indicator data
     const responses = await this.prisma.response.findMany({
       where: { sessionId },
@@ -261,12 +293,32 @@ export class AssessmentService {
         sessionId,
         algorithmVersion: session.algorithmVersionId,
         overallScore: scored.overallScore,
-        dimensionScores: scored.dimensionScores,
-        selfReportScores: scored.selfReportScores,
+        dimensionScores: scored.dimensionScores as object,
+        selfReportScores: scored.selfReportScores as object,
         indicatorBreakdown: scored.indicatorBreakdown as object,
         discernmentGap: scored.discernmentGap,
       },
     });
+
+    // Generate AI feedback asynchronously (non-blocking)
+    let aiFeedback: FeedbackResult | null = null;
+    if (this.feedbackGenerator) {
+      try {
+        aiFeedback = await this.feedbackGenerator.generate({
+          profile: scored,
+        });
+      } catch {
+        // AI feedback is optional — scoring succeeds without it
+      }
+    }
+
+    // Store AI feedback alongside the profile if available
+    if (aiFeedback) {
+      await this.prisma.fluencyProfile.update({
+        where: { id: profile.id },
+        data: { aiFeedback: aiFeedback as object },
+      });
+    }
 
     return {
       profileId: profile.id,
@@ -275,6 +327,7 @@ export class AssessmentService {
       selfReportScores: scored.selfReportScores,
       indicatorBreakdown: scored.indicatorBreakdown,
       discernmentGap: scored.discernmentGap,
+      aiFeedback,
     };
   }
 
@@ -294,6 +347,7 @@ export class AssessmentService {
       selfReportScores: profile.selfReportScores,
       indicatorBreakdown: profile.indicatorBreakdown,
       discernmentGap: profile.discernmentGap,
+      aiFeedback: (profile as { aiFeedback?: unknown }).aiFeedback ?? null,
       createdAt: profile.createdAt,
     };
   }

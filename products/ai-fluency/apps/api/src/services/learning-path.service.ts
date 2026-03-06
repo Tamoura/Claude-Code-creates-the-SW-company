@@ -41,7 +41,7 @@ export class LearningPathService {
     const dimensions: Dimension[] = ['DELEGATION', 'DESCRIPTION', 'DISCERNMENT', 'DILIGENCE'];
 
     // Sort dimensions by score ascending (weakest first)
-    const sortedDimensions = dimensions.sort(
+    const sortedDimensions = [...dimensions].sort(
       (a, b) => (dimScores[a] ?? 0) - (dimScores[b] ?? 0)
     );
 
@@ -62,13 +62,11 @@ export class LearningPathService {
 
     // Build ordered module list (weakest dimension first)
     const orderedModules: Array<{ moduleId: string; estimatedMinutes: number }> = [];
-    let sequence = 1;
 
     for (const dim of sortedDimensions) {
       const dimModules = modules.filter((m) => m.dimension === dim);
       for (const mod of dimModules) {
         orderedModules.push({ moduleId: mod.id, estimatedMinutes: mod.estimatedMinutes });
-        sequence++;
       }
     }
 
@@ -177,7 +175,7 @@ export class LearningPathService {
     pathModuleId: string,
     userId: string,
     orgId: string,
-    status: string
+    status: 'NOT_STARTED' | 'IN_PROGRESS' | 'COMPLETED' | 'SKIPPED'
   ) {
     // Verify path belongs to user
     const path = await this.prisma.learningPath.findFirst({
@@ -200,7 +198,7 @@ export class LearningPathService {
     // Update module status
     const updated = await this.prisma.learningPathModule.update({
       where: { id: pathModuleId },
-      data: { status: status as 'NOT_STARTED' | 'IN_PROGRESS' | 'COMPLETED' | 'SKIPPED' },
+      data: { status },
     });
 
     // If completed, create completion record

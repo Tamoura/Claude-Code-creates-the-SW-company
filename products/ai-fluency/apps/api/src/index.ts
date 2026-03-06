@@ -9,11 +9,11 @@ import { config } from './config.js';
 import { buildApp } from './app.js';
 import { logger } from './utils/logger.js';
 
-async function start(): Promise<void> {
-  const app = await buildApp();
+async function start() {
+  const instance = await buildApp();
 
   try {
-    await app.listen({ port: config.PORT, host: '0.0.0.0' });
+    await instance.listen({ port: config.PORT, host: '0.0.0.0' });
     logger.info('AI Fluency API started', {
       port: config.PORT,
       env: config.NODE_ENV,
@@ -23,17 +23,22 @@ async function start(): Promise<void> {
     logger.error('Failed to start server', err);
     process.exit(1);
   }
+
+  return instance;
 }
 
 // Handle graceful shutdown
-process.on('SIGINT', () => {
-  logger.info('Received SIGINT — shutting down gracefully');
-  process.exit(0);
-});
+let app: Awaited<ReturnType<typeof buildApp>> | undefined;
 
-process.on('SIGTERM', () => {
-  logger.info('Received SIGTERM — shutting down gracefully');
+const gracefulShutdown = async (signal: string) => {
+  logger.info(`Received ${signal} — shutting down gracefully`);
+  if (app) {
+    await app.close();
+  }
   process.exit(0);
-});
+};
 
-start();
+process.on('SIGINT', () => void gracefulShutdown('SIGINT'));
+process.on('SIGTERM', () => void gracefulShutdown('SIGTERM'));
+
+start().then((a) => { app = a; }).catch(() => process.exit(1));

@@ -1,13 +1,15 @@
 // Shared frontend types for AI Fluency
+// Aligned with backend enum casing (UPPER_CASE)
 
-export type UserRole = 'learner' | 'manager' | 'admin';
+export type UserRole = 'LEARNER' | 'MANAGER' | 'ADMIN' | 'SUPER_ADMIN';
 
 export interface User {
   id: string;
   email: string;
-  name: string;
+  firstName: string;
+  lastName: string;
   role: UserRole;
-  organizationId?: string;
+  orgId: string;
 }
 
 export interface AuthState {
@@ -27,40 +29,48 @@ export interface ApiError {
 export interface AssessmentSession {
   id: string;
   userId: string;
-  status: 'in_progress' | 'completed' | 'abandoned';
+  status: 'IN_PROGRESS' | 'COMPLETED' | 'EXPIRED' | 'ABANDONED';
   startedAt: string;
   completedAt?: string;
-  score?: number;
+  progressPct: number;
 }
 
 export interface FluencyProfile {
   userId: string;
   overallScore: number;
-  dimensions: {
-    DELEGATION: number;
-    DESCRIPTION: number;
-    DISCERNMENT: number;
-    DILIGENCE: number;
-  };
+  dimensionScores: DimensionScores;
   lastAssessedAt: string;
 }
 
 export interface LearningPath {
   id: string;
-  title: string;
-  description: string;
+  title?: string;
+  description?: string;
+  status: 'ACTIVE' | 'COMPLETED' | 'PAUSED';
   estimatedHours: number;
-  moduleCount: number;
-  completionPercent: number;
+  progressPct: number;
+  moduleCount?: number;
+  completionPercent?: number;
+  modules: LearningPathModule[];
+}
+
+export interface LearningPathModule {
+  id: string;
+  sequence: number;
+  status: 'NOT_STARTED' | 'IN_PROGRESS' | 'COMPLETED' | 'SKIPPED';
+  module: LearningModule;
 }
 
 export interface LearningModule {
   id: string;
-  pathId: string;
   title: string;
-  description: string;
-  durationMinutes: number;
-  type: 'video' | 'reading' | 'exercise' | 'quiz';
+  dimension?: Dimension;
+  contentType?: string;
+  type?: string;
+  estimatedMinutes?: number;
+  durationMinutes?: number;
+  difficulty?: number;
+  contentUrl?: string;
   completedAt?: string;
 }
 
