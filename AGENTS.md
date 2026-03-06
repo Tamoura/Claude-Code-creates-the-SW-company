@@ -1,7 +1,7 @@
 <!-- gitnexus:start -->
 # GitNexus MCP
 
-This project is indexed by GitNexus as **Claude Code creates the SW company** (7963 symbols, 17957 relationships, 282 execution flows).
+This project is indexed by GitNexus as **Claude Code creates the SW company** (8014 symbols, 18088 relationships, 282 execution flows).
 
 ## Always Start Here
 

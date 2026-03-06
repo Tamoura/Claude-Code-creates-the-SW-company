@@ -633,6 +633,14 @@ C. INVOKE AGENTS (PARALLEL-AWARE)
    `tdd_evidence` in your report: an array of {test_commit, impl_commit,
    test_file, impl_file} for each TDD cycle completed.
 
+   ## CI Preflight (MANDATORY before push)                      [LEVEL 1]
+   Before pushing your changes, run:
+     bash .claude/scripts/ci-preflight.sh {PRODUCT}
+   If FAIL: fix all failures, re-run until PASS. Do NOT push on FAIL.
+   If you modify package.json: run 'pnpm install' and stage pnpm-lock.yaml.
+   If you modify .github/workflows/: check .claude/ci/known-issues.yml first.
+   If you discover a new CI failure pattern: add it to .claude/ci/known-issues.yml.
+
    ## Constraints                                               [LEVEL 1]
    - Work in: products/{PRODUCT}/
    - Stage specific files only (never git add . or git add -A)
@@ -830,7 +838,16 @@ D. RECEIVE AGENT MESSAGES & DETECT OVERRUNS
 
       This is a HARD GATE, not a warning. Constitution Article III mandates TDD.
       An implementation task without verified TDD evidence cannot be marked "completed".
-   6. **Overrun Detection**: Compare `metrics.time_spent_minutes` against
+   6. **CI Preflight Verification** (for implementation tasks that modify code):
+      Before accepting the agent's completion, verify CI preflight passed:
+      - Check agent report for `ci_preflight: PASS` or `ci_preflight: PASS_WITH_WARNINGS`
+      - If `ci_preflight: FAIL` or missing: BLOCK — require agent to run
+        `bash .claude/scripts/ci-preflight.sh {PRODUCT}` and fix all failures
+      - If agent modified `package.json`: verify `pnpm-lock.yaml` was also staged
+      - If agent modified `.github/workflows/`: verify `.claude/ci/known-issues.yml` was checked
+      - Log to audit trail: "CI PREFLIGHT {RESULT}: {TASK_ID}"
+      This prevents the #1 source of CI failures: agents pushing without local validation.
+   7. **Overrun Detection**: Compare `metrics.time_spent_minutes` against
       `task.estimation_range[high]` (from Step 3.7):
       - If actual > range[high]: log overrun alert, flag for estimation recalibration
       - If actual < range[low]: note as faster-than-expected (potential efficiency insight)

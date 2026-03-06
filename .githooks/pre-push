@@ -1,0 +1,66 @@
+#!/bin/bash
+#
+# Pre-push hook: Run CI preflight checks before pushing.
+# Catches lockfile drift, broken action references, and other CI failures locally.
+#
+# Skip: SKIP_CI_PREFLIGHT=1 git push ...
+#
+
+if [ "${SKIP_CI_PREFLIGHT:-0}" = "1" ]; then
+  echo "CI preflight skipped (SKIP_CI_PREFLIGHT=1)"
+  exit 0
+fi
+
+REPO_ROOT="$(git rev-parse --show-toplevel)"
+PREFLIGHT_SCRIPT="$REPO_ROOT/.claude/scripts/ci-preflight.sh"
+
+if [ ! -x "$PREFLIGHT_SCRIPT" ]; then
+  echo "Warning: CI preflight script not found or not executable at $PREFLIGHT_SCRIPT"
+  exit 0
+fi
+
+# Detect which product was modified (for product-specific checks)
+# Look at commits being pushed vs remote
+remote="$1"
+url="$2"
+
+while read -r local_ref local_oid remote_ref remote_oid; do
+  if [ "$local_oid" = "0000000000000000000000000000000000000000" ]; then
+    # Deleting branch — skip
+    continue
+  fi
+
+  if [ "$remote_oid" = "0000000000000000000000000000000000000000" ]; then
+    # New branch — check all commits
+    range="$local_oid"
+  else
+    range="$remote_oid..$local_oid"
+  fi
+
+  # Find modified products
+  products=$(git diff --name-only "$range" 2>/dev/null | grep -oP '^products/\K[^/]+' | sort -u || true)
+
+  if [ -n "$products" ]; then
+    # Run preflight for each modified product
+    for product in $products; do
+      echo "Running CI preflight for product: $product"
+      if ! bash "$PREFLIGHT_SCRIPT" "$product"; then
+        echo ""
+        echo "CI preflight FAILED for '$product'. Fix the issues above before pushing."
+        echo "To skip (NOT recommended): SKIP_CI_PREFLIGHT=1 git push ..."
+        exit 1
+      fi
+    done
+  else
+    # No product-specific changes — run generic checks only
+    echo "Running CI preflight (generic checks)..."
+    if ! bash "$PREFLIGHT_SCRIPT"; then
+      echo ""
+      echo "CI preflight FAILED. Fix the issues above before pushing."
+      echo "To skip (NOT recommended): SKIP_CI_PREFLIGHT=1 git push ..."
+      exit 1
+    fi
+  fi
+done
+
+exit 0

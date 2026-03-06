@@ -1,0 +1,94 @@
+# Known CI Issues Registry
+#
+# Purpose: Track recurring CI failure patterns so agents proactively avoid them.
+# Agents MUST check this file before pushing code that touches CI-related areas.
+# The CI preflight script (.claude/scripts/ci-preflight.sh) also reads this file.
+#
+# Format:
+#   - id: unique identifier
+#     status: active | resolved | workaround
+#     category: action-reference | lockfile | build | test | security-scan
+#     summary: one-line description
+#     pattern: regex or string that appears in CI failure logs
+#     root_cause: explanation
+#     fix: what to do
+#     affected_workflows: list of workflow files
+#     first_seen: ISO date
+#     resolved_date: ISO date (if resolved)
+
+issues:
+
+  - id: CI-001
+    status: active
+    category: action-reference
+    summary: "rhysd/actionlint-action@v1 repository no longer exists"
+    pattern: "Unable to resolve action rhysd/actionlint-action"
+    root_cause: >
+      The rhysd/actionlint-action GitHub Action repository was deleted or
+      made private. This breaks every workflow that references it.
+    fix: >
+      Replace 'uses: rhysd/actionlint-action@v1' with inline actionlint
+      installation and execution:
+        - name: Install actionlint
+          run: |
+            bash <(curl https://raw.githubusercontent.com/rhysd/actionlint/main/scripts/download-actionlint.bash)
+        - name: Run actionlint
+          run: ./actionlint -color
+    affected_workflows:
+      - .github/workflows/security-sast.yml
+    first_seen: "2026-03-05"
+
+  - id: CI-002
+    status: active
+    category: lockfile
+    summary: "pnpm-lock.yaml out of sync with package.json (frozen-lockfile)"
+    pattern: "ERR_PNPM_OUTDATED_LOCKFILE"
+    root_cause: >
+      An agent added/removed/changed dependencies in package.json but did not
+      run 'pnpm install' to regenerate pnpm-lock.yaml. CI runs with
+      --frozen-lockfile which requires exact match.
+    fix: >
+      After ANY package.json change:
+      1. Run 'pnpm install' from the repo root (or affected workspace)
+      2. Stage both package.json AND pnpm-lock.yaml
+      3. Verify: 'pnpm install --frozen-lockfile --dry-run' should succeed
+    prevention: >
+      The ci-preflight.sh script checks for this automatically.
+      The pre-push hook also validates lockfile consistency.
+    affected_workflows:
+      - .github/workflows/test.yml
+      - .github/workflows/connectin-ci.yml
+      - .github/workflows/ai-fluency-ci.yml
+      - "(all product CI workflows)"
+    first_seen: "2026-03-03"
+
+  - id: CI-003
+    status: active
+    category: action-reference
+    summary: "Submodule cleanup fails on .claude/worktrees paths"
+    pattern: "fatal: No url found for submodule path '.claude/worktrees'"
+    root_cause: >
+      Git worktree directories left in .claude/worktrees/ confuse GitHub Actions
+      checkout step's submodule cleanup. These aren't real submodules but git
+      treats them as such.
+    fix: >
+      1. Delete orphaned worktree directories: rm -rf .claude/worktrees/*
+      2. Clean git worktree list: git worktree prune
+      3. Add .claude/worktrees/ to .gitignore if not already present
+    affected_workflows:
+      - "(all workflows — affects checkout step)"
+    first_seen: "2026-03-05"
+
+# Template for adding new issues:
+#
+#  - id: CI-XXX
+#    status: active
+#    category: action-reference | lockfile | build | test | security-scan
+#    summary: "one-line description"
+#    pattern: "string from CI logs"
+#    root_cause: "explanation"
+#    fix: "what to do"
+#    prevention: "how agents should avoid this"
+#    affected_workflows:
+#      - .github/workflows/xxx.yml
+#    first_seen: "YYYY-MM-DD"

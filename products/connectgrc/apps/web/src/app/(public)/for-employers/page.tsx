@@ -14,12 +14,12 @@ export default function ForEmployersPage() {
 
         <div className="bg-accent-50 border border-accent-200 rounded-lg p-6 mb-10">
           <h2 className="text-lg font-semibold text-accent-800 mb-2">
-            Coming Soon
+            Early Access Program
           </h2>
           <p className="text-accent-700">
-            Employer features are currently in development and will be
-            available in Phase 2. Sign up below to be notified when
-            employer access launches.
+            Employer features are in active development for Phase 2. Sign
+            up below to join the early access program and be among the
+            first to use the employer dashboard.
           </p>
         </div>
 
