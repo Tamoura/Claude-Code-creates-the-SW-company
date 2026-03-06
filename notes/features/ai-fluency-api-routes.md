@@ -2,37 +2,41 @@
 
 ## Branch: feature/ai-fluency/openrouter-assessments (existing)
 
-## Scope
-Implement all missing API routes for the AI Fluency backend:
-1. Auth routes (replace 501 stubs)
-2. Assessment routes (new)
-3. Profile routes (new)
-4. Learning path routes (new)
+## Status: COMPLETE
+All 4 route groups implemented and tested.
 
-## Key Decisions
-- Argon2id for password hashing (already in deps)
-- JWT access: 15min, refresh: 7 days
-- SHA-256 hash of refresh token stored in UserSession table
-- All errors use RFC 7807 Problem Details format (AppError)
-- Auth plugin provides `request.currentUser` via `fastify.authenticate` preHandler
-- Zod for request body validation
-- No mocks policy - real DB in tests
+## Implementation Summary
 
-## Implementation Order
-1. Auth services + routes (dependency for all others)
-2. Assessment routes
-3. Profile routes
-4. Learning path routes
+### 1. Auth Routes (src/routes/auth.ts) - DONE
+- POST /api/v1/auth/register - Argon2id hashing, returns JWT tokens
+- POST /api/v1/auth/login - credential validation, user enumeration prevention
+- POST /api/v1/auth/refresh - SHA-256 token lookup, new access token
+- POST /api/v1/auth/logout - invalidates refresh token (requires auth)
+- Service: src/services/auth.service.ts
 
-## Patterns Observed
-- `buildApp()` factory in app.ts, test helper in tests/helpers/build-app.ts
-- `createTestOrg()` helper creates org + admin user + JWT token
-- Routes registered with prefix in routes/index.ts
-- Auth plugin decorates `fastify.authenticate` and `fastify.requireRole(role)`
-- `request.currentUser` has: id, orgId, email, role, status
-- Tests use `app.inject()` for HTTP calls
-- Module `commonjs` in tsconfig, imports use `.js` extension in source
-- jest.config uses `ts-jest` with `diagnostics: false`
+### 2. Assessment Routes (src/routes/assessments.ts) - DONE
+- POST /api/v1/assessment-sessions - create session, return questions
+- GET /api/v1/assessment-sessions/:id - session with progress
+- POST /api/v1/assessment-sessions/:id/responses - upsert response
+- POST /api/v1/assessment-sessions/:id/complete - run scoring engine
+- GET /api/v1/assessment-sessions/:id/results - scored profile
+- Service: src/services/assessment.service.ts
 
-## Test Baseline
-- 125 tests passing across 14 suites
+### 3. Profile Routes (src/routes/profiles.ts) - DONE
+- GET /api/v1/profiles/me - latest fluency profile
+- GET /api/v1/profiles/history - all profiles with session info
+
+### 4. Learning Path Routes (src/routes/learning-paths.ts) - DONE
+- POST /api/v1/learning-paths - generate from profile (weakest-first)
+- GET /api/v1/learning-paths/:id - path with modules
+- PATCH /api/v1/learning-paths/:id/modules/:moduleId - update status
+- Service: src/services/learning-path.service.ts
+
+## Key Fix
+Moved setErrorHandler() BEFORE registerRoutes() in app.ts so
+scoped route plugins inherit the RFC 7807 error handler.
+
+## Test Results
+- Before: 125 tests, 14 suites
+- After: 176 tests, 18 suites (100% passing)
+- New tests: 51 integration tests across 4 new test files
