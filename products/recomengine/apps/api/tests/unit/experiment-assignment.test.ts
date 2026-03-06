@@ -24,13 +24,11 @@ describe('Experiment Assignment', () => {
 
   it('should respect traffic split (50/50 within tolerance)', () => {
     let controlCount = 0;
-    let variantCount = 0;
     const sampleSize = 10000;
 
     for (let i = 0; i < sampleSize; i++) {
       const result = getExperimentAssignment(`user-${i}`, 'exp-split-test', 50);
       if (result.variant === 'control') controlCount++;
-      else variantCount++;
     }
 
     // Within 5% tolerance of 50/50
