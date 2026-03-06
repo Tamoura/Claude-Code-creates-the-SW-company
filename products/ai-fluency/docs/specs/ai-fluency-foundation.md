@@ -3,7 +3,7 @@
 **Product**: ai-fluency
 **Feature Branch**: `feature/ai-fluency/foundation`
 **Created**: 2026-03-02
-**Updated**: 2026-03-06 (SPEC-01 -- incorporates BA-01 v2.0 findings)
+**Updated**: 2026-03-06 (SPEC-01 -- incorporates BA-01 v2.0 findings, adds Site Map, C4 Level 2, auth sequence diagrams)
 **Status**: Approved
 **Input**: CEO brief: "Create a product for AI fluency following Anthropic's latest 4D assessment"
 **BA Reference**: `products/ai-fluency/docs/business-analysis.md` (BA-01 v2.0)
@@ -819,6 +819,264 @@ stateDiagram-v2
         Low confidence flag set
         if duration < 10 minutes.
     end note
+```
+
+---
+
+## Site Map
+
+Every page/route in the AI Fluency platform is listed below. Status indicates whether the route is included in the MVP (P0), deferred to Phase 2 (P1), or future (P2+). Deferred routes MUST render a page skeleton with an appropriate empty state -- never a 404 or "Coming Soon" placeholder.
+
+| Route | Status | Description | Persona(s) |
+|-------|--------|-------------|------------|
+| `/` | MVP | Marketing landing page -- product overview, value proposition, CTA to signup | All (unauthenticated) |
+| `/login` | MVP | Email/password login + "Sign in with SSO" button (if org has SSO configured) | All |
+| `/signup` | MVP | Individual learner signup + organization signup flow | Alex, Lisa |
+| `/forgot-password` | MVP | Password reset request form | All |
+| `/reset-password/:token` | MVP | Password reset confirmation with new password entry | All |
+| `/verify-email/:token` | MVP | Email verification callback page | All |
+| `/dashboard` | MVP | Learner home -- fluency summary, active learning path, recent assessments, quick actions | Alex |
+| `/assessments/new` | MVP | Start new assessment -- select template (default or role-specific if assigned) | Alex |
+| `/assessments/:id` | MVP | Take assessment -- question-by-question with progress indicator, save-and-resume | Alex |
+| `/assessments/:id/results` | MVP | Fluency profile -- radar chart, dimension scores (observed + self-reported separate), indicator breakdown | Alex |
+| `/profile` | MVP | Assessment history -- all completed assessments with scores and dates | Alex |
+| `/learning/:pathId` | MVP | Learning path overview -- module list, progress bar, time invested | Alex |
+| `/learning/:pathId/modules/:id` | MVP | Module content -- lesson text, exercises, mini-assessment | Alex |
+| `/certificates` | Deferred (P2) | Earned certificates and digital badges -- page skeleton with "Certificates available after Phase 2" empty state | Alex |
+| `/settings` | MVP | User settings hub -- links to profile, notifications, privacy | Alex |
+| `/settings/profile` | MVP | User profile editing -- name, email, password change | Alex |
+| `/settings/notifications` | Deferred (P1) | Notification preferences -- page skeleton with default preferences displayed | Alex |
+| `/settings/privacy` | Deferred (P1) | Data privacy management -- GDPR erasure request, data export | Alex |
+| `/manager` | Deferred (P1) | Manager dashboard home -- team overview, pending assignments, quick stats | Lisa |
+| `/manager/team` | Deferred (P1) | Team fluency overview -- aggregate scores per dimension, individual member list | Lisa |
+| `/manager/discernment` | Deferred (P1) | Discernment gap analysis -- flagged learners, improvement trends | Lisa |
+| `/manager/templates` | Deferred (P1) | Role template library -- browse, create custom templates | Lisa |
+| `/manager/assign` | Deferred (P1) | Assign assessments to team members -- select template, set deadline | Lisa |
+| `/manager/reports` | Deferred (P1) | Generate quarterly reports -- date range selection, PDF download | Lisa, David |
+| `/manager/trends` | Deferred (P1) | Longitudinal fluency trends -- 3-12 month line charts per dimension | Lisa |
+| `/admin` | Deferred (P1) | Organization admin dashboard -- org-wide fluency metrics, user count, config summary | David, Raj |
+| `/admin/users` | Deferred (P1) | User management -- invite, deactivate, role assignment | Raj |
+| `/admin/teams` | Deferred (P1) | Team management -- create, edit, assign managers | Raj |
+| `/admin/sso` | Deferred (P1) | SSO configuration -- SAML/OIDC metadata URL, test connection | Raj |
+| `/admin/lms` | Deferred (P1) | LMS integration -- LTI 1.3 configuration, SCORM package download | Raj |
+| `/admin/data` | Deferred (P1) | Data retention policies -- configurable retention period, residency settings | Raj |
+| `/admin/certificates` | Deferred (P2) | Certification configuration -- threshold, validity period, badge design | Raj |
+| `/compliance/dol` | Deferred (P1) | DOL AI Literacy Framework alignment -- 5 content area mapping, 7 delivery principles | Lisa, Maria |
+| `/help` | MVP | Help and FAQ -- assessment instructions, framework overview, contact support | All |
+| `/api/docs` | MVP | API documentation (Swagger/OpenAPI) -- developer reference for integrations | Raj |
+
+### Site Map Diagram
+
+```mermaid
+flowchart TD
+    subgraph "Public (Unauthenticated)"
+        landing["/"]
+        login["/login"]
+        signup["/signup"]
+        forgot["/forgot-password"]
+        reset["/reset-password/:token"]
+        verify["/verify-email/:token"]
+        help["/help"]
+        apidocs["/api/docs"]
+    end
+
+    subgraph "Learner (Alex)"
+        dash["/dashboard"]
+        assess_new["/assessments/new"]
+        assess_take["/assessments/:id"]
+        assess_results["/assessments/:id/results"]
+        profile["/profile"]
+        learn_path["/learning/:pathId"]
+        learn_module["/learning/:pathId/modules/:id"]
+        certs["/certificates"]
+        settings["/settings"]
+        settings_profile["/settings/profile"]
+        settings_notif["/settings/notifications"]
+        settings_privacy["/settings/privacy"]
+    end
+
+    subgraph "Manager (Lisa)"
+        mgr["/manager"]
+        mgr_team["/manager/team"]
+        mgr_disc["/manager/discernment"]
+        mgr_tpl["/manager/templates"]
+        mgr_assign["/manager/assign"]
+        mgr_reports["/manager/reports"]
+        mgr_trends["/manager/trends"]
+    end
+
+    subgraph "Admin (Raj / David)"
+        admin["/admin"]
+        admin_users["/admin/users"]
+        admin_teams["/admin/teams"]
+        admin_sso["/admin/sso"]
+        admin_lms["/admin/lms"]
+        admin_data["/admin/data"]
+        admin_certs["/admin/certificates"]
+    end
+
+    subgraph "Compliance (Lisa / Maria)"
+        dol["/compliance/dol"]
+    end
+
+    login --> dash
+    login --> mgr
+    login --> admin
+    signup --> dash
+
+    dash --> assess_new --> assess_take --> assess_results
+    dash --> profile
+    dash --> learn_path --> learn_module
+    dash --> certs
+    dash --> settings --> settings_profile
+    settings --> settings_notif
+    settings --> settings_privacy
+
+    mgr --> mgr_team
+    mgr --> mgr_disc
+    mgr --> mgr_tpl
+    mgr --> mgr_assign
+    mgr --> mgr_reports
+    mgr --> mgr_trends
+
+    admin --> admin_users
+    admin --> admin_teams
+    admin --> admin_sso
+    admin --> admin_lms
+    admin --> admin_data
+    admin --> admin_certs
+
+    mgr --> dol
+    admin --> dol
+
+    style dash fill:#7950f2,color:#fff
+    style mgr fill:#339af0,color:#fff
+    style admin fill:#ff922b,color:#fff
+    style dol fill:#51cf66,color:#fff
+    style certs fill:#868e96,color:#fff
+    style settings_notif fill:#868e96,color:#fff
+    style settings_privacy fill:#868e96,color:#fff
+    style admin_certs fill:#868e96,color:#fff
+```
+
+**Legend**: Purple = Learner MVP, Blue = Manager (P1), Orange = Admin (P1), Green = Compliance (P1), Gray = Deferred page skeletons
+
+---
+
+## C4 Level 2: Container Diagram
+
+```mermaid
+graph TD
+    subgraph "AI Fluency Platform"
+        web["Web Application<br/><b>Next.js 14+ / React 18+</b><br/>Tailwind CSS<br/>Port: 3118"]
+        api["API Server<br/><b>Fastify 4 / Node.js 20+</b><br/>TypeScript 5+<br/>Port: 5014"]
+        db[("PostgreSQL 15+<br/><b>Assessment data</b><br/>User profiles, org config<br/>RLS-enforced multi-tenancy")]
+        cache[("Redis 7<br/><b>Session cache</b><br/>Rate limiting<br/>BullMQ job queues")]
+        workers["Background Workers<br/><b>BullMQ processors</b><br/>Badge issuance, PDF gen,<br/>LTI grade passback"]
+    end
+
+    subgraph "Shared Packages"
+        auth["@connectsw/auth<br/>JWT + API key auth"]
+        shared["@connectsw/shared<br/>Logger, Crypto, Prisma, Redis"]
+        ui["@connectsw/ui<br/>Button, Input, Card, Table"]
+    end
+
+    subgraph "External Systems"
+        idp["Identity Provider<br/>SAML 2.0 / OIDC"]
+        lms["LMS Platforms<br/>Canvas, Moodle, Blackboard<br/>via LTI 1.3"]
+        email["Email Service<br/>SendGrid"]
+        analytics["PostHog<br/>Product Analytics"]
+        badges["Badgr<br/>Open Badges v3"]
+        s3["S3-Compatible Storage<br/>Assessment media, PDFs"]
+    end
+
+    web -->|"REST API<br/>HTTPS"| api
+    api -->|"Prisma ORM<br/>RLS-scoped queries"| db
+    api -->|"Session / Cache<br/>Job enqueue"| cache
+    workers -->|"Dequeue jobs"| cache
+    workers -->|"Read/Write"| db
+
+    web -.->|imports| ui
+    web -.->|imports| auth
+    api -.->|imports| auth
+    api -.->|imports| shared
+
+    api -->|"SSO auth"| idp
+    api -->|"LTI 1.3"| lms
+    api -->|"Notifications"| email
+    api -->|"Track events"| analytics
+    workers -->|"Issue badges"| badges
+    workers -->|"Store PDFs"| s3
+
+    style web fill:#339af0,color:#fff
+    style api fill:#51cf66,color:#fff
+    style db fill:#ff922b,color:#fff
+    style cache fill:#ff922b,color:#fff
+    style workers fill:#be4bdb,color:#fff
+```
+
+---
+
+## Authentication Sequence Diagram
+
+### Email/Password Authentication
+
+```mermaid
+sequenceDiagram
+    participant U as User (Browser)
+    participant W as Web App (Next.js)
+    participant A as API Server (Fastify)
+    participant DB as PostgreSQL
+    participant R as Redis
+
+    U->>W: Enter email + password, click "Login"
+    W->>A: POST /api/v1/auth/login { email, password }
+    A->>DB: SELECT user WHERE email = :email AND org_id via RLS
+    DB-->>A: User record (with password_hash)
+    A->>A: argon2.verify(password_hash, password)
+    alt Invalid credentials
+        A-->>W: 401 Unauthorized (RFC 7807)
+        W-->>U: Display "Invalid email or password"
+    else Valid credentials
+        A->>A: Generate JWT access token (15 min expiry)
+        A->>A: Generate refresh token (7 day expiry)
+        A->>DB: INSERT user_session (refresh_token_hash SHA-256)
+        A->>R: Cache user profile for fast retrieval
+        A-->>W: 200 OK { accessToken, user } + Set-Cookie: refreshToken (httpOnly, Secure, SameSite=Strict)
+        W->>W: Store accessToken in TokenManager (in-memory, never localStorage)
+        W-->>U: Redirect to /dashboard
+    end
+```
+
+### SSO Authentication (SAML)
+
+```mermaid
+sequenceDiagram
+    participant U as User (Browser)
+    participant W as Web App
+    participant A as API Server
+    participant IDP as Identity Provider
+    participant DB as PostgreSQL
+
+    U->>W: Click "Sign in with SSO"
+    W->>A: GET /api/v1/auth/sso/init?org=acme
+    A->>DB: Fetch org SSO config (sso_config JSONB)
+    DB-->>A: SAML IdP metadata URL, entity ID
+    A->>A: Build SAML AuthnRequest
+    A-->>W: 302 Redirect to IdP login URL
+
+    W->>IDP: SAML AuthnRequest (redirect binding)
+    IDP->>IDP: User authenticates (credentials or MFA)
+    IDP-->>W: SAML Response (POST binding, signed assertion)
+
+    W->>A: POST /api/v1/auth/sso/callback { SAMLResponse }
+    A->>A: Validate XML signature against IdP certificate
+    A->>A: Extract NameID, email, groups from assertion
+    A->>DB: Upsert user (provision if first login, match by email if existing)
+    A->>A: Set RLS context (app.current_org_id)
+    A->>A: Generate JWT + refresh token
+    A-->>W: 200 OK { accessToken, user } + Set-Cookie: refreshToken
+    W-->>U: Redirect to /dashboard
 ```
 
 ---
