@@ -3,7 +3,7 @@
 **Product**: ai-fluency
 **Feature Branch**: `feature/ai-fluency/foundation`
 **Created**: 2026-03-02
-**Updated**: 2026-03-06 (SPEC-01 -- incorporates BA-01 v2.0 findings, adds Site Map, C4 Level 2, auth sequence diagrams)
+**Updated**: 2026-03-06 (CLARIFY-01 -- resolves 5 implementation-blocking ambiguities: dimension weights, RBAC model, signup flow, retake policy, session timeout)
 **Status**: Approved
 **Input**: CEO brief: "Create a product for AI fluency following Anthropic's latest 4D assessment"
 **BA Reference**: `products/ai-fluency/docs/business-analysis.md` (BA-01 v2.0)
@@ -243,7 +243,7 @@ The scoring engine weights each observable behavior inversely to its prevalence 
 **Acceptance Criteria**:
 
 1. **Given** a completed assessment with all questions answered, **When** the scoring engine processes the responses, **Then** it applies prevalence-weighted scoring where rarer behaviors (lower prevalence) receive higher weights.
-2. **Given** a set of test responses with known expected outcomes, **When** the scoring engine calculates scores, **Then** each dimension score falls within 0-100 and the overall score is the weighted average of dimension scores.
+2. **Given** a set of test responses with known expected outcomes, **When** the scoring engine calculates scores, **Then** each dimension score falls within 0-100 and the overall score is the equally-weighted average of dimension scores (each dimension weighted 0.25; per CLARIFY-01 resolution #4).
 3. **Given** an assessment with partial responses (save-and-resume), **When** the scoring engine is invoked, **Then** it scores only completed sections and marks incomplete dimensions as "In Progress."
 
 ---
@@ -569,6 +569,9 @@ The DOL AI Literacy Framework defines seven delivery principles for AI literacy 
 | 8 | Organization exceeds their license seat count | New user registrations for that org are blocked; L&D manager receives notification to upgrade; existing users unaffected | P1 |
 | 9 | Learner takes assessment in two browser tabs simultaneously | System detects duplicate active sessions and blocks the second tab with "Assessment already in progress in another window" message | P1 |
 | 10 | Data deletion request received for a user whose scores are included in org aggregates | Personal data is deleted per GDPR; anonymized scores remain in aggregates; aggregate recalculation excludes identifiable data | P1 |
+| 11 | Learner attempts to start a new assessment within 24-hour cooldown period | System displays "You can retake this assessment in X hours" with the remaining cooldown time; "Start Assessment" button is disabled for that template | P0 |
+| 12 | Individual self-signup user later joins an organization via SSO or admin invitation | System migrates user from personal org to the new org; personal org is archived (not deleted) to preserve historical assessment data; user role is set to `learner` in the new org | P1 |
+| 13 | Admin demotes themselves from `admin` role | System prevents demotion if the user is the last `admin` in the organization; displays "At least one admin is required" error | P1 |
 
 ---
 
@@ -598,6 +601,11 @@ The DOL AI Literacy Framework defines seven delivery principles for AI literacy 
 - **FR-020**: System MUST provide longitudinal fluency trend visualization for 3-12 month periods with per-dimension breakdowns. *Traces to: US-19, AC 1; BN-011*
 - **FR-021**: System MUST display a mapping between 4D framework dimensions and DOL AI Literacy Framework five foundational content areas with coverage indicators. *Traces to: US-23, AC 1-3; BN-013*
 - **FR-022**: System MUST display DOL delivery principle alignment status (Implemented / Partially Implemented / Planned) with evidence per principle. *Traces to: US-24, AC 1-2; BN-013*
+- **FR-023**: System MUST calculate overall fluency score as the equally-weighted average of the four dimension scores (each dimension weight = 0.25). Role-specific templates adjust indicator weights within dimensions but do not change dimension-level weights. *Traces to: US-03, AC 2; CLARIFY-01 #4*
+- **FR-024**: System MUST enforce role-based access control (RBAC) with six roles: `learner`, `manager`, `instructor`, `executive`, `admin`, `gov_admin`. Each user has exactly one role per organization. Permission boundaries are defined in CLARIFY-01 #5. *Traces to: US-18; CLARIFY-01 #5*
+- **FR-025**: System MUST support dual-track signup: individual self-signup (auto-creates personal organization with `learner` role) and organization signup (creates org with `admin` role, supports email invitations and SSO auto-provisioning). *Traces to: CLARIFY-01 #6*
+- **FR-026**: System MUST enforce a 24-hour cooldown between assessment retakes of the same template type. Unlimited retakes are permitted. The most recent non-low-confidence score is used for certification eligibility and dashboard aggregates. All historical scores are retained. *Traces to: US-01; CLARIFY-01 #7*
+- **FR-027**: System MUST transition assessment sessions from IN_PROGRESS to PAUSED after 30 minutes of inactivity (no answer submission or navigation). A best-effort `beforeunload` pause request is also supported. Sessions transition to ABANDONED after 72 hours of inactivity from last activity timestamp. *Traces to: US-01, AC 4; CLARIFY-01 #8*
 
 ### Non-Functional Requirements
 
@@ -616,7 +624,7 @@ The DOL AI Literacy Framework defines seven delivery principles for AI literacy 
 | Entity | Description | Key Attributes | Relationships |
 |--------|-------------|---------------|---------------|
 | Organization | Enterprise tenant | id, name, slug, sso_config, data_retention_days, cert_threshold, cert_validity_months | Has many Users, Teams, AssessmentTemplates |
-| User | Individual user (learner, admin, manager, instructor, gov_admin) | id, org_id, email, name, role, last_login | Belongs to Organization, has many AssessmentSessions |
+| User | Individual user with one of six roles: `learner`, `manager`, `instructor`, `executive`, `admin`, `gov_admin` (per CLARIFY-01 #5). One role per user per organization. | id, org_id, email, name, role, last_login | Belongs to Organization, has many AssessmentSessions |
 | Team | Department/group within org | id, org_id, name, manager_id | Belongs to Organization, has many Users |
 | AssessmentTemplate | Role-specific assessment config | id, org_id, name, role_type, dimension_weights, is_default | Belongs to Organization, has many AssessmentSessions |
 | AssessmentSession | Single assessment attempt | id, user_id, template_id, algorithm_version_id, status, started_at, completed_at, is_low_confidence | Belongs to User and Template, has many Responses |
@@ -799,8 +807,8 @@ stateDiagram-v2
     [*] --> CREATED: Learner clicks Start
     CREATED --> IN_PROGRESS: First question loaded
     IN_PROGRESS --> IN_PROGRESS: Answer question
-    IN_PROGRESS --> PAUSED: Browser closed / timeout
-    PAUSED --> IN_PROGRESS: Resume assessment
+    IN_PROGRESS --> PAUSED: Browser close (beforeunload) OR 30-min idle timeout
+    PAUSED --> IN_PROGRESS: Resume assessment (returns to last unanswered question)
     IN_PROGRESS --> COMPLETED: All questions answered
     COMPLETED --> SCORED: Scoring engine runs
     SCORED --> [*]
@@ -818,6 +826,13 @@ stateDiagram-v2
     note right of COMPLETED
         Low confidence flag set
         if duration < 10 minutes.
+    end note
+
+    note left of PAUSED
+        30-min idle timeout
+        (server-side check).
+        beforeunload is best-effort.
+        Per CLARIFY-01 #8.
     end note
 ```
 
@@ -1145,6 +1160,8 @@ sequenceDiagram
 | 2 | Validity study design for scoring algorithm correlation with real-world AI fluency | Scoring credibility risk if not validated before GA; planned for 100+ user pilot | Product Manager | Open -- planned for Week 14-18 |
 | 3 | DOL AI Literacy Framework evolution timeline and update process | If DOL framework changes, content mapping needs updating; designed as configurable layer | Product Manager | Open -- monitoring quarterly |
 
+**Note**: All implementation-blocking ambiguities have been resolved in CLARIFY-01 resolutions #4-#8 (2026-03-06). The three open questions above are strategic/business concerns that do not block development.
+
 ---
 
 ## Resolved Clarifications (CLARIFY-01)
@@ -1154,6 +1171,11 @@ sequenceDiagram
 | 1 | Does Anthropic's CC BY-NC-SA 4.0 license permit commercial use of framework-derived assessment content? | **Proceed assuming commercial OK.** The CC BY-NC-SA license covers educational materials, not the concept of assessing the 4 dimensions. Our assessment questions are original work. Seek formal Anthropic clarification in parallel but do not block development. | CEO | 2026-03-02 |
 | 2 | What is the minimum viable question count per dimension? | **8 questions per dimension (32 total, ~25 minutes).** Provides adequate statistical reliability for prevalence-weighted scoring across 11 observable + 13 unobservable behaviors while keeping the assessment under 30 minutes to maximize completion rate. | CEO | 2026-03-02 |
 | 3 | Should self-report scores be combined with observed-behavior scores or kept separate? | **Separate sub-scores.** Display "Observed Fluency Score" and "Self-Reported Fluency Score" independently. More transparent, avoids mixing validated behavioral measurement with self-assessment, and is easier to defend scientifically. | CEO | 2026-03-02 |
+| 4 | What are the dimension weights for the overall score formula? | **Equal weights (0.25 each).** All four dimensions (Delegation, Description, Discernment, Diligence) are weighted equally at 0.25 for the overall score calculation. Justification: Anthropic's research does not establish a hierarchy among dimensions; all four are presented as equally important facets of fluency. Role-specific templates adjust indicator weights within dimensions but do not change dimension-level weights. This keeps the default scoring defensible and simple. Custom dimension weights can be considered for Phase 2 as a template configuration option. | Product Manager | 2026-03-06 |
+| 5 | What is the RBAC model -- which roles exist and what are their permission boundaries? | **Six roles with hierarchical permissions.** The `User.role` field accepts: `learner`, `manager`, `instructor`, `executive`, `admin`, `gov_admin`. Permission matrix: (1) `learner` -- take assessments, view own profile/results/learning path, manage own settings; (2) `manager` -- all learner permissions + view team dashboards, assign assessments, manage templates, generate reports for own team; (3) `instructor` -- all learner permissions + assign assessments to students, view student results, LMS grade passback; (4) `executive` -- all learner permissions + view org-wide dashboards, generate quarterly reports (read-only, no user management); (5) `admin` -- all permissions including user management, SSO config, data policies, certification config, team management; (6) `gov_admin` -- all learner permissions + DOL compliance reporting page access. Roles are scoped to the user's organization via RLS. A user has exactly one role per organization. | Product Manager | 2026-03-06 |
+| 6 | What is the organization signup and user provisioning flow? | **Dual-track signup: individual self-signup (B2C) and organization provisioning (B2B).** The `/signup` page supports two flows: (1) **Individual signup** -- a learner creates a personal account with email/password, is assigned to a "Personal" organization (single-tenant, auto-created), and gets the `learner` role. This enables freemium/trial access. (2) **Organization signup** -- an admin creates an organization account, provides org name and billing contact, gets the `admin` role, and can then invite users via email or configure SSO for auto-provisioning. SSO-provisioned users are auto-assigned the `learner` role on first login; admins can promote roles afterward. Justification: B2C self-signup is critical for bottom-up adoption and freemium conversion (BA-01 identifies this as a key go-to-market channel). B2B provisioning is required for enterprise sales. Both flows converge on the same platform with RLS isolation. | Product Manager | 2026-03-06 |
+| 7 | What is the assessment retake policy and cooldown period? | **Unlimited retakes with a 24-hour cooldown.** Learners can retake assessments an unlimited number of times, but must wait at least 24 hours between completing one assessment and starting another of the same template type. Justification: The platform's value proposition depends on longitudinal improvement tracking (BN-011), which requires retakes. A 24-hour cooldown prevents gaming (memorizing answers immediately after seeing results) while not being so restrictive that it discourages re-engagement. All historical scores are retained for trend analysis. The most recent score is used for certification eligibility and dashboard aggregates. Low-confidence assessments (completed in under 10 minutes) do not count toward certification but are retained for the learner's own reference. | Product Manager | 2026-03-06 |
+| 8 | What triggers the PAUSED state and what is the active session idle timeout? | **30-minute idle timeout triggers PAUSED; explicit browser close also triggers PAUSED via beforeunload.** An assessment session transitions from IN_PROGRESS to PAUSED when: (1) no user interaction (answer submission or navigation) occurs for 30 consecutive minutes -- the server marks the session PAUSED via a scheduled check, or (2) the browser fires a `beforeunload` event which sends a lightweight `PATCH /api/v1/assessment-sessions/:id/pause` request. On resume, the learner is returned to the last unanswered question. The 72-hour abandonment timer runs from the last activity timestamp regardless of state (IN_PROGRESS or PAUSED). Justification: 30 minutes balances allowing breaks (coffee, meeting interruption) with preventing stale sessions from accumulating. The beforeunload approach is best-effort (not guaranteed by all browsers) so the server-side 30-minute check is the authoritative mechanism. | Product Manager | 2026-03-06 |
 
 ---
 
