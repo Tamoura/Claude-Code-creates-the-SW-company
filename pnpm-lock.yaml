@@ -163,6 +163,19 @@ importers:
         specifier: '>=3.0.0'
         version: 3.25.76
 
+  packages/observability:
+    dependencies:
+      fastify:
+        specifier: ^4.0.0
+        version: 4.29.1
+      pino:
+        specifier: ^8.0.0
+        version: 8.21.0
+    devDependencies:
+      typescript:
+        specifier: ^5.0.0
+        version: 5.9.3
+
   packages/saas-kit:
     devDependencies:
       '@types/node':
