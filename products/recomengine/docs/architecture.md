@@ -781,4 +781,180 @@ Exposed via `GET /internal/metrics` (protected by `INTERNAL_API_KEY`):
 
 ---
 
+## 13. Traceability Matrix
+
+### User Story to Functional Requirement to Endpoint to Table
+
+| US/Feature | FR IDs | API Endpoint(s) | DB Table(s) | Module |
+|------------|--------|-----------------|-------------|--------|
+| **F-001: Tenant Management** | FR-001, FR-002, FR-003, FR-004, FR-005 | `POST /api/v1/tenants`, `GET /api/v1/tenants`, `GET /api/v1/tenants/:id`, `PUT /api/v1/tenants/:id`, `DELETE /api/v1/tenants/:id` | `tenants`, `admins` | `tenants/` |
+| **F-002: API Key Provisioning** | FR-006, FR-007, FR-008, FR-009, FR-010 | `POST /api/v1/tenants/:id/api-keys`, `GET /api/v1/tenants/:id/api-keys`, `DELETE /api/v1/tenants/:id/api-keys/:keyId` | `api_keys` | `api-keys/` |
+| **F-003: Event Ingestion** | FR-011, FR-012, FR-013, FR-014, FR-015, FR-016, FR-017 | `POST /api/v1/events`, `POST /api/v1/events/batch` | `events` (partitioned) | `events/` |
+| **F-004: Catalog Management** | FR-018, FR-019, FR-020, FR-021, FR-022, FR-023 | `POST /api/v1/catalog`, `POST /api/v1/catalog/batch`, `GET /api/v1/catalog`, `GET /api/v1/catalog/:productId`, `PUT /api/v1/catalog/:productId`, `DELETE /api/v1/catalog/:productId` | `catalog_items` | `catalog/` |
+| **F-005: Recommendation Engine** | FR-024, FR-025, FR-026, FR-027, FR-028, FR-029, FR-030, FR-031, FR-032 | `GET /api/v1/recommendations` | `events`, `catalog_items`, Redis cache | `recommendations/` |
+| **F-006: Configurable Strategies** | FR-026, FR-027, FR-028, FR-029 | `GET /api/v1/recommendations?strategy=...` | `events`, `catalog_items` | `recommendations/` |
+| **F-007: JavaScript SDK** | FR-033, FR-034, FR-035, FR-036, FR-037, FR-038, FR-039, FR-040, FR-041 | `GET /api/v1/recommendations`, `POST /api/v1/events`, `GET /api/v1/tenants/:id/widgets/:wid` | `events`, `widget_configs` | `sdk/` (client-side) |
+| **F-008: A/B Testing** | FR-042, FR-043, FR-044, FR-045, FR-046, FR-047, FR-048 | `POST /api/v1/tenants/:id/experiments`, `GET /api/v1/tenants/:id/experiments`, `GET /api/v1/tenants/:id/experiments/:expId`, `PUT /api/v1/tenants/:id/experiments/:expId`, `DELETE /api/v1/tenants/:id/experiments/:expId`, `GET /api/v1/tenants/:id/experiments/:expId/results` | `experiments`, `experiment_results` | `experiments/` |
+| **F-009: Analytics Dashboard** | FR-049, FR-050, FR-051, FR-052, FR-053, FR-054, FR-055, FR-056 | `GET /api/v1/tenants/:id/analytics/overview`, `GET /api/v1/tenants/:id/analytics/timeseries`, `GET /api/v1/tenants/:id/analytics/top-products`, `GET /api/v1/tenants/:id/analytics/export` | `analytics_daily`, `analytics_summary` (mat. view), `top_recommended_products` (mat. view), Redis counters | `analytics/` |
+| **F-010: REST API** | FR-057, FR-058, FR-059, FR-060, FR-061, FR-062 | All endpoints (versioned under `/api/v1/`) | All tables | All modules |
+| **F-011: Experiment Results API** | FR-045 | `GET /api/v1/tenants/:id/experiments/:expId/results` | `experiment_results`, `events` | `experiments/` |
+| **F-012: Widget Customization** | FR-035 (SDK rendering) | `POST /api/v1/tenants/:id/widgets`, `GET /api/v1/tenants/:id/widgets`, `GET /api/v1/tenants/:id/widgets/:wid`, `PUT /api/v1/tenants/:id/widgets/:wid`, `DELETE /api/v1/tenants/:id/widgets/:wid` | `widget_configs` | `widgets/` |
+| **Auth (cross-cutting)** | NFR-014, NFR-015 | `POST /api/v1/auth/signup`, `POST /api/v1/auth/login`, `POST /api/v1/auth/logout`, `POST /api/v1/auth/forgot-password`, `POST /api/v1/auth/reset-password` | `admins` | `auth/` |
+| **Health (cross-cutting)** | NFR-017 | `GET /health`, `GET /ready` | N/A (checks DB + Redis connectivity) | `health/` |
+
+### Non-Functional Requirement to Implementation
+
+| NFR ID | Requirement | Implementation |
+|--------|-------------|----------------|
+| NFR-001 | Recommendations <100ms p95 | Redis cache (5-min TTL), pre-computed similarity matrix |
+| NFR-002 | Event ingestion <50ms p95 | Async Redis counter updates, lightweight Zod validation |
+| NFR-003 | Batch ingestion (100) <200ms p95 | Bulk INSERT, parallel validation |
+| NFR-004 | Dashboard LCP <2s | SSR for initial render, lazy-loaded charts |
+| NFR-005 | SDK <10KB gzipped | esbuild bundling, zero npm dependencies |
+| NFR-006 | Widget render <200ms | Minimal DOM operations, no framework in SDK |
+| NFR-007 | Analytics query <500ms (100M events) | Materialized views, partitioned event tables, pre-aggregated `analytics_daily` |
+| NFR-008 | TLS 1.2+ | Enforced at load balancer / reverse proxy |
+| NFR-009 | API key HMAC-SHA256 storage | ConnectSW Crypto Utils, `api_keys.key_hash` column |
+| NFR-010 | Tenant data isolation | Prisma middleware injects `tenant_id` in all WHERE clauses |
+| NFR-011 | Rate limiting (1000 read, 500 write/min) | Redis Rate Limit Store, `@fastify/rate-limit` |
+| NFR-012 | CSRF protection | SameSite cookies + custom header (double-submit cookie) |
+| NFR-013 | SDK no third-party requests | IIFE scope, zero external dependencies |
+| NFR-014 | JWT 1hr access + 7d refresh | `@fastify/jwt`, HttpOnly cookie for refresh |
+| NFR-015 | bcrypt cost 12 | ConnectSW Crypto Utils |
+| NFR-016 | Zod validation on all inputs | `schemas.ts` per module with Zod schemas |
+| NFR-017 | 99.9% uptime SLA | Multiple API instances, health checks, auto-restart |
+| NFR-018 | At-least-once event delivery | Idempotent dedup on `(tenant_id, user_id, event_type, product_id, timestamp)` |
+| NFR-019 | Daily DB backups (30d retention) | Managed PostgreSQL backup policy |
+| NFR-020 | Cached results on model failure | Redis cache returns stale data; graceful degradation |
+| NFR-021 | SDK silent failure | `try/catch` around all SDK API calls; widget hidden on error |
+| NFR-022 | 1,000 concurrent tenants | Stateless API, connection pooling, tenant-scoped queries |
+| NFR-023 | 10,000 events/sec aggregate | Partitioned events table, bulk INSERT, Redis counters |
+| NFR-024 | 5,000 recommendations/sec | Redis cache (>95% hit rate), horizontal API scaling |
+| NFR-025 | 1B+ events, 10M+ catalog items | Monthly partitions, detach/archive old partitions |
+| NFR-026 | Horizontal scaling | Stateless Fastify API behind load balancer |
+| NFR-027 | WCAG 2.1 AA (dashboard) | Semantic HTML, ARIA labels, keyboard navigation |
+| NFR-028 | Keyboard navigation | Tab order, focus management, keyboard shortcuts |
+| NFR-029 | Color contrast >= 4.5:1 | Tailwind color palette validated against WCAG |
+| NFR-030 | Screen reader compatible | ARIA labels on charts and data tables |
+| NFR-031 | Correlation ID logging | Observability Plugin generates `X-Request-ID` |
+| NFR-032 | Metrics (latency, throughput, errors) | `GET /internal/metrics` endpoint |
+| NFR-033 | Alerting thresholds | Configurable via monitoring integration (Phase 2) |
+| NFR-034 | 90-day log retention | Structured JSON logging to external aggregator |
+
+### Endpoint Inventory (34 endpoints)
+
+| # | Method | Path | Auth | Module | FR(s) |
+|---|--------|------|------|--------|-------|
+| 1 | POST | `/api/v1/auth/signup` | None | auth | NFR-014 |
+| 2 | POST | `/api/v1/auth/login` | None | auth | NFR-014 |
+| 3 | POST | `/api/v1/auth/logout` | JWT | auth | NFR-014 |
+| 4 | POST | `/api/v1/auth/forgot-password` | None | auth | NFR-014 |
+| 5 | POST | `/api/v1/auth/reset-password` | None | auth | NFR-014 |
+| 6 | GET | `/api/v1/tenants` | JWT | tenants | FR-005 |
+| 7 | POST | `/api/v1/tenants` | JWT | tenants | FR-001 |
+| 8 | GET | `/api/v1/tenants/:id` | JWT | tenants | FR-001 |
+| 9 | PUT | `/api/v1/tenants/:id` | JWT | tenants | FR-003, FR-004 |
+| 10 | DELETE | `/api/v1/tenants/:id` | JWT | tenants | FR-003 |
+| 11 | GET | `/api/v1/tenants/:id/api-keys` | JWT | api-keys | FR-006 |
+| 12 | POST | `/api/v1/tenants/:id/api-keys` | JWT | api-keys | FR-006, FR-007, FR-010 |
+| 13 | DELETE | `/api/v1/tenants/:id/api-keys/:keyId` | JWT | api-keys | FR-008 |
+| 14 | POST | `/api/v1/events` | API Key (write) | events | FR-011, FR-013, FR-014, FR-015, FR-016 |
+| 15 | POST | `/api/v1/events/batch` | API Key (write) | events | FR-012, FR-013, FR-014, FR-015, FR-016 |
+| 16 | GET | `/api/v1/catalog` | API Key | catalog | FR-023 |
+| 17 | POST | `/api/v1/catalog` | API Key (write) | catalog | FR-018, FR-020 |
+| 18 | POST | `/api/v1/catalog/batch` | API Key (write) | catalog | FR-019, FR-020 |
+| 19 | GET | `/api/v1/catalog/:productId` | API Key | catalog | FR-023 |
+| 20 | PUT | `/api/v1/catalog/:productId` | API Key (write) | catalog | FR-021 |
+| 21 | DELETE | `/api/v1/catalog/:productId` | API Key (write) | catalog | FR-022 |
+| 22 | GET | `/api/v1/recommendations` | API Key (read) | recommendations | FR-024, FR-025, FR-026, FR-027, FR-028, FR-029, FR-030, FR-031, FR-032 |
+| 23 | GET | `/api/v1/tenants/:id/experiments` | JWT | experiments | FR-042 |
+| 24 | POST | `/api/v1/tenants/:id/experiments` | JWT | experiments | FR-042, FR-043 |
+| 25 | GET | `/api/v1/tenants/:id/experiments/:expId` | JWT | experiments | FR-042 |
+| 26 | PUT | `/api/v1/tenants/:id/experiments/:expId` | JWT | experiments | FR-046, FR-047 |
+| 27 | DELETE | `/api/v1/tenants/:id/experiments/:expId` | JWT | experiments | FR-048 |
+| 28 | GET | `/api/v1/tenants/:id/experiments/:expId/results` | JWT | experiments | FR-045 |
+| 29 | GET | `/api/v1/tenants/:id/analytics/overview` | JWT | analytics | FR-049, FR-052 |
+| 30 | GET | `/api/v1/tenants/:id/analytics/timeseries` | JWT | analytics | FR-050, FR-052 |
+| 31 | GET | `/api/v1/tenants/:id/analytics/top-products` | JWT | analytics | FR-051 |
+| 32 | GET | `/api/v1/tenants/:id/analytics/export` | JWT | analytics | FR-056 |
+| 33 | GET | `/health` | None | health | NFR-017 |
+| 34 | GET | `/ready` | None | health | NFR-017 |
+
+### Tenant State Machine
+
+```mermaid
+stateDiagram-v2
+    [*] --> active : POST /tenants
+    active --> suspended : PUT /tenants/:id {status: suspended}
+    suspended --> active : PUT /tenants/:id {status: active}
+    active --> deleted : DELETE /tenants/:id
+    suspended --> deleted : DELETE /tenants/:id
+    deleted --> [*] : 30-day retention, then purge
+
+    note right of active
+        All API operations allowed.
+        SDK/API requests served normally.
+    end note
+
+    note right of suspended
+        SDK/API requests return 403.
+        Dashboard read-only.
+        Data preserved.
+    end note
+
+    note right of deleted
+        Soft delete. Data retained 30 days.
+        All API keys revoked immediately.
+    end note
+```
+
+### Experiment State Machine
+
+```mermaid
+stateDiagram-v2
+    [*] --> draft : POST /experiments
+    draft --> running : PUT {status: running}
+    running --> paused : PUT {status: paused}
+    running --> completed : PUT {status: completed}
+    paused --> running : PUT {status: running}
+    paused --> completed : PUT {status: completed}
+    draft --> [*] : DELETE
+    completed --> [*] : DELETE (after 90d)
+
+    note right of running
+        Traffic split active.
+        Results computed in real-time.
+        Only 1 running per placement.
+    end note
+```
+
+### Revenue Attribution Flow
+
+```mermaid
+sequenceDiagram
+    participant USER as Shopper
+    participant SDK as JS SDK
+    participant API as Fastify API
+    participant DB as PostgreSQL
+
+    USER->>SDK: Clicks recommendation (productId: P1)
+    SDK->>API: POST /events {type: recommendation_clicked, userId: U1, productId: P1}
+    API->>DB: INSERT event (click_event_id = E1, timestamp = T1)
+
+    Note over USER: User browses, adds to cart...
+
+    USER->>SDK: Completes purchase (productId: P1)
+    SDK->>API: POST /events {type: purchase, userId: U1, productId: P1, metadata: {price: 49.99}}
+    API->>DB: INSERT event (purchase_event_id = E2, timestamp = T2)
+
+    API->>API: Check: T2 - T1 <= 30 minutes?
+    alt Within attribution window
+        API->>DB: INSERT revenue_attribution {userId: U1, productId: P1, click: E1, purchase: E2, revenue: 49.99}
+    else Outside window
+        Note over API: No attribution (purchase too late)
+    end
+```
+
+---
+
 **End of Architecture Document**
