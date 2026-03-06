@@ -45,6 +45,18 @@ const envSchema = z.object({
   LOG_LEVEL: z
     .enum(['trace', 'debug', 'info', 'warn', 'error', 'fatal'])
     .default('info'),
+
+  // OpenRouter (optional — AI-powered assessment features degrade gracefully)
+  OPENROUTER_API_KEY: z.string().min(1).optional(),
+  OPENROUTER_MODEL: z
+    .string()
+    .default('meta-llama/llama-3.1-8b-instruct:free'),
+  OPENROUTER_BASE_URL: z
+    .string()
+    .url()
+    .default('https://openrouter.ai/api/v1'),
+  OPENROUTER_MAX_TOKENS: z.coerce.number().int().positive().default(1024),
+  OPENROUTER_TEMPERATURE: z.coerce.number().min(0).max(2).default(0.3),
 });
 
 function validateConfig() {
