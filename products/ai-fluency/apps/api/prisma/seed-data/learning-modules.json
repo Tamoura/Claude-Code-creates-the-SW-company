@@ -1,0 +1,402 @@
+[
+  {
+    "title": "Identifying AI-Ready Tasks",
+    "description": "Learn to evaluate everyday work tasks and determine which are good candidates for AI delegation. Covers the task suitability framework: repetitiveness, data availability, risk tolerance, and required judgment level.",
+    "dimension": "DELEGATION",
+    "interactionMode": "AUGMENTATION",
+    "contentType": "ARTICLE",
+    "estimatedMinutes": 15,
+    "difficulty": "BEGINNER",
+    "contentUrl": "/learning/delegation/beginner/task-identification"
+  },
+  {
+    "title": "The Delegation Decision Matrix",
+    "description": "Interactive exercise where you classify 20 real-world tasks on two axes: AI capability and human oversight needed. Build intuition for when to automate, augment, or keep manual.",
+    "dimension": "DELEGATION",
+    "interactionMode": "AUGMENTATION",
+    "contentType": "EXERCISE",
+    "estimatedMinutes": 25,
+    "difficulty": "BEGINNER",
+    "contentUrl": "/learning/delegation/beginner/decision-matrix"
+  },
+  {
+    "title": "Breaking Down Complex Projects for AI",
+    "description": "Master the art of decomposing multi-step projects into AI-suitable subtasks. Learn dependency mapping, handoff point identification, and how to sequence human and AI work for maximum efficiency.",
+    "dimension": "DELEGATION",
+    "interactionMode": "AUGMENTATION",
+    "contentType": "VIDEO",
+    "estimatedMinutes": 20,
+    "difficulty": "INTERMEDIATE",
+    "contentUrl": "/learning/delegation/intermediate/task-decomposition"
+  },
+  {
+    "title": "Iterative Refinement Techniques",
+    "description": "Practice the feedback loop cycle: evaluate AI output, diagnose gaps, give targeted feedback, and assess improvement. Includes 5 hands-on scenarios with progressively complex refinement challenges.",
+    "dimension": "DELEGATION",
+    "interactionMode": "AUGMENTATION",
+    "contentType": "SIMULATION",
+    "estimatedMinutes": 35,
+    "difficulty": "INTERMEDIATE",
+    "contentUrl": "/learning/delegation/intermediate/iterative-refinement"
+  },
+  {
+    "title": "Choosing the Right AI Tool",
+    "description": "Navigate the AI tool landscape with confidence. Compare capabilities of general-purpose LLMs, specialized AI tools, and custom models. Learn evaluation criteria for selecting the right tool for each task type.",
+    "dimension": "DELEGATION",
+    "interactionMode": "AUGMENTATION",
+    "contentType": "ARTICLE",
+    "estimatedMinutes": 20,
+    "difficulty": "INTERMEDIATE",
+    "contentUrl": "/learning/delegation/intermediate/tool-selection"
+  },
+  {
+    "title": "Questioning AI Reasoning",
+    "description": "Learn to probe AI decision-making by requesting explanations, challenging assumptions, and testing edge cases. Practice with scenarios in hiring, financial analysis, and strategic planning.",
+    "dimension": "DELEGATION",
+    "interactionMode": "AUGMENTATION",
+    "contentType": "EXERCISE",
+    "estimatedMinutes": 30,
+    "difficulty": "INTERMEDIATE",
+    "contentUrl": "/learning/delegation/intermediate/questioning-reasoning"
+  },
+  {
+    "title": "AI Delegation in High-Stakes Environments",
+    "description": "Advanced strategies for delegating to AI in regulated industries, high-risk decisions, and time-critical situations. Covers governance frameworks, escalation protocols, and maintaining human accountability.",
+    "dimension": "DELEGATION",
+    "interactionMode": "AUGMENTATION",
+    "contentType": "VIDEO",
+    "estimatedMinutes": 30,
+    "difficulty": "ADVANCED",
+    "contentUrl": "/learning/delegation/advanced/high-stakes"
+  },
+  {
+    "title": "Building AI Workflow Orchestration",
+    "description": "Design end-to-end workflows that chain multiple AI tools with human checkpoints. Simulate a multi-step research-to-report pipeline with quality gates and decision points.",
+    "dimension": "DELEGATION",
+    "interactionMode": "AGENCY",
+    "contentType": "SIMULATION",
+    "estimatedMinutes": 45,
+    "difficulty": "ADVANCED",
+    "contentUrl": "/learning/delegation/advanced/workflow-orchestration"
+  },
+  {
+    "title": "Defining Scope and Guardrails for AI",
+    "description": "Master techniques for setting clear boundaries on AI tasks: defining explicit success criteria, specifying out-of-scope areas, and creating guardrails that prevent AI drift.",
+    "dimension": "DELEGATION",
+    "interactionMode": "AUGMENTATION",
+    "contentType": "EXERCISE",
+    "estimatedMinutes": 25,
+    "difficulty": "ADVANCED",
+    "contentUrl": "/learning/delegation/advanced/scope-guardrails"
+  },
+  {
+    "title": "Multi-Agent Delegation Strategies",
+    "description": "Explore advanced patterns for orchestrating multiple AI agents on complex tasks. Learn about agent specialization, result aggregation, and conflict resolution between competing AI outputs.",
+    "dimension": "DELEGATION",
+    "interactionMode": "AGENCY",
+    "contentType": "ARTICLE",
+    "estimatedMinutes": 25,
+    "difficulty": "ADVANCED",
+    "contentUrl": "/learning/delegation/advanced/multi-agent"
+  },
+  {
+    "title": "Writing Your First Effective Prompt",
+    "description": "Introduction to prompt engineering fundamentals. Learn the anatomy of a good prompt: task description, context, constraints, and output format. Practice with common workplace scenarios.",
+    "dimension": "DESCRIPTION",
+    "interactionMode": "AUGMENTATION",
+    "contentType": "ARTICLE",
+    "estimatedMinutes": 15,
+    "difficulty": "BEGINNER",
+    "contentUrl": "/learning/description/beginner/first-prompt"
+  },
+  {
+    "title": "Context is King: Background Information in Prompts",
+    "description": "Understand why context dramatically affects AI output quality. Learn what context to include, how to structure it, and common pitfalls of too little or too much context.",
+    "dimension": "DESCRIPTION",
+    "interactionMode": "AUGMENTATION",
+    "contentType": "VIDEO",
+    "estimatedMinutes": 18,
+    "difficulty": "BEGINNER",
+    "contentUrl": "/learning/description/beginner/context-provision"
+  },
+  {
+    "title": "Specifying Output Format and Structure",
+    "description": "Practice directing AI to produce outputs in specific formats: tables, JSON, bullet points, essays, emails, and more. Includes exercises on format specification and structure control.",
+    "dimension": "DESCRIPTION",
+    "interactionMode": "AUGMENTATION",
+    "contentType": "EXERCISE",
+    "estimatedMinutes": 20,
+    "difficulty": "BEGINNER",
+    "contentUrl": "/learning/description/beginner/format-specification"
+  },
+  {
+    "title": "Constraint Engineering for AI",
+    "description": "Deep dive into specifying constraints effectively: word limits, tone requirements, technical accuracy levels, compliance boundaries, and audience-specific restrictions. Practice with regulated industry scenarios.",
+    "dimension": "DESCRIPTION",
+    "interactionMode": "AUGMENTATION",
+    "contentType": "EXERCISE",
+    "estimatedMinutes": 30,
+    "difficulty": "INTERMEDIATE",
+    "contentUrl": "/learning/description/intermediate/constraint-engineering"
+  },
+  {
+    "title": "Few-Shot Prompting: Learning by Example",
+    "description": "Master the technique of providing examples to guide AI behavior. Learn when few-shot prompting outperforms zero-shot, how to select representative examples, and how to use negative examples.",
+    "dimension": "DESCRIPTION",
+    "interactionMode": "AUGMENTATION",
+    "contentType": "VIDEO",
+    "estimatedMinutes": 22,
+    "difficulty": "INTERMEDIATE",
+    "contentUrl": "/learning/description/intermediate/few-shot-prompting"
+  },
+  {
+    "title": "Role and Persona Setting",
+    "description": "Learn how assigning roles and personas to AI changes output quality and perspective. Practice setting appropriate expertise levels, communication styles, and domain contexts.",
+    "dimension": "DESCRIPTION",
+    "interactionMode": "AUGMENTATION",
+    "contentType": "ARTICLE",
+    "estimatedMinutes": 15,
+    "difficulty": "INTERMEDIATE",
+    "contentUrl": "/learning/description/intermediate/persona-setting"
+  },
+  {
+    "title": "Iterative Prompt Refinement Workshop",
+    "description": "Hands-on simulation where you iteratively improve prompts across 8 scenarios. Start with a basic prompt, evaluate the output, diagnose issues, and refine until the output meets quality standards.",
+    "dimension": "DESCRIPTION",
+    "interactionMode": "AUGMENTATION",
+    "contentType": "SIMULATION",
+    "estimatedMinutes": 40,
+    "difficulty": "INTERMEDIATE",
+    "contentUrl": "/learning/description/intermediate/prompt-refinement"
+  },
+  {
+    "title": "Advanced Prompt Architectures",
+    "description": "Explore chain-of-thought prompting, self-consistency, tree-of-thought, and meta-prompting techniques. Learn when each approach adds value and practice with complex analytical tasks.",
+    "dimension": "DESCRIPTION",
+    "interactionMode": "AUGMENTATION",
+    "contentType": "VIDEO",
+    "estimatedMinutes": 30,
+    "difficulty": "ADVANCED",
+    "contentUrl": "/learning/description/advanced/prompt-architectures"
+  },
+  {
+    "title": "System Prompts and Prompt Templates",
+    "description": "Design reusable prompt templates and system prompts for common organizational tasks. Build a personal prompt library with parameterized templates for reports, analysis, and communication.",
+    "dimension": "DESCRIPTION",
+    "interactionMode": "AUGMENTATION",
+    "contentType": "EXERCISE",
+    "estimatedMinutes": 35,
+    "difficulty": "ADVANCED",
+    "contentUrl": "/learning/description/advanced/system-prompts"
+  },
+  {
+    "title": "Multi-Turn Conversation Design",
+    "description": "Master the art of multi-turn AI interactions for complex tasks. Learn conversation planning, context management across turns, and techniques for maintaining coherence in long sessions.",
+    "dimension": "DESCRIPTION",
+    "interactionMode": "AUGMENTATION",
+    "contentType": "SIMULATION",
+    "estimatedMinutes": 35,
+    "difficulty": "ADVANCED",
+    "contentUrl": "/learning/description/advanced/multi-turn-design"
+  },
+  {
+    "title": "Spotting AI Mistakes: A Beginner's Guide",
+    "description": "Introduction to common AI errors: hallucinations, outdated information, logical inconsistencies, and confident falsehoods. Learn the red flags that signal AI output needs verification.",
+    "dimension": "DISCERNMENT",
+    "interactionMode": "AUGMENTATION",
+    "contentType": "ARTICLE",
+    "estimatedMinutes": 15,
+    "difficulty": "BEGINNER",
+    "contentUrl": "/learning/discernment/beginner/spotting-mistakes"
+  },
+  {
+    "title": "Fact-Checking AI Outputs",
+    "description": "Step-by-step guide to verifying AI-generated claims, statistics, and citations. Learn efficient verification workflows and build the habit of checking before sharing.",
+    "dimension": "DISCERNMENT",
+    "interactionMode": "AUGMENTATION",
+    "contentType": "VIDEO",
+    "estimatedMinutes": 18,
+    "difficulty": "BEGINNER",
+    "contentUrl": "/learning/discernment/beginner/fact-checking"
+  },
+  {
+    "title": "Understanding AI Confidence vs. Accuracy",
+    "description": "Learn why AI can sound completely confident while being completely wrong. Explore the difference between fluency and truthfulness, and develop calibrated trust in AI outputs.",
+    "dimension": "DISCERNMENT",
+    "interactionMode": "AUGMENTATION",
+    "contentType": "ARTICLE",
+    "estimatedMinutes": 12,
+    "difficulty": "BEGINNER",
+    "contentUrl": "/learning/discernment/beginner/confidence-vs-accuracy"
+  },
+  {
+    "title": "Detecting Hallucinations in Practice",
+    "description": "Interactive exercise with 15 AI outputs -- some contain hallucinations, some do not. Sharpen your ability to identify fabricated citations, invented facts, and plausible-sounding fiction.",
+    "dimension": "DISCERNMENT",
+    "interactionMode": "AUGMENTATION",
+    "contentType": "EXERCISE",
+    "estimatedMinutes": 30,
+    "difficulty": "INTERMEDIATE",
+    "contentUrl": "/learning/discernment/intermediate/hallucination-detection"
+  },
+  {
+    "title": "Bias Detection in AI Outputs",
+    "description": "Learn to identify systematic biases in AI responses: demographic bias, cultural bias, recency bias, and survivorship bias. Practice with real-world examples from hiring, lending, and content generation.",
+    "dimension": "DISCERNMENT",
+    "interactionMode": "AUGMENTATION",
+    "contentType": "VIDEO",
+    "estimatedMinutes": 25,
+    "difficulty": "INTERMEDIATE",
+    "contentUrl": "/learning/discernment/intermediate/bias-detection"
+  },
+  {
+    "title": "When AI Does Not Know What It Does Not Know",
+    "description": "Develop the skill of recognizing when AI lacks context or expertise. Learn to spot hedge words, generic answers, and situations where AI fills knowledge gaps with plausible but unsupported content.",
+    "dimension": "DISCERNMENT",
+    "interactionMode": "AUGMENTATION",
+    "contentType": "EXERCISE",
+    "estimatedMinutes": 25,
+    "difficulty": "INTERMEDIATE",
+    "contentUrl": "/learning/discernment/intermediate/missing-context"
+  },
+  {
+    "title": "AI Limitations Deep Dive",
+    "description": "Comprehensive exploration of fundamental AI limitations: training data cutoffs, context windows, reasoning vs. pattern matching, mathematical capabilities, and real-time knowledge gaps.",
+    "dimension": "DISCERNMENT",
+    "interactionMode": "AUGMENTATION",
+    "contentType": "ARTICLE",
+    "estimatedMinutes": 20,
+    "difficulty": "INTERMEDIATE",
+    "contentUrl": "/learning/discernment/intermediate/limitations"
+  },
+  {
+    "title": "Critical Evaluation Frameworks for AI",
+    "description": "Apply structured evaluation frameworks to AI outputs in high-stakes domains: legal analysis, medical information, financial advice, and engineering recommendations.",
+    "dimension": "DISCERNMENT",
+    "interactionMode": "AUGMENTATION",
+    "contentType": "SIMULATION",
+    "estimatedMinutes": 40,
+    "difficulty": "ADVANCED",
+    "contentUrl": "/learning/discernment/advanced/evaluation-frameworks"
+  },
+  {
+    "title": "Red-Teaming AI Outputs",
+    "description": "Advanced techniques for stress-testing AI outputs: adversarial questioning, edge case probing, cross-validation with multiple models, and systematic error analysis.",
+    "dimension": "DISCERNMENT",
+    "interactionMode": "AUGMENTATION",
+    "contentType": "SIMULATION",
+    "estimatedMinutes": 45,
+    "difficulty": "ADVANCED",
+    "contentUrl": "/learning/discernment/advanced/red-teaming"
+  },
+  {
+    "title": "Building Organizational AI Verification Protocols",
+    "description": "Design and implement team-level protocols for verifying AI outputs. Create checklists, review processes, and quality gates appropriate for different risk levels and use cases.",
+    "dimension": "DISCERNMENT",
+    "interactionMode": "AUGMENTATION",
+    "contentType": "EXERCISE",
+    "estimatedMinutes": 30,
+    "difficulty": "ADVANCED",
+    "contentUrl": "/learning/discernment/advanced/verification-protocols"
+  },
+  {
+    "title": "Responsible AI Use Essentials",
+    "description": "Foundation course on ethical AI use in the workplace. Covers attribution, transparency, data privacy basics, and your responsibilities when using AI-generated content.",
+    "dimension": "DILIGENCE",
+    "interactionMode": "AUGMENTATION",
+    "contentType": "VIDEO",
+    "estimatedMinutes": 18,
+    "difficulty": "BEGINNER",
+    "contentUrl": "/learning/diligence/beginner/responsible-use"
+  },
+  {
+    "title": "Data Privacy When Using AI",
+    "description": "Learn what data should never be shared with AI tools, how to anonymize sensitive information, and how to evaluate AI tools' data handling policies. Includes PII identification exercises.",
+    "dimension": "DILIGENCE",
+    "interactionMode": "AUGMENTATION",
+    "contentType": "ARTICLE",
+    "estimatedMinutes": 15,
+    "difficulty": "BEGINNER",
+    "contentUrl": "/learning/diligence/beginner/data-privacy"
+  },
+  {
+    "title": "AI Attribution Best Practices",
+    "description": "Practical guide to properly attributing AI contributions in different contexts: reports, presentations, code, creative work, and academic writing. Includes templates and examples.",
+    "dimension": "DILIGENCE",
+    "interactionMode": "AUGMENTATION",
+    "contentType": "ARTICLE",
+    "estimatedMinutes": 12,
+    "difficulty": "BEGINNER",
+    "contentUrl": "/learning/diligence/beginner/attribution"
+  },
+  {
+    "title": "Transparency in AI-Assisted Work",
+    "description": "Learn when and how to disclose AI use to stakeholders, clients, and colleagues. Practice navigating awkward conversations about AI involvement in your work with confidence.",
+    "dimension": "DILIGENCE",
+    "interactionMode": "AUGMENTATION",
+    "contentType": "EXERCISE",
+    "estimatedMinutes": 20,
+    "difficulty": "INTERMEDIATE",
+    "contentUrl": "/learning/diligence/intermediate/transparency"
+  },
+  {
+    "title": "AI Ethics in Practice",
+    "description": "Work through 10 ethical dilemmas involving AI use in the workplace. Develop a personal ethical framework for evaluating new AI use cases and their potential impacts.",
+    "dimension": "DILIGENCE",
+    "interactionMode": "AUGMENTATION",
+    "contentType": "SIMULATION",
+    "estimatedMinutes": 35,
+    "difficulty": "INTERMEDIATE",
+    "contentUrl": "/learning/diligence/intermediate/ethics-practice"
+  },
+  {
+    "title": "Staying Current with AI Developments",
+    "description": "Build a sustainable learning practice for keeping up with AI. Curate information sources, set up alerts, join communities, and create a personal AI learning roadmap.",
+    "dimension": "DILIGENCE",
+    "interactionMode": "AUGMENTATION",
+    "contentType": "ARTICLE",
+    "estimatedMinutes": 15,
+    "difficulty": "INTERMEDIATE",
+    "contentUrl": "/learning/diligence/intermediate/staying-current"
+  },
+  {
+    "title": "Enterprise AI Governance Frameworks",
+    "description": "Design and implement organizational AI governance: usage policies, approval workflows, risk classification, audit trails, and compliance monitoring for AI tool adoption.",
+    "dimension": "DILIGENCE",
+    "interactionMode": "AUGMENTATION",
+    "contentType": "VIDEO",
+    "estimatedMinutes": 30,
+    "difficulty": "ADVANCED",
+    "contentUrl": "/learning/diligence/advanced/governance-frameworks"
+  },
+  {
+    "title": "AI Compliance in Regulated Industries",
+    "description": "Navigate AI use in healthcare, finance, legal, and government contexts. Cover GDPR, HIPAA, SOX, and emerging AI-specific regulations with practical compliance checklists.",
+    "dimension": "DILIGENCE",
+    "interactionMode": "AUGMENTATION",
+    "contentType": "ARTICLE",
+    "estimatedMinutes": 25,
+    "difficulty": "ADVANCED",
+    "contentUrl": "/learning/diligence/advanced/regulated-industries"
+  },
+  {
+    "title": "Building an AI-Ethical Culture",
+    "description": "Lead organizational change toward responsible AI adoption. Develop training programs, establish review boards, create reporting mechanisms, and foster open dialogue about AI ethics.",
+    "dimension": "DILIGENCE",
+    "interactionMode": "AUGMENTATION",
+    "contentType": "SIMULATION",
+    "estimatedMinutes": 40,
+    "difficulty": "ADVANCED",
+    "contentUrl": "/learning/diligence/advanced/ethical-culture"
+  },
+  {
+    "title": "AI Risk Assessment and Mitigation",
+    "description": "Advanced techniques for assessing and mitigating AI-related risks in business operations. Covers risk matrices, impact analysis, mitigation strategies, and incident response planning.",
+    "dimension": "DILIGENCE",
+    "interactionMode": "AUGMENTATION",
+    "contentType": "EXERCISE",
+    "estimatedMinutes": 35,
+    "difficulty": "ADVANCED",
+    "contentUrl": "/learning/diligence/advanced/risk-assessment"
+  }
+]

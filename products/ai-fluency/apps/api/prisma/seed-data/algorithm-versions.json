@@ -1,0 +1,7 @@
+[
+  {
+    "version": 1,
+    "description": "Initial scoring algorithm v1. Prevalence-weighted composite scoring across 24 behavioral indicators. Observable indicators scored via scenario response accuracy (0.0-1.0). Self-report indicators scored via Likert scale normalization (1-5 mapped to 0.0-1.0). Dimension scores are prevalence-weighted averages of constituent indicators. Overall score is weighted average of dimension scores using template dimension weights. Discernment gap flag triggered when DISCERNMENT_REASONING and DISCERNMENT_MISSING_CONTEXT both score below 0.4.",
+    "isActive": true
+  }
+]

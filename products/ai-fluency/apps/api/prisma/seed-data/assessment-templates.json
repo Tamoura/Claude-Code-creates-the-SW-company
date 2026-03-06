@@ -1,0 +1,62 @@
+[
+  {
+    "name": "Standard 4D AI Fluency Assessment",
+    "description": "The default assessment covering all four dimensions of AI fluency: Delegation, Description, Discernment, and Diligence. Uses equal weighting across dimensions. Suitable for general workforce assessment across all roles and industries.",
+    "roleProfile": "GENERIC",
+    "isCustom": false,
+    "dimensionWeights": {
+      "delegation": 0.25,
+      "description": 0.25,
+      "discernment": 0.25,
+      "diligence": 0.25
+    }
+  },
+  {
+    "name": "Developer AI Fluency Assessment",
+    "description": "Tailored assessment for software developers and technical roles. Emphasizes Delegation (AI-assisted coding, code review) and Discernment (validating AI-generated code, detecting hallucinated APIs).",
+    "roleProfile": "DEVELOPER",
+    "isCustom": false,
+    "dimensionWeights": {
+      "delegation": 0.30,
+      "description": 0.20,
+      "discernment": 0.30,
+      "diligence": 0.20
+    }
+  },
+  {
+    "name": "Analyst AI Fluency Assessment",
+    "description": "Tailored assessment for data analysts and research roles. Emphasizes Description (precise prompting for data tasks) and Discernment (verifying AI-generated statistics and detecting bias in analysis).",
+    "roleProfile": "ANALYST",
+    "isCustom": false,
+    "dimensionWeights": {
+      "delegation": 0.20,
+      "description": 0.30,
+      "discernment": 0.30,
+      "diligence": 0.20
+    }
+  },
+  {
+    "name": "Manager AI Fluency Assessment",
+    "description": "Tailored assessment for people managers and team leads. Emphasizes Delegation (orchestrating AI across team workflows) and Diligence (governance, transparency, and ethical AI adoption).",
+    "roleProfile": "MANAGER",
+    "isCustom": false,
+    "dimensionWeights": {
+      "delegation": 0.30,
+      "description": 0.15,
+      "discernment": 0.20,
+      "diligence": 0.35
+    }
+  },
+  {
+    "name": "Marketer AI Fluency Assessment",
+    "description": "Tailored assessment for marketing and communications roles. Emphasizes Description (creative prompting, brand voice) and Diligence (attribution, transparency in AI-generated content).",
+    "roleProfile": "MARKETER",
+    "isCustom": false,
+    "dimensionWeights": {
+      "delegation": 0.20,
+      "description": 0.35,
+      "discernment": 0.15,
+      "diligence": 0.30
+    }
+  }
+]

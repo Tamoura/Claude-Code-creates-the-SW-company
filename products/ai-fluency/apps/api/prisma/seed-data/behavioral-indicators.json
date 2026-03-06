@@ -1,0 +1,218 @@
+[
+  {
+    "shortCode": "DELEGATION_TASK_SUITABILITY",
+    "name": "Identify tasks suitable for AI delegation",
+    "description": "Ability to evaluate tasks and determine which are appropriate for AI handling based on complexity, risk, and required judgment. Includes recognizing routine vs. novel tasks, assessing automation potential, and understanding where AI adds value versus where human expertise is essential.",
+    "dimension": "DELEGATION",
+    "track": "OBSERVABLE",
+    "prevalenceWeight": 0.67,
+    "sortOrder": 1
+  },
+  {
+    "shortCode": "DELEGATION_DECOMPOSITION",
+    "name": "Break complex tasks into AI-suitable subtasks",
+    "description": "Capability to decompose large, multi-step tasks into discrete components that can be effectively handled by AI. Involves identifying dependencies between subtasks, sequencing AI and human steps, and creating clear handoff points between automated and manual work.",
+    "dimension": "DELEGATION",
+    "track": "OBSERVABLE",
+    "prevalenceWeight": 0.45,
+    "sortOrder": 2
+  },
+  {
+    "shortCode": "DELEGATION_REASONING",
+    "name": "Question AI reasoning and request explanations",
+    "description": "Practice of not accepting AI outputs at face value but actively probing the reasoning behind recommendations. Includes asking AI to show its work, explain assumptions, and justify conclusions before acting on them.",
+    "dimension": "DELEGATION",
+    "track": "OBSERVABLE",
+    "prevalenceWeight": 0.33,
+    "sortOrder": 3
+  },
+  {
+    "shortCode": "DELEGATION_ITERATIVE",
+    "name": "Use iterative refinement to improve AI outputs",
+    "description": "Skill of progressively improving AI-generated work through multiple rounds of feedback and refinement. Involves evaluating initial outputs, providing specific improvement instructions, and knowing when the output meets quality standards.",
+    "dimension": "DELEGATION",
+    "track": "OBSERVABLE",
+    "prevalenceWeight": 0.58,
+    "sortOrder": 4
+  },
+  {
+    "shortCode": "DELEGATION_HUMAN_JUDGMENT",
+    "name": "Retain human judgment on critical decisions",
+    "description": "Consistent practice of maintaining personal accountability and judgment for high-stakes decisions, even when AI provides recommendations. Includes knowing which decisions require human sign-off and resisting over-reliance on AI for consequential choices.",
+    "dimension": "DELEGATION",
+    "track": "SELF_REPORT",
+    "prevalenceWeight": 0.72,
+    "sortOrder": 5
+  },
+  {
+    "shortCode": "DELEGATION_TOOL_SELECTION",
+    "name": "Select appropriate AI tools for specific tasks",
+    "description": "Knowledge of the AI tool landscape and ability to match the right tool to the right task. Includes understanding strengths and limitations of different AI systems, evaluating new tools critically, and avoiding the trap of using a single tool for everything.",
+    "dimension": "DELEGATION",
+    "track": "SELF_REPORT",
+    "prevalenceWeight": 0.55,
+    "sortOrder": 6
+  },
+  {
+    "shortCode": "DELEGATION_SCOPE_DEFINITION",
+    "name": "Define clear scope boundaries for AI tasks",
+    "description": "Ability to set explicit boundaries on what AI should and should not do within a given task. Includes defining success criteria, specifying constraints, and communicating guardrails that keep AI work within acceptable parameters.",
+    "dimension": "DELEGATION",
+    "track": "SELF_REPORT",
+    "prevalenceWeight": 0.48,
+    "sortOrder": 7
+  },
+  {
+    "shortCode": "DESCRIPTION_CONTEXT",
+    "name": "Provide sufficient context in prompts",
+    "description": "Skill of including all relevant background information, domain knowledge, and situational details in AI prompts. Involves anticipating what the AI needs to know, structuring context effectively, and balancing completeness with conciseness.",
+    "dimension": "DESCRIPTION",
+    "track": "OBSERVABLE",
+    "prevalenceWeight": 0.78,
+    "sortOrder": 8
+  },
+  {
+    "shortCode": "DESCRIPTION_CONSTRAINTS",
+    "name": "Specify constraints and requirements clearly",
+    "description": "Practice of explicitly stating boundaries, limitations, and requirements in AI interactions. Includes defining output length, tone, technical requirements, regulatory constraints, and any exclusions that should apply to the AI's work.",
+    "dimension": "DESCRIPTION",
+    "track": "OBSERVABLE",
+    "prevalenceWeight": 0.62,
+    "sortOrder": 9
+  },
+  {
+    "shortCode": "DESCRIPTION_FORMAT",
+    "name": "Direct output format and structure",
+    "description": "Ability to specify the desired structure, format, and organization of AI outputs. Includes requesting specific formats (tables, lists, prose), defining section headers, specifying data schemas, and setting visual presentation requirements.",
+    "dimension": "DESCRIPTION",
+    "track": "OBSERVABLE",
+    "prevalenceWeight": 0.51,
+    "sortOrder": 10
+  },
+  {
+    "shortCode": "DESCRIPTION_EXAMPLES",
+    "name": "Use examples to guide AI behavior",
+    "description": "Skill of providing clear examples (few-shot prompting) to demonstrate desired behavior, style, or output quality. Includes selecting representative examples, explaining why they are good, and using both positive and negative examples effectively.",
+    "dimension": "DESCRIPTION",
+    "track": "OBSERVABLE",
+    "prevalenceWeight": 0.35,
+    "sortOrder": 11
+  },
+  {
+    "shortCode": "DESCRIPTION_PERSONA",
+    "name": "Set appropriate persona or role for AI interactions",
+    "description": "Practice of establishing the right context, role, or persona for AI to adopt during an interaction. Includes understanding how role-setting affects output quality, matching expertise level to the task, and adjusting persona based on audience needs.",
+    "dimension": "DESCRIPTION",
+    "track": "SELF_REPORT",
+    "prevalenceWeight": 0.42,
+    "sortOrder": 12
+  },
+  {
+    "shortCode": "DESCRIPTION_ITERATION",
+    "name": "Refine prompts based on output quality",
+    "description": "Habit of systematically improving prompts when initial outputs do not meet expectations. Involves diagnosing why output fell short, adjusting specific prompt elements, and building a personal library of effective prompt patterns over time.",
+    "dimension": "DESCRIPTION",
+    "track": "SELF_REPORT",
+    "prevalenceWeight": 0.65,
+    "sortOrder": 13
+  },
+  {
+    "shortCode": "DISCERNMENT_VERIFICATION",
+    "name": "Verify AI outputs against known facts",
+    "description": "Practice of cross-referencing AI-generated claims, data, and recommendations against authoritative sources. Includes fact-checking key assertions, validating numerical data, and confirming that cited sources exist and support the claims made.",
+    "dimension": "DISCERNMENT",
+    "track": "OBSERVABLE",
+    "prevalenceWeight": 0.71,
+    "sortOrder": 14
+  },
+  {
+    "shortCode": "DISCERNMENT_BIAS",
+    "name": "Detect potential bias in AI responses",
+    "description": "Ability to identify systematic biases in AI outputs including demographic bias, confirmation bias, recency bias, and training data bias. Includes recognizing when AI outputs reflect societal prejudices or skewed perspectives rather than balanced analysis.",
+    "dimension": "DISCERNMENT",
+    "track": "OBSERVABLE",
+    "prevalenceWeight": 0.28,
+    "sortOrder": 15
+  },
+  {
+    "shortCode": "DISCERNMENT_HALLUCINATION",
+    "name": "Identify AI hallucinations and fabrications",
+    "description": "Skill of detecting when AI generates plausible-sounding but fabricated information, including fake citations, invented statistics, non-existent people or events, and confidently stated falsehoods. Involves knowing which types of content are most prone to hallucination.",
+    "dimension": "DISCERNMENT",
+    "track": "OBSERVABLE",
+    "prevalenceWeight": 0.39,
+    "sortOrder": 16
+  },
+  {
+    "shortCode": "DISCERNMENT_MISSING_CONTEXT",
+    "name": "Recognize when AI lacks sufficient context",
+    "description": "Ability to detect when AI is operating with incomplete information, leading to generic, off-target, or potentially misleading outputs. Includes recognizing hedging language, overly broad answers, and situations where the AI cannot know relevant domain-specific details.",
+    "dimension": "DISCERNMENT",
+    "track": "OBSERVABLE",
+    "prevalenceWeight": 0.44,
+    "sortOrder": 17
+  },
+  {
+    "shortCode": "DISCERNMENT_CONFIDENCE",
+    "name": "Calibrate confidence in AI outputs appropriately",
+    "description": "Practice of maintaining appropriate skepticism and adjusting trust levels based on the type of task, AI's track record, and stakes involved. Includes neither over-trusting nor under-trusting AI, and knowing which domains have higher error rates.",
+    "dimension": "DISCERNMENT",
+    "track": "SELF_REPORT",
+    "prevalenceWeight": 0.56,
+    "sortOrder": 18
+  },
+  {
+    "shortCode": "DISCERNMENT_LIMITATIONS",
+    "name": "Understand fundamental AI limitations",
+    "description": "Knowledge of the inherent constraints of current AI systems including lack of true understanding, inability to access real-time information (in some systems), training data cutoffs, context window limits, and the difference between pattern matching and reasoning.",
+    "dimension": "DISCERNMENT",
+    "track": "SELF_REPORT",
+    "prevalenceWeight": 0.63,
+    "sortOrder": 19
+  },
+  {
+    "shortCode": "DILIGENCE_ATTRIBUTION",
+    "name": "Attribute AI-generated content properly",
+    "description": "Practice of transparently crediting AI contributions in work products, including marking AI-generated text, noting which sections were AI-assisted, and following organizational or industry attribution standards for AI-produced content.",
+    "dimension": "DILIGENCE",
+    "track": "OBSERVABLE",
+    "prevalenceWeight": 0.31,
+    "sortOrder": 20
+  },
+  {
+    "shortCode": "DILIGENCE_PRIVACY",
+    "name": "Protect sensitive data in AI interactions",
+    "description": "Consistent practice of safeguarding personal, proprietary, and confidential information when working with AI systems. Includes anonymizing data before sharing, understanding data retention policies, and knowing which information should never be entered into AI tools.",
+    "dimension": "DILIGENCE",
+    "track": "SELF_REPORT",
+    "prevalenceWeight": 0.74,
+    "sortOrder": 21
+  },
+  {
+    "shortCode": "DILIGENCE_TRANSPARENCY",
+    "name": "Disclose AI usage to stakeholders",
+    "description": "Habit of proactively informing colleagues, clients, and stakeholders about AI involvement in work products. Includes communicating the extent of AI assistance, explaining how AI was used, and being honest about the human vs. AI contribution split.",
+    "dimension": "DILIGENCE",
+    "track": "SELF_REPORT",
+    "prevalenceWeight": 0.47,
+    "sortOrder": 22
+  },
+  {
+    "shortCode": "DILIGENCE_LEARNING",
+    "name": "Continuously learn about AI capabilities",
+    "description": "Ongoing commitment to staying current with AI developments, exploring new tools and techniques, and expanding personal AI literacy. Includes following AI research, experimenting with new features, and sharing knowledge with colleagues.",
+    "dimension": "DILIGENCE",
+    "track": "SELF_REPORT",
+    "prevalenceWeight": 0.59,
+    "sortOrder": 23
+  },
+  {
+    "shortCode": "DILIGENCE_ETHICS",
+    "name": "Apply ethical guidelines to AI use",
+    "description": "Practice of considering ethical implications before and during AI use, including fairness, accountability, transparency, and potential harm. Involves following organizational AI ethics policies, raising concerns about problematic uses, and prioritizing responsible AI practices.",
+    "dimension": "DILIGENCE",
+    "track": "SELF_REPORT",
+    "prevalenceWeight": 0.52,
+    "sortOrder": 24
+  }
+]
