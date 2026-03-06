@@ -1,13 +1,13 @@
 import { FastifyInstance, FastifyRequest, FastifyReply } from 'fastify';
-import { validateBody, validateQuery, createTenantSchema, updateTenantSchema, paginationQuerySchema } from '../../utils/validation';
-import { NotFoundError, ForbiddenError } from '../../utils/errors';
+import { validateBody, createTenantSchema, updateTenantSchema } from '../../utils/validation';
+import { NotFoundError } from '../../utils/errors';
 import { parsePagination, paginatedResult } from '../../utils/pagination';
 
 export default async function tenantRoutes(fastify: FastifyInstance) {
   // GET /tenants
   fastify.get('/', {
     preHandler: [fastify.authenticate],
-  }, async (request: FastifyRequest, reply: FastifyReply) => {
+  }, async (request: FastifyRequest, _reply: FastifyReply) => {
     const query = request.query as Record<string, string>;
     const { limit, offset } = parsePagination(query);
     const statusFilter = query.status as string | undefined;
@@ -50,7 +50,7 @@ export default async function tenantRoutes(fastify: FastifyInstance) {
   // GET /tenants/:tenantId
   fastify.get<{ Params: { tenantId: string } }>('/:tenantId', {
     preHandler: [fastify.authenticate],
-  }, async (request, reply) => {
+  }, async (request, _reply) => {
     const tenant = await fastify.prisma.tenant.findFirst({
       where: { id: request.params.tenantId, ownerId: request.user!.id },
     });
@@ -65,7 +65,7 @@ export default async function tenantRoutes(fastify: FastifyInstance) {
   // PUT /tenants/:tenantId
   fastify.put<{ Params: { tenantId: string } }>('/:tenantId', {
     preHandler: [fastify.authenticate],
-  }, async (request, reply) => {
+  }, async (request, _reply) => {
     const data = validateBody(updateTenantSchema, request.body);
 
     const existing = await fastify.prisma.tenant.findFirst({
@@ -94,7 +94,7 @@ export default async function tenantRoutes(fastify: FastifyInstance) {
   // DELETE /tenants/:tenantId
   fastify.delete<{ Params: { tenantId: string } }>('/:tenantId', {
     preHandler: [fastify.authenticate],
-  }, async (request, reply) => {
+  }, async (request, _reply) => {
     const existing = await fastify.prisma.tenant.findFirst({
       where: { id: request.params.tenantId, ownerId: request.user!.id },
     });

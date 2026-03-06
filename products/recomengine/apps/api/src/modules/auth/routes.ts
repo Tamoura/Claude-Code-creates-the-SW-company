@@ -77,7 +77,7 @@ export default async function authRoutes(fastify: FastifyInstance) {
   });
 
   // POST /forgot-password
-  fastify.post('/forgot-password', async (request: FastifyRequest, reply: FastifyReply) => {
+  fastify.post('/forgot-password', async (request: FastifyRequest, _reply: FastifyReply) => {
     const body = request.body as { email?: string };
     // Always return success to prevent user enumeration
     if (body?.email) {
@@ -97,7 +97,7 @@ export default async function authRoutes(fastify: FastifyInstance) {
   });
 
   // POST /reset-password
-  fastify.post('/reset-password', async (request: FastifyRequest, reply: FastifyReply) => {
+  fastify.post('/reset-password', async (request: FastifyRequest, _reply: FastifyReply) => {
     const body = request.body as { token?: string; password?: string };
     if (!body?.token || !body?.password) {
       throw new BadRequestError('Token and new password are required');

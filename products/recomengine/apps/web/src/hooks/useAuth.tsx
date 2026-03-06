@@ -61,7 +61,9 @@ export function AuthProvider({ children }: { children: ReactNode }) {
   const logout = async () => {
     try {
       await api.post('/api/v1/auth/logout', {});
-    } catch {}
+    } catch {
+      // expected – logout may fail if token already expired
+    }
     localStorage.removeItem('recomengine_token');
     setUser(null);
   };

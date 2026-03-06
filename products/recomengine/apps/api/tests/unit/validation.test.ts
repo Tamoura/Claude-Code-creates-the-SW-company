@@ -1,6 +1,6 @@
 import { describe, it, expect } from '@jest/globals';
-import { validateBody, signupSchema, eventSchema, createTenantSchema, recommendationQuerySchema } from '../../src/utils/validation';
-import { ValidationError, BadRequestError } from '../../src/utils/errors';
+import { validateBody, signupSchema, eventSchema, createTenantSchema } from '../../src/utils/validation';
+import { ValidationError } from '../../src/utils/errors';
 
 describe('Validation', () => {
   describe('signupSchema', () => {

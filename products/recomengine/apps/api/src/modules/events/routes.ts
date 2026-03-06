@@ -1,6 +1,5 @@
 import { FastifyInstance, FastifyRequest, FastifyReply } from 'fastify';
 import { validateBody, eventSchema, batchEventsSchema } from '../../utils/validation';
-import { logger } from '../../utils/logger';
 import { updateRealtimeCounters } from './counters';
 
 export default async function eventRoutes(fastify: FastifyInstance) {

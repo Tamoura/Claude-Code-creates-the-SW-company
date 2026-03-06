@@ -1,4 +1,4 @@
-import { FastifyInstance, FastifyRequest, FastifyReply } from 'fastify';
+import { FastifyInstance } from 'fastify';
 import { validateQuery, recommendationQuerySchema } from '../../utils/validation';
 import { getRecommendations } from './service';
 
@@ -6,7 +6,7 @@ export default async function recommendationRoutes(fastify: FastifyInstance) {
   // GET /recommendations
   fastify.get('/', {
     preHandler: [fastify.authenticateApiKey],
-  }, async (request: FastifyRequest, reply: FastifyReply) => {
+  }, async (request, _reply) => {
     const query = validateQuery(recommendationQuerySchema, request.query);
     const tenantId = request.tenantId!;
 
