@@ -88,12 +88,12 @@ jobs:
 
       - name: Run lint
         if: steps.check.outputs.exists == 'true'
-        run: pnpm run lint --if-present
+        run: pnpm run --if-present lint
         continue-on-error: true
 
       - name: Run typecheck
         if: steps.check.outputs.exists == 'true'
-        run: pnpm run typecheck --if-present
+        run: pnpm run --if-present typecheck
         continue-on-error: true
 
   security:
@@ -105,7 +105,7 @@ jobs:
         continue-on-error: true
         run: |
           if [ -f "package-lock.json" ]; then
-            npm audit --audit-level=critical --omit=dev || echo "::warning::Security vulnerabilities found - review npm audit output above"
+            npm audit --audit-level=critical --prod || echo "::warning::Security vulnerabilities found - review npm audit output above"
           fi
 
   # Coverage check for products

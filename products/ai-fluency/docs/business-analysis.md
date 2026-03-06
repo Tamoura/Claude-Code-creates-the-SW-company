@@ -1,10 +1,23 @@
 # Business Analysis Report: AI Fluency
 
+**Document Version**: 2.0
+**Date**: March 6, 2026
+**Author**: Business Analyst, ConnectSW
+**Status**: Complete [BA-01]
+**Product**: AI Fluency -- Enterprise AI Fluency Assessment & Development Platform
+
+---
+
 ## 1. Executive Summary
 
-The AI Fluency platform addresses a critical and rapidly growing market need: assessing and developing organizational AI competency using Anthropic's empirically-validated 4D AI Fluency Framework (Delegation, Description, Discernment, Diligence). With AI skills commanding a 56% wage premium (PwC), only 6% of companies having started AI upskilling, and 42% of workers expecting role changes due to AI, the gap between demand and readiness is enormous. The AI training market is growing at 44% YoY toward a projected $2.52T, with skills shelf life averaging only 2 years for AI tools.
+The AI Fluency platform addresses a critical and rapidly growing market need: assessing and developing organizational AI competency using Anthropic's empirically-validated 4D AI Fluency Framework (Delegation, Description, Discernment, Diligence). With AI skills commanding a 56% wage premium (PwC), only 35% of organizations having mature workforce-wide AI upskilling programs, and organizations with AI literacy programs being nearly 2x more likely to see significant AI ROI, the gap between demand and readiness represents a massive commercial opportunity.
 
-This report recommends a GO decision for the AI Fluency product. The platform differentiates from existing competitors (iMocha, DataCamp, Udemy Business) by being the first to implement Anthropic's research-backed 4D assessment framework with its 24 behavioral indicators. The product targets enterprise workforce development teams and educational institutions, delivering interactive assessments that measure observable and unobservable AI fluency behaviors, personalized learning paths per dimension, role-specific assessments, and organizational dashboards. The CC BY-NC-SA 4.0 licensing of the framework enables commercial assessment tooling while requiring attribution and share-alike for derived educational materials.
+This report recommends a **GO** decision for the AI Fluency product. The platform differentiates from existing competitors (iMocha, DataCamp, Udemy Business, Degreed, Anthropic Academy) by being the first to implement Anthropic's research-backed 4D assessment framework with its 24 behavioral indicators (11 observable, 13 unobservable). The product targets enterprise workforce development teams and educational institutions, delivering interactive assessments that measure observable and unobservable AI fluency behaviors, personalized learning paths per dimension, role-specific assessments, and organizational dashboards.
+
+Three converging forces make the timing optimal:
+1. **Anthropic's AI Fluency Index** (published February 23, 2026) provides the empirical behavioral data (9,830 conversations analyzed) that powers our scoring algorithms
+2. **The US Department of Labor AI Literacy Framework** (published February 13, 2026) creates a federal mandate for AI literacy programs, driving enterprise demand
+3. **The enterprise AI platform market** is growing at 27.7% CAGR toward $50.3B by 2030, with organizations investing 1-4% of payroll in AI workforce development reporting 40-120% improvement in AI-driven productivity
 
 Technical feasibility is high given alignment with ConnectSW's default stack (Next.js, Fastify, PostgreSQL). Market feasibility is high given the massive supply-demand gap and absence of framework-specific tooling. The primary risks are framework licensing interpretation for commercial use, rapid evolution of AI tools reducing assessment relevance, and enterprise sales cycle length. Recommended MVP launch targets Q3 2026 with enterprise pilot programs.
 
@@ -17,26 +30,30 @@ Technical feasibility is high given alignment with ConnectSW's default stack (Ne
 **Who experiences it**: Chief Learning Officers, HR/L&D teams, university administrators, and department managers responsible for workforce readiness. Secondary sufferers include individual contributors who lack structured guidance on effective AI interaction.
 
 **Quantified impact**:
-- 94% of companies have NOT started AI upskilling programs (PwC)
+- Nearly two in three leaders report a data or AI skills gap within their organization (DataCamp 2026)
+- Only 35% of organizations have a mature, workforce-wide upskilling program (DataCamp 2026)
 - Workers with AI skills earn 56% more than those without (PwC wage premium data)
+- Organizations with mature AI literacy programs are nearly 2x more likely to report significant AI ROI (42% vs. baseline)
+- When employers provide AI training, adoption jumps to 76% compared to just 25% without support
 - AI skill relevance degrades every ~2 years, requiring continuous reassessment
-- Organizations without AI fluency programs risk losing competitive advantage as AI adoption accelerates across every sector
 
-**Cost of inaction**: Organizations that delay AI fluency development face compounding workforce capability gaps. With 42% of workers expecting AI-driven role changes, the cost of an unprepared workforce includes reduced productivity, talent attrition to AI-fluent competitors, and missed opportunities from underutilized AI tooling.
+**Cost of inaction**: Organizations that delay AI fluency development face compounding workforce capability gaps. With AI transforming roles across every sector, the cost of an unprepared workforce includes reduced productivity, talent attrition to AI-fluent competitors, and missed opportunities from underutilized AI tooling. Organizations investing 1-2% of payroll in AI workforce development report 40-60% improvement in AI initiative success rates; those NOT investing forfeit this competitive advantage entirely.
 
 ### 2.2 Market Landscape
 
-**Market Size**: The global AI training and upskilling market is valued at approximately $2.52 trillion and growing at 44% YoY. The enterprise skills assessment sub-segment (assessments + training platforms) is estimated at $15-20 billion.
+**Market Size**: The enterprise AI platform market was valued at $14.8 billion in 2025, projected to reach $50.3 billion by 2030 at a 27.7% CAGR (Verdantix). The enterprise skills assessment sub-segment (assessments + training platforms) is estimated at $15-20 billion. The AI literacy training segment specifically is growing faster than the broader market due to regulatory tailwinds.
 
 **Growth Trends**:
 - Enterprise AI adoption accelerating across all sectors
 - Shift from "AI awareness" to "AI fluency" as a workforce KPI
-- Increasing regulatory and compliance requirements around AI use (EU AI Act, corporate governance)
+- US Department of Labor AI Literacy Framework (February 2026) establishes five foundational content areas and seven delivery principles for national AI literacy programs
+- EU AI Act and corporate governance requirements increasing compliance-driven demand
 - Remote work driving demand for digital assessment tools
+- Organizations investing 2-4% of payroll in AI training see 80-120% improvement in AI-driven productivity
 
-**Key Players**: iMocha (skill assessment), DataCamp (data/AI literacy), Degreed (skills-based learning), Udemy Business (enterprise upskilling), Anthropic Academy (free foundational courses)
+**Key Players**: iMocha (skill assessment, 300+ customers, 15 Fortune 500), DataCamp (data/AI literacy, annual State of AI Literacy reports), Degreed (skills-based learning), Udemy Business (enterprise upskilling), Anthropic Academy (free foundational courses)
 
-**Disruption Opportunity**: No existing platform implements a peer-reviewed, empirically-validated AI fluency framework with behavioral indicators derived from analysis of 9,830+ real conversations. This is a blue-ocean positioning opportunity as the first purpose-built assessment tool for the 4D framework.
+**Disruption Opportunity**: No existing platform implements a peer-reviewed, empirically-validated AI fluency framework with behavioral indicators derived from analysis of 9,830+ real conversations. The DOL framework creates demand; Anthropic's 4D framework provides the measurement methodology. We are the first purpose-built assessment tool connecting these two forces.
 
 ### 2.3 Target Segments
 
@@ -51,7 +68,7 @@ Technical feasibility is high given alignment with ConnectSW's default stack (Ne
 
 | Segment | Description | Estimated Size | Willingness to Pay |
 |---------|-------------|---------------|-------------------|
-| Government/Public Sector | Federal, state, and local agencies modernizing with AI | ~2,000 agencies | $25-100K/year |
+| Government/Public Sector | Federal, state, and local agencies aligning with DOL AI Literacy Framework | ~2,000 agencies | $25-100K/year |
 | Professional Development | Individual professionals seeking AI fluency certification | ~50M knowledge workers globally | $50-500/individual |
 | Consulting Firms | Firms delivering AI transformation services needing assessment tools | ~1,000 firms | $20-80K/year |
 
@@ -99,15 +116,16 @@ mindmap
         Integration partners
         SCORM/LTI compliance
       Regulatory Bodies
-        Data privacy (GDPR/CCPA)
-        AI governance standards
+        DOL AI Literacy Framework
+        GDPR/CCPA compliance
+        EU AI Act governance
 ```
 
 ### 3.2 Stakeholder Register
 
 | Stakeholder | Role | Interest Level | Influence Level | Key Needs | Communication Cadence |
 |-------------|------|---------------|----------------|-----------|----------------------|
-| L&D Managers | Primary User | High | High | Measurable ROI on training spend, role-specific assessments, progress tracking | Weekly product updates |
+| L&D Managers | Primary User | High | High | Measurable ROI on training spend, role-specific assessments, progress tracking, DOL framework alignment | Weekly product updates |
 | Individual Learners | Primary User | Medium | Medium | Clear feedback, actionable learning paths, minimal time commitment | In-app notifications |
 | University Instructors | Primary User | High | Medium | LMS integration, gradebook export, curriculum alignment | Monthly feature updates |
 | C-Suite Executives | Decision Maker | High | High | Org-wide dashboards, benchmarking data, ROI metrics | Quarterly business reviews |
@@ -116,7 +134,8 @@ mindmap
 | Anthropic | Framework Partner | Medium | High | Proper attribution, research collaboration, framework accuracy | Quarterly alignment |
 | LMS Vendors | Integration Partner | Medium | Medium | SCORM/LTI compliance, clean API documentation | Per-integration basis |
 | Enterprise Procurement | Gatekeeper | Low | High | Security questionnaires, SLA guarantees, data processing agreements | Per-deal basis |
-| Regulatory Bodies | External | Low | High | GDPR/CCPA compliance, AI transparency, data minimization | Ongoing compliance |
+| Regulatory Bodies | External | Low | High | DOL framework alignment, GDPR/CCPA compliance, AI transparency, data minimization | Ongoing compliance |
+| US Government Agencies | Secondary Buyer | Medium | Medium | DOL AI Literacy Framework compliance, workforce modernization metrics | Quarterly reporting |
 
 ### 3.3 Power/Interest Grid
 
@@ -133,17 +152,18 @@ quadrantChart
     IT Administrators: [0.30, 0.80]
     Enterprise Procurement: [0.25, 0.75]
     Anthropic: [0.55, 0.80]
+    Regulatory Bodies: [0.20, 0.85]
     L&D Managers: [0.90, 0.70]
     University Instructors: [0.80, 0.50]
     HR Business Partners: [0.55, 0.45]
     Individual Learners: [0.60, 0.35]
     LMS Vendors: [0.50, 0.40]
-    Regulatory Bodies: [0.20, 0.85]
+    Government Agencies: [0.60, 0.55]
 ```
 
 **Manage Closely** (High Power, High Interest): C-Suite Executives, L&D Managers, Anthropic
 **Keep Satisfied** (High Power, Low Interest): IT Administrators, Enterprise Procurement, Regulatory Bodies
-**Keep Informed** (Low Power, High Interest): University Instructors, Individual Learners
+**Keep Informed** (Low Power, High Interest): University Instructors, Individual Learners, Government Agencies
 **Monitor** (Low Power, Low Interest): LMS Vendors, HR Business Partners
 
 ## 4. Requirements Elicitation
@@ -153,39 +173,42 @@ quadrantChart
 | ID | Need | Source | Priority | Rationale |
 |----|------|--------|----------|-----------|
 | BN-001 | Assess individual AI fluency across all 4 dimensions (Delegation, Description, Discernment, Diligence) | CEO Brief / Anthropic Framework | P0 | Core value proposition; without this, the product has no differentiation |
-| BN-002 | Measure all 24 behavioral indicators (11 observable + 13 unobservable) with validated instruments | Anthropic Research | P0 | Framework fidelity is essential for credibility; the 11 observable indicators have empirical prevalence data |
+| BN-002 | Measure all 24 behavioral indicators (11 observable + 13 unobservable) with validated instruments | Anthropic Research (AI Fluency Index, Feb 2026) | P0 | Framework fidelity is essential for credibility; the 11 observable indicators have empirical prevalence data from 9,830 conversations |
 | BN-003 | Provide personalized learning paths per dimension based on assessment results | CEO Brief | P0 | Assessment without remediation delivers no ROI; learning paths convert one-time assessments to ongoing engagement |
 | BN-004 | Deliver role-specific assessments (managers, developers, analysts, marketers, etc.) | CEO Brief | P1 | Different roles require different AI fluency profiles; a developer needs strong Description, an analyst needs strong Discernment |
 | BN-005 | Provide organizational dashboards with aggregated fluency metrics and benchmarking | CEO Brief | P1 | Enterprise buyers need org-wide visibility to justify budget; dashboards are the primary executive interface |
-| BN-006 | Address the "discernment gap" identified in Anthropic's research as a specific training focus | Anthropic Research (AI Fluency Index) | P1 | Research shows artifact conversations reduce critical evaluation by -3.1pp (reasoning questioning) and -5.2pp (context identification); this is a known weakness to target |
-| BN-007 | Support three modes of AI interaction (Automation, Augmentation, Agency) in assessments | Anthropic Framework | P1 | The framework defines these as distinct interaction modalities; assessments must cover all three to be comprehensive |
+| BN-006 | Address the "discernment gap" identified in Anthropic's research as a specific training focus | Anthropic AI Fluency Index (Feb 2026) | P1 | Research shows artifact conversations reduce critical evaluation by -3.1pp (reasoning questioning) and -5.2pp (context identification); this is a known weakness to target |
+| BN-007 | Support three modes of AI interaction (Automation, Augmentation, Agency) in assessments | Anthropic Framework | P1 | The framework defines these as distinct interaction modalities; assessments MUST cover all three to be comprehensive |
 | BN-008 | Integrate with enterprise SSO (SAML/OIDC) and LMS platforms (SCORM/LTI) | Stakeholder Analysis | P1 | Enterprise adoption requires frictionless authentication and integration with existing L&D infrastructure |
 | BN-009 | Provide certification and credentialing upon fluency milestone achievement | Market Analysis | P2 | Certifications create individual motivation, employer signaling value, and recurring revenue through recertification |
 | BN-010 | Support multi-tenant architecture with data isolation per organization | Enterprise Requirements | P0 | Enterprise customers require strict data isolation; multi-tenancy is a non-negotiable for B2B SaaS |
 | BN-011 | Track fluency progression over time with longitudinal analytics | L&D Manager Needs | P1 | Training ROI requires before/after measurement; longitudinal data proves program effectiveness |
 | BN-012 | Comply with GDPR, CCPA, and SOC 2 Type II requirements | Regulatory/Enterprise | P1 | Enterprise procurement requires compliance certifications as a precondition for purchase |
+| BN-013 | Align with US Department of Labor AI Literacy Framework (five foundational content areas, seven delivery principles) | DOL Framework (Feb 2026) | P1 | Federal framework creates compliance-driven demand; alignment positions platform as DOL-compliant training tool for government and enterprise buyers |
 
 ### 4.2 Business Rules
 
 | ID | Rule | Source | Impact |
 |----|------|--------|--------|
-| BR-001 | The 4D framework attribution MUST comply with CC BY-NC-SA 4.0 license requirements (attribution to Dakan, Feller, and Anthropic; share-alike for derived educational content) | Anthropic License | All assessment content, scoring rubrics, and training materials derived from the framework must carry proper attribution. Commercial assessment tooling is permitted; derived educational materials must be shared under the same license. |
-| BR-002 | Observable behavior scoring MUST align with the empirical prevalence data from the AI Fluency Index (e.g., iterative improvement at 85.7% prevalence, verifying facts at 8.7%) | Anthropic Research | Scoring normalization must use research baselines; a user demonstrating "verifying important facts" scores higher (rarer behavior) than one demonstrating "iterative improvement" (common behavior) |
-| BR-003 | Assessment results MUST NOT be used as sole criteria for employment decisions | Legal/Ethical | The platform must include disclaimers and usage guidelines; assessments inform development plans, not hire/fire decisions |
-| BR-004 | User assessment data MUST be retained for a minimum of 3 years for longitudinal tracking but deleted upon explicit user or organization request | GDPR/CCPA | Data retention policies must balance analytics value with privacy rights; implement right-to-erasure workflows |
-| BR-005 | Organization-level data MUST be isolated at the database level (tenant isolation) | Enterprise Security | Row-level security or schema-per-tenant; no cross-organization data leakage is acceptable |
+| BR-001 | The 4D framework attribution MUST comply with CC BY-NC-SA 4.0 license requirements (attribution to Dakan, Feller, and Anthropic; share-alike for derived educational content) | Anthropic License | All assessment content, scoring rubrics, and training materials derived from the framework carry proper attribution. Commercial assessment tooling is permitted; derived educational materials are shared under the same license. |
+| BR-002 | Observable behavior scoring MUST align with the empirical prevalence data from the AI Fluency Index (e.g., iterative improvement at 85.7% prevalence, verifying facts at 8.7%) | Anthropic Research | Scoring normalization uses research baselines; a user demonstrating "verifying important facts" scores higher (rarer behavior) than one demonstrating "iterative improvement" (common behavior) |
+| BR-003 | Assessment results MUST NOT be used as sole criteria for employment decisions | Legal/Ethical | The platform includes disclaimers and usage guidelines; assessments inform development plans, not hire/fire decisions |
+| BR-004 | User assessment data MUST be retained for a minimum of 3 years for longitudinal tracking but deleted upon explicit user or organization request | GDPR/CCPA | Data retention policies balance analytics value with privacy rights; implement right-to-erasure workflows |
+| BR-005 | Organization-level data MUST be isolated at the database level (tenant isolation) | Enterprise Security | Row-level security in PostgreSQL; no cross-organization data leakage is acceptable |
 | BR-006 | Assessment scoring algorithms MUST be versioned; when scoring changes, historical scores remain under their original version | Assessment Integrity | Score comparability over time requires version tracking; retrospective rescoring is optional but original scores are immutable |
+| BR-007 | Platform MUST map assessment content to DOL AI Literacy Framework content areas where applicable | DOL Framework | Enables marketing as "DOL-aligned" and positions for government procurement |
 
 ### 4.3 Assumptions
 
 | ID | Assumption | Risk if Wrong | Validation Plan |
 |----|-----------|---------------|-----------------|
-| ASM-001 | CC BY-NC-SA 4.0 permits building commercial assessment tooling around the framework (since the assessment tool itself is not a "derivative work" of the educational content) | High - If Anthropic considers the platform a derivative work, we need explicit licensing permission, delaying launch by 2-3 months | Contact Anthropic's partnerships team within 30 days to confirm licensing interpretation; obtain written clarification |
-| ASM-002 | Enterprise L&D budgets will allocate $50-200K/year for AI fluency assessment tooling | Medium - If budgets are lower, pricing model needs adjustment; freemium or per-seat pricing may be necessary | Conduct 10 discovery calls with L&D leaders in target companies within 60 days; validate willingness-to-pay range |
-| ASM-003 | The 11 observable behavioral indicators can be reliably assessed through structured interactive scenarios (not just conversation analysis) | High - If indicators require real AI conversation analysis, the technical architecture changes significantly (need AI integration, conversation monitoring) | Build a prototype assessment for 2-3 indicators and test with 20 users; measure inter-rater reliability against Anthropic's benchmarks |
-| ASM-004 | The 13 unobservable behaviors (ethical use, disclosure practices, consequence consideration) can be assessed through self-report and scenario-based questions with acceptable validity | Medium - Self-report has known social desirability bias; if validity is too low, we need alternative assessment methods (peer review, 360-degree feedback) | Design pilot assessment with both self-report and peer-validation; compare scores for convergent validity |
-| ASM-005 | University adoption will follow the enterprise sales cycle (6-9 months) rather than academic procurement cycles (12-18 months) | Low - If academic procurement is slower, we adjust go-to-market sequencing to lead with enterprise | Track first 5 university pipeline deals; measure average cycle length; adjust segment prioritization if >12 months |
-| ASM-006 | Anthropic will continue updating the 4D framework with new research, providing a sustained competitive moat through framework partnership | Medium - If framework stagnates, our differentiation erodes as competitors build equivalent assessments | Establish quarterly check-ins with Anthropic research team; monitor for competing framework publications |
+| ASM-001 | CC BY-NC-SA 4.0 permits building commercial assessment tooling around the framework (since the assessment tool itself is not a "derivative work" of the educational content) | High -- If Anthropic considers the platform a derivative work, we need explicit licensing permission, delaying launch by 2-3 months | Contact Anthropic's partnerships team within 30 days to confirm licensing interpretation; obtain written clarification |
+| ASM-002 | Enterprise L&D budgets will allocate $50-200K/year for AI fluency assessment tooling | Medium -- If budgets are lower, pricing model needs adjustment; freemium or per-seat pricing is necessary | Conduct 10 discovery calls with L&D leaders in target companies within 60 days; validate willingness-to-pay range |
+| ASM-003 | The 11 observable behavioral indicators can be reliably assessed through structured interactive scenarios (not just conversation analysis) | High -- If indicators require real AI conversation analysis, the technical architecture changes significantly (need AI integration, conversation monitoring) | Build a prototype assessment for 2-3 indicators and test with 20 users; measure inter-rater reliability against Anthropic's benchmarks |
+| ASM-004 | The 13 unobservable behaviors (ethical use, disclosure practices, consequence consideration) can be assessed through self-report and scenario-based questions with acceptable validity | Medium -- Self-report has known social desirability bias; if validity is too low, alternative assessment methods are needed (peer review, 360-degree feedback) | Design pilot assessment with both self-report and peer-validation; compare scores for convergent validity |
+| ASM-005 | University adoption will follow the enterprise sales cycle (6-9 months) rather than academic procurement cycles (12-18 months) | Low -- If academic procurement is slower, adjust go-to-market sequencing to lead with enterprise | Track first 5 university pipeline deals; measure average cycle length; adjust segment prioritization if >12 months |
+| ASM-006 | Anthropic will continue updating the 4D framework with new research, providing a sustained competitive moat through framework partnership | Medium -- If framework stagnates, our differentiation erodes as competitors build equivalent assessments | Establish quarterly check-ins with Anthropic research team; monitor for competing framework publications |
+| ASM-007 | The DOL AI Literacy Framework will drive measurable demand from government agencies and DOL-funded workforce programs | Medium -- If DOL framework adoption is slow or voluntary compliance is ignored, government segment underperforms | Track DOL-funded training program announcements; monitor government RFPs mentioning AI literacy within 90 days |
 
 ## 5. Process Analysis
 
@@ -194,8 +217,8 @@ quadrantChart
 ```mermaid
 flowchart TD
     A[L&D Manager Identifies AI Training Need] --> B{Existing Assessment Tool?}
-    B -->|No - 94% of companies| C[Ad-hoc Skills Survey]
-    B -->|Yes - 6% of companies| D[Generic AI Quiz / iMocha]
+    B -->|No - 65% of organizations| C[Ad-hoc Skills Survey]
+    B -->|Yes - 35% of organizations| D[Generic AI Quiz / iMocha]
     C --> E[Manual Analysis of Survey Results]
     D --> F[Score Report - No Behavioral Insights]
     E --> G{Training Content Available?}
@@ -221,12 +244,13 @@ flowchart TD
 ```
 
 **Pain Points in Current State**:
-- 94% of companies have no structured AI assessment at all
+- 65% of organizations have no mature AI assessment program at all (DataCamp 2026)
 - Existing tools (iMocha, generic quizzes) test knowledge, not behavioral fluency
 - No mapping to empirically-validated behavioral indicators
 - Training is generic (one-size-fits-all), not personalized to fluency gaps
 - ROI measurement is impossible without pre/post behavioral data
 - L&D budgets are at risk due to inability to demonstrate training impact
+- Without employer-provided AI training, adoption stalls at 25%
 
 ### 5.2 Future State (To-Be): AI Fluency Platform
 
@@ -275,6 +299,7 @@ flowchart TD
 | Discernment Focus | Not addressed | Specific module targeting the -3.1pp/-5.2pp discernment gap | Addresses the single largest fluency weakness identified in research |
 | Scale | Manual survey analysis | Automated scoring and dashboarding for 10,000+ users | From weeks of manual analysis to real-time organizational insights |
 | Role Relevance | Generic assessments | Role-specific templates (developer, analyst, manager, marketer) | 4-6x role templates with tailored behavioral indicator weighting |
+| Training Adoption | 25% AI adoption without support | 76% AI adoption with employer-provided training | 3x increase in workforce AI adoption through structured assessment and training |
 
 ## 6. Gap Analysis
 
@@ -292,10 +317,11 @@ flowchart TD
 | Three Interaction Modes | N/A | Assessment scenarios covering Automation, Augmentation, and Agency modes | Full build required | P1 | M |
 | Enterprise SSO (SAML/OIDC) | N/A | SAML 2.0 and OIDC integration for enterprise identity providers | Full build; reuse ConnectSW auth patterns | P1 | S |
 | LMS Integration (SCORM/LTI) | N/A | SCORM 1.2/2004 content packaging and LTI 1.3 tool integration | Full build required | P1 | M |
-| Multi-Tenant Data Isolation | N/A | Row-level security or schema-per-tenant PostgreSQL implementation | Full build; reuse ConnectSW patterns | P0 | M |
+| Multi-Tenant Data Isolation | N/A | Row-level security PostgreSQL implementation | Full build; reuse ConnectSW patterns | P0 | M |
 | Longitudinal Analytics | N/A | Time-series fluency tracking with statistical trend analysis | Full build required | P1 | M |
 | Certification Engine | N/A | Milestone-based credentialing with digital badge issuance | Full build required | P2 | S |
 | GDPR/CCPA Compliance | N/A | Data residency controls, consent management, right-to-erasure workflows | Full build required | P1 | M |
+| DOL Framework Alignment | N/A | Content mapping to DOL five content areas + seven delivery principles | Content mapping exercise | P1 | S |
 
 ### 6.2 Gap Visualization
 
@@ -322,9 +348,10 @@ quadrantChart
     Longitudinal Analytics: [0.65, 0.60]
     GDPR Compliance: [0.70, 0.50]
     Certification Engine: [0.35, 0.30]
+    DOL Alignment: [0.70, 0.25]
 ```
 
-**Reading**: The upper-right quadrant ("Strategic Investment") contains the P0 capabilities that require significant effort but are essential: the 4D Assessment Engine, Observable Behavior Scoring, and Personalized Learning Paths. Enterprise SSO and Certification Engine are "Quick Wins" with relatively lower effort. LMS Integration and Longitudinal Analytics fall into "Plan Carefully" as medium-effort, medium-priority items.
+**Reading**: The upper-right quadrant ("Strategic Investment") contains the P0 capabilities that require significant effort but are essential: the 4D Assessment Engine, Observable Behavior Scoring, and Personalized Learning Paths. Enterprise SSO, Certification Engine, and DOL Alignment are "Quick Wins" with relatively lower effort. LMS Integration and Longitudinal Analytics fall into "Plan Carefully" as medium-effort, medium-priority items.
 
 ## 7. Competitive Analysis
 
@@ -332,11 +359,11 @@ quadrantChart
 
 | Competitor | Strengths | Weaknesses | Market Position | Key Differentiator |
 |-----------|-----------|-----------|----------------|-------------------|
-| **iMocha** | 3,000+ pre-built skill assessments; enterprise-grade; HR system integrations (SAP, Workday); AI-powered proctoring | No AI fluency-specific framework; assessments test knowledge not behavioral fluency; no personalized learning paths; generic AI quizzes | Market leader in technical skill assessment; strong enterprise presence | Breadth of skill coverage across all domains |
-| **DataCamp** | Strong data/AI literacy training content; annual State of AI Literacy reports; enterprise dashboards; hands-on coding exercises | Focused on data skills, not general AI fluency; no behavioral assessment; no 4D framework alignment; limited non-technical roles | Leader in data science education; growing enterprise segment | Hands-on coding exercises and data-specific training |
+| **iMocha** | 3,000+ pre-built skill assessments; enterprise-grade; HR system integrations (SAP, Workday); AI-powered proctoring; 300+ customers including 15 Fortune 500 | No AI fluency-specific framework; assessments test knowledge not behavioral fluency; no personalized learning paths; generic AI quizzes; pricing starts at $400/mo | Market leader in technical skill assessment; strong enterprise presence | Breadth of skill coverage across all domains |
+| **DataCamp** | Strong data/AI literacy training content; annual State of AI Literacy reports; enterprise dashboards; hands-on coding exercises; publishes authoritative market data | Focused on data skills, not general AI fluency; no behavioral assessment; no 4D framework alignment; limited non-technical roles | Leader in data science education; growing enterprise segment | Hands-on coding exercises and data-specific training |
 | **Udemy Business** | Massive course library; 10-step AI upskilling framework; affordable per-seat pricing; recognized brand | No assessment engine; completion-based (not competency-based); no behavioral indicators; generic content not role-specific | Largest online course marketplace; strong SMB adoption | Volume and variety of content at low price point |
 | **Degreed** | Skills graph technology; learning experience platform; integrates with 100+ content sources; career mobility pathways | No AI-specific assessment framework; platform-agnostic (no proprietary content); expensive enterprise pricing; complex implementation | Enterprise LXP leader; competes with Cornerstone | Skills ontology and learning pathway technology |
-| **Anthropic Academy** | Free; created by framework originators; authoritative content; covers foundations well | Free courses only (no assessment); no enterprise features; no dashboards or tracking; no LMS integration; no certification | Free educational resource; establishes framework awareness | Direct authority from framework creators |
+| **Anthropic Academy** | Free; created by framework originators; authoritative content; covers foundations well; student-specific courses available | Free courses only (no assessment); no enterprise features; no dashboards or tracking; no LMS integration; no certification | Free educational resource; establishes framework awareness | Direct authority from framework creators |
 
 ### 7.2 Feature Comparison Matrix
 
@@ -356,20 +383,41 @@ quadrantChart
 | Certification | YES | YES | YES | YES | Certificate of completion |
 | Multi-Tenant Isolation | YES | YES | YES | YES | N/A |
 | Interaction Mode Coverage | YES (3 modes) | No | No | No | Teaches concepts only |
-| Pricing Model | Per-seat enterprise | Per-seat enterprise | Per-seat enterprise | Per-seat enterprise | Free |
+| DOL Framework Alignment | YES | No | Partial | No | No |
+| Pricing Model | Per-seat enterprise | Per-seat enterprise ($400+/mo) | Per-seat enterprise | Per-seat enterprise | Free |
 
 ### 7.3 Competitive Positioning
 
 **Our Differentiation**: AI Fluency is the ONLY platform that implements Anthropic's empirically-validated 4D framework as interactive assessments with automated behavioral scoring. Every competitor either (a) offers generic AI knowledge quizzes without behavioral indicators, (b) focuses on a narrow domain (data skills), or (c) provides training content without assessment capabilities.
 
-**Blue Ocean Opportunity**: The intersection of "validated assessment framework" + "behavioral measurement" + "personalized remediation" + "enterprise analytics" is unoccupied. Anthropic Academy creates framework awareness (demand generation) but provides no assessment tooling (our product fills this gap).
+**Blue Ocean Opportunity**: The intersection of "validated assessment framework" + "behavioral measurement" + "personalized remediation" + "enterprise analytics" + "DOL alignment" is unoccupied. Anthropic Academy creates framework awareness (demand generation) but provides no assessment tooling (our product fills this gap).
 
 **Defensible Moat**:
-1. First-mover advantage on 4D framework implementation
-2. Prevalence-weighted scoring normalization using Anthropic's research data
-3. Discernment gap training as proprietary module
+1. First-mover advantage on 4D framework implementation with 24 behavioral indicators
+2. Prevalence-weighted scoring normalization using Anthropic's empirical data from 9,830 conversations
+3. Discernment gap training as proprietary module addressing the -3.1pp/-5.2pp weakness
 4. Longitudinal behavioral data that improves assessment accuracy over time
-5. Partnership potential with Anthropic for framework evolution alignment
+5. DOL AI Literacy Framework alignment for government procurement positioning
+6. Partnership potential with Anthropic for framework evolution alignment
+
+### 7.4 Competitive Positioning Diagram
+
+```mermaid
+quadrantChart
+    title Competitive Positioning: Assessment Depth vs AI Fluency Focus
+    x-axis Low AI Fluency Focus --> High AI Fluency Focus
+    y-axis Low Assessment Depth --> High Assessment Depth
+    quadrant-1 Our Target Position
+    quadrant-2 Generic Assessment
+    quadrant-3 No Assessment
+    quadrant-4 AI Content Only
+    AI Fluency Platform: [0.95, 0.90]
+    iMocha: [0.25, 0.75]
+    DataCamp: [0.50, 0.45]
+    Udemy Business: [0.30, 0.15]
+    Degreed: [0.20, 0.40]
+    Anthropic Academy: [0.85, 0.10]
+```
 
 ## 8. Feasibility Assessment
 
@@ -383,7 +431,7 @@ quadrantChart
 - **Ports**: Frontend on 3118, Backend API on 5014
 
 **Complexity Estimate**: MODERATE-COMPLEX. The core assessment engine and scoring algorithms require careful design, but the CRUD operations (users, organizations, assessments, results) are standard patterns. The most complex components are:
-1. **Behavioral indicator scoring engine** (weighted scoring with prevalence normalization) -- algorithmically complex but well-defined
+1. **Behavioral indicator scoring engine** (weighted scoring with prevalence normalization) -- algorithmically complex but well-defined by Anthropic's research data
 2. **Adaptive assessment flow** (question selection based on prior answers) -- requires state machine design
 3. **Multi-tenant data isolation** (row-level security in PostgreSQL) -- proven pattern, reusable from ConnectSW registry
 4. **Learning path recommendation engine** (gap-based content selection) -- moderate complexity, rule-based initially
@@ -392,21 +440,25 @@ quadrantChart
 
 | Risk | Impact | Mitigation |
 |------|--------|-----------|
-| Scoring algorithm validity | Scores may not correlate with real AI fluency | Partner with Anthropic to validate scoring against their research data; pilot with 100+ users before GA |
+| Scoring algorithm validity | Scores do not correlate with real AI fluency | Partner with Anthropic to validate scoring against their research data; pilot with 100+ users before GA |
 | Assessment content creation | Scenario design for 24 indicators is labor-intensive | Start with 11 observable indicators (empirical data exists); add unobservable indicators in Phase 2 |
 | LTI/SCORM integration complexity | LMS integrations have notoriously inconsistent implementations | Use established libraries (ltijs for LTI 1.3); test against top 5 LMS platforms (Canvas, Blackboard, Moodle, D2L, Cornerstone) |
 
 ### 8.2 Market Feasibility
 
 **Market Demand Evidence**: STRONG.
-- 94% of companies have not started AI upskilling (massive unmet demand)
+- 65% of organizations lack mature AI upskilling programs (massive unmet demand)
 - AI skills command 56% wage premium (strong ROI signal for employers)
-- 44% YoY market growth demonstrates sustained momentum
+- 27.7% CAGR market growth demonstrates sustained momentum
+- Organizations with AI literacy programs are nearly 2x more likely to report significant AI ROI
+- When employers provide AI training, adoption jumps from 25% to 76%
+- US DOL AI Literacy Framework (Feb 2026) creates federal-level demand signal
 - Anthropic Academy's free courses create framework awareness without filling the assessment gap
 
 **Timing Considerations**: FAVORABLE.
-- The 4D framework was published in early 2026 with the AI Fluency Index
-- Enterprise AI budgets are expanding (not contracting)
+- The 4D framework was published with the AI Fluency Index on February 23, 2026
+- The DOL AI Literacy Framework was published on February 13, 2026
+- Enterprise AI budgets are expanding (organizations investing 2-4% of payroll in AI development)
 - First-mover advantage window is approximately 12-18 months before competitors build similar assessment tools
 
 **Go-to-Market Barriers**:
@@ -442,7 +494,7 @@ quadrantChart
 - Email service (SendGrid, Postmark) for notifications
 - Analytics (PostHog, Mixpanel) for product analytics
 - LTI library (ltijs) for LMS integration
-- SAML library (passport-saml or saml2-js) for enterprise SSO
+- SAML library (samlify) for enterprise SSO
 
 ### 8.4 Feasibility Summary
 
@@ -468,6 +520,7 @@ quadrantChart
 | Time to First Assessment | N/A | <= 15 minutes from signup to first assessment start | Event analytics (signup timestamp to assessment start) | Weekly |
 | Platform Uptime | N/A | >= 99.5% | Infrastructure monitoring (UptimeRobot, Datadog) | Daily |
 | Assessment Scoring Latency | N/A | <= 3 seconds (p95) from assessment submission to results display | API performance monitoring | Daily |
+| AI Adoption Rate Lift | 25% (without training) | >= 70% (with platform training) | Post-training survey measuring AI tool usage | Quarterly |
 
 ### 9.2 Success Criteria
 
@@ -491,8 +544,9 @@ The AI Fluency product is considered successful when ALL of the following are me
 | RSK-006 | Assessment content creation takes longer than estimated, delaying MVP | Medium | Medium | 6 | Start with 11 observable indicators only (Phase 1); engage external educational content designers as needed; use Anthropic's published examples as content seeds | Product Manager |
 | RSK-007 | SOC 2 Type II certification timeline (6-12 months) blocks enterprise deals | Medium | Medium | 6 | Begin SOC 2 readiness from Day 1; implement security controls during foundation phase; pursue SOC 2 Type I first (faster) as interim credential | Security Engineer |
 | RSK-008 | Multi-tenant data isolation breach leaks organization data across tenants | Low | Critical | 7 | Implement PostgreSQL Row Level Security (RLS); automated security testing for tenant isolation; penetration testing before GA | Security Engineer |
-| RSK-009 | LMS integration complexity causes delayed or broken integrations with major platforms | Medium | Medium | 6 | Prioritize top 3 LMS platforms (Canvas, Moodle, Blackboard) for MVP; use established LTI libraries; allocate 2 extra sprints for integration testing | Backend Engineer |
+| RSK-009 | LMS integration complexity causes delayed or broken integrations with major platforms | Medium | Medium | 6 | Prioritize top 3 LMS platforms (Canvas, Moodle, Blackboard) for MVP; use established LTI libraries (ltijs); allocate 2 extra sprints for integration testing | Backend Engineer |
 | RSK-010 | Low assessment completion rate (< 50%) due to assessment length or complexity | Medium | High | 8 | Design assessments to complete in <= 30 minutes; implement save-and-resume; show progress indicators; A/B test assessment length variants | UI/UX Designer |
+| RSK-011 | DOL AI Literacy Framework evolves or is superseded, reducing alignment value | Low | Low | 2 | Monitor DOL publications quarterly; design content mapping as a configurable layer, not hardcoded | Product Manager |
 
 ## 11. Recommendations
 
@@ -501,12 +555,14 @@ The AI Fluency product is considered successful when ALL of the following are me
 **RECOMMENDATION: GO**
 
 **Supporting Evidence**:
-1. **Market opportunity is massive and growing**: 94% of companies have no AI assessment tools; 44% YoY market growth; $2.52T total market
+1. **Market opportunity is massive and growing**: 65% of organizations lack mature AI upskilling programs; 27.7% CAGR market growth; enterprise AI platform market projected at $50.3B by 2030
 2. **Clear differentiation exists**: No competitor implements the empirically-validated 4D framework; we occupy a blue-ocean position
-3. **Technical feasibility is high**: Full alignment with ConnectSW's stack; moderate-complex but well-understood patterns
-4. **Revenue potential is significant**: 20 enterprise customers at $25K average = $500K ARR in Year 1, with expansion revenue from seat growth
-5. **Timing is optimal**: Framework published in early 2026; 12-18 month first-mover window before competitors react
-6. **Risk is manageable**: The two highest-risk items (licensing, scoring validity) have clear validation paths with 30-60 day timelines
+3. **Regulatory tailwind**: The US DOL AI Literacy Framework (Feb 2026) creates federal-level demand for AI literacy programs
+4. **Proven ROI for buyers**: Organizations with AI literacy programs are nearly 2x more likely to report significant AI ROI; training increases AI adoption from 25% to 76%
+5. **Technical feasibility is high**: Full alignment with ConnectSW's stack; moderate-complex but well-understood patterns
+6. **Revenue potential is significant**: 20 enterprise customers at $25K average = $500K ARR in Year 1, with expansion revenue from seat growth
+7. **Timing is optimal**: Framework published Feb 2026; DOL framework published Feb 2026; 12-18 month first-mover window before competitors react
+8. **Risk is manageable**: The two highest-risk items (licensing, scoring validity) have clear validation paths with 30-60 day timelines
 
 **Conditions for Go**:
 - Obtain written licensing clarification from Anthropic within 30 days (RSK-001)
@@ -521,9 +577,10 @@ The AI Fluency product is considered successful when ALL of the following are me
 5. **[Week 6-12]** Build MVP assessment engine covering 11 observable behavioral indicators
 6. **[Week 8-14]** Build personalized learning path system and organizational dashboard
 7. **[Week 10-16]** Add enterprise features: SSO, multi-tenancy, LMS integration
-8. **[Week 14-18]** Conduct scoring validity study with 100+ users; iterate on algorithms
-9. **[Week 16-20]** Security hardening, SOC 2 readiness, penetration testing
-10. **[Week 18-22]** Enterprise pilot program launch with 5-10 organizations
+8. **[Week 12-16]** Map assessment content to DOL AI Literacy Framework content areas
+9. **[Week 14-18]** Conduct scoring validity study with 100+ users; iterate on algorithms
+10. **[Week 16-20]** Security hardening, SOC 2 readiness, penetration testing
+11. **[Week 18-22]** Enterprise pilot program launch with 5-10 organizations
 
 ### 11.3 Traceability: Business Need to User Story Mapping
 
@@ -541,18 +598,25 @@ The AI Fluency product is considered successful when ALL of the following are me
 | BN-010: Multi-Tenant Isolation | US-18: As an IT administrator, I verify that my organization's data is completely isolated from other tenants so that we meet our security and compliance requirements. | P0 |
 | BN-011: Longitudinal Analytics | US-19: As an L&D manager, I view longitudinal fluency trends for individuals and teams over 3-12 months so that I quantify training ROI. US-20: As a C-suite executive, I generate a quarterly AI fluency report showing organization-wide improvement so that I justify continued investment. | P1 |
 | BN-012: GDPR/CCPA Compliance | US-21: As a learner, I manage my data privacy preferences and exercise my right to data erasure so that my personal information is protected. US-22: As an IT administrator, I configure data residency and retention policies for my organization so that we comply with regional regulations. | P1 |
+| BN-013: DOL Framework Alignment | US-23: As an L&D manager, I view a mapping between assessment content and DOL AI Literacy Framework content areas so that I report compliance with federal workforce development standards. US-24: As a government program administrator, I confirm that the platform aligns with DOL delivery principles so that I use it in federally-funded training programs. | P1 |
 
 ---
 
 ## Appendix A: Anthropic 4D Framework Reference
 
-**Source**: Prof. Rick Dakan (Ringling College), Prof. Joseph Feller (University College Cork), in partnership with Anthropic. Published early 2026. Licensed CC BY-NC-SA 4.0.
+**Source**: Prof. Rick Dakan (Ringling College of Art and Design), Prof. Joseph Feller (University College Cork), in partnership with Anthropic. Published early 2026. Licensed CC BY-NC-SA 4.0.
+
+**Official Resources**:
+- Framework overview: https://www.anthropic.com/ai-fluency/overview
+- AI Fluency Index research: https://www.anthropic.com/research/AI-fluency-index
+- Framework documentation hub: https://aifluencyframework.org/
+- Anthropic Academy courses: https://anthropic.skilljar.com/ai-fluency-framework-foundations
 
 **The 4 Dimensions**:
-1. **Delegation**: Deciding what work to do with AI vs. independently
-2. **Description**: Communicating clearly with AI systems (prompting)
-3. **Discernment**: Evaluating AI outputs critically
-4. **Diligence**: Ensuring responsible AI interaction
+1. **Delegation**: Setting goals and deciding whether, when, and how to engage with AI
+2. **Description**: Effectively describing goals to prompt useful AI behaviors and outputs
+3. **Discernment**: Accurately assessing the usefulness of AI outputs and behaviors
+4. **Diligence**: Taking responsibility for what we do with AI and how we do it
 
 **The 3 Interaction Modes**:
 1. **Automation**: AI executes human-specified tasks
@@ -560,17 +624,23 @@ The AI Fluency product is considered successful when ALL of the following are me
 3. **Agency**: Human configures AI for independent future action
 
 **The 24 Behavioral Indicators** (11 observable, 13 unobservable):
-- Observable behaviors measured from 9,830 conversations (Jan 2026)
+- Observable behaviors measured from 9,830 conversations on Claude.ai (7-day window, January 2026)
 - Prevalence ranges from 8.7% (verifying facts) to 85.7% (iterative improvement)
-- Key finding: Iterative conversations show 2x more fluency behaviors
+- Key finding: Iterative conversations show 2x more fluency behaviors (2.67 additional vs. 1.33)
 - Key finding: Artifact conversations show discernment gap (-3.1pp reasoning questioning, -5.2pp context identification)
+- Key finding: Polished AI output makes users less likely to check for errors
 
 ## Appendix B: Market Data Sources
 
 - PwC AI Skills Wage Premium Study (2025-2026)
-- AI Fluency Index Report (Anthropic, Feb 2026)
-- DataCamp State of AI Literacy Report (2026)
+- AI Fluency Index Report (Anthropic, February 23, 2026)
+- DataCamp State of AI Literacy Report (2026) -- 65% of organizations lack mature programs; 42% with programs see significant AI ROI
 - Enterprise AI Adoption Surveys (McKinsey, Deloitte 2025-2026)
+- Verdantix Enterprise AI Platforms Market Size 2024-2030 -- $14.8B (2025) to $50.3B (2030), 27.7% CAGR
+- US Department of Labor AI Literacy Framework (Training and Employment Notice 07-25, February 13, 2026)
+- Bright Horizons 2026 Workforce Outlook -- AI training increases adoption from 25% to 76%
+- Tredence AI Literacy Enterprise Success Guide (2026) -- 1-2% payroll investment yields 40-60% improvement; 2-4% yields 80-120%
+- Josh Bersin Enterprise Learning Tech Market Report (February 2026)
 
 ## Appendix C: Assessment Scoring Concept
 
@@ -591,4 +661,27 @@ Observable behaviors with lower prevalence in the research data indicate higher 
 | Clarify goals before asking for help | 51.1% | 1.5 |
 | Iterative improvement | 85.7% | 1.0 (lowest) |
 
-This weighting ensures that demonstrating rarer, more sophisticated behaviors yields higher scores, aligning assessment outcomes with empirical fluency data.
+## Appendix D: US DOL AI Literacy Framework Alignment
+
+**Published**: February 13, 2026 (Training and Employment Notice 07-25)
+
+**Five Foundational Content Areas** (mapped to 4D Framework):
+
+| DOL Content Area | Description | 4D Framework Mapping |
+|-----------------|-------------|---------------------|
+| Understanding how AI works | Foundational AI concepts and capabilities | Delegation (knowing what AI can do) |
+| Exploring AI applications | Domain-specific AI use cases | Delegation + Description |
+| Effective prompting techniques | Communicating with AI systems | Description (core alignment) |
+| Evaluating AI outputs | Critical assessment of AI responses | Discernment (core alignment) |
+| Managing AI responsibly | Secure and ethical AI usage | Diligence (core alignment) |
+
+**Seven Delivery Principles**:
+1. Enabling experiential learning
+2. Building complementary human skills
+3. Creating pathways for continued learning
+4. Designing for agility
+5. Embedding learning in context
+6. Addressing prerequisites to AI literacy
+7. Preparing enabling roles
+
+The AI Fluency platform directly addresses all five content areas through the 4D framework and implements delivery principles 1-4 through its assessment + learning path model. Principles 5-7 are addressed through role-specific templates and organizational context customization.

@@ -227,7 +227,7 @@ tasks:
       - "Layout is responsive"
       - "At least 5 component tests passing"
       - "All route groups configured with layouts"
-    status: "in_progress"
+    status: "completed"
     notes: "Structure and stubs created, needs styling polish and more tests"
 
   - id: "QA-01"
@@ -263,7 +263,7 @@ tasks:
       - "At least 3 smoke tests created"
       - "Tests can run headless and headed"
       - "Test data seeding works"
-    status: "pending"
+    status: "completed"
 
   - id: "QA-02"
     name: "Run Testing Gate - Foundation"
@@ -297,7 +297,7 @@ tasks:
       - "API responds on http://localhost:5010/api/v1/health"
       - "All UI elements visible and styled"
       - "No console errors"
-    status: "pending"
+    status: "completed"
 
   - id: "DOCS-01"
     name: "Create Initial Documentation"

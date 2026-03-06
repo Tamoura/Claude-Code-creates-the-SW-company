@@ -84,7 +84,7 @@ tasks:
       - "Success metrics are quantified and measurable"
       - "Risk register has at least 3 risks with mitigations"
       - "Business needs mapped to suggested user stories (BN-XXX → US-XX)"
-    status: "pending"
+    status: "completed"
 
   - id: "SPEC-01"
     name: "Create Structured Specification"

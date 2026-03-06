@@ -47,7 +47,7 @@ tasks:
       - "Success metrics are measurable"
       - "MVP scope is clearly defined"
       - "Product addendum created with tech stack and conventions"
-    status: "pending"
+    status: "completed"
 
   # ============================================================================
   # PHASE 2: ARCHITECTURE
@@ -93,7 +93,7 @@ tasks:
       - "At least 2 ADRs documenting key decisions"
       - "Security considerations documented"
       - "Tech stack confirmed and documented"
-    status: "pending"
+    status: "completed"
 
   # ============================================================================
   # PHASE 3: FOUNDATION (Parallel)

@@ -97,9 +97,9 @@ jobs:
         if: steps.check.outputs.exists == 'true'
         run: |
           if [ -f "products/codeguardian/apps/api/package.json" ]; then
-            cd products/codeguardian/apps/api && pnpm audit --audit-level=critical --omit=dev
+            cd products/codeguardian/apps/api && pnpm audit --audit-level=critical --prod
           elif [ -f "products/codeguardian/apps/web/package.json" ]; then
-            cd products/codeguardian/apps/web && pnpm audit --audit-level=critical --omit=dev
+            cd products/codeguardian/apps/web && pnpm audit --audit-level=critical --prod
           fi
 
   e2e:
