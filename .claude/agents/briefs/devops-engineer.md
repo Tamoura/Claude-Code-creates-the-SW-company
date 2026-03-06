@@ -67,6 +67,12 @@ Before committing ANY CI/CD, Docker, or infrastructure config, verify:
 - Secrets use `${VAR:-default}` in compose files, never hardcoded values
 - GitHub Secrets configured for CI — no secrets in workflow YAML files
 
+## CI Preflight (MANDATORY)
+- Run `bash .claude/scripts/ci-preflight.sh [product]` before pushing ANY changes.
+- Check `.claude/ci/known-issues.yml` before modifying workflow files — it tracks broken action references and recurring failures.
+- When you encounter a NEW CI failure pattern, add it to `.claude/ci/known-issues.yml` so other agents avoid it.
+- If you modify package.json: run `pnpm install` and stage pnpm-lock.yaml alongside it.
+
 ## Quality Gate
 - Test pipeline runs on every PR and blocks merge if failing.
 - Staging auto-deploys on main merge.

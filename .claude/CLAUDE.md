@@ -95,6 +95,8 @@ These rules exist because a bad branch base once deleted 600+ files. Follow them
 
 5. **A pre-commit hook enforces these rules.** It blocks commits with >30 files or >5000 deleted lines. Do not bypass it unless you have verified every staged file. Hooks live in `.githooks/` (version-controlled). After cloning, run: `git config core.hooksPath .githooks`
 
+6. **CI Preflight before every push.** Run `bash .claude/scripts/ci-preflight.sh [product]` before pushing. A pre-push hook (`.githooks/pre-push`) runs this automatically. If you modify `package.json`, run `pnpm install` and stage `pnpm-lock.yaml`. Check `.claude/ci/known-issues.yml` before modifying workflow files. Skip: `SKIP_CI_PREFLIGHT=1 git push ...`
+
 ### Branch Naming
 
 ```
@@ -130,6 +132,7 @@ release/[product]/v[X.Y.Z]       # Releases
 | `direct-delivery.md` | Context Engineering | Always — write deliverables to files — Article XII |
 | `parallel-execution.md` | Execution | When spawning multiple sub-agents |
 | `repository-back-translation.md` | Testing | Post-MVP — create agent learning exemplars |
+| `ci-preflight.md` | Quality Assurance | Before every push — prevents CI failures proactively |
 | `agent-message.schema.yml` | Agent Communication | Orchestrator + inter-agent messaging |
 | `message-router.ts` | Agent Communication | Infrastructure — orchestrator routing |
 
