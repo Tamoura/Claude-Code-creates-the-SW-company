@@ -31,7 +31,7 @@ jobs:
 
       - name: Run lint
         working-directory: products/command-center/apps/api
-        run: pnpm run lint --if-present
+        run: pnpm run --if-present lint
 
       - name: Run typecheck
         working-directory: products/command-center/apps/api
@@ -58,8 +58,8 @@ jobs:
       - name: Run tests with coverage
         working-directory: products/command-center/apps/api
         run: |
-          pnpm test --coverage --coverageThreshold='{"global":{"branches":70,"functions":75,"lines":80,"statements":80}}' --if-present 2>/dev/null || \
-          pnpm test --if-present
+          pnpm run --if-present test -- --coverage --coverageThreshold='{"global":{"branches":70,"functions":75,"lines":80,"statements":80}}' 2>/dev/null || \
+          pnpm run --if-present test
         continue-on-error: true  # coverage threshold is a warning gate for now
 
   lint-web:
@@ -82,7 +82,7 @@ jobs:
 
       - name: Run lint
         working-directory: products/command-center/apps/web
-        run: pnpm run lint --if-present
+        run: pnpm run --if-present lint
 
       - name: Run typecheck
         working-directory: products/command-center/apps/web
@@ -90,7 +90,7 @@ jobs:
 
       - name: Run build
         working-directory: products/command-center/apps/web
-        run: pnpm run build --if-present
+        run: pnpm run --if-present build
 
   security:
     runs-on: ubuntu-latest

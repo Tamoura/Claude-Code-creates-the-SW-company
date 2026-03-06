@@ -4,7 +4,7 @@
 **Status**: Active
 **Last Updated**: 2026-03-06
 **Product Manager**: Claude Product Manager
-**Traceability**: US-XX (user stories), FR-XXX (functional), NFR-XXX (non-functional)
+**Task ID**: PRD-01
 
 ---
 
@@ -12,437 +12,593 @@
 
 ### 1.1 Vision
 
-Mu'aththir is a holistic child development platform that helps parents track and nurture their children across six interconnected dimensions: Academic, Social-Emotional, Behavioural, Aspirational, Islamic, and Physical.
+Mu'aththir is a holistic child development platform that helps parents track and nurture their children across six interconnected dimensions: Academic, Social-Emotional, Behavioural, Aspirational, Islamic, and Physical. Rather than reducing a child to a grade or a report card, Mu'aththir treats every child as a complete human being -- intellectually, emotionally, spiritually, and physically.
 
 The name "Mu'aththir" means "influential" or "impactful" in Arabic. The platform embodies the belief that intentional, holistic parenting creates children who grow into adults of genuine impact.
 
 ### 1.2 Problem Statement
 
-Parents lack a unified system to track their children's development across the dimensions that matter:
+Parents lack a unified system to track their children's development across the dimensions that matter. Current tools are fragmented and one-dimensional:
 
-- **Fragmented tracking**: Parents use separate apps for grades, health, Quran progress, and behaviour charts.
-- **Missing dimensions**: Mainstream tools ignore spiritual development, aspirational growth, and social-emotional intelligence.
-- **Age-inappropriate expectations**: Parents lack guidance on what developmental milestones are appropriate for different ages.
-- **No longitudinal view**: Parents cannot see patterns, regressions, or breakthroughs across months and years.
+**Core Problems We Solve**:
+- **Fragmented tracking**: Parents use separate apps for grades, health, Quran progress, and behaviour charts. No tool connects these dimensions into a coherent picture of the child.
+- **Missing dimensions**: Mainstream tools ignore spiritual development, aspirational growth, and social-emotional intelligence entirely. Parents who care about Islamic tarbiyah (upbringing) have zero digital support.
+- **Age-inappropriate expectations**: Parents lack guidance on what developmental milestones are appropriate for a 5-year-old versus a 12-year-old across all dimensions, leading to either under-stimulation or burnout.
+- **No longitudinal view**: Parents can describe yesterday but not the trajectory. Without historical tracking, they cannot see patterns, regressions, or breakthroughs across months and years.
+- **Reactive parenting**: Without structured observation, parents respond to crises (bad grade, behavioural incident) rather than proactively nurturing strengths and addressing gaps before they become problems.
 
-### 1.3 Product Concept
+**The Opportunity**: The Muslim parenting market is underserved by technology. There are 1.8 billion Muslims globally, with a young demographic skew. Muslim parents invest heavily in their children's development -- both worldly and spiritual. No platform exists that honours all six dimensions of a child's growth in a single, integrated experience. Furthermore, five of the six dimensions (all except Islamic) are universal, making the platform relevant to any parent who wants a holistic approach.
 
-```mermaid
-mindmap
-  root((Mu'aththir))
-    Observe
-      Log observations
-      Tag by dimension
-      Sentiment tracking
-      Backdate entries
-    Track
-      6 Dimensions
-        Academic
-        Social-Emotional
-        Behavioural
-        Aspirational
-        Islamic
-        Physical
-      4 Age Bands
-        Early Years 3-5
-        Primary 6-9
-        Upper Primary 10-12
-        Secondary 13-16
-    Visualize
-      Radar chart
-      Trend lines
-      Timeline view
-    Milestones
-      240 definitions
-      Age-appropriate
-      Toggle achieved
-    Goals
-      Custom goals
-      Templates
-      Target dates
-    Share
-      Family access
-      Viewer or Contributor
-      Invite by email
-    Monetize
-      Free 1 child
-      Premium $8/mo
-      Annual $77/yr
-```
+### 1.3 Target Market
+
+**Primary**: Muslim parents with children ages 3-16
+- Families who prioritize both academic achievement and Islamic values
+- Parents seeking structured approaches to child development
+- Homeschooling families and weekend Islamic school families
+- Families in Western countries navigating dual-culture upbringing
+
+**Secondary**: Any parent seeking holistic child development tracking
+- Parents dissatisfied with grade-only school tracking
+- Parents interested in social-emotional learning (SEL)
+- Parents of children with developmental goals across multiple areas
+
+**Initial Launch Market**: English-speaking Muslim families globally (US, UK, Canada, Australia, Gulf states)
 
 ### 1.4 Success Metrics
 
-| Metric | Target | Measurement |
-|--------|--------|-------------|
-| Weekly active parents | 500 by month 6 | Login + observation in 7-day window |
-| Observations per parent per week | >= 3 | Average across active parents |
-| Free-to-premium conversion | 5% by month 6 | Premium / total registered |
-| Milestone engagement | 60% check milestones monthly | Milestone page visits |
-| Retention (30-day) | >= 40% | Parents returning after first month |
-| NPS | >= 50 | Quarterly survey |
+**Business KPIs**:
+
+| Metric | Target | Measurement Period |
+|--------|--------|-------------------|
+| Registered Families | 1,000 | First 6 months |
+| Active Monthly Users | 40% of registered families log 2+ observations/week | Monthly |
+| Paid Conversions | 8% free-to-paid within 90 days | Rolling 90-day |
+| MRR | $3,000 (375+ paid users at $8/month) | By month 6 |
+| Monthly Churn | <6% on paid plans | Monthly |
+
+**Product KPIs**:
+
+| Metric | Target | Measurement Method |
+|--------|--------|-------------------|
+| Time to First Observation | <5 minutes from completing onboarding | Analytics funnel |
+| Observations Per Child Per Week | 3+ average across active users | Database query |
+| Dimension Coverage | 80%+ active users log in 4+ dimensions/month | Database query |
+| Milestone Engagement | 60%+ parents review milestones in first week | Analytics event |
+| Dashboard Return Rate | 70%+ active users view radar chart weekly | Analytics event |
+
+**User Experience KPIs**:
+
+| Metric | Target |
+|--------|--------|
+| NPS | >55 |
+| User Satisfaction | >4.5/5 on holistic tracking value |
+| Support Ticket Volume | <2% of active users per month |
 
 ---
 
-## 2. Target Users
+## 2. User Personas
 
-### Persona 1: Amina (Primary User)
+### Persona 1: Fatima -- Engaged Muslim Mother
 
-- **Role**: Stay-at-home mother, 2 children ages 4 and 8
-- **Goals**: Track Quran memorization alongside school performance; catch social-emotional gaps early
-- **Pain Points**: Uses 4 separate apps/notebooks; loses context; no way to see the whole child
-- **Usage Context**: Logs observations after school, reviews radar chart weekly, checks milestones monthly
-- **Tier**: Premium (2 children)
+**Demographics**:
+- Age: 34
+- Role: Stay-at-home mother, part-time freelance writer
+- Children: 3 (ages 5, 8, and 12)
+- Location: London, UK
+- Technical Skill: Medium (uses WhatsApp, Instagram, Google Docs)
+- Current Tracking: Paper notebook, scattered WhatsApp voice notes to herself
 
-### Persona 2: Omar (Secondary User)
+**Goals**:
+- Track each child's Quran memorization progress alongside their school performance
+- Identify when her 8-year-old's social difficulties at school are getting better or worse
+- Set age-appropriate goals for each child that balance dunya (worldly) and akhirah (hereafter)
+- Have a record of her children's growth to look back on as they get older
 
-- **Role**: Working father, 1 child age 6
-- **Goals**: Stay involved despite limited time; see weekly summary; set goals for his son
-- **Pain Points**: Feels disconnected from child's development; overwhelmed by data
-- **Usage Context**: Reviews weekly digest email; logs weekend observations; checks goals
-- **Tier**: Free (1 child)
+**Pain Points**:
+- Her 12-year-old is struggling academically but thriving in Islamic studies; she has no way to see this balance and communicate it to her husband or the child
+- She suspects her 5-year-old has exceptional social-emotional intelligence but has no structured way to document it
+- She forgets observations within days; her paper notebook is disorganized and unsearchable
+- She feels guilty about not tracking physical development (nutrition, sleep, activity) for any of her children
 
-### Persona 3: Grandparent Fatima (Shared Access)
+**Usage Context**:
+- Logs observations in the evening after children go to bed, or during quiet moments
+- Wants to quickly record something she noticed ("Ahmed shared his lunch with the new boy today -- empathy growing")
+- Reviews the dashboard on weekends to plan the coming week's focus areas
+- Shares progress with her husband monthly
 
-- **Role**: Grandmother invited by Amina as viewer
-- **Goals**: See grandchildren's progress; celebrate milestones remotely
-- **Pain Points**: Not tech-savvy; needs simple read-only view
-- **Usage Context**: Views radar chart and milestone list; does not log observations
-- **Tier**: N/A (shared viewer access)
+**What Fatima Says**:
+_"I can see my children growing every day, but I have no way to capture it. By the time I want to talk to their teacher or plan for next month, I have forgotten the specific moments that mattered."_
 
 ---
 
-## 3. Architecture Overview
+### Persona 2: Yusuf -- Professional Muslim Father
 
-### 3.1 C4 Context Diagram (Level 1)
+**Demographics**:
+- Age: 41
+- Role: Software engineer at a tech company
+- Children: 2 (ages 7 and 10)
+- Location: Toronto, Canada
+- Technical Skill: High
+- Current Tracking: Spreadsheet with grades and Quran progress only
+
+**Goals**:
+- Track his children's development with data, not gut feeling
+- Ensure his children develop strong Islamic identity while succeeding in Canadian society
+- Monitor screen time, physical activity, and sleep patterns alongside academic progress
+- Set aspirational goals (career exploration, leadership skills) early and track progress
+
+**Pain Points**:
+- His spreadsheet only captures grades and surah memorization; everything else is in his head
+- His wife and he disagree on whether their 10-year-old's behaviour is improving; they have no objective record
+- He wants to encourage his 7-year-old's interest in science but does not know if it is a passing phase or genuine aptitude
+- He knows his children need more physical activity but has no system to track or motivate it
+
+**Usage Context**:
+- Reviews data weekly, prefers charts and visual summaries
+- Logs observations quickly on his phone during the week
+- Wants to see trends over months, not just daily snapshots
+- Values the radar chart to see which dimensions need attention
+
+**What Yusuf Says**:
+_"I track my fitness, my finances, and my work projects with data. Why do I not have the same for the most important project of my life -- raising my children?"_
+
+---
+
+### Persona 3: Aisha -- Homeschooling Mother
+
+**Demographics**:
+- Age: 29
+- Role: Full-time homeschooling parent
+- Children: 1 (age 6)
+- Location: Houston, Texas, USA
+- Technical Skill: Medium-High
+- Current Tracking: Multiple apps (ClassDojo for behaviour, Khan Academy for academics, scattered notes for Islamic studies)
+
+**Goals**:
+- Replace her 4 separate tracking tools with one unified platform
+- Document homeschool progress for annual state reporting requirements
+- Track her daughter's development across all areas to ensure homeschooling covers the whole child
+- Have milestone checklists to know if her daughter is on track developmentally
+
+**Pain Points**:
+- Using 4 different apps means nothing connects; she cannot see the full picture
+- She worries she is over-emphasizing academics and under-emphasizing social-emotional development because she has no benchmark
+- State reporting requires showing "adequate progress" but she has no structured records
+- She wants milestone guidance for physical development (gross motor, fine motor) but medical apps are clinical, not parental
+
+**Usage Context**:
+- Logs observations throughout the school day as part of her homeschool routine
+- Uses milestone checklists weekly to plan curriculum
+- Exports or prints progress reports monthly
+- Would use the platform daily as a teaching companion
+
+**What Aisha Says**:
+_"I chose to homeschool so I could give my daughter a complete education -- academic, spiritual, emotional, physical. But I have no single tool that understands what 'complete' means."_
+
+---
+
+## 3. The Six Dimensions Model
+
+The six dimensions are the intellectual foundation of Mu'aththir. Each dimension represents a facet of child development that parents can observe, track, and nurture. The dimensions are interconnected, not siloed.
+
+```mermaid
+mindmap
+  root((Mu'aththir\n6 Dimensions))
+    Academic
+      School performance
+      Learning goals
+      Study habits
+      Reading level
+    Social-Emotional
+      Emotional intelligence
+      Empathy & friendships
+      Conflict resolution
+      Self-awareness
+    Behavioural
+      Conduct & habits
+      Discipline
+      Self-regulation
+      Responsibility
+    Aspirational
+      Goals & dreams
+      Motivation
+      Growth mindset
+      Leadership
+    Islamic
+      Quran progress
+      Salah habits
+      Islamic knowledge
+      Akhlaq character
+    Physical
+      Health & fitness
+      Motor skills
+      Nutrition
+      Sleep patterns
+```
+
+### 3.1 Academic
+
+**What it covers**: School and learning progress, grades, subject mastery, curriculum milestones, learning style observations, homework habits, reading level, mathematical reasoning.
+
+**Example observations**:
+- "Completed multiplication tables up to 12. Confident and fast."
+- "Struggles with reading comprehension but loves being read to."
+- "Showed interest in astronomy after watching a documentary."
+
+**Age-appropriate milestones** (examples):
+- Age 3-5: Recognises letters, counts to 20, writes own name
+- Age 6-9: Reads independently, basic multiplication, writes paragraphs
+- Age 10-12: Research projects, pre-algebra, critical reading
+- Age 13-16: Subject specialisation, exam preparation, independent study habits
+
+### 3.2 Social-Emotional
+
+**What it covers**: Emotional intelligence, empathy, friendship skills, conflict resolution, self-awareness, emotional regulation, relationship building, communication skills.
+
+**Example observations**:
+- "Comforted a crying friend at the park without being prompted."
+- "Had a meltdown when plans changed; still working on flexibility."
+- "Used words to express anger instead of hitting -- first time!"
+
+**Connection to Islamic values**: Husn al-khuluq (good character), rahma (mercy), ihsan in relationships.
+
+### 3.3 Behavioural
+
+**What it covers**: Conduct, habits, discipline, self-regulation, screen time management, chore completion, routine adherence, impulse control, responsibility.
+
+**Example observations**:
+- "Completed morning routine without reminders for the third day in a row."
+- "Screen time exceeded limit; became argumentative when asked to stop."
+- "Took responsibility for breaking a glass without being caught."
+
+**Connection to Islamic values**: Sabr (patience), taqwa (self-discipline), amana (trustworthiness).
+
+### 3.4 Aspirational
+
+**What it covers**: Goals, dreams, motivation, career exploration, role models, leadership development, growth mindset, ambition, project completion.
+
+**Example observations**:
+- "Said she wants to be a doctor. Asked her what kind -- she said 'the kind that helps people who cannot afford it.'"
+- "Finished building his first Lego set without help. Proud of the perseverance."
+- "Talked about wanting to memorise the entire Quran by age 15."
+
+**Connection to Islamic values**: Tawakkul (trust in Allah while taking action), himma (high aspiration), ikhlas (sincerity of intention).
+
+### 3.5 Islamic
+
+**What it covers**: Quran memorization and recitation progress, prayer habits and quality, Islamic knowledge (seerah, fiqh, aqeedah), values and akhlaq, dua memorization, Ramadan engagement, charity/sadaqah habits.
+
+**Example observations**:
+- "Memorised Surah Al-Mulk. Recitation is clear but tajweed needs work on idgham."
+- "Prayed Fajr on time every day this week without being woken up."
+- "Asked a thoughtful question about why Allah tests people."
+- "Chose to give part of his Eid money to charity without being asked."
+
+**Sub-categories**:
+- **Quran**: Surah/ayah memorised, tajweed quality, recitation regularity
+- **Salah**: Consistency, punctuality, khushu (focus), understanding of meaning
+- **Knowledge**: Seerah, fiqh basics, aqeedah understanding, Arabic learning
+- **Character (Akhlaq)**: Truthfulness, generosity, respect for elders, kindness
+- **Ibadah (Worship)**: Dua, dhikr, fasting (age-appropriate), sadaqah
+
+### 3.6 Physical
+
+**What it covers**: Health metrics, fitness activities, motor skill development, sports participation, nutrition habits, sleep patterns, growth tracking.
+
+**Example observations**:
+- "Learned to ride a bicycle without training wheels."
+- "Sleep has been irregular -- averaging 8 hours but bedtime varies by 2 hours."
+- "Joined the school football team. Attends practice twice a week."
+- "Eating more vegetables this month after we started a family garden."
+
+**Connection to Islamic values**: The body as an amanah (trust) from Allah, cleanliness (taharah), moderation in eating.
+
+---
+
+## 4. System Architecture
+
+### 4.1 C4 Context Diagram
 
 ```mermaid
 graph TD
-    Parent["Parent (User)"]
-    SharedUser["Shared Family Member"]
-    Muaththir["Mu'aththir Platform"]
-    Email["Email Service (SMTP)"]
-    Stripe["Stripe (Payments)"]
+    subgraph "Mu'aththir System Boundary"
+        MUATHTHIR["Mu'aththir Platform<br/>(Web Application)"]
+    end
 
-    Parent -->|"Logs observations, checks milestones, sets goals"| Muaththir
-    SharedUser -->|"Views child data (read-only or contributor)"| Muaththir
-    Muaththir -->|"Sends verification, reset, digest emails"| Email
-    Muaththir -->|"Processes premium subscriptions"| Stripe
+    PARENT["Parent<br/>(Primary User)"]
+    COPARENT["Co-Parent / Caregiver<br/>(Shared Access)"]
+    EMAIL["Email Service<br/>(SendGrid / AWS SES)"]
+    STRIPE["Stripe<br/>(Payment Processing)"]
 
-    style Muaththir fill:#3B82F6,color:#fff,stroke:#2563EB
-    style Parent fill:#10B981,color:#fff,stroke:#059669
-    style SharedUser fill:#8B5CF6,color:#fff,stroke:#7C3AED
-    style Email fill:#F59E0B,color:#fff,stroke:#D97706
-    style Stripe fill:#EC4899,color:#fff,stroke:#DB2777
+    PARENT -->|"Logs observations,<br/>reviews milestones,<br/>views dashboard"| MUATHTHIR
+    COPARENT -->|"Views shared<br/>child data"| MUATHTHIR
+    MUATHTHIR -->|"Sends transactional<br/>emails (welcome,<br/>reset, digest)"| EMAIL
+    MUATHTHIR -->|"Manages<br/>subscriptions"| STRIPE
+
+    style MUATHTHIR fill:#3B82F6,stroke:#1E40AF,color:#fff
+    style PARENT fill:#10B981,stroke:#065F46,color:#fff
+    style COPARENT fill:#8B5CF6,stroke:#5B21B6,color:#fff
+    style EMAIL fill:#F59E0B,stroke:#B45309,color:#fff
+    style STRIPE fill:#EC4899,stroke:#BE185D,color:#fff
 ```
 
-### 3.2 C4 Container Diagram (Level 2)
+### 4.2 C4 Container Diagram
 
 ```mermaid
 graph TD
-    Browser["Browser (Parent)"]
-    NextJS["Next.js 14 Frontend<br/>Port 3108<br/>React 18 + Tailwind + shadcn/ui"]
-    Fastify["Fastify 5.x API<br/>Port 5005<br/>REST + JWT Auth"]
-    PostgreSQL["PostgreSQL 15+<br/>Prisma 6.x ORM<br/>muaththir_dev"]
-    Recharts["Recharts 2.x<br/>Radar + Trend Charts"]
+    subgraph "User"
+        BROWSER["Web Browser<br/>(Desktop / Mobile)"]
+    end
 
-    Browser --> NextJS
-    NextJS --> Fastify
-    NextJS --> Recharts
-    Fastify --> PostgreSQL
+    subgraph "Mu'aththir Platform"
+        WEB["Next.js Frontend<br/>(Port 3108)<br/>React 18, Tailwind,<br/>shadcn/ui, Recharts"]
+        API["Fastify API<br/>(Port 5005)<br/>TypeScript, Zod,<br/>JWT Auth"]
+        DB["PostgreSQL<br/>(Port 5432)<br/>Prisma ORM<br/>muaththir_dev"]
+    end
 
-    style Browser fill:#64748B,color:#fff
-    style NextJS fill:#000,color:#fff,stroke:#333
-    style Fastify fill:#3B82F6,color:#fff,stroke:#2563EB
-    style PostgreSQL fill:#336791,color:#fff,stroke:#1B4F72
-    style Recharts fill:#EF4444,color:#fff,stroke:#DC2626
+    subgraph "External Services"
+        EMAIL["Email Service<br/>(SendGrid)"]
+        STORAGE["File Storage<br/>(Local / S3)"]
+    end
+
+    BROWSER -->|"HTTPS"| WEB
+    WEB -->|"REST API<br/>JSON over HTTPS"| API
+    API -->|"Prisma Client<br/>SQL Queries"| DB
+    API -->|"SMTP"| EMAIL
+    API -->|"File I/O"| STORAGE
+
+    style WEB fill:#3B82F6,stroke:#1E40AF,color:#fff
+    style API fill:#10B981,stroke:#065F46,color:#fff
+    style DB fill:#F59E0B,stroke:#B45309,color:#fff
+    style EMAIL fill:#EC4899,stroke:#BE185D,color:#fff
+    style STORAGE fill:#8B5CF6,stroke:#5B21B6,color:#fff
 ```
 
-### 3.3 Entity-Relationship Diagram
+---
+
+## 5. Data Model
+
+### 5.1 Entity-Relationship Diagram
 
 ```mermaid
 erDiagram
     Parent ||--o{ Child : "has"
-    Parent ||--o{ Session : "authenticates via"
-    Parent ||--o{ FamilyAccess : "shares access"
+    Parent ||--o{ Session : "has"
+    Parent ||--o{ FamilyAccess : "creates"
     Child ||--o{ Observation : "has"
-    Child ||--o{ ChildMilestone : "tracks"
-    Child ||--o{ ScoreCache : "caches scores"
-    Child ||--o{ Goal : "pursues"
-    MilestoneDefinition ||--o{ ChildMilestone : "defines"
-    GoalTemplate ||--o{ Goal : "templates"
+    Child ||--o{ ChildMilestone : "has"
+    Child ||--o{ ScoreCache : "has"
+    Child ||--o{ Goal : "has"
+    MilestoneDefinition ||--o{ ChildMilestone : "tracked by"
+    GoalTemplate ||--o{ Goal : "based on"
 
     Parent {
-        string id PK
-        string email UK
+        string id PK "cuid"
+        string email UK "unique"
         string name
         string passwordHash
-        enum subscriptionTier
-        enum digestFrequency
+        enum subscriptionTier "free | premium"
+        enum digestFrequency "off | daily | weekly"
+        boolean dailyReminder
+        boolean weeklyDigest
+        boolean milestoneAlerts
+        string resetToken "nullable"
+        datetime resetTokenExp "nullable"
+        datetime createdAt
+        datetime updatedAt
     }
 
     Child {
-        string id PK
+        string id PK "cuid"
         string parentId FK
         string name
         date dateOfBirth
-        enum gender
-        boolean isDemo
+        enum gender "male | female | nullable"
+        string photoUrl "nullable"
+        boolean isDemo "default false"
+        string medicalNotes "nullable, 1000 chars"
+        string_array allergies "default empty"
+        string specialNeeds "nullable, 500 chars"
+        datetime createdAt
+        datetime updatedAt
     }
 
     Observation {
-        string id PK
+        string id PK "cuid"
         string childId FK
-        enum dimension
-        string content
-        enum sentiment
+        enum dimension "6 dimensions"
+        string content "1-1000 chars"
+        string contentAr "nullable, Arabic"
+        enum sentiment "positive | neutral | needs_attention"
         date observedAt
-        datetime deletedAt
+        string_array tags "0-5 tags"
+        datetime deletedAt "nullable, soft delete"
+        datetime createdAt
+        datetime updatedAt
     }
 
     MilestoneDefinition {
-        string id PK
-        enum dimension
-        enum ageBand
-        string title
-        string description
+        string id PK "cuid"
+        enum dimension "6 dimensions"
+        enum ageBand "4 age bands"
+        string title "100 chars"
+        string description "300 chars"
+        string guidance "nullable, 500 chars"
+        string titleAr "nullable"
+        string descriptionAr "nullable"
+        string guidanceAr "nullable"
         int sortOrder
     }
 
     ChildMilestone {
-        string id PK
+        string id PK "cuid"
         string childId FK
         string milestoneId FK
-        boolean achieved
-        datetime achievedAt
+        boolean achieved "default false"
+        datetime achievedAt "nullable"
+        json achievedHistory "nullable"
+        datetime createdAt
+        datetime updatedAt
     }
 
     ScoreCache {
-        string id PK
+        string id PK "cuid"
         string childId FK
-        enum dimension
-        int score
-        boolean stale
+        enum dimension "6 dimensions"
+        int score "0-100"
+        datetime calculatedAt
+        boolean stale "default true"
     }
 
     Goal {
-        string id PK
+        string id PK "cuid"
         string childId FK
-        enum dimension
-        string title
-        enum status
+        enum dimension "6 dimensions"
+        string title "200 chars"
+        string description "nullable, 500 chars"
+        date targetDate "nullable"
+        enum status "active | completed | paused"
+        string templateId FK "nullable"
+        datetime createdAt
+        datetime updatedAt
+    }
+
+    GoalTemplate {
+        string id PK "cuid"
+        enum dimension "6 dimensions"
+        enum ageBand "4 age bands"
+        string title "200 chars"
+        string description "nullable, 500 chars"
+        string titleAr "nullable"
+        string descriptionAr "nullable"
+        string category "nullable, 50 chars"
+        int sortOrder
+    }
+
+    Session {
+        string id PK "cuid"
+        string parentId FK
+        string token UK "unique"
+        datetime expiresAt
+        datetime createdAt
+    }
+
+    FamilyAccess {
+        string id PK "cuid"
+        string parentId FK
+        string inviteeEmail
+        string inviteeId "nullable"
+        enum role "viewer | contributor"
+        enum status "pending | accepted | declined"
+        string_array childIds
+        datetime invitedAt
+        datetime respondedAt "nullable"
+        datetime createdAt
+        datetime updatedAt
     }
 ```
 
 ---
 
-## 4. The Six Dimensions
+## 6. Features and User Stories
 
-| # | Dimension | Slug | Colour | Description |
-|---|-----------|------|--------|-------------|
-| 1 | Academic | `academic` | Blue #3B82F6 | School performance, learning progress |
-| 2 | Social-Emotional | `social_emotional` | Pink #EC4899 | Emotional intelligence, empathy, friendships |
-| 3 | Behavioural | `behavioural` | Amber #F59E0B | Conduct, habits, discipline |
-| 4 | Aspirational | `aspirational` | Purple #8B5CF6 | Goals, dreams, motivation |
-| 5 | Islamic | `islamic` | Emerald #10B981 | Quran, salah, Islamic knowledge |
-| 6 | Physical | `physical` | Red #EF4444 | Health, fitness, nutrition |
+### 6.1 MVP Features (Must Have)
 
-## 5. Age Bands
+| ID | Feature | User Story | Priority |
+|----|---------|------------|----------|
+| US-01 | Parent Registration | As a parent, I want to create an account with email and password so that my family's data is private and secure | P0 |
+| US-02 | Parent Login | As a parent, I want to log in to my account so that I can access my children's development data | P0 |
+| US-03 | Password Reset | As a parent, I want to reset my password via email so that I can recover access if I forget my password | P0 |
+| US-04 | Child Profile Creation | As a parent, I want to create a profile for my child with their name, date of birth, and photo so I can track their development | P0 |
+| US-05 | Child Profile Editing | As a parent, I want to edit my child's profile information so that I can keep it accurate as they grow | P0 |
+| US-06 | Radar Chart Dashboard | As a parent, I want to see a radar chart showing my child's development across all 6 dimensions so I can understand their holistic profile at a glance | P0 |
+| US-07 | Observation Logging | As a parent, I want to record observations about my child tagged to a specific dimension so I build a rich developmental record over time | P0 |
+| US-08 | Observation Editing | As a parent, I want to edit or delete observations I have recorded so I can correct mistakes or update details | P0 |
+| US-09 | Milestone Checklists | As a parent, I want to see age-appropriate developmental milestones for each dimension so I know what to look for and where my child stands | P0 |
+| US-10 | Milestone Achievement | As a parent, I want to mark milestones as achieved so I can track my child's progress against developmental benchmarks | P0 |
+| US-11 | Progress Timeline | As a parent, I want to see a chronological timeline of all observations for my child so I can review their journey and spot patterns | P0 |
+| US-12 | Timeline Filtering | As a parent, I want to filter the timeline by dimension, sentiment, date range, and text search so I can find specific observations | P0 |
+| US-13 | Dimension Detail View | As a parent, I want to drill into a single dimension to see all observations, milestones, and trends specific to that area | P0 |
+| US-14 | Account Settings | As a parent, I want to manage my account settings including profile, password, and notification preferences | P0 |
+| US-15 | Onboarding Flow | As a new parent, I want to be guided through creating my first child profile and logging my first observation so I understand how to use the platform | P0 |
+| US-16 | Landing Page | As a visitor, I want to understand what Mu'aththir offers and how it works so I can decide whether to sign up | P0 |
+| US-17 | Subscription Management | As a parent, I want to view and upgrade my subscription plan so I can access premium features | P0 |
+| US-18 | Data Export | As a parent, I want to export all my data as JSON so I have ownership of my information (GDPR compliance) | P0 |
 
-| Band | Ages | Slug | Milestone Count |
-|------|------|------|-----------------|
-| Early Years | 3-5 | `early_years` | 60 (10 per dimension) |
-| Primary | 6-9 | `primary` | 60 |
-| Upper Primary | 10-12 | `upper_primary` | 60 |
-| Secondary | 13-16 | `secondary` | 60 |
+**MVP Scope**: US-01 through US-18
 
-Age band is computed from DOB, never stored.
+### 6.2 Phase 2 Features (Should Have)
 
----
+| ID | Feature | User Story | Priority |
+|----|---------|------------|----------|
+| US-19 | AI Insights | As a parent, I want AI-generated insights about my child's development patterns so I get actionable guidance without being an expert | P1 |
+| US-20 | Multi-Child Family View | As a parent with multiple children, I want a family dashboard comparing all children's profiles so I can allocate attention where it is needed | P1 |
+| US-21 | Goal Setting | As a parent, I want to set specific goals per dimension and track progress toward them | P1 |
+| US-22 | Progress Reports | As a parent, I want to generate printable/PDF progress reports summarising my child's development over a period | P1 |
+| US-23 | Observation Photos | As a parent, I want to attach photos to observations so I can capture moments more richly | P1 |
+| US-24 | Reminders | As a parent, I want configurable reminders to log observations so I maintain consistency | P1 |
+| US-25 | Family Sharing | As a parent, I want to invite a co-parent or caregiver to view or contribute to my child's development data | P1 |
+| US-26 | Weekly Email Digest | As a parent, I want to receive a weekly email summarizing my children's recent activity and milestones | P1 |
 
-## 6. User Stories -- MVP (P0)
+### 6.3 Future Considerations (Nice to Have)
 
-### US-01: Parent Registration
-
-**As a** parent, **I want** to create an account with email and password, **so that** I can securely access my children's development data.
-
-**Acceptance Criteria:**
-- Given a valid email and password (8+ chars, 1 uppercase, 1 number), when I submit registration, then my account is created and I receive a verification email
-- Given an already-registered email, when I submit registration, then I see an error "Email already registered"
-- Given an invalid password, when I submit registration, then I see specific validation errors
-
-### US-02: Email Verification
-
-**As a** registered parent, **I want** to verify my email address, **so that** my account is activated.
-
-**Acceptance Criteria:**
-- Given a valid verification token, when I click the email link, then my account is verified and I am redirected to login
-- Given an expired or invalid token, when I click the link, then I see an error with option to resend
-
-### US-03: Login and Session Management
-
-**As a** verified parent, **I want** to log in with email and password, **so that** I can access the platform securely.
-
-**Acceptance Criteria:**
-- Given valid credentials, when I log in, then I receive a JWT access token (1hr) and HttpOnly refresh cookie (7d)
-- Given invalid credentials, when I log in, then I see "Invalid email or password" (no credential enumeration)
-- Given an expired access token, when the frontend makes a request, then it silently refreshes using the cookie
-
-### US-04: Password Reset
-
-**As a** parent who forgot my password, **I want** to reset it via email, **so that** I can regain access.
-
-**Acceptance Criteria:**
-- Given a registered email, when I request a reset, then I receive a reset email with a time-limited token
-- Given a valid reset token, when I submit a new password, then my password is updated and all sessions are invalidated
-- Given an unregistered email, when I request a reset, then I see the same success message (no email enumeration)
-
-### US-05: Add Child Profile
-
-**As a** parent, **I want** to add a child profile with name, date of birth, and optional details, **so that** I can start tracking their development.
-
-**Acceptance Criteria:**
-- Given valid child data (name, DOB within 3-16 age range), when I submit, then the child profile is created
-- Given I am on the free tier with 1 existing child, when I try to add another, then I see a prompt to upgrade to premium
-- Given a DOB, when the profile is created, then the age band is computed automatically (never stored)
-
-### US-06: Log Observation
-
-**As a** parent, **I want** to log an observation about my child in a specific dimension, **so that** I can build a record of their development over time.
-
-**Acceptance Criteria:**
-- Given I select a child and dimension, when I write an observation (1-1000 chars) with sentiment and optional tags (up to 5), then the observation is saved
-- Given I want to record something from the past, when I backdate an observation, then the date is accepted (up to 1 year back)
-- Given I log an observation, when the save completes, then the ScoreCache for that dimension is marked stale
-
-### US-07: View Radar Chart
-
-**As a** parent, **I want** to see a radar chart showing my child's scores across all 6 dimensions, **so that** I can see a holistic snapshot of their development.
-
-**Acceptance Criteria:**
-- Given a child with observations and milestones, when I view the dashboard, then I see a 6-axis radar chart with dimension scores 0-100
-- Given score formula `(min(obs,10)/10 * 40) + (achieved/total * 40) + (positive/total * 20)`, when scores are recalculated, then the chart reflects the computed values
-- Given a stale ScoreCache, when the radar chart loads, then scores are recalculated and cache is updated
-
-### US-08: View Milestones
-
-**As a** parent, **I want** to see age-appropriate milestones for my child across each dimension, **so that** I know what to focus on.
-
-**Acceptance Criteria:**
-- Given a child with DOB that maps to "primary" age band, when I view milestones, then I see 60 milestones (10 per dimension) for ages 6-9
-- Given a milestone, when I toggle it as achieved, then the achievement date is recorded and the ScoreCache is marked stale
-- Given a milestone was toggled in error, when I un-toggle it, then the history is preserved in achievedHistory JSON
-
-### US-09: View Observation Timeline
-
-**As a** parent, **I want** to see a chronological list of all observations for a child, **so that** I can review their development history.
-
-**Acceptance Criteria:**
-- Given a child with observations, when I view the timeline, then observations are listed newest-first with dimension, date, sentiment, and tags
-- Given I want to filter, when I select a dimension or date range, then the timeline filters accordingly
-- Given I want to find something specific, when I search by keyword, then matching observations are returned
-
-### US-10: Edit and Delete Observation
-
-**As a** parent, **I want** to edit or delete an observation, **so that** I can correct mistakes or remove irrelevant entries.
-
-**Acceptance Criteria:**
-- Given an existing observation, when I edit the content, sentiment, or tags, then the changes are saved with updatedAt timestamp
-- Given I delete an observation, when the delete completes, then it is soft-deleted (deletedAt set) and hidden from views
-- Given a soft-deleted observation, when 30 days pass, then it is eligible for permanent deletion
-
-### US-11: Dashboard Overview
-
-**As a** parent, **I want** a dashboard that summarizes each child's development at a glance.
-
-**Acceptance Criteria:**
-- Given I have children, when I view the dashboard, then I see each child with their radar chart, recent observations, and milestone progress
-- Given I have no children yet, when I view the dashboard, then I see an onboarding prompt to add my first child
-- Given I am a free user with the demo child, when I view the dashboard, then the demo child is clearly labeled
-
-### US-12: Set Goals for Child
-
-**As a** parent, **I want** to set development goals for my child in specific dimensions.
-
-**Acceptance Criteria:**
-- Given I select a dimension, when I create a goal with title and optional target date, then the goal is created with status "active"
-- Given goal templates exist for my child's age band, when I browse templates, then I can create a goal from a template
-- Given an active goal, when I mark it complete, then the status changes to "completed" with timestamp
-
-### US-13: Child Selector and Navigation
-
-**As a** parent with multiple children, **I want** to easily switch between children in the UI.
-
-**Acceptance Criteria:**
-- Given I have multiple children, when I use the child selector, then I can switch between children and the dashboard updates
-- Given I select a child, when I navigate to observations, milestones, or goals, then data is filtered to that child
-
-### US-14: Settings and Notifications
-
-**As a** parent, **I want** to configure my notification preferences.
-
-**Acceptance Criteria:**
-- Given the settings page, when I toggle daily reminder, weekly digest, or milestone alerts, then my preferences are saved
-- Given I set digest frequency to "weekly", when the weekly digest runs, then I receive a summary email
-
-### US-15: Responsive Mobile Layout
-
-**As a** parent using my phone, **I want** the app to work well on mobile screens.
-
-**Acceptance Criteria:**
-- Given a mobile viewport (< 768px), when I use the app, then all features are accessible with touch-friendly controls
-- Given the observation form, when I use it on mobile, then the form is easy to fill out with proper input types
-
-### US-16: Demo Child (Onboarding)
-
-**As a** new parent, **I want** to see a pre-populated demo child with sample data, **so that** I understand how the platform works.
-
-**Acceptance Criteria:**
-- Given I just registered, when I log in for the first time, then I see a demo child with sample observations, milestones, and a populated radar chart
-- Given I add my first real child, when I view the dashboard, then the demo child is clearly distinguished or can be hidden
-
-### US-17: Observation Trend Chart
-
-**As a** parent, **I want** to see how my child's dimension scores change over time.
-
-**Acceptance Criteria:**
-- Given a child with observations spanning multiple weeks, when I view the trend chart, then I see score progression over time for each dimension
-- Given I select a specific dimension, when I view the trend, then I see a focused line chart for that dimension
-
-### US-18: Logout and Security
-
-**As a** parent, **I want** to securely log out and manage my sessions.
-
-**Acceptance Criteria:**
-- Given I am logged in, when I click logout, then my session is invalidated and tokens are cleared
-- Given my refresh cookie is stolen, when the attacker tries to use it after I log out, then the session is rejected
+- Teacher/tutor collaboration (shared view with permissions)
+- Community features (anonymous benchmarking, tips from other parents)
+- Gamification for children (age-appropriate achievement badges)
+- Mobile app (iOS/Android)
+- Arabic language support (full RTL)
+- Quran memorization tracker with audio recitation
+- Integration with school learning management systems
+- AI-powered activity suggestions per dimension
+- Developmental concern flagging (e.g., "speech milestones behind for age")
+- Ramadan special tracking mode (fasting, extra ibadah, Quran khatm)
+- Streak tracking and engagement incentives
 
 ---
 
-## 7. User Stories -- Phase 2 (P1)
+## 7. Site Map
 
-### US-19: Family Sharing
-**As a** parent, **I want** to invite family members to view or contribute to my children's profiles.
-
-### US-20: Premium Subscription (Stripe)
-**As a** parent with multiple children, **I want** to upgrade to premium ($8/month or $77/year).
-
-### US-21: Data Export (CSV/PDF)
-**As a** premium parent, **I want** to export my child's data as CSV or PDF.
-
-### US-22: Weekly Digest Email
-**As a** parent, **I want** to receive a weekly email summarizing each child's progress.
-
-### US-23: Arabic Language Support (i18n)
-**As an** Arabic-speaking parent, **I want** to use the platform in Arabic with RTL layout.
-
-### US-24: Bulk Milestone Seeding (Admin)
-**As an** admin, **I want** to seed all 240 milestone definitions from a structured data source.
-
-### US-25: Photo Upload for Child Profile
-**As a** parent, **I want** to upload a photo for each child's profile.
-
-### US-26: Offline Support (PWA)
-**As a** parent in an area with unreliable internet, **I want** to log observations offline and sync when connectivity returns.
+| Route | Status | Description |
+|-------|--------|-------------|
+| `/` | MVP | Landing page -- product value proposition, dimension overview, CTA to sign up |
+| `/signup` | MVP | Parent registration (email/password) |
+| `/login` | MVP | Parent login |
+| `/forgot-password` | MVP | Password reset request |
+| `/reset-password` | MVP | Password reset with token |
+| `/onboarding` | MVP | Post-signup flow: guided setup |
+| `/onboarding/child` | MVP | Child profile creation during onboarding |
+| `/dashboard` | MVP | Main dashboard -- child selector + 6-dimension radar chart + recent observations + quick-log button |
+| `/dashboard/observe` | MVP | New observation form -- select dimension, write observation, optional tags |
+| `/dashboard/timeline` | MVP | Chronological timeline of all observations for the selected child |
+| `/dashboard/dimensions` | MVP | Grid view of all 6 dimensions with summary cards |
+| `/dashboard/dimensions/academic` | MVP | Academic dimension detail -- observations, milestones, trends |
+| `/dashboard/dimensions/social-emotional` | MVP | Social-Emotional dimension detail |
+| `/dashboard/dimensions/behavioural` | MVP | Behavioural dimension detail |
+| `/dashboard/dimensions/aspirational` | MVP | Aspirational dimension detail |
+| `/dashboard/dimensions/islamic` | MVP | Islamic dimension detail -- includes Quran tracker sub-section |
+| `/dashboard/dimensions/physical` | MVP | Physical dimension detail |
+| `/dashboard/milestones` | MVP | All milestone checklists organised by dimension and age band |
+| `/dashboard/milestones/:dimension` | MVP | Milestone checklist for a specific dimension |
+| `/dashboard/child/:id` | MVP | Child profile view |
+| `/dashboard/child/:id/edit` | MVP | Edit child profile |
+| `/dashboard/settings` | MVP | Account settings (profile, email, password) |
+| `/dashboard/settings/notifications` | MVP | Notification preferences |
+| `/dashboard/settings/subscription` | MVP | Subscription plan management |
+| `/dashboard/analytics` | MVP | Analytics overview (page skeleton with empty state) |
+| `/pricing` | MVP | Pricing page (Free, Premium tiers) |
+| `/about` | MVP | About the Mu'aththir methodology and team |
+| `/privacy` | MVP | Privacy policy |
+| `/terms` | MVP | Terms of service |
+| `/dashboard/family` | Phase 2 | Multi-child family overview with comparative radar charts |
+| `/dashboard/goals` | Phase 2 | Goal setting and tracking |
+| `/dashboard/goals/new` | Phase 2 | Create new goal |
+| `/dashboard/goals/:id` | Phase 2 | Goal detail and progress |
+| `/dashboard/reports` | Phase 2 | Progress report generation |
+| `/dashboard/reports/generate` | Phase 2 | Report configuration and download |
+| `/dashboard/insights` | Phase 2 | AI-powered developmental insights |
+| `/dashboard/settings/sharing` | Phase 2 | Family sharing and permissions |
+| `/dashboard/compare` | Phase 2 | Compare children across dimensions |
+| `/dashboard/streaks` | Phase 2 | Streak tracking and engagement |
 
 ---
 
@@ -452,412 +608,518 @@ Age band is computed from DOB, never stored.
 
 ```mermaid
 flowchart TD
-    A[Visit Landing Page] --> B[Click Register]
-    B --> C[Fill Email + Password]
-    C --> D{Validation OK?}
-    D -->|No| C
-    D -->|Yes| E[Account Created]
-    E --> F[Verification Email Sent]
-    F --> G[Click Email Link]
-    G --> H{Token Valid?}
-    H -->|No| I[Show Error + Resend Option]
-    H -->|Yes| J[Account Verified]
-    J --> K[Login]
-    K --> L[See Demo Child on Dashboard]
-    L --> M{Add Real Child?}
-    M -->|Yes| N[Fill Child Form]
-    N --> O[Child Created]
-    O --> P[Start Logging Observations]
-    M -->|Later| Q[Explore Demo Data]
+    A["Visitor lands on /"] --> B{"Has account?"}
+    B -->|No| C["Clicks 'Start Tracking'"]
+    B -->|Yes| D["Clicks 'Log In'"]
+    C --> E["/signup: Enter name, email, password"]
+    E --> F{"Validation passes?"}
+    F -->|No| G["Show validation errors"]
+    G --> E
+    F -->|Yes| H["Account created"]
+    H --> I["/onboarding: Welcome screen"]
+    I --> J["/onboarding/child: Create child profile"]
+    J --> K["Enter child name, DOB, gender, photo"]
+    K --> L["System calculates age band"]
+    L --> M["Dashboard ready screen"]
+    M --> N["/dashboard: Shows empty radar chart"]
+    N --> O["Guided tooltip: 'Log your first observation'"]
+    O --> P["Parent clicks 'Log Observation'"]
+    P --> Q["/dashboard/observe"]
+    Q --> R["Parent writes first observation"]
+    R --> S["Radar chart shows first data point"]
+    D --> T["/login: Enter credentials"]
+    T --> U["/dashboard"]
 
-    style A fill:#3B82F6,color:#fff
-    style P fill:#10B981,color:#fff
-    style Q fill:#8B5CF6,color:#fff
+    style A fill:#3B82F6,stroke:#1E40AF,color:#fff
+    style S fill:#10B981,stroke:#065F46,color:#fff
+    style U fill:#10B981,stroke:#065F46,color:#fff
 ```
 
-### 8.2 Core Loop: Observe-Track-Review
+**Time to Complete**: <5 minutes from signup to first observation
+
+### 8.2 Core Loop: Log Observation
 
 ```mermaid
 flowchart TD
-    A[Select Child] --> B[Choose Dimension]
-    B --> C[Write Observation]
-    C --> D[Set Sentiment + Tags]
-    D --> E[Save Observation]
-    E --> F[ScoreCache Marked Stale]
-    F --> G[View Dashboard]
-    G --> H[Radar Chart Recalculates]
-    H --> I{Score Changed?}
-    I -->|Yes| J[Review Dimension Detail]
-    J --> K[Check Milestones]
-    K --> L{Toggle Milestone?}
-    L -->|Yes| M[Update Milestone + Stale Cache]
-    M --> H
-    L -->|No| N[Set or Review Goals]
-    I -->|No| N
-    N --> A
+    A["/dashboard"] --> B["Click 'Log Observation' FAB"]
+    B --> C["/dashboard/observe"]
+    C --> D["Select child (if multiple)"]
+    D --> E["Select dimension (6 options)"]
+    E --> F["Write observation text (1-1000 chars)"]
+    F --> G["Select sentiment"]
+    G --> H{"Optional: Add tags?"}
+    H -->|Yes| I["Enter up to 5 tags"]
+    H -->|No| J{"Optional: Change date?"}
+    I --> J
+    J -->|Yes| K["Set date (up to 1 year back)"]
+    J -->|No| L["Click 'Save Observation'"]
+    K --> L
+    L --> M{"Validation passes?"}
+    M -->|No| N["Show validation errors"]
+    N --> C
+    M -->|Yes| O["Observation saved"]
+    O --> P["Redirect to /dashboard"]
+    P --> Q["Radar chart updates"]
+    Q --> R["Success toast shown"]
 
-    style A fill:#3B82F6,color:#fff
-    style E fill:#10B981,color:#fff
-    style H fill:#F59E0B,color:#fff
+    style A fill:#3B82F6,stroke:#1E40AF,color:#fff
+    style R fill:#10B981,stroke:#065F46,color:#fff
 ```
+
+**Time to Complete**: <1 minute per observation
 
 ### 8.3 Authentication Flow
 
 ```mermaid
 sequenceDiagram
-    participant B as Browser
-    participant N as Next.js (3108)
-    participant F as Fastify API (5005)
+    participant Browser
+    participant NextJS as Next.js Frontend
+    participant API as Fastify API
     participant DB as PostgreSQL
 
-    B->>N: POST /login (email, password)
-    N->>F: POST /api/auth/login
-    F->>DB: Find parent by email
-    DB-->>F: Parent record
-    F->>F: bcrypt.compare(password, hash)
+    Note over Browser,DB: Login Flow
+    Browser->>NextJS: POST /login (email, password)
+    NextJS->>API: POST /v1/auth/login
+    API->>DB: Find parent by email
+    DB-->>API: Parent record (with passwordHash)
+    API->>API: bcrypt.compare(password, hash)
     alt Valid credentials
-        F->>DB: Create Session record
-        F-->>N: 200 + Set-Cookie refresh (HttpOnly, 7d)
-        N-->>B: Store accessToken, redirect /dashboard
+        API->>DB: Create session record
+        API-->>NextJS: 200 {accessToken} + Set-Cookie: refreshToken (HttpOnly)
+        NextJS-->>Browser: Redirect to /dashboard
     else Invalid credentials
-        F-->>N: 401 Invalid email or password
-        N-->>B: Show error
+        API-->>NextJS: 401 {error: "Invalid email or password"}
+        NextJS-->>Browser: Show error message
+    end
+
+    Note over Browser,DB: Token Refresh Flow
+    Browser->>NextJS: Request with expired access token
+    NextJS->>API: POST /v1/auth/refresh (Cookie: refreshToken)
+    API->>DB: Validate session token
+    alt Valid session
+        API->>DB: Rotate session token
+        API-->>NextJS: 200 {accessToken} + Set-Cookie: newRefreshToken
+        NextJS-->>Browser: Retry original request
+    else Expired/Invalid session
+        API-->>NextJS: 401 {error: "Session expired"}
+        NextJS-->>Browser: Redirect to /login
     end
 ```
 
-### 8.4 Milestone Lifecycle
+### 8.4 Milestone State Diagram
 
 ```mermaid
 stateDiagram-v2
-    [*] --> NotStarted: Child enters age band
-    NotStarted --> Achieved: Parent toggles ON
-    Achieved --> NotStarted: Parent toggles OFF
-    Achieved --> [*]: Child exits age band
+    [*] --> NotAchieved: Child enters age band
+    NotAchieved --> Achieved: Parent checks milestone
+    Achieved --> NotAchieved: Parent unchecks milestone
+    NotAchieved --> Archived: Child exits age band
+    Achieved --> Archived: Child exits age band
 
-    state NotStarted {
+    state NotAchieved {
         [*] --> Visible
         Visible: Shown in checklist
+        Visible: No achievement date
     }
 
     state Achieved {
-        [*] --> Recorded
-        Recorded: achievedAt set
-        Recorded: ScoreCache stale
+        [*] --> Completed
+        Completed: Achievement date recorded
+        Completed: Radar chart score updated
+        Completed: History entry added
+    }
+
+    state Archived {
+        [*] --> Preserved
+        Preserved: Previous band milestones
+        Preserved: Completion status frozen
+        Preserved: Viewable but not editable
     }
 ```
 
 ---
 
-## 9. Functional Requirements
+## 9. Requirements
 
-### 9.1 Authentication (FR-001 to FR-008)
+### 9.1 Functional Requirements
 
-| ID | Requirement |
-|----|-------------|
-| FR-001 | System shall support parent registration with email, name, and password |
-| FR-002 | System shall send email verification on registration |
-| FR-003 | System shall issue JWT access tokens (1hr TTL) and HttpOnly refresh cookies (7d TTL) |
-| FR-004 | System shall silently refresh access tokens using the refresh cookie |
-| FR-005 | System shall support password reset via time-limited email token |
-| FR-006 | System shall invalidate all sessions on password reset |
-| FR-007 | System shall hash passwords with bcrypt cost factor 12 |
-| FR-008 | System shall prevent credential enumeration on login and reset flows |
+**Authentication and Accounts**:
+- FR-001: Parents can sign up with email and password
+- FR-002: Passwords require minimum 8 characters, 1 uppercase letter, 1 number
+- FR-003: Parents can reset their password via email link (valid 1 hour)
+- FR-004: Sessions expire after 7 days of inactivity
+- FR-005: Parents can update their profile (name, email, password)
+- FR-006: Parents can delete their account and all associated data
+- FR-007: Rate limiting on auth endpoints: 30 requests/minute per IP
 
-### 9.2 Child Management (FR-009 to FR-015)
+**Child Profiles**:
+- FR-008: Parents can create a child profile with: name (required), date of birth (required), gender (optional), photo (optional)
+- FR-009: The system calculates the child's age band from their date of birth: 3-5 (Early Years), 6-9 (Primary), 10-12 (Upper Primary), 13-16 (Secondary)
+- FR-010: Parents can edit child profile information at any time
+- FR-011: Free tier limited to 1 child profile; premium allows unlimited
+- FR-012: Deleting a child profile requires confirmation and deletes all associated observations and milestone data
+- FR-013: Child profile photos are resized to 200x200 pixels on upload
+- FR-014: Child profiles support medical notes, allergies, and special needs fields
 
-| ID | Requirement |
-|----|-------------|
-| FR-009 | System shall allow parents to create child profiles with name, DOB (ages 3-16), and optional gender, photo URL, medical notes, allergies, special needs |
-| FR-010 | System shall compute age band from DOB (never store it) |
-| FR-011 | System shall enforce free tier limit of 1 child (excluding demo child) |
-| FR-012 | System shall create a demo child with sample data on first registration |
-| FR-013 | System shall allow editing child profile details |
-| FR-014 | System shall allow deleting a child profile (cascade) |
-| FR-015 | System shall filter all child queries by parent_id (resource ownership) |
+**Observation Logging**:
+- FR-015: Parents can create an observation with: dimension (required, one of 6), text (required, 1-1,000 characters), sentiment (required: positive, neutral, needs_attention), date (defaults to today, can be backdated up to 1 year), tags (optional, free-form, up to 5 per observation)
+- FR-016: Each observation is associated with exactly one child and one dimension
+- FR-017: Parents can edit an observation's text, sentiment, and tags after creation
+- FR-018: Parents can delete an observation (soft delete; recoverable within 30 days)
+- FR-019: The system records creation timestamp and last-modified timestamp for every observation
+- FR-020: Observations are displayed in reverse chronological order by default
+- FR-021: Observations support Arabic text content (bidirectional text rendering)
 
-### 9.3 Observations (FR-016 to FR-025)
+**Six-Dimension Dashboard**:
+- FR-022: The dashboard displays a radar/spider chart with 6 axes, one per dimension
+- FR-023: Each axis value is calculated using the formula: `score = (min(obs_count, 10)/10 * 40) + (achieved/total * 40) + (positive/total * 20)`, normalised to a 0-100 scale
+- FR-024: The radar chart updates when observations are logged or milestones are checked
+- FR-025: Below the radar chart, the dashboard shows the 5 most recent observations across all dimensions
+- FR-026: The dashboard shows a "Milestones Due" section listing the next 3 unchecked milestones for the child's current age band
+- FR-027: If the parent has multiple children, a child selector appears at the top of the dashboard
+- FR-028: Dashboard scores are cached per child per dimension with a staleness flag
 
-| ID | Requirement |
-|----|-------------|
-| FR-016 | System shall allow logging observations with dimension, content (1-1000 chars), sentiment, and observed date |
-| FR-017 | System shall support up to 5 tags per observation |
-| FR-018 | System shall allow backdating observations up to 1 year |
-| FR-019 | System shall support optional Arabic content field (contentAr, up to 2000 chars) |
-| FR-020 | System shall mark ScoreCache as stale when an observation is created, updated, or deleted |
-| FR-021 | System shall support soft deletion of observations (set deletedAt) |
-| FR-022 | System shall exclude soft-deleted observations from all queries |
-| FR-023 | System shall allow recovery of soft-deleted observations within 30 days |
-| FR-024 | System shall support filtering observations by dimension, date range, and sentiment |
-| FR-025 | System shall support pagination for observation lists |
+**Milestone Checklists**:
+- FR-029: The system provides pre-defined milestone checklists for each of the 6 dimensions, segmented by 4 age bands (3-5, 6-9, 10-12, 13-16)
+- FR-030: Each milestone has: title, description, dimension, age band, and optional guidance text
+- FR-031: Parents can mark a milestone as achieved; the date of achievement is recorded automatically
+- FR-032: Parents can unmark a previously achieved milestone (with the original achievement date preserved in history)
+- FR-033: Milestone completion percentage is calculated per dimension per age band
+- FR-034: When a child's age crosses into a new age band, the system shows new milestones while preserving previous band's completion history
+- FR-035: The system ships with a minimum of 10 milestones per dimension per age band (240 milestones total minimum)
+- FR-036: Milestones support Arabic translations for title, description, and guidance
 
-### 9.4 Milestones (FR-026 to FR-032)
+**Dimension Detail View**:
+- FR-037: Each dimension has a dedicated detail page accessible from the dashboard
+- FR-038: The detail page shows: all observations for this dimension (paginated, 20 per page), milestone checklist for the child's current age band, a trend graph showing observation count and sentiment distribution over the last 6 months
+- FR-039: The trend graph shows monthly data points with: total observations (bar), positive percentage (line), and a "needs attention" count (highlight)
 
-| ID | Requirement |
-|----|-------------|
-| FR-026 | System shall store 240 milestone definitions (10 per dimension per age band) |
-| FR-027 | System shall display milestones filtered by child's computed age band |
-| FR-028 | System shall allow toggling a milestone as achieved (sets achievedAt) |
-| FR-029 | System shall preserve toggle history in achievedHistory JSON field |
-| FR-030 | System shall mark ScoreCache as stale when a milestone is toggled |
-| FR-031 | System shall support optional Arabic text for milestone title, description, and guidance |
-| FR-032 | System shall sort milestones by dimension and sortOrder |
+**Progress Timeline**:
+- FR-040: The timeline page displays all observations for a child across all dimensions in reverse chronological order
+- FR-041: Each timeline entry shows: date, dimension (colour-coded badge), sentiment icon, observation text (first 150 characters with expand), and tags
+- FR-042: The timeline supports filtering by: dimension (multi-select), sentiment, date range, and free-text search
+- FR-043: The timeline supports infinite scroll pagination (20 entries per load)
 
-### 9.5 Scoring and Visualization (FR-033 to FR-038)
+**Settings and Account**:
+- FR-044: Parents can update their name and email
+- FR-045: Parents can change their password (requires current password)
+- FR-046: Parents can manage notification preferences (email digest frequency: daily, weekly, off; daily reminder; milestone alerts)
+- FR-047: Parents can view and manage their subscription (free or premium)
+- FR-048: Parents can export all their data as JSON (GDPR compliance)
+- FR-049: Parents can delete their account with all associated data
 
-| ID | Requirement |
-|----|-------------|
-| FR-033 | System shall calculate dimension scores using formula: `(min(obs_count,10)/10 * 40) + (achieved/total * 40) + (positive/total * 20)` |
-| FR-034 | System shall use write-through cache with staleness flag for scores |
-| FR-035 | System shall recalculate stale scores on dashboard load |
-| FR-036 | System shall render a 6-axis radar chart using Recharts |
-| FR-037 | System shall render dimension trend lines over time |
-| FR-038 | System shall display score values 0-100 per dimension |
+**Family Sharing (Phase 2)**:
+- FR-050: Parents can invite co-parents or caregivers by email
+- FR-051: Invitees can be assigned viewer or contributor roles
+- FR-052: Sharing can be limited to specific children
 
-### 9.6 Goals (FR-039 to FR-044)
+### 9.2 Non-Functional Requirements
 
-| ID | Requirement |
-|----|-------------|
-| FR-039 | System shall allow creating goals with title (200 chars), optional description (500 chars), dimension, and optional target date |
-| FR-040 | System shall support goal statuses: active, completed, paused |
-| FR-041 | System shall provide goal templates filtered by dimension and age band |
-| FR-042 | System shall allow creating goals from templates |
-| FR-043 | System shall support editing and deleting goals |
-| FR-044 | System shall display goals grouped by dimension and status |
+**Performance**:
+- NFR-001: Dashboard (including radar chart) loads in <2 seconds (LCP) for a child with up to 500 observations
+- NFR-002: Observation save completes in <500ms (p95)
+- NFR-003: Timeline loads first page in <1 second for up to 2,000 observations
+- NFR-004: API response time <200ms (p95) for non-aggregation endpoints
+- NFR-005: Radar chart calculation completes in <300ms server-side (cached <5ms)
 
-### 9.7 Settings (FR-045 to FR-048)
+**Security**:
+- NFR-006: All communication over HTTPS with TLS 1.3
+- NFR-007: Passwords hashed with bcrypt (cost factor 12)
+- NFR-008: JWT tokens with 1-hour expiry, refresh tokens with 7-day expiry stored in HttpOnly cookies
+- NFR-009: Rate limiting: 200 requests/minute per user for general endpoints, 30/minute for auth endpoints
+- NFR-010: All database queries filtered by parent_id (resource ownership enforcement)
+- NFR-011: Input sanitization on all user-provided text (XSS prevention)
+- NFR-012: CSRF protection on all state-changing endpoints
+- NFR-013: Child data (names, observations) encrypted at rest
+- NFR-014: Security headers via @fastify/helmet (CSP, HSTS, X-Frame-Options)
 
-| ID | Requirement |
-|----|-------------|
-| FR-045 | System shall allow parents to configure daily reminder, weekly digest, and milestone alert preferences |
-| FR-046 | System shall support digest frequency: off, daily, weekly |
-| FR-047 | System shall allow parents to update their name and email |
-| FR-048 | System shall allow parents to change their password (requires current password) |
+**Reliability**:
+- NFR-015: API uptime SLA of 99.9%
+- NFR-016: Database backups daily with 30-day retention
+- NFR-017: Soft-deleted observations recoverable for 30 days
+- NFR-018: Graceful degradation: if radar chart calculation fails, show observations without the chart
+- NFR-019: Graceful shutdown with in-flight request completion
 
-### 9.8 Family Sharing -- Phase 2 (FR-049 to FR-052)
+**Scalability**:
+- NFR-020: System supports 5,000 concurrent users
+- NFR-021: Database design supports 100,000+ children and 10M+ observations
+- NFR-022: Radar chart calculation is cacheable and invalidated on observation/milestone changes
 
-| ID | Requirement |
-|----|-------------|
-| FR-049 | System shall allow parents to invite family members by email with viewer or contributor role |
-| FR-050 | System shall support invitation statuses: pending, accepted, declined |
-| FR-051 | System shall scope shared access to specific children (childIds array) |
-| FR-052 | System shall allow revoking shared access |
+**Accessibility**:
+- NFR-023: Web application meets WCAG 2.1 Level AA
+- NFR-024: Full keyboard navigation support
+- NFR-025: Colour contrast ratio >= 4.5:1 for all text
+- NFR-026: Screen reader compatible (ARIA labels on all interactive elements)
+- NFR-027: Radar chart has a text-based alternative for screen readers (table of dimension scores)
 
----
+**Internationalisation**:
+- NFR-028: All UI text externalised for future translation
+- NFR-029: Date formatting respects user locale
+- NFR-030: Arabic text in observations renders correctly (bidirectional text support)
+- NFR-031: Unicode support for Arabic names, observations, and milestone text
 
-## 10. Non-Functional Requirements
-
-### 10.1 Performance (NFR-001 to NFR-006)
-
-| ID | Requirement |
-|----|-------------|
-| NFR-001 | Dashboard shall load in < 2 seconds |
-| NFR-002 | Observation list pagination shall return in < 500ms |
-| NFR-003 | Score recalculation shall complete in < 200ms |
-| NFR-004 | API responses shall be < 100KB |
-| NFR-005 | Frontend bundle shall be < 300KB gzipped |
-| NFR-006 | Lighthouse performance score shall be >= 80 on mobile |
-
-### 10.2 Security (NFR-007 to NFR-016)
-
-| ID | Requirement |
-|----|-------------|
-| NFR-007 | All API endpoints (except auth) shall require valid JWT |
-| NFR-008 | All data queries shall enforce parent_id ownership filter |
-| NFR-009 | Passwords shall be hashed with bcrypt cost factor 12 |
-| NFR-010 | Refresh tokens shall be HttpOnly, Secure, SameSite=Strict cookies |
-| NFR-011 | All inputs shall be validated with Zod at API boundary |
-| NFR-012 | API shall implement rate limiting: 100 req/min general, 10 req/min auth |
-| NFR-013 | System shall prevent SQL injection via Prisma parameterized queries |
-| NFR-014 | System shall prevent XSS via React escaping + CSP |
-| NFR-015 | System shall log authentication events |
-| NFR-016 | System shall use HTTPS in production |
-
-### 10.3 Reliability (NFR-017 to NFR-021)
-
-| ID | Requirement |
-|----|-------------|
-| NFR-017 | System shall target 99.5% uptime |
-| NFR-018 | Database shall have daily automated backups |
-| NFR-019 | Soft-deleted data shall be recoverable for 30 days |
-| NFR-020 | API shall return structured error responses with error codes |
-| NFR-021 | System shall handle graceful degradation if email service is unavailable |
-
-### 10.4 Usability (NFR-022 to NFR-027)
-
-| ID | Requirement |
-|----|-------------|
-| NFR-022 | App shall be fully responsive (mobile, tablet, desktop) |
-| NFR-023 | App shall support touch interactions on mobile |
-| NFR-024 | App shall meet WCAG 2.1 AA accessibility standards |
-| NFR-025 | Dimension colors shall maintain sufficient contrast ratios |
-| NFR-026 | App shall provide clear empty states with call-to-action |
-| NFR-027 | App shall provide loading skeletons during data fetches |
-
-### 10.5 Scalability (NFR-028 to NFR-032)
-
-| ID | Requirement |
-|----|-------------|
-| NFR-028 | System shall support 1,000 concurrent parents |
-| NFR-029 | Database schema shall support indexing for common query patterns |
-| NFR-030 | Observation table shall use composite indexes on (childId, dimension), (childId, observedAt), (childId, deletedAt) |
-| NFR-031 | ScoreCache shall use unique constraint on (childId, dimension) |
-| NFR-032 | Tags shall use GIN index for array containment queries |
-
-### 10.6 Maintainability (NFR-033 to NFR-037)
-
-| ID | Requirement |
-|----|-------------|
-| NFR-033 | Codebase shall use TypeScript with strict mode |
-| NFR-034 | API shall follow Route-Handler-Service separation pattern |
-| NFR-035 | Database migrations shall be managed by Prisma |
-| NFR-036 | Test coverage shall be >= 80% |
-| NFR-037 | Code shall follow ESLint + Prettier formatting standards |
+**Data and Privacy**:
+- NFR-032: GDPR-compliant data handling (consent, right to deletion, data portability)
+- NFR-033: Children's data receives extra protection (COPPA principles applied even if not legally required)
+- NFR-034: No child data shared with third parties under any circumstances
+- NFR-035: Parent can export all data as JSON within 24 hours of request
+- NFR-036: All data deleted within 30 days of account deletion request
+- NFR-037: No analytics or tracking pixels on pages displaying child data
 
 ---
 
-## 11. Site Map
+## 10. Acceptance Criteria
 
-| Route | Status | Description |
-|-------|--------|-------------|
-| `/` | MVP | Landing page |
-| `/register` | MVP | Registration form |
-| `/verify-email` | MVP | Email verification handler |
-| `/login` | MVP | Login form |
-| `/forgot-password` | MVP | Password reset request |
-| `/reset-password` | MVP | Password reset form |
-| `/dashboard` | MVP | Main dashboard with radar chart |
-| `/dashboard/child/:id` | MVP | Child-specific dashboard |
-| `/children` | MVP | Child list management |
-| `/children/new` | MVP | Add child form |
-| `/children/:id/edit` | MVP | Edit child profile |
-| `/observations` | MVP | Observation timeline |
-| `/observations/new` | MVP | Log new observation |
-| `/observations/:id` | MVP | View single observation |
-| `/observations/:id/edit` | MVP | Edit observation |
-| `/milestones` | MVP | Milestone checklist |
-| `/milestones/:dimension` | MVP | Dimension milestone view |
-| `/goals` | MVP | Goals list |
-| `/goals/new` | MVP | Create goal |
-| `/goals/:id/edit` | MVP | Edit goal |
-| `/goals/templates` | MVP | Browse goal templates |
-| `/trends` | MVP | Trend charts |
-| `/trends/:dimension` | MVP | Dimension trend view |
-| `/settings` | MVP | Settings hub |
-| `/settings/profile` | MVP | Edit parent profile |
-| `/settings/password` | MVP | Change password |
-| `/settings/notifications` | MVP | Notification preferences |
-| `/settings/subscription` | Deferred | Subscription management (skeleton) |
-| `/help` | MVP | Help/FAQ page |
-| `/sharing` | Deferred | Family sharing (skeleton) |
-| `/sharing/invite` | Deferred | Invite family member (skeleton) |
-| `/export` | Deferred | Data export (skeleton) |
-| `/admin/milestones` | Deferred | Milestone management (skeleton) |
-| `/privacy` | MVP | Privacy policy |
-| `/terms` | MVP | Terms of service |
-| `/404` | MVP | Not found page |
-| `/500` | MVP | Server error page |
-| `/offline` | Deferred | Offline fallback (PWA) |
+### US-01: Parent Registration
 
-**Total**: 38 routes (30 MVP + 8 Deferred)
+- [ ] Given a new visitor on `/signup`, when they enter a valid name, email, and password (8+ chars, 1 uppercase, 1 number), then an account is created and they are redirected to `/onboarding`
+- [ ] Given a visitor on `/signup`, when they enter an email that is already registered, then the error message says "An account with this email already exists"
+- [ ] Given a visitor on `/signup`, when they enter a password shorter than 8 characters, then a validation error says "Password must be at least 8 characters"
+- [ ] Given a visitor on `/signup`, when they enter a password without an uppercase letter, then a validation error says "Password must contain at least 1 uppercase letter"
+- [ ] Given a visitor on `/signup`, when they enter a password without a number, then a validation error says "Password must contain at least 1 number"
+
+### US-02: Parent Login
+
+- [ ] Given a registered parent on `/login`, when they enter valid credentials, then they are redirected to `/dashboard` and a session is created (JWT + refresh token)
+- [ ] Given a visitor on `/login`, when they enter an email that does not exist or a wrong password, then the error message says "Invalid email or password" (does not reveal which is wrong)
+- [ ] Given a visitor on `/login`, when they fail 5 login attempts in 15 minutes, then further attempts are rate-limited for 15 minutes
+- [ ] Given a logged-in parent, when they click "Log Out", then their session is invalidated and they are redirected to `/login`
+
+### US-03: Password Reset
+
+- [ ] Given a parent who forgot their password, when they enter their email on `/forgot-password`, then a reset link is emailed (valid for 1 hour, single-use)
+- [ ] Given a parent with a valid reset link, when they click the link, then `/reset-password` loads where they set a new password meeting the password requirements
+- [ ] Given a parent with an expired or used reset link, when they click the link, then an error message says "This reset link has expired. Please request a new one."
+
+### US-04: Child Profile Creation
+
+- [ ] Given a logged-in parent on `/onboarding/child` or `/dashboard`, when they enter a child name and date of birth, then a child profile is created and the age band is calculated automatically
+- [ ] Given a child born on 2020-03-15 and the current date is 2026-03-06, then the child's age is 5 years, 11 months and the age band is "Early Years (3-5)"
+- [ ] Given a parent creating a child profile, when they upload a photo (JPEG or PNG, max 5MB), then the photo is resized to 200x200 pixels and displayed in the dashboard
+- [ ] Given a parent on the free tier with 1 child profile, when they try to create a 2nd child profile, then they see a message: "Free plan supports 1 child. Upgrade to Premium for unlimited profiles."
+- [ ] Given a child whose age crosses from 5 to 6, when the child's 6th birthday passes, then the age band changes from "Early Years (3-5)" to "Primary (6-9)" and new milestones become visible
+
+### US-05: Child Profile Editing
+
+- [ ] Given a logged-in parent viewing `/dashboard/child/:id/edit`, when they update the child's name and save, then the name updates across the application
+- [ ] Given a parent editing a child profile, when they change the date of birth, then the age band recalculates and milestones update accordingly
+- [ ] Given a parent, when they delete a child profile and confirm, then all associated observations and milestones are deleted
+
+### US-06: Radar Chart Dashboard
+
+- [ ] Given a parent with a child who has observations across 4 dimensions, when they view `/dashboard`, then a radar chart is displayed with 6 axes and the 4 dimensions with data show calculated scores while the 2 without data show 0
+- [ ] Given a child with 8 observations in Academic in the last 30 days (6 positive, 1 neutral, 1 needs_attention) and 5 of 12 milestones completed, then the Academic score = `(min(8,10)/10 * 40) + (5/12 * 40) + (6/8 * 20) = 32 + 16.67 + 15 = 64` (rounded)
+- [ ] Given a child with 20 observations across multiple dimensions, when the parent views `/dashboard`, then the 5 most recent observations are shown below the radar chart with dimension badge, date, text preview, and sentiment icon
+- [ ] Given a parent with 3 children, when they view `/dashboard`, then a dropdown/toggle shows all children's names and selecting a different child loads that child's data
+
+### US-07: Observation Logging
+
+- [ ] Given a parent on `/dashboard/observe`, when they select dimension "Islamic", type "Recited Surah Al-Kahf on Friday without mistakes" (50 chars), select sentiment "Positive", and click Save, then the observation is saved and they are redirected to `/dashboard` with the radar chart updated
+- [ ] Given a parent on `/dashboard/observe`, when they change the date to 3 days ago, then the observation is saved with the backdated timestamp and appears in the correct chronological position
+- [ ] Given a parent on `/dashboard/observe`, when they do not select a dimension, then the Save button is disabled and a message shows: "Please select a dimension"
+- [ ] Given a parent on `/dashboard/observe`, when they leave the text empty, then the Save button is disabled and a message shows: "Please describe what you observed"
+- [ ] Given a parent typing an observation, when the text exceeds 1,000 characters, then a character counter shows the overflow in red and the Save button is disabled
+
+### US-08: Observation Editing
+
+- [ ] Given a parent viewing an observation on the timeline, when they click "Edit", then the observation text, sentiment, and tags become editable and they can save changes with the last-modified timestamp updated
+- [ ] Given a parent viewing an observation, when they click "Delete" and confirm, then the observation is soft-deleted, disappears from the timeline and dashboard, and the radar chart score updates
+
+### US-09: Milestone Checklists
+
+- [ ] Given a parent on `/dashboard/milestones/academic` with a 7-year-old child (Primary 6-9 age band), then the Academic milestones for "Primary (6-9)" are displayed with title, description, checkbox, and completion date (if achieved)
+- [ ] Given the system has milestone data loaded, then there are at least 10 milestones per dimension per age band (240+ total) and milestones are ordered by typical developmental progression
+
+### US-10: Milestone Achievement
+
+- [ ] Given a parent viewing a milestone "Can read a chapter book independently", when they check the checkbox, then the milestone is marked as achieved with today's date, the completion percentage updates, and the radar chart recalculates
+- [ ] Given a parent who previously marked a milestone as achieved, when they uncheck the checkbox, then the milestone returns to "not achieved" status, the original achievement date is preserved in history, and the completion percentage and radar chart update
+
+### US-11: Progress Timeline
+
+- [ ] Given a child with 50 observations across all dimensions, when the parent visits `/dashboard/timeline`, then the first 20 observations are shown in reverse chronological order and scrolling to the bottom loads the next 20
+
+### US-12: Timeline Filtering
+
+- [ ] Given a parent on `/dashboard/timeline`, when they select "Islamic" and "Academic" from the dimension filter, then only observations tagged to those 2 dimensions are shown
+- [ ] Given a parent on `/dashboard/timeline`, when they select "Needs Attention" from the sentiment filter, then only observations with sentiment "needs_attention" are shown
+- [ ] Given a parent on `/dashboard/timeline`, when they type "Quran" in the search box, then only observations containing "Quran" in the text are shown
+- [ ] Given a parent on `/dashboard/timeline`, when they select dimension "Islamic" AND sentiment "Positive" AND search "Fajr", then only Islamic observations with positive sentiment containing "Fajr" are shown
+
+### US-13: Dimension Detail View
+
+- [ ] Given a parent navigating to `/dashboard/dimensions/academic`, then they see: a header with "Academic" and the dimension icon, a trend graph for the last 6 months, a list of all Academic observations (paginated, 20 per page), and the Academic milestone checklist for the child's age band
+- [ ] Given a child with observations over the last 4 months, when the parent views a dimension detail page, then the trend graph shows monthly bars for observation count, a line for positive sentiment percentage, and months with no observations show zero
+
+### US-14: Account Settings
+
+- [ ] Given a parent on `/dashboard/settings`, when they change their name and click Save, then the name updates across the application
+- [ ] Given a parent on `/dashboard/settings`, when they enter their current password and a new password (meeting requirements), then the password is updated and all existing sessions except the current one are invalidated
+- [ ] Given a parent on `/dashboard/settings`, when they click "Delete Account" and type "DELETE" to confirm, then all their data is marked for deletion, they are logged out, and data is permanently deleted within 30 days
+
+### US-15: Onboarding Flow
+
+- [ ] Given a newly registered parent, when they are redirected to `/onboarding`, then they see a welcome screen explaining the 6-dimension model
+- [ ] Given a parent completing onboarding, when they create their first child profile and log their first observation, then the dashboard shows a radar chart with the first data point and a success message
+
+### US-16: Landing Page
+
+- [ ] Given a visitor on `/`, then they see: the Mu'aththir value proposition, an explanation of the 6-dimension model, example observations, pricing information, and a "Start Tracking" CTA button
+- [ ] Given a visitor on `/`, when they click "Start Tracking", then they are redirected to `/signup`
+
+### US-17: Subscription Management
+
+- [ ] Given a parent on the free tier viewing `/dashboard/settings/subscription`, then they see their current plan and an option to upgrade to Premium ($8/month or $77/year)
+- [ ] Given a parent on the premium tier, then they see their subscription details and an option to manage billing through Stripe
+
+### US-18: Data Export
+
+- [ ] Given a parent on `/dashboard/settings`, when they click "Export Data", then a JSON file is generated containing all their children, observations, milestones, and goals
+- [ ] Given a parent requesting data export, then the export completes within 24 hours
 
 ---
 
-## 12. Business Rules
+## 11. Out of Scope
 
-### 12.1 Subscription Tiers
-
-| Rule | Free | Premium |
-|------|------|---------|
-| Child profiles | 1 (+ demo) | Unlimited |
-| Observations | Unlimited | Unlimited |
-| Family sharing | No | Yes |
-| Data export | No | Yes |
-| Weekly digest | No | Yes |
-| Price | $0 | $8/month or $77/year |
-
-### 12.2 Score Calculation
-
-```
-dimension_score = (min(obs_count, 10) / 10 * 40) + (achieved / total * 40) + (positive / total * 20)
-```
-
-Cached in ScoreCache with `stale` flag. Recalculated on dashboard load when stale = true.
-
-### 12.3 Soft Delete Policy
-
-Observations use soft delete (deletedAt). 30-day recovery window. Permanent deletion after 30 days via scheduled job.
-
-### 12.4 Resource Ownership
-
-All queries filtered by `parent_id`. No parent can access another parent's data unless shared via FamilyAccess.
+**Explicitly NOT included in MVP**:
+- AI-powered insights or recommendations (Phase 2 -- US-19)
+- Multi-child comparative family dashboard (Phase 2 -- US-20)
+- Goal setting and tracking (Phase 2 -- US-21)
+- Progress report generation/PDF export (Phase 2 -- US-22)
+- Photo/media attachments on observations (Phase 2 -- US-23)
+- Reminders and notification prompts to log observations (Phase 2 -- US-24)
+- Family sharing / co-parent access (Phase 2 -- US-25)
+- Teacher or tutor collaboration features
+- Community features or forums
+- Gamification or child-facing features
+- Mobile app (iOS/Android)
+- Arabic or other non-English language support (UI)
+- Google/Apple OAuth (email/password only for MVP)
+- Quran audio recitation recording
+- Integration with school systems
+- Automated developmental concern flagging
+- Real-time collaboration (multiple parents editing simultaneously)
+- Offline mode
+- Data import from other apps
+- Custom milestones (parents use pre-defined only in MVP)
 
 ---
 
-## 13. Out of Scope (MVP)
+## 12. Dependencies
 
-- Mobile native apps (iOS/Android)
-- AI-generated recommendations
-- Teacher/school integration
-- Multi-language beyond English
-- Social features
-- Gamification
-- Video/image attachments on observations
-- Real-time collaboration
-- Push notifications
-- Calendar integration
+**External Services**:
+- **Email Service**: SendGrid or AWS SES for transactional emails (welcome, password reset, weekly digest)
+- **Image Storage**: Local filesystem for MVP (S3-compatible storage post-MVP) for child profile photos
+- **Payment Processing**: Stripe Billing for subscription management
+- **Authentication**: Custom JWT implementation (no OAuth providers in MVP)
 
----
+**Infrastructure**:
+- **Database**: PostgreSQL 15+ (database: `muaththir_dev`)
+- **Backend**: Fastify 5.x (port 5005)
+- **Frontend**: Next.js 14+ with React 18 (port 3108)
+- **ORM**: Prisma 6.x
+- **Hosting**: To be determined (likely Vercel + Render)
 
-## 14. Dependencies
-
-| Dependency | Purpose | Status |
-|------------|---------|--------|
-| PostgreSQL 15+ | Primary data store | Available |
-| Prisma 6.x | ORM and migrations | Available |
-| Fastify 5.x | API framework | Available |
-| Next.js 14 | Frontend framework | Available |
-| Recharts 2.x | Charts | Available |
-| shadcn/ui + Radix | UI components | Available |
-| Zod 3.x | Input validation | Available |
-| Stripe API | Payment processing | Phase 2 |
-| Email service (SMTP) | Transactional emails | Phase 2 (mock in MVP) |
+**Data**:
+- **Milestone Definitions**: A seed dataset of 240+ milestones (10 per dimension per age band) must be authored and loaded into the database before launch. This is original content, not sourced from copyrighted developmental assessment tools. Milestones should be informed by general child development literature and Islamic educational principles.
 
 ---
 
-## 15. Risks and Mitigations
+## 13. Risks and Mitigations
 
 | Risk | Impact | Likelihood | Mitigation |
 |------|--------|------------|------------|
-| Parents find 6 dimensions overwhelming | High | Medium | Demo child; onboarding tooltips; start with 1-2 dimensions |
-| Islamic dimension limits market | Medium | Low | 5 of 6 dimensions are universal; Islamic is optional |
-| Low observation frequency | High | Medium | Daily reminders; minimum threshold for score display |
-| Milestone definitions culturally biased | Medium | Medium | Expert review; community feedback |
-| Score formula unintuitive | High | Low | A/B test weights; qualitative labels alongside scores |
-| Free tier too generous | Medium | Medium | Gate export, digest, sharing behind premium |
+| Milestone content quality is inadequate or culturally insensitive | High -- undermines core value proposition | Medium | Have milestones reviewed by Islamic educators and child development professionals before launch. Iterate based on early user feedback. |
+| Parents find observation logging too time-consuming and stop using the app | High -- retention collapse | Medium | Keep observation form to 3 fields (dimension, text, sentiment). Offer quick-log from dashboard. Target <1 minute per observation. |
+| Radar chart scoring feels arbitrary or inaccurate to parents | Medium -- loss of trust in the dashboard | Medium | Document the scoring formula transparently. Allow parents to understand what affects each axis. Iterate the formula based on feedback. |
+| Islamic dimension excludes non-Muslim families or feels alienating | Medium -- limits addressable market | Low | Position dimensions 1-4 and 6 as universal. Make Islamic dimension optional during onboarding. Clear messaging that the platform works for any family. |
+| Privacy concerns about storing children's developmental data in the cloud | High -- prevents adoption | Medium | Encryption at rest for child data. Clear privacy policy. GDPR and COPPA-aligned practices. No third-party data sharing. |
+| Insufficient milestone coverage across all dimensions and age bands | Medium -- milestones feel incomplete or generic | Medium | Launch with 10+ milestones per dimension per age band (240+ total). Prioritise Islamic and Academic dimensions where parent expectations are highest. |
+| Low engagement in less-familiar dimensions (Aspirational, Social-Emotional) | Medium -- radar chart skews to 2-3 dimensions | High | Provide example observations and guidance prompts for each dimension. Highlight under-observed dimensions with gentle nudges on dashboard. |
+| Free tier is too generous, preventing paid conversion | Medium -- revenue shortfall | Low | Free tier limited to 1 child profile. Monitor conversion rates and adjust. |
+| Competitor launches similar product targeting Muslim families | Low -- market share loss | Low | First-mover advantage + deep Islamic integration that surface-level competitors cannot replicate. Community trust is a moat. |
 
 ---
 
-## 16. Timeline
+## 14. Monetization Details
 
-| Phase | Scope | User Stories |
-|-------|-------|-------------|
-| MVP | Auth, child mgmt, observations, milestones, radar chart, goals, trends, settings | US-01 through US-18 |
-| Phase 2 | Family sharing, Stripe, export, digest, Arabic, seeding, photo upload | US-19 through US-26 |
-| Future | PWA, AI insights, mobile native, teacher integration, gamification | Backlog |
+### Pricing Tiers
+
+| Tier | Price | Children | Features |
+|------|-------|----------|----------|
+| Free | $0 | 1 child | 6-dimension dashboard, unlimited observations, milestones, timeline |
+| Premium | $8/month | Unlimited | All Free features + unlimited children, data export, email digests, priority support |
+| Premium Annual | $77/year | Unlimited | Same as Premium monthly (20% discount) |
+
+### Revenue Model
+
+- Primary revenue: Monthly/annual subscriptions (Premium tier)
+- No advertising; child data is never monetised
+- No transaction fees or hidden costs
+
+### Free Tier Economics
+
+- 1 child profile is enough to evaluate the product for a single child but insufficient for families with multiple children (most target users have 2-4 children)
+- Cost per free user: approximately $0.02/month (server + database costs per user)
+- Target: 8:1 free-to-paid ratio sustains unit economics
+- Natural upgrade trigger: second child drives conversion
 
 ---
 
-## Appendix A: Glossary
+## 15. Timeline
+
+**MVP Development** (5 weeks):
+- Week 1: Backend foundation (auth, database schema, API structure, child profiles)
+- Week 2: Observation logging API, milestone data model and seed data, radar chart calculation engine
+- Week 3: Frontend foundation (Next.js app, dashboard layout, radar chart component, observation form)
+- Week 4: Dimension detail pages, milestone checklists UI, timeline page, settings
+- Week 5: Integration testing, onboarding flow, landing page, polish, security hardening
+
+**MVP Launch** (Week 6):
+- Deploy to production
+- Onboard first 30 beta families (from Muslim parenting communities)
+- Collect feedback, iterate on milestone content and radar chart scoring
+
+**Phase 2** (Weeks 7-12):
+- AI-powered insights (US-19)
+- Multi-child family dashboard (US-20)
+- Goal setting (US-21)
+- Progress report generation (US-22)
+- Photo/media attachments (US-23)
+- Reminders (US-24)
+- Family sharing (US-25)
+- Email digest (US-26)
+
+**Key Milestones**:
+- **Week 2**: Observation logging works end-to-end, radar chart calculates from real data
+- **Week 3**: Full dashboard with all 6 dimension views functional
+- **Week 4**: Complete milestone checklists loaded, timeline with filtering works
+- **Week 5**: Onboarding flow complete, all tests passing, security reviewed
+- **Week 6**: MVP launched with 30 beta families
+
+---
+
+## 16. Glossary
 
 | Term | Definition |
 |------|-----------|
-| Dimension | One of 6 developmental categories |
-| Age Band | Age grouping: early_years (3-5), primary (6-9), upper_primary (10-12), secondary (13-16) |
-| Observation | A text entry logged by a parent about a child in a specific dimension |
-| Milestone | A predefined developmental checkpoint for a dimension and age band |
-| Radar Chart | A 6-axis spider chart showing a child's scores |
-| ScoreCache | Database table caching computed dimension scores with staleness flag |
-| Sentiment | Observation tone: positive, neutral, or needs_attention |
-| Tarbiyah | Arabic for holistic upbringing/education |
-| Soft Delete | Marking a record as deleted without removing from database |
-| Resource Ownership | Security pattern ensuring queries are filtered by parent_id |
+| Dimension | One of the 6 developmental areas tracked by Mu'aththir (Academic, Social-Emotional, Behavioural, Aspirational, Islamic, Physical) |
+| Observation | A parent's written record of something they noticed about their child, tagged to a dimension with a sentiment indicator |
+| Milestone | A pre-defined developmental achievement appropriate for a specific age band and dimension |
+| Age Band | One of 4 developmental stages: Early Years (3-5), Primary (6-9), Upper Primary (10-12), Secondary (13-16) |
+| Radar Chart | A hexagonal chart with 6 axes showing a child's holistic development profile |
+| Sentiment | A parent's classification of an observation as positive, neutral, or needs_attention |
+| Tarbiyah | Arabic term for holistic upbringing/education, encompassing both worldly and spiritual dimensions |
+| Ihsan | Excellence, doing one's best in all things; a concept that spans all 6 dimensions |
+| Sabr | Patience and perseverance; relevant to behavioural and aspirational dimensions |
+| Akhlaq | Character and manners; core to the Social-Emotional and Islamic dimensions |
+| Tajweed | Rules governing the correct recitation of the Quran |
+| Surah | A chapter of the Quran (114 total) |
+| Fajr/Isha | Dawn and night prayers, two of the five daily Islamic prayers |
+| Dua | Personal supplication/prayer to Allah |
+| Khushu | Mindful presence and concentration during prayer |
+| Seerah | The biography and life example of Prophet Muhammad (peace be upon him) |
+
+---
+
+**End of Document**
