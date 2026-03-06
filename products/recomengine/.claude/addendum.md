@@ -8,6 +8,7 @@ This document provides product-specific context for ConnectSW agents working on 
 **Tagline**: AI-Powered Product Recommendation Orchestrator for E-Commerce
 **Type**: Web App (Full B2B SaaS Product)
 **Status**: Architecture Complete
+**PRD Version**: 2.0 (updated 2026-03-06)
 **Product Directory**: `products/recomengine/`
 **Frontend Port**: 3112
 **Backend Port**: 5008
@@ -19,6 +20,15 @@ This document provides product-specific context for ConnectSW agents working on 
 **Target Users**: Mid-market e-commerce businesses ($1M-$100M revenue), multi-tenant marketplace platforms, SaaS e-commerce providers.
 
 **Monetization**: Usage-based pricing (to be finalized by CEO). Expected tiers based on events ingested and recommendation requests served per month.
+
+## User Personas
+
+| Persona | Name | Role | Primary Actions |
+|---------|------|------|-----------------|
+| Merchant | Elena | Growth Manager | Views analytics, configures strategies, runs A/B tests |
+| Developer | Raj | Platform Engineer | Integrates API/SDK, manages tenants, uploads catalogs |
+| Data Analyst | Sophie | SaaS Platform PM | Reviews performance, exports reports, provisions tenants |
+| Platform Admin | Marcus | Internal Ops | Monitors health, manages tenant lifecycle |
 
 ## Site Map
 
@@ -41,8 +51,8 @@ This document provides product-specific context for ConnectSW agents working on 
 | `/dashboard/tenants/:id/widgets` | MVP | Widget config and preview |
 | `/dashboard/tenants/:id/api-keys` | MVP | API key management |
 | `/dashboard/settings` | MVP | Account settings |
-| `/dashboard/settings/billing` | Phase 2 | Subscription billing (Coming Soon) |
-| `/dashboard/settings/team` | Phase 2 | Team management (Coming Soon) |
+| `/dashboard/settings/billing` | Deferred | Subscription billing (page skeleton with empty state) |
+| `/dashboard/settings/team` | Deferred | Team management (page skeleton with empty state) |
 | `/docs` | MVP | API documentation |
 | `/docs/quickstart` | MVP | Quick start guide |
 | `/docs/sdk` | MVP | JavaScript SDK reference |
@@ -218,22 +228,6 @@ Widget config changes propagate to the SDK within 60 seconds (config cached with
 
 **Modular monolith** (see [ADR-001](../docs/ADRs/001-monolith-architecture.md)). Single Fastify process with 10 domain modules, shared PostgreSQL database, and Redis cache. No microservices for MVP. Module boundaries are designed for future extraction if scaling demands it.
 
-### System Design
-
-```
-Browser (Dashboard) -> Next.js (3112) -> Fastify API (5008) -> PostgreSQL
-                                              |                    |
-                                          +---+---+           Partitioned
-                                          |       |           event tables
-                                        Redis   CDN
-                                        cache   (SDK)
-                                          |
-Merchant Site -> JS SDK -> Fastify API (5008) -> Recommendation Engine
-                              |                         |
-                          Event Store           Algorithm Modules
-                                              (collab, content, trending, fbt)
-```
-
 ### Backend Module Structure
 
 ```
@@ -287,50 +281,6 @@ All endpoints versioned under `/api/v1/`. Full OpenAPI 3.0 spec in `docs/api-sch
 | Widgets | CRUD /tenants/:id/widgets | JWT / API Key (read) | Widget configuration |
 | Health | GET /health, GET /ready | None | Liveness and readiness |
 
-### Database Schema
-
-Full DDL in `docs/db-schema.sql`. Key tables:
-
-| Table | Notes |
-|-------|-------|
-| `admins` | Platform administrators (email, bcrypt password, role) |
-| `tenants` | Customer orgs with JSONB config (owner_id FK to admins) |
-| `api_keys` | HMAC-SHA256 hashed keys with read/read_write permissions |
-| `catalog_items` | Product catalog per tenant (UNIQUE on tenant_id + product_id) |
-| `events` | **Partitioned by month** on `created_at` (see ADR-002) |
-| `experiments` | A/B tests with unique running constraint per placement |
-| `experiment_results` | Aggregated metrics per variant (control/variant) |
-| `analytics_daily` | Pre-aggregated daily stats per tenant |
-| `widget_configs` | Widget appearance config per tenant per placement |
-| `revenue_attributions` | Links recommendation clicks to purchases (30-min window) |
-
-Materialized views: `analytics_summary` (KPI totals), `top_recommended_products` (click/impression rankings).
-
-### Design Patterns
-
-- **Route-Handler-Service**: Routes define endpoints, handlers parse requests, services contain business logic. Services are testable independently.
-- **Tenant-Scoped Queries**: Every database query includes `tenantId` in the WHERE clause. Prisma middleware enforces this automatically.
-- **Zod at Boundaries**: All API inputs validated with Zod before reaching handlers.
-- **Redis Caching**: Recommendations cached with 5-min TTL; cache miss triggers synchronous computation. See [ADR-003](../docs/ADRs/003-recommendation-caching.md).
-- **Deterministic A/B Assignment**: SHA-256 hash of userId + experimentId ensures consistent variant assignment without storing assignments in the database.
-- **Event Sourcing (Lite)**: Raw events are immutable and append-only. Analytics are derived from events via aggregation.
-- **Event Partitioning**: Monthly PostgreSQL range partitions for events table. See [ADR-002](../docs/ADRs/002-event-storage-strategy.md).
-
-### Data Models (Key Entities)
-
-| Entity | Key Fields | Relationships |
-|--------|-----------|---------------|
-| Admin | email, passwordHash, role | has many Tenants |
-| Tenant | name, status, config (JSON), ownerId | belongs to Admin, has many ApiKeys, Events, CatalogItems, Experiments |
-| ApiKey | keyHash, keyPrefix, permissions, tenantId, lastUsedAt | belongs to Tenant |
-| CatalogItem | productId, name, category, price, imageUrl, attributes (JSON), available | belongs to Tenant |
-| Event | eventType, userId, productId, sessionId, metadata (JSON), timestamp, tenantId | belongs to Tenant (partitioned by month) |
-| Experiment | name, controlStrategy, variantStrategy, trafficSplit, metric, status, tenantId | belongs to Tenant |
-| ExperimentResult | experimentId, variant, impressions, clicks, conversions, revenue, sampleSize | belongs to Experiment |
-| AnalyticsDaily | tenantId, date, impressions, clicks, conversions, revenue, placementId, strategy | belongs to Tenant |
-| WidgetConfig | tenantId, placementId, layout, columns, theme (JSON), maxItems | belongs to Tenant |
-| RevenueAttribution | tenantId, userId, productId, clickEventId, purchaseEventId, revenue | belongs to Tenant |
-
 ### Caching Strategy
 
 Redis key patterns (see [ADR-003](../docs/ADRs/003-recommendation-caching.md) for full details):
@@ -379,32 +329,29 @@ Redis key patterns (see [ADR-003](../docs/ADRs/003-recommendation-caching.md) fo
 | [ADR-002](../docs/ADRs/002-event-storage-strategy.md) | PostgreSQL partitioned tables | No additional dependency; native partitioning sufficient for MVP scale |
 | [ADR-003](../docs/ADRs/003-recommendation-caching.md) | Redis with 5-min TTL | Shared cache across instances; meets <100ms target |
 
+### Design Patterns
+
+- **Route-Handler-Service**: Routes define endpoints, handlers parse requests, services contain business logic. Services are testable independently.
+- **Tenant-Scoped Queries**: Every database query includes `tenantId` in the WHERE clause. Prisma middleware enforces this automatically.
+- **Zod at Boundaries**: All API inputs validated with Zod before reaching handlers.
+- **Redis Caching**: Recommendations cached with 5-min TTL; cache miss triggers synchronous computation. See [ADR-003](../docs/ADRs/003-recommendation-caching.md).
+- **Deterministic A/B Assignment**: SHA-256 hash of userId + experimentId ensures consistent variant assignment without storing assignments in the database.
+- **Event Sourcing (Lite)**: Raw events are immutable and append-only. Analytics are derived from events via aggregation.
+- **Event Partitioning**: Monthly PostgreSQL range partitions for events table. See [ADR-002](../docs/ADRs/002-event-storage-strategy.md).
+
 ### ConnectSW Components to Reuse
 
 | Need | Component | Source |
 |------|-----------|--------|
-| Auth (JWT + API Key) | Auth Plugin | `@connectsw/shared` or `stablecoin-gateway/apps/api/src/plugins/auth.ts` |
-| API key hashing | Crypto Utils | `@connectsw/shared` or `stablecoin-gateway/apps/api/src/utils/crypto.ts` |
-| Database connection | Prisma Plugin | `@connectsw/shared` or `stablecoin-gateway/apps/api/src/plugins/prisma.ts` |
-| Redis connection | Redis Plugin | `@connectsw/shared` or `stablecoin-gateway/apps/api/src/plugins/redis.ts` |
-| Rate limiting | Redis Rate Limit Store | `stablecoin-gateway/apps/api/src/utils/redis-rate-limit-store.ts` |
-| Structured logging | Logger | `@connectsw/shared` or `stablecoin-gateway/apps/api/src/utils/logger.ts` |
-| Request metrics | Observability Plugin | `stablecoin-gateway/apps/api/src/plugins/observability.ts` |
-| Error handling | Error Classes | `invoiceforge/apps/api/src/lib/errors.ts` |
-| Pagination | Pagination Helper | `invoiceforge/apps/api/src/lib/pagination.ts` |
-| Input validation | Zod patterns | `stablecoin-gateway/apps/api/src/utils/validation.ts` |
-| Frontend auth | useAuth hook | `stablecoin-gateway/apps/web/src/hooks/useAuth.tsx` |
-| Token storage | Token Manager | `stablecoin-gateway/apps/web/src/lib/token-manager.ts` |
-| API client base | API Client | `stablecoin-gateway/apps/web/src/lib/api-client.ts` |
-| Theme toggle | useTheme + ThemeToggle | `stablecoin-gateway/apps/web/src/hooks/useTheme.ts` |
-| KPI cards | StatCard | `stablecoin-gateway/apps/web/src/components/dashboard/StatCard.tsx` |
-| Data tables | TransactionsTable pattern | `stablecoin-gateway/apps/web/src/components/dashboard/TransactionsTable.tsx` |
-| Navigation | Sidebar pattern | `stablecoin-gateway/apps/web/src/components/dashboard/Sidebar.tsx` |
-| Error boundary | ErrorBoundary | `stablecoin-gateway/apps/web/src/components/ErrorBoundary.tsx` |
-| Route protection | ProtectedRoute | `stablecoin-gateway/apps/web/src/components/ProtectedRoute.tsx` |
-| Docker | Dockerfile + docker-compose | `stablecoin-gateway/` |
-| CI/CD | GitHub Actions | `.github/workflows/test-stablecoin-gateway.yml` |
-| E2E tests | Playwright config + auth fixture | `stablecoin-gateway/apps/web/` |
+| Auth (JWT + API Key) | Auth Plugin | `@connectsw/auth/backend` |
+| API key hashing | Crypto Utils | `@connectsw/shared/utils/crypto` |
+| Database connection | Prisma Plugin | `@connectsw/shared/plugins/prisma` |
+| Redis connection | Redis Plugin | `@connectsw/shared/plugins/redis` |
+| Structured logging | Logger | `@connectsw/shared/utils/logger` |
+| Frontend auth state | useAuth hook | `@connectsw/auth/frontend` |
+| Token storage | TokenManager | `@connectsw/auth/frontend` |
+| Route protection | ProtectedRoute | `@connectsw/auth/frontend` |
+| Error handling | AppError | `@connectsw/auth/backend` |
 
 ## Special Considerations
 
@@ -447,5 +394,5 @@ This is a last-click attribution model. A purchase can only be attributed to one
 
 **Created by**: Product Manager
 **Architecture by**: Architect
-**Last Updated**: 2026-02-12
+**Last Updated**: 2026-03-06
 **Status**: Architecture complete, ready for implementation
