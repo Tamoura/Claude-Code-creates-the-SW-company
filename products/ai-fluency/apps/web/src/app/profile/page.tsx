@@ -1,22 +1,58 @@
-import type { Metadata } from 'next';
+'use client';
+
+import { useEffect, useState } from 'react';
 import Link from 'next/link';
+import { api } from '@/lib/api';
 import { Card } from '@/components/ui/Card';
 import { Sidebar } from '@/components/layout/Sidebar';
 import { t } from '@/lib/i18n';
+import { DimensionRadarChart } from '@/components/charts/DimensionRadarChart';
+import type {
+  DetailedFluencyProfile,
+  FluencyProfile,
+  Dimension,
+} from '@/types/index';
 
-export const metadata: Metadata = {
-  title: 'My Fluency Profile',
-};
-
-const dimensions = [
-  { key: 'DELEGATION', label: t('profile.dimensions.DELEGATION'), score: null },
-  { key: 'DESCRIPTION', label: t('profile.dimensions.DESCRIPTION'), score: null },
-  { key: 'DISCERNMENT', label: t('profile.dimensions.DISCERNMENT'), score: null },
-  { key: 'DILIGENCE', label: t('profile.dimensions.DILIGENCE'), score: null },
+const DIMENSIONS: { key: Dimension; label: string }[] = [
+  { key: 'DELEGATION', label: t('profile.dimensions.DELEGATION') },
+  { key: 'DESCRIPTION', label: t('profile.dimensions.DESCRIPTION') },
+  { key: 'DISCERNMENT', label: t('profile.dimensions.DISCERNMENT') },
+  { key: 'DILIGENCE', label: t('profile.dimensions.DILIGENCE') },
 ];
 
 export default function ProfilePage() {
-  const hasAssessment = false; // Will be fetched from API after auth is wired
+  const [profile, setProfile] = useState<FluencyProfile | null>(null);
+  const [history, setHistory] = useState<DetailedFluencyProfile[]>([]);
+  const [isLoading, setIsLoading] = useState(true);
+
+  useEffect(() => {
+    let mounted = true;
+    const fetchData = async () => {
+      try {
+        const [profileRes, historyRes] = await Promise.all([
+          api
+            .get<{ profile: FluencyProfile }>('/profiles/me')
+            .catch(() => null),
+          api
+            .get<{ profiles: DetailedFluencyProfile[] }>('/profiles/history')
+            .catch(() => null),
+        ]);
+        if (!mounted) return;
+        if (profileRes) setProfile(profileRes.profile);
+        if (historyRes) setHistory(historyRes.profiles);
+      } catch {
+        // Show empty state
+      } finally {
+        if (mounted) setIsLoading(false);
+      }
+    };
+    void fetchData();
+    return () => {
+      mounted = false;
+    };
+  }, []);
+
+  const hasAssessment = profile !== null;
 
   return (
     <div className="flex min-h-[calc(100vh-64px)]">
@@ -30,9 +66,23 @@ export default function ProfilePage() {
             Your AI fluency across four dimensions.
           </p>
 
-          {!hasAssessment ? (
+          {isLoading ? (
+            <div
+              className="flex justify-center py-12"
+              role="status"
+              aria-live="polite"
+            >
+              <div
+                className="h-8 w-8 animate-spin rounded-full border-4 border-brand-200 border-t-brand-600"
+                aria-hidden="true"
+              />
+              <span className="sr-only">{t('common.loading')}</span>
+            </div>
+          ) : !hasAssessment ? (
             <div className="empty-state">
-              <div className="text-5xl" aria-hidden="true">◎</div>
+              <div className="text-5xl" aria-hidden="true">
+                &#9678;
+              </div>
               <h2 className="empty-state-title">
                 {t('profile.no_assessment')}
               </h2>
@@ -50,25 +100,86 @@ export default function ProfilePage() {
             <div className="space-y-6">
               {/* Overall score */}
               <Card padding="lg" className="text-center">
-                <div className="text-sm font-medium text-gray-500 mb-1">
+                <div className="mb-1 text-sm font-medium text-gray-500">
                   {t('profile.overall_score')}
                 </div>
-                <div className="text-6xl font-bold text-brand-600 mb-1">—</div>
+                <div className="mb-1 text-6xl font-bold text-brand-600">
+                  {Math.round(profile.overallScore)}
+                </div>
+                <div className="text-sm text-gray-500">out of 100</div>
               </Card>
 
-              {/* Dimensions */}
+              {/* Radar chart */}
+              <Card padding="lg">
+                <h2 className="mb-4 text-lg font-semibold text-gray-900">
+                  Dimension Overview
+                </h2>
+                <DimensionRadarChart dimensions={profile.dimensions} />
+              </Card>
+
+              {/* Dimension breakdown cards */}
               <div className="grid gap-4 sm:grid-cols-2">
-                {dimensions.map((dim) => (
-                  <Card key={dim.key} padding="md">
-                    <div className="mb-2 font-semibold text-gray-800">
-                      {dim.label}
-                    </div>
-                    <div className="text-3xl font-bold text-brand-600">
-                      {dim.score ?? '—'}
-                    </div>
-                  </Card>
-                ))}
+                {DIMENSIONS.map((dim) => {
+                  const score = Math.round(
+                    profile.dimensions[dim.key] ?? 0,
+                  );
+                  return (
+                    <Card key={dim.key} padding="md">
+                      <div className="mb-2 font-semibold text-gray-800">
+                        {dim.label}
+                      </div>
+                      <div className="mb-2 text-3xl font-bold text-brand-600">
+                        {score}
+                      </div>
+                      <div
+                        className="h-2 w-full overflow-hidden rounded-full bg-gray-100"
+                        role="progressbar"
+                        aria-valuenow={score}
+                        aria-valuemin={0}
+                        aria-valuemax={100}
+                        aria-label={`${dim.label} score: ${score} out of 100`}
+                      >
+                        <div
+                          className="h-full rounded-full bg-brand-500 transition-all duration-700"
+                          style={{ width: `${score}%` }}
+                        />
+                      </div>
+                    </Card>
+                  );
+                })}
               </div>
+
+              {/* Assessment history */}
+              {history.length > 0 && (
+                <Card padding="lg">
+                  <h2 className="mb-4 text-lg font-semibold text-gray-900">
+                    Assessment History
+                  </h2>
+                  <div className="space-y-3">
+                    {history.map((entry) => (
+                      <div
+                        key={entry.id}
+                        className="flex items-center justify-between rounded-lg border border-gray-100 bg-gray-50 p-3"
+                      >
+                        <div>
+                          <div className="text-sm font-medium text-gray-800">
+                            Score: {Math.round(entry.overallScore)}
+                          </div>
+                          <div className="text-xs text-gray-500">
+                            {new Date(entry.createdAt).toLocaleDateString()}
+                          </div>
+                        </div>
+                        <Link
+                          href={`/assessment/${entry.sessionId}/complete`}
+                          className="text-sm font-medium text-brand-600 hover:text-brand-700 focus:outline-none focus:ring-2 focus:ring-brand-500 rounded"
+                        >
+                          View details
+                        </Link>
+                      </div>
+                    ))}
+                  </div>
+                </Card>
+              )}
             </div>
           )}
         </div>

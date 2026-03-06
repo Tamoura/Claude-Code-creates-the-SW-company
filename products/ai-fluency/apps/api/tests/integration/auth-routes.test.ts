@@ -1,20 +1,16 @@
 /**
- * tests/integration/auth-routes.test.ts — Auth route stub tests
+ * tests/integration/auth-routes.test.ts — Auth routes basic contract tests
  *
- * TDD: Tests written FIRST. Implementation in src/routes/auth.ts.
+ * Verifies auth routes exist and respond with correct formats.
+ * Full auth flow tested in auth-full.test.ts.
  *
- * Tests cover:
- * [BACKEND-AUTH][AC-1] POST /api/v1/auth/register returns 501 (not yet implemented)
- * [BACKEND-AUTH][AC-2] POST /api/v1/auth/login returns 501 (not yet implemented)
- * [BACKEND-AUTH][AC-3] Responses use RFC 7807 Problem Details format
- *
- * Uses real Fastify app — NO mocks, per company No Mocks Policy.
+ * [BACKEND-AUTH] Auth route contract tests
  */
 
 import { FastifyInstance } from 'fastify';
 import { buildApp } from '../../src/app';
 
-describe('[BACKEND-AUTH] Auth Route Stubs', () => {
+describe('[BACKEND-AUTH] Auth Route Contracts', () => {
   let app: FastifyInstance;
 
   beforeAll(async () => {
@@ -30,78 +26,61 @@ describe('[BACKEND-AUTH] Auth Route Stubs', () => {
   // POST /api/v1/auth/register
   // ─────────────────────────────────────────────────────────────────────────
 
-  test('[BACKEND-AUTH][AC-1] POST /api/v1/auth/register returns 501', async () => {
+  test('[BACKEND-AUTH][AC-1] POST /api/v1/auth/register route exists', async () => {
     const response = await app.inject({
       method: 'POST',
       url: '/api/v1/auth/register',
-      payload: { email: 'test@example.com', password: 'Test123!' },
+      payload: {},
     });
 
-    expect(response.statusCode).toBe(501);
+    // Should return 400 (validation error), NOT 404
+    expect(response.statusCode).not.toBe(404);
   });
 
-  test('[BACKEND-AUTH][AC-3] POST /api/v1/auth/register returns RFC 7807 shape', async () => {
+  test('[BACKEND-AUTH][AC-3] POST /api/v1/auth/register validation error uses RFC 7807', async () => {
     const response = await app.inject({
       method: 'POST',
       url: '/api/v1/auth/register',
-      payload: { email: 'test@example.com', password: 'Test123!' },
+      payload: { email: 'not-valid' },
     });
 
+    expect(response.statusCode).toBe(400);
     expect(response.headers['content-type']).toMatch(/application\/json/);
     const body = response.json();
     expect(body).toHaveProperty('type');
     expect(body).toHaveProperty('title');
-    expect(body).toHaveProperty('status', 501);
+    expect(body).toHaveProperty('status', 400);
     expect(body).toHaveProperty('detail');
-  });
-
-  test('[BACKEND-AUTH][AC-1] POST /api/v1/auth/register detail mentions Sprint 1.4', async () => {
-    const response = await app.inject({
-      method: 'POST',
-      url: '/api/v1/auth/register',
-    });
-
-    const body = response.json();
-    expect(body.detail).toMatch(/Sprint 1\.4/);
   });
 
   // ─────────────────────────────────────────────────────────────────────────
   // POST /api/v1/auth/login
   // ─────────────────────────────────────────────────────────────────────────
 
-  test('[BACKEND-AUTH][AC-2] POST /api/v1/auth/login returns 501', async () => {
+  test('[BACKEND-AUTH][AC-2] POST /api/v1/auth/login route exists', async () => {
     const response = await app.inject({
       method: 'POST',
       url: '/api/v1/auth/login',
-      payload: { email: 'test@example.com', password: 'Test123!' },
+      payload: {},
     });
 
-    expect(response.statusCode).toBe(501);
+    // Should return 400 (validation error), NOT 404
+    expect(response.statusCode).not.toBe(404);
   });
 
-  test('[BACKEND-AUTH][AC-3] POST /api/v1/auth/login returns RFC 7807 shape', async () => {
+  test('[BACKEND-AUTH][AC-3] POST /api/v1/auth/login validation error uses RFC 7807', async () => {
     const response = await app.inject({
       method: 'POST',
       url: '/api/v1/auth/login',
-      payload: { email: 'test@example.com', password: 'Test123!' },
+      payload: { email: 'test@example.com' },
     });
 
-    expect(response.headers['content-type']).toMatch(/application\/json/);
+    expect(response.statusCode).toBe(400);
     const body = response.json();
     expect(body).toHaveProperty('type');
     expect(body).toHaveProperty('title');
-    expect(body).toHaveProperty('status', 501);
+    expect(body).toHaveProperty('status', 400);
     expect(body).toHaveProperty('detail');
-  });
-
-  test('[BACKEND-AUTH][AC-2] POST /api/v1/auth/login detail mentions Sprint 1.4', async () => {
-    const response = await app.inject({
-      method: 'POST',
-      url: '/api/v1/auth/login',
-    });
-
-    const body = response.json();
-    expect(body.detail).toMatch(/Sprint 1\.4/);
   });
 
   // ─────────────────────────────────────────────────────────────────────────
@@ -112,6 +91,7 @@ describe('[BACKEND-AUTH] Auth Route Stubs', () => {
     const response = await app.inject({
       method: 'POST',
       url: '/api/v1/auth/register',
+      payload: {},
     });
 
     const body = response.json();
@@ -122,6 +102,7 @@ describe('[BACKEND-AUTH] Auth Route Stubs', () => {
     const response = await app.inject({
       method: 'POST',
       url: '/api/v1/auth/login',
+      payload: {},
     });
 
     const body = response.json();

@@ -73,10 +73,10 @@ const translations: Record<string, string> = {
   // Profile
   'profile.title': 'My Fluency Profile',
   'profile.overall_score': 'Overall Score',
-  'profile.dimensions.conceptual': 'Conceptual',
-  'profile.dimensions.practical': 'Practical',
-  'profile.dimensions.critical': 'Critical Thinking',
-  'profile.dimensions.collaborative': 'Collaborative',
+  'profile.dimensions.DELEGATION': 'Delegation',
+  'profile.dimensions.DESCRIPTION': 'Description',
+  'profile.dimensions.DISCERNMENT': 'Discernment',
+  'profile.dimensions.DILIGENCE': 'Diligence',
   'profile.no_assessment': 'No assessment completed yet.',
   'profile.take_assessment': 'Take your first assessment',
 

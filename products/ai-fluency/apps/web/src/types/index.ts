@@ -79,3 +79,57 @@ export interface Team {
   memberCount: number;
   avgFluencyScore: number;
 }
+
+// Assessment question types
+
+export type Dimension = 'DELEGATION' | 'DESCRIPTION' | 'DISCERNMENT' | 'DILIGENCE';
+
+export interface ScenarioOption {
+  key: string;
+  text: string;
+}
+
+export interface LikertScale {
+  min: number;
+  max: number;
+  labels: string[];
+}
+
+export interface Question {
+  id: string;
+  dimension: Dimension;
+  questionType: 'SCENARIO' | 'SELF_REPORT';
+  text: string;
+  optionsJson: ScenarioOption[] | LikertScale;
+  indicatorId: string;
+}
+
+export interface AssessmentResponse {
+  questionId: string;
+  answer: string;
+}
+
+export interface DimensionScores {
+  DELEGATION: number;
+  DESCRIPTION: number;
+  DISCERNMENT: number;
+  DILIGENCE: number;
+}
+
+export interface DetailedFluencyProfile extends FluencyProfile {
+  id: string;
+  sessionId: string;
+  dimensionScores: DimensionScores;
+  selfReportScores: DimensionScores;
+  discernmentGap: boolean;
+  createdAt: string;
+}
+
+export interface AIFeedback {
+  summary: string;
+  dimensionFeedback: Record<string, string>;
+  topStrengths: string[];
+  priorityImprovements: string[];
+  discernmentGapWarning?: string;
+  recommendedNextSteps: string[];
+}

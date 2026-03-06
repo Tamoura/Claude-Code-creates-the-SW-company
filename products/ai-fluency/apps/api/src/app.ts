@@ -106,10 +106,8 @@ export async function buildApp(): Promise<FastifyInstance> {
   // 5. Observability (access log + /metrics) — last plugin, before routes
   await fastify.register(observabilityPlugin);
 
-  // ── ROUTES ────────────────────────────────────────────────────────────────
-  await registerRoutes(fastify);
-
   // ── GLOBAL ERROR HANDLER ──────────────────────────────────────────────────
+  // MUST be set before routes so scoped plugins inherit it.
   fastify.setErrorHandler((error, request, reply) => {
     // AppError — structured application error
     if (error instanceof AppError) {
@@ -180,6 +178,10 @@ export async function buildApp(): Promise<FastifyInstance> {
       .code(500)
       .send(buildProblemDetails('internal-error', 500, detail, request.id));
   });
+
+  // ── ROUTES ────────────────────────────────────────────────────────────────
+  // Registered AFTER error handler so scoped plugins inherit it.
+  await registerRoutes(fastify);
 
   // ── NOT FOUND HANDLER ─────────────────────────────────────────────────────
   fastify.setNotFoundHandler((request, reply) => {
