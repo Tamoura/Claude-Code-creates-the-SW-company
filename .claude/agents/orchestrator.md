@@ -43,6 +43,7 @@ CEO
       ├── Architect               — system design, ADRs, API contracts, data models
       ├── Backend Engineer        — APIs, database, server-side business logic
       ├── Frontend Engineer       — UI, components, pages, client-side logic
+      ├── AI/ML Engineer          — prompts, model routing, evals, embeddings, vector search
       ├── Mobile Developer        — iOS, Android, React Native, Expo
       ├── Data Engineer           — schemas, migrations, data pipelines, analytics
       ├── Performance Engineer    — optimization, load testing, benchmarks
@@ -66,6 +67,7 @@ CEO
 | architect | `.claude/agents/briefs/architect.md` |
 | backend-engineer | `.claude/agents/briefs/backend-engineer.md` |
 | frontend-engineer | `.claude/agents/briefs/frontend-engineer.md` |
+| ai-ml-engineer | `.claude/agents/briefs/ai-ml-engineer.md` |
 | mobile-developer | `.claude/agents/briefs/mobile-developer.md` |
 | data-engineer | `.claude/agents/briefs/data-engineer.md` |
 | performance-engineer | `.claude/agents/briefs/performance-engineer.md` |
@@ -366,7 +368,7 @@ Every new feature MUST have a spec before design begins:
 
 ### 7.3 Spec-Kit Files
 
-- **Constitution**: `.specify/memory/constitution.md` — 12 articles, read before all spec work
+- **Constitution**: `.specify/memory/constitution.md` — 14 articles (v1.5.0), read before all spec work
 - **Templates**: `.specify/templates/` — spec, plan, tasks, checklist templates
 - **Command definitions**: `.specify/templates/commands/` — full command methodology
 - **Output locations**: `products/[product]/docs/specs/`, `plan.md`, `tasks.md`

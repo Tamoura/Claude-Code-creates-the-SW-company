@@ -274,7 +274,7 @@ flowchart TD
 
 ### Gap 8: Agent Experience Data Is Underutilized
 
-**Current State**: 17 agent experience JSON files exist in `.claude/memory/agent-experiences/` tracking completed tasks, patterns learned, common mistakes, and preferred approaches. The orchestrator's prompt template references "pre-scored patterns" but the 5-dimension relevance scoring is manual/implied.
+**Current State**: 18 agent experience JSON files exist in `.claude/memory/agent-experiences/` tracking completed tasks, patterns learned, common mistakes, and preferred approaches. The orchestrator's prompt template references "pre-scored patterns" but the 5-dimension relevance scoring is manual/implied.
 
 **Gap**: The playbook emphasizes that **plans and prompts compound**. The experience data is a compounding asset, but it's not systematically fed back into agent performance. There's no automated mechanism to surface "last time the Backend Engineer worked on a Prisma migration, they hit X issue" before starting a similar task.
 

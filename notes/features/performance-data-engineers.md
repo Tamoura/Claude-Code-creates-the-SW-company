@@ -25,5 +25,5 @@
 - `.claude/memory/agent-experiences/{agent}.json` — experience file
 
 ## Also Updated
-- `.claude/CLAUDE.md` — agent hierarchy now lists all 16 agents
+- `.claude/CLAUDE.md` — agent hierarchy now lists all 18 agents
 - `.claude/memory/metrics/agent-performance.json` — re-aggregated

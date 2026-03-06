@@ -1,0 +1,70 @@
+{
+  "agent": "ai-ml-engineer",
+  "version": "1.0.0",
+  "updated_at": "2026-03-05T00:00:00Z",
+  "learned_patterns": [
+    {
+      "pattern_id": "AIME-PATTERN-001",
+      "description": "Always define the eval harness and golden dataset before writing the first prompt — this prevents 'prompt drift' where quality looks good but actually regressed",
+      "first_applied": "2026-03-05",
+      "products_applied": [],
+      "confidence": "high",
+      "notes": "The eval harness IS the definition of done. Without it, prompt quality is subjective."
+    },
+    {
+      "pattern_id": "AIME-PATTERN-002",
+      "description": "Token budgets must be set before any LLM call reaches production. Use max_tokens cap always. Default caps: Haiku=500, Sonnet=2000, Opus=4000 (adjust per feature needs)",
+      "first_applied": "2026-03-05",
+      "products_applied": [],
+      "confidence": "high",
+      "notes": "Unbounded LLM calls have caused runaway costs on other products. Cap everything."
+    },
+    {
+      "pattern_id": "AIME-PATTERN-003",
+      "description": "PII firewall: never send name+email together to external LLMs. Strip before calling. Log what categories were sent (not values) for audit.",
+      "first_applied": "2026-03-05",
+      "products_applied": [],
+      "confidence": "high",
+      "notes": "Regulatory requirement for all products targeting EU/GCC users."
+    }
+  ],
+  "common_mistakes": [
+    {
+      "mistake": "Inlining prompts as string literals in code",
+      "prevention": "Always version prompts in .prompts/v1/[feature].txt files. Inline strings can't be versioned, rolled back, or A/B tested.",
+      "severity": "medium"
+    },
+    {
+      "mistake": "Calling real LLM APIs in unit tests",
+      "prevention": "Unit tests must mock LLM calls with recorded fixtures. Only eval harnesses (AI_EVAL_MODE=1) call real APIs.",
+      "severity": "high"
+    },
+    {
+      "mistake": "Missing fallback when LLM API is unavailable",
+      "prevention": "Every AI feature must have a fallback path. Catch errors, log them, return safe default.",
+      "severity": "high"
+    }
+  ],
+  "preferred_approaches": [
+    {
+      "scenario": "Content classification",
+      "approach": "Use claude-haiku-4-5-20251001 with structured output (JSON mode). Define category enum in prompt. max_tokens=100.",
+      "confidence": "high"
+    },
+    {
+      "scenario": "Long-form generation (reports, analyses)",
+      "approach": "Use claude-sonnet-4-6 with streaming. Cache results by input hash (Redis, TTL 1h) to avoid duplicate calls.",
+      "confidence": "high"
+    },
+    {
+      "scenario": "Complex reasoning (architecture decisions, code review)",
+      "approach": "Use claude-opus-4-6. Always require ADR justifying cost. Document expected tokens per call.",
+      "confidence": "medium"
+    }
+  ],
+  "performance_metrics": {
+    "avg_task_minutes": 120,
+    "tasks_completed": 0,
+    "success_rate": null
+  }
+}

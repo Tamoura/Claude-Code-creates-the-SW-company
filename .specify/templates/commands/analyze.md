@@ -105,7 +105,7 @@ This is a **read-only consistency audit**. It validates alignment across specifi
    ### Metrics
    - Requirements: X total, Y covered, Z gaps
    - Tasks: X total, Y mapped to requirements, Z orphan
-   - Constitution compliance: X/12 articles satisfied
+   - Constitution compliance: X/14 articles satisfied
    - Implementation audit: X verified, Y excluded, Z violations
    ```
 

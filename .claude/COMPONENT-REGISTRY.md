@@ -2,7 +2,7 @@
 
 > Before building anything, check this registry first. Reuse > rebuild.
 
-Last updated: 2026-02-14
+Last updated: 2026-03-05
 
 ## Shared Packages
 
@@ -196,7 +196,34 @@ import { SubscriptionService, requireFeature, subscriptionRoutes } from '@connec
 import { useSubscription, PricingCard, UsageBar } from '@connectsw/billing/frontend';
 ```
 
-### `@connectsw/saas-kit` — Product Scaffold Generator (NEW)
+### `@connectsw/observability` — Observability & Monitoring
+Location: `packages/observability/`
+
+**Backend** (`@connectsw/observability/backend`):
+- **observabilityPlugin** — Fastify plugin: correlation ID propagation (`X-Request-ID`) + per-route request metrics
+- **healthPlugin** — Fastify plugin: `GET /health` (liveness) + `GET /health/ready` (readiness with dependency checks; returns 503 if any check fails)
+- **metricsPlugin** — `GET /internal/metrics` with p50/p95/p99 latency, error rate, request count per route
+- **correlationPlugin** — `X-Request-ID` header generation and propagation
+- **aiInstrumentation** — AI call tracker: logs model, feature, product, tokensIn, tokensOut, costUsd, durationMs per call
+
+**Usage example:**
+```typescript
+import { observabilityPlugin, healthPlugin, aiInstrumentation } from '@connectsw/observability/backend';
+
+await app.register(observabilityPlugin);
+await app.register(healthPlugin, {
+  checks: { db: async () => { await prisma.$queryRaw`SELECT 1`; } }
+});
+
+// In AI service:
+const tracked = aiInstrumentation.track({ model: 'claude-sonnet-4-6', feature: 'classify', product: 'ai-fluency' });
+const result = await llm.call(...);
+tracked.end({ tokensIn: result.usage.input_tokens, tokensOut: result.usage.output_tokens });
+```
+
+---
+
+### `@connectsw/saas-kit` — Product Scaffold Generator
 Location: `packages/saas-kit/`
 
 **CLI** (`connectsw-create`):
@@ -264,7 +291,7 @@ const files = generateProduct({
 | Real-time updates (SSE)    | SSE pattern (api-client.createEventSource) + TokenManager                     |
 | Rate limiting              | Redis Rate Limit Store + Redis Plugin                                         |
 | Encryption at rest         | Encryption Utils (AES-256-GCM)                                               |
-| Structured logging         | Logger + Observability Plugin                                                 |
+| Structured logging         | Logger + `@connectsw/observability` (observabilityPlugin)                     |
 | Error handling             | AppError (stablecoin-gateway) + validation helpers                            |
 | Pagination                 | listQuerySchemas (stablecoin-gateway)                                         |
 | Audit trail                | Audit Log Service (DB-backed + in-memory fallback)                            |
@@ -275,7 +302,9 @@ const files = generateProduct({
 | E2E tests                  | Playwright Config + Auth Fixture (rate-limit-aware)                           |
 | DB connection              | Prisma Plugin (pool sizing, graceful shutdown)                                |
 | Redis connection           | Redis Plugin (TLS, graceful degradation, health monitoring)                   |
-| Request metrics            | Observability Plugin (p50/p95/p99, error rate, correlation IDs)               |
+| Request metrics            | `@connectsw/observability` (metricsPlugin — p50/p95/p99, error rate)          |
+| Health checks              | `@connectsw/observability` (healthPlugin — liveness + readiness with deps)    |
+| AI call tracking           | `@connectsw/observability` (aiInstrumentation — tokens, cost, latency)        |
 | KPI display card           | StatCard component                                                            |
 | Navigation sidebar         | Sidebar component (role-aware, admin sections)                                |
 | Error boundary             | ErrorBoundary component (React class component with fallback UI)              |
@@ -328,12 +357,12 @@ const files = generateProduct({
 - **To reuse**: Copy the file. Works with any Prisma schema.
 
 #### Stripe Plugin
-- **Source**: `invoiceforge/apps/api/src/plugins/stripe.ts`
+- **Source**: `stablecoin-gateway/apps/api/src/plugins/stripe.ts`
 - **Maturity**: Solid
 - **Reuse**: Copy as-is
 - **Dependencies**: `fastify-plugin`, `stripe` npm package, app config
-- **Used by**: invoiceforge
-- **Description**: Initializes a Stripe client with the configured API version and decorates the Fastify instance with `stripe`. Simple and minimal -- a good starting point for any Stripe integration.
+- **Used by**: stablecoin-gateway
+- **Description**: Initializes a Stripe client with the configured API version and decorates the Fastify instance with `stripe`. Simple and minimal — a good starting point for any Stripe integration.
 - **To reuse**: Copy the file. Update the config import to use your project's config module or environment variable for `stripeSecretKey`.
 
 ---
@@ -462,20 +491,20 @@ const files = generateProduct({
 - **To reuse**: Extract the auth, idempotency, pagination, and metadata schemas. Copy the `validateBody`/`validateQuery` helpers.
 
 #### Error Classes
-- **Source**: `invoiceforge/apps/api/src/lib/errors.ts`
+- **Source**: `stablecoin-gateway/apps/api/src/lib/errors.ts`
 - **Maturity**: Production
 - **Reuse**: Copy as-is
 - **Dependencies**: None
-- **Used by**: invoiceforge
+- **Used by**: stablecoin-gateway, connectin, connectgrc
 - **Description**: Typed error hierarchy for consistent HTTP error responses. Base `AppError` with statusCode and code fields, plus convenience subclasses: NotFoundError (404), UnauthorizedError (401), ForbiddenError (403), BadRequestError (400), ConflictError (409), ValidationError (422, with field-level error map). All extend native Error for proper stack traces.
 - **To reuse**: Copy the file. Use with a Fastify error handler that maps `AppError.statusCode` to HTTP responses.
 
 #### Pagination Helper
-- **Source**: `invoiceforge/apps/api/src/lib/pagination.ts`
+- **Source**: `stablecoin-gateway/apps/api/src/lib/pagination.ts`
 - **Maturity**: Production
 - **Reuse**: Copy as-is
 - **Dependencies**: None
-- **Used by**: invoiceforge
+- **Used by**: stablecoin-gateway
 - **Description**: Standard pagination utilities. `parsePagination()` extracts and bounds-checks page/limit from query strings (defaults: page=1, limit=20, max limit=100). `paginatedResult()` wraps data arrays with pagination metadata (page, limit, total, totalPages, hasMore). Provides TypeScript interfaces: `PaginationParams`, `PaginatedResult<T>`.
 - **To reuse**: Copy the file. Works with any data type.
 
