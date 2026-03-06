@@ -24,14 +24,24 @@ export default function Layout({ children }: LayoutProps) {
               {t('header.title')}
             </Link>
             <div className="flex items-center gap-4">
-              <nav className="flex gap-8">
+              <nav className="flex gap-6">
+                <Link
+                  to="/dashboard"
+                  className={`${
+                    isActive('/dashboard')
+                      ? 'text-blue-600 border-b-2 border-blue-600'
+                      : 'text-gray-600 hover:text-gray-900'
+                  } px-2 py-2 text-sm font-medium transition-colors`}
+                >
+                  Dashboard
+                </Link>
                 <Link
                   to="/use-cases"
                   className={`${
                     isActive('/use-cases')
                       ? 'text-blue-600 border-b-2 border-blue-600'
                       : 'text-gray-600 hover:text-gray-900'
-                  } px-3 py-2 text-sm font-medium transition-colors`}
+                  } px-2 py-2 text-sm font-medium transition-colors`}
                 >
                   {t('common.browse')}
                 </Link>
@@ -41,9 +51,29 @@ export default function Layout({ children }: LayoutProps) {
                     isActive('/compare')
                       ? 'text-blue-600 border-b-2 border-blue-600'
                       : 'text-gray-600 hover:text-gray-900'
-                  } px-3 py-2 text-sm font-medium transition-colors`}
+                  } px-2 py-2 text-sm font-medium transition-colors`}
                 >
                   {t('common.compare')}
+                </Link>
+                <Link
+                  to="/priority-matrix"
+                  className={`${
+                    isActive('/priority-matrix')
+                      ? 'text-blue-600 border-b-2 border-blue-600'
+                      : 'text-gray-600 hover:text-gray-900'
+                  } px-2 py-2 text-sm font-medium transition-colors`}
+                >
+                  Priority Matrix
+                </Link>
+                <Link
+                  to="/assessment"
+                  className={`${
+                    isActive('/assessment')
+                      ? 'text-blue-600 border-b-2 border-blue-600'
+                      : 'text-gray-600 hover:text-gray-900'
+                  } px-2 py-2 text-sm font-medium transition-colors`}
+                >
+                  Assessment
                 </Link>
                 <Link
                   to="/learning-path"
@@ -51,7 +81,7 @@ export default function Layout({ children }: LayoutProps) {
                     isActive('/learning-path')
                       ? 'text-blue-600 border-b-2 border-blue-600'
                       : 'text-gray-600 hover:text-gray-900'
-                  } px-3 py-2 text-sm font-medium transition-colors`}
+                  } px-2 py-2 text-sm font-medium transition-colors`}
                 >
                   {t('common.learningPath')}
                 </Link>
@@ -61,7 +91,7 @@ export default function Layout({ children }: LayoutProps) {
                     isActive('/quantum-sovereignty-arab-world')
                       ? 'text-blue-600 border-b-2 border-blue-600'
                       : 'text-gray-600 hover:text-gray-900'
-                  } px-3 py-2 text-sm font-medium transition-colors`}
+                  } px-2 py-2 text-sm font-medium transition-colors`}
                 >
                   {t('common.arabSovereignty')}
                 </Link>
