@@ -6,7 +6,7 @@ This document provides product-specific context for ConnectSW agents working on 
 
 **Name**: Mu'aththir (Arabic for "Influential/Impactful")
 **Type**: Web App (Full SaaS Product)
-**Status**: Pre-Development (PRD Complete)
+**Status**: Development (Backend MVP complete, Frontend in progress)
 **Product Directory**: `products/muaththir/`
 **Frontend Port**: 3108
 **Backend Port**: 5005
@@ -19,35 +19,36 @@ This document provides product-specific context for ConnectSW agents working on 
 **Monetization**: Freemium model.
 - Free: 1 child profile, unlimited observations and milestones
 - Premium ($8/month): Unlimited children, data export, email digests
+- Annual option: $77/year (20% discount)
 
 ## The Six Dimensions
 
-| # | Dimension | Slug | Colour (suggested) | Icon (suggested) | Description |
-|---|-----------|------|-------------------|-------------------|-------------|
+| # | Dimension | Slug | Colour | Icon (suggested) | Description |
+|---|-----------|------|--------|------------------|-------------|
 | 1 | Academic | `academic` | Blue (#3B82F6) | Book/GraduationCap | School/learning progress, grades, milestones |
-| 2 | Social-Emotional | `social-emotional` | Pink (#EC4899) | Heart/Users | Emotional intelligence, empathy, social skills |
+| 2 | Social-Emotional | `social_emotional` | Pink (#EC4899) | Heart/Users | Emotional intelligence, empathy, social skills |
 | 3 | Behavioural | `behavioural` | Amber (#F59E0B) | Shield/CheckCircle | Conduct, habits, discipline, self-regulation |
 | 4 | Aspirational | `aspirational` | Purple (#8B5CF6) | Star/Rocket | Goals, dreams, motivation, growth mindset |
 | 5 | Islamic | `islamic` | Emerald (#10B981) | Moon/BookOpen | Quran, salah, Islamic knowledge, akhlaq |
 | 6 | Physical | `physical` | Red (#EF4444) | Activity/Zap | Health, fitness, motor skills, nutrition, sleep |
 
-These colours and icons are for UI consistency. All agents building dimension-related UI should use these.
+These colours and icons are for UI consistency. All agents building dimension-related UI must use these.
 
 ## Age Bands
 
 | Band | Ages | Slug | Description |
 |------|------|------|-------------|
-| Early Years | 3-5 | `early-years` | Pre-school, kindergarten. Focus on foundational skills, play-based learning. |
+| Early Years | 3-5 | `early_years` | Pre-school, kindergarten. Focus on foundational skills, play-based learning. |
 | Primary | 6-9 | `primary` | Early school years. Formal learning begins, social awareness grows. |
-| Upper Primary | 10-12 | `upper-primary` | Pre-adolescence. Abstract thinking develops, identity forms. |
+| Upper Primary | 10-12 | `upper_primary` | Pre-adolescence. Abstract thinking develops, identity forms. |
 | Secondary | 13-16 | `secondary` | Adolescence. Independence, critical thinking, advanced academics. |
 
 Age band is calculated from the child's date of birth. When a child's birthday causes a band transition, new milestones appear while previous band's completion status is preserved.
 
 ## Site Map
 
-| Route | Phase | Description |
-|-------|-------|-------------|
+| Route | Status | Description |
+|-------|--------|-------------|
 | `/` | MVP | Landing page -- value proposition, 6-dimension model, CTA |
 | `/signup` | MVP | Registration (email/password) |
 | `/login` | MVP | Login |
@@ -72,6 +73,7 @@ Age band is calculated from the child's date of birth. When a child's birthday c
 | `/dashboard/settings` | MVP | Account settings |
 | `/dashboard/settings/notifications` | MVP | Notification preferences |
 | `/dashboard/settings/subscription` | MVP | Subscription plan |
+| `/dashboard/analytics` | MVP | Analytics overview (page skeleton) |
 | `/pricing` | MVP | Pricing page |
 | `/about` | MVP | About the methodology |
 | `/privacy` | MVP | Privacy policy |
@@ -84,6 +86,8 @@ Age band is calculated from the child's date of birth. When a child's birthday c
 | `/dashboard/reports/generate` | Phase 2 | Report configuration |
 | `/dashboard/insights` | Phase 2 | AI-powered insights |
 | `/dashboard/settings/sharing` | Phase 2 | Family sharing |
+| `/dashboard/compare` | Phase 2 | Compare children across dimensions |
+| `/dashboard/streaks` | Phase 2 | Streak tracking and engagement |
 
 ## Business Logic
 
@@ -110,7 +114,8 @@ The score is rounded to the nearest integer. Dimensions with zero observations a
 Each observation contains:
 - **child_id**: Reference to the child (required)
 - **dimension**: One of the 6 dimension slugs (required)
-- **text**: Free-form text, 1-1,000 characters (required)
+- **content**: Free-form text, 1-1,000 characters (required)
+- **content_ar**: Arabic text content (optional)
 - **sentiment**: One of `positive`, `neutral`, `needs_attention` (required)
 - **observed_at**: Date the observation occurred (defaults to today, can be backdated up to 1 year)
 - **tags**: Array of strings, 0-5 tags per observation (optional)
@@ -118,32 +123,15 @@ Each observation contains:
 - **updated_at**: Timestamp of last edit (system-set)
 - **deleted_at**: Soft-delete timestamp (null if active)
 
-### Milestone Data Model
-
-Each milestone definition contains:
-- **dimension**: One of the 6 dimension slugs
-- **age_band**: One of the 4 age band slugs
-- **title**: Short title, max 100 characters
-- **description**: Detailed description, max 300 characters
-- **guidance**: Optional parent-facing tip, max 500 characters
-- **sort_order**: Display order within dimension + age band
-
-Each child's milestone progress is tracked separately:
-- **child_id**: Reference to child
-- **milestone_id**: Reference to milestone definition
-- **achieved**: Boolean
-- **achieved_at**: Timestamp when marked as achieved
-- **achieved_history**: Array of {achieved_at, unmarked_at} for undo tracking
-
 ### Child Age Band Calculation
 
 ```typescript
 function getAgeBand(dateOfBirth: Date, referenceDate: Date = new Date()): string {
   const ageInYears = differenceInYears(referenceDate, dateOfBirth);
 
-  if (ageInYears >= 3 && ageInYears <= 5) return 'early-years';
+  if (ageInYears >= 3 && ageInYears <= 5) return 'early_years';
   if (ageInYears >= 6 && ageInYears <= 9) return 'primary';
-  if (ageInYears >= 10 && ageInYears <= 12) return 'upper-primary';
+  if (ageInYears >= 10 && ageInYears <= 12) return 'upper_primary';
   if (ageInYears >= 13 && ageInYears <= 16) return 'secondary';
 
   return 'out-of-range'; // Child is under 3 or over 16
@@ -235,19 +223,20 @@ The system requires 240+ milestones at launch (10 per dimension per age band, 6 
 | Testing | Jest + RTL + Playwright | - | Unit, component, E2E |
 | Linting | ESLint + Prettier | - | Company standard |
 
-### Libraries (Likely)
+### Libraries (Adopted)
 
-| Package | Purpose |
-|---------|---------|
-| `bcrypt` | Password hashing |
-| `jsonwebtoken` | JWT creation/verification |
-| `zod` | Schema validation |
-| `date-fns` | Date calculations, age band determination |
-| `@fastify/cors` | CORS |
-| `@fastify/helmet` | Security headers |
-| `@fastify/rate-limit` | Rate limiting |
-| `@fastify/cookie` | Cookie handling (refresh tokens) |
-| `sharp` | Image resizing (child profile photos) |
+| Package | Purpose | Why Chosen |
+|---------|---------|------------|
+| `bcrypt` | Password hashing | Industry standard, configurable cost |
+| `jsonwebtoken` | JWT creation/verification | Mature, well-tested |
+| `zod` | Schema validation | TypeScript-first, composable |
+| `date-fns` | Date calculations, age band determination | Lightweight, tree-shakeable |
+| `@fastify/cors` | CORS | Official Fastify plugin |
+| `@fastify/helmet` | Security headers | Official Fastify plugin |
+| `@fastify/rate-limit` | Rate limiting | Official Fastify plugin |
+| `@fastify/cookie` | Cookie handling (refresh tokens) | Official Fastify plugin |
+| `sharp` | Image resizing (child profile photos) | Fast, production-grade |
+| `recharts` | Radar chart and trend graphs | React-native, SVG, accessible |
 
 ### Ports
 
@@ -268,40 +257,50 @@ Browser -> Next.js (3108) -> Fastify API (5005) -> PostgreSQL
                               (email)
 ```
 
-### Backend Module Structure
+### Backend Route Structure
 
 ```
-apps/api/src/modules/
-  auth/           - Registration, login, JWT, password reset
-  children/       - Child CRUD, age band calculation, profile photos
-  observations/   - Observation CRUD, validation, soft delete
-  milestones/     - Milestone definitions, child milestone progress
-  dashboard/      - Radar chart calculation, aggregation endpoints
-  users/          - Profile, subscription management
-  health/         - Readiness/liveness checks
+apps/api/src/routes/
+  activity.ts        - Activity logging
+  children.ts        - Child CRUD
+  children-photo.ts  - Photo upload
+  compare.ts         - Child comparison
+  dashboard.ts       - Dashboard aggregation
+  digest.ts          - Email digest
+  export.ts          - Data export
+  health.ts          - Readiness/liveness checks
+  insights.ts        - AI insights (Phase 2)
+  milestones.ts      - Milestone definitions and progress
+  profile.ts         - Parent profile management
+  reports.ts         - Progress reports (Phase 2)
+  sharing.ts         - Family sharing (Phase 2)
+  streaks.ts         - Engagement streaks (Phase 2)
 ```
-
-Each module has: `routes.ts`, `handlers.ts`, `service.ts`, `schemas.ts`, `test.ts`
 
 ### Design Patterns
 
-- **Route-Handler-Service**: Routes define endpoints, handlers parse requests, services contain business logic. Services are testable independently.
+- **Route-Handler-Service**: Routes define endpoints, handlers parse requests, services contain business logic.
 - **Zod schemas at boundaries**: All API inputs validated with Zod before reaching handlers.
 - **Resource ownership**: Every database query filters by parent_id. No child can access another parent's data.
 - **Soft deletes**: Observations use soft delete (deleted_at timestamp). Hard delete after 30 days via scheduled job.
 - **Dimension as enum**: The 6 dimensions are a PostgreSQL enum type and a TypeScript union type. No magic strings.
 - **Age band as computed field**: Never stored; always calculated from date of birth at query time.
+- **Write-through cache**: Score cache table with staleness flag. Set stale on writes, recalculate on reads.
 
 ### Data Models (Key Entities)
 
 | Entity | Key Fields | Relationships |
 |--------|-----------|---------------|
-| Parent | email, name, password_hash, subscription_tier | has many Children, Sessions |
-| Child | name, date_of_birth, gender, photo_url, parent_id | belongs to Parent, has many Observations, ChildMilestones |
-| Observation | dimension, text, sentiment, observed_at, tags, deleted_at | belongs to Child |
-| MilestoneDefinition | dimension, age_band, title, description, guidance, sort_order | has many ChildMilestones |
-| ChildMilestone | child_id, milestone_id, achieved, achieved_at | belongs to Child + MilestoneDefinition |
-| Session | token, expires_at | belongs to Parent |
+| Parent | email, name, passwordHash, subscriptionTier, digestFrequency | has many Children, Sessions, FamilyAccess |
+| Child | name, dateOfBirth, gender, photoUrl, isDemo, medicalNotes | belongs to Parent, has many Observations, ChildMilestones, Goals, ScoreCache |
+| Observation | dimension, content, contentAr, sentiment, observedAt, tags, deletedAt | belongs to Child |
+| MilestoneDefinition | dimension, ageBand, title, description, guidance, titleAr, descriptionAr | has many ChildMilestones |
+| ChildMilestone | childId, milestoneId, achieved, achievedAt, achievedHistory | belongs to Child + MilestoneDefinition |
+| ScoreCache | childId, dimension, score, calculatedAt, stale | belongs to Child |
+| Goal | childId, dimension, title, status, targetDate, templateId | belongs to Child, optional GoalTemplate |
+| GoalTemplate | dimension, ageBand, title, description, category | has many Goals |
+| Session | parentId, token, expiresAt | belongs to Parent |
+| FamilyAccess | parentId, inviteeEmail, role, status, childIds | belongs to Parent |
 
 ### Security
 
@@ -310,9 +309,23 @@ Each module has: `routes.ts`, `handlers.ts`, `service.ts`, `schemas.ts`, `test.t
 - Rate limiting on auth (30/min) and general (200/min)
 - All queries filtered by parent_id (resource ownership)
 - Input validation (Zod) + output escaping (XSS prevention)
-- Security headers via @fastify/helmet
+- Security headers via @fastify/helmet (CSP, HSTS, X-Frame-Options)
 - Child data encrypted at rest
 - No analytics tracking on child-data pages
+
+### Component Reuse from Registry
+
+The following components are copied/adapted from the ConnectSW Component Registry:
+
+| Component | Source Product | Adaptation Needed |
+|-----------|---------------|-------------------|
+| Auth Plugin | @connectsw/auth | Adapted for Fastify 5.x |
+| Prisma Plugin | @connectsw/shared | Adapted for Fastify 5.x |
+| Observability Plugin | @connectsw/shared | Adapted for Fastify 5.x |
+| Logger | @connectsw/shared | Copy as-is |
+| Error Classes | @connectsw/shared | Copy as-is |
+| Pagination Helper | Component Registry | Copy as-is |
+| Crypto Utils | @connectsw/shared | Password hashing only |
 
 ### Key Documents
 
@@ -324,81 +337,8 @@ Each module has: `routes.ts`, `handlers.ts`, `service.ts`, `schemas.ts`, `test.t
 - ADR-002: `products/muaththir/docs/ADRs/002-radar-chart-calculation.md`
 - ADR-003: `products/muaththir/docs/ADRs/003-milestone-data-model.md`
 
-## Technical Architecture (Architect Decisions)
-
-This section summarises key decisions made during ARCH-01. Full details in the architecture doc and ADRs.
-
-### Dependency Versions (ADR-001)
-
-| Dependency | Version | Rationale |
-|-----------|---------|-----------|
-| Fastify | 5.x | Greenfield product, aligns with InvoiceForge |
-| Prisma | 6.x | Greenfield product, improved JSON filtering |
-| Recharts | 2.x | React-native radar chart, SVG (accessible) |
-| date-fns | 3.x | Age band calculation, date formatting |
-| sharp | latest | Child photo resizing (200x200) |
-
-### Radar Chart Caching (ADR-002)
-
-- **Strategy**: Write-through PostgreSQL cache with staleness flag.
-- **Cache table**: `score_cache` (6 rows per child, one per dimension).
-- **On write**: Set `stale = true` for all 6 dimensions of affected child.
-- **On read**: If stale, recalculate from 2 SQL queries + pure function. If fresh, return cached (~1ms).
-- **No Redis** for MVP. PostgreSQL cache is sufficient for 5,000 users.
-- **Score formula** (pure function, independently testable):
-  ```
-  score = (min(obs_count, 10)/10 * 40) + (achieved/total * 40) + (positive/total * 20)
-  ```
-
-### Milestone Seed Data (ADR-003)
-
-- **Storage**: `milestone_definitions` Prisma model + database table.
-- **Seed**: TypeScript data files per dimension, loaded via `npx prisma db seed`.
-- **Progress**: `child_milestones` junction table, lazy row creation.
-- **History**: JSONB column `achieved_history` on child_milestones (array of mark/unmark events).
-- **Count**: 240 milestones minimum (10 per dimension per age band).
-- **Idempotent**: Seed script uses UPSERT on unique constraint `(dimension, ageBand, sortOrder)`.
-
-### Image Storage
-
-- **MVP**: Local filesystem (`apps/api/uploads/children/{childId}/photo.jpg`).
-- **Access**: Served through authenticated API endpoint only (no direct URL access).
-- **Processing**: sharp resizes to 200x200 on upload.
-- **Post-MVP**: Migrate to S3 with pre-signed URLs.
-
-### Component Reuse from Registry
-
-The following components should be copied from the ConnectSW Component Registry:
-
-| Component | Source Product | Adaptation Needed |
-|-----------|---------------|-------------------|
-| Auth Plugin | stablecoin-gateway | Adapt for Fastify 5.x, remove API key auth |
-| Prisma Plugin | stablecoin-gateway | Adapt for Fastify 5.x |
-| Observability Plugin | stablecoin-gateway | Adapt for Fastify 5.x |
-| Logger | stablecoin-gateway | Copy as-is |
-| Error Classes | invoiceforge | Copy as-is |
-| Pagination Helper | invoiceforge | Copy as-is |
-| Crypto Utils | stablecoin-gateway | Adapt (remove API key features, keep password hashing) |
-| Token Manager | stablecoin-gateway/web | Copy as-is |
-| useAuth hook | stablecoin-gateway/web | Adapt user type fields |
-| useTheme hook | stablecoin-gateway/web | Change storage key |
-| ErrorBoundary | stablecoin-gateway/web | Copy as-is |
-
-### Cross-Product Port Assignments
-
-| Product | Frontend | Backend | Database |
-|---------|----------|---------|----------|
-| Mu'aththir | 3108 | 5005 | muaththir_dev |
-| Pulse | 3106 | 5003 | pulse_dev |
-| InvoiceForge | 3109 | 5004 | invoiceforge_dev |
-| Stablecoin GW | 3104 | 5001 | stablecoin_dev |
-
-### Plugin Registration Order
-
-Follows PATTERN-009: `observability -> prisma -> auth -> rate-limit -> routes`
-
 ---
 
 **Created by**: Product Manager + Architect
-**Last Updated**: 2026-02-07
-**Status**: Architecture complete, ready for foundation
+**Last Updated**: 2026-03-06
+**Status**: Development -- backend MVP complete, frontend in progress
