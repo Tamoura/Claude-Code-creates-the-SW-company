@@ -1,4 +1,5 @@
-import { useState } from 'react';
+import { useState, useEffect } from 'react';
+import { useParams, Link } from 'react-router-dom';
 import { useApi } from '../hooks/useApi.js';
 import StatCard from '../components/StatCard.js';
 
@@ -70,11 +71,17 @@ function categoryColor(category: string): string {
 }
 
 export default function E2EGallery() {
+  const { product: urlProduct } = useParams<{ product?: string }>();
   const { data, loading, error } = useApi<GalleryResponse>('/e2e-gallery');
   const [activeTab, setActiveTab] = useState<TabType>('screenshots');
-  const [selectedProduct, setSelectedProduct] = useState<string>('all');
+  const [selectedProduct, setSelectedProduct] = useState<string>(urlProduct || 'all');
   const [selectedCategory, setSelectedCategory] = useState<string>('all');
   const [lightboxImage, setLightboxImage] = useState<ScreenshotInfo | null>(null);
+
+  // Sync with URL param changes
+  useEffect(() => {
+    if (urlProduct) setSelectedProduct(urlProduct);
+  }, [urlProduct]);
 
   if (loading) {
     return (
@@ -96,13 +103,14 @@ export default function E2EGallery() {
   }
 
   const products = data.products;
-  const totalScreenshots = products.reduce((sum, p) => sum + p.screenshots.length, 0);
-  const totalVideos = products.reduce((sum, p) => sum + p.videos.length, 0);
-  const totalTraces = products.reduce((sum, p) => sum + p.traces.length, 0);
 
   const filteredProducts = selectedProduct === 'all'
     ? products
     : products.filter(p => p.name === selectedProduct);
+
+  const totalScreenshots = filteredProducts.reduce((sum, p) => sum + p.screenshots.length, 0);
+  const totalVideos = filteredProducts.reduce((sum, p) => sum + p.videos.length, 0);
+  const totalTraces = filteredProducts.reduce((sum, p) => sum + p.traces.length, 0);
 
   const allScreenshots = filteredProducts.flatMap(p => p.screenshots);
   const allVideos = filteredProducts.flatMap(p => p.videos);
@@ -115,49 +123,68 @@ export default function E2EGallery() {
 
   return (
     <div>
+      {/* Breadcrumb */}
+      {urlProduct && (
+        <div className="flex items-center gap-2 text-sm text-slate-500 mb-4">
+          <Link to="/products" className="hover:text-slate-300 transition-colors">Products</Link>
+          <span>/</span>
+          <Link to={`/products/${urlProduct}`} className="hover:text-slate-300 transition-colors">{productDisplayName(urlProduct)}</Link>
+          <span>/</span>
+          <span className="text-slate-300">E2E Tests</span>
+        </div>
+      )}
+
       {/* Header */}
       <div className="mb-8">
-        <h1 className="text-2xl font-bold text-white mb-1">E2E Test Gallery</h1>
-        <p className="text-sm text-slate-400">Screenshots, videos, and traces from Playwright E2E test runs across all products</p>
+        <h1 className="text-2xl font-bold text-white mb-1">
+          {urlProduct ? `${productDisplayName(urlProduct)} — E2E Tests` : 'E2E Test Gallery'}
+        </h1>
+        <p className="text-sm text-slate-400">
+          {urlProduct
+            ? `Screenshots, videos, and traces from Playwright E2E test runs for ${productDisplayName(urlProduct)}`
+            : 'Screenshots, videos, and traces from Playwright E2E test runs across all products'}
+        </p>
       </div>
 
       {/* Stats */}
       <div className="grid grid-cols-2 lg:grid-cols-4 gap-4 mb-8">
-        <StatCard label="Products with E2E" value={products.length} />
+        {!urlProduct && <StatCard label="Products with E2E" value={products.length} />}
         <StatCard label="Screenshots" value={totalScreenshots} />
         <StatCard label="Test Videos" value={totalVideos} />
         <StatCard label="Trace Files" value={totalTraces} />
       </div>
 
-      {/* Product filter */}
-      <div className="flex items-center gap-3 mb-6">
-        <span className="text-xs text-slate-500 uppercase tracking-wider font-medium">Product:</span>
-        <div className="flex gap-2">
-          <button
-            onClick={() => setSelectedProduct('all')}
-            className={`px-3 py-1 rounded-full text-xs font-medium transition-colors ${
-              selectedProduct === 'all'
-                ? 'bg-blue-600 text-white'
-                : 'bg-slate-800 text-slate-400 hover:text-slate-200'
-            }`}
-          >
-            All
-          </button>
-          {products.map(p => (
+      {/* Product filter — hidden when viewing a specific product */}
+      {!urlProduct && (
+        <div className="flex items-center gap-3 mb-6">
+          <span className="text-xs text-slate-500 uppercase tracking-wider font-medium">Product:</span>
+          <div className="flex gap-2">
             <button
-              key={p.name}
-              onClick={() => setSelectedProduct(p.name)}
+              onClick={() => setSelectedProduct('all')}
               className={`px-3 py-1 rounded-full text-xs font-medium transition-colors ${
-                selectedProduct === p.name
+                selectedProduct === 'all'
                   ? 'bg-blue-600 text-white'
                   : 'bg-slate-800 text-slate-400 hover:text-slate-200'
               }`}
             >
-              {productDisplayName(p.name)}
+              All
             </button>
-          ))}
+            {products.map(p => (
+              <button
+                key={p.name}
+                onClick={() => setSelectedProduct(p.name)}
+                className={`px-3 py-1 rounded-full text-xs font-medium transition-colors ${
+                  selectedProduct === p.name
+                    ? 'bg-blue-600 text-white'
+                    : 'bg-slate-800 text-slate-400 hover:text-slate-200'
+                }`}
+              >
+                {productDisplayName(p.name)}
+              </button>
+            ))}
+          </div>
         </div>
-      </div>
+      )}
 
       {/* Tabs */}
       <div className="flex items-center gap-1 border-b border-slate-800 mb-6">
@@ -251,7 +278,7 @@ export default function E2EGallery() {
                     <span className={`text-[10px] px-1.5 py-0.5 rounded ${categoryColor(screenshot.category)}`}>
                       {screenshot.category}
                     </span>
-                    {selectedProduct === 'all' && (
+                    {!urlProduct && selectedProduct === 'all' && (
                       <span className="text-[10px] px-1.5 py-0.5 rounded bg-slate-800 text-slate-400">
                         {productDisplayName(screenshot.product)}
                       </span>

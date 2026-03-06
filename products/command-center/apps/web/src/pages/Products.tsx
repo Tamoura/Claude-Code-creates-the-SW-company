@@ -10,6 +10,8 @@ interface Product {
   hasWeb: boolean;
   hasDocker: boolean;
   hasCi: boolean;
+  hasE2E: boolean;
+  e2eScreenshotCount: number;
   apiPort: number | null;
   webPort: number | null;
   description: string;
@@ -78,18 +80,39 @@ export default function Products() {
                 {product.webPort && <span>Web :{product.webPort}</span>}
                 <span>{product.fileCount} files</span>
               </div>
-              <button
-                onClick={(e) => {
-                  e.stopPropagation();
-                  navigate(`/products/${product.name}/pitch-deck`);
-                }}
-                className="text-xs px-3 py-1.5 bg-blue-600/15 text-blue-400 hover:bg-blue-600/30 rounded-md transition-colors flex items-center gap-1.5 border border-blue-600/20"
-              >
-                <svg className="w-3.5 h-3.5" fill="none" stroke="currentColor" viewBox="0 0 24 24" strokeWidth={1.5}>
-                  <path strokeLinecap="round" strokeLinejoin="round" d="M3.75 3v11.25A2.25 2.25 0 006 16.5h2.25M3.75 3h-1.5m1.5 0h16.5m0 0h1.5m-1.5 0v11.25A2.25 2.25 0 0118 16.5h-2.25m-7.5 0h7.5m-7.5 0l-1 3m8.5-3l1 3m0 0l.5 1.5m-.5-1.5h-9.5m0 0l-.5 1.5M9 11.25v1.5M12 9v3.75m3-6v6" />
-                </svg>
-                Pitch Deck
-              </button>
+              <div className="flex items-center gap-2">
+                {product.hasE2E && (
+                  <button
+                    onClick={(e) => {
+                      e.stopPropagation();
+                      navigate(`/e2e-gallery/${product.name}`);
+                    }}
+                    className="text-xs px-3 py-1.5 bg-emerald-600/15 text-emerald-400 hover:bg-emerald-600/30 rounded-md transition-colors flex items-center gap-1.5 border border-emerald-600/20"
+                  >
+                    <svg className="w-3.5 h-3.5" fill="none" stroke="currentColor" viewBox="0 0 24 24" strokeWidth={1.5}>
+                      <path strokeLinecap="round" strokeLinejoin="round" d="M2.25 15.75l5.159-5.159a2.25 2.25 0 013.182 0l5.159 5.159m-1.5-1.5l1.409-1.41a2.25 2.25 0 013.182 0l2.909 2.91m-18 3.75h16.5a1.5 1.5 0 001.5-1.5V6a1.5 1.5 0 00-1.5-1.5H3.75A1.5 1.5 0 002.25 6v12a1.5 1.5 0 001.5 1.5zm10.5-11.25h.008v.008h-.008V8.25zm.375 0a.375.375 0 11-.75 0 .375.375 0 01.75 0z" />
+                    </svg>
+                    E2E Tests
+                    {product.e2eScreenshotCount > 0 && (
+                      <span className="bg-emerald-600/30 px-1.5 py-0.5 rounded text-[10px]">
+                        {product.e2eScreenshotCount}
+                      </span>
+                    )}
+                  </button>
+                )}
+                <button
+                  onClick={(e) => {
+                    e.stopPropagation();
+                    navigate(`/products/${product.name}/pitch-deck`);
+                  }}
+                  className="text-xs px-3 py-1.5 bg-blue-600/15 text-blue-400 hover:bg-blue-600/30 rounded-md transition-colors flex items-center gap-1.5 border border-blue-600/20"
+                >
+                  <svg className="w-3.5 h-3.5" fill="none" stroke="currentColor" viewBox="0 0 24 24" strokeWidth={1.5}>
+                    <path strokeLinecap="round" strokeLinejoin="round" d="M3.75 3v11.25A2.25 2.25 0 006 16.5h2.25M3.75 3h-1.5m1.5 0h16.5m0 0h1.5m-1.5 0v11.25A2.25 2.25 0 0118 16.5h-2.25m-7.5 0h7.5m-7.5 0l-1 3m8.5-3l1 3m0 0l.5 1.5m-.5-1.5h-9.5m0 0l-.5 1.5M9 11.25v1.5M12 9v3.75m3-6v6" />
+                  </svg>
+                  Pitch Deck
+                </button>
+              </div>
             </div>
           </div>
         ))}

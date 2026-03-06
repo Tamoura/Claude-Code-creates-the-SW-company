@@ -28,6 +28,8 @@ export interface Product {
   hasDocker: boolean;
   hasCi: boolean;
   hasPitchDeck: boolean;
+  hasE2E: boolean;
+  e2eScreenshotCount: number;
   apiPort: number | null;
   webPort: number | null;
   description: string;
@@ -230,6 +232,16 @@ function buildProductInfo(name: string): Product {
   // Check for pitch deck
   const hasPitchDeck = existsSync(join(dir, 'pitch-deck.json'));
 
+  // Check for E2E test results
+  const e2eScreenshotsDir = join(dir, 'e2e', 'test-results', 'screenshots');
+  const hasE2E = existsSync(join(dir, 'e2e', 'test-results'));
+  let e2eScreenshotCount = 0;
+  if (existsSync(e2eScreenshotsDir)) {
+    try {
+      e2eScreenshotCount = readdirSync(e2eScreenshotsDir).filter(f => f.endsWith('.png') || f.endsWith('.jpg')).length;
+    } catch { /* ignore */ }
+  }
+
   return {
     name,
     displayName: name.split('-').map((s) => s.charAt(0).toUpperCase() + s.slice(1)).join(' '),
@@ -239,6 +251,8 @@ function buildProductInfo(name: string): Product {
     hasDocker,
     hasCi,
     hasPitchDeck,
+    hasE2E,
+    e2eScreenshotCount,
     apiPort,
     webPort,
     description,

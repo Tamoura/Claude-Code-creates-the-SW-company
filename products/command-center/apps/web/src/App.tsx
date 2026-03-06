@@ -60,6 +60,7 @@ export default function App() {
         <Route path="approvals" element={<ApprovalQueue />} />
         <Route path="pr-dashboard" element={<PRDashboard />} />
         <Route path="e2e-gallery" element={<E2EGallery />} />
+        <Route path="e2e-gallery/:product" element={<E2EGallery />} />
       </Route>
     </Routes>
   );
