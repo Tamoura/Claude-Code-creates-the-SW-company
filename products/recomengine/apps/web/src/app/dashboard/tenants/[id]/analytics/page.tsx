@@ -39,7 +39,9 @@ export default function AnalyticsPage() {
       ]);
       setOverview(overviewRes.data);
       setTimeseries(timeseriesRes.data);
-    } catch {}
+    } catch {
+      // ignore – loading state handles UX
+    }
     setLoading(false);
   };
 
@@ -55,7 +57,9 @@ export default function AnalyticsPage() {
       a.download = `analytics-${new Date().toISOString().split('T')[0]}.csv`;
       a.click();
       window.URL.revokeObjectURL(url);
-    } catch {}
+    } catch {
+      // ignore – export failure is non-critical
+    }
   };
 
   if (loading) return <div className="text-gray-500">Loading analytics...</div>;

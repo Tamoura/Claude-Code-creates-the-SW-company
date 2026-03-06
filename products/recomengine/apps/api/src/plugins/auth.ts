@@ -2,7 +2,6 @@ import fp from 'fastify-plugin';
 import { FastifyInstance, FastifyRequest, FastifyReply } from 'fastify';
 import { hashApiKey } from '../utils/crypto';
 import { UnauthorizedError, ForbiddenError } from '../utils/errors';
-import { logger } from '../utils/logger';
 
 export interface AuthUser {
   id: string;
@@ -36,7 +35,7 @@ export default fp(async (fastify: FastifyInstance) => {
     sign: { expiresIn: '1h' },
   });
 
-  fastify.decorate('authenticate', async function (request: FastifyRequest, reply: FastifyReply) {
+  fastify.decorate('authenticate', async function (request: FastifyRequest, _reply: FastifyReply) {
     try {
       await request.jwtVerify();
       request.user = request.user as AuthUser;
@@ -45,7 +44,7 @@ export default fp(async (fastify: FastifyInstance) => {
     }
   });
 
-  fastify.decorate('authenticateApiKey', async function (request: FastifyRequest, reply: FastifyReply) {
+  fastify.decorate('authenticateApiKey', async function (request: FastifyRequest, _reply: FastifyReply) {
     const apiKey = request.headers['x-api-key'] as string;
     if (!apiKey) {
       throw new UnauthorizedError('API key required (X-API-Key header)');
@@ -81,7 +80,7 @@ export default fp(async (fastify: FastifyInstance) => {
   });
 
   fastify.decorate('requirePermission', function (permission: 'read' | 'read_write') {
-    return async (request: FastifyRequest, reply: FastifyReply) => {
+    return async (request: FastifyRequest, _reply: FastifyReply) => {
       if (!request.apiKeyAuth) {
         throw new UnauthorizedError('API key authentication required');
       }
@@ -91,7 +90,7 @@ export default fp(async (fastify: FastifyInstance) => {
     };
   });
 
-  fastify.decorate('optionalAuth', async function (request: FastifyRequest, reply: FastifyReply) {
+  fastify.decorate('optionalAuth', async function (request: FastifyRequest, _reply: FastifyReply) {
     // Try JWT first, then API key - don't throw if neither
     try {
       await request.jwtVerify();

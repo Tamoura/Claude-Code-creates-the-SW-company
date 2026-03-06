@@ -59,7 +59,7 @@ export async function buildServer() {
   });
 
   // RFC 7807 error handler
-  fastify.setErrorHandler((error, request, reply) => {
+  fastify.setErrorHandler((error, _request, reply) => {
     if (error instanceof AppError) {
       return reply.status(error.statusCode).send({
         type: `https://api.recomengine.com/errors/${error.code.toLowerCase().replace(/_/g, '-')}`,

@@ -4,7 +4,6 @@ import cors from '@fastify/cors';
 import cookie from '@fastify/cookie';
 
 import authPlugin from '../../src/plugins/auth';
-import { AppError } from '../../src/utils/errors';
 import healthRoutes from '../../src/modules/health/routes';
 import authRoutes from '../../src/modules/auth/routes';
 import tenantRoutes from '../../src/modules/tenants/routes';
@@ -305,7 +304,7 @@ export async function buildTestServer(): Promise<FastifyInstance> {
 
   // RFC 7807 error handler — must be set before routes
   // Uses duck typing instead of instanceof for cross-module compatibility
-  fastify.setErrorHandler((error, request, reply) => {
+  fastify.setErrorHandler((error, _request, reply) => {
     const err = error as any;
     if (err.statusCode && err.code && err.name) {
       return reply.status(err.statusCode).send({

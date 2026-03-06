@@ -6,7 +6,7 @@ export default async function recommendationRoutes(fastify: FastifyInstance) {
   // GET /recommendations
   fastify.get('/', {
     preHandler: [fastify.authenticateApiKey],
-  }, async (request: FastifyRequest, reply: FastifyReply) => {
+  }, async (request: FastifyRequest, _reply: FastifyReply) => {
     const query = validateQuery(recommendationQuerySchema, request.query);
     const tenantId = request.tenantId!;
 

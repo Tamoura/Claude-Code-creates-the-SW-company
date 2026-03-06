@@ -27,7 +27,9 @@ export default function ApiKeysPage() {
     try {
       const res = await api.get<{ data: ApiKey[] }>(`/api/v1/tenants/${tenantId}/api-keys`);
       setKeys(res.data);
-    } catch {}
+    } catch {
+      // ignore – loading state handles UX
+    }
     setLoading(false);
   };
 
@@ -43,14 +45,18 @@ export default function ApiKeysPage() {
       setCreatedKey(res.data.key);
       setNewKeyName('');
       loadKeys();
-    } catch {}
+    } catch {
+      // ignore – key creation failure is silent
+    }
   };
 
   const handleRevoke = async (keyId: string) => {
     try {
       await api.delete(`/api/v1/tenants/${tenantId}/api-keys/${keyId}`);
       loadKeys();
-    } catch {}
+    } catch {
+      // ignore – revoke failure is silent
+    }
   };
 
   if (loading) return <div className="text-gray-500">Loading API keys...</div>;

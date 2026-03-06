@@ -1,4 +1,4 @@
-import { FastifyInstance, FastifyRequest, FastifyReply } from 'fastify';
+import { FastifyInstance } from 'fastify';
 import { validateBody, createExperimentSchema, updateExperimentSchema } from '../../utils/validation';
 import { NotFoundError, ConflictError, BadRequestError } from '../../utils/errors';
 import { parsePagination, paginatedResult } from '../../utils/pagination';
@@ -8,7 +8,7 @@ export default async function experimentRoutes(fastify: FastifyInstance) {
   // GET /tenants/:tenantId/experiments
   fastify.get<{ Params: { tenantId: string } }>('/:tenantId/experiments', {
     preHandler: [fastify.authenticate],
-  }, async (request, reply) => {
+  }, async (request, _reply) => {
     const query = request.query as Record<string, string>;
     const { limit, offset } = parsePagination(query);
 
@@ -71,7 +71,7 @@ export default async function experimentRoutes(fastify: FastifyInstance) {
   // GET /tenants/:tenantId/experiments/:experimentId
   fastify.get<{ Params: { tenantId: string; experimentId: string } }>('/:tenantId/experiments/:experimentId', {
     preHandler: [fastify.authenticate],
-  }, async (request, reply) => {
+  }, async (request, _reply) => {
     const tenant = await fastify.prisma.tenant.findFirst({
       where: { id: request.params.tenantId, ownerId: request.user!.id },
     });
@@ -88,7 +88,7 @@ export default async function experimentRoutes(fastify: FastifyInstance) {
   // PUT /tenants/:tenantId/experiments/:experimentId
   fastify.put<{ Params: { tenantId: string; experimentId: string } }>('/:tenantId/experiments/:experimentId', {
     preHandler: [fastify.authenticate],
-  }, async (request, reply) => {
+  }, async (request, _reply) => {
     const data = validateBody(updateExperimentSchema, request.body);
 
     const tenant = await fastify.prisma.tenant.findFirst({
@@ -149,7 +149,7 @@ export default async function experimentRoutes(fastify: FastifyInstance) {
   // DELETE /tenants/:tenantId/experiments/:experimentId
   fastify.delete<{ Params: { tenantId: string; experimentId: string } }>('/:tenantId/experiments/:experimentId', {
     preHandler: [fastify.authenticate],
-  }, async (request, reply) => {
+  }, async (request, _reply) => {
     const tenant = await fastify.prisma.tenant.findFirst({
       where: { id: request.params.tenantId, ownerId: request.user!.id },
     });
@@ -174,7 +174,7 @@ export default async function experimentRoutes(fastify: FastifyInstance) {
   // GET /tenants/:tenantId/experiments/:experimentId/results
   fastify.get<{ Params: { tenantId: string; experimentId: string } }>('/:tenantId/experiments/:experimentId/results', {
     preHandler: [fastify.authenticate],
-  }, async (request, reply) => {
+  }, async (request, _reply) => {
     const tenant = await fastify.prisma.tenant.findFirst({
       where: { id: request.params.tenantId, ownerId: request.user!.id },
     });

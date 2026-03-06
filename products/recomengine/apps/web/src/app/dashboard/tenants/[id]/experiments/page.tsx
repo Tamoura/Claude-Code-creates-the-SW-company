@@ -25,7 +25,9 @@ export default function ExperimentsPage() {
     try {
       const res = await api.get<{ data: Experiment[] }>(`/api/v1/tenants/${tenantId}/experiments`);
       setExperiments(res.data);
-    } catch {}
+    } catch {
+      // ignore – loading state handles UX
+    }
     setLoading(false);
   };
 

@@ -1,4 +1,4 @@
-import { FastifyInstance, FastifyRequest, FastifyReply } from 'fastify';
+import { FastifyInstance } from 'fastify';
 import { generateApiKey, hashApiKey, getKeyPrefix } from '../../utils/crypto';
 import { validateBody, createApiKeySchema } from '../../utils/validation';
 import { NotFoundError, ConflictError } from '../../utils/errors';
@@ -7,7 +7,7 @@ export default async function apiKeyRoutes(fastify: FastifyInstance) {
   // GET /tenants/:tenantId/api-keys
   fastify.get<{ Params: { tenantId: string } }>('/:tenantId/api-keys', {
     preHandler: [fastify.authenticate],
-  }, async (request, reply) => {
+  }, async (request, _reply) => {
     const tenant = await fastify.prisma.tenant.findFirst({
       where: { id: request.params.tenantId, ownerId: request.user!.id },
     });
@@ -85,7 +85,7 @@ export default async function apiKeyRoutes(fastify: FastifyInstance) {
   // DELETE /tenants/:tenantId/api-keys/:keyId
   fastify.delete<{ Params: { tenantId: string; keyId: string } }>('/:tenantId/api-keys/:keyId', {
     preHandler: [fastify.authenticate],
-  }, async (request, reply) => {
+  }, async (request, _reply) => {
     const tenant = await fastify.prisma.tenant.findFirst({
       where: { id: request.params.tenantId, ownerId: request.user!.id },
     });

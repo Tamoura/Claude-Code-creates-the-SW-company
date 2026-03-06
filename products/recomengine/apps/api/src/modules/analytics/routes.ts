@@ -1,4 +1,4 @@
-import { FastifyInstance, FastifyRequest, FastifyReply } from 'fastify';
+import { FastifyInstance } from 'fastify';
 import { NotFoundError } from '../../utils/errors';
 import { subDays, format, parseISO } from 'date-fns';
 
@@ -14,7 +14,7 @@ export default async function analyticsRoutes(fastify: FastifyInstance) {
   // GET /tenants/:tenantId/analytics/overview
   fastify.get<{ Params: { tenantId: string } }>('/:tenantId/analytics/overview', {
     preHandler: [fastify.authenticate],
-  }, async (request, reply) => {
+  }, async (request, _reply) => {
     const tenant = await fastify.prisma.tenant.findFirst({
       where: { id: request.params.tenantId, ownerId: request.user!.id },
     });
@@ -54,7 +54,7 @@ export default async function analyticsRoutes(fastify: FastifyInstance) {
   // GET /tenants/:tenantId/analytics/timeseries
   fastify.get<{ Params: { tenantId: string } }>('/:tenantId/analytics/timeseries', {
     preHandler: [fastify.authenticate],
-  }, async (request, reply) => {
+  }, async (request, _reply) => {
     const tenant = await fastify.prisma.tenant.findFirst({
       where: { id: request.params.tenantId, ownerId: request.user!.id },
     });
@@ -91,7 +91,7 @@ export default async function analyticsRoutes(fastify: FastifyInstance) {
   // GET /tenants/:tenantId/analytics/top-products
   fastify.get<{ Params: { tenantId: string } }>('/:tenantId/analytics/top-products', {
     preHandler: [fastify.authenticate],
-  }, async (request, reply) => {
+  }, async (request, _reply) => {
     const query = request.query as Record<string, string>;
     const tenant = await fastify.prisma.tenant.findFirst({
       where: { id: request.params.tenantId, ownerId: request.user!.id },

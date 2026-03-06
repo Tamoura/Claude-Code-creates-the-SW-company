@@ -7,7 +7,7 @@ export default async function catalogRoutes(fastify: FastifyInstance) {
   // GET /catalog
   fastify.get('/', {
     preHandler: [fastify.authenticateApiKey],
-  }, async (request: FastifyRequest, reply: FastifyReply) => {
+  }, async (request: FastifyRequest, _reply: FastifyReply) => {
     const tenantId = request.tenantId!;
     const query = request.query as Record<string, string>;
     const { limit, offset } = parsePagination(query);
@@ -66,7 +66,7 @@ export default async function catalogRoutes(fastify: FastifyInstance) {
   // POST /catalog/batch
   fastify.post('/batch', {
     preHandler: [fastify.authenticateApiKey, fastify.requirePermission('read_write')],
-  }, async (request: FastifyRequest, reply: FastifyReply) => {
+  }, async (request: FastifyRequest, _reply: FastifyReply) => {
     const tenantId = request.tenantId!;
     const { items } = validateBody(batchCatalogSchema, request.body);
 
@@ -124,7 +124,7 @@ export default async function catalogRoutes(fastify: FastifyInstance) {
   // GET /catalog/:productId
   fastify.get<{ Params: { productId: string } }>('/:productId', {
     preHandler: [fastify.authenticateApiKey],
-  }, async (request, reply) => {
+  }, async (request, _reply) => {
     const tenantId = request.tenantId!;
 
     const item = await fastify.prisma.catalogItem.findUnique({
@@ -140,7 +140,7 @@ export default async function catalogRoutes(fastify: FastifyInstance) {
   // PUT /catalog/:productId
   fastify.put<{ Params: { productId: string } }>('/:productId', {
     preHandler: [fastify.authenticateApiKey, fastify.requirePermission('read_write')],
-  }, async (request, reply) => {
+  }, async (request, _reply) => {
     const tenantId = request.tenantId!;
     const data = validateBody(updateCatalogItemSchema, request.body);
 
@@ -162,7 +162,7 @@ export default async function catalogRoutes(fastify: FastifyInstance) {
   // DELETE /catalog/:productId (soft delete — mark unavailable)
   fastify.delete<{ Params: { productId: string } }>('/:productId', {
     preHandler: [fastify.authenticateApiKey, fastify.requirePermission('read_write')],
-  }, async (request, reply) => {
+  }, async (request, _reply) => {
     const tenantId = request.tenantId!;
 
     const existing = await fastify.prisma.catalogItem.findUnique({
