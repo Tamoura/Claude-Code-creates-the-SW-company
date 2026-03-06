@@ -24,6 +24,7 @@ declare module '@fastify/jwt' {
 
 declare module 'fastify' {
   interface FastifyRequest {
+    user?: AuthUser;
     apiKeyAuth?: ApiKeyAuth;
     tenantId?: string;
   }
@@ -121,6 +122,7 @@ export default fp(async (fastify: FastifyInstance) => {
 
 declare module 'fastify' {
   interface FastifyInstance {
+    jwt: { sign: (payload: Record<string, unknown>) => string; verify: (token: string) => Record<string, unknown> };
     authenticate: (request: FastifyRequest, reply: FastifyReply) => Promise<void>;
     authenticateApiKey: (request: FastifyRequest, reply: FastifyReply) => Promise<void>;
     requirePermission: (permission: 'read' | 'read_write') => (request: FastifyRequest, reply: FastifyReply) => Promise<void>;
