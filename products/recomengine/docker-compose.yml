@@ -5,9 +5,9 @@ services:
     image: postgres:15-alpine
     container_name: recomengine-postgres
     environment:
-      POSTGRES_USER: recomengine
-      POSTGRES_PASSWORD: recomengine_dev
-      POSTGRES_DB: recomengine_dev
+      POSTGRES_USER: ${POSTGRES_USER:-recomengine}
+      POSTGRES_PASSWORD: ${POSTGRES_PASSWORD:-recomengine_dev}
+      POSTGRES_DB: ${POSTGRES_DB:-recomengine_dev}
     ports:
       - '5432:5432'
     volumes:
@@ -17,17 +17,71 @@ services:
       interval: 5s
       timeout: 5s
       retries: 5
+    deploy:
+      resources:
+        limits:
+          memory: 512M
 
   redis:
     image: redis:7-alpine
     container_name: recomengine-redis
     ports:
       - '6379:6379'
+    volumes:
+      - recomengine_redisdata:/data
     healthcheck:
       test: ['CMD', 'redis-cli', 'ping']
       interval: 5s
       timeout: 5s
       retries: 5
+    deploy:
+      resources:
+        limits:
+          memory: 256M
+
+  api:
+    build:
+      context: ./apps/api
+      dockerfile: Dockerfile
+    container_name: recomengine-api
+    ports:
+      - '5008:5008'
+    environment:
+      DATABASE_URL: postgresql://${POSTGRES_USER:-recomengine}:${POSTGRES_PASSWORD:-recomengine_dev}@postgres:5432/${POSTGRES_DB:-recomengine_dev}
+      REDIS_URL: redis://redis:6379
+      JWT_SECRET: ${JWT_SECRET:-dev-jwt-secret-change-in-production}
+      API_KEY_HMAC_SECRET: ${API_KEY_HMAC_SECRET:-dev-hmac-secret-change-in-production}
+      PORT: 5008
+      NODE_ENV: ${NODE_ENV:-development}
+      LOG_LEVEL: ${LOG_LEVEL:-info}
+    depends_on:
+      postgres:
+        condition: service_healthy
+      redis:
+        condition: service_healthy
+    deploy:
+      resources:
+        limits:
+          memory: 512M
+
+  web:
+    build:
+      context: ./apps/web
+      dockerfile: Dockerfile
+    container_name: recomengine-web
+    ports:
+      - '3112:3112'
+    environment:
+      NEXT_PUBLIC_API_URL: ${NEXT_PUBLIC_API_URL:-http://localhost:5008}
+      PORT: 3112
+      NODE_ENV: ${NODE_ENV:-production}
+    depends_on:
+      - api
+    deploy:
+      resources:
+        limits:
+          memory: 512M
 
 volumes:
   recomengine_pgdata:
+  recomengine_redisdata:
