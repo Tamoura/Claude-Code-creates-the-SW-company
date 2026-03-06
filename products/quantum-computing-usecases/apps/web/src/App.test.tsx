@@ -29,8 +29,11 @@ describe('App', () => {
     // Check for navigation links by role
     const navLinks = screen.getAllByRole('link');
     const navTexts = navLinks.map(link => link.textContent);
+    expect(navTexts.some(text => text?.match(/dashboard/i))).toBe(true);
     expect(navTexts.some(text => text?.match(/browse/i))).toBe(true);
     expect(navTexts.some(text => text?.match(/compare/i))).toBe(true);
+    expect(navTexts.some(text => text?.match(/priority matrix/i))).toBe(true);
+    expect(navTexts.some(text => text?.match(/assessment/i))).toBe(true);
     expect(navTexts.some(text => text?.match(/learning path/i))).toBe(true);
     expect(navTexts.some(text => text?.match(/arab sovereignty/i))).toBe(true);
   });
