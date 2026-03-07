@@ -19,6 +19,8 @@ export default defineConfig({
   use: {
     baseURL: process.env.E2E_BASE_URL || 'http://localhost:3110',
     trace: 'on-first-retry',
+    screenshot: 'on',
+    video: 'on',
   },
   projects: [
     {

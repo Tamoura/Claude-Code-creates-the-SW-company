@@ -24,6 +24,7 @@ import { constitutionRoutes } from './routes/v1/constitution.js';
 import { approvalQueueRoutes } from './routes/v1/approval-queue.js';
 import { prDashboardRoutes } from './routes/v1/pr-dashboard.js';
 import { e2eGalleryRoutes } from './routes/v1/e2e-gallery.js';
+import { e2eRunnerRoutes } from './routes/v1/e2e-runner.js';
 
 export async function buildApp() {
   const app = Fastify({
@@ -73,6 +74,7 @@ export async function buildApp() {
   await app.register(approvalQueueRoutes, { prefix: '/api/v1' });
   await app.register(prDashboardRoutes, { prefix: '/api/v1' });
   await app.register(e2eGalleryRoutes, { prefix: '/api/v1' });
+  await app.register(e2eRunnerRoutes, { prefix: '/api/v1' });
 
   return app;
 }
