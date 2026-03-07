@@ -6,7 +6,49 @@ import { useEffect, useState } from 'react';
 import { Card } from '@/components/ui/Card';
 import { api } from '@/lib/api';
 import { t } from '@/lib/i18n';
-import type { AssessmentResults, DimensionScore } from '@/types/index';
+import type { DimensionScore, DimensionKey } from '@/types/index';
+
+/** Shape returned by GET /assessments/:id/results */
+interface ApiResultsResponse {
+  session: { id: string; status: string; startedAt: string; completedAt: string | null };
+  profile: {
+    id: string;
+    overallScore: number;
+    dimensionScores: Record<string, number>;
+    selfReportScores: Record<string, number> | null;
+    indicatorBreakdown: Record<string, unknown> | null;
+    discernmentGap: number | null;
+    algorithmVersion: number;
+    createdAt: string;
+  };
+}
+
+interface AssessmentResults {
+  sessionId: string;
+  overallScore: number;
+  dimensions: DimensionScore[];
+  discernmentGap?: number;
+  completedAt: string;
+}
+
+function mapApiToResults(data: ApiResultsResponse): AssessmentResults {
+  const dims: DimensionKey[] = ['DELEGATION', 'DESCRIPTION', 'DISCERNMENT', 'DILIGENCE'];
+  const dimensions: DimensionScore[] = dims.map((dim) => {
+    const score = data.profile.dimensionScores?.[dim] ?? 0;
+    let status: 'pass' | 'partial' | 'fail' = 'fail';
+    if (score >= 70) status = 'pass';
+    else if (score >= 40) status = 'partial';
+    return { dimension: dim, score, status };
+  });
+
+  return {
+    sessionId: data.session.id,
+    overallScore: data.profile.overallScore,
+    dimensions,
+    discernmentGap: data.profile.discernmentGap ?? undefined,
+    completedAt: data.session.completedAt ?? new Date().toISOString(),
+  };
+}
 
 function statusColor(status: string): string {
   switch (status) {
@@ -97,10 +139,10 @@ export default function AssessmentCompletePage() {
     let mounted = true;
     const loadResults = async () => {
       try {
-        const data = await api.get<AssessmentResults>(
+        const data = await api.get<ApiResultsResponse>(
           `/assessments/${sessionId}/results`,
         );
-        if (mounted) setResults(data);
+        if (mounted) setResults(mapApiToResults(data));
       } catch {
         if (mounted) {
           setError('Unable to load assessment results.');

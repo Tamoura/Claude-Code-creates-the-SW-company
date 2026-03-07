@@ -1,22 +1,94 @@
-import type { Metadata } from 'next';
+'use client';
+
 import Link from 'next/link';
+import { useEffect, useState } from 'react';
 import { Card } from '@/components/ui/Card';
 import { Sidebar } from '@/components/layout/Sidebar';
+import { useAuth } from '@/hooks/useAuth';
+import { api } from '@/lib/api';
 import { t } from '@/lib/i18n';
+import type { DimensionKey } from '@/types/index';
 
-export const metadata: Metadata = {
-  title: 'My Fluency Profile',
-};
+interface ProfileData {
+  profile: {
+    id: string;
+    overallScore: number;
+    dimensionScores: Record<string, number>;
+    selfReportScores: Record<string, number> | null;
+    discernmentGap: number | null;
+    createdAt: string;
+  } | null;
+}
 
-const dimensions = [
-  { key: 'DELEGATION', label: t('profile.dimensions.DELEGATION'), score: null },
-  { key: 'DESCRIPTION', label: t('profile.dimensions.DESCRIPTION'), score: null },
-  { key: 'DISCERNMENT', label: t('profile.dimensions.DISCERNMENT'), score: null },
-  { key: 'DILIGENCE', label: t('profile.dimensions.DILIGENCE'), score: null },
-];
+const dimensionKeys: DimensionKey[] = ['DELEGATION', 'DESCRIPTION', 'DISCERNMENT', 'DILIGENCE'];
+
+function ScoreBar({ score }: { score: number }) {
+  const clamped = Math.max(0, Math.min(100, score));
+  let color = 'bg-red-500';
+  if (clamped >= 70) color = 'bg-green-500';
+  else if (clamped >= 40) color = 'bg-yellow-500';
+
+  return (
+    <div
+      className="h-2 w-full overflow-hidden rounded-full bg-gray-100"
+      role="progressbar"
+      aria-valuenow={clamped}
+      aria-valuemin={0}
+      aria-valuemax={100}
+    >
+      <div
+        className={`h-full rounded-full ${color} transition-all duration-700`}
+        style={{ width: `${clamped}%` }}
+      />
+    </div>
+  );
+}
 
 export default function ProfilePage() {
-  const hasAssessment = false; // Will be fetched from API after auth is wired
+  const { user, isLoading: authLoading } = useAuth();
+  const [profileData, setProfileData] = useState<ProfileData | null>(null);
+  const [isLoading, setIsLoading] = useState(true);
+
+  useEffect(() => {
+    let mounted = true;
+    const fetchProfile = async () => {
+      try {
+        const data = await api.get<ProfileData>('/profile');
+        if (mounted) setProfileData(data);
+      } catch {
+        // No profile or not authenticated
+        if (mounted) setProfileData(null);
+      } finally {
+        if (mounted) setIsLoading(false);
+      }
+    };
+
+    if (!authLoading && user) {
+      void fetchProfile();
+    } else if (!authLoading) {
+      setIsLoading(false);
+    }
+
+    return () => { mounted = false; };
+  }, [authLoading, user]);
+
+  const profile = profileData?.profile;
+  const hasProfile = profile !== null && profile !== undefined;
+
+  if (authLoading || isLoading) {
+    return (
+      <div className="flex min-h-[calc(100vh-64px)]">
+        <Sidebar />
+        <div className="flex-1 px-6 py-8">
+          <div className="mx-auto max-w-3xl animate-pulse space-y-4">
+            <div className="h-8 w-48 rounded bg-gray-200" />
+            <div className="h-4 w-64 rounded bg-gray-200" />
+            <div className="h-48 rounded-lg bg-gray-200" />
+          </div>
+        </div>
+      </div>
+    );
+  }
 
   return (
     <div className="flex min-h-[calc(100vh-64px)]">
@@ -30,11 +102,11 @@ export default function ProfilePage() {
             Your AI fluency across four dimensions.
           </p>
 
-          {!hasAssessment ? (
+          {!hasProfile ? (
             <div className="empty-state">
               <div className="text-5xl" aria-hidden="true">◎</div>
               <h2 className="empty-state-title">
-                {t('profile.no_assessment')}
+                No assessment completed yet.
               </h2>
               <p className="empty-state-description">
                 Complete your first assessment to see your fluency profile.
@@ -53,22 +125,54 @@ export default function ProfilePage() {
                 <div className="text-sm font-medium text-gray-500 mb-1">
                   {t('profile.overall_score')}
                 </div>
-                <div className="text-6xl font-bold text-brand-600 mb-1">—</div>
+                <div className="text-6xl font-bold text-brand-600 mb-2">
+                  {Math.round(profile.overallScore)}%
+                </div>
+                <div className="max-w-xs mx-auto">
+                  <ScoreBar score={profile.overallScore} />
+                </div>
               </Card>
+
+              {/* Discernment gap warning */}
+              {profile.discernmentGap !== null && profile.discernmentGap > 15 && (
+                <div
+                  role="alert"
+                  className="rounded-md border border-yellow-200 bg-yellow-50 p-4"
+                >
+                  <h2 className="text-sm font-semibold text-yellow-800 mb-1">
+                    Discernment Gap Detected
+                  </h2>
+                  <p className="text-sm text-yellow-700">
+                    Your self-reported confidence exceeds your demonstrated
+                    discernment by {Math.round(profile.discernmentGap)} points.
+                  </p>
+                </div>
+              )}
 
               {/* Dimensions */}
               <div className="grid gap-4 sm:grid-cols-2">
-                {dimensions.map((dim) => (
-                  <Card key={dim.key} padding="md">
-                    <div className="mb-2 font-semibold text-gray-800">
-                      {dim.label}
-                    </div>
-                    <div className="text-3xl font-bold text-brand-600">
-                      {dim.score ?? '—'}
-                    </div>
-                  </Card>
-                ))}
+                {dimensionKeys.map((dim) => {
+                  const score = profile.dimensionScores?.[dim] ?? 0;
+                  return (
+                    <Card key={dim} padding="md">
+                      <div className="mb-2 flex items-center justify-between">
+                        <span className="font-semibold text-gray-800">
+                          {t(`profile.dimensions.${dim}`)}
+                        </span>
+                        <span className="text-lg font-bold text-brand-600">
+                          {Math.round(score)}%
+                        </span>
+                      </div>
+                      <ScoreBar score={score} />
+                    </Card>
+                  );
+                })}
               </div>
+
+              {/* Assessment date */}
+              <p className="text-sm text-gray-400 text-center">
+                Last assessed: {new Date(profile.createdAt).toLocaleDateString()}
+              </p>
             </div>
           )}
         </div>
