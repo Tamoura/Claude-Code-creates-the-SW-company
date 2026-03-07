@@ -1,10 +1,7 @@
 /**
  * helpers/auth.ts — Authentication helpers for E2E tests
  *
- * API-based helpers: register and login via the real backend API.
- * No mocks — all calls go to http://localhost:5014/api/v1/auth/*.
- *
- * Backend auth endpoints (from routes/index.ts planned registration):
+ * Backend auth endpoints:
  *   POST /api/v1/auth/register  → { token, user }
  *   POST /api/v1/auth/login     → { token, user }
  *   GET  /api/v1/auth/me        → { user }
@@ -12,89 +9,112 @@
 
 import { APIRequestContext, Page } from '@playwright/test';
 
-const API_BASE = process.env.API_BASE_URL || 'http://localhost:5014';
+export const API_BASE = process.env.API_BASE_URL || 'http://localhost:5014';
+export const DEFAULT_ORG_SLUG = 'demo-org';
+export const DEFAULT_ORG_ID = ''; // Not needed — we use slug
 
 export interface TestUserCredentials {
   email: string;
   password: string;
-  name: string;
+  firstName: string;
+  lastName: string;
+  orgSlug: string;
 }
 
-export interface AuthResponse {
-  token?: string;
-  accessToken?: string;
-  user?: {
+export interface AuthResult {
+  accessToken: string;
+  refreshToken: string;
+  user: {
     id: string;
     email: string;
     role: string;
+    orgId: string;
+    firstName: string;
+    lastName: string;
   };
 }
 
 /**
  * Create a unique test user via the registration API.
- * Returns the credentials used so the caller can log in.
+ * Returns both credentials and auth result (token + user).
  */
 export async function createTestUser(
-  request: APIRequestContext
-): Promise<TestUserCredentials> {
+  request: APIRequestContext,
+  overrides?: Partial<{ email: string; firstName: string; lastName: string; orgSlug: string }>,
+): Promise<{ credentials: TestUserCredentials; auth: AuthResult }> {
   const timestamp = Date.now();
   const credentials: TestUserCredentials = {
-    email: `e2e-test-${timestamp}@example.com`,
+    email: overrides?.email ?? `e2e-test-${timestamp}@example.com`,
     password: 'E2ETestPass123!',
-    name: 'E2E Test User',
+    firstName: overrides?.firstName ?? 'E2E',
+    lastName: overrides?.lastName ?? 'TestUser',
+    orgSlug: overrides?.orgSlug ?? DEFAULT_ORG_SLUG,
   };
 
   const registerRes = await request.post(`${API_BASE}/api/v1/auth/register`, {
     data: {
       email: credentials.email,
       password: credentials.password,
-      name: credentials.name,
+      firstName: credentials.firstName,
+      lastName: credentials.lastName,
+      orgSlug: credentials.orgSlug,
     },
   });
 
   if (!registerRes.ok()) {
     const body = await registerRes.text();
     throw new Error(
-      `createTestUser failed — status ${registerRes.status()}: ${body}`
+      `createTestUser failed — status ${registerRes.status()}: ${body}`,
     );
   }
 
-  return credentials;
+  const data = (await registerRes.json()) as { token: string; user: AuthResult['user'] };
+
+  return {
+    credentials,
+    auth: {
+      accessToken: data.token,
+      refreshToken: data.token, // Same token for MVP (no refresh flow yet)
+      user: data.user,
+    },
+  };
 }
 
 /**
- * Log in via the API and return the auth response (token + user).
- * Sets the httpOnly refresh cookie automatically via the request context.
+ * Log in via the API and return the auth result.
  */
 export async function loginViaAPI(
   request: APIRequestContext,
   email: string,
-  password: string
-): Promise<AuthResponse> {
+  password: string,
+  orgSlug: string = DEFAULT_ORG_SLUG,
+): Promise<AuthResult> {
   const res = await request.post(`${API_BASE}/api/v1/auth/login`, {
-    data: { email, password },
+    data: { email, password, orgSlug },
   });
 
   if (!res.ok()) {
     const body = await res.text();
     throw new Error(
-      `loginViaAPI failed — status ${res.status()}: ${body}`
+      `loginViaAPI failed — status ${res.status()}: ${body}`,
     );
   }
 
-  return res.json() as Promise<AuthResponse>;
+  const data = (await res.json()) as { token: string; user: AuthResult['user'] };
+  return {
+    accessToken: data.token,
+    refreshToken: data.token,
+    user: data.user,
+  };
 }
 
 /**
  * Log in via the UI login form.
- * Navigates to /login, fills the form, and waits for redirect to /dashboard.
- *
- * Use this when you need real browser state (cookies, localStorage) set.
  */
 export async function loginViaUI(
   page: Page,
   email: string,
-  password: string
+  password: string,
 ): Promise<void> {
   await page.goto('/login');
   await page.waitForLoadState('networkidle');
@@ -103,19 +123,31 @@ export async function loginViaUI(
   await page.getByLabel('Password').fill(password);
   await page.getByRole('button', { name: /sign in/i }).click();
 
-  // Wait for successful redirect to dashboard
   await page.waitForURL('**/dashboard', { timeout: 10_000 });
 }
 
 /**
+ * Inject auth token into browser localStorage so the frontend
+ * recognizes the user as authenticated.
+ */
+export async function injectAuthTokens(
+  page: Page,
+  accessToken: string,
+  _refreshToken?: string,
+): Promise<void> {
+  await page.evaluate((token) => {
+    localStorage.setItem('ai_fluency_token', token);
+  }, accessToken);
+}
+
+/**
  * Create a fresh test user and log them in via UI.
- * Returns credentials for reference; page is authenticated on return.
  */
 export async function createAndLoginUser(
   request: APIRequestContext,
-  page: Page
-): Promise<TestUserCredentials> {
-  const credentials = await createTestUser(request);
-  await loginViaUI(page, credentials.email, credentials.password);
-  return credentials;
+  page: Page,
+): Promise<{ credentials: TestUserCredentials; auth: AuthResult }> {
+  const result = await createTestUser(request);
+  await loginViaUI(page, result.credentials.email, result.credentials.password);
+  return result;
 }
