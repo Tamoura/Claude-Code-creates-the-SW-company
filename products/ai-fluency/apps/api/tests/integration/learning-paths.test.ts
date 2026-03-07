@@ -111,30 +111,35 @@ describe('[LEARNING-PATHS] Learning Path Routes', () => {
       learningModuleIds.push(mod.id);
     }
 
-    // Create completed assessment to get a profile
-    const sessionRes = await app.inject({
-      method: 'POST',
-      url: '/api/v1/assessment-sessions',
-      headers: { authorization: `Bearer ${ctx.token}` },
-      payload: { templateId: template.id },
+    // Create a completed assessment session and profile directly in DB
+    // (bypassing the API which requires answering ALL active questions)
+    const session = await prisma.assessmentSession.create({
+      data: {
+        orgId: ctx.org.id,
+        userId: ctx.user.id,
+        templateId: template.id,
+        algorithmVersionId: 1,
+        status: 'COMPLETED',
+        progressPct: 100,
+        completedAt: new Date(),
+        expiresAt: new Date(Date.now() + 86400000),
+      },
     });
-    const sessionId = sessionRes.json().sessionId;
 
-    for (const qId of questionIds) {
-      await app.inject({
-        method: 'POST',
-        url: `/api/v1/assessment-sessions/${sessionId}/responses`,
-        headers: { authorization: `Bearer ${ctx.token}` },
-        payload: { questionId: qId, answer: 'A' },
-      });
-    }
-
-    const completeRes = await app.inject({
-      method: 'POST',
-      url: `/api/v1/assessment-sessions/${sessionId}/complete`,
-      headers: { authorization: `Bearer ${ctx.token}` },
+    const profile = await prisma.fluencyProfile.create({
+      data: {
+        orgId: ctx.org.id,
+        userId: ctx.user.id,
+        sessionId: session.id,
+        algorithmVersion: 1,
+        overallScore: 75.0,
+        dimensionScores: { DELEGATION: 80, DESCRIPTION: 70, DISCERNMENT: 75, DILIGENCE: 75 },
+        selfReportScores: { DELEGATION: 60, DESCRIPTION: 65, DISCERNMENT: 70, DILIGENCE: 60 },
+        indicatorBreakdown: {},
+        discernmentGap: false,
+      },
     });
-    profileId = completeRes.json().profileId;
+    profileId = profile.id;
   });
 
   afterAll(async () => {

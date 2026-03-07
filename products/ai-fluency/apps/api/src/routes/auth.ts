@@ -73,9 +73,20 @@ function sanitizeUser(user: {
 // ── Route Registration ────────────────────────────────────────────────────────
 
 export async function authRoutes(fastify: FastifyInstance): Promise<void> {
+  // Auth-specific rate limiting: 10 attempts per minute for login/register
+  // Applied per-route via routeConfig consumed by @fastify/rate-limit
+  const authRouteConfig = {
+    rateLimit: {
+      max: 10,
+      timeWindow: 60000,
+      keyGenerator: (request: FastifyRequest) => `auth:${request.ip}`,
+    },
+  };
+
   // ── POST /register ──────────────────────────────────────────────────────
   fastify.post(
     '/register',
+    { config: authRouteConfig },
     async (request: FastifyRequest, reply: FastifyReply) => {
       const parsed = registerSchema.safeParse(request.body);
       if (!parsed.success) {
@@ -132,7 +143,7 @@ export async function authRoutes(fastify: FastifyInstance): Promise<void> {
           orgId: org.id,
           role: user.role,
         },
-        { expiresIn: '24h' }
+        { expiresIn: parseInt(process.env.JWT_ACCESS_EXPIRY || '900', 10) }
       );
 
       return reply.code(201).send({
@@ -145,6 +156,7 @@ export async function authRoutes(fastify: FastifyInstance): Promise<void> {
   // ── POST /login ─────────────────────────────────────────────────────────
   fastify.post(
     '/login',
+    { config: authRouteConfig },
     async (request: FastifyRequest, reply: FastifyReply) => {
       const parsed = loginSchema.safeParse(request.body);
       if (!parsed.success) {
@@ -206,7 +218,7 @@ export async function authRoutes(fastify: FastifyInstance): Promise<void> {
           orgId: org.id,
           role: user.role,
         },
-        { expiresIn: '24h' }
+        { expiresIn: parseInt(process.env.JWT_ACCESS_EXPIRY || '900', 10) }
       );
 
       return reply.code(200).send({

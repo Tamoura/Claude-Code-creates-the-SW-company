@@ -45,6 +45,13 @@ const envSchema = z.object({
   LOG_LEVEL: z
     .enum(['trace', 'debug', 'info', 'warn', 'error', 'fatal'])
     .default('info'),
+
+  // OpenRouter (optional — AI feedback generation)
+  OPENROUTER_API_KEY: z.string().optional(),
+  OPENROUTER_MODEL: z.string().default('anthropic/claude-sonnet-4-20250514'),
+  OPENROUTER_BASE_URL: z.string().url().default('https://openrouter.ai/api/v1'),
+  OPENROUTER_MAX_TOKENS: z.coerce.number().int().positive().default(2048),
+  OPENROUTER_TEMPERATURE: z.coerce.number().min(0).max(2).default(0.3),
 });
 
 function validateConfig() {
