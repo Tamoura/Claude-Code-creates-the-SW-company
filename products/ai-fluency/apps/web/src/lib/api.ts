@@ -1,6 +1,8 @@
 // API client for AI Fluency
-// - Always uses credentials: "include" for httpOnly cookie auth
-// - Backend uses SameSite=Strict cookies — no explicit CSRF token needed
+// - Uses Bearer token auth (JWT stored in localStorage)
+// - Falls back to credentials: "include" for cookie-based auth
+
+import { getToken } from '@/lib/auth';
 
 const API_BASE = process.env.NEXT_PUBLIC_API_URL || 'http://localhost:5014';
 const API_PREFIX = `${API_BASE}/api/v1`;
@@ -27,6 +29,12 @@ async function request<T>(
     'Content-Type': 'application/json',
     ...(options.headers as Record<string, string> | undefined),
   };
+
+  // Attach Bearer token if available
+  const token = getToken();
+  if (token) {
+    headers['Authorization'] = `Bearer ${token}`;
+  }
 
   const response = await fetch(url, {
     ...options,

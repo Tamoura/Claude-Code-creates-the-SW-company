@@ -9,6 +9,8 @@ import userEvent from '@testing-library/user-event';
 jest.mock('@/hooks/useAuth', () => ({
   useAuth: jest.fn(() => ({
     login: jest.fn(),
+    register: jest.fn(),
+    logout: jest.fn(),
     isLoading: false,
     error: null,
     user: null,

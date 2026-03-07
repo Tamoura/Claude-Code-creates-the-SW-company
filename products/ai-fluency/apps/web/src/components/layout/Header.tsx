@@ -1,7 +1,8 @@
 'use client';
 
 import Link from 'next/link';
-import { usePathname } from 'next/navigation';
+import { usePathname, useRouter } from 'next/navigation';
+import { useAuth } from '@/hooks/useAuth';
 import { t } from '@/lib/i18n';
 
 interface NavItem {
@@ -22,6 +23,17 @@ const authNavItems: NavItem[] = [
 
 export function Header() {
   const pathname = usePathname();
+  const router = useRouter();
+  const { isAuthenticated, user, logout, isLoading } = useAuth();
+
+  const navItems = isAuthenticated
+    ? [...publicNavItems, ...authNavItems]
+    : publicNavItems;
+
+  const handleLogout = () => {
+    logout();
+    void router.push('/');
+  };
 
   return (
     <header className="sticky top-0 z-40 border-b border-gray-200 bg-white">
@@ -42,7 +54,7 @@ export function Header() {
 
         {/* Desktop navigation */}
         <ul className="hidden items-center gap-1 md:flex" role="list">
-          {[...publicNavItems, ...authNavItems].map((item) => {
+          {navItems.map((item) => {
             const isActive =
               item.href === '/'
                 ? pathname === '/'
@@ -69,18 +81,37 @@ export function Header() {
 
         {/* Auth buttons */}
         <div className="flex items-center gap-2">
-          <Link
-            href="/login"
-            className="rounded-md px-3 py-2 text-sm font-medium text-gray-600 hover:bg-gray-50 hover:text-gray-900 focus:outline-none focus:ring-2 focus:ring-brand-500 focus:ring-offset-2 transition-colors"
-          >
-            {t('nav.login')}
-          </Link>
-          <Link
-            href="/register"
-            className="rounded-md bg-brand-600 px-4 py-2 text-sm font-medium text-white hover:bg-brand-700 focus:outline-none focus:ring-2 focus:ring-brand-500 focus:ring-offset-2 transition-colors min-h-[40px] flex items-center"
-          >
-            {t('nav.register')}
-          </Link>
+          {isLoading ? (
+            <span className="text-sm text-gray-400">{t('common.loading')}</span>
+          ) : isAuthenticated ? (
+            <>
+              <span className="text-sm text-gray-600 hidden sm:inline">
+                {user?.name}
+              </span>
+              <button
+                type="button"
+                onClick={handleLogout}
+                className="rounded-md px-3 py-2 text-sm font-medium text-gray-600 hover:bg-gray-50 hover:text-gray-900 focus:outline-none focus:ring-2 focus:ring-brand-500 focus:ring-offset-2 transition-colors"
+              >
+                {t('nav.logout')}
+              </button>
+            </>
+          ) : (
+            <>
+              <Link
+                href="/login"
+                className="rounded-md px-3 py-2 text-sm font-medium text-gray-600 hover:bg-gray-50 hover:text-gray-900 focus:outline-none focus:ring-2 focus:ring-brand-500 focus:ring-offset-2 transition-colors"
+              >
+                {t('nav.login')}
+              </Link>
+              <Link
+                href="/register"
+                className="rounded-md bg-brand-600 px-4 py-2 text-sm font-medium text-white hover:bg-brand-700 focus:outline-none focus:ring-2 focus:ring-brand-500 focus:ring-offset-2 transition-colors min-h-[40px] flex items-center"
+              >
+                {t('nav.register')}
+              </Link>
+            </>
+          )}
         </div>
       </nav>
     </header>

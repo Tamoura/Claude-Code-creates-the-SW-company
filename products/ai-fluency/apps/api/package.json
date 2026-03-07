@@ -4,7 +4,7 @@
   "description": "AI Fluency Platform — Backend API",
   "main": "dist/index.js",
   "scripts": {
-    "dev": "ts-node-dev --respawn --transpile-only src/index.ts",
+    "dev": "node --env-file=.env --import tsx src/index.ts",
     "build": "tsc",
     "start": "node dist/index.js",
     "test": "jest --runInBand",
@@ -16,7 +16,8 @@
     "db:deploy": "prisma migrate deploy",
     "db:generate": "prisma generate",
     "db:studio": "prisma studio",
-    "db:reset": "prisma migrate reset"
+    "db:reset": "prisma migrate reset",
+    "db:seed": "tsx prisma/seed.ts"
   },
   "dependencies": {
     "@fastify/cookie": "^11.0.0",
@@ -47,6 +48,9 @@
     "ts-node": "^10.0.0",
     "ts-node-dev": "^2.0.0",
     "typescript": "^5.0.0"
+  },
+  "prisma": {
+    "seed": "tsx prisma/seed.ts"
   },
   "engines": {
     "node": ">=20.0.0"

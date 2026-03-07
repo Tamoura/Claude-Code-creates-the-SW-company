@@ -6,7 +6,10 @@ export interface User {
   id: string;
   email: string;
   name: string;
+  firstName?: string;
+  lastName?: string;
   role: UserRole;
+  orgId?: string;
   organizationId?: string;
 }
 
@@ -43,6 +46,44 @@ export interface FluencyProfile {
     DILIGENCE: number;
   };
   lastAssessedAt: string;
+}
+
+export type QuestionType = 'SCENARIO' | 'SELF_REPORT';
+export type DimensionKey = 'DELEGATION' | 'DESCRIPTION' | 'DISCERNMENT' | 'DILIGENCE';
+
+export interface AssessmentQuestion {
+  id: string;
+  dimension: DimensionKey;
+  type: QuestionType;
+  text: string;
+  options?: { key: string; text: string }[];
+  order: number;
+}
+
+export interface AssessmentResponse {
+  questionId: string;
+  answer: string;
+}
+
+export interface DimensionScore {
+  dimension: DimensionKey;
+  score: number;
+  status: 'pass' | 'partial' | 'fail';
+}
+
+export interface AssessmentResults {
+  sessionId: string;
+  overallScore: number;
+  dimensions: DimensionScore[];
+  discernmentGap?: number;
+  completedAt: string;
+}
+
+export interface DashboardData {
+  user: User;
+  profile: FluencyProfile | null;
+  assessmentCount: number;
+  latestSession: AssessmentSession | null;
 }
 
 export interface LearningPath {

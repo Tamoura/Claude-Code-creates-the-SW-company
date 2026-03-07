@@ -6,7 +6,7 @@ const apiUrl = process.env.NEXT_PUBLIC_API_URL || 'http://localhost:5014';
 
 const cspHeader = [
   "default-src 'self'",
-  "script-src 'self'",
+  "script-src 'self' 'unsafe-inline' 'unsafe-eval'",
   "style-src 'self' 'unsafe-inline'",
   "img-src 'self' data: blob:",
   "font-src 'self'",
