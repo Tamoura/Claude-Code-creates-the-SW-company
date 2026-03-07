@@ -1,12 +1,14 @@
-import type { Metadata } from 'next';
+'use client';
+
 import Link from 'next/link';
+import { useRouter } from 'next/navigation';
+import { useState } from 'react';
 import { Card } from '@/components/ui/Card';
 import { Sidebar } from '@/components/layout/Sidebar';
+import { Button } from '@/components/ui/Button';
+import { api } from '@/lib/api';
 import { t } from '@/lib/i18n';
-
-export const metadata: Metadata = {
-  title: 'Assessment',
-};
+import type { AssessmentSession, AssessmentQuestion } from '@/types/index';
 
 const dimensions = [
   {
@@ -36,6 +38,25 @@ const dimensions = [
 ];
 
 export default function AssessmentPage() {
+  const router = useRouter();
+  const [isStarting, setIsStarting] = useState(false);
+  const [error, setError] = useState<string | null>(null);
+
+  const handleStart = async () => {
+    setIsStarting(true);
+    setError(null);
+    try {
+      const data = await api.post<{
+        session: AssessmentSession;
+        questions: AssessmentQuestion[];
+      }>('/assessments/start');
+      void router.push(`/assessment/${data.session.id}`);
+    } catch {
+      setError('Unable to start assessment. Please try again.');
+      setIsStarting(false);
+    }
+  };
+
   return (
     <div className="flex min-h-[calc(100vh-64px)]">
       <Sidebar />
@@ -45,6 +66,15 @@ export default function AssessmentPage() {
             {t('assessment.title')}
           </h1>
           <p className="mb-8 text-gray-600">{t('assessment.description')}</p>
+
+          {error && (
+            <div
+              role="alert"
+              className="mb-6 rounded-md bg-danger-50 border border-danger-200 p-3 text-sm text-danger-700"
+            >
+              {error}
+            </div>
+          )}
 
           <Card padding="md" className="mb-6">
             <h2 className="mb-4 text-lg font-semibold text-gray-900">
@@ -78,7 +108,7 @@ export default function AssessmentPage() {
               </div>
               <div className="h-8 w-px bg-gray-200" aria-hidden="true" />
               <div className="text-center">
-                <div className="text-2xl font-bold text-brand-600">20–30</div>
+                <div className="text-2xl font-bold text-brand-600">20-30</div>
                 <div className="text-xs text-gray-500">Minutes</div>
               </div>
               <div className="h-8 w-px bg-gray-200" aria-hidden="true" />
@@ -90,12 +120,14 @@ export default function AssessmentPage() {
           </Card>
 
           <div className="flex gap-4">
-            <Link
-              href="/assessment/new"
-              className="inline-flex min-h-[48px] items-center rounded-lg bg-brand-600 px-6 py-3 text-base font-semibold text-white shadow-sm hover:bg-brand-700 focus:outline-none focus:ring-2 focus:ring-brand-500 focus:ring-offset-2 transition-colors"
+            <Button
+              type="button"
+              size="lg"
+              loading={isStarting}
+              onClick={handleStart}
             >
               {t('assessment.start')}
-            </Link>
+            </Button>
             <Link
               href="/profile"
               className="inline-flex min-h-[48px] items-center rounded-lg border border-gray-300 bg-white px-6 py-3 text-base font-medium text-gray-700 hover:bg-gray-50 focus:outline-none focus:ring-2 focus:ring-brand-500 focus:ring-offset-2 transition-colors"

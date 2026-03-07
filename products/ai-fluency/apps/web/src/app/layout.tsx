@@ -1,6 +1,7 @@
 import type { Metadata } from 'next';
 import { SkipNav } from '@/components/layout/SkipNav';
 import { Header } from '@/components/layout/Header';
+import { AuthProvider } from '@/context/AuthContext';
 import '@/styles/globals.css';
 
 export const metadata: Metadata = {
@@ -23,11 +24,13 @@ export default function RootLayout({
   return (
     <html lang="en">
       <body className="min-h-screen bg-gray-50">
-        <SkipNav />
-        <Header />
-        <main id="main-content" tabIndex={-1} className="focus:outline-none">
-          {children}
-        </main>
+        <AuthProvider>
+          <SkipNav />
+          <Header />
+          <main id="main-content" tabIndex={-1} className="focus:outline-none">
+            {children}
+          </main>
+        </AuthProvider>
       </body>
     </html>
   );

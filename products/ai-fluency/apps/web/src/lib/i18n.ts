@@ -77,6 +77,10 @@ const translations: Record<string, string> = {
   'profile.dimensions.practical': 'Practical',
   'profile.dimensions.critical': 'Critical Thinking',
   'profile.dimensions.collaborative': 'Collaborative',
+  'profile.dimensions.DELEGATION': 'Delegation',
+  'profile.dimensions.DESCRIPTION': 'Description',
+  'profile.dimensions.DISCERNMENT': 'Discernment',
+  'profile.dimensions.DILIGENCE': 'Diligence',
   'profile.no_assessment': 'No assessment completed yet.',
   'profile.take_assessment': 'Take your first assessment',
 
