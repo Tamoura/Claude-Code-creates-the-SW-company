@@ -104,9 +104,9 @@ export class AssessmentService {
     };
   }
 
-  async getSession(sessionId: string, userId: string) {
+  async getSession(sessionId: string, userId: string, orgId?: string) {
     const session = await this.prisma.assessmentSession.findFirst({
-      where: { id: sessionId, userId, deletedAt: null },
+      where: { id: sessionId, userId, ...(orgId ? { orgId } : {}), deletedAt: null },
       include: {
         responses: {
           select: { questionId: true, answer: true },
@@ -331,9 +331,9 @@ export class AssessmentService {
     };
   }
 
-  async getResults(sessionId: string, userId: string) {
+  async getResults(sessionId: string, userId: string, orgId?: string) {
     const profile = await this.prisma.fluencyProfile.findFirst({
-      where: { sessionId, userId },
+      where: { sessionId, userId, ...(orgId ? { orgId } : {}) },
     });
 
     if (!profile) {
