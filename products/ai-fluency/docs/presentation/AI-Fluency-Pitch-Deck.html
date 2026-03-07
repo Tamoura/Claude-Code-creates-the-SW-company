@@ -1,0 +1,848 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
+<title>AI Fluency — Investor Pitch Deck</title>
+<style>
+  @page { size: A4 landscape; margin: 0; }
+  * { margin: 0; padding: 0; box-sizing: border-box; }
+  body { font-family: 'Segoe UI', system-ui, -apple-system, sans-serif; background: #f0f0f0; }
+
+  :root {
+    --navy: #0a2240;
+    --navy-light: #132d4f;
+    --gold: #c9a227;
+    --teal: #0e7490;
+    --green: #15803d;
+    --red: #dc2626;
+    --purple: #7950f2;
+    --purple-light: #9775fa;
+    --gray-50: #f8f9fa;
+    --gray-100: #f1f3f5;
+    --gray-200: #e9ecef;
+    --gray-600: #868e96;
+    --gray-700: #495057;
+    --gray-800: #343a40;
+    --gray-900: #212529;
+  }
+
+  .slide {
+    width: 297mm; height: 210mm;
+    page-break-after: always; page-break-inside: avoid;
+    overflow: hidden; position: relative;
+    background: #fff; margin: 10px auto;
+    box-shadow: 0 4px 20px rgba(0,0,0,0.15);
+  }
+  .slide:last-child { page-break-after: avoid; }
+
+  @media print {
+    body { background: #fff; }
+    .slide { box-shadow: none; margin: 0; }
+  }
+
+  /* --- Layouts --- */
+  .slide-cover { background: linear-gradient(135deg, var(--navy) 0%, #1a3a5c 50%, var(--purple) 100%); color: #fff; display: flex; flex-direction: column; justify-content: center; align-items: center; text-align: center; }
+  .slide-cover h1 { font-size: 52px; font-weight: 800; letter-spacing: -1px; margin-bottom: 8px; }
+  .slide-cover .subtitle { font-size: 22px; color: var(--gold); font-weight: 600; margin-bottom: 32px; }
+  .slide-cover .tagline { font-size: 18px; opacity: 0.85; max-width: 700px; line-height: 1.5; }
+  .slide-cover .meta { position: absolute; bottom: 30px; font-size: 13px; opacity: 0.6; }
+
+  .slide-inner { padding: 36px 48px 30px; display: flex; flex-direction: column; height: 100%; }
+  .slide-title { font-size: 28px; font-weight: 700; color: var(--navy); margin-bottom: 4px; }
+  .slide-subtitle { font-size: 14px; color: var(--gray-600); margin-bottom: 20px; }
+  .slide-body { flex: 1; display: flex; flex-direction: column; }
+
+  .two-col { display: grid; grid-template-columns: 1fr 1fr; gap: 32px; flex: 1; }
+  .three-col { display: grid; grid-template-columns: 1fr 1fr 1fr; gap: 20px; flex: 1; }
+  .four-col { display: grid; grid-template-columns: 1fr 1fr 1fr 1fr; gap: 16px; flex: 1; }
+
+  /* --- Cards --- */
+  .card { background: var(--gray-50); border-radius: 12px; padding: 20px; border: 1px solid var(--gray-200); }
+  .card-purple { background: linear-gradient(135deg, #f3f0ff 0%, #e5dbff 100%); border-color: #d0bfff; }
+  .card-teal { background: linear-gradient(135deg, #e6fcf5 0%, #c3fae8 100%); border-color: #96f2d7; }
+  .card-gold { background: linear-gradient(135deg, #fff9db 0%, #fff3bf 100%); border-color: #ffe066; }
+  .card-navy { background: linear-gradient(135deg, #e7f5ff 0%, #d0ebff 100%); border-color: #a5d8ff; }
+  .card-red { background: linear-gradient(135deg, #fff5f5 0%, #ffe3e3 100%); border-color: #ffc9c9; }
+
+  .card h3 { font-size: 16px; font-weight: 700; color: var(--navy); margin-bottom: 8px; }
+  .card p, .card li { font-size: 13px; color: var(--gray-700); line-height: 1.5; }
+  .card ul { padding-left: 16px; }
+  .card li { margin-bottom: 4px; }
+
+  /* --- Stats --- */
+  .stat { text-align: center; padding: 16px 8px; }
+  .stat .value { font-size: 40px; font-weight: 800; color: var(--purple); line-height: 1; }
+  .stat .label { font-size: 12px; color: var(--gray-600); margin-top: 6px; font-weight: 500; }
+  .stat-row { display: flex; justify-content: space-around; }
+
+  /* --- Table --- */
+  .deck-table { width: 100%; border-collapse: collapse; font-size: 13px; }
+  .deck-table th { background: var(--navy); color: #fff; padding: 8px 12px; text-align: left; font-weight: 600; }
+  .deck-table td { padding: 8px 12px; border-bottom: 1px solid var(--gray-200); color: var(--gray-700); }
+  .deck-table tr:nth-child(even) { background: var(--gray-50); }
+  .check { color: var(--green); font-weight: 700; }
+  .cross { color: var(--red); font-weight: 700; }
+
+  /* --- Dimension badge --- */
+  .dim-badge { display: inline-block; padding: 4px 12px; border-radius: 20px; font-size: 12px; font-weight: 700; color: #fff; margin-right: 6px; }
+  .dim-delegation { background: #4263eb; }
+  .dim-description { background: #ae3ec9; }
+  .dim-discernment { background: #e8590c; }
+  .dim-diligence { background: var(--green); }
+
+  /* --- Timeline --- */
+  .timeline { display: flex; align-items: flex-start; gap: 0; flex: 1; padding-top: 12px; }
+  .timeline-item { flex: 1; text-align: center; position: relative; }
+  .timeline-item::before { content: ''; position: absolute; top: 18px; left: 0; right: 0; height: 3px; background: var(--gray-200); z-index: 0; }
+  .timeline-item:first-child::before { left: 50%; }
+  .timeline-item:last-child::before { right: 50%; }
+  .timeline-dot { width: 36px; height: 36px; border-radius: 50%; background: var(--purple); color: #fff; display: flex; align-items: center; justify-content: center; font-weight: 700; font-size: 14px; margin: 0 auto 8px; position: relative; z-index: 1; }
+  .timeline-label { font-size: 13px; font-weight: 700; color: var(--navy); }
+  .timeline-desc { font-size: 11px; color: var(--gray-600); margin-top: 4px; line-height: 1.4; padding: 0 8px; }
+
+  /* --- Flow --- */
+  .flow { display: flex; align-items: center; justify-content: center; gap: 8px; margin: 12px 0; }
+  .flow-step { background: var(--purple); color: #fff; padding: 10px 16px; border-radius: 8px; font-size: 13px; font-weight: 600; text-align: center; min-width: 100px; }
+  .flow-arrow { font-size: 20px; color: var(--gray-600); }
+
+  /* --- Misc --- */
+  .highlight { color: var(--purple); font-weight: 700; }
+  .highlight-gold { color: #b8860b; font-weight: 700; }
+  .small { font-size: 11px; color: var(--gray-600); }
+  .page-num { position: absolute; bottom: 12px; right: 24px; font-size: 11px; color: var(--gray-600); }
+  .logo-text { position: absolute; bottom: 12px; left: 24px; font-size: 11px; color: var(--gray-600); font-weight: 600; }
+
+  .icon-circle { width: 48px; height: 48px; border-radius: 50%; display: flex; align-items: center; justify-content: center; font-size: 22px; margin-bottom: 8px; }
+  .icon-purple { background: #e5dbff; }
+  .icon-teal { background: #c3fae8; }
+  .icon-gold { background: #fff3bf; }
+  .icon-navy { background: #d0ebff; }
+
+  .bar-chart { display: flex; align-items: flex-end; gap: 12px; height: 140px; padding-top: 10px; }
+  .bar { display: flex; flex-direction: column; align-items: center; flex: 1; }
+  .bar-fill { width: 100%; border-radius: 6px 6px 0 0; transition: height 0.3s; }
+  .bar-label { font-size: 10px; color: var(--gray-600); margin-top: 4px; text-align: center; }
+  .bar-value { font-size: 11px; font-weight: 700; color: var(--navy); margin-bottom: 2px; }
+
+  .cta-box { background: linear-gradient(135deg, var(--navy) 0%, var(--purple) 100%); color: #fff; border-radius: 16px; padding: 32px; text-align: center; }
+  .cta-box h2 { font-size: 32px; margin-bottom: 12px; }
+  .cta-box p { font-size: 16px; opacity: 0.9; }
+</style>
+</head>
+<body>
+
+<!-- ============ SLIDE 1: COVER ============ -->
+<div class="slide slide-cover">
+  <div style="font-size: 14px; letter-spacing: 3px; text-transform: uppercase; opacity: 0.7; margin-bottom: 24px;">ConnectSW presents</div>
+  <h1>AI Fluency</h1>
+  <div class="subtitle">The Enterprise AI Readiness Platform</div>
+  <div class="tagline">Measure, develop, and certify workforce AI competency using Anthropic's empirically-validated 4D Framework &mdash; the only assessment built on 9,830+ real AI conversations.</div>
+  <div class="meta">Confidential &bull; March 2026 &bull; Seed Round</div>
+</div>
+
+<!-- ============ SLIDE 2: THE PROBLEM ============ -->
+<div class="slide">
+  <div class="slide-inner">
+    <div class="slide-title">The Problem</div>
+    <div class="slide-subtitle">A $2.52 trillion market with no measurement standard</div>
+    <div class="slide-body">
+      <div class="stat-row" style="margin-bottom: 24px;">
+        <div class="stat">
+          <div class="value">94%</div>
+          <div class="label">of companies have NOT started<br>AI upskilling programs (PwC)</div>
+        </div>
+        <div class="stat">
+          <div class="value">56%</div>
+          <div class="label">wage premium for workers<br>with AI skills (PwC)</div>
+        </div>
+        <div class="stat">
+          <div class="value">44%</div>
+          <div class="label">YoY growth in AI<br>training market</div>
+        </div>
+        <div class="stat">
+          <div class="value">2/3</div>
+          <div class="label">of leaders report a data<br>or AI skills gap (DataCamp)</div>
+        </div>
+      </div>
+      <div class="two-col">
+        <div class="card card-red">
+          <h3>Today: Broken AI Training</h3>
+          <div class="flow" style="flex-wrap: wrap; gap: 6px;">
+            <div class="flow-step" style="background: var(--red);">Assign generic courses</div>
+            <div class="flow-arrow">&rarr;</div>
+            <div class="flow-step" style="background: var(--red);">Watch videos</div>
+            <div class="flow-arrow">&rarr;</div>
+            <div class="flow-step" style="background: var(--red);">Get certificate</div>
+            <div class="flow-arrow">&rarr;</div>
+            <div class="flow-step" style="background: #991b1b;">No behavioral measurement</div>
+          </div>
+          <p style="margin-top: 12px;"><strong>Result:</strong> L&D cannot prove ROI. Budget gets cut. Cycle repeats.</p>
+        </div>
+        <div class="card" style="border-left: 4px solid var(--navy);">
+          <h3>Three Systemic Failures</h3>
+          <ul>
+            <li><strong>No standardized measurement</strong> &mdash; generic quizzes and course completions don't measure behavioral fluency</li>
+            <li><strong>No validated framework</strong> &mdash; existing tools test AI knowledge, not competency</li>
+            <li><strong>No personalized remediation</strong> &mdash; generic training wastes budget; L&D teams can't demonstrate pre/post ROI</li>
+          </ul>
+        </div>
+      </div>
+    </div>
+    <span class="logo-text">AI Fluency &bull; ConnectSW</span>
+    <span class="page-num">2</span>
+  </div>
+</div>
+
+<!-- ============ SLIDE 3: MARKET OPPORTUNITY ============ -->
+<div class="slide">
+  <div class="slide-inner">
+    <div class="slide-title">Market Opportunity</div>
+    <div class="slide-subtitle">Three converging forces create a blue-ocean window</div>
+    <div class="slide-body">
+      <div class="three-col" style="margin-bottom: 20px;">
+        <div class="card card-purple" style="text-align: center;">
+          <div class="icon-circle icon-purple" style="margin: 0 auto 8px;">&#x1F9E0;</div>
+          <h3>Anthropic's 4D Framework</h3>
+          <p>Published Feb 23, 2026. Empirical data from 9,830 conversations. 24 behavioral indicators. <strong>No one else builds on it.</strong></p>
+        </div>
+        <div class="card card-navy" style="text-align: center;">
+          <div class="icon-circle icon-navy" style="margin: 0 auto 8px;">&#x1F3DB;</div>
+          <h3>DOL AI Literacy Mandate</h3>
+          <p>US Dept of Labor framework (Feb 13, 2026). 5 content areas + 7 delivery principles. <strong>Enterprises must comply.</strong></p>
+        </div>
+        <div class="card card-teal" style="text-align: center;">
+          <div class="icon-circle icon-teal" style="margin: 0 auto 8px;">&#x1F4C8;</div>
+          <h3>Explosive Market Growth</h3>
+          <p>Enterprise AI platform market: <strong>$14.8B &rarr; $50.3B</strong> by 2030 (27.7% CAGR). Skills assessment sub-segment: <strong>$15&ndash;20B</strong>.</p>
+        </div>
+      </div>
+      <div class="card" style="background: linear-gradient(90deg, #f3f0ff 0%, #e7f5ff 50%, #e6fcf5 100%); text-align: center; padding: 16px;">
+        <h3 style="font-size: 18px; margin-bottom: 6px;">Blue-Ocean Intersection</h3>
+        <p style="font-size: 14px;">Validated Assessment Framework + Behavioral Measurement + Personalized Remediation + Enterprise Analytics + DOL Alignment = <span class="highlight">unoccupied by any competitor</span></p>
+      </div>
+      <div style="margin-top: 16px;">
+        <div class="bar-chart">
+          <div class="bar"><div class="bar-value">$14.8B</div><div class="bar-fill" style="height: 40px; background: var(--purple);"></div><div class="bar-label">2025</div></div>
+          <div class="bar"><div class="bar-value">$19.0B</div><div class="bar-fill" style="height: 55px; background: var(--purple);"></div><div class="bar-label">2026</div></div>
+          <div class="bar"><div class="bar-value">$24.3B</div><div class="bar-fill" style="height: 70px; background: var(--purple);"></div><div class="bar-label">2027</div></div>
+          <div class="bar"><div class="bar-value">$31.0B</div><div class="bar-fill" style="height: 88px; background: var(--purple);"></div><div class="bar-label">2028</div></div>
+          <div class="bar"><div class="bar-value">$39.6B</div><div class="bar-fill" style="height: 108px; background: var(--purple);"></div><div class="bar-label">2029</div></div>
+          <div class="bar"><div class="bar-value">$50.3B</div><div class="bar-fill" style="height: 130px; background: var(--purple);"></div><div class="bar-label">2030</div></div>
+        </div>
+        <p class="small" style="text-align: center; margin-top: 4px;">Enterprise AI Platform Market (Verdantix) &bull; 27.7% CAGR</p>
+      </div>
+    </div>
+    <span class="logo-text">AI Fluency &bull; ConnectSW</span>
+    <span class="page-num">3</span>
+  </div>
+</div>
+
+<!-- ============ SLIDE 4: THE SOLUTION ============ -->
+<div class="slide">
+  <div class="slide-inner">
+    <div class="slide-title">The Solution</div>
+    <div class="slide-subtitle">AI Fluency: Measure what matters &mdash; behavioral competency, not quiz scores</div>
+    <div class="slide-body">
+      <div class="flow" style="margin-bottom: 20px;">
+        <div class="flow-step">Learner takes<br>4D Assessment<br><span style="font-size:11px; opacity:0.8;">25 min, 32 questions</span></div>
+        <div class="flow-arrow">&rarr;</div>
+        <div class="flow-step">Scored across<br>24 behavioral<br>indicators</div>
+        <div class="flow-arrow">&rarr;</div>
+        <div class="flow-step">Personalized<br>learning path<br><span style="font-size:11px; opacity:0.8;">weakest first</span></div>
+        <div class="flow-arrow">&rarr;</div>
+        <div class="flow-step">Reassessment<br>shows measurable<br>improvement</div>
+        <div class="flow-arrow">&rarr;</div>
+        <div class="flow-step" style="background: var(--green);">L&D proves<br>ROI with data</div>
+      </div>
+      <div class="four-col">
+        <div class="card card-purple">
+          <div style="margin-bottom: 6px;"><span class="dim-badge dim-delegation">D1</span></div>
+          <h3>Delegation</h3>
+          <p>Knowing <em>when</em> and <em>what</em> to delegate to AI. 7 indicators covering task decomposition, human judgment retention, and iterative refinement.</p>
+          <p class="small" style="margin-top: 6px;">67% prevalence in conversations</p>
+        </div>
+        <div class="card card-purple">
+          <div style="margin-bottom: 6px;"><span class="dim-badge dim-description">D2</span></div>
+          <h3>Description</h3>
+          <p>Crafting effective prompts and instructions. 6 indicators: context provision, constraint specification, format direction, example usage.</p>
+          <p class="small" style="margin-top: 6px;">Observable in real prompts</p>
+        </div>
+        <div class="card card-gold">
+          <div style="margin-bottom: 6px;"><span class="dim-badge dim-discernment">D3</span></div>
+          <h3>Discernment</h3>
+          <p>Evaluating AI outputs critically. 6 indicators: output verification, bias detection, hallucination awareness, quality assessment.</p>
+          <p class="small" style="margin-top: 6px;">Largest gap: 49% overconfidence</p>
+        </div>
+        <div class="card card-teal">
+          <div style="margin-bottom: 6px;"><span class="dim-badge dim-diligence">D4</span></div>
+          <h3>Diligence</h3>
+          <p>Responsible and ethical AI use. 5 indicators: attribution, privacy, transparency, continuous learning, ethical boundaries.</p>
+          <p class="small" style="margin-top: 6px;">Regulatory compliance driver</p>
+        </div>
+      </div>
+    </div>
+    <span class="logo-text">AI Fluency &bull; ConnectSW</span>
+    <span class="page-num">4</span>
+  </div>
+</div>
+
+<!-- ============ SLIDE 5: PRODUCT FEATURES ============ -->
+<div class="slide">
+  <div class="slide-inner">
+    <div class="slide-title">Product Features</div>
+    <div class="slide-subtitle">Enterprise-grade assessment platform with 6 core capabilities</div>
+    <div class="slide-body">
+      <div class="three-col">
+        <div class="card card-purple">
+          <h3>4D Behavioral Assessment</h3>
+          <ul>
+            <li>32 scenario-based questions</li>
+            <li>24 behavioral indicators scored</li>
+            <li>Prevalence-weighted algorithm</li>
+            <li>11 observable + 13 unobservable</li>
+            <li>25-minute completion time</li>
+            <li>Resume mid-assessment</li>
+          </ul>
+        </div>
+        <div class="card card-teal">
+          <h3>Personalized Learning Paths</h3>
+          <ul>
+            <li>Weakest-dimension-first ordering</li>
+            <li>Interactive exercises per indicator</li>
+            <li>Discernment gap training module</li>
+            <li>Progress tracking per dimension</li>
+            <li>Recommended resources</li>
+            <li>Retake with improvement tracking</li>
+          </ul>
+        </div>
+        <div class="card card-gold">
+          <h3>Role-Specific Templates</h3>
+          <ul>
+            <li>6+ role templates included</li>
+            <li>Custom role configuration</li>
+            <li>Industry-specific scenarios</li>
+            <li>Difficulty calibration</li>
+            <li>Three interaction modes</li>
+            <li>Automation/Augmentation/Agency</li>
+          </ul>
+        </div>
+        <div class="card card-navy">
+          <h3>Organizational Dashboard</h3>
+          <ul>
+            <li>Aggregate fluency scores</li>
+            <li>Department-level breakdown</li>
+            <li>Trend analysis over time</li>
+            <li>ROI metrics and reporting</li>
+            <li>Exportable quarterly reports</li>
+            <li>Industry benchmarking</li>
+          </ul>
+        </div>
+        <div class="card" style="border-left: 4px solid var(--purple);">
+          <h3>Enterprise Integration</h3>
+          <ul>
+            <li>SAML/OIDC SSO (Azure AD, Okta)</li>
+            <li>LTI 1.3 for Canvas, Moodle, Blackboard</li>
+            <li>SCORM export for existing LMS</li>
+            <li>REST API for custom integrations</li>
+            <li>Webhook notifications</li>
+            <li>Multi-tenant data isolation (RLS)</li>
+          </ul>
+        </div>
+        <div class="card" style="border-left: 4px solid var(--green);">
+          <h3>Certification & Compliance</h3>
+          <ul>
+            <li>Digital credentials (badges)</li>
+            <li>Verifiable certificates</li>
+            <li>DOL AI Literacy alignment</li>
+            <li>GDPR/CCPA compliant</li>
+            <li>Configurable data retention</li>
+            <li>Audit trail for compliance</li>
+          </ul>
+        </div>
+      </div>
+    </div>
+    <span class="logo-text">AI Fluency &bull; ConnectSW</span>
+    <span class="page-num">5</span>
+  </div>
+</div>
+
+<!-- ============ SLIDE 6: COMPETITIVE LANDSCAPE ============ -->
+<div class="slide">
+  <div class="slide-inner">
+    <div class="slide-title">Competitive Landscape</div>
+    <div class="slide-subtitle">First platform to implement Anthropic's validated 4D framework for enterprise assessment</div>
+    <div class="slide-body" style="justify-content: center;">
+      <table class="deck-table">
+        <thead>
+          <tr>
+            <th style="width: 22%;">Capability</th>
+            <th style="background: var(--purple); width: 18%;">AI Fluency (Ours)</th>
+            <th>iMocha</th>
+            <th>DataCamp</th>
+            <th>Udemy Business</th>
+            <th>Anthropic Academy</th>
+          </tr>
+        </thead>
+        <tbody>
+          <tr><td><strong>4D Framework Assessment</strong></td><td class="check">CORE</td><td class="cross">No</td><td class="cross">No</td><td class="cross">No</td><td class="cross">No</td></tr>
+          <tr><td><strong>24 Behavioral Indicators</strong></td><td class="check">All 24</td><td class="cross">No</td><td class="cross">No</td><td class="cross">No</td><td>Teaches concepts</td></tr>
+          <tr><td><strong>Prevalence-Weighted Scoring</strong></td><td class="check">Yes</td><td class="cross">No</td><td class="cross">No</td><td class="cross">No</td><td class="cross">No</td></tr>
+          <tr><td><strong>Personalized Learning Paths</strong></td><td class="check">Per dimension</td><td class="cross">No</td><td>Partial (data)</td><td class="cross">No</td><td class="cross">No</td></tr>
+          <tr><td><strong>Discernment Gap Detection</strong></td><td class="check">Targeted</td><td class="cross">No</td><td class="cross">No</td><td class="cross">No</td><td>Mentions concept</td></tr>
+          <tr><td><strong>Role-Specific Templates</strong></td><td class="check">6+ roles</td><td>Generic</td><td>Data roles</td><td class="cross">No</td><td class="cross">No</td></tr>
+          <tr><td><strong>Organizational Dashboard</strong></td><td class="check">Yes</td><td class="check">Yes</td><td class="check">Yes</td><td>Basic</td><td class="cross">No</td></tr>
+          <tr><td><strong>Enterprise SSO</strong></td><td class="check">Yes</td><td class="check">Yes</td><td class="check">Yes</td><td class="check">Yes</td><td class="cross">No</td></tr>
+          <tr><td><strong>LMS Integration (LTI)</strong></td><td class="check">Yes</td><td class="check">Yes</td><td class="check">Yes</td><td class="check">Yes</td><td class="cross">No</td></tr>
+          <tr><td><strong>Longitudinal Tracking</strong></td><td class="check">Yes</td><td>Partial</td><td class="check">Yes</td><td>Completion only</td><td class="cross">No</td></tr>
+        </tbody>
+      </table>
+      <div class="card" style="margin-top: 16px; text-align: center; padding: 12px; background: linear-gradient(90deg, #f3f0ff, #e5dbff);">
+        <p style="font-size: 14px;"><strong>Key Insight:</strong> Anthropic Academy creates framework <em>awareness</em> (demand generation) but provides <strong>no assessment tooling</strong>. We fill the measurement gap they create.</p>
+      </div>
+    </div>
+    <span class="logo-text">AI Fluency &bull; ConnectSW</span>
+    <span class="page-num">6</span>
+  </div>
+</div>
+
+<!-- ============ SLIDE 7: TARGET CUSTOMERS ============ -->
+<div class="slide">
+  <div class="slide-inner">
+    <div class="slide-title">Target Customers</div>
+    <div class="slide-subtitle">Three segments, six personas, clear willingness to pay</div>
+    <div class="slide-body">
+      <div class="three-col" style="margin-bottom: 16px;">
+        <div class="card card-purple">
+          <h3 style="font-size: 14px; text-transform: uppercase; letter-spacing: 1px; color: var(--purple);">Primary: Enterprise L&D</h3>
+          <p style="font-size: 26px; font-weight: 800; color: var(--navy); margin: 8px 0;">~5,000 orgs</p>
+          <p>Fortune 5000 with 500+ employees</p>
+          <p style="margin-top: 6px;"><strong>ACV:</strong> $50&ndash;200K/year</p>
+          <p style="margin-top: 6px; font-size: 12px;"><em>"I need to prove AI training ROI to leadership with measurable behavioral data."</em></p>
+        </div>
+        <div class="card card-navy">
+          <h3 style="font-size: 14px; text-transform: uppercase; letter-spacing: 1px; color: var(--teal);">Secondary: Higher Education</h3>
+          <p style="font-size: 26px; font-weight: 800; color: var(--navy); margin: 8px 0;">~4,000 inst.</p>
+          <p>Universities integrating AI fluency</p>
+          <p style="margin-top: 6px;"><strong>ACV:</strong> $10&ndash;50K/year</p>
+          <p style="margin-top: 6px; font-size: 12px;"><em>"I need validated assessments that flow into Canvas grades via LTI."</em></p>
+        </div>
+        <div class="card card-teal">
+          <h3 style="font-size: 14px; text-transform: uppercase; letter-spacing: 1px; color: var(--green);">Tertiary: Government</h3>
+          <p style="font-size: 26px; font-weight: 800; color: var(--navy); margin: 8px 0;">~2,000 agencies</p>
+          <p>DOL framework compliance</p>
+          <p style="margin-top: 6px;"><strong>ACV:</strong> $25&ndash;100K/year</p>
+          <p style="margin-top: 6px; font-size: 12px;"><em>"We must align with DOL AI Literacy Framework requirements."</em></p>
+        </div>
+      </div>
+      <div class="two-col">
+        <div class="card">
+          <h3>Key Buyer Personas</h3>
+          <table class="deck-table" style="font-size: 12px;">
+            <tr><td><strong>Lisa</strong> &mdash; L&D Manager</td><td>Recommends tools, needs ROI proof</td></tr>
+            <tr><td><strong>David</strong> &mdash; VP/CTO/CLO</td><td>Approves budget, views dashboards</td></tr>
+            <tr><td><strong>Raj</strong> &mdash; IT Administrator</td><td>Can block on security; needs SSO/RLS</td></tr>
+            <tr><td><strong>Prof. Sarah</strong> &mdash; Instructor</td><td>Course-level adoption, LTI required</td></tr>
+          </table>
+        </div>
+        <div class="card card-gold">
+          <h3>Why They Buy</h3>
+          <ul>
+            <li>Organizations investing 1&ndash;4% of payroll in AI training see <strong>40&ndash;120%</strong> productivity improvement</li>
+            <li>When employers provide AI training, adoption jumps from <strong>25% &rarr; 76%</strong></li>
+            <li>AI-literate orgs are <strong>2x more likely</strong> to see significant AI ROI</li>
+          </ul>
+        </div>
+      </div>
+    </div>
+    <span class="logo-text">AI Fluency &bull; ConnectSW</span>
+    <span class="page-num">7</span>
+  </div>
+</div>
+
+<!-- ============ SLIDE 8: BUSINESS MODEL ============ -->
+<div class="slide">
+  <div class="slide-inner">
+    <div class="slide-title">Business Model</div>
+    <div class="slide-subtitle">SaaS subscription with enterprise and education tiers</div>
+    <div class="slide-body">
+      <div class="three-col" style="margin-bottom: 20px;">
+        <div class="card" style="text-align: center; border-top: 4px solid var(--gray-600);">
+          <h3 style="font-size: 14px; text-transform: uppercase; letter-spacing: 1px;">Starter</h3>
+          <p style="font-size: 32px; font-weight: 800; color: var(--navy); margin: 8px 0;">Free</p>
+          <p class="small">Individual learners</p>
+          <ul style="text-align: left; margin-top: 12px;">
+            <li>1 assessment per quarter</li>
+            <li>Basic fluency profile</li>
+            <li>Limited learning resources</li>
+            <li>No organizational features</li>
+          </ul>
+          <p style="margin-top: 12px; font-size: 12px; color: var(--purple);"><strong>Purpose:</strong> Top-of-funnel &amp; demand generation</p>
+        </div>
+        <div class="card card-purple" style="text-align: center; border-top: 4px solid var(--purple);">
+          <h3 style="font-size: 14px; text-transform: uppercase; letter-spacing: 1px; color: var(--purple);">Enterprise</h3>
+          <p style="font-size: 32px; font-weight: 800; color: var(--purple); margin: 8px 0;">$50&ndash;200K</p>
+          <p class="small">Per year &bull; 500+ seats</p>
+          <ul style="text-align: left; margin-top: 12px;">
+            <li>Unlimited assessments</li>
+            <li>Org dashboard &amp; analytics</li>
+            <li>Role-specific templates</li>
+            <li>SSO + LMS integration</li>
+            <li>Dedicated success manager</li>
+            <li>DOL compliance reporting</li>
+          </ul>
+        </div>
+        <div class="card card-navy" style="text-align: center; border-top: 4px solid var(--teal);">
+          <h3 style="font-size: 14px; text-transform: uppercase; letter-spacing: 1px; color: var(--teal);">Education</h3>
+          <p style="font-size: 32px; font-weight: 800; color: var(--teal); margin: 8px 0;">$10&ndash;50K</p>
+          <p class="small">Per year &bull; Per institution</p>
+          <ul style="text-align: left; margin-top: 12px;">
+            <li>LTI 1.3 integration</li>
+            <li>Class-level analytics</li>
+            <li>Grade passback to LMS</li>
+            <li>Academic pricing</li>
+            <li>Instructor dashboard</li>
+            <li>SCORM export</li>
+          </ul>
+        </div>
+      </div>
+      <div class="two-col">
+        <div class="card">
+          <h3>Revenue Projections</h3>
+          <table class="deck-table" style="font-size: 12px;">
+            <tr><td><strong>Year 1</strong></td><td>20 enterprise customers</td><td class="highlight">$500K ARR</td></tr>
+            <tr><td><strong>Year 2</strong></td><td>60 enterprise + 40 education</td><td class="highlight">$2M ARR</td></tr>
+            <tr><td><strong>Year 3</strong></td><td>150 enterprise + 100 education + gov</td><td class="highlight">$5M ARR</td></tr>
+          </table>
+        </div>
+        <div class="card">
+          <h3>Unit Economics (Target)</h3>
+          <table class="deck-table" style="font-size: 12px;">
+            <tr><td>Average ACV (Enterprise)</td><td class="highlight">$25K</td></tr>
+            <tr><td>Gross Margin</td><td class="highlight">80%+</td></tr>
+            <tr><td>CAC Payback</td><td class="highlight">&lt; 12 months</td></tr>
+            <tr><td>Net Revenue Retention</td><td class="highlight">120%+ target</td></tr>
+          </table>
+        </div>
+      </div>
+    </div>
+    <span class="logo-text">AI Fluency &bull; ConnectSW</span>
+    <span class="page-num">8</span>
+  </div>
+</div>
+
+<!-- ============ SLIDE 9: GO-TO-MARKET ============ -->
+<div class="slide">
+  <div class="slide-inner">
+    <div class="slide-title">Go-to-Market Strategy</div>
+    <div class="slide-subtitle">Framework-led demand generation with enterprise sales motion</div>
+    <div class="slide-body">
+      <div class="two-col" style="margin-bottom: 16px;">
+        <div class="card card-purple">
+          <h3>Demand Generation (PLG)</h3>
+          <ul>
+            <li><strong>Free individual assessments</strong> &mdash; virality through shareable fluency profiles</li>
+            <li><strong>Content marketing</strong> &mdash; whitepapers on 4D framework, DOL alignment guides</li>
+            <li><strong>Anthropic ecosystem</strong> &mdash; complementary positioning alongside Anthropic Academy</li>
+            <li><strong>Conference speaking</strong> &mdash; ATD, SHRM, EDUCAUSE (L&D + EdTech)</li>
+            <li><strong>SEO/thought leadership</strong> &mdash; "AI fluency assessment" keywords</li>
+          </ul>
+        </div>
+        <div class="card card-navy">
+          <h3>Enterprise Sales Motion</h3>
+          <ul>
+            <li><strong>Free pilot program</strong> &mdash; 30-day trial for 50 seats, frictionless conversion</li>
+            <li><strong>Champion-led sale</strong> &mdash; L&D manager (Lisa) recommends to VP (David)</li>
+            <li><strong>ROI-driven close</strong> &mdash; pre/post assessment data proves training impact</li>
+            <li><strong>Land &amp; expand</strong> &mdash; start with one department, expand org-wide</li>
+            <li><strong>Channel partnerships</strong> &mdash; consulting firms (Deloitte, Accenture, McKinsey)</li>
+          </ul>
+        </div>
+      </div>
+      <div class="card" style="border-left: 4px solid var(--gold);">
+        <h3>Strategic Moat</h3>
+        <div class="three-col" style="gap: 16px;">
+          <div>
+            <p><strong>Framework Lock-in</strong></p>
+            <p class="small">First to productize the 4D framework. Assessment data creates switching costs as orgs build longitudinal baselines.</p>
+          </div>
+          <div>
+            <p><strong>Network Effects</strong></p>
+            <p class="small">More assessments = better benchmarking data. Industry norms become proprietary assets. Organizations want comparative data.</p>
+          </div>
+          <div>
+            <p><strong>DOL Compliance</strong></p>
+            <p class="small">Federal mandate creates non-discretionary buying. Government procurement cycles create durable revenue once won.</p>
+          </div>
+        </div>
+      </div>
+    </div>
+    <span class="logo-text">AI Fluency &bull; ConnectSW</span>
+    <span class="page-num">9</span>
+  </div>
+</div>
+
+<!-- ============ SLIDE 10: TECHNOLOGY ============ -->
+<div class="slide">
+  <div class="slide-inner">
+    <div class="slide-title">Technology Architecture</div>
+    <div class="slide-subtitle">Enterprise-grade SaaS built on proven stack with security-first design</div>
+    <div class="slide-body">
+      <div class="two-col">
+        <div>
+          <div class="card card-navy" style="margin-bottom: 16px;">
+            <h3>Tech Stack</h3>
+            <table class="deck-table" style="font-size: 12px;">
+              <tr><td><strong>Frontend</strong></td><td>Next.js 14 + React 18 + Tailwind CSS</td></tr>
+              <tr><td><strong>Backend</strong></td><td>Fastify + TypeScript + Prisma ORM</td></tr>
+              <tr><td><strong>Database</strong></td><td>PostgreSQL 15 with Row-Level Security</td></tr>
+              <tr><td><strong>Cache</strong></td><td>Redis (sessions, leaderboards)</td></tr>
+              <tr><td><strong>Auth</strong></td><td>JWT + SAML/OIDC SSO</td></tr>
+              <tr><td><strong>CI/CD</strong></td><td>GitHub Actions + Docker</td></tr>
+              <tr><td><strong>Hosting</strong></td><td>Cloud-native (AWS/GCP)</td></tr>
+            </table>
+          </div>
+          <div class="card card-teal">
+            <h3>Scoring Algorithm</h3>
+            <p>Prevalence-weighted scoring derived from Anthropic's 9,830-conversation dataset. Each behavioral indicator has empirical prevalence rates that weight its contribution to dimension scores.</p>
+            <p style="margin-top: 6px;"><strong>Key innovation:</strong> Discernment gap detection identifies where users <em>think</em> they're proficient but behavioral data says otherwise.</p>
+          </div>
+        </div>
+        <div>
+          <div class="card card-purple" style="margin-bottom: 16px;">
+            <h3>Security &amp; Compliance</h3>
+            <ul>
+              <li><strong>Multi-tenant isolation</strong> via PostgreSQL Row-Level Security &mdash; data physically separated per tenant</li>
+              <li><strong>GDPR/CCPA compliant</strong> &mdash; configurable data retention, right to deletion, consent management</li>
+              <li><strong>SOC 2 Type II</strong> target (Year 2)</li>
+              <li><strong>Encryption</strong> &mdash; TLS 1.3 in transit, AES-256 at rest</li>
+              <li><strong>Audit logging</strong> &mdash; every assessment action logged for compliance</li>
+              <li><strong>RBAC</strong> &mdash; Platform Admin, Org Admin, Manager, Learner roles</li>
+            </ul>
+          </div>
+          <div class="card card-gold">
+            <h3>Integration Architecture</h3>
+            <ul>
+              <li><strong>LTI 1.3</strong> &mdash; Canvas, Moodle, Blackboard (grade passback)</li>
+              <li><strong>SCORM 2004</strong> &mdash; export for legacy LMS</li>
+              <li><strong>REST API</strong> &mdash; custom integrations, HRIS sync</li>
+              <li><strong>Webhooks</strong> &mdash; assessment complete, cert issued events</li>
+              <li><strong>SSO</strong> &mdash; SAML 2.0 (Azure AD, Okta, OneLogin)</li>
+            </ul>
+          </div>
+        </div>
+      </div>
+    </div>
+    <span class="logo-text">AI Fluency &bull; ConnectSW</span>
+    <span class="page-num">10</span>
+  </div>
+</div>
+
+<!-- ============ SLIDE 11: ROADMAP ============ -->
+<div class="slide">
+  <div class="slide-inner">
+    <div class="slide-title">Product Roadmap</div>
+    <div class="slide-subtitle">MVP in Q3 2026, enterprise GA in Q4 2026, education launch Q1 2027</div>
+    <div class="slide-body">
+      <div class="timeline" style="margin-bottom: 24px;">
+        <div class="timeline-item">
+          <div class="timeline-dot" style="background: var(--green);">1</div>
+          <div class="timeline-label">Foundation</div>
+          <div class="timeline-desc">Q2 2026<br>Auth, multi-tenancy, assessment engine, scoring algorithm, Prisma schema</div>
+        </div>
+        <div class="timeline-item">
+          <div class="timeline-dot" style="background: var(--purple);">2</div>
+          <div class="timeline-label">MVP</div>
+          <div class="timeline-desc">Q3 2026<br>4D assessment UI, fluency profiles, basic learning paths, individual dashboards</div>
+        </div>
+        <div class="timeline-item">
+          <div class="timeline-dot">3</div>
+          <div class="timeline-label">Enterprise GA</div>
+          <div class="timeline-desc">Q4 2026<br>Org dashboards, SSO, role templates, team management, DOL reporting</div>
+        </div>
+        <div class="timeline-item">
+          <div class="timeline-dot">4</div>
+          <div class="timeline-label">Education</div>
+          <div class="timeline-desc">Q1 2027<br>LTI integration, SCORM export, class analytics, grade passback</div>
+        </div>
+        <div class="timeline-item">
+          <div class="timeline-dot">5</div>
+          <div class="timeline-label">Scale</div>
+          <div class="timeline-desc">2027+<br>AI-powered adaptive assessments, benchmarking, certifications, API marketplace</div>
+        </div>
+      </div>
+      <div class="two-col">
+        <div class="card">
+          <h3>MVP Scope (Q3 2026)</h3>
+          <ul>
+            <li>User registration &amp; authentication (JWT)</li>
+            <li>4D assessment engine (32 questions)</li>
+            <li>Prevalence-weighted scoring algorithm</li>
+            <li>Fluency profile with dimension radar chart</li>
+            <li>Basic learning path generation</li>
+            <li>Assessment history &amp; progress tracking</li>
+            <li>Responsive web application</li>
+          </ul>
+        </div>
+        <div class="card card-purple">
+          <h3>Current Progress (~30% built)</h3>
+          <ul>
+            <li class="check">Foundation architecture complete</li>
+            <li class="check">Multi-tenant data model (RLS)</li>
+            <li class="check">Authentication system (JWT + roles)</li>
+            <li class="check">Assessment API endpoints</li>
+            <li class="check">Scoring algorithm (ADR-002)</li>
+            <li class="check">CI/CD pipeline configured</li>
+            <li>Assessment UI &mdash; in progress</li>
+            <li>Learning paths &mdash; planned</li>
+          </ul>
+        </div>
+      </div>
+    </div>
+    <span class="logo-text">AI Fluency &bull; ConnectSW</span>
+    <span class="page-num">11</span>
+  </div>
+</div>
+
+<!-- ============ SLIDE 12: TRACTION & VALIDATION ============ -->
+<div class="slide">
+  <div class="slide-inner">
+    <div class="slide-title">Traction &amp; Validation</div>
+    <div class="slide-subtitle">Research-backed framework with regulatory tailwinds</div>
+    <div class="slide-body">
+      <div class="two-col" style="margin-bottom: 20px;">
+        <div class="card card-purple">
+          <h3>Framework Validation</h3>
+          <ul>
+            <li><strong>9,830 real conversations</strong> analyzed by Anthropic researchers to derive the 4D framework</li>
+            <li><strong>24 behavioral indicators</strong> empirically identified (11 observable, 13 unobservable)</li>
+            <li><strong>Prevalence rates</strong> established per indicator &mdash; powers our scoring algorithm</li>
+            <li><strong>Peer-reviewed research</strong> &mdash; Anthropic's AI Fluency Index (Feb 2026)</li>
+            <li><strong>Discernment gap</strong> quantified &mdash; 49% of users show overconfidence in AI output evaluation</li>
+          </ul>
+        </div>
+        <div class="card card-navy">
+          <h3>Regulatory Tailwinds</h3>
+          <ul>
+            <li><strong>US DOL AI Literacy Framework</strong> (Feb 13, 2026) &mdash; 5 content areas, 7 delivery principles, federal mandate</li>
+            <li><strong>EU AI Act</strong> &mdash; requires AI literacy for operators; creates compliance demand</li>
+            <li><strong>Executive Order on AI</strong> &mdash; federal workforce AI readiness requirements</li>
+            <li><strong>Corporate governance</strong> &mdash; boards increasingly require AI readiness reporting</li>
+            <li><strong>Insurance/risk</strong> &mdash; AI literacy becoming a factor in operational risk assessments</li>
+          </ul>
+        </div>
+      </div>
+      <div class="card" style="text-align: center; padding: 20px;">
+        <h3 style="font-size: 18px; margin-bottom: 12px;">Market Validation Signals</h3>
+        <div class="stat-row">
+          <div class="stat">
+            <div class="value" style="font-size: 32px;">2x</div>
+            <div class="label">AI-literate orgs more likely<br>to see significant AI ROI</div>
+          </div>
+          <div class="stat">
+            <div class="value" style="font-size: 32px;">76%</div>
+            <div class="label">AI adoption when employers<br>provide training (vs 25%)</div>
+          </div>
+          <div class="stat">
+            <div class="value" style="font-size: 32px;">40-120%</div>
+            <div class="label">productivity improvement<br>from AI workforce investment</div>
+          </div>
+          <div class="stat">
+            <div class="value" style="font-size: 32px;">$2.52T</div>
+            <div class="label">AI training market<br>growing 44% YoY</div>
+          </div>
+        </div>
+      </div>
+    </div>
+    <span class="logo-text">AI Fluency &bull; ConnectSW</span>
+    <span class="page-num">12</span>
+  </div>
+</div>
+
+<!-- ============ SLIDE 13: TEAM & COMPANY ============ -->
+<div class="slide">
+  <div class="slide-inner">
+    <div class="slide-title">The Team &mdash; ConnectSW</div>
+    <div class="slide-subtitle">AI-first software company with 17 specialist AI agents shipping production code</div>
+    <div class="slide-body">
+      <div class="two-col" style="margin-bottom: 16px;">
+        <div class="card card-purple">
+          <h3>Company Overview</h3>
+          <p style="margin-bottom: 8px;">ConnectSW is an AI-first software company where Claude Code agents handle all execution under CEO direction. Our AI workforce of 17 specialist agents delivers:</p>
+          <ul>
+            <li><strong>7 active products</strong> in production or development</li>
+            <li><strong>Full-stack delivery</strong> &mdash; from PRD to deployment</li>
+            <li><strong>Enterprise-grade quality</strong> &mdash; TDD, security scanning, CI/CD</li>
+            <li><strong>Rapid iteration</strong> &mdash; features ship in hours, not weeks</li>
+          </ul>
+        </div>
+        <div class="card card-navy">
+          <h3>AI-Native Development</h3>
+          <p style="margin-bottom: 8px;">Our development model gives us a structural cost advantage:</p>
+          <ul>
+            <li><strong>17 specialist agents</strong> (backend, frontend, QA, security, DevOps, etc.)</li>
+            <li><strong>Parallel execution</strong> &mdash; multiple agents work simultaneously</li>
+            <li><strong>24/7 development</strong> &mdash; no timezone or availability constraints</li>
+            <li><strong>Consistent quality</strong> &mdash; agents follow codified standards</li>
+            <li><strong>Low burn rate</strong> &mdash; AI execution cost vs. human engineering team</li>
+          </ul>
+        </div>
+      </div>
+      <div class="card">
+        <h3>ConnectSW Product Portfolio</h3>
+        <div style="display: grid; grid-template-columns: repeat(4, 1fr); gap: 12px; margin-top: 8px;">
+          <div style="text-align: center; padding: 12px; background: linear-gradient(135deg, #f3f0ff, #e5dbff); border-radius: 8px;">
+            <p style="font-size: 14px; font-weight: 700; color: var(--purple);">AI Fluency</p>
+            <p class="small">AI Assessment Platform</p>
+          </div>
+          <div style="text-align: center; padding: 12px; background: var(--gray-50); border-radius: 8px;">
+            <p style="font-size: 14px; font-weight: 700; color: var(--navy);">ConnectGRC</p>
+            <p class="small">GRC Platform</p>
+          </div>
+          <div style="text-align: center; padding: 12px; background: var(--gray-50); border-radius: 8px;">
+            <p style="font-size: 14px; font-weight: 700; color: var(--navy);">RecomEngine</p>
+            <p class="small">Recommendation Engine</p>
+          </div>
+          <div style="text-align: center; padding: 12px; background: var(--gray-50); border-radius: 8px;">
+            <p style="font-size: 14px; font-weight: 700; color: var(--navy);">CodeGuardian</p>
+            <p class="small">Code Security</p>
+          </div>
+        </div>
+      </div>
+    </div>
+    <span class="logo-text">AI Fluency &bull; ConnectSW</span>
+    <span class="page-num">13</span>
+  </div>
+</div>
+
+<!-- ============ SLIDE 14: THE ASK / CLOSING ============ -->
+<div class="slide slide-cover" style="background: linear-gradient(135deg, var(--navy) 0%, #1a3a5c 40%, var(--purple) 100%);">
+  <div style="max-width: 800px; text-align: center;">
+    <div style="font-size: 14px; letter-spacing: 3px; text-transform: uppercase; opacity: 0.7; margin-bottom: 32px;">The Opportunity</div>
+    <h1 style="font-size: 42px; margin-bottom: 20px;">The AI Fluency Gap Is Real.<br>We Have the Only Validated Solution.</h1>
+
+    <div style="display: grid; grid-template-columns: 1fr 1fr 1fr; gap: 20px; margin: 32px 0;">
+      <div style="background: rgba(255,255,255,0.1); border-radius: 12px; padding: 20px;">
+        <div style="font-size: 36px; font-weight: 800; color: var(--gold);">$50.3B</div>
+        <div style="font-size: 13px; opacity: 0.8;">Market by 2030</div>
+      </div>
+      <div style="background: rgba(255,255,255,0.1); border-radius: 12px; padding: 20px;">
+        <div style="font-size: 36px; font-weight: 800; color: var(--gold);">Zero</div>
+        <div style="font-size: 13px; opacity: 0.8;">Competitors with 4D framework</div>
+      </div>
+      <div style="background: rgba(255,255,255,0.1); border-radius: 12px; padding: 20px;">
+        <div style="font-size: 36px; font-weight: 800; color: var(--gold);">$5M</div>
+        <div style="font-size: 13px; opacity: 0.8;">ARR target by Year 3</div>
+      </div>
+    </div>
+
+    <div style="margin-top: 32px;">
+      <p style="font-size: 20px; margin-bottom: 12px;">Ready to invest in the future of AI workforce readiness?</p>
+      <p style="font-size: 15px; opacity: 0.7;">contact@connectsw.com &bull; connectsw.com/ai-fluency</p>
+    </div>
+  </div>
+  <div class="meta">Confidential &bull; ConnectSW &bull; March 2026</div>
+</div>
+
+</body>
+</html>

@@ -1,0 +1,353 @@
+[
+  {
+    "dimension": "DELEGATION",
+    "interactionMode": "AUGMENTATION",
+    "questionType": "SCENARIO",
+    "indicatorShortCode": "DELEGATION_TASK_SUITABILITY",
+    "text": "Your team needs to analyze 500 customer support tickets to identify common themes and prioritize product improvements. Which approach best demonstrates effective AI delegation?",
+    "optionsJson": [
+      {"key": "A", "text": "Use AI to categorize all tickets automatically, then have team members verify a random sample and the edge cases AI flagged as uncertain", "isCorrect": true, "score": 1.0},
+      {"key": "B", "text": "Have team members manually review all 500 tickets to ensure complete accuracy", "isCorrect": false, "score": 0.0},
+      {"key": "C", "text": "Use AI to categorize all tickets and accept the results without any human review", "isCorrect": false, "score": 0.0},
+      {"key": "D", "text": "Use AI for initial categorization but require every single ticket to be reviewed by a person", "isCorrect": false, "score": 0.5}
+    ]
+  },
+  {
+    "dimension": "DELEGATION",
+    "interactionMode": "AUGMENTATION",
+    "questionType": "SCENARIO",
+    "indicatorShortCode": "DELEGATION_DECOMPOSITION",
+    "text": "You need to prepare a comprehensive market analysis report for a new product launch. The report requires competitive research, financial projections, customer interviews, and strategic recommendations. How would you best decompose this for AI assistance?",
+    "optionsJson": [
+      {"key": "A", "text": "Ask AI to generate the entire market analysis report end-to-end", "isCorrect": false, "score": 0.0},
+      {"key": "B", "text": "Break it into subtasks: AI drafts competitive landscape from public data, AI structures financial model templates, you conduct interviews, then AI helps synthesize findings into recommendations that you refine", "isCorrect": true, "score": 1.0},
+      {"key": "C", "text": "Do all the research manually and only use AI to check grammar at the end", "isCorrect": false, "score": 0.0},
+      {"key": "D", "text": "Have AI handle research and writing while you focus only on the financial projections", "isCorrect": false, "score": 0.5}
+    ]
+  },
+  {
+    "dimension": "DELEGATION",
+    "interactionMode": "AUGMENTATION",
+    "questionType": "SCENARIO",
+    "indicatorShortCode": "DELEGATION_REASONING",
+    "text": "An AI system recommends rejecting a loan application based on the applicant's profile. Before acting on this recommendation, what is the most appropriate next step?",
+    "optionsJson": [
+      {"key": "A", "text": "Accept the recommendation since the AI was trained on historical data", "isCorrect": false, "score": 0.0},
+      {"key": "B", "text": "Ask the AI to explain the top factors driving the rejection and check whether those factors align with your lending criteria and fair lending regulations", "isCorrect": true, "score": 1.0},
+      {"key": "C", "text": "Override the AI and approve the loan to avoid potential bias", "isCorrect": false, "score": 0.0},
+      {"key": "D", "text": "Run the application through the AI system a second time to see if the result changes", "isCorrect": false, "score": 0.25}
+    ]
+  },
+  {
+    "dimension": "DELEGATION",
+    "interactionMode": "AUGMENTATION",
+    "questionType": "SCENARIO",
+    "indicatorShortCode": "DELEGATION_ITERATIVE",
+    "text": "You asked AI to draft a project proposal and the first version is technically accurate but reads like a dry academic paper. Your audience is non-technical executives. What is the best approach?",
+    "optionsJson": [
+      {"key": "A", "text": "Rewrite the entire proposal yourself from scratch", "isCorrect": false, "score": 0.0},
+      {"key": "B", "text": "Accept it as-is since the technical content is correct", "isCorrect": false, "score": 0.0},
+      {"key": "C", "text": "Give the AI specific feedback: simplify jargon, lead with business impact, add an executive summary, use bullet points for key metrics, and limit to 2 pages", "isCorrect": true, "score": 1.0},
+      {"key": "D", "text": "Ask a colleague to edit the AI-generated draft", "isCorrect": false, "score": 0.25}
+    ]
+  },
+  {
+    "dimension": "DELEGATION",
+    "interactionMode": "AUGMENTATION",
+    "questionType": "SCENARIO",
+    "indicatorShortCode": "DELEGATION_TASK_SUITABILITY",
+    "text": "Your company needs to write personalized condolence letters to families of employees who passed away during the year. Which approach is most appropriate?",
+    "optionsJson": [
+      {"key": "A", "text": "Use AI to generate all the letters, personalizing each with the employee's name and tenure", "isCorrect": false, "score": 0.0},
+      {"key": "B", "text": "Write each letter personally, as this situation requires genuine human empathy and sensitivity that AI cannot authentically provide", "isCorrect": true, "score": 1.0},
+      {"key": "C", "text": "Use AI to draft templates, then heavily personalize each one with your own words and memories", "isCorrect": false, "score": 0.5},
+      {"key": "D", "text": "Use AI to write the letters and have a manager review them before sending", "isCorrect": false, "score": 0.0}
+    ]
+  },
+  {
+    "dimension": "DELEGATION",
+    "interactionMode": "AUGMENTATION",
+    "questionType": "SELF_REPORT",
+    "indicatorShortCode": "DELEGATION_HUMAN_JUDGMENT",
+    "text": "When using AI to help with decision-making, I consistently identify which aspects require my personal judgment versus which can be safely delegated to AI.",
+    "optionsJson": {"min": 1, "max": 5, "labels": ["Strongly Disagree", "Disagree", "Neutral", "Agree", "Strongly Agree"]}
+  },
+  {
+    "dimension": "DELEGATION",
+    "interactionMode": "AUGMENTATION",
+    "questionType": "SELF_REPORT",
+    "indicatorShortCode": "DELEGATION_TOOL_SELECTION",
+    "text": "Before starting a task that could benefit from AI, I evaluate multiple AI tools to determine which one is best suited for the specific requirements rather than defaulting to whatever tool I used last.",
+    "optionsJson": {"min": 1, "max": 5, "labels": ["Strongly Disagree", "Disagree", "Neutral", "Agree", "Strongly Agree"]}
+  },
+  {
+    "dimension": "DELEGATION",
+    "interactionMode": "AUGMENTATION",
+    "questionType": "SELF_REPORT",
+    "indicatorShortCode": "DELEGATION_SCOPE_DEFINITION",
+    "text": "When delegating work to AI, I explicitly define what the AI should and should not do, including success criteria and boundaries for acceptable output.",
+    "optionsJson": {"min": 1, "max": 5, "labels": ["Strongly Disagree", "Disagree", "Neutral", "Agree", "Strongly Agree"]}
+  },
+  {
+    "dimension": "DESCRIPTION",
+    "interactionMode": "AUGMENTATION",
+    "questionType": "SCENARIO",
+    "indicatorShortCode": "DESCRIPTION_CONTEXT",
+    "text": "You need AI to help draft a response to a negative customer review about delayed shipping. Which prompt provides the best context?",
+    "optionsJson": [
+      {"key": "A", "text": "Write a response to this negative review: [review text]", "isCorrect": false, "score": 0.0},
+      {"key": "B", "text": "You are a customer service representative for an e-commerce company that sells handmade ceramics. Our brand voice is warm and empathetic. The delay was caused by a supplier issue now resolved. We offer free expedited shipping on next orders as a standard recovery. Draft a response to this review: [review text]", "isCorrect": true, "score": 1.0},
+      {"key": "C", "text": "Write a professional response to a bad review. Make it sound nice.", "isCorrect": false, "score": 0.0},
+      {"key": "D", "text": "Respond to this review apologetically and offer a discount: [review text]", "isCorrect": false, "score": 0.5}
+    ]
+  },
+  {
+    "dimension": "DESCRIPTION",
+    "interactionMode": "AUGMENTATION",
+    "questionType": "SCENARIO",
+    "indicatorShortCode": "DESCRIPTION_CONSTRAINTS",
+    "text": "You are asking AI to write social media posts for a healthcare company. Which set of constraints is most effective?",
+    "optionsJson": [
+      {"key": "A", "text": "Write some social media posts about our new wellness program", "isCorrect": false, "score": 0.0},
+      {"key": "B", "text": "Write social media posts. Make them engaging and professional.", "isCorrect": false, "score": 0.0},
+      {"key": "C", "text": "Create 5 LinkedIn posts about our corporate wellness program. Each post must: be 150-200 words, include a call-to-action, avoid any medical claims or health advice, comply with HIPAA by not referencing patient data, use inclusive language, and end with a relevant hashtag. Tone: professional but approachable.", "isCorrect": true, "score": 1.0},
+      {"key": "D", "text": "Write 5 LinkedIn posts about wellness. Keep them short and professional. No medical claims.", "isCorrect": false, "score": 0.5}
+    ]
+  },
+  {
+    "dimension": "DESCRIPTION",
+    "interactionMode": "AUGMENTATION",
+    "questionType": "SCENARIO",
+    "indicatorShortCode": "DESCRIPTION_FORMAT",
+    "text": "You need AI to summarize a 30-page quarterly report for different audiences. How would you best direct the output format?",
+    "optionsJson": [
+      {"key": "A", "text": "Summarize this report", "isCorrect": false, "score": 0.0},
+      {"key": "B", "text": "Create three summaries: (1) Executive brief - 5 bullet points with key metrics and trends, no jargon; (2) Team lead version - 1-page structured summary with sections for each department's performance, using a table for KPIs; (3) Board deck talking points - 3 slides worth of content with headline, 3 supporting points, and one data visualization suggestion per slide", "isCorrect": true, "score": 1.0},
+      {"key": "C", "text": "Make a short version and a long version of this report", "isCorrect": false, "score": 0.0},
+      {"key": "D", "text": "Summarize this report in bullet points for executives", "isCorrect": false, "score": 0.5}
+    ]
+  },
+  {
+    "dimension": "DESCRIPTION",
+    "interactionMode": "AUGMENTATION",
+    "questionType": "SCENARIO",
+    "indicatorShortCode": "DESCRIPTION_EXAMPLES",
+    "text": "You want AI to classify customer feedback into categories for your product team. Which approach uses examples most effectively?",
+    "optionsJson": [
+      {"key": "A", "text": "Classify these customer feedback items into categories", "isCorrect": false, "score": 0.0},
+      {"key": "B", "text": "Classify feedback into: Bug Report, Feature Request, UX Issue, Praise, Billing Question. Here are examples: 'The app crashes when I upload photos' = Bug Report. 'I wish I could export to PDF' = Feature Request. 'The checkout button is hard to find on mobile' = UX Issue. Now classify these items: [feedback list]", "isCorrect": true, "score": 1.0},
+      {"key": "C", "text": "Sort this feedback into positive and negative categories", "isCorrect": false, "score": 0.0},
+      {"key": "D", "text": "Classify feedback into Bug Report, Feature Request, or Other. Be accurate.", "isCorrect": false, "score": 0.25}
+    ]
+  },
+  {
+    "dimension": "DESCRIPTION",
+    "interactionMode": "AUGMENTATION",
+    "questionType": "SCENARIO",
+    "indicatorShortCode": "DESCRIPTION_CONTEXT",
+    "text": "You need AI to review a contract clause for potential risks. Which prompt will yield the most useful analysis?",
+    "optionsJson": [
+      {"key": "A", "text": "Is this contract clause risky? [clause text]", "isCorrect": false, "score": 0.0},
+      {"key": "B", "text": "Review this clause. We are the vendor in this agreement.", "isCorrect": false, "score": 0.25},
+      {"key": "C", "text": "We are a SaaS vendor (the 'Provider') in a B2B contract with an enterprise client. Our standard liability cap is 12 months of fees. We cannot accept unlimited liability or IP indemnification beyond our own IP. Analyze this clause for risks from our perspective, flag any terms that exceed our standard positions, and suggest alternative language: [clause text]", "isCorrect": true, "score": 1.0},
+      {"key": "D", "text": "Analyze this contract clause for legal risks and suggest improvements: [clause text]", "isCorrect": false, "score": 0.5}
+    ]
+  },
+  {
+    "dimension": "DESCRIPTION",
+    "interactionMode": "AUGMENTATION",
+    "questionType": "SELF_REPORT",
+    "indicatorShortCode": "DESCRIPTION_PERSONA",
+    "text": "When starting an AI interaction, I consider what role, expertise level, or perspective the AI should adopt to produce the most useful output for my specific task.",
+    "optionsJson": {"min": 1, "max": 5, "labels": ["Strongly Disagree", "Disagree", "Neutral", "Agree", "Strongly Agree"]}
+  },
+  {
+    "dimension": "DESCRIPTION",
+    "interactionMode": "AUGMENTATION",
+    "questionType": "SELF_REPORT",
+    "indicatorShortCode": "DESCRIPTION_ITERATION",
+    "text": "When AI output does not meet my expectations, I analyze what was missing or unclear in my prompt and systematically adjust it rather than starting over or giving up.",
+    "optionsJson": {"min": 1, "max": 5, "labels": ["Strongly Disagree", "Disagree", "Neutral", "Agree", "Strongly Agree"]}
+  },
+  {
+    "dimension": "DESCRIPTION",
+    "interactionMode": "AUGMENTATION",
+    "questionType": "SELF_REPORT",
+    "indicatorShortCode": "DESCRIPTION_ITERATION",
+    "text": "Over time, I have developed a personal collection of prompt patterns and templates that I reuse and refine for recurring tasks.",
+    "optionsJson": {"min": 1, "max": 5, "labels": ["Strongly Disagree", "Disagree", "Neutral", "Agree", "Strongly Agree"]}
+  },
+  {
+    "dimension": "DISCERNMENT",
+    "interactionMode": "AUGMENTATION",
+    "questionType": "SCENARIO",
+    "indicatorShortCode": "DISCERNMENT_VERIFICATION",
+    "text": "AI generates a market research summary that states: 'According to a 2024 Gartner report, 78% of enterprises have adopted AI in at least one business function.' You plan to include this in a board presentation. What should you do?",
+    "optionsJson": [
+      {"key": "A", "text": "Include it as-is since Gartner is a reputable source and the statistic sounds plausible", "isCorrect": false, "score": 0.0},
+      {"key": "B", "text": "Search for the actual Gartner report to verify the exact statistic, publication date, and methodology before including it", "isCorrect": true, "score": 1.0},
+      {"key": "C", "text": "Remove the specific percentage and just say 'most enterprises have adopted AI'", "isCorrect": false, "score": 0.5},
+      {"key": "D", "text": "Ask AI to confirm whether this statistic is accurate", "isCorrect": false, "score": 0.0}
+    ]
+  },
+  {
+    "dimension": "DISCERNMENT",
+    "interactionMode": "AUGMENTATION",
+    "questionType": "SCENARIO",
+    "indicatorShortCode": "DISCERNMENT_BIAS",
+    "text": "You ask AI to help screen resumes for a software engineering position. The AI consistently ranks candidates from certain universities higher. What is the most appropriate response?",
+    "optionsJson": [
+      {"key": "A", "text": "Trust the AI's rankings since it is processing more data points than a human could", "isCorrect": false, "score": 0.0},
+      {"key": "B", "text": "Recognize this as potential training data bias, investigate whether university prestige correlates with actual job performance in your data, and adjust the screening criteria to focus on demonstrated skills and experience", "isCorrect": true, "score": 1.0},
+      {"key": "C", "text": "Manually override the AI rankings for candidates from less prestigious universities", "isCorrect": false, "score": 0.25},
+      {"key": "D", "text": "Remove university names from resumes before feeding them to the AI", "isCorrect": false, "score": 0.5}
+    ]
+  },
+  {
+    "dimension": "DISCERNMENT",
+    "interactionMode": "AUGMENTATION",
+    "questionType": "SCENARIO",
+    "indicatorShortCode": "DISCERNMENT_HALLUCINATION",
+    "text": "You ask AI to provide case studies of companies that successfully implemented a specific technology. The AI returns three detailed case studies with company names, dates, and results. One case study describes 'TechVista Corp's 2023 implementation.' You have never heard of this company. What is the most likely explanation and best response?",
+    "optionsJson": [
+      {"key": "A", "text": "It is probably a smaller company you are not familiar with; include it in your presentation", "isCorrect": false, "score": 0.0},
+      {"key": "B", "text": "This may be an AI hallucination; search for TechVista Corp independently, and verify all three case studies against primary sources before using any of them", "isCorrect": true, "score": 1.0},
+      {"key": "C", "text": "Remove only the TechVista case study and use the other two since those companies are recognizable", "isCorrect": false, "score": 0.25},
+      {"key": "D", "text": "Ask the AI if TechVista Corp is a real company", "isCorrect": false, "score": 0.0}
+    ]
+  },
+  {
+    "dimension": "DISCERNMENT",
+    "interactionMode": "AUGMENTATION",
+    "questionType": "SCENARIO",
+    "indicatorShortCode": "DISCERNMENT_MISSING_CONTEXT",
+    "text": "You ask AI to recommend a pricing strategy for your new B2B SaaS product. The AI provides a detailed tiered pricing model with specific price points. What should concern you most about this recommendation?",
+    "optionsJson": [
+      {"key": "A", "text": "The price points might be too low for the market", "isCorrect": false, "score": 0.25},
+      {"key": "B", "text": "The AI does not know your cost structure, competitive landscape, customer willingness-to-pay data, or sales cycle length, so these specific numbers are essentially arbitrary despite sounding authoritative", "isCorrect": true, "score": 1.0},
+      {"key": "C", "text": "The tiered model might not work for your product", "isCorrect": false, "score": 0.25},
+      {"key": "D", "text": "The recommendation seems too generic", "isCorrect": false, "score": 0.5}
+    ]
+  },
+  {
+    "dimension": "DISCERNMENT",
+    "interactionMode": "AUGMENTATION",
+    "questionType": "SCENARIO",
+    "indicatorShortCode": "DISCERNMENT_VERIFICATION",
+    "text": "AI helps you write a technical blog post that includes code examples. Before publishing, what verification is most critical?",
+    "optionsJson": [
+      {"key": "A", "text": "Run a spell check and grammar check on the article", "isCorrect": false, "score": 0.0},
+      {"key": "B", "text": "Ask a colleague to read it for clarity", "isCorrect": false, "score": 0.25},
+      {"key": "C", "text": "Actually run the code examples to verify they work correctly, check that any referenced APIs or libraries exist at the stated versions, and verify technical claims against official documentation", "isCorrect": true, "score": 1.0},
+      {"key": "D", "text": "Ask the AI to double-check its own code examples", "isCorrect": false, "score": 0.0}
+    ]
+  },
+  {
+    "dimension": "DISCERNMENT",
+    "interactionMode": "AUGMENTATION",
+    "questionType": "SELF_REPORT",
+    "indicatorShortCode": "DISCERNMENT_CONFIDENCE",
+    "text": "I adjust my level of trust in AI outputs based on the task type -- I am more skeptical of AI-generated facts, statistics, and citations than I am of AI-generated creative writing or formatting help.",
+    "optionsJson": {"min": 1, "max": 5, "labels": ["Strongly Disagree", "Disagree", "Neutral", "Agree", "Strongly Agree"]}
+  },
+  {
+    "dimension": "DISCERNMENT",
+    "interactionMode": "AUGMENTATION",
+    "questionType": "SELF_REPORT",
+    "indicatorShortCode": "DISCERNMENT_LIMITATIONS",
+    "text": "I can explain to a colleague why AI might give confidently wrong answers, why it cannot truly 'understand' context the way humans do, and why certain tasks are fundamentally unsuitable for current AI systems.",
+    "optionsJson": {"min": 1, "max": 5, "labels": ["Strongly Disagree", "Disagree", "Neutral", "Agree", "Strongly Agree"]}
+  },
+  {
+    "dimension": "DISCERNMENT",
+    "interactionMode": "AUGMENTATION",
+    "questionType": "SELF_REPORT",
+    "indicatorShortCode": "DISCERNMENT_CONFIDENCE",
+    "text": "Before using AI output in important work, I consistently consider what could go wrong if the output contains errors and plan verification steps accordingly.",
+    "optionsJson": {"min": 1, "max": 5, "labels": ["Strongly Disagree", "Disagree", "Neutral", "Agree", "Strongly Agree"]}
+  },
+  {
+    "dimension": "DILIGENCE",
+    "interactionMode": "AUGMENTATION",
+    "questionType": "SCENARIO",
+    "indicatorShortCode": "DILIGENCE_ATTRIBUTION",
+    "text": "You used AI to help write a significant portion of a white paper that will be published under your company's name. How should you handle attribution?",
+    "optionsJson": [
+      {"key": "A", "text": "No attribution needed since you reviewed and edited all the content", "isCorrect": false, "score": 0.0},
+      {"key": "B", "text": "Include a note in the methodology or acknowledgments section stating that AI tools were used to assist with research and drafting, and follow your organization's AI disclosure policy", "isCorrect": true, "score": 1.0},
+      {"key": "C", "text": "List the AI as a co-author", "isCorrect": false, "score": 0.25},
+      {"key": "D", "text": "Only disclose if someone specifically asks whether AI was used", "isCorrect": false, "score": 0.0}
+    ]
+  },
+  {
+    "dimension": "DILIGENCE",
+    "interactionMode": "AUGMENTATION",
+    "questionType": "SCENARIO",
+    "indicatorShortCode": "DILIGENCE_ATTRIBUTION",
+    "text": "A colleague submits a data analysis report that you suspect was largely generated by AI without disclosure. The analysis contains some factual errors. What is the best course of action?",
+    "optionsJson": [
+      {"key": "A", "text": "Ignore the AI question and just point out the factual errors", "isCorrect": false, "score": 0.25},
+      {"key": "B", "text": "Report the colleague to management for using AI", "isCorrect": false, "score": 0.0},
+      {"key": "C", "text": "Privately discuss the errors and your company's AI usage and attribution policy, emphasizing that AI-assisted work requires verification and transparent disclosure", "isCorrect": true, "score": 1.0},
+      {"key": "D", "text": "Fix the errors yourself and say nothing about the AI usage", "isCorrect": false, "score": 0.0}
+    ]
+  },
+  {
+    "dimension": "DILIGENCE",
+    "interactionMode": "AUGMENTATION",
+    "questionType": "SCENARIO",
+    "indicatorShortCode": "DILIGENCE_PRIVACY",
+    "text": "You need AI to help analyze employee performance data to identify training needs. The dataset includes names, salaries, performance scores, and medical leave records. What is the safest approach?",
+    "optionsJson": [
+      {"key": "A", "text": "Upload the full dataset to a public AI tool since it needs all context to give useful analysis", "isCorrect": false, "score": 0.0},
+      {"key": "B", "text": "Anonymize the data by replacing names with IDs, removing salary details and medical records, and use only an enterprise AI tool with appropriate data processing agreements. Share only the minimum data needed for training gap analysis.", "isCorrect": true, "score": 1.0},
+      {"key": "C", "text": "Remove only the names and upload everything else", "isCorrect": false, "score": 0.25},
+      {"key": "D", "text": "Use a company-approved AI tool and upload everything since the tool has a privacy policy", "isCorrect": false, "score": 0.5}
+    ]
+  },
+  {
+    "dimension": "DILIGENCE",
+    "interactionMode": "AUGMENTATION",
+    "questionType": "SCENARIO",
+    "indicatorShortCode": "DILIGENCE_ETHICS",
+    "text": "Your marketing team wants to use AI to generate customer testimonials based on real review data, then publish them on the website as if they were direct quotes from customers. What is the most ethical approach?",
+    "optionsJson": [
+      {"key": "A", "text": "Proceed since the testimonials are based on real customer sentiment data", "isCorrect": false, "score": 0.0},
+      {"key": "B", "text": "Refuse entirely and explain that AI-generated testimonials presented as direct customer quotes are fundamentally misleading, regardless of the source data. Propose alternatives like aggregated sentiment summaries clearly labeled as AI-analyzed", "isCorrect": true, "score": 1.0},
+      {"key": "C", "text": "Add a small disclaimer at the bottom of the page noting that testimonials are AI-enhanced", "isCorrect": false, "score": 0.25},
+      {"key": "D", "text": "Only use the AI-generated testimonials internally and ask customers for permission to use actual quotes", "isCorrect": false, "score": 0.5}
+    ]
+  },
+  {
+    "dimension": "DILIGENCE",
+    "interactionMode": "AUGMENTATION",
+    "questionType": "SELF_REPORT",
+    "indicatorShortCode": "DILIGENCE_PRIVACY",
+    "text": "Before entering any data into an AI tool, I evaluate whether it contains personally identifiable information (PII), proprietary data, or confidential information, and I take steps to minimize or anonymize sensitive data.",
+    "optionsJson": {"min": 1, "max": 5, "labels": ["Strongly Disagree", "Disagree", "Neutral", "Agree", "Strongly Agree"]}
+  },
+  {
+    "dimension": "DILIGENCE",
+    "interactionMode": "AUGMENTATION",
+    "questionType": "SELF_REPORT",
+    "indicatorShortCode": "DILIGENCE_TRANSPARENCY",
+    "text": "I proactively inform my colleagues and stakeholders when AI has played a significant role in producing work deliverables, even when no one asks.",
+    "optionsJson": {"min": 1, "max": 5, "labels": ["Strongly Disagree", "Disagree", "Neutral", "Agree", "Strongly Agree"]}
+  },
+  {
+    "dimension": "DILIGENCE",
+    "interactionMode": "AUGMENTATION",
+    "questionType": "SELF_REPORT",
+    "indicatorShortCode": "DILIGENCE_LEARNING",
+    "text": "I regularly explore new AI tools, read about AI developments, and experiment with different approaches to expand my ability to use AI effectively in my work.",
+    "optionsJson": {"min": 1, "max": 5, "labels": ["Strongly Disagree", "Disagree", "Neutral", "Agree", "Strongly Agree"]}
+  },
+  {
+    "dimension": "DILIGENCE",
+    "interactionMode": "AUGMENTATION",
+    "questionType": "SELF_REPORT",
+    "indicatorShortCode": "DILIGENCE_ETHICS",
+    "text": "When considering a new way to use AI in my work, I think through potential negative consequences -- such as unfairness, job displacement, or misrepresentation -- before proceeding.",
+    "optionsJson": {"min": 1, "max": 5, "labels": ["Strongly Disagree", "Disagree", "Neutral", "Agree", "Strongly Agree"]}
+  }
+]
