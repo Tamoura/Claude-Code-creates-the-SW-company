@@ -24,6 +24,8 @@ export interface ProblemDetails {
 }
 
 export class AppError extends Error {
+  public readonly statusCode: number;
+
   constructor(
     public readonly code: string,
     public readonly status: number,
@@ -31,6 +33,7 @@ export class AppError extends Error {
   ) {
     super(detail);
     this.name = 'AppError';
+    this.statusCode = status; // Fastify uses statusCode for HTTP response code
   }
 
   toJSON(instance?: string): ProblemDetails {

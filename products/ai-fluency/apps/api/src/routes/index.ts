@@ -11,6 +11,7 @@ import { authRoutes } from './auth.js';
 import { assessmentRoutes } from './assessment.js';
 import { profileRoutes } from './profile.js';
 import { dashboardRoutes } from './dashboard.js';
+import { learningPathRoutes } from './learning-paths.js';
 
 export async function registerRoutes(fastify: FastifyInstance): Promise<void> {
   // Health check (no prefix — lives at root level)
@@ -27,4 +28,7 @@ export async function registerRoutes(fastify: FastifyInstance): Promise<void> {
 
   // Dashboard routes
   await fastify.register(dashboardRoutes, { prefix: '/api/v1/dashboard' });
+
+  // Learning path routes
+  await fastify.register(learningPathRoutes, { prefix: '/api/v1/learning-paths' });
 }

@@ -1,4 +1,4 @@
-import { useState, useEffect } from 'react';
+import { useState, useEffect, useCallback } from 'react';
 import { useParams, Link } from 'react-router-dom';
 import { useApi } from '../hooks/useApi.js';
 import StatCard from '../components/StatCard.js';
@@ -76,12 +76,43 @@ export default function E2EGallery() {
   const [activeTab, setActiveTab] = useState<TabType>('screenshots');
   const [selectedProduct, setSelectedProduct] = useState<string>(urlProduct || 'all');
   const [selectedCategory, setSelectedCategory] = useState<string>('all');
-  const [lightboxImage, setLightboxImage] = useState<ScreenshotInfo | null>(null);
+  const [lightboxIndex, setLightboxIndex] = useState<number | null>(null);
 
   // Sync with URL param changes
   useEffect(() => {
     if (urlProduct) setSelectedProduct(urlProduct);
   }, [urlProduct]);
+
+  // Compute displayed screenshots for lightbox navigation (safe to compute even while loading)
+  const products = data?.products ?? [];
+  const filteredProducts = selectedProduct === 'all'
+    ? products
+    : products.filter(p => p.name === selectedProduct);
+  const allScreenshots = filteredProducts.flatMap(p => p.screenshots);
+  const displayScreenshots = selectedCategory === 'all'
+    ? allScreenshots
+    : allScreenshots.filter(s => s.category === selectedCategory);
+
+  const lightboxImage = lightboxIndex !== null ? displayScreenshots[lightboxIndex] : null;
+
+  const goToPrev = useCallback(() => {
+    setLightboxIndex(i => i !== null && i > 0 ? i - 1 : i);
+  }, []);
+
+  const goToNext = useCallback(() => {
+    setLightboxIndex(i => i !== null && i < displayScreenshots.length - 1 ? i + 1 : i);
+  }, [displayScreenshots.length]);
+
+  useEffect(() => {
+    if (lightboxIndex === null) return;
+    const handleKey = (e: KeyboardEvent) => {
+      if (e.key === 'Escape') setLightboxIndex(null);
+      if (e.key === 'ArrowLeft') goToPrev();
+      if (e.key === 'ArrowRight') goToNext();
+    };
+    document.addEventListener('keydown', handleKey);
+    return () => document.removeEventListener('keydown', handleKey);
+  }, [lightboxIndex, goToPrev, goToNext]);
 
   if (loading) {
     return (
@@ -102,24 +133,14 @@ export default function E2EGallery() {
     return <p className="text-rose-400">Failed to load E2E test gallery: {error}</p>;
   }
 
-  const products = data.products;
-
-  const filteredProducts = selectedProduct === 'all'
-    ? products
-    : products.filter(p => p.name === selectedProduct);
-
   const totalScreenshots = filteredProducts.reduce((sum, p) => sum + p.screenshots.length, 0);
   const totalVideos = filteredProducts.reduce((sum, p) => sum + p.videos.length, 0);
   const totalTraces = filteredProducts.reduce((sum, p) => sum + p.traces.length, 0);
 
-  const allScreenshots = filteredProducts.flatMap(p => p.screenshots);
   const allVideos = filteredProducts.flatMap(p => p.videos);
   const allTraces = filteredProducts.flatMap(p => p.traces);
 
   const categories = [...new Set(allScreenshots.map(s => s.category))].sort();
-  const displayScreenshots = selectedCategory === 'all'
-    ? allScreenshots
-    : allScreenshots.filter(s => s.category === selectedCategory);
 
   return (
     <div>
@@ -250,11 +271,11 @@ export default function E2EGallery() {
 
           {/* Screenshot grid */}
           <div className="grid grid-cols-1 md:grid-cols-2 xl:grid-cols-3 gap-4">
-            {displayScreenshots.map(screenshot => (
+            {displayScreenshots.map((screenshot, idx) => (
               <div
                 key={`${screenshot.product}-${screenshot.filename}`}
                 className="group bg-slate-900 border border-slate-800 rounded-xl overflow-hidden hover:border-slate-600 transition-all cursor-pointer"
-                onClick={() => setLightboxImage(screenshot)}
+                onClick={() => setLightboxIndex(idx)}
               >
                 <div className="relative aspect-video bg-slate-950 flex items-center justify-center overflow-hidden">
                   <img
@@ -363,26 +384,59 @@ export default function E2EGallery() {
         </div>
       )}
 
-      {/* Lightbox */}
-      {lightboxImage && (
+      {/* Lightbox with prev/next navigation */}
+      {lightboxImage && lightboxIndex !== null && (
         <div
-          className="fixed inset-0 z-50 bg-black/90 flex items-center justify-center p-8 cursor-pointer"
-          onClick={() => setLightboxImage(null)}
+          className="fixed inset-0 z-50 bg-black/90 flex items-center justify-center cursor-pointer"
+          onClick={() => setLightboxIndex(null)}
         >
-          <div className="relative max-w-6xl max-h-full w-full" onClick={e => e.stopPropagation()}>
+          {/* Previous button */}
+          {lightboxIndex > 0 && (
             <button
-              onClick={() => setLightboxImage(null)}
-              className="absolute -top-10 right-0 text-white/70 hover:text-white text-sm flex items-center gap-1"
+              onClick={(e) => { e.stopPropagation(); goToPrev(); }}
+              className="absolute left-4 top-1/2 -translate-y-1/2 z-10 w-12 h-12 flex items-center justify-center rounded-full bg-black/60 text-white/70 hover:text-white hover:bg-black/80 transition-colors"
+              title="Previous (Left arrow)"
+            >
+              <svg className="w-7 h-7" fill="none" stroke="currentColor" viewBox="0 0 24 24" strokeWidth={2}>
+                <path strokeLinecap="round" strokeLinejoin="round" d="M15 19l-7-7 7-7" />
+              </svg>
+            </button>
+          )}
+
+          {/* Next button */}
+          {lightboxIndex < displayScreenshots.length - 1 && (
+            <button
+              onClick={(e) => { e.stopPropagation(); goToNext(); }}
+              className="absolute right-4 top-1/2 -translate-y-1/2 z-10 w-12 h-12 flex items-center justify-center rounded-full bg-black/60 text-white/70 hover:text-white hover:bg-black/80 transition-colors"
+              title="Next (Right arrow)"
+            >
+              <svg className="w-7 h-7" fill="none" stroke="currentColor" viewBox="0 0 24 24" strokeWidth={2}>
+                <path strokeLinecap="round" strokeLinejoin="round" d="M9 5l7 7-7 7" />
+              </svg>
+            </button>
+          )}
+
+          <div className="relative max-w-6xl max-h-full w-full px-16" onClick={e => e.stopPropagation()}>
+            {/* Close button */}
+            <button
+              onClick={() => setLightboxIndex(null)}
+              className="absolute -top-10 right-16 text-white/70 hover:text-white text-sm flex items-center gap-1"
             >
               <svg className="w-5 h-5" fill="none" stroke="currentColor" viewBox="0 0 24 24" strokeWidth={1.5}>
                 <path strokeLinecap="round" strokeLinejoin="round" d="M6 18L18 6M6 6l12 12" />
               </svg>
               Close
             </button>
+
+            {/* Counter */}
+            <div className="absolute -top-10 left-16 text-white/50 text-sm">
+              {lightboxIndex + 1} / {displayScreenshots.length}
+            </div>
+
             <img
               src={lightboxImage.url}
               alt={lightboxImage.name}
-              className="w-full h-auto max-h-[85vh] object-contain rounded-lg"
+              className="w-full h-auto max-h-[80vh] object-contain rounded-lg"
             />
             <div className="mt-3 text-center">
               <h3 className="text-lg font-medium text-white">{lightboxImage.name}</h3>

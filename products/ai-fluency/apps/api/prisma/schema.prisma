@@ -461,6 +461,9 @@ model FluencyProfile {
   /// True when "Question AI reasoning" + "Identify missing context" both FAIL
   /// Triggers priority Discernment modules in learning path
   discernmentGap        Boolean   @default(false)
+  /// JSON: AI-generated personalized feedback (summary, dimension feedback, strengths, improvements)
+  /// Nullable — only populated when OpenRouter is configured
+  aiFeedback            Json?     @map("ai_feedback")
   createdAt             DateTime  @default(now())
 
   session               AssessmentSession @relation(fields: [sessionId], references: [id])
