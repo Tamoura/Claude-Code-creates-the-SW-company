@@ -12,6 +12,21 @@ import { api, ApiError } from '@/lib/api';
 import { setToken, clearToken, getToken } from '@/lib/auth';
 import type { User } from '@/types/index';
 
+/** Map API user response to frontend User shape */
+function mapUser(apiUser: Record<string, unknown>): User {
+  const firstName = (apiUser.firstName as string) || '';
+  const lastName = (apiUser.lastName as string) || '';
+  return {
+    id: apiUser.id as string,
+    email: apiUser.email as string,
+    name: `${firstName} ${lastName}`.trim() || (apiUser.email as string),
+    firstName,
+    lastName,
+    role: ((apiUser.role as string) || 'learner').toLowerCase() as User['role'],
+    orgId: apiUser.orgId as string | undefined,
+  };
+}
+
 interface LoginCredentials {
   email: string;
   password: string;
@@ -50,8 +65,8 @@ export function AuthProvider({ children }: { children: ReactNode }) {
         return;
       }
       try {
-        const data = await api.get<{ user: User }>('/auth/me');
-        if (mounted) setUser(data.user);
+        const data = await api.get<{ user: Record<string, unknown> }>('/auth/me');
+        if (mounted) setUser(mapUser(data.user));
       } catch {
         // Token expired or invalid — clear it
         clearToken();
@@ -70,12 +85,12 @@ export function AuthProvider({ children }: { children: ReactNode }) {
     setIsLoading(true);
     setError(null);
     try {
-      const data = await api.post<{ token: string; user: User }>(
+      const data = await api.post<{ token: string; user: Record<string, unknown> }>(
         '/auth/login',
-        credentials,
+        { ...credentials, orgSlug: 'demo-org' },
       );
       setToken(data.token);
-      setUser(data.user);
+      setUser(mapUser(data.user));
     } catch (err) {
       const message =
         err instanceof ApiError
@@ -92,7 +107,7 @@ export function AuthProvider({ children }: { children: ReactNode }) {
     setIsLoading(true);
     setError(null);
     try {
-      const data = await api.post<{ token: string; user: User }>(
+      const data = await api.post<{ token: string; user: Record<string, unknown> }>(
         '/auth/register',
         {
           email: credentials.email,
@@ -103,7 +118,7 @@ export function AuthProvider({ children }: { children: ReactNode }) {
         },
       );
       setToken(data.token);
-      setUser(data.user);
+      setUser(mapUser(data.user));
     } catch (err) {
       const message =
         err instanceof ApiError
