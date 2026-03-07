@@ -5,19 +5,19 @@
  *   register -> start session -> get questions -> submit responses -> complete -> get results
  *
  * Uses real database — no mocks.
+ *
+ * NOTE: The /start endpoint auto-selects a template and resumes existing
+ * IN_PROGRESS sessions. Tests are structured to avoid session conflicts.
  */
 
 import { FastifyInstance } from 'fastify';
 import { buildApp } from '../../src/app';
-import { PrismaClient } from '@prisma/client';
 
 describe('Assessment API', () => {
   let app: FastifyInstance;
   let orgId: string;
   let orgSlug: string;
   let token: string;
-  let userId: string;
-  let templateId: string;
 
   beforeAll(async () => {
     app = await buildApp();
@@ -84,7 +84,7 @@ describe('Assessment API', () => {
     }
 
     // Create assessment template
-    const template = await app.prisma.assessmentTemplate.create({
+    await app.prisma.assessmentTemplate.create({
       data: {
         orgId: org.id,
         name: 'Test Assessment Template',
@@ -95,7 +95,6 @@ describe('Assessment API', () => {
         isActive: true,
       },
     });
-    templateId = template.id;
 
     // Register a user via API
     const regResponse = await app.inject({
@@ -112,7 +111,6 @@ describe('Assessment API', () => {
 
     const regBody = regResponse.json();
     token = regBody.token;
-    userId = regBody.user.id;
   });
 
   afterAll(async () => {
@@ -134,40 +132,14 @@ describe('Assessment API', () => {
   // ─────────────────────────────────────────────────────────
 
   describe('POST /api/v1/assessments/start', () => {
-    test('starts a new assessment session', async () => {
-      const response = await app.inject({
-        method: 'POST',
-        url: '/api/v1/assessments/start',
-        headers: { authorization: `Bearer ${token}` },
-        payload: { templateId },
-      });
-
-      expect(response.statusCode).toBe(201);
-      const body = response.json();
-      expect(body.sessionId).toBeDefined();
-      expect(body.status).toBe('IN_PROGRESS');
-      expect(body.totalQuestions).toBeGreaterThan(0);
-    });
-
     test('returns 401 without auth', async () => {
       const response = await app.inject({
         method: 'POST',
         url: '/api/v1/assessments/start',
-        payload: { templateId },
+        payload: {},
       });
 
       expect(response.statusCode).toBe(401);
-    });
-
-    test('returns 404 for non-existent template', async () => {
-      const response = await app.inject({
-        method: 'POST',
-        url: '/api/v1/assessments/start',
-        headers: { authorization: `Bearer ${token}` },
-        payload: { templateId: '00000000-0000-0000-0000-000000000000' },
-      });
-
-      expect(response.statusCode).toBe(404);
     });
   });
 
@@ -178,16 +150,36 @@ describe('Assessment API', () => {
   describe('Full assessment lifecycle', () => {
     let sessionId: string;
 
-    test('start session', async () => {
+    test('start session (auto-selects template)', async () => {
       const response = await app.inject({
         method: 'POST',
         url: '/api/v1/assessments/start',
         headers: { authorization: `Bearer ${token}` },
-        payload: { templateId },
+        payload: {},
       });
 
       expect(response.statusCode).toBe(201);
-      sessionId = response.json().sessionId;
+      const body = response.json();
+      expect(body.session).toBeDefined();
+      expect(body.session.id).toBeDefined();
+      expect(body.session.status).toBe('IN_PROGRESS');
+      expect(body.totalQuestions).toBeGreaterThan(0);
+      expect(body.questions).toBeDefined();
+      expect(Array.isArray(body.questions)).toBe(true);
+      sessionId = body.session.id;
+    });
+
+    test('starting again resumes existing IN_PROGRESS session (200)', async () => {
+      const response = await app.inject({
+        method: 'POST',
+        url: '/api/v1/assessments/start',
+        headers: { authorization: `Bearer ${token}` },
+        payload: {},
+      });
+
+      expect(response.statusCode).toBe(200);
+      const body = response.json();
+      expect(body.session.id).toBe(sessionId);
     });
 
     test('GET /assessments/:sessionId returns session status', async () => {
@@ -216,7 +208,6 @@ describe('Assessment API', () => {
       expect(body.questions).toBeDefined();
       expect(Array.isArray(body.questions)).toBe(true);
       expect(body.questions.length).toBeGreaterThan(0);
-      // Each question should have id, text, type, dimension, options
       const q = body.questions[0];
       expect(q.id).toBeDefined();
       expect(q.text).toBeDefined();
@@ -225,8 +216,7 @@ describe('Assessment API', () => {
       expect(q.options).toBeDefined();
     });
 
-    test('POST /assessments/:sessionId/responses submits answers', async () => {
-      // Get questions first
+    test('POST /assessments/:sessionId/responses submits batch answers', async () => {
       const qResponse = await app.inject({
         method: 'GET',
         url: `/api/v1/assessments/${sessionId}/questions`,
@@ -234,8 +224,6 @@ describe('Assessment API', () => {
       });
 
       const questions = qResponse.json().questions;
-
-      // Submit responses for all questions
       const responses = questions.map((q: { id: string; questionType: string }) => ({
         questionId: q.id,
         answer: q.questionType === 'SCENARIO' ? 'A' : '4',
@@ -326,14 +314,15 @@ describe('Assessment API', () => {
     });
 
     test('cannot submit responses to completed session', async () => {
-      // Start and complete a session
+      // Start a new session (previous one completed, so this creates new)
       const startRes = await app.inject({
         method: 'POST',
         url: '/api/v1/assessments/start',
         headers: { authorization: `Bearer ${token}` },
-        payload: { templateId },
+        payload: {},
       });
-      const sid = startRes.json().sessionId;
+      const body = startRes.json();
+      const sid = body.session.id;
 
       // Get questions and submit all
       const qRes = await app.inject({
@@ -360,7 +349,7 @@ describe('Assessment API', () => {
         headers: { authorization: `Bearer ${token}` },
       });
 
-      // Try to submit more responses
+      // Try to submit more responses to completed session
       const response = await app.inject({
         method: 'POST',
         url: `/api/v1/assessments/${sid}/responses`,

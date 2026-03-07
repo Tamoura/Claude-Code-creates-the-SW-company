@@ -1,10 +1,11 @@
 /**
  * routes/assessment.ts — Assessment lifecycle endpoints
  *
- * POST   /start              — create new session, return session ID
- * GET    /:sessionId          — get session status + progress
+ * POST   /start                — create new session (auto-selects template)
+ * GET    /:sessionId           — get session status + progress
  * GET    /:sessionId/questions — get all questions for this session
- * POST   /:sessionId/responses — submit answer(s), update progress
+ * POST   /:sessionId/respond   — submit single answer, update progress
+ * POST   /:sessionId/responses — submit batch answers, update progress
  * POST   /:sessionId/complete  — finalize, run scoring, create FluencyProfile
  * GET    /:sessionId/results   — get scored results
  *
@@ -20,10 +21,33 @@ import {
   DimensionWeights,
 } from '../services/scoring.js';
 
-// ── Validation Schemas ────────────────────────────────────────────────────────
+// -- Types for Prisma select results ------------------------------------------
 
-const startSchema = z.object({
-  templateId: z.string().uuid('templateId must be a valid UUID'),
+interface QuestionSelect {
+  id: string;
+  text: string;
+  questionType: string;
+  dimension: string;
+  interactionMode: string;
+  optionsJson: unknown;
+}
+
+function formatQuestion(q: QuestionSelect) {
+  return {
+    id: q.id,
+    text: q.text,
+    questionType: q.questionType,
+    dimension: q.dimension,
+    interactionMode: q.interactionMode,
+    options: q.optionsJson,
+  };
+}
+
+// -- Validation Schemas -------------------------------------------------------
+
+const respondSchema = z.object({
+  questionId: z.string().uuid('questionId must be a valid UUID'),
+  answer: z.string().min(1, 'answer is required').max(10),
 });
 
 const responsesSchema = z.object({
@@ -41,44 +65,127 @@ const uuidParamSchema = z.object({
   sessionId: z.string().uuid('sessionId must be a valid UUID'),
 });
 
-// ── Constants ─────────────────────────────────────────────────────────────────
+// -- Constants ----------------------------------------------------------------
 
 const SESSION_EXPIRY_HOURS = 2;
 
-// ── Route Registration ────────────────────────────────────────────────────────
+// -- Helpers ------------------------------------------------------------------
+
+function parseSessionParam(params: unknown): string {
+  const parsed = uuidParamSchema.safeParse(params);
+  if (!parsed.success) {
+    throw new AppError('validation-error', 400, 'Invalid session ID');
+  }
+  return parsed.data.sessionId;
+}
+
+async function getVerifiedSession(
+  fastify: FastifyInstance,
+  sessionId: string,
+  userId: string,
+  orgId: string,
+  options?: {
+    requireInProgress?: boolean;
+    includeTemplate?: boolean;
+  }
+) {
+  const session = await fastify.prisma.assessmentSession.findFirst({
+    where: {
+      id: sessionId,
+      userId,
+      orgId,
+      deletedAt: null,
+    },
+    include: options?.includeTemplate ? { template: true } : undefined,
+  });
+
+  if (!session) {
+    throw new AppError('session-not-found', 404, 'Assessment session not found');
+  }
+
+  if (options?.requireInProgress && session.status !== 'IN_PROGRESS') {
+    throw new AppError(
+      'session-not-active',
+      409,
+      'Assessment session is not in progress'
+    );
+  }
+
+  return session;
+}
+
+async function checkSessionExpiry(
+  fastify: FastifyInstance,
+  session: { id: string; expiresAt: Date }
+) {
+  if (session.expiresAt < new Date()) {
+    await fastify.prisma.assessmentSession.update({
+      where: { id: session.id },
+      data: { status: 'EXPIRED' },
+    });
+    throw new AppError('session-expired', 410, 'Assessment session has expired');
+  }
+}
+
+async function upsertResponses(
+  fastify: FastifyInstance,
+  sessionId: string,
+  orgId: string,
+  items: Array<{ questionId: string; answer: string }>
+) {
+  for (const resp of items) {
+    await fastify.prisma.response.upsert({
+      where: {
+        sessionId_questionId: {
+          sessionId,
+          questionId: resp.questionId,
+        },
+      },
+      update: { answer: resp.answer },
+      create: {
+        orgId,
+        sessionId,
+        questionId: resp.questionId,
+        answer: resp.answer,
+      },
+    });
+  }
+}
+
+async function updateProgress(
+  fastify: FastifyInstance,
+  sessionId: string
+): Promise<{ progressPct: number; answeredCount: number; totalQuestions: number }> {
+  const totalQuestions = await fastify.prisma.question.count({
+    where: { isActive: true },
+  });
+  const answeredCount = await fastify.prisma.response.count({
+    where: { sessionId },
+  });
+  const progressPct =
+    totalQuestions > 0
+      ? Math.round((answeredCount / totalQuestions) * 100 * 10) / 10
+      : 0;
+
+  await fastify.prisma.assessmentSession.update({
+    where: { id: sessionId },
+    data: { progressPct },
+  });
+
+  return { progressPct, answeredCount, totalQuestions };
+}
+
+// -- Route Registration -------------------------------------------------------
 
 export async function assessmentRoutes(fastify: FastifyInstance): Promise<void> {
   // All assessment routes require authentication
   fastify.addHook('preHandler', fastify.authenticate);
 
-  // ── POST /start ─────────────────────────────────────────────────────────
+  // -- POST /start ------------------------------------------------------------
   fastify.post(
     '/start',
     async (request: FastifyRequest, reply: FastifyReply) => {
-      const parsed = startSchema.safeParse(request.body);
-      if (!parsed.success) {
-        throw new AppError(
-          'validation-error',
-          400,
-          parsed.error.issues.map((i) => `${i.path.join('.')}: ${i.message}`).join('; ')
-        );
-      }
-
       const user = request.currentUser!;
-      const { templateId } = parsed.data;
-
-      // Verify template exists and belongs to the user's org (or is platform-wide)
-      const template = await fastify.prisma.assessmentTemplate.findFirst({
-        where: {
-          id: templateId,
-          isActive: true,
-          OR: [{ orgId: user.orgId }, { orgId: null }],
-        },
-      });
-
-      if (!template) {
-        throw new AppError('template-not-found', 404, 'Assessment template not found');
-      }
 
       // Get active algorithm version
       const algorithm = await fastify.prisma.algorithmVersion.findFirst({
@@ -90,10 +197,55 @@ export async function assessmentRoutes(fastify: FastifyInstance): Promise<void> 
         throw new AppError('no-algorithm', 500, 'No active scoring algorithm configured');
       }
 
-      // Count available questions
-      const totalQuestions = await fastify.prisma.question.count({
-        where: { isActive: true },
+      // Auto-select template: prefer org-specific, fall back to platform-provided
+      const template = await fastify.prisma.assessmentTemplate.findFirst({
+        where: {
+          isActive: true,
+          OR: [{ orgId: user.orgId }, { orgId: null }],
+        },
+        orderBy: [{ orgId: 'desc' }, { createdAt: 'desc' }],
       });
+
+      if (!template) {
+        throw new AppError('no-template', 500, 'No assessment template found');
+      }
+
+      // Check for existing in-progress session — resume it instead of creating new
+      const existing = await fastify.prisma.assessmentSession.findFirst({
+        where: {
+          userId: user.id,
+          orgId: user.orgId,
+          status: 'IN_PROGRESS',
+          deletedAt: null,
+        },
+      });
+
+      if (existing) {
+        const questions = await fastify.prisma.question.findMany({
+          where: { isActive: true },
+          orderBy: [{ dimension: 'asc' }, { createdAt: 'asc' }],
+          select: {
+            id: true,
+            text: true,
+            questionType: true,
+            dimension: true,
+            interactionMode: true,
+            optionsJson: true,
+          },
+        });
+
+        return reply.code(200).send({
+          session: {
+            id: existing.id,
+            status: existing.status,
+            progressPct: existing.progressPct,
+            startedAt: existing.startedAt.toISOString(),
+            expiresAt: existing.expiresAt.toISOString(),
+          },
+          questions: questions.map(formatQuestion),
+          totalQuestions: questions.length,
+        });
+      }
 
       // Create session
       const expiresAt = new Date();
@@ -111,26 +263,40 @@ export async function assessmentRoutes(fastify: FastifyInstance): Promise<void> 
         },
       });
 
+      // Fetch all active questions
+      const questions = await fastify.prisma.question.findMany({
+        where: { isActive: true },
+        orderBy: [{ dimension: 'asc' }, { createdAt: 'asc' }],
+        select: {
+          id: true,
+          text: true,
+          questionType: true,
+          dimension: true,
+          interactionMode: true,
+          optionsJson: true,
+        },
+      });
+
       return reply.code(201).send({
-        sessionId: session.id,
-        status: session.status,
-        totalQuestions,
-        expiresAt: session.expiresAt.toISOString(),
+        session: {
+          id: session.id,
+          status: session.status,
+          progressPct: session.progressPct,
+          startedAt: session.startedAt.toISOString(),
+          expiresAt: session.expiresAt.toISOString(),
+        },
+        questions: questions.map(formatQuestion),
+        totalQuestions: questions.length,
       });
     }
   );
 
-  // ── GET /:sessionId ─────────────────────────────────────────────────────
+  // -- GET /:sessionId --------------------------------------------------------
   fastify.get(
     '/:sessionId',
     async (request: FastifyRequest, reply: FastifyReply) => {
-      const params = uuidParamSchema.safeParse(request.params);
-      if (!params.success) {
-        throw new AppError('validation-error', 400, 'Invalid session ID');
-      }
-
+      const sessionId = parseSessionParam(request.params);
       const user = request.currentUser!;
-      const { sessionId } = params.data;
 
       const session = await fastify.prisma.assessmentSession.findFirst({
         where: {
@@ -170,33 +336,15 @@ export async function assessmentRoutes(fastify: FastifyInstance): Promise<void> 
     }
   );
 
-  // ── GET /:sessionId/questions ───────────────────────────────────────────
+  // -- GET /:sessionId/questions -----------------------------------------------
   fastify.get(
     '/:sessionId/questions',
     async (request: FastifyRequest, reply: FastifyReply) => {
-      const params = uuidParamSchema.safeParse(request.params);
-      if (!params.success) {
-        throw new AppError('validation-error', 400, 'Invalid session ID');
-      }
-
+      const sessionId = parseSessionParam(request.params);
       const user = request.currentUser!;
-      const { sessionId } = params.data;
 
-      // Verify session belongs to user
-      const session = await fastify.prisma.assessmentSession.findFirst({
-        where: {
-          id: sessionId,
-          userId: user.id,
-          orgId: user.orgId,
-          deletedAt: null,
-        },
-      });
+      await getVerifiedSession(fastify, sessionId, user.id, user.orgId);
 
-      if (!session) {
-        throw new AppError('session-not-found', 404, 'Assessment session not found');
-      }
-
-      // Get all active questions
       const questions = await fastify.prisma.question.findMany({
         where: { isActive: true },
         orderBy: [{ dimension: 'asc' }, { createdAt: 'asc' }],
@@ -210,7 +358,6 @@ export async function assessmentRoutes(fastify: FastifyInstance): Promise<void> 
         },
       });
 
-      // Get existing responses for this session
       const existingResponses = await fastify.prisma.response.findMany({
         where: { sessionId },
         select: { questionId: true, answer: true },
@@ -220,31 +367,69 @@ export async function assessmentRoutes(fastify: FastifyInstance): Promise<void> 
         existingResponses.map((r) => [r.questionId, r.answer])
       );
 
-      const formattedQuestions = questions.map((q) => ({
-        id: q.id,
-        text: q.text,
-        questionType: q.questionType,
-        dimension: q.dimension,
-        interactionMode: q.interactionMode,
-        options: q.optionsJson,
-        existingAnswer: responseMap.get(q.id) ?? null,
-      }));
-
       return reply.code(200).send({
-        questions: formattedQuestions,
-        totalQuestions: formattedQuestions.length,
+        questions: questions.map((q) => ({
+          id: q.id,
+          text: q.text,
+          questionType: q.questionType,
+          dimension: q.dimension,
+          interactionMode: q.interactionMode,
+          options: q.optionsJson,
+          existingAnswer: responseMap.get(q.id) ?? null,
+        })),
+        totalQuestions: questions.length,
       });
     }
   );
 
-  // ── POST /:sessionId/responses ──────────────────────────────────────────
+  // -- POST /:sessionId/respond (single response) ----------------------------
+  fastify.post(
+    '/:sessionId/respond',
+    async (request: FastifyRequest, reply: FastifyReply) => {
+      const sessionId = parseSessionParam(request.params);
+      const user = request.currentUser!;
+
+      const parsed = respondSchema.safeParse(request.body);
+      if (!parsed.success) {
+        throw new AppError(
+          'validation-error',
+          400,
+          parsed.error.issues.map((i) => `${i.path.join('.')}: ${i.message}`).join('; ')
+        );
+      }
+
+      const { questionId, answer } = parsed.data;
+
+      const session = await getVerifiedSession(
+        fastify, sessionId, user.id, user.orgId, { requireInProgress: true }
+      );
+      await checkSessionExpiry(fastify, session);
+
+      // Verify question exists
+      const question = await fastify.prisma.question.findFirst({
+        where: { id: questionId, isActive: true },
+      });
+      if (!question) {
+        throw new AppError('question-not-found', 404, 'Question not found');
+      }
+
+      await upsertResponses(fastify, sessionId, user.orgId, [{ questionId, answer }]);
+      const progress = await updateProgress(fastify, sessionId);
+
+      return reply.code(200).send({
+        sessionId,
+        questionId,
+        ...progress,
+      });
+    }
+  );
+
+  // -- POST /:sessionId/responses (batch) ------------------------------------
   fastify.post(
     '/:sessionId/responses',
     async (request: FastifyRequest, reply: FastifyReply) => {
-      const params = uuidParamSchema.safeParse(request.params);
-      if (!params.success) {
-        throw new AppError('validation-error', 400, 'Invalid session ID');
-      }
+      const sessionId = parseSessionParam(request.params);
+      const user = request.currentUser!;
 
       const bodyParsed = responsesSchema.safeParse(request.body);
       if (!bodyParsed.success) {
@@ -255,137 +440,56 @@ export async function assessmentRoutes(fastify: FastifyInstance): Promise<void> 
         );
       }
 
-      const user = request.currentUser!;
-      const { sessionId } = params.data;
       const { responses } = bodyParsed.data;
 
-      // Verify session exists and is IN_PROGRESS
-      const session = await fastify.prisma.assessmentSession.findFirst({
-        where: {
-          id: sessionId,
-          userId: user.id,
-          orgId: user.orgId,
-          deletedAt: null,
-        },
-      });
+      const session = await getVerifiedSession(
+        fastify, sessionId, user.id, user.orgId, { requireInProgress: true }
+      );
+      await checkSessionExpiry(fastify, session);
 
-      if (!session) {
-        throw new AppError('session-not-found', 404, 'Assessment session not found');
-      }
-
-      if (session.status !== 'IN_PROGRESS') {
-        throw new AppError(
-          'session-not-active',
-          409,
-          'Assessment session is not active'
-        );
-      }
-
-      // Check if session is expired
-      if (session.expiresAt < new Date()) {
-        await fastify.prisma.assessmentSession.update({
-          where: { id: sessionId },
-          data: { status: 'EXPIRED' },
-        });
-        throw new AppError('session-expired', 410, 'Assessment session has expired');
-      }
-
-      // Upsert responses (idempotent save-and-resume)
-      for (const resp of responses) {
-        await fastify.prisma.response.upsert({
-          where: {
-            sessionId_questionId: {
-              sessionId,
-              questionId: resp.questionId,
-            },
-          },
-          update: {
-            answer: resp.answer,
-          },
-          create: {
-            orgId: user.orgId,
-            sessionId,
-            questionId: resp.questionId,
-            answer: resp.answer,
-          },
-        });
-      }
-
-      // Update progress
-      const totalQuestions = await fastify.prisma.question.count({
-        where: { isActive: true },
-      });
-      const answeredCount = await fastify.prisma.response.count({
-        where: { sessionId },
-      });
-
-      const progressPct =
-        totalQuestions > 0
-          ? Math.round((answeredCount / totalQuestions) * 100 * 10) / 10
-          : 0;
-
-      await fastify.prisma.assessmentSession.update({
-        where: { id: sessionId },
-        data: { progressPct },
-      });
+      await upsertResponses(fastify, sessionId, user.orgId, responses);
+      const progress = await updateProgress(fastify, sessionId);
 
       return reply.code(200).send({
         saved: responses.length,
-        progressPct,
-        answeredCount,
-        totalQuestions,
+        ...progress,
       });
     }
   );
 
-  // ── POST /:sessionId/complete ───────────────────────────────────────────
+  // -- POST /:sessionId/complete ----------------------------------------------
   fastify.post(
     '/:sessionId/complete',
     async (request: FastifyRequest, reply: FastifyReply) => {
-      const params = uuidParamSchema.safeParse(request.params);
-      if (!params.success) {
-        throw new AppError('validation-error', 400, 'Invalid session ID');
-      }
-
+      const sessionId = parseSessionParam(request.params);
       const user = request.currentUser!;
-      const { sessionId } = params.data;
 
-      // Verify session
-      const session = await fastify.prisma.assessmentSession.findFirst({
-        where: {
-          id: sessionId,
-          userId: user.id,
-          orgId: user.orgId,
-          deletedAt: null,
-        },
-        include: {
-          template: true,
-        },
-      });
-
-      if (!session) {
-        throw new AppError('session-not-found', 404, 'Assessment session not found');
-      }
-
-      if (session.status !== 'IN_PROGRESS') {
-        throw new AppError(
-          'session-already-completed',
-          409,
-          'Assessment session is not in progress'
-        );
-      }
+      const session = await getVerifiedSession(
+        fastify, sessionId, user.id, user.orgId,
+        { requireInProgress: true, includeTemplate: true }
+      );
 
       // Get all responses with their questions and indicators
       const responses = await fastify.prisma.response.findMany({
         where: { sessionId },
         include: {
-          question: {
-            include: {
-              indicator: true,
-            },
-          },
+          question: { include: { indicator: true } },
         },
       });
+
+      // Validate all questions answered
+      const totalQuestions = await fastify.prisma.question.count({
+        where: { isActive: true },
+      });
+
+      if (responses.length < totalQuestions) {
+        const unanswered = totalQuestions - responses.length;
+        throw new AppError(
+          'incomplete-assessment',
+          400,
+          `${unanswered} question(s) remain unanswered. Please answer all questions before completing.`
+        );
+      }
 
       // Build scoring inputs
       const indicatorInputs: IndicatorInput[] = responses.map((r) => ({
@@ -397,15 +501,23 @@ export async function assessmentRoutes(fastify: FastifyInstance): Promise<void> 
         questionType: r.question.questionType as IndicatorInput['questionType'],
       }));
 
-      const dimensionWeights = session.template.dimensionWeights as DimensionWeights;
-
       // Build options map for scoring
       const optionsMap: Record<string, unknown> = {};
       for (const r of responses) {
         optionsMap[r.question.indicator.shortCode] = r.question.optionsJson;
       }
 
-      // Score the assessment using the scoring service
+      // Get dimension weights from template (session includes template)
+      const templateData = (session as typeof session & { template: { dimensionWeights: unknown } }).template;
+      const weights = templateData.dimensionWeights as Record<string, number>;
+      const dimensionWeights: DimensionWeights = {
+        DELEGATION: weights.DELEGATION ?? weights.delegation ?? 0.25,
+        DESCRIPTION: weights.DESCRIPTION ?? weights.description ?? 0.25,
+        DISCERNMENT: weights.DISCERNMENT ?? weights.discernment ?? 0.25,
+        DILIGENCE: weights.DILIGENCE ?? weights.diligence ?? 0.25,
+      };
+
+      // Score the assessment
       const scoredProfile = scoreAssessment(
         indicatorInputs,
         dimensionWeights,
@@ -438,6 +550,11 @@ export async function assessmentRoutes(fastify: FastifyInstance): Promise<void> 
       });
 
       return reply.code(200).send({
+        session: {
+          id: sessionId,
+          status: 'COMPLETED',
+          completedAt: new Date().toISOString(),
+        },
         profile: {
           id: profile.id,
           overallScore: profile.overallScore,
@@ -451,33 +568,25 @@ export async function assessmentRoutes(fastify: FastifyInstance): Promise<void> 
     }
   );
 
-  // ── GET /:sessionId/results ─────────────────────────────────────────────
+  // -- GET /:sessionId/results ------------------------------------------------
   fastify.get(
     '/:sessionId/results',
     async (request: FastifyRequest, reply: FastifyReply) => {
-      const params = uuidParamSchema.safeParse(request.params);
-      if (!params.success) {
-        throw new AppError('validation-error', 400, 'Invalid session ID');
-      }
-
+      const sessionId = parseSessionParam(request.params);
       const user = request.currentUser!;
-      const { sessionId } = params.data;
 
-      // Verify session belongs to user
-      const session = await fastify.prisma.assessmentSession.findFirst({
-        where: {
-          id: sessionId,
-          userId: user.id,
-          orgId: user.orgId,
-          deletedAt: null,
-        },
-      });
+      const session = await getVerifiedSession(
+        fastify, sessionId, user.id, user.orgId
+      );
 
-      if (!session) {
-        throw new AppError('session-not-found', 404, 'Assessment session not found');
+      if (session.status !== 'COMPLETED') {
+        throw new AppError(
+          'results-not-ready',
+          400,
+          'Assessment session has not been completed yet'
+        );
       }
 
-      // Get the fluency profile
       const profile = await fastify.prisma.fluencyProfile.findUnique({
         where: { sessionId },
       });
@@ -491,6 +600,12 @@ export async function assessmentRoutes(fastify: FastifyInstance): Promise<void> 
       }
 
       return reply.code(200).send({
+        session: {
+          id: session.id,
+          status: session.status,
+          startedAt: session.startedAt.toISOString(),
+          completedAt: session.completedAt?.toISOString() ?? null,
+        },
         profile: {
           id: profile.id,
           overallScore: profile.overallScore,
