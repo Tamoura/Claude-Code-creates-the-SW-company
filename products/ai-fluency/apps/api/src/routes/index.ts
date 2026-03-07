@@ -8,15 +8,15 @@
 import { FastifyInstance } from 'fastify';
 import healthRoute from './health.js';
 import { authRoutes } from './auth.js';
+import { assessmentRoutes } from './assessment.js';
 
 export async function registerRoutes(fastify: FastifyInstance): Promise<void> {
   // Health check (no prefix — lives at root level)
   await fastify.register(healthRoute);
 
-  // Auth routes — Sprint 1.3 stubs, full impl in Sprint 1.4
+  // Auth routes
   await fastify.register(authRoutes, { prefix: '/api/v1/auth' });
 
-  // Future route modules registered here as features are added:
-  // await fastify.register(assessmentRoutes, { prefix: '/api/v1/assessments' });
-  // await fastify.register(profileRoutes, { prefix: '/api/v1/profiles' });
+  // Assessment routes
+  await fastify.register(assessmentRoutes, { prefix: '/api/v1/assessments' });
 }
