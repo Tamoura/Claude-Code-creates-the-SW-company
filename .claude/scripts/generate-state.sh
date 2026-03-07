@@ -15,9 +15,11 @@ STATE_FILE="$REPO_ROOT/.claude/orchestrator/state.yml"
 PORT_REGISTRY="$REPO_ROOT/.claude/PORT-REGISTRY.md"
 PRODUCTS_DIR="$REPO_ROOT/products"
 
-if [ ! -d "$PRODUCTS_DIR" ]; then
-  echo "ERROR: products/ directory not found at $PRODUCTS_DIR"
-  exit 1
+# Detect repo mode
+if [ -d "$PRODUCTS_DIR" ]; then
+  REPO_MODE="monorepo"
+else
+  REPO_MODE="single"
 fi
 
 # Helper: count TS/TSX files under a directory
@@ -103,8 +105,14 @@ get_ports() {
 # Helper: get last commit date for a product
 get_last_activity() {
   local product="$1"
+  local git_path
+  if [ "$REPO_MODE" = "monorepo" ]; then
+    git_path="products/$product"
+  else
+    git_path="."
+  fi
   local raw_date
-  raw_date=$(git log -1 --format="%ci" -- "products/$product" 2>/dev/null || echo "")
+  raw_date=$(git log -1 --format="%ci" -- "$git_path" 2>/dev/null || echo "")
   if [ -n "$raw_date" ]; then
     echo "$raw_date" | awk '{print $1"T"$2"Z"}'
   else
@@ -130,8 +138,18 @@ company:
 products:
 HEADER
 
-# Iterate over each product directory
-for product_path in "$PRODUCTS_DIR"/*/; do
+# Build list of product paths to iterate
+PRODUCT_PATHS=()
+if [ "$REPO_MODE" = "monorepo" ]; then
+  for p in "$PRODUCTS_DIR"/*/; do
+    [ -d "$p" ] && PRODUCT_PATHS+=("$p")
+  done
+else
+  # Single-repo: treat repo root as the single product
+  PRODUCT_PATHS+=("$REPO_ROOT")
+fi
+
+for product_path in "${PRODUCT_PATHS[@]}"; do
   product=$(basename "$product_path")
   ts_count=$(count_ts_files "$product_path")
   phase=$(detect_phase "$product_path")
@@ -166,9 +184,16 @@ for product_path in "$PRODUCTS_DIR"/*/; do
     description=$(head -10 "$product_path/.claude/addendum.md" | grep -v "^#" | grep -v "^$" | head -1 | sed 's/"/\\"/g' | cut -c1-100)
   fi
 
+  # Path in state.yml
+  if [ "$REPO_MODE" = "monorepo" ]; then
+    product_rel_path="products/$product"
+  else
+    product_rel_path="."
+  fi
+
   cat >> "$STATE_FILE" << PRODUCT
   $product:
-    path: "products/$product"
+    path: "$product_rel_path"
     status: "$status"
     phase: "$phase"
     apps: $apps_yaml
@@ -214,4 +239,4 @@ last_updated: "$TIMESTAMP"
 FOOTER
 
 echo "State generated at $STATE_FILE"
-echo "Products found: $(ls -d "$PRODUCTS_DIR"/*/ 2>/dev/null | wc -l | tr -d ' ')"
+echo "Products found: ${#PRODUCT_PATHS[@]} (mode: $REPO_MODE)"

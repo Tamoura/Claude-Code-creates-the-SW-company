@@ -29,7 +29,7 @@ if [ -z "$PRODUCT" ] || [ -z "$SPRINT_NUM" ]; then
   exit 1
 fi
 
-PRODUCT_DIR="$REPO_ROOT/products/$PRODUCT"
+source "$REPO_ROOT/.claude/scripts/resolve-product.sh"
 PRD_FILE="$PRODUCT_DIR/docs/PRD.md"
 
 if [ ! -f "$PRD_FILE" ]; then
@@ -128,7 +128,7 @@ while IFS= read -r line; do
 
 ## Story Details
 
-> See PRD for full story details: \`products/$PRODUCT/docs/PRD.md\`
+> See PRD for full story details: \`docs/PRD.md\`
 
 ## Definition of Done
 

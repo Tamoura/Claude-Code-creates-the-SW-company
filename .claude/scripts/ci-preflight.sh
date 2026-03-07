@@ -16,6 +16,7 @@ set -uo pipefail
 
 REPO_ROOT="$(cd "$(dirname "$0")/../.." && pwd)"
 PRODUCT="${1:-}"
+source "$REPO_ROOT/.claude/scripts/resolve-product.sh"
 FAILURES=0
 WARNINGS=0
 REPORT_LINES=()
@@ -108,8 +109,8 @@ fi
 # ── 3. TypeScript Compilation ────────────────────────────────────────────
 section "TypeScript Compilation"
 
-if [ -n "$PRODUCT" ] && [ -d "$REPO_ROOT/products/$PRODUCT" ]; then
-  for app_dir in "$REPO_ROOT/products/$PRODUCT/apps/"*/; do
+if [ -d "$PRODUCT_DIR/apps" ]; then
+  for app_dir in "$PRODUCT_DIR/apps/"*/; do
     [ -d "$app_dir" ] || continue
     app_name=$(basename "$app_dir")
     if [ -f "$app_dir/tsconfig.json" ]; then
@@ -120,15 +121,15 @@ if [ -n "$PRODUCT" ] && [ -d "$REPO_ROOT/products/$PRODUCT" ]; then
       fi
     fi
   done
-elif [ -n "$PRODUCT" ]; then
-  warn "Product '$PRODUCT' not found at products/$PRODUCT"
+elif [ -n "$PRODUCT" ] && [ "$REPO_MODE" = "unknown" ]; then
+  warn "Product '$PRODUCT' not found"
 fi
 
 # ── 4. Lint Check ────────────────────────────────────────────────────────
 section "Lint Check"
 
-if [ -n "$PRODUCT" ] && [ -d "$REPO_ROOT/products/$PRODUCT" ]; then
-  for app_dir in "$REPO_ROOT/products/$PRODUCT/apps/"*/; do
+if [ -d "$PRODUCT_DIR/apps" ]; then
+  for app_dir in "$PRODUCT_DIR/apps/"*/; do
     [ -d "$app_dir" ] || continue
     app_name=$(basename "$app_dir")
     if [ -f "$app_dir/package.json" ]; then
@@ -144,8 +145,8 @@ fi
 # ── 5. Test Execution ───────────────────────────────────────────────────
 section "Test Execution"
 
-if [ -n "$PRODUCT" ] && [ -d "$REPO_ROOT/products/$PRODUCT" ]; then
-  for app_dir in "$REPO_ROOT/products/$PRODUCT/apps/"*/; do
+if [ -d "$PRODUCT_DIR/apps" ]; then
+  for app_dir in "$PRODUCT_DIR/apps/"*/; do
     [ -d "$app_dir" ] || continue
     app_name=$(basename "$app_dir")
     if [ -f "$app_dir/package.json" ]; then

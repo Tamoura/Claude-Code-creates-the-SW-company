@@ -16,21 +16,25 @@ DAYS=${2:-30}
 echo "Extracting patterns from $PRODUCT (last $DAYS days)"
 echo ""
 
-PRODUCT_DIR="$REPO_ROOT/products/$PRODUCT"
+source "$REPO_ROOT/.claude/scripts/resolve-product.sh"
 
 if [ ! -d "$PRODUCT_DIR" ]; then
   echo "Error: Product directory not found: $PRODUCT_DIR"
   exit 1
 fi
 
+# Git path filter: monorepo uses products/$PRODUCT/, single-repo uses whole repo
+GIT_PATH_FILTER="."
+[ "$REPO_MODE" = "monorepo" ] && GIT_PATH_FILTER="products/$PRODUCT/"
+
 echo "=== File Types ==="
-git -C "$REPO_ROOT" log --since="${DAYS} days ago" --name-only --diff-filter=AM -- "products/$PRODUCT/" 2>/dev/null | \
+git -C "$REPO_ROOT" log --since="${DAYS} days ago" --name-only --diff-filter=AM -- "$GIT_PATH_FILTER" 2>/dev/null | \
   grep -E '\.(ts|tsx|js|json|prisma)$' | sort -u | \
   sed 's/.*\.//' | sort | uniq -c | sort -rn
 
 echo ""
 echo "=== Recurring Patterns (files modified 3+ times) ==="
-git -C "$REPO_ROOT" log --since="${DAYS} days ago" --name-only -- "products/$PRODUCT/" 2>/dev/null | \
+git -C "$REPO_ROOT" log --since="${DAYS} days ago" --name-only -- "$GIT_PATH_FILTER" 2>/dev/null | \
   grep -E '\.(ts|tsx)$' | sort | uniq -c | sort -rn | head -10
 
 echo ""

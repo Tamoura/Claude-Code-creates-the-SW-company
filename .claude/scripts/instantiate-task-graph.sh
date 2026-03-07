@@ -61,7 +61,8 @@ if [ -n "$PARAMS" ]; then
 fi
 
 # Create product directory if needed
-mkdir -p "$REPO_ROOT/products/$PRODUCT/.claude"
+source "$REPO_ROOT/.claude/scripts/resolve-product.sh"
+mkdir -p "$PRODUCT_DIR/.claude"
 
 # Validate no placeholders remain
 if echo "$OUTPUT" | grep -q '{[A-Z_]*}'; then
@@ -74,7 +75,7 @@ if echo "$OUTPUT" | grep -q '{[A-Z_]*}'; then
 fi
 
 # Save task graph
-OUTPUT_FILE="$REPO_ROOT/products/$PRODUCT/.claude/task-graph.yml"
+OUTPUT_FILE="$PRODUCT_DIR/.claude/task-graph.yml"
 echo "$OUTPUT" > "$OUTPUT_FILE"
 
 echo ""

@@ -19,7 +19,8 @@ fi
 SCRIPT_DIR_INIT="$(cd "$(dirname "${BASH_SOURCE[0]}")" && pwd)"
 REPO_ROOT="$(cd "$SCRIPT_DIR_INIT/../.." && pwd)"
 
-PRODUCT_PATH="$REPO_ROOT/products/$PRODUCT"
+source "$REPO_ROOT/.claude/scripts/resolve-product.sh"
+PRODUCT_PATH="$PRODUCT_DIR"
 REPORT_DIR="$PRODUCT_PATH/docs/quality-reports"
 mkdir -p "$REPORT_DIR"
 TIMESTAMP=$(date +%Y%m%d-%H%M%S)

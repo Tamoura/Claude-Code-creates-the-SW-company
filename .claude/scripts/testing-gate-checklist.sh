@@ -17,7 +17,7 @@ if [ -z "$PRODUCT" ]; then
   exit 1
 fi
 
-PRODUCT_DIR="$REPO_ROOT/products/$PRODUCT"
+source "$REPO_ROOT/.claude/scripts/resolve-product.sh"
 
 if [ ! -d "$PRODUCT_DIR" ]; then
   echo "Error: Product directory not found: $PRODUCT_DIR"
