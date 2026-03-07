@@ -289,9 +289,9 @@ ConnectSW uses [GitHub's spec-kit](https://github.com/github/spec-kit) methodolo
 - `.specify/memory/constitution.md` — Governing principles (14 articles, v1.5.0)
 - `.specify/templates/` — Spec, plan, tasks, checklist templates
 - `.specify/templates/commands/` — Command definitions
-- `products/[product]/docs/specs/` — Feature specifications
-- `products/[product]/docs/plan.md` — Implementation plans
-- `products/[product]/docs/tasks.md` — Task lists
+- `{product}/docs/specs/` — Feature specifications (`products/[name]/docs/specs/` in monorepo, `docs/specs/` in single-repo)
+- `{product}/docs/plan.md` — Implementation plans
+- `{product}/docs/tasks.md` — Task lists
 
 **Workflow (New Products):**
 ```
@@ -308,43 +308,61 @@ CEO brief → /speckit.specify → Design → Implementation → /speckit.analyz
 
 ## Directory Structure
 
+ConnectSW supports two repo layouts. All scripts auto-detect which mode via `.claude/scripts/resolve-product.sh`.
+
+### Monorepo Mode (multiple products in one repo)
+
 ```
 /products/[name]/        # Individual products
-/packages/               # Shared cross-product packages (future)
+/packages/               # Shared cross-product packages
 /docs/                   # Company documentation
 /notes/                  # CEO briefs, decisions
 /.claude/                # Agent definitions, workflows
 /.specify/               # Spec-kit constitution, templates, commands
 ```
 
+### Single-Repo Mode (one product per repo)
+
+```
+/apps/                   # api/ and web/ at repo root (no products/ wrapper)
+/e2e/                    # End-to-end tests
+/docs/                   # Product documentation (PRD, specs, plan, tasks)
+/.claude/                # Agent definitions, workflows
+/.specify/               # Spec-kit constitution, templates, commands
+/package.json            # Product root
+```
+
+**Detection**: If `products/` directory exists, scripts use monorepo mode. Otherwise, they treat the repo root as the single product.
+
 ## Product Structure
 
-Each product follows this structure:
+Each product follows this structure (paths relative to product root):
 
 ```
-products/[name]/
-├── apps/
-│   ├── api/             # Backend service
-│   │   ├── src/
-│   │   ├── tests/
-│   │   └── package.json
-│   └── web/             # Frontend app
-│       ├── src/
-│       ├── tests/
-│       └── package.json
-├── packages/            # Product-specific shared code
-├── e2e/                 # End-to-end tests
-├── docs/
-│   ├── PRD.md          # Product Requirements
-│   ├── API.md          # API documentation
-│   ├── ADRs/           # Architecture decisions
-│   ├── specs/          # Feature specifications (spec-kit)
-│   ├── plan.md         # Implementation plan (spec-kit)
-│   ├── tasks.md        # Task list (spec-kit)
-│   └── quality-reports/ # Spec consistency & gate reports
-├── package.json        # Monorepo root
-└── README.md
+apps/
+├── api/                 # Backend service
+│   ├── src/
+│   ├── tests/
+│   └── package.json
+└── web/                 # Frontend app
+    ├── src/
+    ├── tests/
+    └── package.json
+packages/                # Product-specific shared code
+e2e/                     # End-to-end tests
+docs/
+├── PRD.md              # Product Requirements
+├── API.md              # API documentation
+├── ADRs/               # Architecture decisions
+├── specs/              # Feature specifications (spec-kit)
+├── plan.md             # Implementation plan (spec-kit)
+├── tasks.md            # Task list (spec-kit)
+└── quality-reports/    # Spec consistency & gate reports
+package.json
+README.md
 ```
+
+In monorepo mode, each product lives under `products/[name]/`. In single-repo mode, this structure is at the repo root.
 
 ## Technology Stack
 

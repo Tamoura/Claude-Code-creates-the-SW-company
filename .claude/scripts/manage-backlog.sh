@@ -37,7 +37,8 @@ usage() {
 
 BACKLOG_FILE=""
 if [ -n "$PRODUCT" ]; then
-  BACKLOG_FILE="$REPO_ROOT/products/$PRODUCT/docs/backlog.yml"
+  source "$REPO_ROOT/.claude/scripts/resolve-product.sh"
+  BACKLOG_FILE="$PRODUCT_DIR/docs/backlog.yml"
 fi
 
 require_backlog() {
@@ -68,7 +69,6 @@ cmd_init() {
     exit 1
   fi
 
-  PRODUCT_DIR="$REPO_ROOT/products/$PRODUCT"
   if [ ! -d "$PRODUCT_DIR" ]; then
     echo "Error: Product directory not found: $PRODUCT_DIR"
     exit 1

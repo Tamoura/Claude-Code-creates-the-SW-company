@@ -22,7 +22,8 @@ if [ -z "$PRODUCT" ] || [ -z "$TASK_ID" ] || [ -z "$STATUS" ]; then
   exit 1
 fi
 
-TASK_GRAPH="$REPO_ROOT/products/$PRODUCT/.claude/task-graph.yml"
+source "$REPO_ROOT/.claude/scripts/resolve-product.sh"
+TASK_GRAPH="$PRODUCT_DIR/.claude/task-graph.yml"
 
 if [ ! -f "$TASK_GRAPH" ]; then
   echo "Error: Task graph not found: $TASK_GRAPH"

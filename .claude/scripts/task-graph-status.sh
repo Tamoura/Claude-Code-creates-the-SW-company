@@ -19,7 +19,8 @@ if [ -z "$PRODUCT" ]; then
   exit 1
 fi
 
-GRAPH_FILE="$REPO_ROOT/products/$PRODUCT/.claude/task-graph.yml"
+source "$REPO_ROOT/.claude/scripts/resolve-product.sh"
+GRAPH_FILE="$PRODUCT_DIR/.claude/task-graph.yml"
 
 if [ ! -f "$GRAPH_FILE" ]; then
   if [ "$FORMAT" = "--json" ]; then

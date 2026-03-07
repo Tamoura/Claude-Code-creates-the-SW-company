@@ -19,7 +19,11 @@ echo "Reading git log..."
 
 # Parse commits that touch the product directory
 COUNT=0
-git -C "$REPO_ROOT" log --oneline --no-merges -- "products/$PRODUCT/" 2>/dev/null | while IFS= read -r line; do
+source "$REPO_ROOT/.claude/scripts/resolve-product.sh"
+GIT_PATH_FILTER="."
+[ "$REPO_MODE" = "monorepo" ] && GIT_PATH_FILTER="products/$PRODUCT/"
+
+git -C "$REPO_ROOT" log --oneline --no-merges -- "$GIT_PATH_FILTER" 2>/dev/null | while IFS= read -r line; do
   COMMIT_HASH=$(echo "$line" | cut -d' ' -f1)
   COMMIT_MSG=$(echo "$line" | cut -d' ' -f2-)
   COMMIT_DATE=$(git -C "$REPO_ROOT" log -1 --format="%aI" "$COMMIT_HASH" 2>/dev/null)
@@ -37,7 +41,7 @@ git -C "$REPO_ROOT" log --oneline --no-merges -- "products/$PRODUCT/" 2>/dev/nul
   esac
 
   # Count files changed
-  FILES_CHANGED=$(git -C "$REPO_ROOT" diff-tree --no-commit-id --name-only -r "$COMMIT_HASH" -- "products/$PRODUCT/" 2>/dev/null | wc -l | tr -d ' ')
+  FILES_CHANGED=$(git -C "$REPO_ROOT" diff-tree --no-commit-id --name-only -r "$COMMIT_HASH" -- "$GIT_PATH_FILTER" 2>/dev/null | wc -l | tr -d ' ')
 
   # Append to audit trail
   ENTRY=$(cat <<JSONEOF

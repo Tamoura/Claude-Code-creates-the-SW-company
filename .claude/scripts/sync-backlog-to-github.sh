@@ -28,7 +28,8 @@ if [ -z "$PRODUCT" ]; then
   exit 1
 fi
 
-BACKLOG_FILE="$REPO_ROOT/products/$PRODUCT/docs/backlog.yml"
+source "$REPO_ROOT/.claude/scripts/resolve-product.sh"
+BACKLOG_FILE="$PRODUCT_DIR/docs/backlog.yml"
 
 if [ ! -f "$BACKLOG_FILE" ]; then
   echo "Error: Backlog not found: $BACKLOG_FILE"
