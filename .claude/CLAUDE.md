@@ -166,6 +166,7 @@ Goal: The review surface shrinks over time. Every repeated review comment is a m
 | `repository-back-translation.md` | Testing | Post-MVP — create agent learning exemplars |
 | `i18n.md` | Internationalisation | Any product with Arabic/RTL or multi-language requirements |
 | `ci-preflight.md` | Quality Assurance | Before every push — prevents CI failures proactively |
+| `regression-testing.md` | Testing | Every new feature must add regression E2E tests |
 | `agent-message.schema.yml` | Agent Communication | Orchestrator + inter-agent messaging |
 | `message-router.ts` | Agent Communication | Infrastructure — orchestrator routing |
 
