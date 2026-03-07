@@ -368,13 +368,8 @@ export async function assessmentRoutes(fastify: FastifyInstance): Promise<void> 
       );
 
       return reply.code(200).send({
-        questions: questions.map((q) => ({
-          id: q.id,
-          text: q.text,
-          questionType: q.questionType,
-          dimension: q.dimension,
-          interactionMode: q.interactionMode,
-          options: q.optionsJson,
+        questions: questions.map((q: QuestionSelect & { id: string }) => ({
+          ...formatQuestion(q),
           existingAnswer: responseMap.get(q.id) ?? null,
         })),
         totalQuestions: questions.length,
@@ -532,9 +527,9 @@ export async function assessmentRoutes(fastify: FastifyInstance): Promise<void> 
           sessionId,
           algorithmVersion: session.algorithmVersionId,
           overallScore: scoredProfile.overallScore,
-          dimensionScores: scoredProfile.dimensionScores,
-          selfReportScores: scoredProfile.selfReportScores,
-          indicatorBreakdown: scoredProfile.indicatorBreakdown as object,
+          dimensionScores: scoredProfile.dimensionScores as unknown as object,
+          selfReportScores: scoredProfile.selfReportScores as unknown as object,
+          indicatorBreakdown: scoredProfile.indicatorBreakdown as unknown as object,
           discernmentGap: scoredProfile.discernmentGap,
         },
       });

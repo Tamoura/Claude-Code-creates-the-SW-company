@@ -476,6 +476,209 @@ const scenarioQuestions: QuestionDef[] = [
       { key: 'D', text: 'Suggest using AI to help real customers write better reviews instead', isCorrect: false, score: 0.5 },
     ],
   },
+
+  // Additional DELEGATION SCENARIOS (4 more)
+  {
+    indicatorShortCode: 'DELEGATION_TASK_SUITABILITY',
+    dimension: 'DELEGATION',
+    interactionMode: 'AGENCY',
+    questionType: 'SCENARIO',
+    text: 'Your team needs to create personalized onboarding emails for 200 new employees starting next month. Which delegation strategy is most effective?',
+    optionsJson: [
+      { key: 'A', text: 'Write each email manually to ensure personalization', isCorrect: false, score: 0.0 },
+      { key: 'B', text: 'Use AI to generate personalized drafts from employee data, review a sample, then batch-send after approval', isCorrect: true, score: 1.0 },
+      { key: 'C', text: 'Send a generic template to all employees', isCorrect: false, score: 0.0 },
+      { key: 'D', text: 'Use AI to generate all emails and send them without review', isCorrect: false, score: 0.5 },
+    ],
+  },
+  {
+    indicatorShortCode: 'DELEGATION_REASONING',
+    dimension: 'DELEGATION',
+    interactionMode: 'AUTOMATION',
+    questionType: 'SCENARIO',
+    text: 'You are considering using AI to summarize 100 pages of meeting transcripts. Which factor is LEAST important when deciding to delegate this?',
+    optionsJson: [
+      { key: 'A', text: 'Whether the transcripts contain confidential information', isCorrect: false, score: 0.0 },
+      { key: 'B', text: 'The specific AI model version number being used', isCorrect: true, score: 1.0 },
+      { key: 'C', text: 'Whether key action items might be missed by AI summarization', isCorrect: false, score: 0.0 },
+      { key: 'D', text: 'The accuracy requirements for the final summary', isCorrect: false, score: 0.5 },
+    ],
+  },
+  {
+    indicatorShortCode: 'DELEGATION_RISK_ASSESSMENT',
+    dimension: 'DELEGATION',
+    interactionMode: 'AUGMENTATION',
+    questionType: 'SCENARIO',
+    text: 'Your company wants to use AI to triage customer support tickets by priority. What risk mitigation strategy is most critical?',
+    optionsJson: [
+      { key: 'A', text: 'Ensure the AI processes tickets faster than humans', isCorrect: false, score: 0.0 },
+      { key: 'B', text: 'Implement human review for high-priority classifications and monitor for systematic misclassification patterns', isCorrect: true, score: 1.0 },
+      { key: 'C', text: 'Train the AI on more data to improve accuracy', isCorrect: false, score: 0.5 },
+      { key: 'D', text: 'Only use AI during off-hours when support volume is lower', isCorrect: false, score: 0.0 },
+    ],
+  },
+  {
+    indicatorShortCode: 'DELEGATION_RISK_ASSESSMENT',
+    dimension: 'DELEGATION',
+    interactionMode: 'AGENCY',
+    questionType: 'SCENARIO',
+    text: 'A healthcare company wants to use AI to draft patient communication letters. Which risk assessment approach is most appropriate?',
+    optionsJson: [
+      { key: 'A', text: 'Test the AI with a few sample letters and proceed if they look good', isCorrect: false, score: 0.0 },
+      { key: 'B', text: 'Require mandatory clinician review, test for medical accuracy errors, verify HIPAA compliance, and maintain audit trails', isCorrect: true, score: 1.0 },
+      { key: 'C', text: 'Use AI only for non-medical portions of the letters', isCorrect: false, score: 0.5 },
+      { key: 'D', text: 'Have the AI flag any medical terms it is unsure about', isCorrect: false, score: 0.0 },
+    ],
+  },
+
+  // Additional DESCRIPTION SCENARIOS (4 more)
+  {
+    indicatorShortCode: 'DESCRIPTION_CONTEXT_PROVISION',
+    dimension: 'DESCRIPTION',
+    interactionMode: 'AUTOMATION',
+    questionType: 'SCENARIO',
+    text: 'You want AI to help debug a production error. Which information is most essential to include in your prompt?',
+    optionsJson: [
+      { key: 'A', text: 'The error message only', isCorrect: false, score: 0.0 },
+      { key: 'B', text: 'The error message, stack trace, relevant code context, what changed recently, and the expected vs actual behavior', isCorrect: true, score: 1.0 },
+      { key: 'C', text: 'A description of what the application is supposed to do', isCorrect: false, score: 0.0 },
+      { key: 'D', text: 'The error message and the file where it occurred', isCorrect: false, score: 0.5 },
+    ],
+  },
+  {
+    indicatorShortCode: 'DESCRIPTION_ITERATIVE_REFINEMENT',
+    dimension: 'DESCRIPTION',
+    interactionMode: 'AGENCY',
+    questionType: 'SCENARIO',
+    text: 'AI generates a data visualization but it uses the wrong chart type for your data. What is the most effective iterative refinement?',
+    optionsJson: [
+      { key: 'A', text: 'Start over with a completely new prompt', isCorrect: false, score: 0.0 },
+      { key: 'B', text: 'Specify the exact chart type needed, explain why it fits the data better, and provide an example of the layout you want', isCorrect: true, score: 1.0 },
+      { key: 'C', text: 'Ask AI to "fix the chart"', isCorrect: false, score: 0.0 },
+      { key: 'D', text: 'Ask AI to try a different chart type', isCorrect: false, score: 0.5 },
+    ],
+  },
+  {
+    indicatorShortCode: 'DESCRIPTION_PROMPT_CLARITY',
+    dimension: 'DESCRIPTION',
+    interactionMode: 'AGENCY',
+    questionType: 'SCENARIO',
+    text: 'You need AI to translate a technical document for a non-technical audience. Which prompt element is most important to include?',
+    optionsJson: [
+      { key: 'A', text: 'Ask AI to translate it simply', isCorrect: false, score: 0.0 },
+      { key: 'B', text: 'Specify the target audience reading level, define which technical terms need explanation, and provide an example of the desired tone', isCorrect: true, score: 1.0 },
+      { key: 'C', text: 'Tell AI to remove all technical jargon', isCorrect: false, score: 0.5 },
+      { key: 'D', text: 'Provide the document and ask for a summary', isCorrect: false, score: 0.0 },
+    ],
+  },
+  {
+    indicatorShortCode: 'DESCRIPTION_CONTEXT_PROVISION',
+    dimension: 'DESCRIPTION',
+    interactionMode: 'AUGMENTATION',
+    questionType: 'SCENARIO',
+    text: 'You ask AI to write a product comparison for your company blog. The first draft is generic and lacks your unique perspective. What context was likely missing?',
+    optionsJson: [
+      { key: 'A', text: 'The word count was not specified', isCorrect: false, score: 0.0 },
+      { key: 'B', text: 'Your company brand voice, unique selling points, target audience pain points, and competitive positioning strategy', isCorrect: true, score: 1.0 },
+      { key: 'C', text: 'Links to competitor websites', isCorrect: false, score: 0.0 },
+      { key: 'D', text: 'Product feature lists for comparison', isCorrect: false, score: 0.5 },
+    ],
+  },
+
+  // Additional DISCERNMENT SCENARIOS (4 more)
+  {
+    indicatorShortCode: 'DISCERNMENT_ACCURACY_EVALUATION',
+    dimension: 'DISCERNMENT',
+    interactionMode: 'AGENCY',
+    questionType: 'SCENARIO',
+    text: 'AI generates a summary of a research paper and states "the study found a 95% success rate." The actual paper reports 95% confidence interval. What type of error is this?',
+    optionsJson: [
+      { key: 'A', text: 'A minor rounding error that does not matter', isCorrect: false, score: 0.0 },
+      { key: 'B', text: 'A semantic hallucination — the AI confused a statistical concept (confidence interval) with a result metric (success rate)', isCorrect: true, score: 1.0 },
+      { key: 'C', text: 'The AI simplified the language for readability', isCorrect: false, score: 0.0 },
+      { key: 'D', text: 'An acceptable paraphrase of the original finding', isCorrect: false, score: 0.5 },
+    ],
+  },
+  {
+    indicatorShortCode: 'DISCERNMENT_MISSING_CONTEXT',
+    dimension: 'DISCERNMENT',
+    interactionMode: 'AGENCY',
+    questionType: 'SCENARIO',
+    text: 'You ask AI to recommend the best database for your application. It confidently recommends PostgreSQL. What critical context might be missing from its analysis?',
+    optionsJson: [
+      { key: 'A', text: 'The recommendation seems correct, so no context is missing', isCorrect: false, score: 0.0 },
+      { key: 'B', text: 'Your specific data volume, query patterns, team expertise, existing infrastructure, budget constraints, and compliance requirements', isCorrect: true, score: 1.0 },
+      { key: 'C', text: 'Alternative database names it should have considered', isCorrect: false, score: 0.0 },
+      { key: 'D', text: 'PostgreSQL version compatibility details', isCorrect: false, score: 0.5 },
+    ],
+  },
+  {
+    indicatorShortCode: 'DISCERNMENT_BIAS_DETECTION',
+    dimension: 'DISCERNMENT',
+    interactionMode: 'AGENCY',
+    questionType: 'SCENARIO',
+    text: 'AI writes a performance review summary that uses words like "aggressive" and "assertive" differently for male and female employees with similar behaviors. What should you do?',
+    optionsJson: [
+      { key: 'A', text: 'Accept the language since the AI trained on real performance reviews', isCorrect: false, score: 0.0 },
+      { key: 'B', text: 'Recognize this as gender bias in language, standardize terminology across all reviews, and flag this as a systemic issue to address', isCorrect: true, score: 1.0 },
+      { key: 'C', text: 'Remove the descriptive words from all reviews', isCorrect: false, score: 0.5 },
+      { key: 'D', text: 'Rewrite just the female employee reviews to match the male phrasing', isCorrect: false, score: 0.0 },
+    ],
+  },
+  {
+    indicatorShortCode: 'DISCERNMENT_BIAS_DETECTION',
+    dimension: 'DISCERNMENT',
+    interactionMode: 'AUGMENTATION',
+    questionType: 'SCENARIO',
+    text: 'You ask AI to suggest marketing strategies for a global product launch. The suggestions focus heavily on English-speaking Western markets. What does this reveal?',
+    optionsJson: [
+      { key: 'A', text: 'Western markets are the most important, so this is appropriate', isCorrect: false, score: 0.0 },
+      { key: 'B', text: 'The AI exhibits training data bias toward English-language Western content, and you need to explicitly request strategies for non-Western markets', isCorrect: true, score: 1.0 },
+      { key: 'C', text: 'You should just add a few Asian markets to the list', isCorrect: false, score: 0.5 },
+      { key: 'D', text: 'The AI needs more context about your product', isCorrect: false, score: 0.0 },
+    ],
+  },
+
+  // Additional DILIGENCE SCENARIOS (2 more)
+  {
+    indicatorShortCode: 'DILIGENCE_OUTPUT_VERIFICATION',
+    dimension: 'DILIGENCE',
+    interactionMode: 'AUTOMATION',
+    questionType: 'SCENARIO',
+    text: 'AI generates a set of database migration scripts for a production deployment. What verification process should you follow?',
+    optionsJson: [
+      { key: 'A', text: 'Run the migration directly on production since AI-generated SQL is typically correct', isCorrect: false, score: 0.0 },
+      { key: 'B', text: 'Review each statement, test on a staging environment with production-like data, verify rollback scripts work, and have a DBA review', isCorrect: true, score: 1.0 },
+      { key: 'C', text: 'Run the migration on a test database and check if it completes without errors', isCorrect: false, score: 0.5 },
+      { key: 'D', text: 'Ask the AI to verify its own migration scripts', isCorrect: false, score: 0.0 },
+    ],
+  },
+  {
+    indicatorShortCode: 'DILIGENCE_ACCOUNTABILITY',
+    dimension: 'DILIGENCE',
+    interactionMode: 'AUGMENTATION',
+    questionType: 'SCENARIO',
+    text: 'You used AI to help prepare a presentation that your CEO will deliver to investors. The AI included an inaccurate market size figure. Who is responsible?',
+    optionsJson: [
+      { key: 'A', text: 'The AI tool provider, since their product generated the error', isCorrect: false, score: 0.0 },
+      { key: 'B', text: 'You are responsible — you used the tool and should have verified all data points before the presentation was finalized', isCorrect: true, score: 1.0 },
+      { key: 'C', text: 'The CEO, since they approved the presentation', isCorrect: false, score: 0.0 },
+      { key: 'D', text: 'Shared responsibility between you and the AI tool', isCorrect: false, score: 0.5 },
+    ],
+  },
+  {
+    indicatorShortCode: 'DILIGENCE_ETHICAL_AWARENESS',
+    dimension: 'DILIGENCE',
+    interactionMode: 'AUGMENTATION',
+    questionType: 'SCENARIO',
+    text: 'You discover that an AI tool your team uses for content creation was trained partly on copyrighted material without license. What is the most responsible course of action?',
+    optionsJson: [
+      { key: 'A', text: 'Continue using it since it is the vendor responsibility, not yours', isCorrect: false, score: 0.0 },
+      { key: 'B', text: 'Evaluate the legal and ethical risk, consult legal counsel, document the concern, and explore alternative tools while implementing interim safeguards', isCorrect: true, score: 1.0 },
+      { key: 'C', text: 'Stop using AI entirely until the issue is resolved', isCorrect: false, score: 0.5 },
+      { key: 'D', text: 'Keep using it but avoid generating content similar to known copyrighted works', isCorrect: false, score: 0.0 },
+    ],
+  },
 ];
 
 // Self-report questions (Likert 1-5)
