@@ -57,28 +57,39 @@ function humanizeName(filename: string): string {
 }
 
 async function scanScreenshots(product: string): Promise<ScreenshotInfo[]> {
-  const screenshotsDir = join(REPO_ROOT, 'products', product, 'e2e', 'test-results', 'screenshots');
-  if (!existsSync(screenshotsDir)) return [];
+  const testResultsDir = join(REPO_ROOT, 'products', product, 'e2e', 'test-results');
+  if (!existsSync(testResultsDir)) return [];
 
-  const files = await readdir(screenshotsDir);
+  const entries = await readdir(testResultsDir);
   const screenshots: ScreenshotInfo[] = [];
 
-  for (const file of files) {
-    if (!['.png', '.jpg', '.jpeg', '.webp'].includes(extname(file).toLowerCase())) continue;
-    const filePath = join(screenshotsDir, file);
-    const stats = await stat(filePath);
-    screenshots.push({
-      name: humanizeName(file),
-      filename: file,
-      product,
-      category: categorizeScreenshot(file),
-      url: `/api/v1/e2e-gallery/file/${product}/screenshots/${file}`,
-      sizeKb: Math.round(stats.size / 1024),
-      modifiedAt: stats.mtime.toISOString(),
-    });
+  for (const entry of entries) {
+    const entryPath = join(testResultsDir, entry);
+    const entryStat = await stat(entryPath);
+    if (!entryStat.isDirectory()) continue;
+
+    try {
+      const subFiles = await readdir(entryPath);
+      for (const file of subFiles) {
+        if (!['.png', '.jpg', '.jpeg', '.webp'].includes(extname(file).toLowerCase())) continue;
+        const filePath = join(entryPath, file);
+        const stats = await stat(filePath);
+        screenshots.push({
+          name: humanizeName(entry),
+          filename: file,
+          product,
+          category: categorizeScreenshot(entry),
+          url: `/api/v1/e2e-gallery/file/${product}/screenshots/${entry}/${file}`,
+          sizeKb: Math.round(stats.size / 1024),
+          modifiedAt: stats.mtime.toISOString(),
+        });
+      }
+    } catch {
+      // Skip unreadable directories
+    }
   }
 
-  return screenshots.sort((a, b) => a.filename.localeCompare(b.filename));
+  return screenshots.sort((a, b) => a.name.localeCompare(b.name));
 }
 
 async function scanVideos(product: string): Promise<VideoInfo[]> {
@@ -185,9 +196,9 @@ export async function e2eGalleryRoutes(app: FastifyInstance) {
   });
 
   // Serve individual files (screenshots, videos, traces)
-  app.get('/e2e-gallery/file/:product/screenshots/:filename', async (request, reply) => {
-    const { product, filename } = request.params as { product: string; filename: string };
-    const filePath = join(REPO_ROOT, 'products', product, 'e2e', 'test-results', 'screenshots', filename);
+  app.get('/e2e-gallery/file/:product/screenshots/:testName/:filename', async (request, reply) => {
+    const { product, testName, filename } = request.params as { product: string; testName: string; filename: string };
+    const filePath = join(REPO_ROOT, 'products', product, 'e2e', 'test-results', testName, filename);
 
     if (!existsSync(filePath)) {
       return reply.code(404).send({ error: 'File not found' });
