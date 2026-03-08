@@ -30,6 +30,7 @@ export interface Product {
   hasPitchDeck: boolean;
   hasE2E: boolean;
   e2eScreenshotCount: number;
+  e2eVideoCount: number;
   apiPort: number | null;
   webPort: number | null;
   description: string;
@@ -232,13 +233,20 @@ function buildProductInfo(name: string): Product {
   // Check for pitch deck
   const hasPitchDeck = existsSync(join(dir, 'pitch-deck.json'));
 
-  // Check for E2E test results
-  const e2eScreenshotsDir = join(dir, 'e2e', 'test-results', 'screenshots');
-  const hasE2E = existsSync(join(dir, 'e2e', 'test-results'));
+  // Check for E2E tests (spec files) and results (screenshots/videos)
+  const hasE2E = existsSync(join(dir, 'e2e', 'tests')) || existsSync(join(dir, 'e2e', 'playwright.config.ts'));
+  const e2eResultsDir = join(dir, 'e2e', 'test-results');
   let e2eScreenshotCount = 0;
-  if (existsSync(e2eScreenshotsDir)) {
+  let e2eVideoCount = 0;
+  if (existsSync(e2eResultsDir)) {
     try {
-      e2eScreenshotCount = readdirSync(e2eScreenshotsDir).filter(f => f.endsWith('.png') || f.endsWith('.jpg')).length;
+      for (const sub of readdirSync(e2eResultsDir, { withFileTypes: true })) {
+        if (sub.isDirectory()) {
+          const files = readdirSync(join(e2eResultsDir, sub.name));
+          e2eScreenshotCount += files.filter(f => f.endsWith('.png') || f.endsWith('.jpg')).length;
+          e2eVideoCount += files.filter(f => f.endsWith('.webm') || f.endsWith('.mp4')).length;
+        }
+      }
     } catch { /* ignore */ }
   }
 
@@ -253,6 +261,7 @@ function buildProductInfo(name: string): Product {
     hasPitchDeck,
     hasE2E,
     e2eScreenshotCount,
+    e2eVideoCount,
     apiPort,
     webPort,
     description,
