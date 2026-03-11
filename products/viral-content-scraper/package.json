@@ -1,0 +1,18 @@
+{
+  "name": "viral-content-scraper",
+  "version": "0.1.0",
+  "private": true,
+  "description": "Scrapes and ranks the top 1% of viral content ideas across social media platforms",
+  "scripts": {
+    "dev": "pnpm --filter './apps/*' --parallel run dev",
+    "build": "pnpm --filter './apps/*' run build",
+    "test": "pnpm --filter './apps/*' run test",
+    "test:coverage": "pnpm --filter './apps/*' run test:coverage",
+    "lint": "pnpm --filter './apps/*' run lint",
+    "db:generate": "pnpm --filter api run db:generate",
+    "db:migrate": "pnpm --filter api run db:migrate",
+    "db:push": "pnpm --filter api run db:push",
+    "db:seed": "pnpm --filter api run db:seed"
+  },
+  "keywords": ["viral", "content", "scraper", "social-media", "analytics"]
+}

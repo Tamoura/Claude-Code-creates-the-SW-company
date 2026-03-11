@@ -1,0 +1,24 @@
+{
+  "name": "Viral Content Scraper",
+  "tagline": "Find the top 1% of viral content ideas before everyone else",
+  "description": "Real-time scraping across 9 social media platforms with AI-powered virality scoring. Discover what's about to blow up, filter by platform, category, and velocity, and set alerts for specific topics.",
+  "category": "Content Intelligence",
+  "status": "MVP",
+  "stack": ["Next.js", "Fastify", "PostgreSQL", "Redis", "Prisma", "Tailwind CSS"],
+  "ports": {
+    "web": 3120,
+    "api": 5015
+  },
+  "features": [
+    "Multi-platform scraping (Reddit, HN, Twitter, LinkedIn, TikTok, YouTube, Instagram, Threads, Bluesky)",
+    "Composite virality scoring engine",
+    "Engagement velocity tracking",
+    "Top 1% percentile filtering",
+    "Category and hashtag trend detection",
+    "Real-time dashboard with analytics",
+    "Content search and filtering",
+    "Save content to personal collections",
+    "Custom alert system",
+    "Scheduled auto-scraping (every 30 min)"
+  ]
+}

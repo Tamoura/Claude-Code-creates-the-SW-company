@@ -1,0 +1,226 @@
+generator client {
+  provider = "prisma-client-js"
+}
+
+datasource db {
+  provider = "postgresql"
+  url      = env("DATABASE_URL")
+}
+
+// ─── Users & Auth ────────────────────────────────────────
+
+model User {
+  id           String   @id @default(cuid())
+  email        String   @unique
+  passwordHash String   @map("password_hash")
+  name         String?
+  role         Role     @default(USER)
+  createdAt    DateTime @default(now()) @map("created_at")
+  updatedAt    DateTime @updatedAt @map("updated_at")
+
+  savedContent SavedContent[]
+  alerts       Alert[]
+  apiKeys      ApiKey[]
+
+  @@map("users")
+}
+
+enum Role {
+  USER
+  ADMIN
+}
+
+model ApiKey {
+  id          String   @id @default(cuid())
+  userId      String   @map("user_id")
+  keyHash     String   @unique @map("key_hash")
+  name        String
+  permission  String   @default("read")
+  lastUsedAt  DateTime? @map("last_used_at")
+  expiresAt   DateTime? @map("expires_at")
+  createdAt   DateTime @default(now()) @map("created_at")
+
+  user User @relation(fields: [userId], references: [id], onDelete: Cascade)
+
+  @@map("api_keys")
+}
+
+// ─── Content ─────────────────────────────────────────────
+
+model Content {
+  id             String        @id @default(cuid())
+  platform       Platform
+  externalId     String?       @map("external_id")
+  url            String?
+  title          String?
+  body           String?
+  author         String?
+  authorFollowers Int?         @map("author_followers")
+
+  // Engagement metrics
+  likes          Int           @default(0)
+  shares         Int           @default(0)
+  comments       Int           @default(0)
+  views          Int           @default(0)
+  saves          Int           @default(0)
+
+  // Virality scoring
+  viralityScore  Float         @default(0) @map("virality_score")
+  engagementRate Float         @default(0) @map("engagement_rate")
+  velocityScore  Float         @default(0) @map("velocity_score")
+  percentile     Float         @default(0)
+
+  // Metadata
+  hashtags       String[]
+  category       String?
+  language       String?       @default("en")
+  mediaType      MediaType     @default(TEXT) @map("media_type")
+  publishedAt    DateTime?     @map("published_at")
+  scrapedAt      DateTime      @default(now()) @map("scraped_at")
+  updatedAt      DateTime      @updatedAt @map("updated_at")
+
+  savedBy    SavedContent[]
+  snapshots  ContentSnapshot[]
+  topics     ContentTopic[]
+
+  @@unique([platform, externalId])
+  @@index([viralityScore(sort: Desc)])
+  @@index([platform, viralityScore(sort: Desc)])
+  @@index([scrapedAt])
+  @@index([category])
+  @@map("content")
+}
+
+enum Platform {
+  TWITTER
+  REDDIT
+  LINKEDIN
+  TIKTOK
+  YOUTUBE
+  INSTAGRAM
+  THREADS
+  BLUESKY
+  HACKERNEWS
+}
+
+enum MediaType {
+  TEXT
+  IMAGE
+  VIDEO
+  CAROUSEL
+  LINK
+  POLL
+}
+
+// Track engagement over time to calculate velocity
+model ContentSnapshot {
+  id          String   @id @default(cuid())
+  contentId   String   @map("content_id")
+  likes       Int      @default(0)
+  shares      Int      @default(0)
+  comments    Int      @default(0)
+  views       Int      @default(0)
+  capturedAt  DateTime @default(now()) @map("captured_at")
+
+  content Content @relation(fields: [contentId], references: [id], onDelete: Cascade)
+
+  @@index([contentId, capturedAt])
+  @@map("content_snapshots")
+}
+
+// ─── Topics & Trends ─────────────────────────────────────
+
+model Topic {
+  id        String   @id @default(cuid())
+  name      String   @unique
+  slug      String   @unique
+  createdAt DateTime @default(now()) @map("created_at")
+
+  content ContentTopic[]
+  trends  TrendSnapshot[]
+
+  @@map("topics")
+}
+
+model ContentTopic {
+  contentId String @map("content_id")
+  topicId   String @map("topic_id")
+  relevance Float  @default(1.0)
+
+  content Content @relation(fields: [contentId], references: [id], onDelete: Cascade)
+  topic   Topic   @relation(fields: [topicId], references: [id], onDelete: Cascade)
+
+  @@id([contentId, topicId])
+  @@map("content_topics")
+}
+
+model TrendSnapshot {
+  id            String   @id @default(cuid())
+  topicId       String   @map("topic_id")
+  platform      Platform
+  contentCount  Int      @default(0) @map("content_count")
+  avgVirality   Float    @default(0) @map("avg_virality")
+  totalEngagement BigInt @default(0) @map("total_engagement")
+  capturedAt    DateTime @default(now()) @map("captured_at")
+
+  topic Topic @relation(fields: [topicId], references: [id], onDelete: Cascade)
+
+  @@index([topicId, capturedAt])
+  @@index([platform, capturedAt])
+  @@map("trend_snapshots")
+}
+
+// ─── User Features ───────────────────────────────────────
+
+model SavedContent {
+  userId    String   @map("user_id")
+  contentId String   @map("content_id")
+  notes     String?
+  savedAt   DateTime @default(now()) @map("saved_at")
+
+  user    User    @relation(fields: [userId], references: [id], onDelete: Cascade)
+  content Content @relation(fields: [contentId], references: [id], onDelete: Cascade)
+
+  @@id([userId, contentId])
+  @@map("saved_content")
+}
+
+model Alert {
+  id        String      @id @default(cuid())
+  userId    String      @map("user_id")
+  name      String
+  platform  Platform?
+  category  String?
+  minScore  Float       @default(90) @map("min_score")
+  keywords  String[]
+  isActive  Boolean     @default(true) @map("is_active")
+  createdAt DateTime    @default(now()) @map("created_at")
+
+  user User @relation(fields: [userId], references: [id], onDelete: Cascade)
+
+  @@map("alerts")
+}
+
+// ─── Scraper State ───────────────────────────────────────
+
+model ScrapeJob {
+  id         String      @id @default(cuid())
+  platform   Platform
+  status     JobStatus   @default(PENDING)
+  itemsFound Int         @default(0) @map("items_found")
+  errors     String[]
+  startedAt  DateTime?   @map("started_at")
+  finishedAt DateTime?   @map("finished_at")
+  createdAt  DateTime    @default(now()) @map("created_at")
+
+  @@index([platform, status])
+  @@index([createdAt])
+  @@map("scrape_jobs")
+}
+
+enum JobStatus {
+  PENDING
+  RUNNING
+  COMPLETED
+  FAILED
+}

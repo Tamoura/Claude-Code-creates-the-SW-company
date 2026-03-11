@@ -1,0 +1,26 @@
+version: '3.8'
+
+services:
+  postgres:
+    image: postgres:15-alpine
+    container_name: postgres-vcs
+    environment:
+      POSTGRES_DB: viral_content_scraper
+      POSTGRES_USER: postgres
+      POSTGRES_PASSWORD: postgres
+    ports:
+      - '5432:5432'
+    volumes:
+      - vcs_pgdata:/var/lib/postgresql/data
+
+  redis:
+    image: redis:7-alpine
+    container_name: redis-vcs
+    ports:
+      - '6379:6379'
+    volumes:
+      - vcs_redis:/data
+
+volumes:
+  vcs_pgdata:
+  vcs_redis:
