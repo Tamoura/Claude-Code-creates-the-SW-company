@@ -358,6 +358,48 @@ quadrantChart
 
 ---
 
+### US-17 — Technical Debt Tracker (Priority: P1)
+
+**As a** CTO, **I want to** track, prioritize, and manage technical debt across my systems, **so that** I can make data-driven decisions about when and what to pay down.
+
+**Acceptance Criteria**:
+1. **Given** a CTO on the tech debt page, **When** they click "Add Debt Item", **Then** a form captures: title, description, category (code, architecture, infrastructure, dependency, testing), severity (1-5), business impact, estimated effort, and linked systems/ADRs.
+2. **Given** existing debt items, **When** the CTO views the debt dashboard, **Then** items are displayed in a prioritized list sorted by AI-recommended ROI score, with filters by category, severity, and status.
+3. **Given** a debt item, **When** the CTO clicks "AI Prioritize", **Then** the agent analyzes the item against company context, risk profile, and upcoming initiatives to recommend priority and optimal timing.
+
+**Priority**: P1
+**Traces to**: BN-015, FR-036, FR-037, FR-038
+
+---
+
+### US-18 — Board Report Generator (Priority: P1)
+
+**As a** CTO, **I want to** auto-generate executive technology reports for board presentations, **so that** I spend less than 30 minutes preparing board-ready technology updates instead of 4-8 hours.
+
+**Acceptance Criteria**:
+1. **Given** a CTO on the reports page, **When** they click "Generate Board Report", **Then** the agent compiles data from ADRs, risks, costs, radar, and tech debt into a structured executive report with key metrics, decisions made, risks surfaced, and strategic recommendations.
+2. **Given** a generated report, **When** the CTO reviews it, **Then** they can select/deselect sections, edit AI-generated commentary, and add their own executive summary before exporting.
+3. **Given** a finalized report, **When** the CTO clicks "Export", **Then** the report downloads as PDF and Markdown with professional formatting suitable for board presentation.
+
+**Priority**: P1
+**Traces to**: BN-016, FR-039, FR-040, FR-041
+
+---
+
+### US-19 — Compliance Checker (Priority: P1)
+
+**As a** CTO, **I want to** assess my organization's compliance gaps against SOC2, ISO27001, and GDPR frameworks, **so that** I can proactively address audit readiness without hiring external consultants for initial assessment.
+
+**Acceptance Criteria**:
+1. **Given** a CTO on the compliance page, **When** they select a framework (SOC2/ISO27001/GDPR), **Then** the system displays a structured checklist of requirements with current status (compliant/partial/non-compliant/not-assessed) and progress percentage.
+2. **Given** identified compliance gaps, **When** the CTO clicks "Get Recommendations", **Then** the agent generates prioritized remediation steps based on company profile, current tech stack, and industry best practices.
+3. **Given** the compliance dashboard, **When** the CTO views it, **Then** it shows per-framework compliance percentage, priority gaps, and estimated effort to reach target compliance level.
+
+**Priority**: P1
+**Traces to**: BN-009, FR-042, FR-043, FR-044
+
+---
+
 ## 5. Functional Requirements
 
 | ID | Requirement | User Stories | Description |
@@ -397,6 +439,15 @@ quadrantChart
 | FR-033 | ADR Mermaid diagrams | US-15 | System MUST support embedding Mermaid diagrams (before/after architecture) within ADRs. |
 | FR-034 | ADR RAG integration | US-16 | System MUST index ADRs in the RAG pipeline so the advisory agent can cite past decisions when answering related questions. |
 | FR-035 | Related ADR surfacing | US-16 | System MUST surface related past ADRs when a CTO creates a new ADR with overlapping context or technologies. |
+| FR-036 | Tech debt inventory | US-17 | System MUST support creating and managing technical debt items with fields: title, description, category, severity, business impact, estimated effort, and linked systems. |
+| FR-037 | AI debt prioritization | US-17 | System MUST use the LangGraph agent to prioritize tech debt by business impact and ROI, considering company context and risk profile. |
+| FR-038 | Debt-to-Risk linking | US-17 | System MUST link tech debt items to risk items and ADRs for cross-referencing. |
+| FR-039 | Board report generation | US-18 | System MUST auto-generate executive technology reports from ADRs, risks, costs, radar data, and tech debt status. |
+| FR-040 | Report export | US-18 | System MUST export board reports as PDF and Markdown. |
+| FR-041 | Report customization | US-18 | System MUST allow CTOs to select which sections to include and add executive commentary before export. |
+| FR-042 | Compliance gap analysis | US-19 | System MUST provide SOC2, ISO27001, and GDPR gap analysis checklists with current status tracking. |
+| FR-043 | AI compliance recommendations | US-19 | System MUST use the LangGraph agent to generate compliance remediation recommendations based on company profile and identified gaps. |
+| FR-044 | Compliance status dashboard | US-19 | System MUST display compliance status per framework with progress percentages and priority items. |
 
 ---
 
@@ -489,10 +540,8 @@ The following are explicitly NOT included in Phase 1 MVP:
 - **Team topology advisor** -- Requires significant domain modeling (Phase 3).
 - **Incident post-mortem analyzer** -- Phase 3.
 - **Vendor evaluation framework** -- Phase 2.
-- **Technical debt tracker** -- Phase 2.
-- **Board/executive report generator** -- Phase 2. Advisory chat can draft report sections in Phase 1.
 - **ADR management** -- ELEVATED TO MVP. Structured ADR creation, AI-assisted drafting, and RAG integration included in Phase 1.
-- **Compliance checking (SOC2/ISO27001/GDPR)** -- Phase 2.
+- **Advanced compliance automation** -- Phase 2. Basic gap analysis checklists are MVP; automated evidence collection and continuous monitoring are Phase 2.
 - **Mobile application** -- No native app. Web app is responsive.
 - **On-premise/VPC deployment** -- Enterprise deployment deferred to post-Phase 2.
 - **Multi-language support** -- English only.
@@ -525,9 +574,15 @@ The following are explicitly NOT included in Phase 1 MVP:
 | `/settings/preferences` | MVP | Advisory preferences | Detail level, risk tolerance, communication style toggles |
 | `/help` | Deferred | Help and FAQ | Page skeleton with empty state: "Help documentation coming soon" |
 | `/integrations` | Deferred | Third-party integrations | Page skeleton with empty state: "Integrations coming soon" |
-| `/reports` | Deferred | Executive report generation | Page skeleton with empty state: "Report generation coming soon" |
+| `/reports` | MVP | Board report generator | Generate, customize, and export executive tech reports |
+| `/reports/new` | MVP | Generate new report | AI-compiled report from ADRs, risks, costs, radar, debt |
+| `/reports/:reportId` | MVP | Report detail/edit | Edit sections, add commentary, export PDF/Markdown |
 | `/team` | Deferred | Team management | Page skeleton with empty state: "Team management coming soon" |
-| `/compliance` | Deferred | Compliance checker | Page skeleton with empty state: "Compliance tools coming soon" |
+| `/compliance` | MVP | Compliance checker | Framework selection, gap analysis dashboard |
+| `/compliance/:framework` | MVP | Framework detail | Checklist with status tracking, AI recommendations |
+| `/debt` | MVP | Technical debt tracker | Prioritized debt inventory, AI ROI scoring |
+| `/debt/new` | MVP | Add debt item | Structured form with category, severity, business impact |
+| `/debt/:debtId` | MVP | Debt item detail | Full detail with linked ADRs, risks, AI prioritization |
 | `/adrs` | MVP | Architecture Decision Records | Searchable ADR list with filters by status, technology, date |
 | `/adrs/new` | MVP | Create new ADR | Structured form with AI-assist button for trade-off analysis |
 | `/adrs/:adrId` | MVP | ADR detail view | Full ADR with Mermaid diagrams, linked radar/risk items, conversation history |
