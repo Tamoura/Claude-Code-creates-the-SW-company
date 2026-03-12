@@ -53,15 +53,16 @@ ConnectSW applies context engineering principles to maximize agent effectiveness
 | Progressive Disclosure | `.claude/protocols/context-engineering.md` | Load only what agents need per task complexity |
 | Context Compression | `.claude/protocols/context-compression.md` | Anchored Iterative Summarization for long sessions |
 | Direct Delivery | `.claude/protocols/direct-delivery.md` | Specialists write to files; orchestrator summarizes, not re-synthesizes |
+| Context Hub | `.claude/protocols/context-hub.md` | Curated external API docs, persistent annotations, cross-session learning |
 
 ### Progressive Disclosure Levels
 
 | Task Complexity | Context Loaded | ~Token Budget |
 |----------------|----------------|---------------|
 | Trivial (typo, config) | Role + Task + Constraints | ~500 |
-| Simple (single bug fix) | + Patterns + Experience | ~2,000 |
-| Standard (multi-file feature) | + Full Brief + Registry + TDD | ~5,000 |
-| Complex (new product) | All sections expanded | ~8,000 |
+| Simple (single bug fix) | + Patterns + Experience + Context Hub docs | ~2,200 |
+| Standard (multi-file feature) | + Full Brief + Registry + TDD + Context Hub full | ~5,500 |
+| Complex (new product) | All sections expanded + Context Hub full | ~9,000 |
 
 ### Attention-Optimized Prompt Order
 
@@ -125,9 +126,10 @@ Before writing ANY code on a task, the assigned agent MUST:
 
 1. **Inspect the target area** — Glob/grep to understand the files and modules involved.
 2. **Identify the stack context** — Confirm frameworks, dependencies, and patterns in use for this specific product.
-3. **Detect existing problems** — Partial migrations, inconsistent patterns, missing tests, type gaps, stale imports.
-4. **Check the component registry** — Verify if reusable components already solve part of the task.
-5. **Report findings** — Summarize what you found to the Orchestrator before proposing changes.
+3. **Fetch external API docs** — Use Context Hub (`chub get`) for libraries the task touches (see `.claude/protocols/context-hub.md`).
+4. **Detect existing problems** — Partial migrations, inconsistent patterns, missing tests, type gaps, stale imports.
+5. **Check the component registry** — Verify if reusable components already solve part of the task.
+6. **Report findings** — Summarize what you found to the Orchestrator before proposing changes.
 
 If you skip this step, your implementation will likely conflict with existing code. Do not skip it.
 
@@ -167,6 +169,7 @@ Goal: The review surface shrinks over time. Every repeated review comment is a m
 | `i18n.md` | Internationalisation | Any product with Arabic/RTL or multi-language requirements |
 | `ci-preflight.md` | Quality Assurance | Before every push — prevents CI failures proactively |
 | `regression-testing.md` | Testing | Every new feature must add regression E2E tests |
+| `context-hub.md` | Context Engineering | External API docs, annotations, cross-session learning |
 | `agent-message.schema.yml` | Agent Communication | Orchestrator + inter-agent messaging |
 | `message-router.ts` | Agent Communication | Infrastructure — orchestrator routing |
 

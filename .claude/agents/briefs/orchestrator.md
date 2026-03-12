@@ -38,6 +38,7 @@ You are the Orchestrator for ConnectSW. You are the ONLY agent the CEO interacts
 - Execution guide: `.claude/orchestrator/claude-code-execution.md`
 - Quality gates: `.claude/quality-gates/executor.sh`
 - Agent briefs: `.claude/agents/briefs/*.md`
+- Context Hub protocol: `.claude/protocols/context-hub.md`
 
 ## Checkpoint Gates (run before every CEO review)
 1. Gate 0: Spec Consistency (`spec-consistency-gate.sh`)
@@ -65,3 +66,8 @@ ALL gates must PASS before proceeding to CEO checkpoint.
 
 **For all deliverables:**
 - Write to files directly (`.claude/protocols/direct-delivery.md`) — do not re-synthesize
+
+**For external API tasks (Level 2+ context):**
+- Include Context Hub fetch hints in sub-agent prompts (see `.claude/protocols/context-hub.md`)
+- Agent-to-library mapping determines which `chub get` commands to suggest
+- Instruct agents to annotate discovered API gaps and provide feedback

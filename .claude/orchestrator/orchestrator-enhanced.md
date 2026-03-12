@@ -35,10 +35,11 @@ For detailed execution instructions, see: `.claude/orchestrator/claude-code-exec
 - **Purpose**: Inline into sub-agent prompts instead of telling agents to read full files
 - **Originals**: `.claude/agents/{agent}.md` preserved as deep-dive reference
 
-### 3c. Context Engineering Protocols (NEW)
+### 3c. Context Engineering Protocols
 - **Progressive Disclosure**: `.claude/protocols/context-engineering.md` — Load only what agents need per task complexity
 - **Compression Protocol**: `.claude/protocols/context-compression.md` — Anchored Iterative Summarization for long sessions
 - **Direct Delivery**: `.claude/protocols/direct-delivery.md` — Specialists write deliverables to files, avoiding orchestrator re-synthesis
+- **Context Hub**: `.claude/protocols/context-hub.md` — Curated external API docs, persistent annotations, cross-session learning
 - **Script Registry**: `.claude/scripts/SCRIPT-REGISTRY.md` — Namespaced script index (replaces directory browsing)
 
 ### 4. Quality Gates
@@ -467,6 +468,22 @@ Before entering the execution loop, load memory files ONCE and score patterns ag
    ## Your Past Experience
    - Common mistake to avoid: "Missing Zod validation"
    - Preferred approach: "Route → Schema → Handler → Service"
+
+10. **Context Hub Injection** (Level 2+ only):
+
+   Using the agent-to-library mapping from `.claude/protocols/context-hub.md`,
+   identify which external libraries the task touches and add fetch hints:
+
+   ## External API Reference (Context Hub)
+   Fetch curated docs for the libraries this task uses:
+   - `chub get fastify/routes --lang js` — Route definitions, hooks, validation
+   - `chub get prisma/client --lang js` — Client API, queries, transactions
+
+   If you discover undocumented behavior or API gaps:
+   - Annotate: `chub annotate <id> "<discovery>"`
+   - Rate docs: `chub feedback <id> up|down`
+
+   For Level 3 (Standard+ tasks), add `--full` to fetch reference files too.
 ```
 
 ### Step 3.7: Compute Adaptive Duration Estimates

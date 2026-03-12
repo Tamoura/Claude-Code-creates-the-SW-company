@@ -546,6 +546,53 @@ Memory DOES contain:
 - Performance metrics
 - Code structure patterns
 
+## Context Hub Integration
+
+[Context Hub](https://github.com/andrewyng/context-hub) extends the memory system with **external API documentation** and **persistent annotations** that survive across sessions.
+
+### How It Connects
+
+```mermaid
+flowchart LR
+    CH[Context Hub] -->|annotations| CK[company-knowledge.json]
+    CH -->|feedback metrics| CM[context-hub-metrics.json]
+    CK -->|patterns sync| CHR[ConnectSW chub registry]
+    AE[agent-experiences/*.json] -->|learned gotchas| CH
+```
+
+### Annotation → Memory Sync
+
+When an agent annotates a Context Hub doc, the post-task update script should also add the finding to `company-knowledge.json` as a gotcha:
+
+```json
+{
+  "issue": "Prisma createMany does not support nested relations",
+  "solution": "Use prisma.$transaction with individual create calls",
+  "category": "backend",
+  "source": "context-hub-annotation",
+  "chub_id": "prisma/client"
+}
+```
+
+### Feedback Tracking
+
+Quality metrics for external docs are stored in `.claude/memory/metrics/context-hub-metrics.json`:
+
+```json
+{
+  "library_quality": {
+    "fastify/routes": { "up": 5, "down": 0, "reliability": 1.0 },
+    "prisma/client": { "up": 3, "down": 1, "reliability": 0.75 }
+  },
+  "annotation_count": 7,
+  "last_updated": "2026-03-12T00:00:00Z"
+}
+```
+
+### Internal Registry
+
+ConnectSW company patterns can be packaged as chub-compatible docs at `.claude/context-hub/connectsw/`. Build with `chub build .claude/context-hub/connectsw/`. See `.claude/protocols/context-hub.md` for full details.
+
 ## Future Enhancements
 
 - **AI-Powered Pattern Detection**: Use LLM to analyze commits and suggest patterns
