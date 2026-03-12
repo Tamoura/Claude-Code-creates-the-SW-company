@@ -329,6 +329,35 @@ quadrantChart
 
 ---
 
+### US-15 — ADR Creation & Management (Priority: P0)
+
+**As a** CTO, **I want to** create, store, and manage Architecture Decision Records in a structured format, **so that** my team and I can track the rationale behind every major technical decision.
+
+**Acceptance Criteria**:
+1. **Given** a CTO on the ADR page, **When** they click "New ADR", **Then** a structured form appears with fields: title, status (Proposed/Accepted/Deprecated/Superseded), context, decision, consequences, alternatives considered, and related technologies.
+2. **Given** a CTO filling out an ADR, **When** they click "AI Assist", **Then** the agent drafts trade-off analysis, suggests alternatives based on the company's tech stack and knowledge base, and pre-fills consequences based on similar decisions at other companies.
+3. **Given** existing ADRs, **When** the CTO views the ADR list, **Then** ADRs are displayed in a searchable, filterable table with columns: ID, title, status, date, related technologies, and linked risk items.
+4. **Given** an ADR, **When** the CTO views its detail page, **Then** the full ADR is rendered in a clean format with before/after architecture diagrams (Mermaid), linked radar items, and conversation history that led to the decision.
+
+**Priority**: P0
+**Traces to**: BN-011, FR-030, FR-031, FR-032, FR-033
+
+---
+
+### US-16 — ADR Search & Learning (Priority: P0)
+
+**As a** CTO, **I want to** search my past ADRs and have the AI advisor reference them when I ask related questions, **so that** my decisions build on institutional knowledge rather than being made in isolation.
+
+**Acceptance Criteria**:
+1. **Given** a CTO in the advisory chat, **When** they ask a question related to a past ADR (e.g., "why did we choose PostgreSQL?"), **Then** the agent retrieves and cites the relevant ADR alongside external knowledge base results.
+2. **Given** a CTO creating a new ADR, **When** the decision context overlaps with an existing ADR, **Then** the system surfaces the related ADR(s) with a "You decided X on [date] — is this still valid?" prompt.
+3. **Given** the ADR list, **When** the CTO searches by keyword, technology, or date range, **Then** results are returned in less than 500ms with highlighted matching text.
+
+**Priority**: P0
+**Traces to**: BN-011, FR-034, FR-035
+
+---
+
 ## 5. Functional Requirements
 
 | ID | Requirement | User Stories | Description |
@@ -362,6 +391,12 @@ quadrantChart
 | FR-027 | Cloud spend analysis | US-13 | System MUST display cloud spend breakdown with benchmark comparisons and optimization recommendations. |
 | FR-028 | Free-tier message limits | US-01 | System MUST enforce daily message limits for free-tier users (20 messages/day). |
 | FR-029 | AI disclaimer | BR-007 | All advisory responses MUST include a disclaimer that recommendations are AI-generated and not professional advice. |
+| FR-030 | ADR CRUD operations | US-15 | System MUST support creating, reading, updating, and archiving Architecture Decision Records with structured fields (title, status, context, decision, consequences, alternatives). |
+| FR-031 | AI-assisted ADR drafting | US-15 | System MUST use the LangGraph agent to draft trade-off analysis, suggest alternatives based on company context, and pre-fill consequences from knowledge base. |
+| FR-032 | ADR-to-Radar linking | US-15 | System MUST allow linking ADRs to tech radar items and risk items for cross-referencing. |
+| FR-033 | ADR Mermaid diagrams | US-15 | System MUST support embedding Mermaid diagrams (before/after architecture) within ADRs. |
+| FR-034 | ADR RAG integration | US-16 | System MUST index ADRs in the RAG pipeline so the advisory agent can cite past decisions when answering related questions. |
+| FR-035 | Related ADR surfacing | US-16 | System MUST surface related past ADRs when a CTO creates a new ADR with overlapping context or technologies. |
 
 ---
 
@@ -435,7 +470,7 @@ Phase 2 expands the platform with advanced features and begins the transition to
 | SSO/SAML/SCIM | Enterprise enablement | Enterprise authentication for Dana persona; required for enterprise sales |
 | Cloud API Integration | BN-005 extended | Direct AWS/GCP/Azure cost API integration replacing manual input |
 | Compliance Checker | BN-009 | SOC2/ISO27001/GDPR gap analysis with automated checklists |
-| ADR Management | BN-011 | Create, store, search, and learn from Architecture Decision Records |
+| ADR Management (Advanced) | BN-011 | ADR templates, versioning, team collaboration on ADRs (basic CRUD + AI-assist is MVP) |
 | Vendor Evaluation | BN-014 | Structured vendor comparison framework with market data |
 | Technical Debt Tracker | BN-015 | Debt inventory, prioritization by business impact, ROI modeling |
 | Board Report Generator | BN-016 | Auto-generated executive technology reports for board presentations |
@@ -456,7 +491,7 @@ The following are explicitly NOT included in Phase 1 MVP:
 - **Vendor evaluation framework** -- Phase 2.
 - **Technical debt tracker** -- Phase 2.
 - **Board/executive report generator** -- Phase 2. Advisory chat can draft report sections in Phase 1.
-- **ADR management** -- Phase 2. Conversations are stored, but structured ADR creation is deferred.
+- **ADR management** -- ELEVATED TO MVP. Structured ADR creation, AI-assisted drafting, and RAG integration included in Phase 1.
 - **Compliance checking (SOC2/ISO27001/GDPR)** -- Phase 2.
 - **Mobile application** -- No native app. Web app is responsive.
 - **On-premise/VPC deployment** -- Enterprise deployment deferred to post-Phase 2.
@@ -493,7 +528,9 @@ The following are explicitly NOT included in Phase 1 MVP:
 | `/reports` | Deferred | Executive report generation | Page skeleton with empty state: "Report generation coming soon" |
 | `/team` | Deferred | Team management | Page skeleton with empty state: "Team management coming soon" |
 | `/compliance` | Deferred | Compliance checker | Page skeleton with empty state: "Compliance tools coming soon" |
-| `/adrs` | Deferred | Architecture Decision Records | Page skeleton with empty state: "ADR management coming soon" |
+| `/adrs` | MVP | Architecture Decision Records | Searchable ADR list with filters by status, technology, date |
+| `/adrs/new` | MVP | Create new ADR | Structured form with AI-assist button for trade-off analysis |
+| `/adrs/:adrId` | MVP | ADR detail view | Full ADR with Mermaid diagrams, linked radar/risk items, conversation history |
 
 ---
 
