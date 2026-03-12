@@ -1,0 +1,1546 @@
+openapi: 3.0.3
+info:
+  title: CTOaaS API
+  description: |
+    AI-powered CTO/CIO advisory platform API.
+    All endpoints require JWT authentication unless marked as public.
+    All data endpoints are scoped by the authenticated user's organization_id.
+  version: 1.0.0
+  contact:
+    name: ConnectSW Engineering
+  license:
+    name: Proprietary
+
+servers:
+  - url: http://localhost:5015/v1
+    description: Local development
+  - url: https://api.ctoaas.connectsw.com/v1
+    description: Production
+
+tags:
+  - name: Auth
+    description: Authentication and account management
+  - name: Onboarding
+    description: Company profile setup wizard
+  - name: Profile
+    description: Company profile management
+  - name: Conversations
+    description: Advisory chat conversation management
+  - name: Copilot
+    description: CopilotKit runtime (AG-UI streaming)
+  - name: Risks
+    description: Technology risk dashboard and recommendations
+  - name: Costs
+    description: TCO calculator and cloud spend analysis
+  - name: Radar
+    description: Interactive technology radar
+  - name: Preferences
+    description: User preference management
+  - name: Health
+    description: System health checks
+
+paths:
+  # ============================================================
+  # AUTH
+  # ============================================================
+  /auth/signup:
+    post:
+      tags: [Auth]
+      summary: Register a new CTO account
+      description: Creates user + organization. Sends verification email. Uses @connectsw/auth.
+      security: []
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              type: object
+              required: [email, password, name, companyName]
+              properties:
+                email:
+                  type: string
+                  format: email
+                  example: cto@acmecorp.com
+                password:
+                  type: string
+                  minLength: 8
+                  description: "8+ chars, 1 uppercase, 1 lowercase, 1 number, 1 special"
+                  example: "SecureP@ss1"
+                name:
+                  type: string
+                  example: Alex Chen
+                companyName:
+                  type: string
+                  example: Acme Corp
+      responses:
+        "201":
+          description: Account created, verification email sent
+          content:
+            application/json:
+              schema:
+                type: object
+                properties:
+                  id:
+                    type: string
+                    format: uuid
+                  email:
+                    type: string
+                  message:
+                    type: string
+                    example: "Check your email to verify your account"
+        "400":
+          $ref: "#/components/responses/ValidationError"
+        "409":
+          description: Email already registered
+
+  /auth/verify-email:
+    post:
+      tags: [Auth]
+      summary: Verify email with token
+      security: []
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              type: object
+              required: [token]
+              properties:
+                token:
+                  type: string
+      responses:
+        "200":
+          description: Email verified
+        "400":
+          description: Token invalid or expired
+
+  /auth/login:
+    post:
+      tags: [Auth]
+      summary: Login with email and password
+      description: Returns JWT access token + sets httpOnly refresh cookie. Locks after 5 failures in 15 min.
+      security: []
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              type: object
+              required: [email, password]
+              properties:
+                email:
+                  type: string
+                  format: email
+                password:
+                  type: string
+      responses:
+        "200":
+          description: Login successful
+          content:
+            application/json:
+              schema:
+                type: object
+                properties:
+                  access_token:
+                    type: string
+                    description: JWT (15-min expiry). Store in memory only.
+                  user:
+                    $ref: "#/components/schemas/UserSummary"
+          headers:
+            Set-Cookie:
+              description: httpOnly refresh token (7-day expiry)
+              schema:
+                type: string
+        "401":
+          description: Invalid credentials
+        "429":
+          description: Account locked (5 failures in 15 min)
+
+  /auth/refresh:
+    post:
+      tags: [Auth]
+      summary: Refresh access token
+      description: Uses httpOnly cookie. Rotates refresh token (old JTI revoked, new JTI issued).
+      security: []
+      responses:
+        "200":
+          description: New access token issued
+          content:
+            application/json:
+              schema:
+                type: object
+                properties:
+                  access_token:
+                    type: string
+        "401":
+          description: Refresh token invalid or revoked
+
+  /auth/logout:
+    post:
+      tags: [Auth]
+      summary: Logout and revoke refresh token
+      responses:
+        "200":
+          description: Logged out, refresh token revoked
+
+  /auth/change-password:
+    post:
+      tags: [Auth]
+      summary: Change password
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              type: object
+              required: [currentPassword, newPassword]
+              properties:
+                currentPassword:
+                  type: string
+                newPassword:
+                  type: string
+                  minLength: 8
+      responses:
+        "200":
+          description: Password changed
+        "400":
+          $ref: "#/components/responses/ValidationError"
+        "401":
+          description: Current password incorrect
+
+  # ============================================================
+  # ONBOARDING
+  # ============================================================
+  /onboarding:
+    get:
+      tags: [Onboarding]
+      summary: Get onboarding progress
+      responses:
+        "200":
+          content:
+            application/json:
+              schema:
+                type: object
+                properties:
+                  currentStep:
+                    type: integer
+                    minimum: 1
+                    maximum: 4
+                  completed:
+                    type: boolean
+                  data:
+                    type: object
+                    description: Previously saved onboarding data
+
+    post:
+      tags: [Onboarding]
+      summary: Save onboarding step
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              type: object
+              required: [step]
+              properties:
+                step:
+                  type: integer
+                  enum: [1, 2, 3, 4]
+                data:
+                  type: object
+                  description: Step-specific data
+                  oneOf:
+                    - $ref: "#/components/schemas/OnboardingStep1"
+                    - $ref: "#/components/schemas/OnboardingStep2"
+                    - $ref: "#/components/schemas/OnboardingStep3"
+                    - $ref: "#/components/schemas/OnboardingStep4"
+      responses:
+        "200":
+          description: Step saved
+          content:
+            application/json:
+              schema:
+                type: object
+                properties:
+                  nextStep:
+                    type: integer
+                  profileCompleteness:
+                    type: integer
+                    minimum: 0
+                    maximum: 100
+
+  # ============================================================
+  # PROFILE
+  # ============================================================
+  /profile:
+    get:
+      tags: [Profile]
+      summary: Get company profile
+      responses:
+        "200":
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/CompanyProfile"
+
+    put:
+      tags: [Profile]
+      summary: Update company profile
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              $ref: "#/components/schemas/CompanyProfileUpdate"
+      responses:
+        "200":
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/CompanyProfile"
+
+  # ============================================================
+  # CONVERSATIONS
+  # ============================================================
+  /conversations:
+    get:
+      tags: [Conversations]
+      summary: List conversations for current user
+      parameters:
+        - name: limit
+          in: query
+          schema:
+            type: integer
+            default: 20
+            maximum: 100
+        - name: offset
+          in: query
+          schema:
+            type: integer
+            default: 0
+      responses:
+        "200":
+          content:
+            application/json:
+              schema:
+                type: object
+                properties:
+                  conversations:
+                    type: array
+                    items:
+                      $ref: "#/components/schemas/ConversationSummary"
+                  total:
+                    type: integer
+
+  /conversations/search:
+    get:
+      tags: [Conversations]
+      summary: Search conversation history (full-text)
+      description: Full-text search across all message content. Returns within 2 seconds.
+      parameters:
+        - name: q
+          in: query
+          required: true
+          schema:
+            type: string
+            minLength: 2
+        - name: limit
+          in: query
+          schema:
+            type: integer
+            default: 20
+      responses:
+        "200":
+          content:
+            application/json:
+              schema:
+                type: object
+                properties:
+                  results:
+                    type: array
+                    items:
+                      $ref: "#/components/schemas/ConversationSearchResult"
+                  total:
+                    type: integer
+
+  /conversations/{id}:
+    get:
+      tags: [Conversations]
+      summary: Get conversation with messages
+      parameters:
+        - name: id
+          in: path
+          required: true
+          schema:
+            type: string
+            format: uuid
+      responses:
+        "200":
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/ConversationDetail"
+        "404":
+          description: Conversation not found
+
+    delete:
+      tags: [Conversations]
+      summary: Delete conversation
+      parameters:
+        - name: id
+          in: path
+          required: true
+          schema:
+            type: string
+            format: uuid
+      responses:
+        "204":
+          description: Deleted
+
+  /conversations/{id}/messages/{messageId}/feedback:
+    post:
+      tags: [Conversations]
+      summary: Submit feedback on a message (thumbs up/down)
+      parameters:
+        - name: id
+          in: path
+          required: true
+          schema:
+            type: string
+            format: uuid
+        - name: messageId
+          in: path
+          required: true
+          schema:
+            type: string
+            format: uuid
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              type: object
+              required: [feedback]
+              properties:
+                feedback:
+                  type: string
+                  enum: [up, down]
+      responses:
+        "200":
+          description: Feedback recorded
+
+  # ============================================================
+  # COPILOT RUNTIME
+  # ============================================================
+  /copilot/runtime:
+    post:
+      tags: [Copilot]
+      summary: CopilotKit AG-UI runtime endpoint
+      description: |
+        Main advisory endpoint. Accepts CopilotKit AG-UI protocol messages.
+        Returns streaming response with reasoning steps visible to the CTO.
+        Rate limited to 20 req/min. Free tier limited to 20 messages/day.
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              type: object
+              description: CopilotKit AG-UI protocol message format
+      responses:
+        "200":
+          description: Streaming AG-UI response
+          content:
+            text/event-stream:
+              schema:
+                type: string
+                description: SSE stream with AG-UI events
+        "429":
+          description: Rate limit or free tier daily limit exceeded
+
+  # ============================================================
+  # RISKS
+  # ============================================================
+  /risks/summary:
+    get:
+      tags: [Risks]
+      summary: Get risk dashboard summary
+      description: Returns 4 risk categories with aggregate scores and trends.
+      responses:
+        "200":
+          content:
+            application/json:
+              schema:
+                type: object
+                properties:
+                  configured:
+                    type: boolean
+                    description: Whether company profile is configured
+                  categories:
+                    type: array
+                    items:
+                      $ref: "#/components/schemas/RiskCategorySummary"
+
+  /risks/{category}:
+    get:
+      tags: [Risks]
+      summary: List risk items for a category
+      parameters:
+        - name: category
+          in: path
+          required: true
+          schema:
+            type: string
+            enum: [tech-debt, vendor, compliance, operational]
+      responses:
+        "200":
+          content:
+            application/json:
+              schema:
+                type: object
+                properties:
+                  items:
+                    type: array
+                    items:
+                      $ref: "#/components/schemas/RiskItem"
+
+  /risks/{id}:
+    get:
+      tags: [Risks]
+      summary: Get risk item detail
+      parameters:
+        - name: id
+          in: path
+          required: true
+          schema:
+            type: string
+            format: uuid
+      responses:
+        "200":
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/RiskItemDetail"
+
+  /risks/{id}/recommendations:
+    post:
+      tags: [Risks]
+      summary: Generate AI mitigation recommendations
+      description: Uses LangGraph agent to generate 2-5 mitigation actions. Rate limited (20/min LLM).
+      parameters:
+        - name: id
+          in: path
+          required: true
+          schema:
+            type: string
+            format: uuid
+      responses:
+        "200":
+          content:
+            application/json:
+              schema:
+                type: object
+                properties:
+                  recommendations:
+                    type: array
+                    items:
+                      $ref: "#/components/schemas/RiskRecommendation"
+
+  /risks/{id}/status:
+    patch:
+      tags: [Risks]
+      summary: Update risk item status
+      parameters:
+        - name: id
+          in: path
+          required: true
+          schema:
+            type: string
+            format: uuid
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              type: object
+              required: [status]
+              properties:
+                status:
+                  type: string
+                  enum: [active, mitigated, dismissed]
+      responses:
+        "200":
+          description: Status updated, risk scores recalculated
+
+  # ============================================================
+  # COSTS
+  # ============================================================
+  /costs/tco:
+    get:
+      tags: [Costs]
+      summary: List TCO comparisons
+      responses:
+        "200":
+          content:
+            application/json:
+              schema:
+                type: object
+                properties:
+                  comparisons:
+                    type: array
+                    items:
+                      $ref: "#/components/schemas/TcoComparisonSummary"
+
+    post:
+      tags: [Costs]
+      summary: Create TCO comparison
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              $ref: "#/components/schemas/TcoComparisonCreate"
+      responses:
+        "201":
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/TcoComparison"
+
+  /costs/tco/{id}:
+    get:
+      tags: [Costs]
+      summary: Get TCO comparison detail
+      parameters:
+        - name: id
+          in: path
+          required: true
+          schema:
+            type: string
+            format: uuid
+      responses:
+        "200":
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/TcoComparison"
+
+    put:
+      tags: [Costs]
+      summary: Update TCO comparison
+      parameters:
+        - name: id
+          in: path
+          required: true
+          schema:
+            type: string
+            format: uuid
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              $ref: "#/components/schemas/TcoComparisonCreate"
+      responses:
+        "200":
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/TcoComparison"
+
+    delete:
+      tags: [Costs]
+      summary: Delete TCO comparison
+      parameters:
+        - name: id
+          in: path
+          required: true
+          schema:
+            type: string
+            format: uuid
+      responses:
+        "204":
+          description: Deleted
+
+  /costs/tco/{id}/analyze:
+    post:
+      tags: [Costs]
+      summary: Generate AI analysis of TCO comparison
+      description: Uses LangGraph agent to analyze TCO options in organizational context.
+      parameters:
+        - name: id
+          in: path
+          required: true
+          schema:
+            type: string
+            format: uuid
+      responses:
+        "200":
+          content:
+            application/json:
+              schema:
+                type: object
+                properties:
+                  analysis:
+                    type: string
+                    description: AI-generated TCO analysis with recommendations
+
+  /costs/tco/{id}/export:
+    get:
+      tags: [Costs]
+      summary: Export TCO comparison as PDF/Markdown
+      parameters:
+        - name: id
+          in: path
+          required: true
+          schema:
+            type: string
+            format: uuid
+        - name: format
+          in: query
+          schema:
+            type: string
+            enum: [pdf, markdown]
+            default: markdown
+      responses:
+        "200":
+          description: Export file
+          content:
+            application/pdf:
+              schema:
+                type: string
+                format: binary
+            text/markdown:
+              schema:
+                type: string
+
+  /costs/cloud-spend:
+    get:
+      tags: [Costs]
+      summary: Get cloud spend entries
+      responses:
+        "200":
+          content:
+            application/json:
+              schema:
+                type: object
+                properties:
+                  entries:
+                    type: array
+                    items:
+                      $ref: "#/components/schemas/CloudSpend"
+
+    post:
+      tags: [Costs]
+      summary: Create cloud spend entry (manual or import)
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              $ref: "#/components/schemas/CloudSpendCreate"
+      responses:
+        "201":
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/CloudSpend"
+
+  /costs/cloud-spend/import:
+    post:
+      tags: [Costs]
+      summary: Import cloud spend from CSV/JSON
+      requestBody:
+        required: true
+        content:
+          multipart/form-data:
+            schema:
+              type: object
+              properties:
+                file:
+                  type: string
+                  format: binary
+                format:
+                  type: string
+                  enum: [csv, json]
+      responses:
+        "201":
+          description: Import successful
+          content:
+            application/json:
+              schema:
+                type: object
+                properties:
+                  imported:
+                    type: integer
+                  entries:
+                    type: array
+                    items:
+                      $ref: "#/components/schemas/CloudSpend"
+
+  /costs/cloud-spend/recommendations:
+    get:
+      tags: [Costs]
+      summary: Get cloud spend optimization recommendations
+      description: AI-generated recommendations based on spend profile vs. benchmarks.
+      responses:
+        "200":
+          content:
+            application/json:
+              schema:
+                type: object
+                properties:
+                  recommendations:
+                    type: array
+                    items:
+                      $ref: "#/components/schemas/CloudSpendRecommendation"
+                  benchmarkComparison:
+                    type: object
+                    properties:
+                      companySize:
+                        type: string
+                      industry:
+                        type: string
+                      percentile:
+                        type: integer
+
+  # ============================================================
+  # RADAR
+  # ============================================================
+  /radar:
+    get:
+      tags: [Radar]
+      summary: Get all technology radar items
+      parameters:
+        - name: quadrant
+          in: query
+          schema:
+            type: string
+            enum: [languages-frameworks, platforms-infrastructure, tools, techniques]
+        - name: ring
+          in: query
+          schema:
+            type: string
+            enum: [adopt, trial, assess, hold]
+        - name: myStack
+          in: query
+          schema:
+            type: boolean
+            default: false
+          description: Filter to technologies matching CTO's tech stack
+      responses:
+        "200":
+          content:
+            application/json:
+              schema:
+                type: object
+                properties:
+                  items:
+                    type: array
+                    items:
+                      $ref: "#/components/schemas/TechRadarItem"
+                  userStackTechnologies:
+                    type: array
+                    items:
+                      type: string
+                    description: Technology names matching user's stack
+
+  /radar/{id}:
+    get:
+      tags: [Radar]
+      summary: Get radar item detail with personalized relevance
+      parameters:
+        - name: id
+          in: path
+          required: true
+          schema:
+            type: string
+            format: uuid
+      responses:
+        "200":
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/TechRadarItemDetail"
+
+  # ============================================================
+  # PREFERENCES
+  # ============================================================
+  /preferences:
+    get:
+      tags: [Preferences]
+      summary: Get user preferences
+      responses:
+        "200":
+          content:
+            application/json:
+              schema:
+                type: object
+                properties:
+                  preferences:
+                    type: array
+                    items:
+                      $ref: "#/components/schemas/UserPreference"
+
+    put:
+      tags: [Preferences]
+      summary: Update preferences
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              type: object
+              properties:
+                detailLevel:
+                  type: string
+                  enum: [concise, balanced, detailed]
+                riskTolerance:
+                  type: string
+                  enum: [conservative, moderate, aggressive]
+                communicationStyle:
+                  type: string
+                  enum: [technical, business, mixed]
+      responses:
+        "200":
+          description: Preferences updated
+
+  # ============================================================
+  # HEALTH
+  # ============================================================
+  /health:
+    get:
+      tags: [Health]
+      summary: Health check
+      security: []
+      responses:
+        "200":
+          description: Healthy
+          content:
+            application/json:
+              schema:
+                type: object
+                properties:
+                  status:
+                    type: string
+                    enum: [ok]
+                  version:
+                    type: string
+                  uptime:
+                    type: number
+                  database:
+                    type: string
+                    enum: [connected, disconnected]
+                  redis:
+                    type: string
+                    enum: [connected, disconnected, degraded]
+        "503":
+          description: Database unavailable
+          content:
+            application/json:
+              schema:
+                type: object
+                properties:
+                  status:
+                    type: string
+                    enum: [unhealthy]
+                  error:
+                    type: string
+
+# ================================================================
+# COMPONENTS
+# ================================================================
+components:
+  securitySchemes:
+    bearerAuth:
+      type: http
+      scheme: bearer
+      bearerFormat: JWT
+      description: JWT access token (15-min expiry). Stored in memory, never localStorage.
+
+  responses:
+    ValidationError:
+      description: Validation error
+      content:
+        application/json:
+          schema:
+            type: object
+            properties:
+              type:
+                type: string
+                example: "https://ctoaas.connectsw.com/errors/validation"
+              title:
+                type: string
+                example: Validation Error
+              status:
+                type: integer
+                example: 400
+              detail:
+                type: string
+              errors:
+                type: array
+                items:
+                  type: object
+                  properties:
+                    field:
+                      type: string
+                    message:
+                      type: string
+
+  schemas:
+    UserSummary:
+      type: object
+      properties:
+        id:
+          type: string
+          format: uuid
+        email:
+          type: string
+        name:
+          type: string
+        organizationId:
+          type: string
+          format: uuid
+        tier:
+          type: string
+          enum: [free, pro, enterprise]
+        emailVerified:
+          type: boolean
+
+    OnboardingStep1:
+      type: object
+      required: [industry, employeeCount, growthStage]
+      properties:
+        industry:
+          type: string
+          description: From predefined list of 20+ industries
+        employeeCount:
+          type: integer
+          minimum: 1
+        growthStage:
+          type: string
+          enum: [seed, series-a, series-b, series-c, growth, enterprise]
+        foundedYear:
+          type: integer
+
+    OnboardingStep2:
+      type: object
+      required: [techStack]
+      properties:
+        techStack:
+          type: object
+          properties:
+            languages:
+              type: array
+              items:
+                type: string
+            frameworks:
+              type: array
+              items:
+                type: string
+            databases:
+              type: array
+              items:
+                type: string
+            cloudProvider:
+              type: string
+            cicd:
+              type: array
+              items:
+                type: string
+
+    OnboardingStep3:
+      type: object
+      required: [challenges]
+      properties:
+        challenges:
+          type: array
+          items:
+            type: string
+          minItems: 1
+          description: From predefined list + free text
+        customChallenges:
+          type: string
+
+    OnboardingStep4:
+      type: object
+      properties:
+        detailLevel:
+          type: string
+          enum: [concise, balanced, detailed]
+          default: balanced
+        riskTolerance:
+          type: string
+          enum: [conservative, moderate, aggressive]
+          default: moderate
+        communicationStyle:
+          type: string
+          enum: [technical, business, mixed]
+          default: mixed
+
+    CompanyProfile:
+      type: object
+      properties:
+        id:
+          type: string
+          format: uuid
+        organizationId:
+          type: string
+          format: uuid
+        organizationName:
+          type: string
+        industry:
+          type: string
+        employeeCount:
+          type: integer
+        growthStage:
+          type: string
+        foundedYear:
+          type: integer
+        challenges:
+          type: array
+          items:
+            type: string
+        techStack:
+          type: object
+        cloudProvider:
+          type: string
+        architectureNotes:
+          type: string
+        constraints:
+          type: string
+        profileCompleteness:
+          type: integer
+          minimum: 0
+          maximum: 100
+
+    CompanyProfileUpdate:
+      type: object
+      properties:
+        industry:
+          type: string
+        employeeCount:
+          type: integer
+        growthStage:
+          type: string
+        techStack:
+          type: object
+        cloudProvider:
+          type: string
+        architectureNotes:
+          type: string
+        constraints:
+          type: string
+        challenges:
+          type: array
+          items:
+            type: string
+
+    ConversationSummary:
+      type: object
+      properties:
+        id:
+          type: string
+          format: uuid
+        title:
+          type: string
+        messageCount:
+          type: integer
+        createdAt:
+          type: string
+          format: date-time
+        updatedAt:
+          type: string
+          format: date-time
+
+    ConversationDetail:
+      type: object
+      properties:
+        id:
+          type: string
+          format: uuid
+        title:
+          type: string
+        summary:
+          type: string
+          nullable: true
+        longTermMemory:
+          type: string
+          nullable: true
+        messageCount:
+          type: integer
+        messages:
+          type: array
+          items:
+            $ref: "#/components/schemas/Message"
+        createdAt:
+          type: string
+          format: date-time
+
+    Message:
+      type: object
+      properties:
+        id:
+          type: string
+          format: uuid
+        role:
+          type: string
+          enum: [user, assistant]
+        content:
+          type: string
+        citations:
+          type: array
+          nullable: true
+          items:
+            $ref: "#/components/schemas/Citation"
+        confidence:
+          type: string
+          nullable: true
+          enum: [high, medium, low]
+        feedback:
+          type: string
+          nullable: true
+          enum: [up, down]
+        tokenCount:
+          type: integer
+        createdAt:
+          type: string
+          format: date-time
+
+    Citation:
+      type: object
+      properties:
+        index:
+          type: integer
+        title:
+          type: string
+        source:
+          type: string
+        author:
+          type: string
+        date:
+          type: string
+        url:
+          type: string
+          nullable: true
+        excerpt:
+          type: string
+          description: Relevant chunk content
+
+    ConversationSearchResult:
+      type: object
+      properties:
+        conversationId:
+          type: string
+          format: uuid
+        conversationTitle:
+          type: string
+        messageId:
+          type: string
+          format: uuid
+        messageContent:
+          type: string
+          description: Excerpt with search term highlighted
+        createdAt:
+          type: string
+          format: date-time
+
+    RiskCategorySummary:
+      type: object
+      properties:
+        category:
+          type: string
+          enum: [tech-debt, vendor, compliance, operational]
+        displayName:
+          type: string
+          example: Technology Debt
+        score:
+          type: number
+          minimum: 1
+          maximum: 10
+        trend:
+          type: string
+          enum: [improving, stable, worsening]
+        itemCount:
+          type: integer
+
+    RiskItem:
+      type: object
+      properties:
+        id:
+          type: string
+          format: uuid
+        category:
+          type: string
+        title:
+          type: string
+        description:
+          type: string
+        severity:
+          type: integer
+          minimum: 1
+          maximum: 10
+        trend:
+          type: string
+          enum: [improving, stable, worsening]
+        status:
+          type: string
+          enum: [active, mitigated, dismissed]
+        affectedSystems:
+          type: array
+          items:
+            type: string
+        identifiedAt:
+          type: string
+          format: date-time
+
+    RiskItemDetail:
+      allOf:
+        - $ref: "#/components/schemas/RiskItem"
+        - type: object
+          properties:
+            mitigations:
+              type: array
+              nullable: true
+              items:
+                $ref: "#/components/schemas/RiskRecommendation"
+
+    RiskRecommendation:
+      type: object
+      properties:
+        action:
+          type: string
+        effort:
+          type: string
+          description: "days/weeks estimate"
+        priority:
+          type: string
+          enum: [high, medium, low]
+        expectedImpact:
+          type: string
+          description: Expected reduction in risk score
+
+    TcoComparisonSummary:
+      type: object
+      properties:
+        id:
+          type: string
+          format: uuid
+        title:
+          type: string
+        optionCount:
+          type: integer
+        hasAnalysis:
+          type: boolean
+        createdAt:
+          type: string
+          format: date-time
+
+    TcoComparisonCreate:
+      type: object
+      required: [title, options]
+      properties:
+        title:
+          type: string
+          example: "Build vs Buy: Auth System"
+        options:
+          type: array
+          minItems: 2
+          maxItems: 5
+          items:
+            type: object
+            required: [name, developmentCost, infrastructureCost, maintenanceCost]
+            properties:
+              name:
+                type: string
+                example: "Build In-House"
+              developmentCost:
+                type: object
+                properties:
+                  teamSize:
+                    type: integer
+                  durationMonths:
+                    type: integer
+                  monthlyCostPerDev:
+                    type: number
+              infrastructureCost:
+                type: object
+                properties:
+                  monthlyCompute:
+                    type: number
+                  monthlyStorage:
+                    type: number
+                  monthlyOther:
+                    type: number
+              maintenanceCost:
+                type: object
+                properties:
+                  monthlyEngineering:
+                    type: number
+                  monthlySupport:
+                    type: number
+              opportunityCost:
+                type: number
+                description: Monthly opportunity cost estimate
+
+    TcoComparison:
+      type: object
+      properties:
+        id:
+          type: string
+          format: uuid
+        title:
+          type: string
+        options:
+          type: array
+          items:
+            type: object
+        projections:
+          type: object
+          description: 3-year TCO projections per option
+          properties:
+            year1:
+              type: object
+            year2:
+              type: object
+            year3:
+              type: object
+            totalByOption:
+              type: object
+        aiAnalysis:
+          type: string
+          nullable: true
+        createdAt:
+          type: string
+          format: date-time
+        updatedAt:
+          type: string
+          format: date-time
+
+    CloudSpendCreate:
+      type: object
+      required: [provider, spendBreakdown, totalMonthly, periodStart, periodEnd]
+      properties:
+        provider:
+          type: string
+          enum: [aws, gcp, azure, other]
+        spendBreakdown:
+          type: object
+          properties:
+            compute:
+              type: number
+            storage:
+              type: number
+            database:
+              type: number
+            networking:
+              type: number
+            other:
+              type: number
+        totalMonthly:
+          type: number
+        periodStart:
+          type: string
+          format: date
+        periodEnd:
+          type: string
+          format: date
+
+    CloudSpend:
+      type: object
+      properties:
+        id:
+          type: string
+          format: uuid
+        provider:
+          type: string
+        spendBreakdown:
+          type: object
+        totalMonthly:
+          type: number
+        benchmarks:
+          type: object
+          nullable: true
+        recommendations:
+          type: array
+          nullable: true
+          items:
+            $ref: "#/components/schemas/CloudSpendRecommendation"
+        periodStart:
+          type: string
+          format: date
+        periodEnd:
+          type: string
+          format: date
+        createdAt:
+          type: string
+          format: date-time
+
+    CloudSpendRecommendation:
+      type: object
+      properties:
+        description:
+          type: string
+        estimatedMonthlySavings:
+          type: object
+          properties:
+            min:
+              type: number
+            max:
+              type: number
+        effort:
+          type: string
+          enum: [low, medium, high]
+        riskLevel:
+          type: string
+          enum: [low, medium, high]
+
+    TechRadarItem:
+      type: object
+      properties:
+        id:
+          type: string
+          format: uuid
+        name:
+          type: string
+        quadrant:
+          type: string
+          enum: [languages-frameworks, platforms-infrastructure, tools, techniques]
+        ring:
+          type: string
+          enum: [adopt, trial, assess, hold]
+        description:
+          type: string
+        isNew:
+          type: boolean
+        inUserStack:
+          type: boolean
+          description: Whether this technology is in the CTO's configured stack
+
+    TechRadarItemDetail:
+      allOf:
+        - $ref: "#/components/schemas/TechRadarItem"
+        - type: object
+          properties:
+            rationale:
+              type: string
+            relatedTechnologies:
+              type: array
+              items:
+                type: string
+            personalizedRelevance:
+              type: string
+              description: AI-generated relevance assessment based on CTO's org context
+
+    UserPreference:
+      type: object
+      properties:
+        key:
+          type: string
+        value:
+          type: string
+        signalCount:
+          type: integer
+
+security:
+  - bearerAuth: []
