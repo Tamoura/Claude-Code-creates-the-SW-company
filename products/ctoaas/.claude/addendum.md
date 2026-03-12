@@ -12,7 +12,10 @@
 | Layer | Technology | Notes |
 |-------|------------|-------|
 | Frontend | Next.js 14+ / React 18+ | Port 3120. App Router. SSR for landing page SEO. |
-| Backend | Fastify / TypeScript | Port 5015. Plugin architecture. SSE for streaming. |
+| AI UI | CopilotKit (@copilotkit/react-ui, react-core) | In-app AI copilot with streaming, generative UI, agent reasoning visible to user. AG-UI protocol. |
+| Agent Framework | LangGraph (TypeScript) | Stateful multi-step agent orchestration. Tool use, human-in-the-loop, durable execution. |
+| RAG Framework | LlamaIndex (TypeScript) | Knowledge ingestion, chunking, indexing, retrieval. 40% faster than alternatives. |
+| Backend | Fastify / TypeScript | Port 5015. Plugin architecture. LangGraph agent endpoints. |
 | Database | PostgreSQL 15+ with pgvector | Users, orgs, conversations, embeddings, risk data. pgvector for RAG similarity search. |
 | ORM | Prisma | Type-safe queries, migration management. |
 | Cache | Redis | Session cache, rate limiting, conversation context. Graceful degradation when unavailable. |
@@ -41,14 +44,23 @@
 | `@anthropic-ai/sdk` | Claude API client | Official SDK |
 | `openai` | OpenAI embeddings + fallback | Official SDK |
 | `ioredis` | Redis client | ConnectSW standard |
+| `@copilotkit/react-ui` | AI copilot chat UI components | Streaming, generative UI, agent display |
+| `@copilotkit/react-core` | CopilotKit core React hooks | State sync, tool definitions |
+| `@copilotkit/runtime` | CopilotKit server runtime | Agent endpoint, LangGraph integration |
+| `@langchain/langgraph` | Agent orchestration framework | Stateful workflows, tool use, human-in-the-loop |
+| `@langchain/core` | LangChain core (required by LangGraph) | Base abstractions |
+| `@langchain/anthropic` | Claude provider for LangGraph | LLM integration |
+| `llamaindex` | RAG framework | Document ingestion, chunking, retrieval |
 
 ### Avoid (Don't Use)
 
 | Library | Reason |
 |---------|--------|
-| `langchain` | Too heavy for our use case; custom RAG pipeline preferred for control |
+| `langchain` (full) | Only use @langchain/core as required by LangGraph; avoid full LangChain orchestration |
+| `crewai` | Higher token overhead (3x); LangGraph is more efficient for production |
 | `pinecone` / `weaviate` | pgvector is sufficient for Phase 1 scale; dedicated vector DB is Phase 2 consideration |
-| `socket.io` | Use SSE (Server-Sent Events) for streaming; simpler, sufficient for one-way streaming |
+| `socket.io` | CopilotKit handles streaming via AG-UI protocol; no need for manual WebSocket |
+| `autogen` | Microsoft ecosystem lock-in; LangGraph is more flexible |
 
 ## Site Map
 
@@ -83,18 +95,26 @@
 ## Design Patterns
 
 ### Component Patterns
-- Chat interface is a custom build (no matching component in registry)
-- Technology radar is a custom circular visualization
+- Chat interface uses CopilotKit `<CopilotChat />` and `<CopilotSidebar />` components — DO NOT build from scratch
+- Agent reasoning display uses CopilotKit's built-in streaming UI with AG-UI protocol
+- Technology radar is a custom circular visualization (D3.js or custom SVG)
 - Reuse `@connectsw/ui` components for all standard UI (buttons, cards, inputs, tables, layout)
+
+### Agent Architecture
+- LangGraph defines the agent graph: nodes = tools/reasoning steps, edges = state transitions
+- Agent tools: RAG search, risk analysis, cost calculation, tech radar lookup, memory retrieval
+- Human-in-the-loop: agent can pause and ask CTO for clarification before proceeding
+- CopilotKit `useCopilotAction()` hooks expose frontend actions to the agent
 
 ### State Management
 - React Server Components for static pages (landing, settings)
 - Client components for interactive features (chat, radar, cost calculator)
+- CopilotKit shared state for agent-UI synchronization
 - SWR or React Query for API data fetching and caching
 
 ### API Patterns
 - RESTful endpoints for CRUD operations
-- SSE (Server-Sent Events) for streaming chat responses
+- CopilotKit Runtime endpoint for agent streaming (replaces manual SSE)
 - JWT authentication with httpOnly refresh token rotation
 - All queries scoped by organization ID (mandatory)
 - Rate limiting: 100 req/min general, 20 req/min LLM endpoints
@@ -102,7 +122,7 @@
 ## Business Logic
 
 ### Key Calculations/Algorithms
-- **RAG Pipeline**: Query embedding -> pgvector similarity search (cosine, top-5, threshold 0.7) -> rerank -> inject into prompt
+- **RAG Pipeline**: LlamaIndex handles ingestion/chunking/indexing. Query embedding -> pgvector similarity search (cosine, top-5, threshold 0.7) -> LlamaIndex reranker -> inject into LangGraph agent context
 - **Conversation Summarization**: When messages > 10, older messages are summarized; last 10 retained verbatim; key facts extracted to long-term memory
 - **Risk Scoring**: Analyze company profile tech stack against known EOL dates, CVE databases, vendor concentration, compliance requirements. Score 1-10 per category.
 - **TCO Calculator**: 3-year projection with development cost (team size x duration x loaded cost), infrastructure cost, maintenance cost, opportunity cost

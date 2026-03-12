@@ -95,7 +95,7 @@ graph TD
         API["API Server<br/>Fastify / TypeScript<br/>Port 5015<br/>Auth, chat, RAG, risk, cost APIs"]
         DB[("PostgreSQL 15+<br/>+ pgvector extension<br/>Users, orgs, conversations,<br/>embeddings, risk data")]
         CACHE[("Redis<br/>Session cache, rate limiting,<br/>conversation context cache")]
-        STORAGE["Object Storage<br/>S3/R2<br/>Knowledge base documents")]
+        STORAGE["Object Storage<br/>S3/R2<br/>Knowledge base documents"]
     end
 
     subgraph "External APIs"
@@ -508,7 +508,7 @@ The Technology Radar displays technologies in a circular radar visualization wit
 erDiagram
     USER {
         uuid id PK
-        string email UK
+        string email "UK"
         string name
         string password_hash
         string role
@@ -532,7 +532,7 @@ erDiagram
 
     COMPANY_PROFILE {
         uuid id PK
-        uuid organization_id FK UK
+        uuid organization_id FK
         json tech_stack
         string cloud_provider
         text architecture_notes
@@ -579,7 +579,7 @@ erDiagram
         uuid id PK
         uuid document_id FK
         text content
-        vector embedding
+        string embedding
         int token_count
         int chunk_index
     }
@@ -611,7 +611,7 @@ erDiagram
 
     TECH_RADAR_ITEM {
         uuid id PK
-        string name UK
+        string name "UK"
         string quadrant
         string ring
         text description
@@ -632,7 +632,7 @@ erDiagram
     REFRESH_TOKEN {
         uuid id PK
         uuid user_id FK
-        string jti UK
+        string jti "UK"
         boolean revoked
         timestamp expires_at
         timestamp created_at
