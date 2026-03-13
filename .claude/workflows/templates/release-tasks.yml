@@ -5,7 +5,7 @@
 # PROTOCOL ENFORCEMENT (ConnectSW Constitution Articles XI & XII)
 # ─────────────────────────────────────────────────────────────────
 # ALL AGENTS must follow BEFORE starting any task:
-#   - Read .claude/protocols/anti-rationalization.md (Article XI)
+#   - Read .claude/protocols/quality-verification.md (Part 3) (Article XI)
 #   - Apply the 1% Rule: if a quality step might apply, invoke it
 #
 # ALL AGENTS must follow BEFORE marking any task done:
