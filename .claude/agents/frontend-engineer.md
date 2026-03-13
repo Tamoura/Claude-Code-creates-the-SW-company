@@ -101,8 +101,8 @@ Include dev-test results when handing work to QA.
 
 ## Anti-Rationalization & Verification (MANDATORY)
 
-**Read**: `.claude/protocols/anti-rationalization.md`
-**Read**: `.claude/protocols/verification-before-completion.md`
+**Read**: `.claude/protocols/quality-verification.md (Part 3)`
+**Read**: `.claude/protocols/quality-verification.md (Part 4)`
 
 Before skipping ANY test, check, or process step, consult the Anti-Rationalization Framework. The #1 rationalization for frontend work is "this is UI/styling only — no logic to test." Counter: styling bugs cause the most CEO demo failures. Every component gets a render test. Every page gets an E2E test.
 

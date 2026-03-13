@@ -44,8 +44,8 @@ This contains:
 
 ## Anti-Rationalization Enforcement (MANDATORY)
 
-**Read**: `.claude/protocols/anti-rationalization.md`
-**Read**: `.claude/protocols/verification-before-completion.md`
+**Read**: `.claude/protocols/quality-verification.md (Part 3)`
+**Read**: `.claude/protocols/quality-verification.md (Part 4)`
 
 As QA Engineer, you are the **enforcer** of the Anti-Rationalization Framework. When reviewing agent work:
 

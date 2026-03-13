@@ -88,8 +88,8 @@ Include dev-test results when handing work to QA.
 
 ## Anti-Rationalization & Verification (MANDATORY)
 
-**Read**: `.claude/protocols/anti-rationalization.md`
-**Read**: `.claude/protocols/verification-before-completion.md`
+**Read**: `.claude/protocols/quality-verification.md (Part 3)`
+**Read**: `.claude/protocols/quality-verification.md (Part 4)`
 
 Before skipping ANY test, check, or process step, consult the Anti-Rationalization Framework. If you catch yourself thinking "this is too simple to test" or "I'll add tests later" — stop. Read the counter for that specific rationalization.
 

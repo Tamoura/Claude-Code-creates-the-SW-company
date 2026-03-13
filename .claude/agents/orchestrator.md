@@ -877,8 +877,8 @@ Include this instruction in every sub-agent prompt for Standard/Complex tasks.
 | Component registry | `.claude/COMPONENT-REGISTRY.md` |
 | Port registry | `.claude/PORT-REGISTRY.md` |
 | Parallel execution | `.claude/protocols/parallel-execution.md` |
-| Anti-rationalization | `.claude/protocols/anti-rationalization.md` |
-| Verification protocol | `.claude/protocols/verification-before-completion.md` |
+| Anti-rationalization | `.claude/protocols/quality-verification.md (Part 3)` |
+| Verification protocol | `.claude/protocols/quality-verification.md (Part 4)` |
 | Context engineering | `.claude/protocols/context-engineering.md` |
 | Context compression | `.claude/protocols/context-compression.md` |
 | Direct delivery | `.claude/protocols/direct-delivery.md` |

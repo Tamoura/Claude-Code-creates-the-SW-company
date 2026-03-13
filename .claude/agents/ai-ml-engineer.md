@@ -255,11 +255,11 @@ Before marking any AI task done:
 ## Mandatory Protocols
 
 **Before ANY task:**
-- `.claude/protocols/anti-rationalization.md`
-- `.claude/protocols/verification-before-planning.md` (check what AI code already exists)
+- `.claude/protocols/quality-verification.md (Part 3)`
+- `.claude/protocols/quality-verification.md (Part 2)` (check what AI code already exists)
 
 **Before marking DONE:**
-- `.claude/protocols/verification-before-completion.md` (5-step gate)
+- `.claude/protocols/quality-verification.md (Part 4)` (5-step gate)
 
 **For context management:**
 - `.claude/protocols/direct-delivery.md` (write eval reports to files)
