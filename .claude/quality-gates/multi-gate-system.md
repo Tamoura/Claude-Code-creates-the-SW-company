@@ -19,8 +19,8 @@ Spec → Spec Consistency Gate → Documentation Gate → Browser Gate → Secur
    │  Script: .claude/scripts/ci-preflight.sh  |  Known Issues: .claude/ci/known-issues.yml              │
    ├─────────────────────────────────────────────────────────────────────────────────────────────────────┤
    │  Verification-Before-Completion Gate (runs at EVERY individual task, not just milestones)           │
-   │  Protocol: .claude/protocols/verification-before-completion.md                                      │
-   │  Enforcement: Anti-Rationalization Framework (.claude/protocols/anti-rationalization.md)             │
+   │  Protocol: .claude/protocols/quality-verification.md (Part 4)                                      │
+   │  Enforcement: Anti-Rationalization Framework (.claude/protocols/quality-verification.md (Part 3))             │
    └─────────────────────────────────────────────────────────────────────────────────────────────────────┘
 ```
 
@@ -64,8 +64,8 @@ FAIL if:
 
 **When**: Before ANY agent marks ANY task as complete. This is not a milestone gate — it runs at every individual task.
 **Purpose**: Prevent agents from claiming "done" without evidence. Catches issues at the source before they reach milestone-level gates.
-**Protocol**: `.claude/protocols/verification-before-completion.md`
-**Enforcement**: `.claude/protocols/anti-rationalization.md`
+**Protocol**: `.claude/protocols/quality-verification.md (Part 4)`
+**Enforcement**: `.claude/protocols/quality-verification.md (Part 3)`
 
 #### The Five Steps (MANDATORY for every task completion)
 

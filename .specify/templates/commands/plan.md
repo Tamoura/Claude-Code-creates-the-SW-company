@@ -41,7 +41,7 @@ You are creating an implementation plan that translates a feature specification 
    - **If ANY gate fails: ERROR — resolve before proceeding**
 
 2b. **Implementation Audit (Gate — Verification-Before-Planning)**:
-   - Follow `.claude/protocols/verification-before-planning.md`
+   - Follow `.claude/protocols/quality-verification.md (Part 2)`
    - Inventory all capabilities the spec proposes to build
    - For each, query the codebase (GitNexus if available, Grep otherwise):
      - `gitnexus_query({ query: "<capability>" })` for execution flows
@@ -73,7 +73,7 @@ You are creating an implementation plan that translates a feature specification 
    - **Integration Points table is MANDATORY**: Systems, protocols, data exchanged, auth methods
    - **Security Considerations section is MANDATORY**: Auth, authorization, data protection, input validation
    - **Error Handling Strategy table is MANDATORY**: Error categories, detection, recovery, user experience
-   - **Implementation Audit table is MANDATORY**: Every planned capability must show verification status per `.claude/protocols/verification-before-planning.md`
+   - **Implementation Audit table is MANDATORY**: Every planned capability must show verification status per `.claude/protocols/quality-verification.md (Part 2)`
    - Complete Constitution Check table
    - Fill Component Reuse Plan
    - Define project structure (following ConnectSW conventions)

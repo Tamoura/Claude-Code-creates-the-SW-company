@@ -28,8 +28,8 @@ This check is designed for products that handle financial transactions, risk/gov
 
 **Reference protocols**:
 - `.specify/memory/constitution.md` (Article VI: Quality, Article IX: Documentation)
-- `.claude/protocols/verification-before-completion.md` (5-step verification gate)
-- `.claude/protocols/anti-rationalization.md` (The 1% Rule: if a check *might* apply, it MUST be run)
+- `.claude/protocols/quality-verification.md (Part 4)` (5-step verification gate)
+- `.claude/protocols/quality-verification.md (Part 3)` (The 1% Rule: if a check *might* apply, it MUST be run)
 
 ## Execution Steps
 

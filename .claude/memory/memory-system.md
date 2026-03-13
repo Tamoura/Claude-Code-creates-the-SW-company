@@ -508,27 +508,12 @@ Monthly (automated task):
 - Archive old patterns with low confidence
 - Update anti-patterns based on failures
 
-### Confidence Scoring
+### Confidence & Relevance Scoring
 
-Patterns gain confidence as they're successfully applied:
-
-```
-confidence = success_rate * log(times_applied + 1)
-
-Where:
-- success_rate = 1.0 means always worked
-- times_applied = how many times it's been used
-- log dampens the impact of many applications
-
-Levels:
-- high: confidence >= 0.9
-- medium: 0.6 <= confidence < 0.9
-- low: confidence < 0.6
-```
-
-High confidence patterns are auto-applied.
-Medium confidence patterns are suggested.
-Low confidence patterns are available but not pushed.
+See `.claude/memory/relevance-scoring.md` for the full 5-dimension scoring rubric used to match patterns to tasks. Summary:
+- **High confidence** (>= 0.9): Auto-applied
+- **Medium confidence** (0.6-0.9): Suggested
+- **Low confidence** (< 0.6): Available but not pushed
 
 ## Privacy & Security
 

@@ -58,7 +58,7 @@ For detailed execution instructions, see: `.claude/orchestrator/claude-code-exec
 6. **Checkpoint at milestones** - Pause for CEO approval at defined points
 7. **Retry 3x then escalate** - Don't get stuck, but don't give up too easily
 8. **GitNexus before every implementation task** - See protocol below
-9. **Verify before planning** - Check what already exists before creating tasks. See Step 2.7 and `.claude/protocols/verification-before-planning.md`.
+9. **Verify before planning** - Check what already exists before creating tasks. See Step 2.7 and `.claude/protocols/quality-verification.md` (Part 2).
 
 ## GitNexus Protocol (MANDATORY for all implementation tasks)
 
@@ -249,7 +249,7 @@ Fast Track benefits:
 
 **Required for**: new-feature, bug-fix, release, prototype-first, hotfix — any workflow on an existing product.
 
-Before instantiating the task graph (Step 3), verify that planned capabilities are not already implemented. This prevents phantom tasks that waste agent time. Follow `.claude/protocols/verification-before-planning.md`.
+Before instantiating the task graph (Step 3), verify that planned capabilities are not already implemented. This prevents phantom tasks that waste agent time. Follow `.claude/protocols/quality-verification.md` (Part 2).
 
 ```markdown
 1. Identify the target product: products/{PRODUCT}/
@@ -288,7 +288,7 @@ Before instantiating the task graph (Step 3), verify that planned capabilities a
 ```
 ## Verification-Before-Planning (MANDATORY)
 Before listing any capability in the plan/tasks, verify it is not already implemented.
-Follow: .claude/protocols/verification-before-planning.md
+Follow: .claude/protocols/quality-verification.md (Part 2)
 The plan MUST include an "Implementation Audit" table.
 ```
 
@@ -406,52 +406,15 @@ Before entering the execution loop, load memory files ONCE and score patterns ag
 2. Read `.claude/memory/decision-log.json`
 3. Read agent experience files: `.claude/memory/agent-experiences/{agent}.json`
 
-4. For each task in the task graph, score EVERY pattern using 5 dimensions (0-10):
+4. Score patterns using 5-dimension rubric from `.claude/memory/relevance-scoring.md`:
+   - Task Description Match (0-3), Product Context Match (0-2), Agent Role Fit (0-2),
+     Historical Success (0-2), Recency Bonus (0-1) = 0-10 total
+   - Include patterns >= 4 (up to 5, ranked). Code snippets for >= 7. Fallback to >= 3.
+   - Anti-patterns: dimensions (a)+(c) only, threshold >= 3, max 3
+   - Gotchas: matched by category, max 3
+   - Agent experience: always include all common_mistakes + preferred_approaches
 
-   a. Task Description Match (0-3): Semantic similarity between task description
-      and pattern's `problem`, `solution`, `when_to_use` fields.
-      3 = directly addresses the task's core problem
-      2 = clearly relevant to the task domain
-      1 = tangentially related
-      0 = no meaningful connection
-
-   b. Product Context Match (0-2): Pattern's `learned_from.product` or
-      `applies_to` vs current product.
-      2 = same product or explicitly applies
-      1 = similar tech stack or domain
-      0 = unrelated product
-
-   c. Agent Role Fit (0-2): How relevant to the assigned agent's role.
-      2 = core to agent's role
-      1 = adjacent — useful context
-      0 = irrelevant to agent
-
-   d. Historical Success (0-2): Based on `confidence` and `times_applied`.
-      2 = high confidence AND times_applied >= 3
-      1 = high confidence (fewer applications) or medium confidence
-      0 = low confidence or untested
-
-   e. Recency Bonus (0-1): Pattern learned within last 30 days.
-      1 = within 30 days
-      0 = older
-
-5. Select patterns:
-   - Include patterns with score >= 4 (up to 5 patterns, ranked by score)
-   - For score >= 7: include full code_snippet
-   - For score 4-6: include problem + solution only
-   - Fallback: if fewer than 3 qualify at >= 4, lower threshold to >= 3
-
-6. Score anti-patterns using dimensions (a) + (c) only (0-5 scale):
-   - Include anti-patterns with score >= 3 (up to 3)
-
-7. Match gotchas by category against agent domain + task keywords:
-   - Include up to 3 relevant gotchas
-
-8. Extract agent's own experience:
-   - `common_mistakes` from agent experience file (always include all)
-   - `preferred_approaches` from agent experience file (always include all)
-
-9. Cache results per (task_id, agent_role). When spawning a sub-agent, inject as:
+5. Cache results per (task_id, agent_role). When spawning a sub-agent, inject as:
 
    ## Relevant Patterns (semantically matched, score >= 4/10)
    - PATTERN-014 (score: 9/10, confidence: high): "Webhook Queue with Idempotency"
@@ -621,10 +584,10 @@ C. INVOKE AGENTS (PARALLEL-AWARE)
    ## Non-Negotiable Protocol Gates                             [LEVEL 1]
 
    **Non-Negotiable Before You Start:**
-   Read `.claude/protocols/anti-rationalization.md` — know what shortcuts to reject.
+   Read `.claude/protocols/quality-verification.md` (Part 3) — know what shortcuts to reject.
 
    **Non-Negotiable Before You Claim Done:**
-   Follow `.claude/protocols/verification-before-completion.md` — evidence required, no exceptions.
+   Follow `.claude/protocols/quality-verification.md` (Part 4) — evidence required, no exceptions.
 
    ## Your Brief                                                [LEVEL 3]
    {INLINE_BRIEF_CONTENT from .claude/agents/briefs/{agent}.md}
@@ -767,8 +730,8 @@ C. INVOKE AGENTS (PARALLEL-AWARE)
    You are the {ROLE} for ConnectSW.
 
    ## Non-Negotiable Protocol Gates
-   **Before You Start:** Read `.claude/protocols/anti-rationalization.md` — know what shortcuts to reject.
-   **Before You Claim Done:** Follow `.claude/protocols/verification-before-completion.md` — evidence required, no exceptions.
+   **Before You Start:** Read `.claude/protocols/quality-verification.md` (Part 3) — know what shortcuts to reject.
+   **Before You Claim Done:** Follow `.claude/protocols/quality-verification.md` (Part 4) — evidence required, no exceptions.
 
    ## Constraints
    - Work in: products/{PRODUCT}/
@@ -793,8 +756,8 @@ C. INVOKE AGENTS (PARALLEL-AWARE)
    You are the {ROLE} for ConnectSW.
 
    ## Non-Negotiable Protocol Gates
-   **Before You Start:** Read `.claude/protocols/anti-rationalization.md` — know what shortcuts to reject.
-   **Before You Claim Done:** Follow `.claude/protocols/verification-before-completion.md` — evidence required, no exceptions.
+   **Before You Start:** Read `.claude/protocols/quality-verification.md` (Part 3) — know what shortcuts to reject.
+   **Before You Claim Done:** Follow `.claude/protocols/quality-verification.md` (Part 4) — evidence required, no exceptions.
 
    ## Constraints
    - Work in: products/{PRODUCT}/
