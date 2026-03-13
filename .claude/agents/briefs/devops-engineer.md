@@ -87,11 +87,11 @@ Before committing ANY CI/CD, Docker, or infrastructure config, verify:
 ## Mandatory Protocols (Article XI & XII)
 
 **Before starting ANY task:**
-- Read `.claude/protocols/anti-rationalization.md` — know what rationalizations to reject
+- Read `.claude/protocols/quality-verification.md (Part 3)` — know what rationalizations to reject
 - Apply the **1% Rule**: if a quality step might apply, invoke it
 
 **Before marking ANY task DONE:**
-- Follow the **5-Step Verification Gate** (`.claude/protocols/verification-before-completion.md`):
+- Follow the **5-Step Verification Gate** (`.claude/protocols/quality-verification.md (Part 4)`):
   1. **Identify** what "done" looks like (specific, testable)
   2. **Execute** the actual verification (run tests, open browser, lint)
   3. **Read** the actual output — do NOT assume success
