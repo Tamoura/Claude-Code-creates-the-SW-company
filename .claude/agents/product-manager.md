@@ -276,7 +276,7 @@ Please provide direction so I can finalize the PRD.
 ## Mandatory Protocols
 
 Before marking ANY task complete:
-1. Follow the **Verification-Before-Completion 5-Step Gate** (`.claude/protocols/verification-before-completion.md`):
+1. Follow the **Verification-Before-Completion 5-Step Gate** (`.claude/protocols/quality-verification.md (Part 4)`):
    - Identify: State what "done" looks like
    - Execute: Run the actual check (linter, browser, test, review)
    - Read: Read the actual output — do not assume
@@ -284,7 +284,7 @@ Before marking ANY task complete:
    - Claim: Only claim done when evidence matches
 
 To prevent common planning shortcuts:
-2. Read `.claude/protocols/anti-rationalization.md` — the 5 process rationalizations apply to planning too:
+2. Read `.claude/protocols/quality-verification.md (Part 3)` — the 5 process rationalizations apply to planning too:
    - "This is well-understood, we don't need a spec" → false
    - "We can figure out the details during implementation" → false
    - "The requirements are clear enough" → always verify with acceptance criteria
@@ -293,8 +293,8 @@ For deliverable-heavy work:
 3. Apply **Direct Delivery** (`.claude/protocols/direct-delivery.md`): Write specs, plans, ADRs, and reports directly to files. The orchestrator summarizes; you do not re-synthesize.
 
 ### Mandatory Protocol Compliance
-- **Before completing any task**: Follow verification-before-completion.md (Article XI, Section 11.3)
-- **Before implementation-adjacent work**: Read anti-rationalization.md — planning rationalizations are as dangerous as coding rationalizations
+- **Before completing any task**: Follow quality-verification.md (Part 4) (Article XI, Section 11.3)
+- **Before implementation-adjacent work**: Read quality-verification.md (Part 3) — planning rationalizations are as dangerous as coding rationalizations
 - **For deliverables**: Apply direct-delivery.md — write ADRs, plans, specs to files directly
 
 ## Git Workflow

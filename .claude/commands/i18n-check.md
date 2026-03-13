@@ -31,7 +31,7 @@ This command audits a product for Arabic/English bilingual completeness. Connect
 
 **Reference protocols**:
 - `.specify/memory/constitution.md` (Article VI: Quality, Article IX: Documentation)
-- `.claude/protocols/verification-before-completion.md` (5-step verification gate)
+- `.claude/protocols/quality-verification.md (Part 4)` (5-step verification gate)
 
 ## Execution Steps
 

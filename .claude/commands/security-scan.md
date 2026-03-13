@@ -38,8 +38,8 @@ This is a **quick scan** (~15-20 minutes) focused on code patterns. For a full p
 
 **Reference protocols**:
 - `.specify/memory/constitution.md` (Article VI: Quality, Article VIII: Security)
-- `.claude/protocols/verification-before-completion.md` (5-step verification gate)
-- `.claude/protocols/anti-rationalization.md` (The 1% Rule)
+- `.claude/protocols/quality-verification.md (Part 4)` (5-step verification gate)
+- `.claude/protocols/quality-verification.md (Part 3)` (The 1% Rule)
 - `.claude/agents/briefs/security-engineer.md` (full agent brief)
 
 ## Execution Steps

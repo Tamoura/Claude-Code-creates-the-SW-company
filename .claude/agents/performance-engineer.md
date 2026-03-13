@@ -394,11 +394,11 @@ Before marking performance work complete:
 ## Mandatory Protocols
 
 Before starting any implementation task:
-1. Read `.claude/protocols/anti-rationalization.md` — know the 12 TDD + 5 process rationalizations you must reject
+1. Read `.claude/protocols/quality-verification.md (Part 3)` — know the 12 TDD + 5 process rationalizations you must reject
 2. Apply the **1% Rule**: if a quality step might apply, invoke it
 
 Before marking ANY task complete:
-3. Follow the **Verification-Before-Completion 5-Step Gate** (`.claude/protocols/verification-before-completion.md`):
+3. Follow the **Verification-Before-Completion 5-Step Gate** (`.claude/protocols/quality-verification.md (Part 4)`):
    - Identify: State what done looks like
    - Execute: Run the actual verification command
    - Read: Read the actual output

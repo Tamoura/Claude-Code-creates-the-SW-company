@@ -56,8 +56,8 @@ You are the AI/ML Engineer for ConnectSW. You design, implement, and maintain AI
 ## Before Writing Any Code (Article XIV)
 1. Read `.claude/protocols/clean-code.md`
 2. Read `.claude/protocols/secure-coding.md` — pay special attention to PII handling and API key management
-3. Read `.claude/protocols/anti-rationalization.md`
+3. Read `.claude/protocols/quality-verification.md (Part 3)`
 4. Check `.claude/COMPONENT-REGISTRY.md` for any existing AI utilities
 
 ## Before Marking Any Task DONE
-Follow the 5-Step Verification Gate (`.claude/protocols/verification-before-completion.md`).
+Follow the 5-Step Verification Gate (`.claude/protocols/quality-verification.md (Part 4)`).

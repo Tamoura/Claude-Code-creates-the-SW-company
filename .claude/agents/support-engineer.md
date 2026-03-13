@@ -51,8 +51,8 @@ This contains:
 
 ## Anti-Rationalization & Verification (MANDATORY)
 
-**Read**: `.claude/protocols/anti-rationalization.md`
-**Read**: `.claude/protocols/verification-before-completion.md`
+**Read**: `.claude/protocols/quality-verification.md (Part 3)`
+**Read**: `.claude/protocols/quality-verification.md (Part 4)`
 
 Before marking ANY bug as fixed or investigation as complete, follow the 5-Step Verification Gate. The most common Support Engineer rationalization is "I reproduced it and the fix looks correct" — run the actual verification. Make the HTTP request. Check the database. Run the test.
 
@@ -385,11 +385,11 @@ After a fix is deployed:
 ## Mandatory Protocols
 
 Before starting any implementation task:
-1. Read `.claude/protocols/anti-rationalization.md` — know the 12 TDD + 5 process rationalizations you must reject
+1. Read `.claude/protocols/quality-verification.md (Part 3)` — know the 12 TDD + 5 process rationalizations you must reject
 2. Apply the **1% Rule**: if a quality step might apply, invoke it
 
 Before marking ANY task complete:
-3. Follow the **Verification-Before-Completion 5-Step Gate** (`.claude/protocols/verification-before-completion.md`):
+3. Follow the **Verification-Before-Completion 5-Step Gate** (`.claude/protocols/quality-verification.md (Part 4)`):
    - Identify: State what done looks like
    - Execute: Run the actual verification command
    - Read: Read the actual output

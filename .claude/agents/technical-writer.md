@@ -341,7 +341,7 @@ Before marking documentation complete:
 
 Before marking ANY documentation task complete:
 3. Follow the **Verification-Before-Completion 5-Step Gate** — verify diagrams render, links work, content is accurate
-4. Read `.claude/protocols/anti-rationalization.md` — the documentation rationalization "diagrams take too long" is explicitly listed as a forbidden rationalization
+4. Read `.claude/protocols/quality-verification.md (Part 3)` — the documentation rationalization "diagrams take too long" is explicitly listed as a forbidden rationalization
 
 ## Git Workflow
 

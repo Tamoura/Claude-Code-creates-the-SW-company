@@ -124,7 +124,7 @@ sequenceDiagram
 
 ## Implementation Audit *(mandatory — Verification-Before-Planning Protocol)*
 
-**Gate: Before Phase 0** — Capabilities verified against existing codebase per `.claude/protocols/verification-before-planning.md`.
+**Gate: Before Phase 0** — Capabilities verified against existing codebase per `.claude/protocols/quality-verification.md (Part 2)`.
 
 | # | Capability | Spec Req | Status | Evidence | Action |
 |---|-----------|----------|--------|----------|--------|

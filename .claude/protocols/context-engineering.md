@@ -27,25 +27,27 @@ Agents load only what they need, when they need it. Context is organized into th
 - Relevant gotchas (top 3)
 - Agent's past experience (common mistakes, preferred approaches)
 - Context chain from upstream completed tasks (capped at 500 words)
+- **Context Hub**: External API docs for libraries the task touches (see `.claude/protocols/context-hub.md`)
 
-**Token budget**: ~1,500 tokens
+**Token budget**: ~1,700 tokens
 
 ### Level 3: Deep Reference (Only When Needed)
 - Full agent brief (50-80 lines)
 - Component registry excerpt (matching entries only)
 - Product addendum
 - Coding conventions scan instructions
+- **Context Hub**: Full docs with references (`chub get <id> --full`) for complex API integration
 
-**Token budget**: ~3,000 tokens
+**Token budget**: ~3,500 tokens
 
 ### Loading Rules
 
 | Task Complexity | Levels Loaded | Estimated Tokens |
 |----------------|---------------|-----------------|
 | Trivial (typo, config) | Level 1 only | ~500 |
-| Simple (single bug fix) | Level 1 + Level 2 | ~2,000 |
-| Standard (multi-file feature) | Level 1 + Level 2 + Level 3 | ~5,000 |
-| Complex (new product, architecture) | All levels + full brief | ~8,000 |
+| Simple (single bug fix) | Level 1 + Level 2 | ~2,200 |
+| Standard (multi-file feature) | Level 1 + Level 2 + Level 3 | ~5,500 |
+| Complex (new product, architecture) | All levels + full brief | ~9,000 |
 
 ### Implementation
 
@@ -180,6 +182,22 @@ Agents write large outputs to `scratch/`, deliverables to `deliverables/`, and h
 
 ---
 
+## 7. Context Hub Integration
+
+External API documentation is managed via [Context Hub](https://github.com/andrewyng/context-hub) (`chub`). This prevents agents from hallucinating APIs and enables persistent cross-session learning through annotations.
+
+### Rules
+- **Fetch before use**: When a task involves an external API, agents fetch curated docs via `chub get`
+- **Annotate gaps**: If docs are wrong or incomplete, agents annotate for future sessions
+- **Feedback loop**: Rate docs quality after use (`chub feedback <id> up|down`)
+- **Token-aware**: Only fetch main doc at Level 2; fetch `--full` (with references) at Level 3
+
+### Per-Agent Library Mapping
+
+See `.claude/protocols/context-hub.md` for the full agent-to-library mapping table.
+
+---
+
 ## References
 
 - [Agent-Skills-for-Context-Engineering](https://github.com/muratcankoylan/Agent-Skills-for-Context-Engineering)
@@ -189,3 +207,4 @@ Agents write large outputs to `scratch/`, deliverables to `deliverables/`, and h
 - Multi-agent-patterns skill: Context isolation, telephone game, token economics
 - Filesystem-context skill: Scratch pad, plan persistence, sub-agent communication
 - Tool-design skill: Consolidation principle, tool description engineering
+- [Context Hub](https://github.com/andrewyng/context-hub): Curated API docs, persistent annotations, feedback loop

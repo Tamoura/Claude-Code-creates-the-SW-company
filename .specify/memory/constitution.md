@@ -38,7 +38,7 @@ Before building ANY backend plugin, service, utility, frontend hook, component, 
 - If a matching component exists at maturity "Production" or "Solid": copy and adapt it
 - If building something new and generic: add it to the registry
 - Spec plans MUST reference existing components they will reuse
-- **Implementation Status Verification**: Before generating ANY plan (`/speckit.plan`) or task list (`/speckit.tasks`), agents MUST verify the implementation status of each proposed capability using the Verification-Before-Planning Protocol (`.claude/protocols/verification-before-planning.md`). Plans and task lists MUST include an "Implementation Audit" table documenting what was checked and what was found. This extends the reuse principle: don't just check for reusable components — check for already-implemented features.
+- **Implementation Status Verification**: Before generating ANY plan (`/speckit.plan`) or task list (`/speckit.tasks`), agents MUST verify the implementation status of each proposed capability using the Verification-Before-Planning Protocol (`.claude/protocols/quality-verification.md`, Part 2). Plans and task lists MUST include an "Implementation Audit" table documenting what was checked and what was found. This extends the reuse principle: don't just check for reusable components — check for already-implemented features.
 
 **Rationale:** ConnectSW maintains a growing library of production-tested components across products (see `.claude/COMPONENT-REGISTRY.md` for current count). Rebuilding wastes time and introduces inconsistency. The Verification-Before-Planning gate ensures that the "reuse before rebuild" principle extends to whole features, not just components.
 
@@ -267,14 +267,14 @@ All agents MUST follow the Anti-Rationalization Framework and the Verification-B
 - When in doubt, run the check
 
 ### 11.2 Anti-Rationalization Framework
-- All engineer agents (Backend, Frontend, Mobile) MUST read `.claude/protocols/anti-rationalization.md` before starting implementation work
+- All engineer agents (Backend, Frontend, Mobile) MUST read `.claude/protocols/quality-verification.md` (Part 3) before starting implementation work
 - The framework defines 12 TDD rationalizations and 5 process rationalizations with explicit counters
 - When an agent catches itself rationalizing a skip, it MUST apply the corresponding counter
 - Only the CEO can override a TDD requirement; no agent may self-grant exceptions
 - The QA Engineer enforces anti-rationalization compliance during the Testing Gate
 
 ### 11.3 Verification-Before-Completion Protocol
-- No agent may mark a task as complete without following the 5-step verification gate defined in `.claude/protocols/verification-before-completion.md`
+- No agent may mark a task as complete without following the 5-step verification gate defined in `.claude/protocols/quality-verification.md` (Part 4)
 - The five steps are: Identify verification command → Execute → Read output → Compare against expected → Claim with evidence
 - Task completion handoffs MUST include a "Verification Evidence" section with actual command output
 - The Orchestrator MUST reject task completions that lack verification evidence

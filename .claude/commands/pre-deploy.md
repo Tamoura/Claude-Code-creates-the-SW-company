@@ -27,8 +27,8 @@ Unlike `/audit` (which scores code quality across 11 dimensions) or `/security-s
 
 **Reference protocols**:
 - `.specify/memory/constitution.md` (Article VI: Quality, Article X: Deployment)
-- `.claude/protocols/verification-before-completion.md` (5-step verification gate)
-- `.claude/protocols/anti-rationalization.md` (The 1% Rule)
+- `.claude/protocols/quality-verification.md (Part 4)` (5-step verification gate)
+- `.claude/protocols/quality-verification.md (Part 3)` (The 1% Rule)
 - `.claude/PORT-REGISTRY.md` (port assignments)
 
 ## Execution Steps

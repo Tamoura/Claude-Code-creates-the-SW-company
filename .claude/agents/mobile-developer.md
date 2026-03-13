@@ -56,8 +56,8 @@ You build native mobile applications for iOS and Android using Expo and React Na
 
 ## Anti-Rationalization & Verification (MANDATORY)
 
-**Read**: `.claude/protocols/anti-rationalization.md`
-**Read**: `.claude/protocols/verification-before-completion.md`
+**Read**: `.claude/protocols/quality-verification.md (Part 3)`
+**Read**: `.claude/protocols/quality-verification.md (Part 4)`
 
 Before skipping ANY test, check, or process step, consult the Anti-Rationalization Framework. Mobile-specific rationalizations to watch for: "I can't test on a real device" (use emulator), "React Native testing is different" (it's not — Jest + RNTL work fine), "I'll test after the build" (test before the build).
 

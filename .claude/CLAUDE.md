@@ -22,13 +22,13 @@ The Orchestrator handles everything else.
 ```
 CEO
  └── Orchestrator (routes all work)
-      ├── Business Analyst (requirements elicitation, stakeholder analysis, gap analysis)
+      ├── Business Analyst (requirements, stakeholder analysis)
       ├── Product Manager (specs, requirements)
       ├── Product Strategist (market analysis, roadmap)
       ├── Architect (system design)
       ├── Backend Engineer (API, business logic)
       ├── Frontend Engineer (UI, UX)
-      ├── AI/ML Engineer (prompts, model routing, evals, embeddings, vector search)
+      ├── AI/ML Engineer (prompts, model routing, evals)
       ├── Mobile Developer (iOS, Android, React Native)
       ├── Data Engineer (schemas, migrations, pipelines)
       ├── Performance Engineer (optimization, load testing)
@@ -42,276 +42,113 @@ CEO
       └── Code Reviewer (audits, security assessment)
 ```
 
-## Context Engineering (Constitution Article XII)
+## Governing Documents
 
-ConnectSW applies context engineering principles to maximize agent effectiveness and minimize token waste. Context windows degrade due to attention mechanics, not raw token limits.
+The **Constitution** (`.specify/memory/constitution.md`) is the single source of truth for all rules. It contains 14 articles covering:
 
-### Key Protocols
+| Article | Topic | Key Rule |
+|---------|-------|----------|
+| I | Spec-First Development | Every product/feature needs a spec before code |
+| II | Component Reuse | Check COMPONENT-REGISTRY.md before building anything |
+| III | Test-Driven Development | TDD with real dependencies, 80%+ coverage, no mocks |
+| IV | TypeScript Everywhere | TS 5+, strict mode, Zod for runtime validation |
+| V | Default Tech Stack | Fastify + Prisma + PostgreSQL + Next.js + Tailwind |
+| VI | Traceability | Every artifact traces to a spec requirement (US-XX, FR-XXX) |
+| VII | Port Registry | Unique ports per product (see PORT-REGISTRY.md) |
+| VIII | Git Safety | Never `git add .`, verify staged files, pre-commit hooks |
+| IX | Diagram-First Docs | If it can be a diagram, it MUST be a diagram (Mermaid) |
+| X | Quality Gates | Browser, Security, Performance, Testing, Production gates |
+| XI | Anti-Rationalization | No skipping quality processes; evidence-based completion |
+| XII | Context Engineering | Progressive disclosure, attention-optimized prompts |
+| XIII | CI Enforcement | Lint, test, coverage, security, traceability in CI |
+| XIV | Clean & Secure Code | Shared ESLint config, OWASP-mapped rules, code review gate |
+
+**Read the full constitution** for detailed rules and rationale.
+
+## Context Engineering
+
+Context windows degrade due to attention mechanics, not raw token limits. ConnectSW applies progressive disclosure to keep agents focused.
+
+### Protocols
 
 | Protocol | File | Purpose |
 |----------|------|---------|
 | Progressive Disclosure | `.claude/protocols/context-engineering.md` | Load only what agents need per task complexity |
 | Context Compression | `.claude/protocols/context-compression.md` | Anchored Iterative Summarization for long sessions |
-| Direct Delivery | `.claude/protocols/direct-delivery.md` | Specialists write to files; orchestrator summarizes, not re-synthesizes |
+| Direct Delivery | `.claude/protocols/direct-delivery.md` | Specialists write to files; no re-synthesis |
+| Context Hub | `.claude/protocols/context-hub.md` | Curated external API docs, persistent annotations |
+| Quality Verification | `.claude/protocols/quality-verification.md` | Anti-rationalization + verification gates (planning, completion) |
 
 ### Progressive Disclosure Levels
 
 | Task Complexity | Context Loaded | ~Token Budget |
 |----------------|----------------|---------------|
 | Trivial (typo, config) | Role + Task + Constraints | ~500 |
-| Simple (single bug fix) | + Patterns + Experience | ~2,000 |
-| Standard (multi-file feature) | + Full Brief + Registry + TDD | ~5,000 |
-| Complex (new product) | All sections expanded | ~8,000 |
-
-### Attention-Optimized Prompt Order
-
-1. **Start** (high attention): Stable role/rules/tech stack (KV-cache reusable)
-2. **Middle** (lower attention): Variable patterns/context (supplementary)
-3. **End** (high attention): Current task + completion instructions (critical)
+| Simple (single bug fix) | + Patterns + Experience + Context Hub docs | ~2,200 |
+| Standard (multi-file feature) | + Full Brief + Registry + TDD + Context Hub full | ~5,500 |
+| Complex (new product) | All sections expanded + Context Hub full | ~9,000 |
 
 ### Script Registry
 
-All 28 scripts organized into 6 namespaces. See `.claude/scripts/SCRIPT-REGISTRY.md` for the "I Need To..." quick reference table.
+All scripts organized into 6 namespaces. See `.claude/scripts/SCRIPT-REGISTRY.md` for the "I Need To..." quick reference table.
 
-## Standards
-
-### Git
-
-- All work on branches, never direct to main
-- PRs required for all changes
-- Squash merge for features
-- Conventional commits format
-
-### Git Safety Rules (MANDATORY)
-
-These rules exist because a bad branch base once deleted 600+ files. Follow them exactly.
-
-1. **Verify base branch before creating a new branch.** Before `git checkout -b`, confirm you are on the correct parent branch — the one the PR will target. Run `git branch --show-current` and verify it matches the intended PR base. If you are on `foundation/X` but the PR targets `feature/Y`, switch first.
-
-2. **Never use `git add .` or `git add -A`.** Always stage specific files by name. Broad adds pick up untracked files from branch divergence and cause mass deletions.
-
-3. **Verify staged files before every commit.** Run `git diff --cached --name-only | wc -l` and `git diff --cached --stat` before committing. If more than ~20 files are staged, stop and investigate — something is likely wrong.
-
-4. **Verify after every commit.** Run `git show --stat` to confirm only the intended files were included. If unexpected files appear, revert immediately with `git reset HEAD~1` before the damage propagates.
-
-5. **A pre-commit hook enforces these rules.** It blocks commits with >30 files or >5000 deleted lines. Do not bypass it unless you have verified every staged file. Hooks live in `.githooks/` (version-controlled). After cloning, run: `git config core.hooksPath .githooks`
-
-6. **CI Preflight before every push.** Run `bash .claude/scripts/ci-preflight.sh [product]` before pushing. A pre-push hook (`.githooks/pre-push`) runs this automatically. If you modify `package.json`, run `pnpm install` and stage `pnpm-lock.yaml`. Check `.claude/ci/known-issues.yml` before modifying workflow files. Skip: `SKIP_CI_PREFLIGHT=1 git push ...`
-
-### Branch Naming
-
-```
-feature/[product]/[feature-id]   # New features
-fix/[product]/[issue-id]         # Bug fixes
-arch/[product]                   # Architecture work
-foundation/[product]             # Initial setup
-release/[product]/v[X.Y.Z]       # Releases
-```
-
-### Code
-
-- TypeScript for all JavaScript code
-- TDD: Red-Green-Refactor (enforced by Anti-Rationalization Framework)
-- No mocks in tests - real databases, real services
-- 80%+ test coverage minimum
-- ESLint + Prettier for formatting
-- **Verification-Before-Completion**: No task marked done without evidence (5-step gate)
-- **Anti-Rationalization**: 12 TDD + 5 process rationalizations with explicit counters
-- **The 1% Rule**: If a check *might* apply, it MUST be run
-
-### Phase 0 — Mandatory Context Discovery
+## Phase 0 — Mandatory Context Discovery
 
 Before writing ANY code on a task, the assigned agent MUST:
 
 1. **Inspect the target area** — Glob/grep to understand the files and modules involved.
-2. **Identify the stack context** — Confirm frameworks, dependencies, and patterns in use for this specific product.
-3. **Detect existing problems** — Partial migrations, inconsistent patterns, missing tests, type gaps, stale imports.
-4. **Check the component registry** — Verify if reusable components already solve part of the task.
-5. **Report findings** — Summarize what you found to the Orchestrator before proposing changes.
+2. **Identify the stack context** — Confirm frameworks, dependencies, and patterns in use.
+3. **Fetch external API docs** — Use Context Hub (`chub get`) for libraries the task touches.
+4. **Detect existing problems** — Partial migrations, inconsistent patterns, missing tests.
+5. **Check the component registry** — Verify if reusable components already solve part of the task.
+6. **Report findings** — Summarize to Orchestrator before proposing changes.
 
-If you skip this step, your implementation will likely conflict with existing code. Do not skip it.
-
-### When In Doubt — Default Agent Behavior
-
-When any agent encounters ambiguity, undefined requirements, or uncertain decisions:
+## When In Doubt — Default Agent Behavior
 
 - **Read the code first.** Do not assume. Inspect the actual state.
-- **Escalate, don't guess.** Surface the ambiguity to the Orchestrator or CEO. Never make product decisions autonomously.
-- **Propose a plan, don't just implement.** Present options with trade-offs. Wait for confirmation.
-- **Keep changes small and reversible.** If you must proceed under uncertainty, make the minimal safe change.
+- **Escalate, don't guess.** Surface ambiguity to the Orchestrator or CEO.
+- **Propose a plan, don't just implement.** Present options with trade-offs.
+- **Keep changes small and reversible.**
 
-### Review Pattern Automation
-
-When any agent notices the same review feedback recurring across tasks or PRs, it must not keep repeating the feedback manually. Instead:
-
-1. **Identify the pattern** — Same issue flagged 2+ times (e.g., missing error boundaries, inconsistent naming, missing input validation).
-2. **Automate it** — Add a lint rule, type constraint, pre-commit check, or test template that catches it automatically.
-3. **Stop reviewing for it** — Once automated, the guardrail handles it. Agent attention moves to new issues.
-
-Goal: The review surface shrinks over time. Every repeated review comment is a missing guardrail.
-
-### Protocol Library (`.claude/protocols/`)
+## Protocol Library (`.claude/protocols/`)
 
 | Protocol | Category | When to Apply |
 |----------|----------|---------------|
-| `anti-rationalization.md` | Quality Assurance | Before ANY implementation work — Article XI |
-| `verification-before-completion.md` | Quality Assurance | Before marking ANY task done — Article XI |
-| `verification-before-planning.md` | Quality Assurance | Before generating plans/tasks — Article II |
-| `development-oriented-testing.md` | Testing | During implementation (not after) |
-| `dynamic-test-generation.md` | Testing | QA phase — edge cases beyond spec |
+| `quality-verification.md` | Quality Assurance | Before planning, during implementation, before marking done — Articles II, XI |
 | `context-engineering.md` | Context Engineering | When prompt design matters — Article XII |
 | `context-compression.md` | Context Engineering | When context exceeds 60% — Article XII |
 | `direct-delivery.md` | Context Engineering | Always — write deliverables to files — Article XII |
-| `parallel-execution.md` | Execution | When spawning multiple sub-agents |
-| `repository-back-translation.md` | Testing | Post-MVP — create agent learning exemplars |
-| `i18n.md` | Internationalisation | Any product with Arabic/RTL or multi-language requirements |
-| `ci-preflight.md` | Quality Assurance | Before every push — prevents CI failures proactively |
+| `context-hub.md` | Context Engineering | External API docs, annotations, cross-session learning |
+| `clean-code.md` | Code Quality | Before writing implementation code — Article XIV |
+| `secure-coding.md` | Security | Before writing auth/payments/data code — Article XIV |
 | `regression-testing.md` | Testing | Every new feature must add regression E2E tests |
+| `ci-preflight.md` | Quality Assurance | Before every push — prevents CI failures |
+| `parallel-execution.md` | Execution | When spawning multiple sub-agents |
+| `i18n.md` | Internationalisation | Products with Arabic/RTL or multi-language |
+| `proof-recording.md` | Testing | Every feature produces proof artifacts |
 | `agent-message.schema.yml` | Agent Communication | Orchestrator + inter-agent messaging |
 | `message-router.ts` | Agent Communication | Infrastructure — orchestrator routing |
 
-### Ports
-
-**IMPORTANT**: See `.claude/PORT-REGISTRY.md` for port assignments. All products must use unique ports to run simultaneously.
-
-- Frontend apps: 3100-3199 (assigned per product)
-- Backend APIs: 5000-5099 (assigned per product)
-- Mobile dev servers: 8081-8099 (assigned per product)
-- Databases: default ports in Docker (shared via containers)
-
-### Documentation Standards (MANDATORY)
-
-Documentation must NEVER be thin or skeletal. Every product and feature must have rich, comprehensive documentation that includes ALL of the following:
-
-#### Diagram-First Principle (CEO MANDATE)
-
-**If something can be explained with a diagram, it MUST include a diagram.** Diagrams are the primary communication tool at ConnectSW — text is supplementary. A wall of text where a diagram would suffice is a documentation defect.
-
-All diagrams use **Mermaid syntax** (renders natively in GitHub, Command Center, and our tooling).
-
-**When to use which diagram type:**
-
-| Situation | Diagram Type | Mermaid Syntax |
-|-----------|-------------|----------------|
-| System boundaries, users, external services | C4 Context | `graph TD` (with C4 styling) |
-| Apps, databases, APIs, tech stack | C4 Container | `graph TD` (with container styling) |
-| Internal services, modules, plugins | C4 Component | `graph TD` (with component styling) |
-| Database tables and relationships | Entity-Relationship | `erDiagram` |
-| Multi-step flows (auth, payments, API calls) | Sequence Diagram | `sequenceDiagram` |
-| User journeys and workflows | Flowchart | `flowchart TD` |
-| Decision logic, branching paths | Flowchart | `flowchart TD` with decision nodes |
-| State transitions (order status, user lifecycle) | State Diagram | `stateDiagram-v2` |
-| Timeline, phases, parallel work | Gantt Chart | `gantt` |
-| Class/module relationships | Class Diagram | `classDiagram` |
-| Git branching strategy | Gitgraph | `gitgraph` |
-| Quick concept relationships | Mindmap | `mindmap` |
-
-**Minimum diagram requirements by document type:**
-
-**Required in every PRD / Feature Spec:**
-- **Business Context**: Why this product/feature exists, what problem it solves, who it serves, market positioning
-- **User Stories**: Full user stories with personas, motivations, and acceptance criteria (Given/When/Then)
-- **User Journey Flowchart**: Mermaid flowchart showing the user's path through the feature
-- **Acceptance Criteria**: Explicit, testable criteria for every user story — never implied
-- **C4 Diagrams**: Architecture documentation must include C4 model diagrams (Context, Container, Component, Code) using Mermaid syntax
-  - **Level 1 (Context)**: System in its environment — users, external systems, boundaries
-  - **Level 2 (Container)**: High-level tech choices — apps, databases, message queues, APIs
-  - **Level 3 (Component)**: Internal structure of each container — services, plugins, modules
-  - **Level 4 (Code)**: Class/module level detail for complex components (when warranted)
-- **Data Model Diagrams**: Entity-relationship diagrams for all database schemas
-- **API Contracts**: Full request/response examples, error codes, authentication requirements
-- **Sequence Diagrams**: For any multi-step flows (auth flows, payment flows, etc.)
-- **State Diagrams**: For any entity with lifecycle states (orders, users, subscriptions)
-
-**Required in every Implementation Plan:**
-- **Architecture section with C4 diagrams** (at minimum Level 1 and Level 2)
-- **Integration points**: How this feature connects to existing systems — with a sequence diagram showing the integration flow
-- **Data flow**: How data moves through the system end-to-end — with a flowchart or sequence diagram
-- **ER diagram**: For any database schema changes
-- **Security considerations**: Auth, authorization, data protection specifics
-- **Error handling strategy**: What can go wrong and how the system recovers — with a flowchart showing error paths
-
-**Required in every README:**
-- **Business context**: What this product does and why it exists (not just tech setup)
-- **Architecture overview with diagrams**: At minimum a Container-level C4 diagram
-- **Getting started**: Complete setup instructions that actually work
-- **API overview**: Key endpoints with examples — with a sequence diagram for complex endpoints
-
-**Required in every ADR (Architecture Decision Record):**
-- **Before/after diagrams**: Show the architecture before and after the decision
-- **Alternatives considered**: Each alternative should have a diagram if the difference is structural
-
-**Enforcement**: If a PR is submitted with thin documentation (missing user stories, no diagrams, no business context, no acceptance criteria), it MUST be rejected and sent back for documentation enrichment. Documentation is not optional — it is a first-class deliverable equal to code. A document that explains something complex without a diagram is incomplete.
-
-### Testing
-
-- Unit: Jest
-- Integration: Jest + real DB
-- E2E: Playwright
-- All tests must pass before PR merge
-- **Development-Oriented Testing**: Engineers dev-test during coding (not just at QA gate)
-- **Dynamic Test Generation**: QA generates edge case tests from code analysis
-- **Database State Verification**: Verify DB integrity, not just API responses
-
-### Component Reuse (MANDATORY)
-
-**Before building ANY backend plugin, service, utility, frontend hook, component, or infrastructure config**, agents MUST:
-
-1. Read `.claude/COMPONENT-REGISTRY.md`
-2. Check the "I Need To..." quick reference table
-3. If a matching component exists: **copy and adapt it** — do NOT rebuild from scratch
-4. If you build something new that is generic (not domain-specific): **add it to the registry**
-
-This rule exists because ConnectSW maintains a growing library of production-tested components across products (see registry for current count). Rebuilding wastes time and introduces inconsistency.
-
-**Key registries:**
-- `.claude/COMPONENT-REGISTRY.md` — Reusable code components
-- `.claude/PORT-REGISTRY.md` — Port assignments
-- `.claude/PRODUCT-REGISTRY.md` — All products with tier, stack, ports, CI, and docs
-
-### Specification-Driven Development (spec-kit)
-
-ConnectSW uses [GitHub's spec-kit](https://github.com/github/spec-kit) methodology for specification-driven development. All product and feature work follows a structured spec → plan → tasks → implement pipeline.
-
-**Commands:**
+## Specification-Driven Development (spec-kit)
 
 | Command | Agent | Purpose |
 |---------|-------|---------|
 | `/speckit.specify` | Product Manager | Create structured feature specs from CEO briefs |
-| `/speckit.clarify` | Product Manager | Resolve ambiguities in specs (up to 5 questions) |
-| `/speckit.plan` | Architect | Create traceable implementation plans from specs |
-| `/speckit.tasks` | Orchestrator | Generate dependency-ordered task lists from plans |
+| `/speckit.clarify` | Product Manager | Resolve ambiguities in specs |
+| `/speckit.plan` | Architect | Create traceable implementation plans |
+| `/speckit.tasks` | Orchestrator | Generate dependency-ordered task lists |
 | `/speckit.analyze` | QA Engineer | Validate spec/plan/tasks consistency (quality gate) |
-| `/speckit.checklist` | QA Engineer | Generate requirements-quality checklists |
-| `/speckit.constitution` | Orchestrator | Update governing principles |
 | `/speckit.implement` | Orchestrator | Execute tasks via specialist agents |
 
-**Key files:**
-- `.specify/memory/constitution.md` — Governing principles (14 articles, v1.5.0)
-- `.specify/templates/` — Spec, plan, tasks, checklist templates
-- `.specify/templates/commands/` — Command definitions
-- `{product}/docs/specs/` — Feature specifications (`products/[name]/docs/specs/` in monorepo, `docs/specs/` in single-repo)
-- `{product}/docs/plan.md` — Implementation plans
-- `{product}/docs/tasks.md` — Task lists
+**Workflow**: CEO brief → BA analysis → specify → clarify → PRD → Architecture → plan → tasks → implement → analyze → CEO Review
 
-**Workflow (New Products):**
-```
-CEO brief → BA analysis → /speckit.specify → /speckit.clarify → PRD → Architecture
-→ /speckit.plan → /speckit.tasks → Implementation → /speckit.analyze → CEO Review
-```
-
-**Workflow (New Features):**
-```
-CEO brief → /speckit.specify → Design → Implementation → /speckit.analyze → CEO Review
-```
-
-**Enforcement:** Spec-kit tasks (BA-01, SPEC-01, CLARIFY-01, ANALYZE-01) are mandatory for new products. SPEC-{ID} and ANALYZE-{ID} are mandatory for new features. The orchestrator MUST NOT skip them.
+**Enforcement:** Spec-kit tasks are mandatory. The orchestrator MUST NOT skip them.
 
 ## Directory Structure
 
 ConnectSW supports two repo layouts. All scripts auto-detect which mode via `.claude/scripts/resolve-product.sh`.
 
-### Monorepo Mode (multiple products in one repo)
+### Monorepo Mode
 
 ```
 /products/[name]/        # Individual products
@@ -322,117 +159,42 @@ ConnectSW supports two repo layouts. All scripts auto-detect which mode via `.cl
 /.specify/               # Spec-kit constitution, templates, commands
 ```
 
-### Single-Repo Mode (one product per repo)
+### Single-Repo Mode
 
 ```
-/apps/                   # api/ and web/ at repo root (no products/ wrapper)
+/apps/                   # api/ and web/ at repo root
 /e2e/                    # End-to-end tests
-/docs/                   # Product documentation (PRD, specs, plan, tasks)
+/docs/                   # Product documentation
 /.claude/                # Agent definitions, workflows
 /.specify/               # Spec-kit constitution, templates, commands
-/package.json            # Product root
 ```
 
-**Detection**: If `products/` directory exists, scripts use monorepo mode. Otherwise, they treat the repo root as the single product.
-
-## Product Structure
-
-Each product follows this structure (paths relative to product root):
+### Product Structure (per product)
 
 ```
 apps/
-├── api/                 # Backend service
-│   ├── src/
-│   ├── tests/
-│   └── package.json
-└── web/                 # Frontend app
-    ├── src/
-    ├── tests/
-    └── package.json
-packages/                # Product-specific shared code
-e2e/                     # End-to-end tests
+├── api/                 # Backend (Fastify + Prisma)
+└── web/                 # Frontend (Next.js + Tailwind)
+e2e/                     # Playwright tests
 docs/
-├── PRD.md              # Product Requirements
-├── API.md              # API documentation
-├── ADRs/               # Architecture decisions
-├── specs/              # Feature specifications (spec-kit)
-├── plan.md             # Implementation plan (spec-kit)
-├── tasks.md            # Task list (spec-kit)
-└── quality-reports/    # Spec consistency & gate reports
-package.json
-README.md
+├── PRD.md, API.md, ADRs/, specs/, plan.md, tasks.md
 ```
 
-In monorepo mode, each product lives under `products/[name]/`. In single-repo mode, this structure is at the repo root.
+## Key Registries
 
-## Technology Stack
-
-### Default Stack (can be overridden per product)
-
-- **Runtime**: Node.js 20+
-- **Language**: TypeScript 5+
-- **Backend**: Fastify
-- **Frontend**: Next.js 14+ with React 18+
-- **Database**: PostgreSQL 15+
-- **ORM**: Prisma
-- **Styling**: Tailwind CSS
-- **Testing**: Jest, React Testing Library, Playwright
-- **CI/CD**: GitHub Actions
-
-## Commit Message Format
-
-```
-<type>(<scope>): <subject>
-
-<body>
-
-<footer>
-```
-
-Types: feat, fix, refactor, test, docs, chore, ci
-
-Example:
-```
-feat(auth): add email verification endpoint
-
-Implements PRO-03 email verification with token generation
-and expiration handling.
-
-Closes #42
-```
+- `.claude/COMPONENT-REGISTRY.md` — Reusable code components
+- `.claude/PORT-REGISTRY.md` — Port assignments (3100-3199 frontend, 5000-5099 backend)
+- `.claude/PRODUCT-REGISTRY.md` — All products with tier, stack, ports, CI, and docs
 
 ## Invoking the Orchestrator
 
-Use the `/orchestrator` command followed by your request:
-
 ```
-/orchestrator New product: task management app for teams
-/orchestrator Add dark mode to stablecoin-gateway
-/orchestrator Fix the login bug in deal-flow-platform
-/orchestrator Status update on all products
-/orchestrator Ship stablecoin-gateway to production
+/orchestrator New product: [idea]
+/orchestrator Add [feature] to [product]
+/orchestrator Fix [description] in [product]
+/orchestrator Ship [product] to production
+/orchestrator Status update
 ```
-
-### Example Requests
-
-| What You Want | Command |
-|---------------|---------|
-| Create new product | `/orchestrator New product: [idea]` |
-| Add feature | `/orchestrator Add [feature] to [product]` |
-| Fix bug | `/orchestrator Fix [description] in [product]` |
-| Deploy | `/orchestrator Ship [product] to production` |
-| Status | `/orchestrator Status update` |
-
-## How the Orchestrator Works
-
-The Orchestrator manages all work. It will:
-
-1. Break down your requests into tasks
-2. Assign tasks to appropriate specialist agents
-3. Coordinate parallel work using git worktrees
-4. **Run Testing Gate** (via QA Engineer) before any checkpoint
-5. Pause at checkpoints for your approval
-6. Handle errors with 3 retries before escalating
 
 ### Checkpoints (Orchestrator pauses for CEO approval)
 
@@ -442,14 +204,10 @@ The Orchestrator manages all work. It will:
 - Feature complete (after Testing Gate PASS)
 - Pre-deployment to production (after Testing Gate PASS)
 - Any blocker or decision needed
-- After 3 failed retries on any task
 
-### Quality Gates
+### Quality Gates (run before every checkpoint)
 
-Before any checkpoint where you'll review the product, the Orchestrator automatically runs:
-
-1. **Spec Consistency Gate** — `/speckit.analyze` validates spec/plan/tasks alignment
+1. **Spec Consistency Gate** — `/speckit.analyze` validates alignment
 2. **Browser-First Gate** — Product works in a real browser
-3. **Testing Gate** — Unit tests, E2E tests, visual verification all pass
-4. Only proceeds to checkpoint if ALL gates report PASS
-5. If FAIL, routes to appropriate agent for fix, then re-runs gates
+3. **Testing Gate** — Unit tests, E2E tests, visual verification
+4. All must PASS before proceeding. FAIL → fix → re-run.
