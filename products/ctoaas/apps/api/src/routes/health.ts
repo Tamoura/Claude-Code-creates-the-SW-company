@@ -1,0 +1,49 @@
+import { FastifyPluginAsync } from 'fastify';
+import { sendSuccess } from '../lib/response';
+
+const startTime = Date.now();
+
+const healthRoutes: FastifyPluginAsync =
+  async (fastify) => {
+    fastify.get(
+      '/health',
+      {
+        schema: {
+          description: 'Health check endpoint',
+          tags: ['System'],
+          response: {
+            200: {
+              type: 'object',
+              properties: {
+                success: { type: 'boolean' },
+                data: {
+                  type: 'object',
+                  properties: {
+                    status: { type: 'string' },
+                    timestamp: { type: 'string' },
+                    uptime: { type: 'number' },
+                    version: { type: 'string' },
+                  },
+                },
+              },
+            },
+          },
+        },
+      },
+      async (_request, reply) => {
+        const uptimeSeconds = Math.floor(
+          (Date.now() - startTime) / 1000
+        );
+
+        return sendSuccess(reply, {
+          status: 'ok',
+          timestamp: new Date().toISOString(),
+          uptime: uptimeSeconds,
+          version:
+            process.env.npm_package_version || '0.1.0',
+        });
+      }
+    );
+  };
+
+export default healthRoutes;
