@@ -41,6 +41,34 @@ const NAV_ITEMS = [
   },
 ] as const;
 
+const SECONDARY_NAV_ITEMS = [
+  {
+    label: "Reports",
+    href: "/reports",
+    icon: "M9 17v-2m3 2v-4m3 4v-6m2 10H7a2 2 0 01-2-2V5a2 2 0 012-2h5.586a1 1 0 01.707.293l5.414 5.414a1 1 0 01.293.707V19a2 2 0 01-2 2z",
+  },
+  {
+    label: "Compliance",
+    href: "/compliance",
+    icon: "M3 6l3 1m0 0l-3 9a5.002 5.002 0 006.001 0M6 7l3 9M6 7l6-2m6 2l3-1m-3 1l-3 9a5.002 5.002 0 006.001 0M18 7l3 9m-3-9l-6-2m0-2v2m0 16V5m0 16H9m3 0h3",
+  },
+  {
+    label: "Team",
+    href: "/team",
+    icon: "M17 20h5v-2a3 3 0 00-5.356-1.857M17 20H7m10 0v-2c0-.656-.126-1.283-.356-1.857M7 20H2v-2a3 3 0 015.356-1.857M7 20v-2c0-.656.126-1.283.356-1.857m0 0a5.002 5.002 0 019.288 0M15 7a3 3 0 11-6 0 3 3 0 016 0z",
+  },
+  {
+    label: "Integrations",
+    href: "/integrations",
+    icon: "M11 4a2 2 0 114 0v1a1 1 0 001 1h3a1 1 0 011 1v3a1 1 0 01-1 1h-1a2 2 0 100 4h1a1 1 0 011 1v3a1 1 0 01-1 1h-3a1 1 0 01-1-1v-1a2 2 0 10-4 0v1a1 1 0 01-1 1H7a1 1 0 01-1-1v-3a1 1 0 00-1-1H4a2 2 0 110-4h1a1 1 0 001-1V7a1 1 0 011-1h3a1 1 0 001-1V4z",
+  },
+  {
+    label: "Help",
+    href: "/help",
+    icon: "M8.228 9c.549-1.165 2.03-2 3.772-2 2.21 0 4 1.343 4 3 0 1.4-1.278 2.575-3.006 2.907-.542.104-.994.54-.994 1.093m0 3h.01M21 12a9 9 0 11-18 0 9 9 0 0118 0z",
+  },
+] as const;
+
 export default function DashboardLayout({
   children,
 }: {
@@ -70,7 +98,7 @@ export default function DashboardLayout({
         </div>
 
         {/* Navigation */}
-        <nav className="flex-1 p-4 space-y-1" aria-label="Main">
+        <nav className="flex-1 p-4 space-y-1 overflow-y-auto" aria-label="Main">
           {NAV_ITEMS.map((item) => {
             const isActive =
               pathname === item.href ||
@@ -105,6 +133,43 @@ export default function DashboardLayout({
               </Link>
             );
           })}
+
+          {/* Secondary navigation */}
+          <div className="pt-4 mt-4 border-t border-border space-y-1">
+            {SECONDARY_NAV_ITEMS.map((item) => {
+              const isActive =
+                pathname === item.href ||
+                pathname.startsWith(item.href);
+              return (
+                <Link
+                  key={item.href}
+                  href={item.href}
+                  aria-current={isActive ? "page" : undefined}
+                  className={`flex items-center gap-3 px-3 py-2 rounded-lg text-sm font-medium min-h-[44px] ${
+                    isActive
+                      ? "bg-primary-100 text-primary-700"
+                      : "text-muted-foreground hover:bg-muted hover:text-foreground"
+                  }`}
+                >
+                  <svg
+                    className="w-5 h-5 flex-shrink-0"
+                    fill="none"
+                    stroke="currentColor"
+                    viewBox="0 0 24 24"
+                    aria-hidden="true"
+                  >
+                    <path
+                      strokeLinecap="round"
+                      strokeLinejoin="round"
+                      strokeWidth={2}
+                      d={item.icon}
+                    />
+                  </svg>
+                  {item.label}
+                </Link>
+              );
+            })}
+          </div>
         </nav>
 
         {/* User section */}
