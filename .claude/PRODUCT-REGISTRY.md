@@ -202,6 +202,22 @@
 | **Has Mobile** | No |
 | **Notes** | No dedicated backend by design; integrates QDB's existing Direct Financing, Advisory, and Guarantees APIs |
 
+#### `ctoaas`
+| Field | Value |
+|-------|-------|
+| **Description** | AI-powered CTO advisory platform — conversational AI with RAG, risk surfacing, cost analysis, technology radar |
+| **Tier** | Development |
+| **Stack** | Fastify + Next.js + PostgreSQL + Redis + CopilotKit + LangGraph + LlamaIndex |
+| **Frontend** | 3120 |
+| **Backend** | 5015 |
+| **Mobile** | -- |
+| **CI** | -- (not yet configured) |
+| **PRD** | `products/ctoaas/docs/PRD.md` |
+| **Specs** | `products/ctoaas/docs/specs/` |
+| **Has Backend** | Yes |
+| **Has Mobile** | No |
+| **Notes** | AI-heavy; uses pgvector for RAG similarity search; CopilotKit for chat UI; LangGraph for agent orchestration; free tier enforced at 20 msg/day |
+
 #### `qdb-sme-relief`
 | Field | Value |
 |-------|-------|
