@@ -32,8 +32,18 @@ export async function closeApp(): Promise<void> {
 }
 
 export async function cleanDatabase(): Promise<void> {
-  // Will add table deletions after Prisma schema
-  // is created in IMPL-005
+  const db = getPrisma();
+  // Delete in FK-safe order
+  await db.auditLog.deleteMany();
+  await db.refreshToken.deleteMany();
+  await db.userPreference.deleteMany();
+  await db.cloudSpend.deleteMany();
+  await db.tcoComparison.deleteMany();
+  await db.message.deleteMany();
+  await db.conversation.deleteMany();
+  await db.companyProfile.deleteMany();
+  await db.user.deleteMany();
+  await db.organization.deleteMany();
 }
 
 export interface TestUser {
