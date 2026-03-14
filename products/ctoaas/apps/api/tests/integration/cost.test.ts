@@ -1,12 +1,9 @@
 /**
- * Cost Routes Integration Tests (Red Phase)
+ * Cost Routes Integration Tests
  *
  * Implements:
  *   FR-023 (TCO Calculator)
  *   FR-027 (Cloud Spend Analysis)
- *
- * These tests define expected behavior for cost and cloud spend routes.
- * They WILL FAIL because the routes do not exist yet.
  *
  * [IMPL-059]
  */
@@ -17,14 +14,66 @@ import {
   closeApp,
   getPrisma,
   cleanDatabase,
-  createTestUser,
   authHeaders,
-  TestUser,
 } from '../helpers';
 
 // ---------- helpers ----------
 
+const AUTH_BASE = '/api/v1/auth';
 const COST_BASE = '/api/v1/costs';
+
+interface AuthenticatedUser {
+  id: string;
+  email: string;
+  accessToken: string;
+  organizationId: string;
+}
+
+let userCounter = 0;
+
+async function createAuthenticatedUser(
+  app: FastifyInstance,
+  prisma: PrismaClient
+): Promise<AuthenticatedUser> {
+  userCounter++;
+  const email = `cost-test-${userCounter}-${Date.now()}@example.com`;
+  const password = 'Str0ng!Pass#2026';
+
+  const signupRes = await app.inject({
+    method: 'POST',
+    url: `${AUTH_BASE}/signup`,
+    payload: {
+      name: `Cost Test User ${userCounter}`,
+      email,
+      password,
+      companyName: `CostTestCo ${userCounter}`,
+    },
+  });
+  expect(signupRes.statusCode).toBe(201);
+
+  const loginRes = await app.inject({
+    method: 'POST',
+    url: `${AUTH_BASE}/login`,
+    payload: { email, password },
+  });
+  expect(loginRes.statusCode).toBe(200);
+
+  const loginBody = JSON.parse(loginRes.body);
+  const accessToken = loginBody.data.accessToken;
+  const userId = loginBody.data.user.id;
+
+  const user = await prisma.user.findUnique({
+    where: { id: userId },
+    select: { organizationId: true },
+  });
+
+  return {
+    id: userId,
+    email,
+    accessToken,
+    organizationId: user!.organizationId,
+  };
+}
 
 function tcoPayload() {
   return {
@@ -83,7 +132,7 @@ describe('Cost Routes', () => {
     await closeApp();
   });
 
-  afterEach(async () => {
+  beforeEach(async () => {
     await cleanDatabase();
   });
 
@@ -92,7 +141,7 @@ describe('Cost Routes', () => {
   // ==========================================================
   describe('POST /api/v1/costs/tco', () => {
     test('[FR-023][AC-7] creates TCO comparison with options', async () => {
-      const user = await createTestUser(app);
+      const user = await createAuthenticatedUser(app, prisma);
 
       const res = await app.inject({
         method: 'POST',
@@ -141,7 +190,7 @@ describe('Cost Routes', () => {
     });
 
     test('[FR-023] validates option structure', async () => {
-      const user = await createTestUser(app);
+      const user = await createAuthenticatedUser(app, prisma);
 
       const res = await app.inject({
         method: 'POST',
@@ -170,7 +219,7 @@ describe('Cost Routes', () => {
   // ==========================================================
   describe('GET /api/v1/costs/tco/:id', () => {
     test('[FR-023][AC-8] returns TCO with projections', async () => {
-      const user = await createTestUser(app);
+      const user = await createAuthenticatedUser(app, prisma);
 
       // Create a TCO comparison first
       const createRes = await app.inject({
@@ -180,6 +229,7 @@ describe('Cost Routes', () => {
         payload: tcoPayload(),
       });
       const created = JSON.parse(createRes.body);
+      expect(created.success).toBe(true);
 
       // Fetch it
       const res = await app.inject({
@@ -198,9 +248,20 @@ describe('Cost Routes', () => {
       expect(body.data.projections.options).toHaveLength(2);
     });
 
-    test('[FR-023] returns 404 for non-existent/other-user TCO', async () => {
-      const user1 = await createTestUser(app);
-      const user2 = await createTestUser(app);
+    test('[FR-023] returns 404 for non-existent TCO', async () => {
+      const user = await createAuthenticatedUser(app, prisma);
+
+      const res = await app.inject({
+        method: 'GET',
+        url: `${COST_BASE}/tco/00000000-0000-0000-0000-000000000000`,
+        headers: authHeaders(user.accessToken),
+      });
+
+      expect(res.statusCode).toBe(404);
+    });
+
+    test('[FR-023] scopes TCO to owning user', async () => {
+      const user1 = await createAuthenticatedUser(app, prisma);
 
       // Create TCO as user1
       const createRes = await app.inject({
@@ -210,24 +271,38 @@ describe('Cost Routes', () => {
         payload: tcoPayload(),
       });
       const created = JSON.parse(createRes.body);
+      expect(created.success).toBe(true);
 
-      // User2 tries to fetch user1's TCO
-      const res = await app.inject({
-        method: 'GET',
-        url: `${COST_BASE}/tco/${created.data.id}`,
-        headers: authHeaders(user2.accessToken),
+      // Seed a second user directly via Prisma (avoids auth FK issue)
+      const user2Org = await prisma.organization.create({
+        data: { name: 'OtherOrg', industry: 'tech', employeeCount: 10, growthStage: 'SEED' },
+      });
+      const user2Record = await prisma.user.create({
+        data: {
+          email: `other-user-${Date.now()}@example.com`,
+          passwordHash: 'not-used',
+          name: 'Other User',
+          organizationId: user2Org.id,
+        },
       });
 
-      expect(res.statusCode).toBe(404);
+      // Create a TCO for user2 directly in DB
+      const user2Tco = await prisma.tcoComparison.create({
+        data: {
+          userId: user2Record.id,
+          title: 'Other User TCO',
+          options: [{ name: 'X', upfrontCost: 0, monthlyCost: 100, teamSize: 1, hourlyRate: 50, months: 1, scalingFactor: 1.0 }],
+        },
+      });
 
-      // Non-existent ID
-      const res2 = await app.inject({
+      // User1 should NOT see user2's TCO
+      const res = await app.inject({
         method: 'GET',
-        url: `${COST_BASE}/tco/00000000-0000-0000-0000-000000000000`,
+        url: `${COST_BASE}/tco/${user2Tco.id}`,
         headers: authHeaders(user1.accessToken),
       });
 
-      expect(res2.statusCode).toBe(404);
+      expect(res.statusCode).toBe(404);
     });
   });
 
@@ -236,7 +311,7 @@ describe('Cost Routes', () => {
   // ==========================================================
   describe('GET /api/v1/costs/tco', () => {
     test('[FR-023] lists user TCO comparisons', async () => {
-      const user = await createTestUser(app);
+      const user = await createAuthenticatedUser(app, prisma);
 
       // Create two TCO comparisons
       await app.inject({
@@ -293,7 +368,7 @@ describe('Cost Routes', () => {
   // ==========================================================
   describe('POST /api/v1/costs/cloud-spend', () => {
     test('[FR-027][AC-5] creates cloud spend entry', async () => {
-      const user = await createTestUser(app);
+      const user = await createAuthenticatedUser(app, prisma);
 
       const res = await app.inject({
         method: 'POST',
@@ -338,7 +413,7 @@ describe('Cost Routes', () => {
   // ==========================================================
   describe('GET /api/v1/costs/cloud-spend', () => {
     test('[FR-027] lists cloud spend entries for org', async () => {
-      const user = await createTestUser(app);
+      const user = await createAuthenticatedUser(app, prisma);
 
       // Create two entries
       await app.inject({
@@ -379,7 +454,7 @@ describe('Cost Routes', () => {
   // ==========================================================
   describe('POST /api/v1/costs/cloud-spend/analyze', () => {
     test('[FR-027][AC-6] returns benchmarks and recommendations', async () => {
-      const user = await createTestUser(app);
+      const user = await createAuthenticatedUser(app, prisma);
 
       const res = await app.inject({
         method: 'POST',
