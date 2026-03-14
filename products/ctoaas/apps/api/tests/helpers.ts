@@ -41,7 +41,10 @@ export async function cleanDatabase(): Promise<void> {
   await db.tcoComparison.deleteMany();
   await db.message.deleteMany();
   await db.conversation.deleteMany();
+  await db.riskItem.deleteMany();
   await db.companyProfile.deleteMany();
+  await db.knowledgeChunk.deleteMany();
+  await db.knowledgeDocument.deleteMany();
   await db.user.deleteMany();
   await db.organization.deleteMany();
 }
