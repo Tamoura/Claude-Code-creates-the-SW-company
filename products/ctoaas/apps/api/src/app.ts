@@ -21,6 +21,7 @@ import preferencesRoutes from './routes/preferences';
 import costRoutes from './routes/costs';
 import radarRoutes from './routes/radar';
 import adrRoutes from './routes/adrs';
+import tierRoutes from './routes/tier';
 
 export interface BuildAppOptions {
   skipRateLimit?: boolean;
@@ -77,6 +78,9 @@ export async function buildApp(
   });
   await app.register(adrRoutes, {
     prefix: '/api/v1/adrs',
+  });
+  await app.register(tierRoutes, {
+    prefix: '/api/v1/tier',
   });
 
   return app;

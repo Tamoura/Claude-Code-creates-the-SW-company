@@ -14,11 +14,14 @@
 
 import { FastifyPluginAsync } from 'fastify';
 import { CopilotService } from '../services/copilot.service';
+import { TierService } from '../services/tier.service';
 import { sendSuccess, sendError } from '../lib/response';
+import { AppError } from '../lib/errors';
 import { AI_DISCLAIMER } from '../agent/nodes/synthesizer';
 
 const copilotRoutes: FastifyPluginAsync = async (fastify) => {
   const copilotService = new CopilotService(fastify.prisma);
+  const tierService = new TierService(fastify.prisma);
 
   // POST /api/v1/copilot/run
   fastify.post(
@@ -98,11 +101,24 @@ const copilotRoutes: FastifyPluginAsync = async (fastify) => {
 
       const userId = (request.user as { sub: string }).sub;
 
+      // Free tier enforcement [FR-028]
+      const allowance = await tierService.getRemainingMessages(userId);
+      if (!allowance.allowed) {
+        throw new AppError(
+          allowance.upgradeCta || 'Daily message limit reached',
+          429,
+          'TIER_LIMIT_REACHED'
+        );
+      }
+
       const result = await copilotService.run({
         message: message.trim(),
         conversationId: conversationId ?? null,
         userId,
       });
+
+      // Increment message count after successful response [FR-028]
+      await tierService.incrementMessageCount(userId);
 
       // Set AI disclaimer header
       reply.header('X-AI-Disclaimer', AI_DISCLAIMER);

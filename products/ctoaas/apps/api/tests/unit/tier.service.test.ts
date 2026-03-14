@@ -31,7 +31,9 @@ function freeUser(overrides: Partial<{
     id: 'user-free-1',
     tier: 'FREE' as const,
     dailyMessageCount: overrides.dailyMessageCount ?? 0,
-    dailyMessageResetDate: overrides.dailyMessageResetDate ?? new Date(),
+    dailyMessageResetDate: 'dailyMessageResetDate' in overrides
+      ? overrides.dailyMessageResetDate!
+      : new Date(),
   };
 }
 
