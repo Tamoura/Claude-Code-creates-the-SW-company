@@ -14,6 +14,7 @@ import healthRoutes from './routes/health';
 import authRoutes from './routes/auth';
 import profileRoutes from './routes/profile';
 import knowledgeRoutes from './routes/knowledge';
+import riskRoutes from './routes/risks';
 
 export interface BuildAppOptions {
   skipRateLimit?: boolean;
@@ -54,6 +55,9 @@ export async function buildApp(
   });
   await app.register(profileRoutes);
   await app.register(knowledgeRoutes);
+  await app.register(riskRoutes, {
+    prefix: '/api/v1/risks',
+  });
 
   return app;
 }
