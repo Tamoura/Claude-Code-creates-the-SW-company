@@ -105,6 +105,7 @@ describe('ConversationService', () => {
       headers: authHeaders(testUser.accessToken),
       payload: { title: 'With Messages' },
     });
+    expect(createRes.statusCode).toBe(201);
     const convId = JSON.parse(createRes.body).data.id;
 
     // Add messages directly to DB
@@ -148,7 +149,10 @@ describe('ConversationService', () => {
       headers: authHeaders(testUser.accessToken),
       payload: {},
     });
-    const convId = JSON.parse(createRes.body).data.id;
+    expect(createRes.statusCode).toBe(201);
+    const createBody = JSON.parse(createRes.body);
+    expect(createBody.data).toBeDefined();
+    const convId = createBody.data.id;
 
     // Add messages directly to DB
     await prisma.message.createMany({
@@ -240,6 +244,7 @@ describe('ConversationService', () => {
       headers: authHeaders(testUser.accessToken),
       payload: { title: 'Old Title' },
     });
+    expect(createRes.statusCode).toBe(201);
     const convId = JSON.parse(createRes.body).data.id;
 
     const res = await app.inject({
@@ -262,6 +267,7 @@ describe('ConversationService', () => {
       headers: authHeaders(testUser.accessToken),
       payload: { title: 'To Delete' },
     });
+    expect(createRes.statusCode).toBe(201);
     const convId = JSON.parse(createRes.body).data.id;
 
     const res = await app.inject({
@@ -299,6 +305,7 @@ describe('ConversationService', () => {
       headers: authHeaders(testUser.accessToken),
       payload: { title: 'Private' },
     });
+    expect(createRes.statusCode).toBe(201);
     const convId = JSON.parse(createRes.body).data.id;
 
     const res = await app.inject({
