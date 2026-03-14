@@ -95,6 +95,7 @@ async function createAdr(
     headers: authHeaders(accessToken),
     payload: { ...validAdrPayload, ...overrides },
   });
+  expect(res.statusCode).toBe(201);
   const body = JSON.parse(res.body);
   return body.data;
 }

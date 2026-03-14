@@ -18,6 +18,9 @@ import riskRoutes from './routes/risks';
 import copilotRoutes from './routes/copilot';
 import conversationRoutes from './routes/conversations';
 import preferencesRoutes from './routes/preferences';
+import costRoutes from './routes/costs';
+import radarRoutes from './routes/radar';
+import adrRoutes from './routes/adrs';
 
 export interface BuildAppOptions {
   skipRateLimit?: boolean;
@@ -66,6 +69,15 @@ export async function buildApp(
   });
   await app.register(conversationRoutes);
   await app.register(preferencesRoutes);
+  await app.register(costRoutes, {
+    prefix: '/api/v1/costs',
+  });
+  await app.register(radarRoutes, {
+    prefix: '/api/v1/radar',
+  });
+  await app.register(adrRoutes, {
+    prefix: '/api/v1/adrs',
+  });
 
   return app;
 }
