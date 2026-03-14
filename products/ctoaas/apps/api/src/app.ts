@@ -15,6 +15,9 @@ import authRoutes from './routes/auth';
 import profileRoutes from './routes/profile';
 import knowledgeRoutes from './routes/knowledge';
 import riskRoutes from './routes/risks';
+import copilotRoutes from './routes/copilot';
+import conversationRoutes from './routes/conversations';
+import preferencesRoutes from './routes/preferences';
 
 export interface BuildAppOptions {
   skipRateLimit?: boolean;
@@ -58,6 +61,11 @@ export async function buildApp(
   await app.register(riskRoutes, {
     prefix: '/api/v1/risks',
   });
+  await app.register(copilotRoutes, {
+    prefix: '/api/v1/copilot',
+  });
+  await app.register(conversationRoutes);
+  await app.register(preferencesRoutes);
 
   return app;
 }
