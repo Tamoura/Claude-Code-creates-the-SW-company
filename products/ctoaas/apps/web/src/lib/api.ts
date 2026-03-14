@@ -246,6 +246,39 @@ class ApiClient {
     }
   }
 
+  async patch<T>(
+    path: string,
+    body?: unknown,
+    options?: RequestOptions
+  ): Promise<ApiResponse<T>> {
+    try {
+      await this.ensureCsrfToken();
+      const url = this.buildUrl(path, options?.params);
+      const response = await fetch(url, {
+        ...options,
+        method: "PATCH",
+        credentials: "include",
+        headers: this.getHeadersForMethod(
+          "PATCH",
+          options?.headers as HeadersInit
+        ),
+        body: body ? JSON.stringify(body) : undefined,
+      });
+      return this.handleResponse<T>(response);
+    } catch (error) {
+      return {
+        success: false,
+        error: {
+          code: "NETWORK_ERROR",
+          message:
+            error instanceof Error
+              ? error.message
+              : "Network request failed",
+        },
+      };
+    }
+  }
+
   async delete<T>(
     path: string,
     options?: RequestOptions
