@@ -34,6 +34,7 @@ export async function closeApp(): Promise<void> {
 export async function cleanDatabase(): Promise<void> {
   const db = getPrisma();
   // Delete in FK-safe order
+  await db.architectureDecisionRecord.deleteMany();
   await db.auditLog.deleteMany();
   await db.refreshToken.deleteMany();
   await db.userPreference.deleteMany();

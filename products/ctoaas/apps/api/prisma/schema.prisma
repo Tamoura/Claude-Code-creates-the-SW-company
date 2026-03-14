@@ -136,6 +136,15 @@ enum RadarRing {
   @@map("radar_ring")
 }
 
+enum AdrStatus {
+  PROPOSED   @map("proposed")
+  ACCEPTED   @map("accepted")
+  DEPRECATED @map("deprecated")
+  SUPERSEDED @map("superseded")
+
+  @@map("adr_status")
+}
+
 // ============================================================
 // MODELS
 // ============================================================
@@ -157,6 +166,7 @@ model Organization {
   riskItems        RiskItem[]
   cloudSpend       CloudSpend[]
   userPreferences  UserPreference[]
+  adrs             ArchitectureDecisionRecord[]
 
   @@index([industry])
   @@map("organizations")
@@ -227,6 +237,7 @@ model Conversation {
   // Relations
   user     User      @relation(fields: [userId], references: [id], onDelete: Cascade)
   messages Message[]
+  adrs     ArchitectureDecisionRecord[]
 
   @@index([userId])
   @@index([updatedAt(sort: Desc)])
@@ -422,4 +433,27 @@ model AuditLog {
   @@index([action])
   @@index([createdAt(sort: Desc)])
   @@map("audit_logs")
+}
+
+model ArchitectureDecisionRecord {
+  id              String    @id @default(uuid())
+  organizationId  String    @map("organization_id")
+  title           String    @db.VarChar(500)
+  status          AdrStatus @default(PROPOSED)
+  context         String    @db.Text
+  decision        String    @db.Text
+  consequences    String?   @db.Text
+  alternatives    String?   @db.Text
+  mermaidDiagram  String?   @map("mermaid_diagram") @db.Text
+  conversationId  String?   @map("conversation_id")
+  createdAt       DateTime  @default(now()) @map("created_at") @db.Timestamptz
+  updatedAt       DateTime  @updatedAt @map("updated_at") @db.Timestamptz
+
+  // Relations
+  organization Organization  @relation(fields: [organizationId], references: [id], onDelete: Cascade)
+  conversation Conversation? @relation(fields: [conversationId], references: [id])
+
+  @@index([organizationId])
+  @@index([status])
+  @@map("architecture_decision_records")
 }
