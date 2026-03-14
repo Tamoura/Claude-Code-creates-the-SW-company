@@ -13,6 +13,7 @@ import rateLimiterPlugin from './plugins/rate-limiter';
 import healthRoutes from './routes/health';
 import authRoutes from './routes/auth';
 import profileRoutes from './routes/profile';
+import knowledgeRoutes from './routes/knowledge';
 
 export interface BuildAppOptions {
   skipRateLimit?: boolean;
@@ -52,6 +53,7 @@ export async function buildApp(
     prefix: '/api/v1/auth',
   });
   await app.register(profileRoutes);
+  await app.register(knowledgeRoutes);
 
   return app;
 }

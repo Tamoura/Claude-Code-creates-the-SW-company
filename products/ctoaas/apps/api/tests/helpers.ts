@@ -65,15 +65,38 @@ export async function createTestUser(
   userCounter++;
   const email =
     overrides?.email ||
-    `testuser${userCounter}@example.com`;
+    `testuser${userCounter}-${Date.now()}@example.com`;
+  const password = 'Str0ng!Pass#2026';
 
-  // Will be implemented after auth routes in IMPL-010
-  void testApp;
-  return {
-    id: `test-user-${userCounter}`,
-    email,
-    accessToken: 'stub-token',
-  };
+  // Sign up
+  const signupRes = await testApp.inject({
+    method: 'POST',
+    url: '/api/v1/auth/signup',
+    payload: {
+      email,
+      password,
+      name: `Test User ${userCounter}`,
+      companyName: `Test Co ${userCounter}`,
+      industry: 'technology',
+      employeeCount: 50,
+      growthStage: 'seed',
+    },
+  });
+
+  const signupBody = JSON.parse(signupRes.body);
+  const userId = signupBody.data?.user?.id ?? `test-user-${userCounter}`;
+
+  // Log in to get an access token
+  const loginRes = await testApp.inject({
+    method: 'POST',
+    url: '/api/v1/auth/login',
+    payload: { email, password },
+  });
+
+  const loginBody = JSON.parse(loginRes.body);
+  const accessToken = loginBody.data?.accessToken ?? 'stub-token';
+
+  return { id: userId, email, accessToken };
 }
 
 export function authHeaders(
