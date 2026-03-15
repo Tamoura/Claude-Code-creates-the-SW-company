@@ -15,6 +15,7 @@
     "db:push": "prisma db push",
     "db:studio": "prisma studio",
     "db:seed": "tsx prisma/seed.ts",
+    "db:seed:knowledge": "tsx src/scripts/seed-knowledge.ts",
     "lint": "eslint src/",
     "typecheck": "tsc --noEmit"
   },
