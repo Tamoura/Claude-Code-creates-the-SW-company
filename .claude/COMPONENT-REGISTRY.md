@@ -414,6 +414,42 @@ const files = generateProduct({
 - **Description**: HSM-backed wallet signing via AWS KMS. Private keys never exist in application memory. Provides three layers: (1) `KMSService` — AWS KMS operations (sign, verify, health checks, key rotation), (2) `KMSSignerProvider` — Fastify-friendly wallet provider abstraction supporting dual-mode (KMS in prod, env var in dev), (3) `KMSWalletAdapter` — ethers.js-compatible interface for seamless integration with blockchain libraries. Includes startup guard (validates KMS connectivity on app start), structured audit logging (fire-and-forget), and admin rotation endpoint (`POST /v1/admin/kms/rotate`). Supports secp256k1 signing for Polygon, Ethereum, and EVM-compatible chains.
 - **To reuse**: Copy all three files. Set `USE_KMS=true` and `KMS_KEY_ID=arn:aws:kms:...` in production. In development, set `USE_KMS=false` and `MERCHANT_WALLET_PRIVATE_KEY=0x...` for env var fallback. Add `POST /v1/admin/kms/rotate` endpoint to admin routes (see stablecoin-gateway/apps/api/src/routes/v1/admin.ts for implementation example). Requires AuditLog Prisma model for logging.
 
+#### Data Sanitizer
+- **Source**: `ctoaas/apps/api/src/services/data-sanitizer.ts`
+- **Maturity**: Foundation
+- **Reuse**: Copy and adapt sensitive field patterns for your domain
+- **Dependencies**: None
+- **Used by**: ctoaas
+- **Description**: PII stripping service that sanitizes data before sending to external LLM APIs. Removes or redacts fields matching configurable patterns (emails, phone numbers, financial data, credentials). Designed to prevent accidental PII leakage to third-party AI providers. Supports nested object traversal and array processing.
+- **To reuse**: Copy the file. Add or remove field patterns in the sanitization rules to match your domain's PII requirements.
+
+#### Risk Scoring Engine
+- **Source**: `ctoaas/apps/api/src/services/risk.service.ts`
+- **Maturity**: Foundation
+- **Reuse**: Copy and adapt risk categories and detection rules for your domain
+- **Dependencies**: `@prisma/client` (optional for DB-backed methods)
+- **Used by**: ctoaas
+- **Description**: Rule-based risk assessment engine. Generates risk items from structured profile data across 4 categories (tech debt, vendor, compliance, operational). Detects EOL technologies, single-cloud vendor concentration, missing compliance frameworks, and team-size-vs-complexity mismatches. Calculates category scores (average severity of active risks), validates status transitions, and provides summary rollups with trend analysis. Pure logic methods work without a database; DB-backed methods persist and query risks.
+- **To reuse**: Copy the file. Replace EOL_TECHNOLOGIES lookup, REGULATED_INDUSTRIES list, and detection rules with your domain-specific risk indicators. The scoring and summary logic is domain-agnostic.
+
+#### TCO Calculator
+- **Source**: `ctoaas/apps/api/src/services/cost.service.ts`
+- **Maturity**: Foundation
+- **Reuse**: Copy and adapt cost categories for your domain
+- **Dependencies**: `@prisma/client`
+- **Used by**: ctoaas
+- **Description**: Total Cost of Ownership comparison calculator with 3-year projection. Accepts multiple technology options and computes development cost (team size x duration x loaded cost), infrastructure cost, maintenance cost, and opportunity cost. Stores comparisons with AI-generated analysis. Supports cloud spend tracking with provider breakdown and benchmark comparison.
+- **To reuse**: Copy the file. Adjust cost categories and projection formulas for your domain's TCO model.
+
+#### RAG Query Engine
+- **Source**: `ctoaas/apps/api/src/services/rag-query.service.ts`
+- **Maturity**: Foundation
+- **Reuse**: Copy and adapt for any RAG-powered application
+- **Dependencies**: `@prisma/client`, pgvector extension
+- **Used by**: ctoaas
+- **Description**: Retrieval-Augmented Generation query engine using pgvector for similarity search. Accepts a query embedding, performs cosine similarity search against knowledge chunks (configurable threshold, default 0.7), and returns top-K results with relevance scores. Includes query preprocessing, result deduplication, and context window assembly for LLM injection.
+- **To reuse**: Copy the file. Requires a PostgreSQL database with pgvector extension and a KnowledgeChunk model with a vector(1536) embedding column. Adjust embedding dimensions and similarity threshold as needed.
+
 ---
 
 ### Utilities
@@ -795,6 +831,7 @@ Components in this registry are sourced from these products:
 | muaththir            | Production | Yes     | Yes      | Yes        | Yes    |
 | connectgrc           | MVP        | Yes     | Yes      | Yes        | Yes    |
 | recomengine          | Foundation | Yes     | Yes      | Yes        | --     |
+| ctoaas               | Foundation | Yes     | Yes      | --         | --     |
 
 ---
 
