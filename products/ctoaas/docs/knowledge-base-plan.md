@@ -1,8 +1,8 @@
 # CTOaaS Knowledge Base Curation Plan
 
-**Date**: 2026-03-15
-**Source**: [System Design Academy](https://github.com/systemdesign42/system-design-academy) taxonomy (22.7k stars)
-**Purpose**: Map elite engineering knowledge topics to CTOaaS RAG categories for Phase 1 (50 topics) and Phase 2 (150 topics)
+**Date**: 2026-03-16 (updated)
+**Source**: [System Design Academy](https://github.com/systemdesign42/system-design-academy) taxonomy + CTO awareness domains
+**Purpose**: Map elite engineering knowledge topics to CTOaaS RAG categories. Phase 1: 42 topics (shipped). Phase 1.5: 17 topics (KPIs, licensing, CTO universe). Phase 2: 100+ topics.
 **Traces to**: US-03, US-04, FR-005
 
 > **License note**: The System Design Academy repo (CC BY-NC-ND 4.0) cannot be used directly.
@@ -24,6 +24,9 @@ graph TD
         F[Cost & Vendor Strategy]
         G[Team & Engineering Culture]
         H[AI & Emerging Tech]
+        I[KPIs & Metrics]
+        J[Licensing & IP]
+        K[CTO Universe]
     end
 
     subgraph Sources["Content Sources (must verify license)"]
