@@ -12,7 +12,7 @@ Create a traceable implementation plan that maps specification requirements to t
 2. Read the plan command template: `.specify/templates/commands/plan.md`
 3. Read the plan template: `.specify/templates/plan-template.md`
 4. Read the specification being planned (path provided in input)
-5. Read product addendum: `products/{PRODUCT}/.claude/addendum.md`
+5. Read product addendum: `{PRODUCT_DIR}/.claude/addendum.md`
 6. Check `.claude/COMPONENT-REGISTRY.md` for reusable components
 
 ## Your Role
@@ -33,7 +33,7 @@ $ARGUMENTS
 6. Include ER diagrams for any database schema changes.
 7. Include sequence diagrams for multi-step flows.
 8. Identify components to reuse from the Component Registry.
-9. Output the plan to: `products/{PRODUCT}/docs/plan.md`
+9. Output the plan to: `{PRODUCT_DIR}/docs/plan.md`
 
 ## Quality Checks
 

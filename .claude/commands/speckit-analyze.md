@@ -10,10 +10,10 @@ Validate specification-plan-tasks consistency as a mandatory quality gate before
 
 1. Read the spec-kit constitution: `.specify/memory/constitution.md`
 2. Read the analyze command template: `.specify/templates/commands/analyze.md`
-3. Read the specification: `products/{PRODUCT}/docs/specs/{FEATURE_ID}.md` (or all specs)
-4. Read the implementation plan: `products/{PRODUCT}/docs/plan.md`
-5. Read the task list: `products/{PRODUCT}/docs/tasks.md`
-6. Read the PRD: `products/{PRODUCT}/docs/PRD.md`
+3. Read the specification: `{PRODUCT_DIR}/docs/specs/{FEATURE_ID}.md` (or all specs)
+4. Read the implementation plan: `{PRODUCT_DIR}/docs/plan.md`
+5. Read the task list: `{PRODUCT_DIR}/docs/tasks.md`
+6. Read the PRD: `{PRODUCT_DIR}/docs/PRD.md`
 
 ## Your Role
 
@@ -55,7 +55,7 @@ $ARGUMENTS
 - Article VI: Traceability IDs present
 - Article IX: Diagrams present in docs
 
-4. Generate the consistency report at: `products/{PRODUCT}/docs/quality-reports/spec-consistency.md`
+4. Generate the consistency report at: `{PRODUCT_DIR}/docs/quality-reports/spec-consistency.md`
 
 ## Report Format
 

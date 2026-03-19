@@ -17,7 +17,17 @@ echo ""
 echo "| Product | Apps | Recent Commits (7d) | Status |"
 echo "|---------|------|---------------------|--------|"
 
-for product_dir in products/*/; do
+REPO_ROOT="$(git rev-parse --show-toplevel)"
+
+# Detect repo mode and build product list
+if [ -d "$REPO_ROOT/products" ]; then
+  PRODUCT_DIRS=("$REPO_ROOT"/products/*/)
+else
+  # Single-repo: treat repo root as the only product
+  PRODUCT_DIRS=("$REPO_ROOT")
+fi
+
+for product_dir in "${PRODUCT_DIRS[@]}"; do
   [ -d "$product_dir" ] || continue
   product=$(basename "$product_dir")
 
@@ -59,7 +69,12 @@ if [ -f ".claude/audit-trail.jsonl" ]; then
   done
   echo ""
   echo "By product:"
-  for product_dir in products/*/; do
+  if [ -d "$REPO_ROOT/products" ]; then
+    AUDIT_PRODUCT_DIRS=("$REPO_ROOT"/products/*/)
+  else
+    AUDIT_PRODUCT_DIRS=("$REPO_ROOT")
+  fi
+  for product_dir in "${AUDIT_PRODUCT_DIRS[@]}"; do
     [ -d "$product_dir" ] || continue
     product=$(basename "$product_dir")
     count=$(grep -c "\"product\":\"$product\"" .claude/audit-trail.jsonl 2>/dev/null || echo "0")
@@ -77,7 +92,11 @@ echo ""
 
 # 5. Quality Gate Status
 echo "## Recent Quality Reports"
-find products/*/docs/quality-reports/ -name "*.md" -mtime -7 2>/dev/null | head -5 || echo "No recent reports"
+if [ -d "$REPO_ROOT/products" ]; then
+  find "$REPO_ROOT"/products/*/docs/quality-reports/ -name "*.md" -mtime -7 2>/dev/null | head -5 || echo "No recent reports"
+else
+  find "$REPO_ROOT"/docs/quality-reports/ -name "*.md" -mtime -7 2>/dev/null | head -5 || echo "No recent reports"
+fi
 ```
 
 ## Present Report

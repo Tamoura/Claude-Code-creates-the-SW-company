@@ -15,7 +15,18 @@ echo ""
 
 # Products with recent activity
 echo "=== Products ==="
-for product_dir in products/*/; do
+
+REPO_ROOT="$(git rev-parse --show-toplevel)"
+
+# Detect repo mode and build product list
+if [ -d "$REPO_ROOT/products" ]; then
+  PRODUCT_DIRS=("$REPO_ROOT"/products/*/)
+else
+  # Single-repo: treat repo root as the only product
+  PRODUCT_DIRS=("$REPO_ROOT")
+fi
+
+for product_dir in "${PRODUCT_DIRS[@]}"; do
   [ -d "$product_dir" ] || continue
   product=$(basename "$product_dir")
 

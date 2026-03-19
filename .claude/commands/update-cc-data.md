@@ -28,7 +28,15 @@ echo ""
 REPO_ROOT="$(git rev-parse --show-toplevel)"
 MONO_ROOT="$REPO_ROOT"
 
-for product_dir in "$MONO_ROOT/products"/*/; do
+# Detect repo mode and build product list
+if [ -d "$MONO_ROOT/products" ]; then
+  PRODUCT_DIRS=("$MONO_ROOT"/products/*/)
+else
+  # Single-repo: treat repo root as the only product
+  PRODUCT_DIRS=("$MONO_ROOT")
+fi
+
+for product_dir in "${PRODUCT_DIRS[@]}"; do
   [ -d "$product_dir" ] || continue
   product=$(basename "$product_dir")
   [ "$product" = "command-center" ] && continue  # skip internal tool

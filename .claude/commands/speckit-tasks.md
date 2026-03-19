@@ -11,8 +11,8 @@ Generate a dependency-ordered task list suitable for the orchestrator's task gra
 1. Read the spec-kit constitution: `.specify/memory/constitution.md`
 2. Read the tasks command template: `.specify/templates/commands/tasks.md`
 3. Read the tasks template: `.specify/templates/tasks-template.md`
-4. Read the implementation plan: `products/{PRODUCT}/docs/plan.md`
-5. Read the specification: `products/{PRODUCT}/docs/specs/{FEATURE_ID}.md`
+4. Read the implementation plan: `{PRODUCT_DIR}/docs/plan.md`
+5. Read the specification: `{PRODUCT_DIR}/docs/specs/{FEATURE_ID}.md`
 
 ## Your Role
 
@@ -37,7 +37,7 @@ $ARGUMENTS
    - Produces (output artifacts)
    - Whether it can run in parallel
 6. Enforce TDD ordering: test tasks before implementation tasks.
-7. Output to: `products/{PRODUCT}/docs/tasks.md`
+7. Output to: `{PRODUCT_DIR}/docs/tasks.md`
 
 ## Quality Checks
 

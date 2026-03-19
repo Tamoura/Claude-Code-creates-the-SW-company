@@ -120,24 +120,37 @@ skip the full product discovery loop — only scan the target product directory.
 git status
 git branch -a
 
-# 2. Discover products from filesystem (not state.yml)
+# 2. Discover products from filesystem
 # FAST PATH: If target product is known, skip this loop and go directly to step 3
-for product_dir in products/*/; do
-  [ -d "$product_dir" ] || continue
-  product=$(basename "$product_dir")
-  recent=$(git log --oneline --since="7 days ago" -- "$product_dir" 2>/dev/null | wc -l | tr -d ' ')
-  has_api=$( [ -d "${product_dir}apps/api" ] && echo "yes" || echo "no" )
-  has_web=$( [ -d "${product_dir}apps/web" ] && echo "yes" || echo "no" )
-  echo "$product: api=$has_api web=$has_web recent=$recent"
-done
+REPO_ROOT="$(git rev-parse --show-toplevel)"
+if [ -d "$REPO_ROOT/products" ]; then
+  # Monorepo: loop over products
+  for product_dir in products/*/; do
+    [ -d "$product_dir" ] || continue
+    product=$(basename "$product_dir")
+    recent=$(git log --oneline --since="7 days ago" -- "$product_dir" 2>/dev/null | wc -l | tr -d ' ')
+    has_api=$( [ -d "${product_dir}apps/api" ] && echo "yes" || echo "no" )
+    has_web=$( [ -d "${product_dir}apps/web" ] && echo "yes" || echo "no" )
+    echo "$product: api=$has_api web=$has_web recent=$recent"
+  done
+else
+  # Single-repo: treat repo root as the single product
+  product=$(basename "$REPO_ROOT")
+  has_api=$( [ -d "apps/api" ] && echo "yes" || echo "no" )
+  has_web=$( [ -d "apps/web" ] && echo "yes" || echo "no" )
+  recent=$(git log --oneline --since="7 days ago" 2>/dev/null | wc -l | tr -d ' ')
+  echo "$product: api=$has_api web=$has_web recent=$recent (single-repo)"
+fi
 
 # 3. Check for active work
 gh pr list 2>/dev/null || echo "No PRs"
 gh issue list --state open 2>/dev/null || echo "No issues"
 
 # 4. Check if product has active task graph
-if [ -f "products/{PRODUCT}/.claude/task-graph.yml" ]; then
-  cat products/{PRODUCT}/.claude/task-graph.yml
+PRODUCT_DIR="${REPO_ROOT}/products/{PRODUCT}"
+[ ! -d "$PRODUCT_DIR" ] && PRODUCT_DIR="$REPO_ROOT"
+if [ -f "$PRODUCT_DIR/.claude/task-graph.yml" ]; then
+  cat "$PRODUCT_DIR/.claude/task-graph.yml"
 fi
 
 # 5. Check audit trail for recent activity
