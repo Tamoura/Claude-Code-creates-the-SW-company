@@ -146,7 +146,26 @@ Before writing ANY code on a task, the assigned agent MUST:
 
 ## Directory Structure
 
-ConnectSW supports two repo layouts. All scripts auto-detect which mode via `.claude/scripts/resolve-product.sh`.
+ConnectSW supports two repo layouts. All commands and scripts auto-detect which mode via `.claude/scripts/resolve-product.sh`.
+
+### Path Resolution (CRITICAL)
+
+Before accessing any product files, resolve the path:
+
+```bash
+REPO_ROOT="$(git rev-parse --show-toplevel)"
+PRODUCT="<product-name>"
+source "$REPO_ROOT/.claude/scripts/resolve-product.sh"
+# Exports: PRODUCT_DIR, REPO_MODE, PRODUCT
+```
+
+| Variable | Monorepo | Single-Repo |
+|----------|----------|-------------|
+| `PRODUCT_DIR` | `products/<name>` | repo root |
+| `REPO_MODE` | `"monorepo"` | `"single"` |
+| `PRODUCT` | argument value | directory name |
+
+**Rule**: Always use `$PRODUCT_DIR` instead of `products/{PRODUCT}/` in all file paths.
 
 ### Monorepo Mode
 

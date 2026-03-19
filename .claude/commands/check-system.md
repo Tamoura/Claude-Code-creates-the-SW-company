@@ -121,33 +121,39 @@ done
 echo ""
 echo "=== Products (from filesystem) ==="
 
-if [ -d "products" ]; then
-  for product_dir in products/*/; do
-    [ -d "$product_dir" ] || continue
-    product=$(basename "$product_dir")
+REPO_ROOT="$(git rev-parse --show-toplevel)"
 
-    has_api="no"
-    has_web="no"
-    has_addendum="no"
-    has_tests="no"
-    recent_commits=0
-
-    [ -d "${product_dir}apps/api" ] && has_api="yes"
-    [ -d "${product_dir}apps/web" ] && has_web="yes"
-    [ -f "${product_dir}.claude/addendum.md" ] && has_addendum="yes"
-
-    # Check for test files
-    test_count=$(find "$product_dir" -name "*.test.*" -o -name "*.spec.*" 2>/dev/null | wc -l | tr -d ' ')
-    [ "$test_count" -gt 0 ] && has_tests="$test_count files"
-
-    # Recent activity
-    recent_commits=$(git log --oneline --since="30 days ago" -- "$product_dir" 2>/dev/null | wc -l | tr -d ' ')
-
-    echo "$product: api=$has_api web=$has_web tests=$has_tests commits(30d)=$recent_commits"
-  done
+# Detect repo mode and build product list
+if [ -d "$REPO_ROOT/products" ]; then
+  PRODUCT_DIRS=("$REPO_ROOT"/products/*/)
 else
-  echo "MISSING products directory"
+  # Single-repo: treat repo root as the only product
+  PRODUCT_DIRS=("$REPO_ROOT")
 fi
+
+for product_dir in "${PRODUCT_DIRS[@]}"; do
+  [ -d "$product_dir" ] || continue
+  product=$(basename "$product_dir")
+
+  has_api="no"
+  has_web="no"
+  has_addendum="no"
+  has_tests="no"
+  recent_commits=0
+
+  [ -d "${product_dir}apps/api" ] && has_api="yes"
+  [ -d "${product_dir}apps/web" ] && has_web="yes"
+  [ -f "${product_dir}.claude/addendum.md" ] && has_addendum="yes"
+
+  # Check for test files
+  test_count=$(find "$product_dir" -name "*.test.*" -o -name "*.spec.*" 2>/dev/null | wc -l | tr -d ' ')
+  [ "$test_count" -gt 0 ] && has_tests="$test_count files"
+
+  # Recent activity
+  recent_commits=$(git log --oneline --since="30 days ago" -- "$product_dir" 2>/dev/null | wc -l | tr -d ' ')
+
+  echo "$product: api=$has_api web=$has_web tests=$has_tests commits(30d)=$recent_commits"
+done
 ```
 
 ### 6. Check Agent Memory

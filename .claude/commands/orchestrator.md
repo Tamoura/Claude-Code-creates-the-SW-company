@@ -18,6 +18,20 @@ $ARGUMENTS
 
 Based on the CEO's request above:
 
+### Path Resolution
+
+ConnectSW supports both monorepo (`products/<name>/`) and single-repo (`apps/` at root) layouts. Before accessing any product files, resolve the path:
+
+```bash
+REPO_ROOT="$(git rev-parse --show-toplevel)"
+PRODUCT="<product-name>"
+source "$REPO_ROOT/.claude/scripts/resolve-product.sh"
+# PRODUCT_DIR: monorepo → products/<name>, single-repo → repo root
+# REPO_MODE: "monorepo" or "single"
+```
+
+Use `$PRODUCT_DIR` instead of `products/{PRODUCT}/` in all file paths passed to sub-agents.
+
 ### 1. Assess Current State
 
 ```bash
@@ -80,7 +94,7 @@ Use the "I Need To..." table. If a match exists, copy and adapt it.
 If you build something new and generic, add it to the registry.
 
 ## Product Context
-Read: `products/{PRODUCT}/.claude/addendum.md`
+Read: `{PRODUCT_DIR}/.claude/addendum.md`
 
 ## Relevant Patterns (semantically scored, threshold >= 4/10)
 {SCORED_PATTERNS — top 5 patterns from company knowledge, scored using 5-dimension rubric:
@@ -98,7 +112,7 @@ Read: `products/{PRODUCT}/.claude/addendum.md`
 {AGENT_EXPERIENCE — common_mistakes and preferred_approaches from agent experience file}
 
 ## Product Coding Conventions
-Scan existing code in `products/{PRODUCT}/apps/` and match these conventions:
+Scan existing code in `{PRODUCT_DIR}/apps/` and match these conventions:
 - **Error handling**: Find the AppError/error class used and follow the same pattern
 - **Service layer**: Match the existing service class structure (constructor injection, etc.)
 - **Test helpers**: Use the same buildApp()/test setup pattern found in existing tests
@@ -139,11 +153,11 @@ Include `tdd_evidence` in your completion report: `[{test_commit, impl_commit, t
 
 ## Context Management
 - If you have read more than 10 files, pause and assess whether you still need all the context you have accumulated. Re-read the task objective to anchor yourself.
-- Write intermediate results to `products/{PRODUCT}/.claude/scratch/` before your context becomes overloaded — do not wait until you forget what you have done.
+- Write intermediate results to `{PRODUCT_DIR}/.claude/scratch/` before your context becomes overloaded — do not wait until you forget what you have done.
 - If your task requires reading >20 files, stop and split into sub-tasks via the Agent tool. Pass state via a scratch file, not via prompt repetition.
 
 ## Constraints
-- Work in: `products/{PRODUCT}/`
+- Work in: `{PRODUCT_DIR}/`
 - Stage specific files only (never `git add .` or `git add -A`)
 - Verify staged files before commit (`git diff --cached --stat`)
 - Use conventional commit messages

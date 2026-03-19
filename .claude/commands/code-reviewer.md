@@ -16,7 +16,7 @@ Examples:
 
 ## Arguments
 
-- **product-name**: Product directory name under `products/` (e.g., `stablecoin-gateway`)
+- **product-name**: Product name. Works in both monorepo and single-repo layouts.
 - **--scope** (optional): Narrow the review to a specific subdirectory
 
 ## What This Command Does
@@ -25,14 +25,39 @@ This is a **lightweight** code review focused on code quality, patterns, and cor
 
 ## Execution Steps
 
+### Step 0: Resolve Product Path
+
+```bash
+REPO_ROOT="$(git rev-parse --show-toplevel)"
+PRODUCT="$ARGUMENTS"
+source "$REPO_ROOT/.claude/scripts/resolve-product.sh"
+# PRODUCT_DIR now set: monorepo → products/<name>, single-repo → repo root
+# REPO_MODE: "monorepo" or "single"
+
+if [ ! -d "$PRODUCT_DIR/apps" ] && [ "$REPO_MODE" != "single" ]; then
+  echo "FAIL: Product '$PRODUCT' not found."
+  if [ -d "$REPO_ROOT/products" ]; then
+    echo "Available products:"
+    ls "$REPO_ROOT/products/"
+  else
+    echo "This appears to be a single-repo. Run without a product name or use the repo directory name."
+  fi
+  exit 1
+fi
+
+echo "Product: $PRODUCT"
+echo "Mode: $REPO_MODE"
+echo "Path: $PRODUCT_DIR"
+```
+
 ### Step 1: Load Agent Context
 
 Read the Code Reviewer agent brief:
 - File: `.claude/agents/briefs/code-reviewer.md`
 
 Read the product context:
-- File: `products/$ARGUMENTS/README.md`
-- File: `products/$ARGUMENTS/.claude/addendum.md` (if exists)
+- File: `$PRODUCT_DIR/README.md`
+- File: `$PRODUCT_DIR/.claude/addendum.md` (if exists)
 
 ### Step 2: Explore the Code
 
@@ -84,7 +109,7 @@ Output a structured review with these sections:
 
 ### Step 4: Save Review
 
-Save to `products/$ARGUMENTS/docs/CODE-REVIEW-[date].md`
+Save to `$PRODUCT_DIR/docs/CODE-REVIEW-[date].md`
 
 ### Step 5: Log Decision (if applicable)
 

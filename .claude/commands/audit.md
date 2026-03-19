@@ -15,7 +15,7 @@ Example:
 
 ## Arguments
 
-- **product-name**: Product directory name under `products/` (e.g., `stablecoin-gateway`, `deal-flow-platform`)
+- **product-name**: Product name (e.g., `stablecoin-gateway`, `deal-flow-platform`). Works in both monorepo (`products/<name>/`) and single-repo (`apps/` at root) layouts.
 
 ## What This Command Does
 
@@ -29,20 +29,45 @@ The report is both technically rigorous (file:line references, exploit scenarios
 
 ## Execution Steps
 
-### Step 0: E2E Gate (MANDATORY — block audit if E2E fails)
+### Step 0: Resolve Product Path
+
+```bash
+REPO_ROOT="$(git rev-parse --show-toplevel)"
+PRODUCT="$ARGUMENTS"
+source "$REPO_ROOT/.claude/scripts/resolve-product.sh"
+# PRODUCT_DIR now set: monorepo → products/<name>, single-repo → repo root
+# REPO_MODE: "monorepo" or "single"
+
+if [ ! -d "$PRODUCT_DIR/apps" ] && [ "$REPO_MODE" != "single" ]; then
+  echo "FAIL: Product '$PRODUCT' not found."
+  if [ -d "$REPO_ROOT/products" ]; then
+    echo "Available products:"
+    ls "$REPO_ROOT/products/"
+  else
+    echo "This appears to be a single-repo. Run without a product name or use the repo directory name."
+  fi
+  exit 1
+fi
+
+echo "Product: $PRODUCT"
+echo "Mode: $REPO_MODE"
+echo "Path: $PRODUCT_DIR"
+```
+
+### Step 0b: E2E Gate (MANDATORY — block audit if E2E fails)
 
 Before performing any audit analysis, verify E2E tests exist and pass.
 
 ```bash
 # Check E2E tests exist
-if [ ! -f "products/$ARGUMENTS/e2e/package.json" ]; then
-  echo "AUDIT BLOCKED: No E2E tests found in products/$ARGUMENTS/e2e/"
+if [ ! -f "$PRODUCT_DIR/e2e/package.json" ]; then
+  echo "AUDIT BLOCKED: No E2E tests found in $PRODUCT_DIR/e2e/"
   echo "E2E tests are required before audit. Add Playwright tests first."
   exit 1
 fi
 
 # Run E2E tests (assumes API + web are already running)
-cd products/$ARGUMENTS/e2e && npm test 2>&1
+cd "$PRODUCT_DIR/e2e" && npm test 2>&1
 E2E_STATUS=$?
 
 if [ $E2E_STATUS -ne 0 ]; then
@@ -58,7 +83,7 @@ echo "E2E Gate: PASS — proceeding with audit"
 > AUDIT BLOCKED — E2E tests must pass before audit can proceed. Route to QA Engineer to fix failing tests.
 
 **If services are not running:** Report to CEO:
-> Audit requires the platform to be running. Start with `npm run dev` in `products/$ARGUMENTS/`, then re-run `/audit $ARGUMENTS`.
+> Audit requires the platform to be running. Start with `npm run dev` in `$PRODUCT_DIR/`, then re-run `/audit $ARGUMENTS`.
 
 ---
 
@@ -68,9 +93,9 @@ Read the Code Reviewer agent instructions:
 - File: `.claude/agents/code-reviewer.md`
 
 Read the product context:
-- File: `products/$ARGUMENTS/.claude/addendum.md` (if exists)
-- File: `products/$ARGUMENTS/README.md`
-- File: `products/$ARGUMENTS/docs/PRD.md` (if exists)
+- File: `$PRODUCT_DIR/.claude/addendum.md` (if exists)
+- File: `$PRODUCT_DIR/README.md`
+- File: `$PRODUCT_DIR/docs/PRD.md` (if exists)
 
 ### Step 2: Explore the Codebase
 
@@ -869,7 +894,7 @@ Every audit must report coverage against these frameworks:
 
 Save the full audit report to:
 ```
-products/$ARGUMENTS/docs/AUDIT-REPORT.md
+$PRODUCT_DIR/docs/AUDIT-REPORT.md
 ```
 
 ### Step 6: Score Gate Check
@@ -1040,7 +1065,7 @@ Full report: products/[product]/docs/AUDIT-REPORT.md
 Every audit produces a single report file with two clearly separated parts:
 
 ```
-products/$ARGUMENTS/docs/AUDIT-REPORT.md
+$PRODUCT_DIR/docs/AUDIT-REPORT.md
 ```
 
 | Part | Audience | Contains | Does NOT Contain |

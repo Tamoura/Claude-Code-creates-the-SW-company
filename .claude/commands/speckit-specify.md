@@ -11,7 +11,7 @@ Create a structured feature specification using spec-kit methodology.
 1. Read the spec-kit constitution: `.specify/memory/constitution.md`
 2. Read the specify command template: `.specify/templates/commands/specify.md`
 3. Read the spec template: `.specify/templates/spec-template.md`
-4. If a product exists, read: `products/{PRODUCT}/.claude/addendum.md`
+4. If a product exists, read: `{PRODUCT_DIR}/.claude/addendum.md`
 
 ## Your Role
 
@@ -27,7 +27,7 @@ $ARGUMENTS
 2. Follow the specify command template (`.specify/templates/commands/specify.md`) step by step.
 3. Use the spec template (`.specify/templates/spec-template.md`) as the output structure.
 4. Check `.claude/COMPONENT-REGISTRY.md` and fill the Component Reuse Check table.
-5. Output the specification to: `products/{PRODUCT}/docs/specs/{FEATURE_ID}.md`
+5. Output the specification to: `{PRODUCT_DIR}/docs/specs/{FEATURE_ID}.md`
 6. Mark any uncertain areas with `[NEEDS CLARIFICATION]` tags.
 
 ## Quality Checks

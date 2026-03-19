@@ -14,6 +14,13 @@ DATED_FILE="$REPORT_DIR/$(date +%Y-%m-%d).md"
 LATEST_FILE="$REPO_ROOT/.claude/dashboard/latest-report.md"
 OUTPUT_FILE=${1:-"$DATED_FILE"}
 
+# Detect repo mode
+if [ -d "$REPO_ROOT/products" ]; then
+  PRODUCT_DIRS=("$REPO_ROOT"/products/*/)
+else
+  PRODUCT_DIRS=("$REPO_ROOT")
+fi
+
 # Start report
 cat > "$OUTPUT_FILE" << EOF
 # ConnectSW Dashboard
@@ -35,10 +42,10 @@ cat >> "$OUTPUT_FILE" << EOF
 |---------|--------|----------|-------------|
 EOF
 
-for product_dir in "$REPO_ROOT"/products/*/; do
+for product_dir in "${PRODUCT_DIRS[@]}"; do
   if [ -d "$product_dir" ]; then
     product=$(basename "$product_dir")
-    
+
     # Check for task graph
     if [ -f "$product_dir/.claude/task-graph.yml" ]; then
       COMPLETED=$(grep -c 'status: "completed"' "$product_dir/.claude/task-graph.yml" 2>/dev/null || echo "0")
@@ -231,7 +238,7 @@ EOF
 ALERTS=0
 
 # Check for failed tasks in any product
-for product_dir in "$REPO_ROOT"/products/*/; do
+for product_dir in "${PRODUCT_DIRS[@]}"; do
   if [ -f "$product_dir/.claude/task-graph.yml" ]; then
     FAILED=$(grep -c 'status: "failed"' "$product_dir/.claude/task-graph.yml" 2>/dev/null || echo "0")
     if [ "$FAILED" -gt 0 ]; then
@@ -243,7 +250,7 @@ for product_dir in "$REPO_ROOT"/products/*/; do
 done
 
 # Check for blocked tasks
-for product_dir in "$REPO_ROOT"/products/*/; do
+for product_dir in "${PRODUCT_DIRS[@]}"; do
   if [ -f "$product_dir/.claude/task-graph.yml" ]; then
     BLOCKED=$(grep -c 'status: "blocked"' "$product_dir/.claude/task-graph.yml" 2>/dev/null || echo "0")
     if [ "$BLOCKED" -gt 0 ]; then

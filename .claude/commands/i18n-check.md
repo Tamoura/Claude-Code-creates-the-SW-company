@@ -17,7 +17,7 @@ Examples:
 
 ## Arguments
 
-- **product-name**: Product directory name under `products/` (e.g., `stablecoin-gateway`, `connectin`). All ConnectSW products targeting the Qatar/MENA market require bilingual support.
+- **product-name**: Product name. Works in both monorepo and single-repo layouts. All ConnectSW products targeting the Qatar/MENA market require bilingual support.
 
 ## What This Command Does
 
@@ -35,28 +35,37 @@ This command audits a product for Arabic/English bilingual completeness. Connect
 
 ## Execution Steps
 
-### Step 1: Validate Product Exists
+### Step 0: Resolve Product Path
 
 ```bash
-PRODUCT_DIR="products/$ARGUMENTS"
+REPO_ROOT="$(git rev-parse --show-toplevel)"
+PRODUCT="$ARGUMENTS"
+source "$REPO_ROOT/.claude/scripts/resolve-product.sh"
+# PRODUCT_DIR now set: monorepo → products/<name>, single-repo → repo root
+# REPO_MODE: "monorepo" or "single"
 
-if [ ! -d "$PRODUCT_DIR" ]; then
-  echo "FAIL: Product directory '$PRODUCT_DIR' does not exist."
-  echo "Available products:"
-  ls products/
+if [ ! -d "$PRODUCT_DIR/apps" ] && [ "$REPO_MODE" != "single" ]; then
+  echo "FAIL: Product '$PRODUCT' not found."
+  if [ -d "$REPO_ROOT/products" ]; then
+    echo "Available products:"
+    ls "$REPO_ROOT/products/"
+  else
+    echo "This appears to be a single-repo. Run without a product name or use the repo directory name."
+  fi
   exit 1
 fi
 
-echo "i18n check target: $ARGUMENTS"
-echo "Product path: $PRODUCT_DIR"
+echo "Product: $PRODUCT"
+echo "Mode: $REPO_MODE"
+echo "Path: $PRODUCT_DIR"
 ```
 
 ### Step 2: Load Product Context
 
 Read the product context to understand its UI surface area:
-- File: `products/$ARGUMENTS/README.md`
-- File: `products/$ARGUMENTS/.claude/addendum.md` (if exists)
-- File: `products/$ARGUMENTS/docs/PRD.md` (if exists)
+- File: `$PRODUCT_DIR/README.md`
+- File: `$PRODUCT_DIR/.claude/addendum.md` (if exists)
+- File: `$PRODUCT_DIR/docs/PRD.md` (if exists)
 
 Determine the frontend technology:
 - Check for Next.js (`next.config.*`), React, or other frontend frameworks
@@ -361,12 +370,12 @@ Verdict logic:
 
 Save the i18n report to:
 ```
-products/$ARGUMENTS/docs/quality-reports/i18n-check-[YYYY-MM-DD].md
+$PRODUCT_DIR/docs/quality-reports/i18n-check-[YYYY-MM-DD].md
 ```
 
 Create the directory if it does not exist:
 ```bash
-mkdir -p "products/$ARGUMENTS/docs/quality-reports"
+mkdir -p "$PRODUCT_DIR/docs/quality-reports"
 ```
 
 ### Step 10: Log to Audit Trail

@@ -15,24 +15,33 @@ Example:
 
 ## Arguments
 
-- **product**: Product name (folder under `products/`)
+- **product**: Product name. Works in both monorepo and single-repo layouts.
 - **task-id**: Task ID from the task graph (e.g., BACKEND-01)
 
 ## Your Task
 
-1. **Read the task graph** for the product:
-   - File: `products/<product>/.claude/task-graph.yml`
+1. **Resolve the product path** using `resolve-product.sh`:
+   ```bash
+   REPO_ROOT="$(git rev-parse --show-toplevel)"
+   PRODUCT="<product>"
+   source "$REPO_ROOT/.claude/scripts/resolve-product.sh"
+   # PRODUCT_DIR now set: monorepo → products/<name>, single-repo → repo root
+   # REPO_MODE: "monorepo" or "single"
+   ```
+
+2. **Read the task graph** for the product:
+   - File: `$PRODUCT_DIR/.claude/task-graph.yml`
    - Find the task entry with the given task-id
 
-2. **Validate task status**:
+3. **Validate task status**:
    - If task status is `completed`, report and stop
    - If task status is `in_progress`, report and stop
    - If task status is `blocked`, report blockers and stop
    - If task status is `pending`, continue
 
-3. **Spawn the correct agent** based on the task's `agent` field
+4. **Spawn the correct agent** based on the task's `agent` field
 
-4. **Use the standard sub-agent prompt template**:
+5. **Use the standard sub-agent prompt template**:
    - Read agent instructions
    - Read agent memory
    - Read company knowledge
@@ -41,7 +50,7 @@ Example:
    - Report results
    - Update memory
 
-5. **Update task status** after completion:
+6. **Update task status** after completion:
    - Mark task as `completed` or `failed`
    - Use: `.claude/scripts/update-task-status.sh <product> <task-id> <status>`
 
@@ -67,7 +76,7 @@ Read these files before starting:
    Read: `.claude/memory/company-knowledge.json`
 
 4. Product context:
-   Read: `products/[product]/.claude/addendum.md`
+   Read: `$PRODUCT_DIR/.claude/addendum.md`
 
 ## Step 2: Your Task
 
