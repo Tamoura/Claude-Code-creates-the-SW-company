@@ -277,13 +277,43 @@ gstack's `/browse` is its most differentiated capability:
 
 ---
 
-## 12. Conclusion
+## 12. Adoption Status — gstack Features into ConnectSW
+
+All of gstack's standout advantages have been adopted into ConnectSW as protocols:
+
+| gstack Feature | ConnectSW Protocol | Status |
+|----------------|-------------------|--------|
+| `/browse` (persistent Chromium daemon) | `browser-automation.md` | **ADOPTED** |
+| `/setup-browser-cookies` (cookie import) | `browser-automation.md` (Cookie Import section) | **ADOPTED** |
+| `/design-consultation` (design system gen) | `design-review.md` (Part 1) | **ADOPTED** |
+| `/plan-design-review` (design scoring) | `design-review.md` (Part 2) | **ADOPTED** |
+| `/design-review` (80-item visual audit) | `design-review.md` (Part 3) | **ADOPTED** |
+| `/retro` (retrospective analysis) | `retrospective.md` + `retrospective-tasks.yml` | **ADOPTED** |
+| `/careful` (destructive cmd warning) | `destructive-command-guards.md` (Level 1) | **ADOPTED** |
+| `/freeze` (directory boundary lock) | `destructive-command-guards.md` (Level 2) | **ADOPTED** |
+| `/guard` (maximum protection) | `destructive-command-guards.md` (Level 3) | **ADOPTED** |
+| `/codex` (multi-model second opinion) | `multi-model-review.md` | **ADOPTED** |
+| Auto-generated SKILL.md from source | `living-documentation.md` | **ADOPTED** |
+
+### Files Created
+- `.claude/protocols/browser-automation.md` — Persistent Chromium daemon, cookie import, visual regression, human handoff
+- `.claude/protocols/design-review.md` — Design system generation, 10-dimension scoring, 80-item visual audit
+- `.claude/protocols/retrospective.md` — Post-milestone analysis, pattern extraction, memory updates
+- `.claude/protocols/destructive-command-guards.md` — 3-level protection: careful → freeze → guard
+- `.claude/protocols/multi-model-review.md` — Cross-validate with second AI model (3 modes)
+- `.claude/protocols/living-documentation.md` — Auto-generated docs, CI validation, staleness detection
+- `.claude/workflows/templates/retrospective-tasks.yml` — 6-task retrospective workflow
+- `.claude/CLAUDE.md` — Protocol library table updated with all new protocols
+
+---
+
+## 13. Conclusion
 
 **gstack** is the right tool for a **solo founder shipping fast** — it gives you a complete sprint workflow with real browser automation in 2 minutes. Its strength is speed and simplicity.
 
 **ConnectSW** is the right system for **building a portfolio of production-grade products** — it enforces quality at every step and prevents the rework that comes from skipping specs and tests. Its strength is correctness and scale.
 
-The ideal approach: **adopt gstack's browser automation and design tooling into ConnectSW's governed workflow**. This would give ConnectSW real visual QA capabilities while maintaining its specification rigor and quality gates.
+With the adoption of all gstack standout features, ConnectSW now combines both approaches: **gstack's velocity tools** (browser automation, design tooling, retrospectives, safety guards) operating within **ConnectSW's governed framework** (spec-kit, quality gates, traceability, constitution). The result is a system that can move fast AND maintain correctness at scale.
 
 ---
 

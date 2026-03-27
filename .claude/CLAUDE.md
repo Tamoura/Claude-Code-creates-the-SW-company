@@ -128,6 +128,12 @@ Before writing ANY code on a task, the assigned agent MUST:
 | `proof-recording.md` | Testing | Every feature produces proof artifacts |
 | `agent-message.schema.yml` | Agent Communication | Orchestrator + inter-agent messaging |
 | `message-router.ts` | Agent Communication | Infrastructure — orchestrator routing |
+| `browser-automation.md` | Quality Assurance | Live browser QA, visual regression, auth flow testing — Article X |
+| `design-review.md` | Design Quality | Design system generation, scoring, 80-item visual audit — Article IX |
+| `retrospective.md` | Process Improvement | Post-milestone analysis, pattern extraction, memory updates — Article XI |
+| `destructive-command-guards.md` | Safety | Destructive command interception, directory freeze, guard mode — Article VIII |
+| `multi-model-review.md` | Quality Assurance | Cross-validate critical decisions with second AI model — Article XIV |
+| `living-documentation.md` | Documentation | Auto-generated docs from source, staleness detection — Article IX |
 
 ## Specification-Driven Development (spec-kit)
 

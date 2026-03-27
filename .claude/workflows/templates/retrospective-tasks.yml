@@ -1,0 +1,89 @@
+# Retrospective Workflow Template
+# Triggered: After CEO checkpoint, production gate, or on-demand
+# Duration: ~15 minutes
+# Inspired by: gstack /retro
+
+name: retrospective
+description: Analyze completed work, identify patterns, update memory system
+version: 1.0.0
+
+triggers:
+  - after_ceo_checkpoint
+  - after_production_gate
+  - on_demand
+  - weekly_if_active
+
+parameters:
+  product: required
+  start_date: required       # Period start
+  end_date: default_today    # Period end
+  milestone: optional        # e.g., "foundation-complete", "v1.0-release"
+
+tasks:
+  - id: RETRO-01
+    name: Gather Commit Metrics
+    agent: orchestrator
+    depends_on: []
+    actions:
+      - git log analysis (commits by type, agent, files changed)
+      - lines added/removed per agent
+      - commit frequency distribution
+    output: "$PRODUCT_DIR/docs/retros/data/commits-$END_DATE.json"
+
+  - id: RETRO-02
+    name: Gather Test Health Metrics
+    agent: qa-engineer
+    depends_on: []
+    actions:
+      - run test suite with coverage
+      - compare coverage to previous retro
+      - identify flaky tests
+      - count test-to-code ratio
+    output: "$PRODUCT_DIR/docs/retros/data/test-health-$END_DATE.json"
+
+  - id: RETRO-03
+    name: Gather CI/CD Metrics
+    agent: devops-engineer
+    depends_on: []
+    actions:
+      - CI pass rate for the period
+      - average build time
+      - failed jobs categorized (lint, test, security, e2e)
+      - deployment frequency
+    output: "$PRODUCT_DIR/docs/retros/data/ci-metrics-$END_DATE.json"
+
+  - id: RETRO-04
+    name: Gather Security Metrics
+    agent: security-engineer
+    depends_on: []
+    actions:
+      - vulnerabilities found/fixed in period
+      - dependency audit status
+      - security gate pass/fail history
+    output: "$PRODUCT_DIR/docs/retros/data/security-$END_DATE.json"
+
+  - id: RETRO-05
+    name: Analyze Patterns & Write Retrospective
+    agent: orchestrator
+    depends_on: [RETRO-01, RETRO-02, RETRO-03, RETRO-04]
+    actions:
+      - synthesize all metrics into retrospective report
+      - identify what went well (evidence-based)
+      - identify what could improve (with action items)
+      - extract new patterns and anti-patterns
+      - generate action items with owners and priorities
+    output: "$PRODUCT_DIR/docs/retros/retro-$END_DATE.md"
+
+  - id: RETRO-06
+    name: Update Memory System
+    agent: orchestrator
+    depends_on: [RETRO-05]
+    actions:
+      - add new patterns to company-knowledge.json
+      - update agent-experiences for involved agents
+      - log retrospective event to audit-trail.jsonl
+      - carry forward unresolved action items
+    output:
+      - ".claude/memory/company-knowledge.json"
+      - ".claude/memory/agent-experiences/*.json"
+      - ".claude/audit-trail.jsonl"
