@@ -335,13 +335,135 @@ colors: {
 3. **Tailwind v4 breaking changes**: CSS-first config, `@theme` directive replaces `tailwind.config.ts`. Plan migration carefully.
 4. **Container queries**: Use `@container` for component-level responsiveness (Tailwind v3.4+).
 
+## DESIGN.md Integration (MANDATORY)
+
+Every ConnectSW product has a `$PRODUCT_DIR/DESIGN.md` that defines the visual system. When consulted, your guidance MUST align with the product's DESIGN.md. Read `.claude/protocols/design-md.md` for the full protocol.
+
+### Translating DESIGN.md to Tailwind Config
+
+```typescript
+// Pattern: CSS variables in globals.css + Tailwind references
+// This allows DESIGN.md tokens to be the single source of truth
+
+// globals.css
+:root {
+  --color-background: #faf9f7;
+  --color-surface: #ffffff;
+  --color-brand: #3B82F6;
+  --color-text-primary: #1c1c1e;
+  --font-display: 'Inter';
+  --radius-button: 8px;
+}
+
+// tailwind.config.ts
+colors: {
+  background: 'var(--color-background)',
+  surface: 'var(--color-surface)',
+  brand: { DEFAULT: 'var(--color-brand)' },
+}
+```
+
+### Advanced Typography Utilities (from 60+ Real Design Systems)
+
+Most products need custom letter-spacing and line-height values that Tailwind doesn't include by default:
+
+```typescript
+// tailwind.config.ts — typography extension
+fontSize: {
+  // [size, { lineHeight, letterSpacing }] format
+  'display': ['4rem', { lineHeight: '1.05', letterSpacing: '-0.03em' }],
+  'h1': ['2.5rem', { lineHeight: '1.15', letterSpacing: '-0.02em' }],
+  'h2': ['1.875rem', { lineHeight: '1.25', letterSpacing: '-0.01em' }],
+  'h3': ['1.5rem', { lineHeight: '1.30', letterSpacing: '0' }],
+  'body': ['1rem', { lineHeight: '1.60', letterSpacing: '0' }],
+  'small': ['0.875rem', { lineHeight: '1.50', letterSpacing: '0.01em' }],
+  'micro': ['0.75rem', { lineHeight: '1.30', letterSpacing: '0.05em' }],
+},
+```
+
+**Key rule**: Letter-spacing scales inversely with font size. The larger the text, the tighter the tracking. This is the single most impactful typography improvement.
+
+### Shadow Strategies by Product Archetype
+
+```typescript
+// Shadow-based (Stripe-like — warm tinted)
+boxShadow: {
+  'sm': '0 1px 2px rgba(50,50,93,0.10), 0 1px 1px rgba(0,0,0,0.06)',
+  'md': '0 4px 6px rgba(50,50,93,0.11), 0 1px 3px rgba(0,0,0,0.08)',
+  'lg': '0 13px 27px rgba(50,50,93,0.25), 0 8px 16px rgba(0,0,0,0.15)',
+}
+
+// Ring-shadow (Vercel-like — hairline borders via shadow)
+boxShadow: {
+  'ring': '0 0 0 1px rgba(0,0,0,0.08)',
+  'ring-hover': '0 0 0 1px rgba(0,0,0,0.15)',
+  'card': '0 0 0 1px rgba(0,0,0,0.08), 0 4px 6px rgba(0,0,0,0.04)',
+}
+
+// Border-based (Linear-like — no shadows at all)
+// Use border-opacity utilities instead:
+// border-white/[0.04], border-white/[0.08], border-white/[0.12]
+
+// Frosted glass (Resend-like)
+// bg-white/10 backdrop-blur-md border border-white/20
+```
+
+### Component Radius Decision Tree
+
+| Product Feel | Radius | Tailwind | Examples |
+|-------------|--------|----------|----------|
+| Modern, friendly | 9999px (pill) | `rounded-full` | Stripe, Vercel, Spotify |
+| Professional | 8-12px | `rounded-lg` to `rounded-xl` | Notion, Airtable |
+| Minimal | 4-6px | `rounded` to `rounded-md` | Intercom, Webflow |
+| Industrial/precise | 0px | `rounded-none` | IBM, BMW, SpaceX |
+
+### Hover & Interaction Utilities
+
+```css
+/* Custom utilities for DESIGN.md-specified interactions */
+@layer utilities {
+  /* Scale hover (Wise, Warp pattern) */
+  .hover-scale { @apply transition-transform hover:scale-[1.02] active:scale-[0.98]; }
+
+  /* Translate hover (Webflow, Clay pattern) */
+  .hover-lift { @apply transition-transform hover:-translate-y-0.5; }
+
+  /* Background opacity shift (Linear, Raycast on dark) */
+  .hover-glow { @apply transition-colors hover:bg-white/[0.05]; }
+}
+```
+
+### OpenType Features in Tailwind
+
+```css
+/* globals.css — enable font features globally */
+body {
+  font-feature-settings: "kern" 1, "liga" 1;
+}
+
+/* For specific fonts (e.g., Inter with stylistic sets) */
+.font-inter-enhanced {
+  font-feature-settings: "kern" 1, "liga" 1, "cv01" 1, "ss03" 1;
+}
+
+/* Tabular numbers for data displays */
+.font-tabular {
+  font-variant-numeric: tabular-nums;
+  /* or */ font-feature-settings: "tnum" 1;
+}
+```
+
 ## ConnectSW-Specific Guidance
 
 - Tailwind CSS is our **default styling solution** (Article V)
+- Every product MUST have a `DESIGN.md` — read `.claude/protocols/design-md.md`
+- Design tokens live in CSS variables (`globals.css`) referenced by `tailwind.config.ts`
 - Always use `cn()` from `lib/utils.ts` for class merging
 - Use `cva` (class-variance-authority) for component variants
-- Design tokens in `tailwind.config.ts`, never raw hex in components
+- Never use raw hex values in components — always reference design tokens
 - Mobile-first responsive design (test at 375px, 768px, 1024px)
 - All interactive elements need visible focus rings (WCAG AA)
 - Form inputs must have visible borders (not just bottom-border)
 - All user-visible strings through `t()` for i18n readiness
+- Letter-spacing is NOT optional — apply DESIGN.md tracking values precisely
+- Choose ONE depth strategy per product (shadows OR borders OR flat) — never mix

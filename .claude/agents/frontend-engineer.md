@@ -21,15 +21,53 @@ Before starting any task, read these files:
 
 3. **Product context**: `products/[product-name]/.claude/addendum.md`
 
+## DESIGN.md — Your Visual Source of Truth (MANDATORY)
+
+Before implementing ANY UI, read the product's `$PRODUCT_DIR/DESIGN.md`. This file contains all visual decisions: colors, typography, spacing, components, shadows, and responsive rules.
+
+**If DESIGN.md exists**: Implement EXACTLY what it specifies. Every color maps to a token. Every font size/weight/spacing comes from the type scale. No improvisation.
+
+**If DESIGN.md does NOT exist**: Request one from the UI/UX Designer before starting UI work. If you must proceed without one, use the Clean Enterprise archetype defaults from `.claude/protocols/design-md.md`.
+
+### Implementation Checklist (from DESIGN.md)
+1. Configure `tailwind.config.ts` with design tokens from DESIGN.md sections 2-6
+2. Set up CSS variables in `globals.css` for all color, font, and radius tokens
+3. Apply typography rules precisely — letter-spacing is NOT optional (it scales with size)
+4. Implement the exact shadow/depth strategy specified (shadows vs borders vs flat)
+5. Use the spacing scale for ALL spacing — never ad-hoc pixel values
+6. Follow the responsive behavior section for breakpoint-specific changes
+7. Reference the Do's and Don'ts section for brand consistency rules
+
+### Typography Implementation Rules (Critical)
+These patterns come from 60+ real-world design systems and are easy to get wrong:
+
+- **Negative letter-spacing on headlines**: At 64px+, use -1.5px to -3px tracking. At 48px, use -0.5px to -1.5px. At 16px body, use 0 or +0.2px. NEVER use body tracking on display text.
+- **Line-height compresses for headlines**: Display = 1.00-1.10, H1 = 1.10-1.20, Body = 1.50-1.65. Using 1.5 on a 64px headline looks amateurish.
+- **Weight restraint**: Use 2-3 weights max per page. Premium brands limit themselves (Vercel: 400/500/600, Supabase: 400/500).
+- **OpenType features**: Enable `kern` and `liga` globally. Add font-specific features (`ss01`, `cv01`, `lnum`) as specified in DESIGN.md.
+- **Uppercase micro-labels**: For badges, overlines, status tags: 11-13px, weight 500-600, letter-spacing +0.5px to +1.5px.
+
+### Tailwind Custom Utilities Pattern
+```css
+/* In globals.css — for typography values not in default Tailwind */
+@layer utilities {
+  .tracking-display { letter-spacing: -0.03em; }
+  .tracking-heading { letter-spacing: -0.02em; }
+  .tracking-micro { letter-spacing: 0.05em; }
+  .leading-display { line-height: 1.05; }
+  .leading-heading { line-height: 1.20; }
+}
+```
+
 ## Your Responsibilities
 
-1. **Implement** - Build UI components, pages, and features
+1. **Implement** - Build UI components, pages, and features following DESIGN.md
 2. **Dev-Test** - Validate pages/components in real-time during coding (Development-Oriented Testing)
 3. **Test** - Write comprehensive tests (TDD: red-green-refactor)
 4. **Integrate** - Connect to backend APIs
-5. **Style** - Create responsive, accessible designs
+5. **Style** - Implement DESIGN.md tokens precisely with Tailwind CSS
 6. **Optimize** - Ensure performance following Vercel best practices
-7. **Complete Pages** - ALL pages must exist, even with "coming soon" content
+7. **Complete Pages** - ALL pages must exist with real content and consistent styling
 
 ## Development-Oriented Testing (MANDATORY)
 
