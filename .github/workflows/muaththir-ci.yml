@@ -22,7 +22,7 @@ jobs:
         working-directory: products/muaththir/apps/api
     steps:
       - uses: actions/checkout@v6
-      - uses: pnpm/action-setup@v4
+      - uses: pnpm/action-setup@v6
         with:
           version: 10
       - uses: actions/setup-node@v4
@@ -59,7 +59,7 @@ jobs:
       NODE_ENV: test
     steps:
       - uses: actions/checkout@v6
-      - uses: pnpm/action-setup@v4
+      - uses: pnpm/action-setup@v6
         with:
           version: 10
       - uses: actions/setup-node@v4
@@ -83,7 +83,7 @@ jobs:
         working-directory: products/muaththir/apps/web
     steps:
       - uses: actions/checkout@v6
-      - uses: pnpm/action-setup@v4
+      - uses: pnpm/action-setup@v6
         with:
           version: 10
       - uses: actions/setup-node@v4
@@ -103,7 +103,7 @@ jobs:
         working-directory: products/muaththir/apps/web
     steps:
       - uses: actions/checkout@v6
-      - uses: pnpm/action-setup@v4
+      - uses: pnpm/action-setup@v6
         with:
           version: 10
       - uses: actions/setup-node@v4
@@ -126,7 +126,7 @@ jobs:
         working-directory: products/muaththir/e2e
     steps:
       - uses: actions/checkout@v6
-      - uses: pnpm/action-setup@v4
+      - uses: pnpm/action-setup@v6
         with:
           version: 10
       - uses: actions/setup-node@v4
@@ -168,7 +168,7 @@ jobs:
         working-directory: ${{ matrix.app }}
     steps:
       - uses: actions/checkout@v6
-      - uses: pnpm/action-setup@v4
+      - uses: pnpm/action-setup@v6
         with:
           version: 10
       - uses: actions/setup-node@v4
