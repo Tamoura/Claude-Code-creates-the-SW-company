@@ -10,17 +10,27 @@ export interface ProblemDetails {
   detail: string;
   instance?: string;
   errors?: Record<string, string[]>;
+  // RFC 7807 allows arbitrary extension members (e.g. dependentGoals for C-7).
+  [key: string]: unknown;
 }
 
 export class AppError extends Error {
   public readonly statusCode: number;
   public readonly code: string;
+  /** Extra RFC 7807 extension members merged into the problem body. */
+  public extensions?: Record<string, unknown>;
 
   constructor(message: string, statusCode: number, code: string) {
     super(message);
     this.name = 'AppError';
     this.statusCode = statusCode;
     this.code = code;
+  }
+
+  /** Attach extension members to the problem+json body (fluent). */
+  withExtensions(extensions: Record<string, unknown>): this {
+    this.extensions = { ...this.extensions, ...extensions };
+    return this;
   }
 
   toProblem(instance?: string): ProblemDetails {
@@ -32,6 +42,7 @@ export class AppError extends Error {
       status: this.statusCode,
       detail: this.message,
       ...(instance ? { instance } : {}),
+      ...(this.extensions ?? {}),
     };
   }
 }
