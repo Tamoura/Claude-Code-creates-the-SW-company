@@ -9,6 +9,7 @@ import sessionAuthPlugin from './plugins/sessionAuth';
 import authRoutes from './routes/auth.routes';
 import subjectRoutes from './routes/subject.routes';
 import selectionRoutes from './routes/selection.routes';
+import goalRoutes from './routes/goal.routes';
 import { logger } from './utils/logger';
 import { AppError } from './lib/errors';
 
@@ -145,6 +146,7 @@ export async function buildApp(
   await app.register(authRoutes, { prefix: '/v1' });
   await app.register(subjectRoutes, { prefix: '/v1' });
   await app.register(selectionRoutes, { prefix: '/v1' });
+  await app.register(goalRoutes, { prefix: '/v1' });
 
   return app;
 }
