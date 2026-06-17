@@ -58,6 +58,38 @@
 
 ### Development Tier
 
+#### `studyflow`
+| Field | Value |
+|-------|-------|
+| **Description** | Study planning web app for university students — discover & choose subjects/courses, set study goals per subject, and track progress. No-AI MVP (pure CRUD); AI recommendations are Phase 2. |
+| **Tier** | Development |
+| **Stack** | Fastify + Next.js + PostgreSQL + Prisma |
+| **Frontend** | 3122 |
+| **Backend** | 5017 |
+| **Mobile** | — |
+| **CI** | `.github/workflows/studyflow-ci.yml` (pending — DevOps phase) |
+| **PRD** | `products/studyflow/docs/PRD.md` |
+| **Specs** | `products/studyflow/docs/specs/`, `products/studyflow/docs/business-analysis.md` |
+| **Has Backend** | Yes |
+| **Has Mobile** | No |
+| **Notes** | Inception complete (BA + spec + PRD). 13 user stories (US-01…13), 25 FRs. Domain: Student, Subject, Selection, Goal, ProgressEntry. Awaiting CEO PRD approval before architecture. |
+
+#### `credit-os`
+| Field | Value |
+|-------|-------|
+| **Description** | Composable Credit OS — meta-driven composable credit operating system for corporate financing; configuration-over-code platform (product, eligibility, decisioning, workflow, forms, documents, integrations, validation, publication, runtime) |
+| **Tier** | Development |
+| **Stack** | Fastify + Next.js + PostgreSQL + Prisma |
+| **Frontend** | 3121 |
+| **Backend** | 5016 |
+| **Mobile** | — |
+| **CI** | `.github/workflows/credit-os-ci.yml` |
+| **PRD** | `products/credit-os/docs/PRD.md` |
+| **Specs** | `products/credit-os/docs/specs/`, `products/credit-os/docs/plan.md`, `products/credit-os/docs/tasks.md` |
+| **Has Backend** | Yes |
+| **Has Mobile** | No |
+| **Notes** | Modular monolith (13 logical modules, ADR-001); single-tenant multi-tenant-ready; json-rules-engine; Keycloak OIDC; full spec-kit pipeline |
+
 #### `connectgrc`
 | Field | Value |
 |-------|-------|
