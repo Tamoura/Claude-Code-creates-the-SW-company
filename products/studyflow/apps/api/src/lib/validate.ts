@@ -1,12 +1,15 @@
-import { ZodSchema, ZodError } from 'zod';
+import { z, ZodTypeAny, ZodError } from 'zod';
 import { ValidationError } from './errors';
 
 /**
- * Validates `data` against a Zod schema, returning the parsed value or throwing
- * a `ValidationError` (400, RFC 7807) with field-level messages. Used by
- * handlers for body/query/params (architecture.md §4.2).
+ * Validates `data` against a Zod schema, returning the parsed (output) value or
+ * throwing a `ValidationError` (400, RFC 7807) with field-level messages. Used
+ * by handlers for body/query/params (architecture.md §4.2).
  */
-export function validate<T>(schema: ZodSchema<T>, data: unknown): T {
+export function validate<S extends ZodTypeAny>(
+  schema: S,
+  data: unknown
+): z.output<S> {
   const result = schema.safeParse(data);
   if (!result.success) {
     throw toValidationError(result.error);

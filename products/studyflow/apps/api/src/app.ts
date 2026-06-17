@@ -7,6 +7,7 @@ import { ZodError } from 'zod';
 import prismaPlugin from './plugins/prisma';
 import sessionAuthPlugin from './plugins/sessionAuth';
 import authRoutes from './routes/auth.routes';
+import subjectRoutes from './routes/subject.routes';
 import { logger } from './utils/logger';
 import { AppError } from './lib/errors';
 
@@ -141,6 +142,7 @@ export async function buildApp(
 
   // Domain modules registered under the /v1 prefix (architecture.md §4.2).
   await app.register(authRoutes, { prefix: '/v1' });
+  await app.register(subjectRoutes, { prefix: '/v1' });
 
   return app;
 }
