@@ -58,6 +58,10 @@ jobs:
           --health-retries 5
     env:
       DATABASE_URL: postgresql://test:test@localhost:5432/studyflow_test
+      # The jest setup (tests/helpers/env.ts) forces tests onto the test DB via
+      # TEST_DATABASE_URL; CI must provide it with the container's credentials,
+      # otherwise it falls back to a passwordless `postgres` URL and auth fails.
+      TEST_DATABASE_URL: postgresql://test:test@localhost:5432/studyflow_test
       SESSION_SECRET: ci-test-session-secret-not-for-production-0123456789
       NODE_ENV: test
     steps:
