@@ -11,6 +11,7 @@ import subjectRoutes from './routes/subject.routes';
 import selectionRoutes from './routes/selection.routes';
 import goalRoutes from './routes/goal.routes';
 import progressRoutes from './routes/progress.routes';
+import dashboardRoutes from './routes/dashboard.routes';
 import { logger } from './utils/logger';
 import { AppError } from './lib/errors';
 
@@ -149,6 +150,7 @@ export async function buildApp(
   await app.register(selectionRoutes, { prefix: '/v1' });
   await app.register(goalRoutes, { prefix: '/v1' });
   await app.register(progressRoutes, { prefix: '/v1' });
+  await app.register(dashboardRoutes, { prefix: '/v1' });
 
   return app;
 }
