@@ -1,0 +1,17 @@
+{
+  "name": "studyflow",
+  "version": "0.1.0",
+  "description": "StudyFlow — discover subjects, set goals, track progress",
+  "private": true,
+  "scripts": {
+    "dev": "concurrently -n api,web -c blue,green \"pnpm --filter @studyflow/api dev\" \"pnpm --filter @studyflow/web dev\"",
+    "dev:api": "pnpm --filter @studyflow/api dev",
+    "dev:web": "pnpm --filter @studyflow/web dev",
+    "build": "pnpm --filter @studyflow/api build && pnpm --filter @studyflow/web build",
+    "db:migrate": "pnpm --filter @studyflow/api db:migrate",
+    "db:seed": "pnpm --filter @studyflow/api db:seed"
+  },
+  "devDependencies": {
+    "concurrently": "^9.0.0"
+  }
+}

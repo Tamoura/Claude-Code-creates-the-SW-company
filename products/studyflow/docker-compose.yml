@@ -1,0 +1,22 @@
+# StudyFlow — local infra (Postgres only; no Redis in MVP per architecture §3.2).
+# Host port 5435 for parity / to avoid clashing with a local Postgres on 5432.
+services:
+  postgres:
+    image: postgres:15-alpine
+    container_name: studyflow-postgres
+    environment:
+      POSTGRES_USER: ${POSTGRES_USER:-postgres}
+      POSTGRES_PASSWORD: ${POSTGRES_PASSWORD:-postgres}
+      POSTGRES_DB: ${POSTGRES_DB:-studyflow_dev}
+    ports:
+      - '5435:5432'
+    volumes:
+      - studyflow_postgres_data:/var/lib/postgresql/data
+    healthcheck:
+      test: ['CMD-SHELL', 'pg_isready -U ${POSTGRES_USER:-postgres}']
+      interval: 10s
+      timeout: 5s
+      retries: 5
+
+volumes:
+  studyflow_postgres_data:

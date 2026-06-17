@@ -1,0 +1,137 @@
+// StudyFlow — Prisma schema
+// Implements the ER diagram in docs/architecture.md §5.
+// Entities: Student, Session, Subject, Selection, Goal, ProgressEntry.
+// Conventions: uuid PKs (@default(uuid())), timestamps, ownership FKs (BR-004),
+// goal metric enum (C-3), goal/progress bindings (BR-001/002), cascade rules.
+
+generator client {
+  provider = "prisma-client-js"
+}
+
+datasource db {
+  provider = "postgresql"
+  url      = env("DATABASE_URL")
+}
+
+enum GoalMetricType {
+  numeric
+  boolean
+  percentage
+}
+
+enum GoalCadence {
+  daily
+  weekly
+}
+
+enum GoalStatus {
+  draft
+  active
+  at_risk
+  completed
+  abandoned
+}
+
+model Student {
+  id           String    @id @default(uuid())
+  email        String    @unique // lowercased + unique (FR-001)
+  passwordHash String // bcrypt (NFR-005)
+  activeTerm   String // single active term (C-5)
+  createdAt    DateTime  @default(now())
+  updatedAt    DateTime  @updatedAt
+
+  sessions      Session[]
+  selections    Selection[]
+  ownedSubjects Subject[]   @relation("SubjectOwner")
+
+  @@map("students")
+}
+
+model Session {
+  id        String   @id @default(uuid())
+  tokenHash String   @unique // SHA-256 of opaque session token (ADR-002)
+  studentId String
+  expiresAt DateTime
+  createdAt DateTime @default(now())
+
+  student Student @relation(fields: [studentId], references: [id], onDelete: Cascade)
+
+  @@index([studentId])
+  @@index([expiresAt])
+  @@map("sessions")
+}
+
+model Subject {
+  id             String   @id @default(uuid())
+  code           String? // nullable for manual adds
+  name           String
+  credits        Int?
+  workload       String?
+  prerequisites  String? // comma/code list, advisory only (BR-007)
+  description    String?
+  term           String?
+  isSeed         Boolean  @default(false) // true = read-only catalog (BR-005)
+  ownerStudentId String? // null for seed subjects (BR-005)
+  createdAt      DateTime @default(now())
+  updatedAt      DateTime @updatedAt
+
+  owner      Student?    @relation("SubjectOwner", fields: [ownerStudentId], references: [id], onDelete: Cascade)
+  selections Selection[]
+
+  @@index([name])
+  @@index([code])
+  @@index([ownerStudentId])
+  @@map("subjects")
+}
+
+model Selection {
+  id               String   @id @default(uuid())
+  studentId        String // BR-004
+  subjectId        String
+  term             String // scopes to active term (C-5)
+  prereqWarningAck Boolean  @default(false) // BR-007 / FR-025
+  createdAt        DateTime @default(now())
+
+  student Student @relation(fields: [studentId], references: [id], onDelete: Cascade)
+  subject Subject @relation(fields: [subjectId], references: [id], onDelete: Cascade)
+  goals   Goal[]
+
+  // No duplicate selection per term (FR-007)
+  @@unique([studentId, subjectId, term])
+  @@index([studentId, term])
+  @@map("selections")
+}
+
+model Goal {
+  id          String         @id @default(uuid())
+  selectionId String // binds goal to a selected subject (BR-001)
+  title       String
+  metricType  GoalMetricType // numeric|boolean|percentage (C-3)
+  target      Decimal // interpretation per metricType
+  cadence     GoalCadence    @default(daily) // C-9
+  dueDate     DateTime       @db.Date // must be future at creation (BR-006)
+  status      GoalStatus     @default(active)
+  createdAt   DateTime       @default(now())
+  updatedAt   DateTime       @updatedAt
+
+  selection       Selection       @relation(fields: [selectionId], references: [id], onDelete: Cascade)
+  progressEntries ProgressEntry[]
+
+  @@index([selectionId])
+  @@map("goals")
+}
+
+model ProgressEntry {
+  id        String   @id @default(uuid())
+  goalId    String // binds entry to one goal (BR-002)
+  entryDate DateTime @db.Date // <= today (C-8)
+  value     Decimal // metric-appropriate
+  note      String?
+  createdAt DateTime @default(now())
+
+  // Goal cascade on delete (FR-022 / US-11 AC-2)
+  goal Goal @relation(fields: [goalId], references: [id], onDelete: Cascade)
+
+  @@index([goalId, entryDate])
+  @@map("progress_entries")
+}
