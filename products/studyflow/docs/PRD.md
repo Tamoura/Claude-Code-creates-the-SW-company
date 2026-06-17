@@ -273,7 +273,7 @@ Feature-based milestones (no time estimates per protocol). Build the P0 loop fir
 
 | Milestone | Contents | Gate |
 |-----------|----------|------|
-| **M0 — Foundation** | Scaffold api (Fastify+Prisma, port 5018) + web (Next.js+Tailwind, port 3123); 5-entity Prisma schema + migrations; seed catalog (C-2); auth (US-01). | Testing Gate PASS |
+| **M0 — Foundation** | Scaffold api (Fastify+Prisma, port 5017) + web (Next.js+Tailwind, port 3122); 5-entity Prisma schema + migrations; seed catalog (C-2); auth (US-01). | Testing Gate PASS |
 | **M1 — Discover & select** | Catalog browse/search (US-02), compare (US-03), selection + manual add (US-04, US-05), prerequisite advisory (US-13). | Testing Gate PASS |
 | **M2 — Goals & tracking** | Goals (US-06), progress logging (US-07), completion %/streaks/at-risk (US-08) under TDD on real DB. | Testing Gate PASS |
 | **M3 — Loop close** | Dashboard (US-10), in-app reminders (US-09), full CRUD (US-11). | Testing Gate PASS |
@@ -298,7 +298,7 @@ Feature-based milestones (no time estimates per protocol). Build the P0 loop fir
 
 ## 12. Dependencies
 
-- **Internal:** ConnectSW default stack (Fastify, Prisma, PostgreSQL, Next.js, Tailwind, Zod, TS strict); ports web **3123** / api **5018**; local DB `studyflow_dev`.
+- **Internal:** ConnectSW default stack (Fastify, Prisma, PostgreSQL, Next.js, Tailwind, Zod, TS strict); ports web **3122** / api **5017**; local DB `studyflow_dev`.
 - **External (MVP):** none required — no AI provider, no SIS/LMS, no email provider (in-app reminders only, C-4), no OAuth provider.
 - **Data:** curated seed catalog (one faculty, ~20–40 subjects) shipped via seed script (C-2).
 

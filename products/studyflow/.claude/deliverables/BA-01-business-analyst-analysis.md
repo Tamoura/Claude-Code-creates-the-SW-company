@@ -297,7 +297,7 @@ StudyFlow occupies the **integrated, academic-native middle** between course-dis
 ### 8.3 Resource Feasibility
 
 - **Effort estimate:** Foundation + full MVP loop is a small set of CRUD slices — estimate **2-3 sprints** with the default agent team (schema/migrations, API CRUD, web UI, dashboard, reminders, E2E).
-- **Infrastructure:** Local Postgres (`studyflow_dev`), web `3123`, api `5018`. Standard CI. Email provider for reminders.
+- **Infrastructure:** Local Postgres (`studyflow_dev`), web `3122`, api `5017`. Standard CI. Email provider for reminders.
 - **Third-party dependencies (MVP):** Auth (email/password to start), an email-sending service for reminders. No catalog/SIS integrations.
 
 ### 8.4 Feasibility Summary
