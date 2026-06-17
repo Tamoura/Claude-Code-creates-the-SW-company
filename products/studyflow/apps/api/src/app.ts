@@ -72,6 +72,27 @@ export async function buildApp(
   // Cookie (session auth — ADR-002)
   await app.register(cookie);
 
+  // Tolerate an empty body on requests that carry `Content-Type:
+  // application/json` (common from browser fetch on DELETE/POST). Without this,
+  // Fastify throws FST_ERR_CTP_EMPTY_JSON_BODY. We parse empty → undefined so
+  // bodyless mutations (logout, delete) proceed normally.
+  app.addContentTypeParser(
+    'application/json',
+    { parseAs: 'string' },
+    (_req, body: string, done) => {
+      if (body === '' || body == null) {
+        done(null, undefined);
+        return;
+      }
+      try {
+        done(null, JSON.parse(body));
+      } catch (err) {
+        (err as { statusCode?: number }).statusCode = 400;
+        done(err as Error, undefined);
+      }
+    }
+  );
+
   // Single RFC 7807 error handler — set BEFORE routes for encapsulation.
   app.setErrorHandler((error, request, reply) => {
     if (error instanceof AppError) {
@@ -87,6 +108,25 @@ export async function buildApp(
         detail: 'Request validation failed',
         instance: request.url,
         errors: error.flatten().fieldErrors,
+      });
+    }
+
+    // Fastify's own framework errors carry a meaningful 4xx statusCode (e.g.
+    // FST_ERR_CTP_EMPTY_JSON_BODY when a DELETE/POST is sent with an empty body
+    // and Content-Type: application/json). Honour it instead of masking as 500.
+    const fwError = error as { statusCode?: number; name?: string; message?: string };
+    const fastifyStatus = fwError.statusCode;
+    if (
+      typeof fastifyStatus === 'number' &&
+      fastifyStatus >= 400 &&
+      fastifyStatus < 500
+    ) {
+      return reply.code(fastifyStatus).send({
+        type: 'about:blank',
+        title: fwError.name || 'Bad Request',
+        status: fastifyStatus,
+        detail: fwError.message || 'Request error',
+        instance: request.url,
       });
     }
 
