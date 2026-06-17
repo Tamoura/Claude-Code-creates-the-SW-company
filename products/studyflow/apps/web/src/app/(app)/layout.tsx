@@ -18,7 +18,7 @@ function Guard({ children }: { children: ReactNode }) {
 
   if (status === 'loading') {
     return (
-      <div className="flex min-h-screen items-center justify-center bg-slate-50">
+      <div className="flex min-h-screen items-center justify-center bg-[#fafbfb]">
         <LoadingState label="Checking your session…" />
       </div>
     );
@@ -27,7 +27,7 @@ function Guard({ children }: { children: ReactNode }) {
   if (status === 'unauthenticated') {
     // Redirecting — render nothing to avoid a flash of protected content.
     return (
-      <div className="flex min-h-screen items-center justify-center bg-slate-50">
+      <div className="flex min-h-screen items-center justify-center bg-[#fafbfb]">
         <LoadingState label="Redirecting to sign in…" />
       </div>
     );

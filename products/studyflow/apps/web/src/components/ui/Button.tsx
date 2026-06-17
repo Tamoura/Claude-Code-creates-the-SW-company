@@ -10,13 +10,13 @@ export interface ButtonProps
 
 const VARIANTS: Record<NonNullable<ButtonProps['variant']>, string> = {
   primary:
-    'bg-brand-600 text-white shadow-sm hover:bg-brand-700 focus-visible:outline-brand-600',
+    'bg-sage-600 text-white shadow-sm hover:bg-sage-700 focus-visible:outline-sage-600',
   secondary:
-    'bg-white text-slate-900 shadow-sm ring-1 ring-inset ring-slate-300 hover:bg-slate-50 focus-visible:outline-slate-600',
+    'bg-sage-50 text-sage-700 ring-1 ring-inset ring-sage-100 hover:bg-sage-100 focus-visible:outline-sage-600',
   danger:
     'bg-red-600 text-white shadow-sm hover:bg-red-700 focus-visible:outline-red-600',
   ghost:
-    'bg-transparent text-slate-700 hover:bg-slate-100 focus-visible:outline-slate-500',
+    'bg-transparent text-slate-700 hover:bg-sage-50 hover:text-sage-700 focus-visible:outline-sage-500',
 };
 
 const SIZES: Record<NonNullable<ButtonProps['size']>, string> = {
@@ -42,7 +42,7 @@ export const Button = forwardRef<HTMLButtonElement, ButtonProps>(
       disabled={disabled || loading}
       aria-busy={loading || undefined}
       className={cn(
-        'inline-flex items-center justify-center gap-2 rounded-xl font-semibold transition-colors duration-150',
+        'inline-flex items-center justify-center gap-2 rounded-lg font-medium transition-colors duration-150',
         'focus-visible:outline focus-visible:outline-2 focus-visible:outline-offset-2',
         'disabled:cursor-not-allowed disabled:opacity-50',
         VARIANTS[variant],

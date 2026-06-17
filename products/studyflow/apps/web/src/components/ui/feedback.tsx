@@ -94,11 +94,11 @@ export function Card({
 // --- Badge ------------------------------------------------------------------
 
 const BADGE_TONES = {
-  neutral: 'bg-slate-100 text-slate-700',
-  brand: 'bg-brand-100 text-brand-700',
-  success: 'bg-emerald-100 text-emerald-700',
-  warning: 'bg-amber-100 text-amber-800',
-  danger: 'bg-red-100 text-red-700',
+  neutral: 'bg-slate-100 text-slate-700 ring-1 ring-inset ring-slate-200/70',
+  brand: 'bg-sage-50 text-sage-700 ring-1 ring-inset ring-sage-100',
+  success: 'bg-sage-100 text-sage-800 ring-1 ring-inset ring-sage-200/70',
+  warning: 'bg-amber-100 text-amber-800 ring-1 ring-inset ring-amber-200/70',
+  danger: 'bg-red-100 text-red-700 ring-1 ring-inset ring-red-200/70',
 } as const;
 
 export function Badge({
@@ -154,7 +154,7 @@ export function ProgressBar({
 }) {
   const pct = Math.max(0, Math.min(100, Math.round(value)));
   const tone =
-    pct >= 100 ? 'bg-emerald-500' : pct >= 50 ? 'bg-brand-600' : 'bg-amber-500';
+    pct >= 100 ? 'bg-sage-600' : pct >= 50 ? 'bg-sage-500' : 'bg-amber-500';
   return (
     <div>
       <div className="flex items-center justify-between text-xs font-medium text-slate-600">
@@ -162,7 +162,7 @@ export function ProgressBar({
         <span>{pct}%</span>
       </div>
       <div
-        className="mt-1 h-2 w-full overflow-hidden rounded-full bg-slate-100"
+        className="mt-1 h-2 w-full overflow-hidden rounded-full bg-sage-50"
         role="progressbar"
         aria-valuenow={pct}
         aria-valuemin={0}

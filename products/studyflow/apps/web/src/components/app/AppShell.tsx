@@ -37,10 +37,10 @@ function NavLinks({
               aria-current={active ? 'page' : undefined}
               className={cn(
                 'flex items-center gap-3 rounded-xl px-3 py-2.5 text-sm font-medium transition-colors',
-                'focus-visible:outline focus-visible:outline-2 focus-visible:outline-offset-2 focus-visible:outline-brand-500',
+                'focus-visible:outline focus-visible:outline-2 focus-visible:outline-offset-2 focus-visible:outline-sage-500',
                 active
-                  ? 'bg-brand-600 text-white shadow-sm'
-                  : 'text-slate-600 hover:bg-slate-100 hover:text-slate-900'
+                  ? 'bg-sage-50 text-sage-700 ring-1 ring-inset ring-sage-100'
+                  : 'text-slate-600 hover:bg-sage-50/60 hover:text-sage-700'
               )}
             >
               <span aria-hidden className="text-base">
@@ -60,11 +60,11 @@ function Brand() {
     <Link href="/dashboard" className="flex items-center gap-2">
       <span
         aria-hidden
-        className="inline-flex h-9 w-9 items-center justify-center rounded-xl bg-brand-600 text-lg font-bold text-white"
+        className="inline-flex h-9 w-9 items-center justify-center rounded-xl bg-sage-600 text-lg font-bold text-white"
       >
         S
       </span>
-      <span className="text-lg font-extrabold tracking-tight text-slate-900">
+      <span className="font-display text-lg font-bold tracking-tight text-slate-900">
         StudyFlow
       </span>
     </Link>
@@ -77,7 +77,7 @@ export function AppShell({ children }: { children: ReactNode }) {
   const [mobileOpen, setMobileOpen] = useState(false);
 
   return (
-    <div className="min-h-screen bg-slate-50">
+    <div className="min-h-screen bg-[#fafbfb]">
       <a
         href="#main-content"
         className="sr-only focus:not-sr-only focus:absolute focus:left-4 focus:top-4 focus:z-50 focus:rounded-lg focus:bg-white focus:px-4 focus:py-2 focus:shadow"
@@ -119,7 +119,7 @@ export function AppShell({ children }: { children: ReactNode }) {
           aria-label={mobileOpen ? 'Close menu' : 'Open menu'}
           aria-expanded={mobileOpen}
           onClick={() => setMobileOpen((v) => !v)}
-          className="rounded-lg p-2 text-slate-600 hover:bg-slate-100 focus-visible:outline focus-visible:outline-2 focus-visible:outline-offset-2 focus-visible:outline-brand-500"
+          className="rounded-lg p-2 text-slate-600 hover:bg-sage-50 hover:text-sage-700 focus-visible:outline focus-visible:outline-2 focus-visible:outline-offset-2 focus-visible:outline-sage-500"
         >
           <span aria-hidden className="text-xl">
             {mobileOpen ? '✕' : '☰'}
