@@ -2,7 +2,7 @@
 
 **Purpose**: Centralized port allocation to prevent conflicts when running multiple products simultaneously.
 
-**Last Updated**: 2026-03-05
+**Last Updated**: 2026-05-17
 
 ## Port Allocation Rules
 
@@ -31,7 +31,9 @@
 | 3117 | humanid | Active | http://localhost:3117 |
 | 3118 | ai-fluency | Active | http://localhost:3118 |
 | 3119 | qdb-sme-relief | Active | http://localhost:3119 |
-| 3120-3199 | *Available* | Free | - |
+| 3121 | credit-os | Development | http://localhost:3121 |
+| 3122 | studyflow | Development | http://localhost:3122 |
+| 3120, 3123-3199 | *Available* | Free | - |
 
 ### Backend APIs (5000-5099)
 
@@ -48,7 +50,9 @@
 | 5012 | archforge | Active | http://localhost:5012 |
 | 5013 | humanid | Active | http://localhost:5013 |
 | 5014 | ai-fluency | Active | http://localhost:5014 |
-| 5015-5099 | *Available* | Free | - |
+| 5016 | credit-os | Development | http://localhost:5016 |
+| 5017 | studyflow | Development | http://localhost:5017 |
+| 5015, 5018-5099 | *Available* | Free | - |
 
 > **Note**: `qdb-one` (3102) is frontend-only — it proxies QDB's existing APIs, no dedicated backend.
 > **Note**: `qdb-sme-relief` (3119) is frontend-only — it uses a lightweight serverless backend, no dedicated API port.
