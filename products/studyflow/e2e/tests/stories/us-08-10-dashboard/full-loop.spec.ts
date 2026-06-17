@@ -30,14 +30,9 @@ test.describe('US-08/10 — Dashboard & full loop', () => {
   test('[US-08][AC-1][US-10][AC-1] full loop: select → goal → progress → dashboard reflects 40%', async ({
     page,
   }, testInfo) => {
-    // KNOWN BUG (BUG-001): logging progress through the UI sends the user's local
-    // "today" as entryDate, which the API rejects as future when the server's UTC
-    // date is a day behind (timezone boundary). That blocks step 3 below, so the
-    // dashboard never reaches 40%. We keep the full, correct money-path assertions
-    // and mark the test expected-to-fail until BUG-001 is fixed — it will flip to
-    // a real failure (alerting us) the moment the fix lands. (The same loop passes
-    // end-to-end when entryDate is omitted; see the QA report repro.)
-    test.fail(true, 'BUG-001: progress entryDate compared against UTC today, not the user’s local today');
+    // BUG-001 (FIXED): logging progress through the UI sends the user's local
+    // "today", which the API now accepts (one-day UTC grace). The full money path
+    // reaches 40% end-to-end. This test enforces it as a hard green.
 
     // 1. Account + subject.
     await signupNewUser(page);

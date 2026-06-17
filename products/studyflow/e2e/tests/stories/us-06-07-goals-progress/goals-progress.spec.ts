@@ -66,15 +66,9 @@ test.describe('US-06/07/11 — Goals & progress', () => {
   test('[US-07][AC-1/AC-2] log a progress entry (value 4) → completion recomputes to 40%', async ({
     page,
   }) => {
-    // KNOWN BUG (BUG-001): the API computes "today" in UTC, so a user whose
-    // local date is ahead of UTC (e.g. just past local midnight in UTC+) has
-    // the date input pre-filled with their *local* today, which the server then
-    // rejects as "in the future" (HTTP 400). This breaks US-07 AC-1 ("date
-    // defaulting to today") and the whole progress/streak loop for those users.
-    // We assert the CORRECT behaviour (40%) and mark the test as expected-to-fail
-    // so it (a) does not mask the bug and (b) flips to a failure the moment the
-    // bug is fixed. Remove `test.fail()` once BUG-001 is resolved.
-    test.fail(true, 'BUG-001: progress entryDate compared against UTC today, not the user’s local today');
+    // BUG-001 (FIXED): the API now accepts the user's local "today" even when it
+    // is one calendar day ahead of UTC, so a user in UTC+ can log progress for
+    // their current day. This test enforces the correct 40% behaviour.
 
     // Create the numeric/target-10 goal.
     await page.getByRole('button', { name: '+ New goal' }).click();

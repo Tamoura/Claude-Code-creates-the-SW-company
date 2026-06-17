@@ -12,6 +12,11 @@ function isoTomorrow(): string {
   d.setUTCDate(d.getUTCDate() + 1);
   return d.toISOString().slice(0, 10);
 }
+function isoTwoDaysAhead(): string {
+  const d = new Date();
+  d.setUTCDate(d.getUTCDate() + 2);
+  return d.toISOString().slice(0, 10);
+}
 
 describe('Progress — US-07/08/11 (FR-014/015/016/017/018/022)', () => {
   let app: FastifyInstance;
@@ -73,14 +78,28 @@ describe('Progress — US-07/08/11 (FR-014/015/016/017/018/022)', () => {
       expect(res.json().progressEntry.entryDate).toBe(isoToday());
     });
 
-    it('[US-07][AC-3] rejects a future-dated entry (400/422)', async () => {
+    it('[US-07][AC-3] rejects a genuinely future-dated entry (400/422)', async () => {
+      // Two days ahead of UTC is in the future for every timezone on earth.
+      const res = await app.inject({
+        method: 'POST',
+        url: `/v1/goals/${goalId}/progress`,
+        headers: { cookie: student.cookie },
+        payload: { value: 1, entryDate: isoTwoDaysAhead() },
+      });
+      expect([400, 422]).toContain(res.statusCode);
+    });
+
+    it('[US-07][AC-3] accepts the user local today even when UTC is a day behind (BUG-001)', async () => {
+      // A user in a timezone ahead of UTC (e.g. UTC+3, logging in the evening)
+      // sends their local date, which can be one calendar day ahead of UTC.
+      // The API must accept it so the core habit loop is not broken.
       const res = await app.inject({
         method: 'POST',
         url: `/v1/goals/${goalId}/progress`,
         headers: { cookie: student.cookie },
         payload: { value: 1, entryDate: isoTomorrow() },
       });
-      expect([400, 422]).toContain(res.statusCode);
+      expect(res.statusCode).toBe(201);
     });
 
     it('transitions goal to completed at 100% (BR-003)', async () => {
@@ -139,13 +158,13 @@ describe('Progress — US-07/08/11 (FR-014/015/016/017/018/022)', () => {
       expect(res.json().goal.completionPct).toBe(80);
     });
 
-    it('[US-07][AC-3] rejects editing to a future date (400/422)', async () => {
+    it('[US-07][AC-3] rejects editing to a genuinely future date (400/422)', async () => {
       const id = await logEntry(3);
       const res = await app.inject({
         method: 'PATCH',
         url: `/v1/progress/${id}`,
         headers: { cookie: student.cookie },
-        payload: { entryDate: isoTomorrow() },
+        payload: { entryDate: isoTwoDaysAhead() },
       });
       expect([400, 422]).toContain(res.statusCode);
     });
