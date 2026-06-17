@@ -5,6 +5,8 @@ import helmet from '@fastify/helmet';
 import { ZodError } from 'zod';
 
 import prismaPlugin from './plugins/prisma';
+import sessionAuthPlugin from './plugins/sessionAuth';
+import authRoutes from './routes/auth.routes';
 import { logger } from './utils/logger';
 import { AppError } from './lib/errors';
 
@@ -116,6 +118,7 @@ export async function buildApp(
 
   // Plugins
   await app.register(prismaPlugin);
+  await app.register(sessionAuthPlugin);
 
   // Health route (ops, no auth) — verifies DB connectivity via SELECT 1.
   app.get('/v1/health', async (_request, reply) => {
@@ -136,8 +139,8 @@ export async function buildApp(
     }
   });
 
-  // Domain modules (auth, catalog, selection, goal, progress, dashboard,
-  // reminder, export) are registered here by the Backend Engineer under /v1.
+  // Domain modules registered under the /v1 prefix (architecture.md §4.2).
+  await app.register(authRoutes, { prefix: '/v1' });
 
   return app;
 }
