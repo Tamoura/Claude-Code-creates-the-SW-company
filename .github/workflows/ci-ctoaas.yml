@@ -1,0 +1,143 @@
+name: CI - CTOaaS
+
+on:
+  push:
+    branches: [main, 'foundation/ctoaas', 'feature/ctoaas/**']
+    paths:
+      - 'products/ctoaas/**'
+      - '.github/workflows/ci-ctoaas.yml'
+  pull_request:
+    branches: [main]
+    paths:
+      - 'products/ctoaas/**'
+      - '.github/workflows/ci-ctoaas.yml'
+
+jobs:
+  api-lint-and-typecheck:
+    name: API Lint & Typecheck
+    runs-on: ubuntu-latest
+    defaults:
+      run:
+        working-directory: products/ctoaas/apps/api
+    steps:
+      - uses: actions/checkout@v4
+      - uses: actions/setup-node@v4
+        with:
+          node-version: '20'
+      - run: npm ci
+      - run: npx prisma generate
+      - name: TypeScript check
+        run: npx tsc --noEmit
+      - name: Lint
+        run: npm run lint
+
+  api-test:
+    name: API Tests
+    runs-on: ubuntu-latest
+    services:
+      postgres:
+        image: pgvector/pgvector:pg15
+        env:
+          POSTGRES_DB: ctoaas_test
+          POSTGRES_USER: postgres
+          POSTGRES_PASSWORD: postgres
+        ports:
+          - '5432:5432'
+        options: >-
+          --health-cmd pg_isready
+          --health-interval 10s
+          --health-timeout 5s
+          --health-retries 5
+      redis:
+        image: redis:7-alpine
+        ports:
+          - '6379:6379'
+        options: >-
+          --health-cmd "redis-cli ping"
+          --health-interval 10s
+          --health-timeout 5s
+          --health-retries 5
+    defaults:
+      run:
+        working-directory: products/ctoaas/apps/api
+    steps:
+      - uses: actions/checkout@v4
+      - uses: actions/setup-node@v4
+        with:
+          node-version: '20'
+      - run: npm ci
+      - run: npx prisma generate
+      - name: Run migrations
+        run: npx prisma migrate deploy
+        env:
+          DATABASE_URL: postgresql://postgres:postgres@localhost:5432/ctoaas_test
+      - name: Run tests
+        run: npm test
+        env:
+          DATABASE_URL: postgresql://postgres:postgres@localhost:5432/ctoaas_test
+          REDIS_URL: redis://localhost:6379
+          JWT_SECRET: ci-test-jwt-secret-at-least-32-characters-long
+          JWT_REFRESH_SECRET: ci-test-refresh-secret-at-least-32-chars
+          NODE_ENV: test
+
+  web-build:
+    name: Frontend Build
+    runs-on: ubuntu-latest
+    defaults:
+      run:
+        working-directory: products/ctoaas/apps/web
+    steps:
+      - uses: actions/checkout@v4
+      - uses: actions/setup-node@v4
+        with:
+          node-version: '20'
+      - run: npm ci
+      - name: TypeScript check
+        run: npx tsc --noEmit
+      - name: Lint
+        run: npm run lint
+      - name: Build
+        run: npm run build
+        env:
+          NEXT_PUBLIC_API_URL: http://localhost:5015
+
+  security:
+    name: Security Audit
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v4
+      - uses: actions/setup-node@v4
+        with:
+          node-version: '20'
+      - name: Audit API dependencies
+        working-directory: products/ctoaas/apps/api
+        run: npm audit --audit-level=critical --production
+      - name: Audit Web dependencies
+        working-directory: products/ctoaas/apps/web
+        run: npm audit --audit-level=critical --production
+
+  quality-gate:
+    name: Quality Gate
+    needs: [api-lint-and-typecheck, api-test, web-build, security]
+    runs-on: ubuntu-latest
+    if: always()
+    steps:
+      - name: Verify all jobs succeeded
+        run: |
+          echo "Job results:"
+          echo "  api-lint-and-typecheck: ${{ needs.api-lint-and-typecheck.result }}"
+          echo "  api-test:              ${{ needs.api-test.result }}"
+          echo "  web-build:             ${{ needs.web-build.result }}"
+          echo "  security:              ${{ needs.security.result }}"
+          if [ "${{ needs.api-lint-and-typecheck.result }}" != "success" ] || \
+             [ "${{ needs.api-test.result }}" != "success" ] || \
+             [ "${{ needs.web-build.result }}" != "success" ]; then
+            echo "Quality gate FAILED: one or more core jobs did not succeed"
+            exit 1
+          fi
+          if [ "${{ needs.security.result }}" != "success" ] && \
+             [ "${{ needs.security.result }}" != "skipped" ]; then
+            echo "::error::Security gate FAILED - fix vulnerabilities before merging"
+            exit 1
+          fi
+          echo "All quality gates passed for CTOaaS"

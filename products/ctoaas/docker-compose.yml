@@ -1,0 +1,87 @@
+version: '3.8'
+
+services:
+  db:
+    image: pgvector/pgvector:pg15
+    container_name: ctoaas-postgres
+    ports:
+      - '5433:5432'
+    environment:
+      POSTGRES_DB: ctoaas_dev
+      POSTGRES_USER: postgres
+      POSTGRES_PASSWORD: ${POSTGRES_PASSWORD:-postgres}
+    volumes:
+      - ctoaas_pgdata:/var/lib/postgresql/data
+    healthcheck:
+      test: ['CMD-SHELL', 'pg_isready -U postgres']
+      interval: 10s
+      timeout: 5s
+      retries: 5
+    networks:
+      - ctoaas
+
+  redis:
+    image: redis:7-alpine
+    container_name: ctoaas-redis
+    ports:
+      - '6381:6379'
+    volumes:
+      - ctoaas_redisdata:/data
+    healthcheck:
+      test: ['CMD', 'redis-cli', 'ping']
+      interval: 10s
+      timeout: 5s
+      retries: 5
+    networks:
+      - ctoaas
+
+  api:
+    build:
+      context: ./apps/api
+      dockerfile: Dockerfile
+    container_name: ctoaas-api
+    ports:
+      - '5015:5015'
+    environment:
+      DATABASE_URL: postgresql://postgres:${POSTGRES_PASSWORD:-postgres}@db:5432/ctoaas_dev
+      REDIS_URL: redis://redis:6379
+      JWT_SECRET: ${JWT_SECRET:-change-this-to-a-secure-random-string-at-least-32-chars}
+      PORT: 5015
+      HOST: 0.0.0.0
+      NODE_ENV: development
+      CORS_ORIGIN: http://localhost:3120
+    depends_on:
+      db:
+        condition: service_healthy
+      redis:
+        condition: service_healthy
+    deploy:
+      resources:
+        limits:
+          cpus: '1'
+          memory: 512M
+    networks:
+      - ctoaas
+
+  web:
+    build:
+      context: ./apps/web
+      dockerfile: Dockerfile
+    container_name: ctoaas-web
+    ports:
+      - '3120:3120'
+    environment:
+      NEXT_PUBLIC_API_URL: http://localhost:5015
+      PORT: 3120
+    depends_on:
+      - api
+    networks:
+      - ctoaas
+
+networks:
+  ctoaas:
+    driver: bridge
+
+volumes:
+  ctoaas_pgdata:
+  ctoaas_redisdata:

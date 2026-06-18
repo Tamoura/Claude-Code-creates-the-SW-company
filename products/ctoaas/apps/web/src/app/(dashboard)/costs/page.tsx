@@ -1,148 +1,75 @@
-import { DollarSign, TrendingDown, ArrowRight, Server, Cloud, Cpu } from 'lucide-react';
-import Link from 'next/link';
+"use client";
 
-const spendBreakdown = [
-  { service: 'EC2 (Compute)', amount: 9832, percent: 40, icon: Cpu },
-  { service: 'RDS (Database)', amount: 5892, percent: 24, icon: Server },
-  { service: 'S3 (Storage)', amount: 3687, percent: 15, icon: Cloud },
-  { service: 'Other Services', amount: 5169, percent: 21, icon: Cloud },
-];
+import Link from "next/link";
 
-const savingsOpportunities = [
+const COST_SECTIONS = [
   {
-    title: 'Reserved Instances (Moderate Plan)',
-    savings: '$6,128/month',
-    effort: 'Low',
-    description: '75% RI coverage on steady-state services + Savings Plan for variable workloads.',
+    title: "TCO Calculator",
+    description:
+      "Compare total cost of ownership across technology options. Evaluate upfront costs, recurring expenses, team costs, and scaling factors over a 3-year horizon.",
+    href: "/costs/tco",
+    icon: "M9 7h6m0 10v-3m-3 3h.01M9 17h.01M9 14h.01M12 14h.01M15 11h.01M12 11h.01M9 11h.01M7 21h10a2 2 0 002-2V5a2 2 0 00-2-2H7a2 2 0 00-2 2v14a2 2 0 002 2z",
   },
   {
-    title: 'Right-size over-provisioned instances',
-    savings: '$2,340/month',
-    effort: 'Medium',
-    description: '4 services running at <30% CPU utilization. Downsize from m5.xlarge to m5.large.',
+    title: "Cloud Spend Analysis",
+    description:
+      "Track and analyze your cloud infrastructure costs. Compare spending against industry benchmarks and get AI-powered recommendations for optimization.",
+    href: "/costs/cloud-spend",
+    icon: "M3 15a4 4 0 004 4h9a5 5 0 10-.1-9.999 5.002 5.002 0 10-9.78 2.096A4.001 4.001 0 003 15z",
   },
-  {
-    title: 'S3 Intelligent-Tiering',
-    savings: '$920/month',
-    effort: 'Low',
-    description: '2.1TB in S3 Standard that has <1 access/month. Move to Intelligent-Tiering.',
-  },
-];
+] as const;
 
+/**
+ * Cost analysis hub page with links to TCO calculator and Cloud Spend.
+ * [US-12][US-13][FR-023][FR-027]
+ */
 export default function CostsPage() {
   return (
-    <div className="space-y-8">
-      <div className="flex items-start justify-between">
-        <div>
-          <h1 className="text-h1 text-slate-900">Cost Analysis</h1>
-          <p className="text-body-sm mt-1 text-slate-500">
-            Cloud spend optimization and TCO comparison tools
-          </p>
-        </div>
-        <div className="flex gap-2">
-          <Link
-            href="/costs/tco"
-            className="rounded-[8px] border border-slate-200 bg-white px-4 py-2.5 text-sm font-medium text-slate-700 shadow-ring hover:bg-slate-50"
-          >
-            TCO Calculator
-          </Link>
-          <Link
-            href="/costs/cloud-spend"
-            className="rounded-[8px] bg-brand px-4 py-2.5 text-sm font-medium text-white hover:bg-brand-hover"
-          >
-            Detailed Analysis
-          </Link>
-        </div>
+    <div className="space-y-6">
+      <div>
+        <h1 className="text-2xl font-bold text-foreground">
+          Cost Analysis
+        </h1>
+        <p className="text-muted-foreground mt-1">
+          Evaluate technology investments and optimize cloud spending.
+        </p>
       </div>
 
-      {/* Spend overview */}
-      <div className="grid grid-cols-1 gap-6 lg:grid-cols-3">
-        <div className="rounded-[12px] border border-slate-200 bg-white p-6 shadow-ring">
-          <p className="text-overline text-slate-500">MONTHLY CLOUD SPEND</p>
-          <p className="font-tabular mt-2 text-[48px] font-light leading-[1.08] tracking-[-0.031em] text-slate-950">
-            $24,580
-          </p>
-          <span className="mt-1 inline-flex items-center gap-0.5 text-caption text-success">
-            <TrendingDown className="h-3.5 w-3.5" />
-            -8% from last month
-          </span>
-        </div>
-        <div className="rounded-[12px] border border-slate-200 bg-white p-6 shadow-ring">
-          <p className="text-overline text-slate-500">POTENTIAL SAVINGS</p>
-          <p className="font-tabular mt-2 text-[48px] font-light leading-[1.08] tracking-[-0.031em] text-success">
-            $9,388
-          </p>
-          <span className="mt-1 text-caption text-slate-500">38% of current spend</span>
-        </div>
-        <div className="rounded-[12px] border border-slate-200 bg-white p-6 shadow-ring">
-          <p className="text-overline text-slate-500">COST PER ENGINEER</p>
-          <p className="font-tabular mt-2 text-[48px] font-light leading-[1.08] tracking-[-0.031em] text-slate-950">
-            $492
-          </p>
-          <span className="mt-1 text-caption text-slate-500">Industry avg: $580</span>
-        </div>
-      </div>
-
-      <div className="grid grid-cols-1 gap-8 lg:grid-cols-2">
-        {/* Spend breakdown */}
-        <div className="rounded-[12px] border border-slate-200 bg-white shadow-ring">
-          <div className="border-b border-slate-100 px-6 py-4">
-            <h2 className="text-h3 text-slate-900">Spend Breakdown</h2>
-          </div>
-          <div className="p-6 space-y-4">
-            {spendBreakdown.map((item) => (
-              <div key={item.service} className="flex items-center gap-4">
-                <div className="flex h-10 w-10 shrink-0 items-center justify-center rounded-[8px] bg-brand-light">
-                  <item.icon className="h-5 w-5 text-brand" />
-                </div>
-                <div className="flex-1">
-                  <div className="flex items-center justify-between">
-                    <p className="text-body-sm font-medium text-slate-900">{item.service}</p>
-                    <p className="font-tabular text-body-sm font-semibold text-slate-900">
-                      ${item.amount.toLocaleString()}
-                    </p>
-                  </div>
-                  <div className="mt-1.5 flex items-center gap-2">
-                    <div className="h-1.5 flex-1 rounded-full bg-slate-100">
-                      <div
-                        className="h-1.5 rounded-full bg-brand"
-                        style={{ width: `${item.percent}%` }}
-                      />
-                    </div>
-                    <span className="font-tabular text-caption text-slate-400">{item.percent}%</span>
-                  </div>
-                </div>
+      <div className="grid grid-cols-1 md:grid-cols-2 gap-6">
+        {COST_SECTIONS.map((section) => (
+          <Link
+            key={section.href}
+            href={section.href}
+            className="block rounded-xl border border-border bg-background p-6 hover:shadow-md hover:border-primary-200 focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-primary-500 focus-visible:ring-offset-2 transition-shadow"
+          >
+            <div className="flex items-start gap-4">
+              <div className="w-12 h-12 bg-primary-100 rounded-lg flex items-center justify-center flex-shrink-0">
+                <svg
+                  className="w-6 h-6 text-primary-600"
+                  fill="none"
+                  stroke="currentColor"
+                  viewBox="0 0 24 24"
+                  aria-hidden="true"
+                >
+                  <path
+                    strokeLinecap="round"
+                    strokeLinejoin="round"
+                    strokeWidth={2}
+                    d={section.icon}
+                  />
+                </svg>
               </div>
-            ))}
-          </div>
-        </div>
-
-        {/* Savings opportunities */}
-        <div className="rounded-[12px] border border-slate-200 bg-white shadow-ring">
-          <div className="border-b border-slate-100 px-6 py-4">
-            <h2 className="text-h3 text-slate-900">Savings Opportunities</h2>
-          </div>
-          <div className="divide-y divide-slate-50">
-            {savingsOpportunities.map((opp) => (
-              <div key={opp.title} className="px-6 py-4">
-                <div className="flex items-start justify-between">
-                  <div>
-                    <p className="text-body-sm font-medium text-slate-900">{opp.title}</p>
-                    <p className="text-caption mt-1 text-slate-500">{opp.description}</p>
-                  </div>
-                  <div className="text-right shrink-0 ml-4">
-                    <p className="font-tabular text-body-sm font-semibold text-success">
-                      {opp.savings}
-                    </p>
-                    <span className={`text-micro ${opp.effort === 'Low' ? 'text-success' : 'text-warning'}`}>
-                      {opp.effort} effort
-                    </span>
-                  </div>
-                </div>
+              <div>
+                <h2 className="text-lg font-semibold text-foreground">
+                  {section.title}
+                </h2>
+                <p className="text-sm text-muted-foreground mt-1">
+                  {section.description}
+                </p>
               </div>
-            ))}
-          </div>
-        </div>
+            </div>
+          </Link>
+        ))}
       </div>
     </div>
   );

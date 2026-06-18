@@ -1,0 +1,53 @@
+{
+  "name": "@ctoaas/api",
+  "version": "0.1.0",
+  "private": true,
+  "description": "CTOaaS API - AI-Powered CTO Advisory Platform Backend",
+  "scripts": {
+    "dev": "tsx watch src/index.ts",
+    "build": "tsc",
+    "start": "node dist/index.js",
+    "test": "jest --detectOpenHandles --forceExit",
+    "test:watch": "jest --watch",
+    "test:coverage": "jest --coverage",
+    "db:generate": "prisma generate",
+    "db:migrate": "prisma migrate dev",
+    "db:push": "prisma db push",
+    "db:studio": "prisma studio",
+    "db:seed": "tsx prisma/seed.ts",
+    "db:seed:knowledge": "tsx src/scripts/seed-knowledge.ts",
+    "lint": "eslint src/",
+    "typecheck": "tsc --noEmit"
+  },
+  "dependencies": {
+    "@fastify/cookie": "^11.0.2",
+    "@fastify/cors": "^11.2.0",
+    "@fastify/jwt": "^10.0.0",
+    "@fastify/multipart": "^9.4.0",
+    "@fastify/rate-limit": "^10.3.0",
+    "@prisma/client": "^5.10.0",
+    "bcryptjs": "^3.0.3",
+    "fastify": "^5.7.4",
+    "fastify-plugin": "^5.1.0",
+    "ioredis": "^5.3.2",
+    "pdf-parse": "^2.4.5",
+    "zod": "^3.22.4"
+  },
+  "devDependencies": {
+    "@eslint/js": "^9.39.3",
+    "@swc/core": "^1.15.18",
+    "@swc/jest": "^0.2.39",
+    "@types/bcryptjs": "^2.4.6",
+    "@types/jest": "^29.5.12",
+    "@types/node": "^20.11.16",
+    "@types/pdf-parse": "^1.1.5",
+    "eslint": "^9.39.3",
+    "eslint-plugin-no-secrets": "^1.1.2",
+    "eslint-plugin-security": "^3.0.1",
+    "jest": "^29.7.0",
+    "prisma": "^5.10.0",
+    "tsx": "^4.7.1",
+    "typescript": "^5.3.3",
+    "typescript-eslint": "^8.56.0"
+  }
+}

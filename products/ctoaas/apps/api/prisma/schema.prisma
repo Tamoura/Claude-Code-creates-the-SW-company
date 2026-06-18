@@ -1,0 +1,459 @@
+// CTOaaS Prisma Schema
+// PostgreSQL 15+ with pgvector extension
+// Traces to: US-01..US-14, FR-008, FR-011, FR-017
+//
+// Generated from: products/ctoaas/docs/db-schema.sql
+
+generator client {
+  provider        = "prisma-client-js"
+  previewFeatures = ["postgresqlExtensions"]
+}
+
+datasource db {
+  provider   = "postgresql"
+  url        = env("DATABASE_URL")
+  extensions = [pgvector, uuidOssp(map: "uuid-ossp"), pg_trgm]
+}
+
+// ============================================================
+// ENUMS
+// ============================================================
+
+enum GrowthStage {
+  SEED       @map("seed")
+  SERIES_A   @map("series-a")
+  SERIES_B   @map("series-b")
+  SERIES_C   @map("series-c")
+  GROWTH     @map("growth")
+  ENTERPRISE @map("enterprise")
+
+  @@map("growth_stage")
+}
+
+enum UserRole {
+  CTO        @map("cto")
+  VP_ENG     @map("vp_eng")
+  CO_FOUNDER @map("co_founder")
+  ADMIN      @map("admin")
+
+  @@map("user_role")
+}
+
+enum UserTier {
+  FREE       @map("free")
+  PRO        @map("pro")
+  ENTERPRISE @map("enterprise")
+
+  @@map("user_tier")
+}
+
+enum MessageRole {
+  USER      @map("user")
+  ASSISTANT @map("assistant")
+
+  @@map("message_role")
+}
+
+enum Confidence {
+  HIGH   @map("high")
+  MEDIUM @map("medium")
+  LOW    @map("low")
+
+  @@map("confidence")
+}
+
+enum Feedback {
+  UP   @map("up")
+  DOWN @map("down")
+
+  @@map("feedback")
+}
+
+enum DocStatus {
+  ACTIVE   @map("active")
+  ARCHIVED @map("archived")
+
+  @@map("doc_status")
+}
+
+enum RiskCategory {
+  TECH_DEBT   @map("tech-debt")
+  VENDOR      @map("vendor")
+  COMPLIANCE  @map("compliance")
+  OPERATIONAL @map("operational")
+
+  @@map("risk_category")
+}
+
+enum RiskTrend {
+  IMPROVING @map("improving")
+  STABLE    @map("stable")
+  WORSENING @map("worsening")
+
+  @@map("risk_trend")
+}
+
+enum RiskStatus {
+  ACTIVE    @map("active")
+  MITIGATED @map("mitigated")
+  DISMISSED @map("dismissed")
+
+  @@map("risk_status")
+}
+
+enum CloudProvider {
+  AWS   @map("aws")
+  GCP   @map("gcp")
+  AZURE @map("azure")
+  OTHER @map("other")
+
+  @@map("cloud_provider")
+}
+
+enum ImportSource {
+  MANUAL      @map("manual")
+  CSV         @map("csv")
+  JSON_IMPORT @map("json")
+
+  @@map("import_source")
+}
+
+enum RadarQuadrant {
+  LANGUAGES_FRAMEWORKS       @map("languages-frameworks")
+  PLATFORMS_INFRASTRUCTURE   @map("platforms-infrastructure")
+  TOOLS                      @map("tools")
+  TECHNIQUES                 @map("techniques")
+
+  @@map("radar_quadrant")
+}
+
+enum RadarRing {
+  ADOPT  @map("adopt")
+  TRIAL  @map("trial")
+  ASSESS @map("assess")
+  HOLD   @map("hold")
+
+  @@map("radar_ring")
+}
+
+enum AdrStatus {
+  PROPOSED   @map("proposed")
+  ACCEPTED   @map("accepted")
+  DEPRECATED @map("deprecated")
+  SUPERSEDED @map("superseded")
+
+  @@map("adr_status")
+}
+
+// ============================================================
+// MODELS
+// ============================================================
+
+model Organization {
+  id            String      @id @default(uuid())
+  name          String      @db.VarChar(255)
+  industry      String      @db.VarChar(100)
+  employeeCount Int         @map("employee_count")
+  growthStage   GrowthStage @map("growth_stage")
+  foundedYear   Int?        @map("founded_year")
+  challenges    Json        @default("[]")
+  createdAt     DateTime    @default(now()) @map("created_at") @db.Timestamptz
+  updatedAt     DateTime    @updatedAt @map("updated_at") @db.Timestamptz
+
+  // Relations
+  users            User[]
+  companyProfile   CompanyProfile?
+  riskItems        RiskItem[]
+  cloudSpend       CloudSpend[]
+  userPreferences  UserPreference[]
+  adrs             ArchitectureDecisionRecord[]
+
+  @@index([industry])
+  @@map("organizations")
+}
+
+model User {
+  id                         String    @id @default(uuid())
+  organizationId             String    @map("organization_id")
+  email                      String    @unique @db.VarChar(255)
+  name                       String    @db.VarChar(255)
+  passwordHash               String    @map("password_hash") @db.VarChar(255)
+  role                       UserRole  @default(CTO)
+  emailVerified              Boolean   @default(false) @map("email_verified")
+  verificationToken          String?   @map("verification_token") @db.VarChar(255)
+  verificationTokenExpiresAt DateTime? @map("verification_token_expires_at") @db.Timestamptz
+  failedLoginAttempts        Int       @default(0) @map("failed_login_attempts")
+  lockedUntil                DateTime? @map("locked_until") @db.Timestamptz
+  tier                       UserTier  @default(FREE)
+  dailyMessageCount          Int       @default(0) @map("daily_message_count")
+  dailyMessageResetDate      DateTime? @map("daily_message_reset_date") @db.Date
+  createdAt                  DateTime  @default(now()) @map("created_at") @db.Timestamptz
+  updatedAt                  DateTime  @updatedAt @map("updated_at") @db.Timestamptz
+
+  // Relations
+  organization    Organization     @relation(fields: [organizationId], references: [id], onDelete: Cascade)
+  conversations   Conversation[]
+  tcoComparisons  TcoComparison[]
+  cloudSpend      CloudSpend[]
+  userPreferences UserPreference[]
+  refreshTokens   RefreshToken[]
+  auditLogs       AuditLog[]
+
+  @@index([organizationId])
+  @@index([email])
+  @@index([verificationToken])
+  @@map("users")
+}
+
+model CompanyProfile {
+  id                   String   @id @default(uuid())
+  organizationId       String   @unique @map("organization_id")
+  techStack            Json     @default("{}") @map("tech_stack")
+  cloudProvider        String?  @map("cloud_provider") @db.VarChar(50)
+  architectureNotes    String?  @map("architecture_notes")
+  constraints          String?
+  profileCompleteness  Int      @default(0) @map("profile_completeness")
+  onboardingState      Json?    @default("{\"currentStep\": 1, \"completed\": false}") @map("onboarding_state")
+  createdAt            DateTime @default(now()) @map("created_at") @db.Timestamptz
+  updatedAt            DateTime @updatedAt @map("updated_at") @db.Timestamptz
+
+  // Relations
+  organization Organization @relation(fields: [organizationId], references: [id], onDelete: Cascade)
+
+  @@index([organizationId])
+  @@map("company_profiles")
+}
+
+model Conversation {
+  id             String   @id @default(uuid())
+  userId         String   @map("user_id")
+  title          String?  @db.VarChar(255)
+  summary        String?
+  longTermMemory String?  @map("long_term_memory")
+  messageCount   Int      @default(0) @map("message_count")
+  createdAt      DateTime @default(now()) @map("created_at") @db.Timestamptz
+  updatedAt      DateTime @updatedAt @map("updated_at") @db.Timestamptz
+
+  // Relations
+  user     User      @relation(fields: [userId], references: [id], onDelete: Cascade)
+  messages Message[]
+  adrs     ArchitectureDecisionRecord[]
+
+  @@index([userId])
+  @@index([updatedAt(sort: Desc)])
+  @@map("conversations")
+}
+
+model Message {
+  id             String      @id @default(uuid())
+  conversationId String      @map("conversation_id")
+  role           MessageRole
+  content        String
+  citations      Json?
+  confidence     Confidence?
+  feedback       Feedback?
+  tokenCount     Int?        @map("token_count")
+  createdAt      DateTime    @default(now()) @map("created_at") @db.Timestamptz
+
+  // Relations
+  conversation Conversation @relation(fields: [conversationId], references: [id], onDelete: Cascade)
+
+  @@index([conversationId])
+  @@index([createdAt])
+  @@map("messages")
+}
+
+model KnowledgeDocument {
+  id            String    @id @default(uuid())
+  title         String    @db.VarChar(500)
+  source        String    @db.VarChar(255)
+  author        String?   @db.VarChar(255)
+  publishedDate DateTime? @map("published_date") @db.Date
+  url           String?   @db.VarChar(2048)
+  content       String?
+  category      String    @db.VarChar(100)
+  status        DocStatus @default(ACTIVE)
+  ingestedAt    DateTime  @default(now()) @map("ingested_at") @db.Timestamptz
+  updatedAt     DateTime  @updatedAt @map("updated_at") @db.Timestamptz
+
+  // Relations
+  chunks KnowledgeChunk[]
+
+  @@index([category])
+  @@index([status])
+  @@map("knowledge_documents")
+}
+
+model KnowledgeChunk {
+  id         String                         @id @default(uuid())
+  documentId String                         @map("document_id")
+  content    String
+  embedding  Unsupported("vector(1536)")?
+  tokenCount Int?                           @map("token_count")
+  chunkIndex Int                            @map("chunk_index")
+
+  // Relations
+  document KnowledgeDocument @relation(fields: [documentId], references: [id], onDelete: Cascade)
+
+  @@index([documentId])
+  @@map("knowledge_chunks")
+}
+
+model RiskItem {
+  id              String       @id @default(uuid())
+  organizationId  String       @map("organization_id")
+  category        RiskCategory
+  title           String       @db.VarChar(500)
+  description     String?
+  severity        Int
+  trend           RiskTrend    @default(STABLE)
+  status          RiskStatus   @default(ACTIVE)
+  mitigations     Json         @default("[]")
+  affectedSystems Json         @default("[]") @map("affected_systems")
+  identifiedAt    DateTime     @default(now()) @map("identified_at") @db.Timestamptz
+  updatedAt       DateTime     @updatedAt @map("updated_at") @db.Timestamptz
+
+  // Relations
+  organization Organization @relation(fields: [organizationId], references: [id], onDelete: Cascade)
+
+  @@index([organizationId])
+  @@index([category])
+  @@index([status])
+  @@index([severity(sort: Desc)])
+  @@map("risk_items")
+}
+
+model TcoComparison {
+  id          String   @id @default(uuid())
+  userId      String   @map("user_id")
+  title       String   @db.VarChar(255)
+  options     Json
+  projections Json?
+  aiAnalysis  String?  @map("ai_analysis")
+  createdAt   DateTime @default(now()) @map("created_at") @db.Timestamptz
+  updatedAt   DateTime @updatedAt @map("updated_at") @db.Timestamptz
+
+  // Relations
+  user User @relation(fields: [userId], references: [id], onDelete: Cascade)
+
+  @@index([userId])
+  @@map("tco_comparisons")
+}
+
+model CloudSpend {
+  id             String        @id @default(uuid())
+  userId         String        @map("user_id")
+  organizationId String        @map("organization_id")
+  provider       CloudProvider
+  spendBreakdown Json          @map("spend_breakdown")
+  totalMonthly   Decimal       @map("total_monthly") @db.Decimal(12, 2)
+  benchmarks     Json?
+  recommendations Json?
+  importSource   ImportSource  @default(MANUAL) @map("import_source")
+  periodStart    DateTime      @map("period_start") @db.Date
+  periodEnd      DateTime      @map("period_end") @db.Date
+  createdAt      DateTime      @default(now()) @map("created_at") @db.Timestamptz
+
+  // Relations
+  user         User         @relation(fields: [userId], references: [id], onDelete: Cascade)
+  organization Organization @relation(fields: [organizationId], references: [id], onDelete: Cascade)
+
+  @@index([userId])
+  @@index([organizationId])
+  @@index([periodStart, periodEnd])
+  @@map("cloud_spend")
+}
+
+model TechRadarItem {
+  id                   String        @id @default(uuid())
+  name                 String        @unique @db.VarChar(100)
+  quadrant             RadarQuadrant
+  ring                 RadarRing
+  description          String?
+  rationale            String?
+  isNew                Boolean       @default(false) @map("is_new")
+  relatedTechnologies  Json          @default("[]") @map("related_technologies")
+  createdAt            DateTime      @default(now()) @map("created_at") @db.Timestamptz
+  updatedAt            DateTime      @updatedAt @map("updated_at") @db.Timestamptz
+
+  @@index([quadrant])
+  @@index([ring])
+  @@map("tech_radar_items")
+}
+
+model UserPreference {
+  id              String       @id @default(uuid())
+  userId          String       @map("user_id")
+  organizationId  String       @map("organization_id")
+  preferenceKey   String       @map("preference_key") @db.VarChar(100)
+  preferenceValue String?      @map("preference_value")
+  signalCount     Int          @default(0) @map("signal_count")
+  updatedAt       DateTime     @updatedAt @map("updated_at") @db.Timestamptz
+
+  // Relations
+  user         User         @relation(fields: [userId], references: [id], onDelete: Cascade)
+  organization Organization @relation(fields: [organizationId], references: [id], onDelete: Cascade)
+
+  @@unique([userId, preferenceKey])
+  @@index([userId])
+  @@map("user_preferences")
+}
+
+model RefreshToken {
+  id        String   @id @default(uuid())
+  userId    String   @map("user_id")
+  jti       String   @unique @db.VarChar(255)
+  revoked   Boolean  @default(false)
+  expiresAt DateTime @map("expires_at") @db.Timestamptz
+  createdAt DateTime @default(now()) @map("created_at") @db.Timestamptz
+
+  // Relations
+  user User @relation(fields: [userId], references: [id], onDelete: Cascade)
+
+  @@index([userId])
+  @@index([jti])
+  @@index([expiresAt])
+  @@map("refresh_tokens")
+}
+
+model AuditLog {
+  id         String   @id @default(uuid())
+  userId     String?  @map("user_id")
+  action     String   @db.VarChar(100)
+  entityType String?  @map("entity_type") @db.VarChar(100)
+  entityId   String?  @map("entity_id")
+  metadata   Json     @default("{}")
+  ipAddress  String?  @map("ip_address") @db.VarChar(45)
+  createdAt  DateTime @default(now()) @map("created_at") @db.Timestamptz
+
+  // Relations
+  user User? @relation(fields: [userId], references: [id], onDelete: SetNull)
+
+  @@index([userId])
+  @@index([action])
+  @@index([createdAt(sort: Desc)])
+  @@map("audit_logs")
+}
+
+model ArchitectureDecisionRecord {
+  id              String    @id @default(uuid())
+  organizationId  String    @map("organization_id")
+  title           String    @db.VarChar(500)
+  status          AdrStatus @default(PROPOSED)
+  context         String    @db.Text
+  decision        String    @db.Text
+  consequences    String?   @db.Text
+  alternatives    String?   @db.Text
+  mermaidDiagram  String?   @map("mermaid_diagram") @db.Text
+  conversationId  String?   @map("conversation_id")
+  createdAt       DateTime  @default(now()) @map("created_at") @db.Timestamptz
+  updatedAt       DateTime  @updatedAt @map("updated_at") @db.Timestamptz
+
+  // Relations
+  organization Organization  @relation(fields: [organizationId], references: [id], onDelete: Cascade)
+  conversation Conversation? @relation(fields: [conversationId], references: [id])
+
+  @@index([organizationId])
+  @@index([status])
+  @@map("architecture_decision_records")
+}

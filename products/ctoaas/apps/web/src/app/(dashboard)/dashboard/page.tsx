@@ -1,291 +1,282 @@
+"use client";
+
+import Link from "next/link";
 import {
-  Shield,
-  DollarSign,
   MessageSquare,
-  AlertTriangle,
-  TrendingUp,
-  TrendingDown,
+  Shield,
+  Zap,
+  User,
   ArrowRight,
-  Clock,
-  Brain,
-  CheckCircle2,
-  AlertCircle,
-  Minus,
-} from 'lucide-react';
-import Link from 'next/link';
+  BarChart3,
+  Globe,
+} from "lucide-react";
+import { useConversations } from "@/hooks/useConversations";
+import { useRiskSummary } from "@/hooks/useRisks";
+import { getScoreColor, RISK_CATEGORY_META } from "@/types/risks";
+import type { RiskCategory } from "@/types/risks";
 
-// Mock data — will be replaced by real API calls
-const stats = [
-  {
-    label: 'Risk Score',
-    value: '6.2',
-    trend: '+0.3',
-    trendDir: 'up' as const,
-    icon: Shield,
-    color: 'text-warning',
-    bg: 'bg-warning-light',
-  },
-  {
-    label: 'Monthly Cloud Spend',
-    value: '$24,580',
-    trend: '-8%',
-    trendDir: 'down' as const,
-    icon: DollarSign,
-    color: 'text-success',
-    bg: 'bg-success-light',
-  },
-  {
-    label: 'Advisory Sessions',
-    value: '47',
-    trend: '+12',
-    trendDir: 'up' as const,
-    icon: MessageSquare,
-    color: 'text-brand',
-    bg: 'bg-brand-light',
-  },
-  {
-    label: 'Open Risks',
-    value: '13',
-    trend: '-2',
-    trendDir: 'down' as const,
-    icon: AlertTriangle,
-    color: 'text-error',
-    bg: 'bg-error-light',
-  },
-];
-
-const riskCategories = [
-  { name: 'Tech Debt', count: 5, severity: 'High', color: 'bg-risk-tech-debt', textColor: 'text-risk-tech-debt' },
-  { name: 'Vendor Risk', count: 3, severity: 'Medium', color: 'bg-risk-vendor', textColor: 'text-risk-vendor' },
-  { name: 'Compliance', count: 3, severity: 'High', color: 'bg-risk-compliance', textColor: 'text-risk-compliance' },
-  { name: 'Operational', count: 2, severity: 'Low', color: 'bg-risk-operational', textColor: 'text-risk-operational' },
-];
-
-const recentConversations = [
-  {
-    id: '1',
-    title: 'Should we migrate from AWS to GCP?',
-    time: '2 hours ago',
-    status: 'completed',
-  },
-  {
-    id: '2',
-    title: 'SOC2 compliance readiness assessment',
-    time: '5 hours ago',
-    status: 'completed',
-  },
-  {
-    id: '3',
-    title: 'Kubernetes vs ECS for our team of 4',
-    time: 'Yesterday',
-    status: 'completed',
-  },
-];
-
-const recommendations = [
-  {
-    title: 'Upgrade Node.js to v20 LTS',
-    category: 'Tech Debt',
-    severity: 'high',
-    description: 'Node.js 18 reaches EOL in April 2025. 3 services affected.',
-  },
-  {
-    title: 'Review AWS single-region deployment',
-    category: 'Operational',
-    severity: 'medium',
-    description: 'All services in us-east-1. Consider multi-region for 99.99% SLA.',
-  },
-  {
-    title: 'Implement SBOM for supply chain compliance',
-    category: 'Compliance',
-    severity: 'medium',
-    description: 'Required for enterprise customers under EU Cyber Resilience Act.',
-  },
-];
-
-function SeverityBadge({ severity }: { severity: string }) {
-  const styles = {
-    critical: 'bg-severity-critical text-white',
-    high: 'bg-severity-high text-white',
-    medium: 'bg-severity-medium text-white',
-    low: 'bg-severity-low text-white',
-  };
-
-  return (
-    <span
-      className={`inline-flex items-center rounded-full px-2 py-0.5 text-micro uppercase ${
-        styles[severity as keyof typeof styles] || styles.medium
-      }`}
-    >
-      {severity}
-    </span>
-  );
-}
-
-function TrendIndicator({ value, direction }: { value: string; direction: 'up' | 'down' | 'neutral' }) {
-  if (direction === 'up') {
-    return (
-      <span className="inline-flex items-center gap-0.5 text-caption text-success">
-        <TrendingUp className="h-3.5 w-3.5" />
-        {value}
-      </span>
-    );
-  }
-  if (direction === 'down') {
-    return (
-      <span className="inline-flex items-center gap-0.5 text-caption text-error">
-        <TrendingDown className="h-3.5 w-3.5" />
-        {value}
-      </span>
-    );
-  }
-  return (
-    <span className="inline-flex items-center gap-0.5 text-caption text-slate-400">
-      <Minus className="h-3.5 w-3.5" />
-      {value}
-    </span>
-  );
-}
-
+/**
+ * Main dashboard page with summary cards:
+ * - Recent Conversations
+ * - Risk Posture
+ * - Quick Actions
+ * - Profile Completeness
+ *
+ * [US-04][FR-029]
+ */
 export default function DashboardPage() {
+  const { conversations, isLoading: isLoadingConvs } = useConversations();
+  const { data: riskData, isLoading: isLoadingRisks } = useRiskSummary();
+
+  const recentConversations = conversations.slice(0, 3);
+  const profileCompleteness = 35; // TODO: compute from user profile data
+
   return (
-    <div className="space-y-8">
-      {/* Page header */}
-      <div>
-        <h1 className="text-h1 text-slate-900">Dashboard</h1>
-        <p className="text-body-sm mt-1 text-slate-500">
-          Overview of your technology advisory insights
+    <div>
+      {/* Welcome section */}
+      <div className="mb-8">
+        <h1 className="text-2xl font-bold text-foreground">
+          Welcome to CTOaaS
+        </h1>
+        <p className="text-muted-foreground mt-1">
+          Your AI-powered CTO advisory dashboard. Get strategic guidance
+          tailored to your organization.
         </p>
       </div>
 
-      {/* Stat cards */}
-      <div className="grid grid-cols-1 gap-6 sm:grid-cols-2 lg:grid-cols-4">
-        {stats.map((stat) => (
-          <div
-            key={stat.label}
-            className="rounded-[12px] border border-slate-200 bg-white p-5 shadow-ring"
-          >
-            <div className="flex items-center justify-between">
-              <p className="text-overline text-slate-500">{stat.label}</p>
-              <div className={`${stat.bg} rounded-[8px] p-1.5`}>
-                <stat.icon className={`h-4 w-4 ${stat.color}`} />
-              </div>
-            </div>
-            <p className="font-tabular mt-2 text-[36px] font-semibold leading-[1.15] tracking-[-0.025em] text-slate-900">
-              {stat.value}
-            </p>
-            <TrendIndicator
-              value={`${stat.trend} from last month`}
-              direction={stat.trendDir === 'down' && stat.label !== 'Open Risks' ? 'down' : stat.trendDir === 'down' ? 'up' : 'up'}
+      {/* Summary cards grid */}
+      <div className="grid grid-cols-1 md:grid-cols-2 gap-6">
+        {/* Card 1: Recent Conversations */}
+        <div className="bg-background rounded-xl p-6 shadow-sm border border-border">
+          <div className="flex items-center gap-2 mb-4">
+            <MessageSquare
+              className="w-5 h-5 text-primary-600"
+              aria-hidden="true"
             />
+            <h2 className="text-lg font-semibold text-foreground">
+              Recent Conversations
+            </h2>
           </div>
-        ))}
-      </div>
 
-      {/* Main content grid */}
-      <div className="grid grid-cols-1 gap-8 lg:grid-cols-3">
-        {/* Risk summary - 2 cols */}
-        <div className="lg:col-span-2">
-          <div className="rounded-[12px] border border-slate-200 bg-white shadow-ring">
-            <div className="flex items-center justify-between border-b border-slate-100 px-6 py-4">
-              <h2 className="text-h3 text-slate-900">Risk Overview</h2>
-              <Link
-                href="/risks"
-                className="inline-flex items-center gap-1 text-body-sm font-medium text-brand hover:text-brand-hover"
-              >
-                View all
-                <ArrowRight className="h-3.5 w-3.5" />
-              </Link>
-            </div>
+          {isLoadingConvs && (
+            <p className="text-sm text-muted-foreground">Loading...</p>
+          )}
 
-            {/* Risk category bars */}
-            <div className="p-6">
-              <div className="grid grid-cols-2 gap-4 lg:grid-cols-4">
-                {riskCategories.map((cat) => (
-                  <div
-                    key={cat.name}
-                    className="rounded-[8px] border border-slate-200 p-4"
-                    style={{ borderLeftWidth: '4px', borderLeftColor: `var(--color-risk-${cat.name.toLowerCase().replace(' ', '-')})` }}
+          {!isLoadingConvs && recentConversations.length === 0 && (
+            <p className="text-sm text-muted-foreground">
+              No conversations yet. Start chatting with your AI advisor.
+            </p>
+          )}
+
+          {!isLoadingConvs && recentConversations.length > 0 && (
+            <ul className="space-y-2">
+              {recentConversations.map((conv) => (
+                <li key={conv.id}>
+                  <Link
+                    href={`/chat/${conv.id}`}
+                    className="flex items-center justify-between p-2 rounded-lg hover:bg-muted focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-primary-500 min-h-[44px] transition-colors"
                   >
-                    <p className="text-overline text-slate-500">{cat.name}</p>
-                    <p className="font-tabular mt-1 text-2xl font-semibold tracking-[-0.021em] text-slate-900">
-                      {cat.count}
-                    </p>
-                    <SeverityBadge severity={cat.severity.toLowerCase()} />
-                  </div>
-                ))}
-              </div>
+                    <span className="text-sm text-foreground truncate">
+                      {conv.title}
+                    </span>
+                    <ArrowRight
+                      className="w-4 h-4 text-muted-foreground flex-shrink-0"
+                      aria-hidden="true"
+                    />
+                  </Link>
+                </li>
+              ))}
+            </ul>
+          )}
 
-              {/* Recommendations */}
-              <div className="mt-6">
-                <h3 className="text-body-sm font-medium text-slate-700">Top Recommendations</h3>
-                <div className="mt-3 space-y-3">
-                  {recommendations.map((rec) => (
-                    <div
-                      key={rec.title}
-                      className="flex items-start gap-3 rounded-[8px] border border-slate-100 p-3 transition-colors hover:bg-slate-50"
-                    >
-                      <AlertCircle className="mt-0.5 h-4 w-4 shrink-0 text-warning" />
-                      <div className="min-w-0 flex-1">
-                        <div className="flex items-center gap-2">
-                          <p className="text-body-sm font-medium text-slate-900">{rec.title}</p>
-                          <SeverityBadge severity={rec.severity} />
-                        </div>
-                        <p className="text-caption mt-0.5 text-slate-500">{rec.description}</p>
-                      </div>
+          <Link
+            href="/chat"
+            className="inline-flex items-center gap-1 text-sm text-primary-600 hover:underline mt-3 focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-primary-500 rounded"
+          >
+            View all conversations
+            <ArrowRight className="w-3 h-3" aria-hidden="true" />
+          </Link>
+        </div>
+
+        {/* Card 2: Risk Posture */}
+        <div className="bg-background rounded-xl p-6 shadow-sm border border-border">
+          <div className="flex items-center gap-2 mb-4">
+            <Shield
+              className="w-5 h-5 text-primary-600"
+              aria-hidden="true"
+            />
+            <h2 className="text-lg font-semibold text-foreground">
+              Risk Posture
+            </h2>
+          </div>
+
+          {isLoadingRisks && (
+            <p className="text-sm text-muted-foreground">Loading...</p>
+          )}
+
+          {!isLoadingRisks && riskData && (
+            <div className="space-y-3">
+              {riskData.categories.map((cat) => {
+                const meta =
+                  RISK_CATEGORY_META[cat.category as RiskCategory];
+                const scoreColor = getScoreColor(cat.score);
+                return (
+                  <div
+                    key={cat.category}
+                    className="flex items-center justify-between"
+                  >
+                    <span className="text-sm text-foreground">
+                      {meta?.label ?? cat.category}
+                    </span>
+                    <div className="flex items-center gap-2">
+                      <div
+                        className={`w-3 h-3 rounded-full ${scoreColor.bg} border ${scoreColor.border}`}
+                        aria-label={`Score ${cat.score}`}
+                      />
+                      <span className="text-sm font-medium text-foreground w-6 text-right">
+                        {cat.score}
+                      </span>
                     </div>
-                  ))}
-                </div>
-              </div>
+                  </div>
+                );
+              })}
             </div>
+          )}
+
+          <Link
+            href="/risks"
+            className="inline-flex items-center gap-1 text-sm text-primary-600 hover:underline mt-3 focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-primary-500 rounded"
+          >
+            View risk dashboard
+            <ArrowRight className="w-3 h-3" aria-hidden="true" />
+          </Link>
+        </div>
+
+        {/* Card 3: Quick Actions */}
+        <div className="bg-background rounded-xl p-6 shadow-sm border border-border">
+          <div className="flex items-center gap-2 mb-4">
+            <Zap
+              className="w-5 h-5 text-primary-600"
+              aria-hidden="true"
+            />
+            <h2 className="text-lg font-semibold text-foreground">
+              Quick Actions
+            </h2>
+          </div>
+
+          <div className="grid grid-cols-2 gap-2">
+            <Link
+              href="/chat"
+              aria-label="New Chat"
+              className="flex flex-col items-center gap-1 p-3 rounded-lg border border-border hover:border-primary-200 hover:bg-primary-50 focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-primary-500 min-h-[48px] transition-colors"
+            >
+              <MessageSquare
+                className="w-5 h-5 text-primary-600"
+                aria-hidden="true"
+              />
+              <span className="text-xs font-medium text-foreground">
+                New Chat
+              </span>
+            </Link>
+            <Link
+              href="/risks"
+              aria-label="View Risks"
+              className="flex flex-col items-center gap-1 p-3 rounded-lg border border-border hover:border-primary-200 hover:bg-primary-50 focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-primary-500 min-h-[48px] transition-colors"
+            >
+              <Shield
+                className="w-5 h-5 text-primary-600"
+                aria-hidden="true"
+              />
+              <span className="text-xs font-medium text-foreground">
+                View Risks
+              </span>
+            </Link>
+            <Link
+              href="/costs/tco"
+              aria-label="TCO Calculator"
+              className="flex flex-col items-center gap-1 p-3 rounded-lg border border-border hover:border-primary-200 hover:bg-primary-50 focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-primary-500 min-h-[48px] transition-colors"
+            >
+              <BarChart3
+                className="w-5 h-5 text-primary-600"
+                aria-hidden="true"
+              />
+              <span className="text-xs font-medium text-foreground">
+                TCO Calculator
+              </span>
+            </Link>
+            <Link
+              href="/radar"
+              aria-label="Tech Radar"
+              className="flex flex-col items-center gap-1 p-3 rounded-lg border border-border hover:border-primary-200 hover:bg-primary-50 focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-primary-500 min-h-[48px] transition-colors"
+            >
+              <Globe
+                className="w-5 h-5 text-primary-600"
+                aria-hidden="true"
+              />
+              <span className="text-xs font-medium text-foreground">
+                Tech Radar
+              </span>
+            </Link>
           </div>
         </div>
 
-        {/* Recent conversations - 1 col */}
-        <div>
-          <div className="rounded-[12px] border border-slate-200 bg-white shadow-ring">
-            <div className="flex items-center justify-between border-b border-slate-100 px-6 py-4">
-              <h2 className="text-h3 text-slate-900">Recent Conversations</h2>
-              <Link
-                href="/chat"
-                className="inline-flex items-center gap-1 text-body-sm font-medium text-brand hover:text-brand-hover"
-              >
-                New chat
-                <ArrowRight className="h-3.5 w-3.5" />
-              </Link>
-            </div>
-            <div className="divide-y divide-slate-100">
-              {recentConversations.map((conv) => (
-                <Link
-                  key={conv.id}
-                  href={`/chat/${conv.id}`}
-                  className="flex items-start gap-3 px-6 py-4 transition-colors hover:bg-slate-50"
-                >
-                  <div className="mt-0.5 flex h-8 w-8 shrink-0 items-center justify-center rounded-[8px] bg-brand-light">
-                    <Brain className="h-4 w-4 text-brand" />
-                  </div>
-                  <div className="min-w-0">
-                    <p className="truncate text-body-sm font-medium text-slate-900">
-                      {conv.title}
-                    </p>
-                    <div className="mt-1 flex items-center gap-2">
-                      <Clock className="h-3 w-3 text-slate-400" />
-                      <span className="text-caption text-slate-400">{conv.time}</span>
-                      <CheckCircle2 className="h-3 w-3 text-success" />
-                    </div>
-                  </div>
-                </Link>
-              ))}
-            </div>
-            <div className="border-t border-slate-100 px-6 py-3">
-              <Link
-                href="/chat"
-                className="text-body-sm font-medium text-brand hover:text-brand-hover"
-              >
-                View all conversations
-              </Link>
-            </div>
+        {/* Card 4: Profile Completeness */}
+        <div className="bg-background rounded-xl p-6 shadow-sm border border-border">
+          <div className="flex items-center gap-2 mb-4">
+            <User
+              className="w-5 h-5 text-primary-600"
+              aria-hidden="true"
+            />
+            <h2 className="text-lg font-semibold text-foreground">
+              Profile Completeness
+            </h2>
           </div>
+
+          <div className="space-y-3">
+            <div className="flex items-center justify-between">
+              <span className="text-sm text-muted-foreground">
+                Complete your profile for better recommendations
+              </span>
+              <span className="text-sm font-bold text-foreground">
+                {profileCompleteness}%
+              </span>
+            </div>
+            <div
+              role="progressbar"
+              aria-valuenow={profileCompleteness}
+              aria-valuemin={0}
+              aria-valuemax={100}
+              aria-label="Profile completeness"
+              className="w-full h-2 bg-gray-200 rounded-full overflow-hidden"
+            >
+              <div
+                className="h-full bg-primary-600 rounded-full transition-all duration-300"
+                style={{ width: `${profileCompleteness}%` }}
+              />
+            </div>
+            <ul className="text-xs text-muted-foreground space-y-1">
+              <li className="flex items-center gap-1">
+                <span className="w-1.5 h-1.5 rounded-full bg-green-500" />
+                Company basics completed
+              </li>
+              <li className="flex items-center gap-1">
+                <span className="w-1.5 h-1.5 rounded-full bg-yellow-500" />
+                Tech stack partially set
+              </li>
+              <li className="flex items-center gap-1">
+                <span className="w-1.5 h-1.5 rounded-full bg-gray-300" />
+                Challenges not configured
+              </li>
+            </ul>
+          </div>
+
+          <Link
+            href="/onboarding"
+            className="inline-flex items-center gap-1 text-sm text-primary-600 hover:underline mt-3 focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-primary-500 rounded"
+          >
+            Complete profile
+            <ArrowRight className="w-3 h-3" aria-hidden="true" />
+          </Link>
         </div>
       </div>
     </div>
