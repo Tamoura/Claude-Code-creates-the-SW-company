@@ -1,0 +1,196 @@
+@import "tailwindcss";
+
+/* ============================================================
+   CTOaaS Design Tokens — from DESIGN.md
+   Archetype: Clean Enterprise + Dark Precision
+   ============================================================ */
+
+@theme {
+  /* ---- Brand ---- */
+  --color-brand: #4f46e5;
+  --color-brand-hover: #4338ca;
+  --color-brand-light: #eef2ff;
+  --color-brand-subtle: #c7d2fe;
+
+  /* ---- Semantic ---- */
+  --color-success: #059669;
+  --color-success-light: #ecfdf5;
+  --color-warning: #d97706;
+  --color-warning-light: #fffbeb;
+  --color-error: #dc2626;
+  --color-error-light: #fef2f2;
+  --color-info: #2563eb;
+  --color-info-light: #eff6ff;
+
+  /* ---- Risk Categories ---- */
+  --color-risk-tech-debt: #f59e0b;
+  --color-risk-vendor: #7c3aed;
+  --color-risk-compliance: #2563eb;
+  --color-risk-operational: #e11d48;
+
+  /* ---- Risk Severity ---- */
+  --color-severity-critical: #dc2626;
+  --color-severity-high: #ea580c;
+  --color-severity-medium: #d97706;
+  --color-severity-low: #059669;
+
+  /* ---- Radar Quadrants ---- */
+  --color-radar-languages: #3b82f6;
+  --color-radar-platforms: #10b981;
+  --color-radar-tools: #f59e0b;
+  --color-radar-techniques: #8b5cf6;
+
+  /* ---- Chat (Dark Surfaces) ---- */
+  --color-chat-bg: #0f172a;
+  --color-chat-surface: #1e293b;
+  --color-chat-border: rgba(255, 255, 255, 0.08);
+  --color-chat-text: rgba(255, 255, 255, 0.92);
+  --color-chat-muted: rgba(255, 255, 255, 0.55);
+  --color-chat-citation: #818cf8;
+
+  /* ---- Shadows (Ring-Shadow Strategy) ---- */
+  --shadow-ring: 0 0 0 1px rgba(15, 23, 42, 0.06);
+  --shadow-card-hover: 0 0 0 1px rgba(15, 23, 42, 0.06), 0 4px 8px rgba(15, 23, 42, 0.04);
+  --shadow-dropdown: 0 0 0 1px rgba(15, 23, 42, 0.06), 0 8px 16px rgba(15, 23, 42, 0.08);
+  --shadow-modal: 0 0 0 1px rgba(15, 23, 42, 0.06), 0 16px 32px rgba(15, 23, 42, 0.12);
+  --shadow-toast: 0 0 0 1px rgba(15, 23, 42, 0.06), 0 12px 24px rgba(15, 23, 42, 0.10);
+
+  /* ---- Typography ---- */
+  --font-sans: "Inter", system-ui, -apple-system, sans-serif;
+  --font-mono: "JetBrains Mono", Menlo, Consolas, monospace;
+
+  /* ---- Radii ---- */
+  --radius-component: 8px;
+  --radius-card: 12px;
+  --radius-badge: 9999px;
+
+  /* ---- Animations ---- */
+  --animate-fade-in: fade-in 0.15s ease-out;
+  --animate-slide-up: slide-up 0.2s ease-out;
+  --animate-pulse-dot: pulse-dot 1.5s ease-in-out infinite;
+}
+
+@keyframes fade-in {
+  from { opacity: 0; }
+  to { opacity: 1; }
+}
+
+@keyframes slide-up {
+  from { opacity: 0; transform: translateY(4px); }
+  to { opacity: 1; transform: translateY(0); }
+}
+
+@keyframes pulse-dot {
+  0%, 100% { opacity: 1; transform: scale(1); }
+  50% { opacity: 0.6; transform: scale(1.3); }
+}
+
+/* ---- Base Styles ---- */
+@layer base {
+  html {
+    font-feature-settings: "kern" 1, "liga" 1, "cv01" 1;
+    -webkit-font-smoothing: antialiased;
+    -moz-osx-font-smoothing: grayscale;
+  }
+
+  body {
+    color: #0f172a;
+    background-color: #f8fafc;
+  }
+
+  /* Smooth transitions for interactive elements */
+  button, a, input, select, textarea {
+    transition-property: color, background-color, border-color, box-shadow;
+    transition-duration: 150ms;
+    transition-timing-function: ease;
+  }
+}
+
+/* ---- Utilities ---- */
+@layer utilities {
+  .font-tabular {
+    font-variant-numeric: tabular-nums;
+  }
+
+  /* Typography from DESIGN.md Section 3 */
+  .text-display {
+    font-size: 3rem;
+    line-height: 1.08;
+    letter-spacing: -0.031em;
+    font-weight: 300;
+  }
+
+  .text-h1 {
+    font-size: 2.25rem;
+    line-height: 1.15;
+    letter-spacing: -0.025em;
+    font-weight: 600;
+  }
+
+  .text-h2 {
+    font-size: 1.5rem;
+    line-height: 1.25;
+    letter-spacing: -0.021em;
+    font-weight: 600;
+  }
+
+  .text-h3 {
+    font-size: 1.25rem;
+    line-height: 1.30;
+    letter-spacing: -0.01em;
+    font-weight: 500;
+  }
+
+  .text-body {
+    font-size: 0.9375rem;
+    line-height: 1.60;
+    letter-spacing: 0;
+    font-weight: 400;
+  }
+
+  .text-body-sm {
+    font-size: 0.875rem;
+    line-height: 1.50;
+    letter-spacing: 0.007em;
+    font-weight: 400;
+  }
+
+  .text-caption {
+    font-size: 0.8125rem;
+    line-height: 1.40;
+    letter-spacing: 0.015em;
+    font-weight: 500;
+  }
+
+  .text-micro {
+    font-size: 0.6875rem;
+    line-height: 1.30;
+    letter-spacing: 0.073em;
+    font-weight: 600;
+  }
+
+  .text-overline {
+    font-size: 0.6875rem;
+    line-height: 1.30;
+    letter-spacing: 0.109em;
+    font-weight: 600;
+    text-transform: uppercase;
+  }
+
+  /* Shadow utilities */
+  .shadow-ring {
+    box-shadow: var(--shadow-ring);
+  }
+
+  .shadow-card-hover {
+    box-shadow: var(--shadow-card-hover);
+  }
+
+  .shadow-dropdown {
+    box-shadow: var(--shadow-dropdown);
+  }
+
+  .shadow-modal {
+    box-shadow: var(--shadow-modal);
+  }
+}

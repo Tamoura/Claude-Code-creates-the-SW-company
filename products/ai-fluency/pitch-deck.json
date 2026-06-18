@@ -1,0 +1,120 @@
+{
+  "product": "ai-fluency",
+  "subtitle": "The first platform built on Anthropic's peer-reviewed 4D AI Fluency Framework",
+  "slides": [
+    {
+      "layout": "title",
+      "title": "AI Fluency",
+      "subtitle": "Enterprise AI Readiness Assessment & Development Platform",
+      "tagline": "Measure and grow your organization's AI fluency with behavioral science.",
+      "audiences": ["consumers", "customers", "investors", "founders"]
+    },
+    {
+      "layout": "problem",
+      "heading": "The Problem",
+      "statement": "Organizations are flying blind on AI readiness",
+      "points": [
+        "94% of companies have NOT started AI upskilling programs (PwC) — yet workers with AI skills earn a 56% wage premium",
+        "No standardized measurement — organizations rely on generic quizzes or course completions that don't measure behavioral fluency",
+        "No validated framework — existing tools test AI knowledge, not behavioral competency across real-world tasks",
+        "No personalized remediation — generic training wastes budget; L&D teams cannot demonstrate ROI without pre/post behavioral data",
+        "AI skill relevance degrades every ~2 years — 42% of workers expect AI-driven role changes"
+      ],
+      "audiences": ["investors", "founders"]
+    },
+    {
+      "layout": "solution",
+      "heading": "The Solution",
+      "statement": "The only platform implementing Anthropic's peer-reviewed 4D AI Fluency Framework",
+      "points": [
+        "4-Dimension Assessment — Delegation, Description, Discernment, Diligence with 24 empirically-validated behavioral indicators",
+        "Prevalence-weighted scoring — derived from analysis of 9,830+ real AI conversations for scientific rigor",
+        "Personalized learning paths — AI-curated content targeting each learner's weakest dimensions first",
+        "Longitudinal tracking — reassessment proves improvement and demonstrates training ROI with hard data"
+      ],
+      "audiences": ["investors", "founders", "consumers"]
+    },
+    {
+      "layout": "market",
+      "heading": "Market Opportunity",
+      "tam": { "value": "$2.52T", "label": "AI Training Market (44% YoY growth)" },
+      "sam": { "value": "$15-20B", "label": "Enterprise Skills Assessment" },
+      "som": { "value": "$500K", "label": "Year 1 ARR (20 enterprise customers)" },
+      "audiences": ["investors", "founders"]
+    },
+    {
+      "layout": "feature-grid",
+      "heading": "Product Features",
+      "features": [
+        { "icon": "brain", "title": "4D Assessment", "description": "Delegation, Description, Discernment, Diligence — 24 behavioral indicators" },
+        { "icon": "bar-chart", "title": "Fluency Scoring", "description": "Prevalence-weighted scores from 0-100 per dimension" },
+        { "icon": "book", "title": "Learning Paths", "description": "AI-curated paths: AI Foundations, Prompt Engineering, Critical AI Evaluation" },
+        { "icon": "target", "title": "Gap Detection", "description": "Discernment gap analysis identifies specific fluency weaknesses" },
+        { "icon": "users", "title": "Team Dashboard", "description": "Organization-wide fluency tracking and benchmarking" },
+        { "icon": "clipboard", "title": "Progress Tracking", "description": "Longitudinal assessment with before/after ROI proof" }
+      ],
+      "audiences": ["consumers", "customers", "investors", "founders"]
+    },
+    {
+      "layout": "traction",
+      "heading": "Traction & Progress",
+      "timeline": [
+        { "date": "Q1 2026", "milestone": "PRD complete with full C4 architecture, sequence diagrams, and data model" },
+        { "date": "Q1 2026", "milestone": "MVP built — Registration, Authentication, 4D Assessment, Learning Paths, Dashboard" },
+        { "date": "Q1 2026", "milestone": "20 E2E Playwright tests with full visual coverage across 8 user flows" },
+        { "date": "Q2 2026", "milestone": "Enterprise pilot program — 20 target customers" }
+      ],
+      "audiences": ["investors", "founders"]
+    },
+    {
+      "layout": "business-model",
+      "heading": "Business Model",
+      "model": "Freemium + Enterprise Subscriptions",
+      "tiers": [
+        { "name": "Free", "price": "$0/mo", "features": ["Individual 4D assessment", "Basic fluency score", "3 learning resources"] },
+        { "name": "Professional", "price": "$19/mo", "features": ["Unlimited assessments", "Full learning paths", "Progress tracking"] },
+        { "name": "Team", "price": "$99/mo", "features": ["Up to 50 users", "Team dashboard", "Benchmark reports"] },
+        { "name": "Enterprise", "price": "Custom", "features": ["Unlimited users", "SSO/SCIM", "LTI integration", "Custom dimensions", "API access"] }
+      ],
+      "audiences": ["investors", "founders"]
+    },
+    {
+      "layout": "competitive",
+      "heading": "Competitive Landscape",
+      "axes": { "x": "Assessment Scientific Rigor", "y": "AI Fluency Specialization" },
+      "competitors": [
+        { "name": "iMocha", "position": "mid-x low-y", "note": "Generic AI quizzes, no behavioral framework" },
+        { "name": "Udemy Business", "position": "low-x low-y", "note": "Course completions, no assessment" },
+        { "name": "DataCamp", "position": "mid-x mid-y", "note": "Data skills only, not AI fluency" },
+        { "name": "Coursera Enterprise", "position": "low-x low-y", "note": "Certificate-based, no behavioral scoring" },
+        { "name": "AI Fluency", "position": "high-x high-y", "note": "Peer-reviewed 4D framework + behavioral scoring" }
+      ],
+      "audiences": ["investors", "founders"]
+    },
+    {
+      "layout": "metrics",
+      "heading": "Key Metrics",
+      "metrics": [
+        { "value": "4", "label": "Fluency Dimensions", "trend": "stable" },
+        { "value": "24", "label": "Behavioral Indicators", "trend": "stable" },
+        { "value": "9,830+", "label": "Conversations Analyzed", "trend": "stable" },
+        { "value": "20", "label": "E2E Tests Passing", "trend": "up" },
+        { "value": "8", "label": "User Flows Covered", "trend": "up" },
+        { "value": "25 min", "label": "Assessment Duration", "trend": "stable" }
+      ],
+      "audiences": ["investors", "founders"]
+    },
+    {
+      "layout": "vision",
+      "heading": "Vision",
+      "statement": "Become the global standard for AI fluency measurement and development",
+      "milestones": [
+        "2026: Launch MVP with 4D assessment — 20 enterprise pilots, $500K ARR",
+        "2027: Add team analytics + LTI university integration — 200 organizations, $2M ARR",
+        "2028: Industry benchmarks + API platform — 1,000 organizations, $5M ARR",
+        "2030: The definitive AI readiness platform — embedded in enterprise L&D worldwide"
+      ],
+      "audiences": ["investors", "founders", "consumers"]
+    }
+  ]
+}

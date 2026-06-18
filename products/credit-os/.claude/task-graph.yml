@@ -1,0 +1,59 @@
+# Composable Credit OS — Task Graph (Inception → PRD → Architecture)
+metadata:
+  product: "credit-os"
+  version: "1.0.0"
+  workflow_type: "new-product"
+  created_at: "2026-05-17"
+  brief: "notes/ceo/credit-os-brief.md"
+  ceo_decisions:
+    architecture: "modular-monolith"
+    tenant_model: "single-tenant-multi-tenant-ready"
+    rule_engine: "json-rules-engine"
+    scope: "full-program"
+  traceability:
+    brd_ref: "products/credit-os/docs/PRD.md"
+    epic: "EP-CREDIT-OS-FOUNDATION"
+
+tasks:
+  - id: "BA-01"
+    name: "Conduct Business Analysis"
+    agent: "business-analyst"
+    depends_on: []
+    produces: ["products/credit-os/docs/business-analysis.md"]
+    checkpoint: false
+    status: "completed"
+
+  - id: "SPEC-01"  # completed
+    name: "Create feature specification (/speckit.specify)"
+    agent: "product-manager"
+    depends_on: ["BA-01"]
+    produces: ["products/credit-os/docs/specs/spec.md"]
+    checkpoint: false
+    status: "completed"
+
+  - id: "CLARIFY-01"  # completed
+    name: "Resolve spec ambiguities (/speckit.clarify)"
+    agent: "product-manager"
+    depends_on: ["SPEC-01"]
+    produces: ["products/credit-os/docs/specs/spec.md (clarified)"]
+    checkpoint: false
+    status: "completed"
+
+  - id: "PRD-01"
+    name: "Produce PRD"
+    agent: "product-manager"
+    depends_on: ["CLARIFY-01"]
+    produces: ["products/credit-os/docs/PRD.md"]
+    checkpoint: true   # CEO approval gate
+    status: "completed"
+
+  - id: "ARCH-01"
+    name: "System architecture + ADRs (/speckit.plan)"
+    agent: "architect"
+    depends_on: ["PRD-01"]
+    produces:
+      - "products/credit-os/docs/ARCHITECTURE.md"
+      - "products/credit-os/docs/ADRs/"
+      - "products/credit-os/docs/plan.md"
+    checkpoint: true   # CEO approval gate
+    status: "completed"

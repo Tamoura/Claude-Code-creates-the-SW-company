@@ -1,0 +1,27 @@
+{
+  "name": "credit-os",
+  "version": "0.1.0",
+  "private": true,
+  "description": "Composable Credit OS — meta-driven composable credit operating system for corporate financing",
+  "scripts": {
+    "dev": "concurrently --names api,web --prefix-colors blue,green \"pnpm run dev:api\" \"pnpm run dev:web\"",
+    "dev:api": "cd apps/api && pnpm run dev",
+    "dev:web": "cd apps/web && pnpm run dev",
+    "test": "pnpm run test:api",
+    "test:api": "cd apps/api && pnpm test",
+    "build": "pnpm run build:api",
+    "build:api": "cd apps/api && pnpm run build",
+    "lint": "pnpm run lint:api",
+    "lint:api": "cd apps/api && pnpm run lint --if-present",
+    "typecheck": "pnpm run typecheck:api",
+    "typecheck:api": "cd apps/api && pnpm run typecheck",
+    "depcruise": "cd apps/api && pnpm run depcruise",
+    "db:migrate": "cd apps/api && npx prisma migrate dev",
+    "db:studio": "cd apps/api && npx prisma studio",
+    "db:seed": "cd apps/api && pnpm run db:seed",
+    "test:e2e": "cd e2e && pnpm test"
+  },
+  "devDependencies": {
+    "concurrently": "^9.1.2"
+  }
+}

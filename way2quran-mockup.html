@@ -1,0 +1,933 @@
+<!DOCTYPE html>
+<html lang="ar" dir="rtl">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
+<title>Way2Quran</title>
+<style>
+  @import url('https://fonts.googleapis.com/css2?family=Amiri:wght@400;700&family=Cairo:wght@400;600;700;800&display=swap');
+
+  * { margin: 0; padding: 0; box-sizing: border-box; }
+
+  :root {
+    --green-dark: #1a5c2a;
+    --green-mid: #2d8a4e;
+    --green-light: #4db872;
+    --green-pale: #e8f5ee;
+    --gold: #d4a234;
+    --gold-light: #f0d78c;
+    --bg: #f5f7f5;
+    --card-bg: rgba(255,255,255,0.85);
+    --text-dark: #1a2e1a;
+    --text-mid: #3a5a3a;
+    --text-light: #6a8a6a;
+    --radius: 16px;
+    --radius-sm: 10px;
+  }
+
+  body {
+    font-family: 'Cairo', 'Amiri', sans-serif;
+    background: var(--bg);
+    color: var(--text-dark);
+    min-height: 100vh;
+    overflow-x: hidden;
+  }
+
+  /* ===== NAVBAR ===== */
+  .navbar {
+    display: flex;
+    align-items: center;
+    justify-content: space-between;
+    padding: 12px 40px;
+    background: white;
+    border-bottom: 1px solid #e0e8e0;
+    position: sticky;
+    top: 0;
+    z-index: 100;
+    backdrop-filter: blur(10px);
+  }
+  .navbar .logo {
+    font-size: 20px;
+    font-weight: 800;
+    color: var(--green-dark);
+    letter-spacing: -0.5px;
+  }
+  .navbar .logo span { color: var(--gold); }
+  .nav-links {
+    display: flex;
+    gap: 32px;
+    list-style: none;
+  }
+  .nav-links a {
+    text-decoration: none;
+    color: var(--text-mid);
+    font-weight: 600;
+    font-size: 15px;
+    padding: 6px 0;
+    border-bottom: 2px solid transparent;
+    transition: all 0.2s;
+  }
+  .nav-links a:hover, .nav-links a.active {
+    color: var(--green-dark);
+    border-bottom-color: var(--green-mid);
+  }
+  .search-box {
+    display: flex;
+    align-items: center;
+    gap: 8px;
+    background: var(--green-pale);
+    border-radius: 24px;
+    padding: 8px 16px;
+    min-width: 260px;
+  }
+  .search-box input {
+    border: none;
+    background: transparent;
+    outline: none;
+    font-family: 'Cairo', sans-serif;
+    font-size: 14px;
+    color: var(--text-dark);
+    width: 100%;
+    direction: rtl;
+  }
+  .search-box input::placeholder { color: var(--text-light); }
+  .search-icon {
+    width: 18px; height: 18px;
+    fill: var(--green-mid);
+    flex-shrink: 0;
+  }
+
+  /* ===== HERO ===== */
+  .hero {
+    position: relative;
+    margin: 24px 40px;
+    border-radius: var(--radius);
+    overflow: hidden;
+    background: linear-gradient(135deg, #1a5c2a 0%, #2d8a4e 40%, #4db872 100%);
+    min-height: 320px;
+    display: grid;
+    grid-template-columns: 1fr auto 1fr;
+    align-items: center;
+    padding: 32px 40px;
+  }
+  .hero::before {
+    content: '';
+    position: absolute;
+    inset: 0;
+    background:
+      repeating-conic-gradient(from 0deg at 50% 50%, transparent 0deg, rgba(255,255,255,0.03) 10deg, transparent 20deg),
+      radial-gradient(ellipse at 30% 50%, rgba(255,255,255,0.1) 0%, transparent 60%);
+    pointer-events: none;
+  }
+  /* Concentric circle pattern overlay */
+  .hero::after {
+    content: '';
+    position: absolute;
+    inset: 0;
+    background:
+      radial-gradient(circle at 50% 50%, transparent 30%, rgba(255,255,255,0.02) 31%, transparent 32%),
+      radial-gradient(circle at 50% 50%, transparent 40%, rgba(255,255,255,0.02) 41%, transparent 42%),
+      radial-gradient(circle at 50% 50%, transparent 50%, rgba(255,255,255,0.02) 51%, transparent 52%),
+      radial-gradient(circle at 50% 50%, transparent 60%, rgba(255,255,255,0.02) 61%, transparent 62%),
+      radial-gradient(circle at 50% 50%, transparent 70%, rgba(255,255,255,0.02) 71%, transparent 72%);
+    pointer-events: none;
+  }
+
+  .hero-title {
+    position: relative; z-index: 1;
+    text-align: center;
+  }
+  .hero-title .surah-name {
+    font-family: 'Amiri', serif;
+    font-size: 52px;
+    color: white;
+    text-shadow: 0 2px 20px rgba(0,0,0,0.2);
+    line-height: 1.2;
+  }
+  .hero-title .surah-label {
+    background: rgba(255,255,255,0.15);
+    backdrop-filter: blur(10px);
+    border-radius: var(--radius);
+    padding: 16px 24px;
+    margin-top: 16px;
+    display: inline-block;
+  }
+  .hero-title .surah-label .surah-arabic {
+    font-family: 'Amiri', serif;
+    font-size: 28px;
+    color: white;
+    display: block;
+  }
+  .hero-title .surah-label .surah-english {
+    color: rgba(255,255,255,0.8);
+    font-size: 14px;
+    margin-top: 4px;
+  }
+
+  /* Center speaker */
+  .hero-player {
+    position: relative; z-index: 1;
+    display: flex;
+    flex-direction: column;
+    align-items: center;
+    gap: 16px;
+  }
+  .speaker-icon {
+    width: 160px; height: 160px;
+    border-radius: 50%;
+    background: radial-gradient(circle at 50% 45%, #f0d78c 0%, #d4a234 30%, #8a6a1a 70%, #5a4410 100%);
+    box-shadow:
+      0 0 0 8px rgba(212,162,52,0.3),
+      0 0 0 16px rgba(212,162,52,0.15),
+      0 8px 32px rgba(0,0,0,0.3);
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    position: relative;
+  }
+  .speaker-icon::before {
+    content: '';
+    width: 80px; height: 80px;
+    border-radius: 50%;
+    background: radial-gradient(circle, #3a2a0a 0%, #5a4410 40%, #8a6a1a 100%);
+    box-shadow: inset 0 2px 8px rgba(0,0,0,0.4);
+  }
+  .speaker-icon::after {
+    content: '';
+    position: absolute;
+    width: 30px; height: 30px;
+    border-radius: 50%;
+    background: radial-gradient(circle, #d4a234 0%, #8a6a1a 100%);
+    box-shadow: 0 1px 4px rgba(0,0,0,0.3);
+  }
+  .player-controls {
+    display: flex;
+    gap: 12px;
+    align-items: center;
+  }
+  .player-controls .btn {
+    width: 40px; height: 40px;
+    border-radius: 50%;
+    border: none;
+    cursor: pointer;
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    transition: transform 0.15s;
+  }
+  .player-controls .btn:hover { transform: scale(1.1); }
+  .btn-prev, .btn-next {
+    background: rgba(255,255,255,0.2);
+    color: white;
+  }
+  .btn-play {
+    width: 48px; height: 48px;
+    background: var(--gold);
+    color: white;
+    box-shadow: 0 4px 16px rgba(212,162,52,0.5);
+  }
+
+  /* Right side panels */
+  .hero-side {
+    position: relative; z-index: 1;
+    display: flex;
+    flex-direction: column;
+    gap: 16px;
+    align-self: stretch;
+  }
+  .verse-card {
+    background: rgba(255,255,255,0.12);
+    backdrop-filter: blur(10px);
+    border-radius: var(--radius);
+    padding: 20px;
+    border: 1px solid rgba(255,255,255,0.15);
+    flex: 1;
+  }
+  .verse-card h3 {
+    color: var(--gold-light);
+    font-size: 14px;
+    margin-bottom: 10px;
+    font-weight: 700;
+  }
+  .verse-card .verse-text {
+    font-family: 'Amiri', serif;
+    color: white;
+    font-size: 16px;
+    line-height: 1.8;
+    opacity: 0.9;
+  }
+
+  .new-released {
+    background: rgba(255,255,255,0.12);
+    backdrop-filter: blur(10px);
+    border-radius: var(--radius);
+    padding: 16px;
+    border: 1px solid rgba(255,255,255,0.15);
+  }
+  .new-released h3 {
+    color: var(--gold-light);
+    font-size: 14px;
+    margin-bottom: 12px;
+    font-weight: 700;
+    display: flex;
+    justify-content: space-between;
+    align-items: center;
+  }
+  .new-released h3 .arrow {
+    color: rgba(255,255,255,0.6);
+    cursor: pointer;
+    font-size: 16px;
+  }
+  .new-released-list {
+    display: flex;
+    flex-direction: column;
+    gap: 8px;
+  }
+  .new-released-item {
+    display: flex;
+    align-items: center;
+    gap: 10px;
+    padding: 6px 8px;
+    border-radius: 8px;
+    cursor: pointer;
+    transition: background 0.2s;
+  }
+  .new-released-item:hover { background: rgba(255,255,255,0.1); }
+  .new-released-item.active {
+    background: var(--green-mid);
+  }
+  .new-released-item .thumb {
+    width: 32px; height: 32px;
+    border-radius: 50%;
+    background: rgba(255,255,255,0.2);
+    overflow: hidden;
+  }
+  .new-released-item .info {
+    flex: 1;
+  }
+  .new-released-item .info .name {
+    color: white;
+    font-size: 12px;
+    font-weight: 600;
+  }
+  .new-released-item .info .reciter {
+    color: rgba(255,255,255,0.6);
+    font-size: 11px;
+  }
+
+  /* ===== MAIN CONTENT ===== */
+  .main-content {
+    padding: 0 40px 120px;
+  }
+
+  /* Section headers */
+  .section-header {
+    display: flex;
+    align-items: center;
+    justify-content: space-between;
+    margin: 32px 0 16px;
+  }
+  .section-header h2 {
+    font-size: 20px;
+    font-weight: 700;
+    color: var(--text-dark);
+  }
+  .section-nav {
+    display: flex;
+    gap: 8px;
+  }
+  .section-nav button {
+    width: 32px; height: 32px;
+    border-radius: 50%;
+    border: 1px solid #d0d8d0;
+    background: white;
+    cursor: pointer;
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    color: var(--text-mid);
+    transition: all 0.2s;
+  }
+  .section-nav button:hover {
+    background: var(--green-pale);
+    border-color: var(--green-mid);
+    color: var(--green-dark);
+  }
+
+  /* ===== RECITERS ===== */
+  .reciters-scroll {
+    display: flex;
+    gap: 24px;
+    overflow-x: auto;
+    padding-bottom: 8px;
+    scrollbar-width: none;
+  }
+  .reciters-scroll::-webkit-scrollbar { display: none; }
+
+  .reciter-card {
+    display: flex;
+    flex-direction: column;
+    align-items: center;
+    gap: 8px;
+    min-width: 90px;
+    cursor: pointer;
+  }
+  .reciter-avatar {
+    width: 72px; height: 72px;
+    border-radius: 50%;
+    background: linear-gradient(135deg, #e0e8e0, #c8d8c8);
+    overflow: hidden;
+    position: relative;
+    border: 3px solid white;
+    box-shadow: 0 2px 8px rgba(0,0,0,0.1);
+  }
+  .reciter-avatar img {
+    width: 100%; height: 100%;
+    object-fit: cover;
+  }
+  /* Placeholder for avatar */
+  .reciter-avatar::before {
+    content: '';
+    position: absolute;
+    inset: 0;
+    background: linear-gradient(135deg, #c8d8c8 0%, #a8c0a8 100%);
+    display: flex;
+    align-items: center;
+    justify-content: center;
+  }
+  .reciter-avatar::after {
+    content: '';
+    position: absolute;
+    bottom: 0; left: 50%;
+    transform: translateX(-50%);
+    width: 40px; height: 40px;
+    border-radius: 50%;
+    background: #8aaa8a;
+    top: 15px;
+  }
+  .reciter-name {
+    font-size: 12px;
+    font-weight: 600;
+    color: var(--text-dark);
+    text-align: center;
+    white-space: nowrap;
+  }
+  .reciter-sub {
+    font-size: 10px;
+    color: var(--text-light);
+    text-align: center;
+  }
+  .reciter-play {
+    width: 24px; height: 24px;
+    border-radius: 50%;
+    background: var(--gold);
+    border: none;
+    cursor: pointer;
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    box-shadow: 0 2px 6px rgba(212,162,52,0.4);
+    transition: transform 0.15s;
+  }
+  .reciter-play:hover { transform: scale(1.15); }
+  .reciter-play svg { width: 10px; height: 10px; fill: white; }
+
+  /* ===== SURAH SPOTLIGHTS ===== */
+  .spotlights-scroll {
+    display: flex;
+    gap: 16px;
+    overflow-x: auto;
+    padding-bottom: 8px;
+    scrollbar-width: none;
+  }
+  .spotlights-scroll::-webkit-scrollbar { display: none; }
+
+  .spotlight-card {
+    min-width: 160px;
+    border-radius: var(--radius-sm);
+    overflow: hidden;
+    background: var(--green-dark);
+    position: relative;
+    cursor: pointer;
+    transition: transform 0.2s;
+  }
+  .spotlight-card:hover { transform: translateY(-4px); }
+  .spotlight-img {
+    width: 100%; height: 100px;
+    background: linear-gradient(135deg, #1a5c2a, #2d8a4e);
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    position: relative;
+  }
+  .spotlight-img .speaker-sm {
+    width: 48px; height: 48px;
+    border-radius: 50%;
+    background: radial-gradient(circle, #d4a234 0%, #8a6a1a 100%);
+    box-shadow: 0 2px 8px rgba(0,0,0,0.3);
+  }
+  .spotlight-info {
+    padding: 10px 12px;
+    background: var(--green-dark);
+  }
+  .spotlight-info .name {
+    font-family: 'Amiri', serif;
+    color: white;
+    font-size: 14px;
+  }
+  .spotlight-info .sub {
+    color: rgba(255,255,255,0.6);
+    font-size: 11px;
+    margin-top: 2px;
+  }
+
+  /* ===== BOTTOM PLAYER ===== */
+  .bottom-player {
+    position: fixed;
+    bottom: 20px;
+    left: 50%;
+    transform: translateX(-50%);
+    display: flex;
+    gap: 16px;
+    z-index: 200;
+  }
+  .mini-player {
+    background: rgba(255,255,255,0.92);
+    backdrop-filter: blur(20px);
+    border-radius: var(--radius);
+    padding: 16px 20px;
+    display: flex;
+    align-items: center;
+    gap: 16px;
+    box-shadow: 0 8px 32px rgba(0,0,0,0.15), 0 2px 8px rgba(0,0,0,0.1);
+    border: 1px solid rgba(255,255,255,0.5);
+    min-width: 320px;
+  }
+  .mini-player .album-art {
+    width: 48px; height: 48px;
+    border-radius: 8px;
+    background: var(--green-dark);
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    flex-shrink: 0;
+  }
+  .mini-player .album-art .quran-text {
+    font-family: 'Amiri', serif;
+    color: var(--gold-light);
+    font-size: 16px;
+  }
+  .mini-player .track-info {
+    flex: 1;
+    min-width: 0;
+  }
+  .mini-player .track-name {
+    font-family: 'Amiri', serif;
+    font-size: 14px;
+    font-weight: 700;
+    color: var(--text-dark);
+    white-space: nowrap;
+    overflow: hidden;
+    text-overflow: ellipsis;
+  }
+  .mini-player .track-time {
+    font-size: 11px;
+    color: var(--text-light);
+    margin-top: 2px;
+  }
+  .progress-bar {
+    width: 100%;
+    height: 4px;
+    background: #e0e8e0;
+    border-radius: 2px;
+    margin-top: 6px;
+    position: relative;
+    overflow: hidden;
+  }
+  .progress-bar .fill {
+    position: absolute;
+    top: 0; right: 0;
+    height: 100%;
+    width: 35%;
+    background: var(--green-mid);
+    border-radius: 2px;
+  }
+  .mini-controls {
+    display: flex;
+    gap: 8px;
+    align-items: center;
+  }
+  .mini-controls .ctrl-btn {
+    width: 32px; height: 32px;
+    border-radius: 50%;
+    border: none;
+    cursor: pointer;
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    background: transparent;
+    color: var(--text-mid);
+    transition: all 0.15s;
+  }
+  .mini-controls .ctrl-btn:hover {
+    background: var(--green-pale);
+    color: var(--green-dark);
+  }
+  .mini-controls .ctrl-play {
+    width: 36px; height: 36px;
+    background: var(--gold);
+    color: white;
+    box-shadow: 0 2px 8px rgba(212,162,52,0.4);
+  }
+  .mini-controls .ctrl-play:hover {
+    background: #c49224;
+  }
+
+  /* Quran Tiles label */
+  .quran-tiles-badge {
+    position: absolute;
+    top: -10px;
+    left: 50%;
+    transform: translateX(-50%);
+    background: var(--gold);
+    color: white;
+    font-size: 10px;
+    font-weight: 700;
+    padding: 3px 12px;
+    border-radius: 10px;
+    white-space: nowrap;
+  }
+
+  /* Playlist panel */
+  .playlist-panel {
+    background: rgba(255,255,255,0.92);
+    backdrop-filter: blur(20px);
+    border-radius: var(--radius);
+    padding: 16px 20px;
+    box-shadow: 0 8px 32px rgba(0,0,0,0.15), 0 2px 8px rgba(0,0,0,0.1);
+    border: 1px solid rgba(255,255,255,0.5);
+    min-width: 200px;
+  }
+  .playlist-panel h4 {
+    font-size: 14px;
+    font-weight: 700;
+    color: var(--text-dark);
+    margin-bottom: 12px;
+    display: flex;
+    align-items: center;
+    justify-content: space-between;
+  }
+  .playlist-panel h4 .toggle {
+    cursor: pointer;
+    color: var(--text-light);
+    font-size: 18px;
+  }
+  .playlist-item {
+    padding: 8px 10px;
+    border-radius: 8px;
+    font-size: 13px;
+    color: var(--text-mid);
+    cursor: pointer;
+    transition: background 0.2s;
+    margin-bottom: 4px;
+  }
+  .playlist-item:hover { background: var(--green-pale); }
+  .playlist-item.active {
+    background: var(--gold);
+    color: white;
+    font-weight: 600;
+  }
+
+  /* ===== WAVE PATTERN (background) ===== */
+  .wave-bg {
+    position: fixed;
+    inset: 0;
+    z-index: -1;
+    overflow: hidden;
+    opacity: 0.3;
+  }
+  .wave-bg::before {
+    content: '';
+    position: absolute;
+    width: 200%; height: 200%;
+    top: -50%; left: -50%;
+    background:
+      repeating-radial-gradient(circle at 50% 50%, transparent 0px, transparent 40px, rgba(77,184,114,0.05) 41px, transparent 42px);
+  }
+
+  /* ===== SVG icons inline ===== */
+  .icon { display: inline-flex; align-items: center; justify-content: center; }
+</style>
+</head>
+<body>
+
+<div class="wave-bg"></div>
+
+<!-- NAVBAR -->
+<nav class="navbar">
+  <div class="logo">Way2<span>Quran</span></div>
+  <ul class="nav-links">
+    <li><a href="#" class="active">الرئيسية</a></li>
+    <li><a href="#">المصاحف</a></li>
+    <li><a href="#">القراء</a></li>
+    <li><a href="#">التلاوات</a></li>
+  </ul>
+  <div class="search-box">
+    <svg class="search-icon" viewBox="0 0 24 24"><path d="M15.5 14h-.79l-.28-.27A6.47 6.47 0 0 0 16 9.5 6.5 6.5 0 1 0 9.5 16c1.61 0 3.09-.59 4.23-1.57l.27.28v.79l5 4.99L20.49 19l-4.99-5zm-6 0C7.01 14 5 11.99 5 9.5S7.01 5 9.5 5 14 7.01 14 9.5 11.99 14 9.5 14z"/></svg>
+    <input type="text" placeholder="ابحث عن سورة أو قارئ">
+  </div>
+</nav>
+
+<!-- HERO -->
+<section class="hero">
+  <div class="hero-title">
+    <div class="surah-name">سورة القرن</div>
+    <div class="surah-label">
+      <span class="surah-arabic">سورة العشر القرن</span>
+      <span class="surah-english">Surah of the Day</span>
+    </div>
+  </div>
+
+  <div class="hero-player">
+    <div class="speaker-icon"></div>
+    <div class="player-controls">
+      <button class="btn btn-next">
+        <svg width="16" height="16" fill="white" viewBox="0 0 24 24"><path d="M6 18l8.5-6L6 6v12zM16 6v12h2V6h-2z"/></svg>
+      </button>
+      <button class="btn btn-play">
+        <svg width="20" height="20" fill="white" viewBox="0 0 24 24"><path d="M6 19h4V5H6v14zm8-14v14h4V5h-4z"/></svg>
+      </button>
+      <button class="btn btn-prev">
+        <svg width="16" height="16" fill="white" viewBox="0 0 24 24"><path d="M6 6h2v12H6zm3.5 6l8.5 6V6z"/></svg>
+      </button>
+    </div>
+  </div>
+
+  <div class="hero-side">
+    <div class="verse-card">
+      <h3>Verse of the Day</h3>
+      <p class="verse-text">
+        فَاللَّهُ خَيْرٌ حَافِظًا ۖ وَهُوَ أَرْحَمُ الرَّاحِمِينَ ۝
+        اللَّهُمَّ اغْفِرْ لِي وَلِوَالِدَيَّ وَلِلْمُؤْمِنِينَ
+        يَوْمَ يَقُومُ الْحِسَابُ
+      </p>
+    </div>
+
+    <div class="new-released">
+      <h3>
+        New Released
+        <span class="arrow">‹ ›</span>
+      </h3>
+      <div class="new-released-list">
+        <div class="new-released-item">
+          <div class="thumb"></div>
+          <div class="info">
+            <div class="name">معالي المعلي</div>
+            <div class="reciter">سورة البقرة</div>
+          </div>
+        </div>
+        <div class="new-released-item">
+          <div class="thumb"></div>
+          <div class="info">
+            <div class="name">معالي المعلي</div>
+            <div class="reciter">سورة آل عمران</div>
+          </div>
+        </div>
+        <div class="new-released-item active">
+          <div class="thumb"></div>
+          <div class="info">
+            <div class="name">معالي المعلي</div>
+            <div class="reciter">سورة النساء</div>
+          </div>
+        </div>
+      </div>
+    </div>
+  </div>
+</section>
+
+<!-- RECITERS -->
+<div class="main-content">
+  <div class="section-header">
+    <h2>Reciters</h2>
+    <div class="section-nav">
+      <button>‹</button>
+      <button>›</button>
+    </div>
+  </div>
+
+  <div class="reciters-scroll">
+    <div class="reciter-card">
+      <div class="reciter-avatar"></div>
+      <span class="reciter-name">معالي المعلي</span>
+      <span class="reciter-sub">Samad Hakeem</span>
+      <button class="reciter-play">
+        <svg viewBox="0 0 24 24"><path d="M8 5v14l11-7z"/></svg>
+      </button>
+    </div>
+    <div class="reciter-card">
+      <div class="reciter-avatar"></div>
+      <span class="reciter-name">معالي المعلي</span>
+      <span class="reciter-sub">Samad Saleem</span>
+      <button class="reciter-play">
+        <svg viewBox="0 0 24 24"><path d="M8 5v14l11-7z"/></svg>
+      </button>
+    </div>
+    <div class="reciter-card">
+      <div class="reciter-avatar"></div>
+      <span class="reciter-name">معالي المعلي</span>
+      <span class="reciter-sub">Jamal Saleem</span>
+      <button class="reciter-play">
+        <svg viewBox="0 0 24 24"><path d="M8 5v14l11-7z"/></svg>
+      </button>
+    </div>
+    <div class="reciter-card">
+      <div class="reciter-avatar"></div>
+      <span class="reciter-name">معالي المعلي</span>
+      <span class="reciter-sub">Samad Mutasem</span>
+      <button class="reciter-play">
+        <svg viewBox="0 0 24 24"><path d="M8 5v14l11-7z"/></svg>
+      </button>
+    </div>
+    <div class="reciter-card">
+      <div class="reciter-avatar"></div>
+      <span class="reciter-name">معالي المعلي</span>
+      <span class="reciter-sub">Yussef Al-Rashid</span>
+      <button class="reciter-play">
+        <svg viewBox="0 0 24 24"><path d="M8 5v14l11-7z"/></svg>
+      </button>
+    </div>
+    <div class="reciter-card">
+      <div class="reciter-avatar"></div>
+      <span class="reciter-name">معالي المعلي</span>
+      <span class="reciter-sub">Faisal Al-Aziz</span>
+      <button class="reciter-play">
+        <svg viewBox="0 0 24 24"><path d="M8 5v14l11-7z"/></svg>
+      </button>
+    </div>
+    <div class="reciter-card">
+      <div class="reciter-avatar"></div>
+      <span class="reciter-name">معالي المعلي</span>
+      <span class="reciter-sub">Ahmad Qasem</span>
+      <button class="reciter-play">
+        <svg viewBox="0 0 24 24"><path d="M8 5v14l11-7z"/></svg>
+      </button>
+    </div>
+    <div class="reciter-card">
+      <div class="reciter-avatar"></div>
+      <span class="reciter-name">معالي المعلي</span>
+      <span class="reciter-sub">Kareem Ibrahim</span>
+      <button class="reciter-play">
+        <svg viewBox="0 0 24 24"><path d="M8 5v14l11-7z"/></svg>
+      </button>
+    </div>
+    <div class="reciter-card">
+      <div class="reciter-avatar"></div>
+      <span class="reciter-name">معالي المعلي</span>
+      <span class="reciter-sub">Mustafa Osman</span>
+      <button class="reciter-play">
+        <svg viewBox="0 0 24 24"><path d="M8 5v14l11-7z"/></svg>
+      </button>
+    </div>
+    <div class="reciter-card">
+      <div class="reciter-avatar"></div>
+      <span class="reciter-name">المعلي</span>
+      <span class="reciter-sub">Samad</span>
+      <button class="reciter-play">
+        <svg viewBox="0 0 24 24"><path d="M8 5v14l11-7z"/></svg>
+      </button>
+    </div>
+  </div>
+
+  <!-- SURAH SPOTLIGHTS -->
+  <div class="section-header">
+    <h2>Surah Spotlights</h2>
+    <div class="section-nav">
+      <button>‹</button>
+      <button>›</button>
+    </div>
+  </div>
+
+  <div class="spotlights-scroll">
+    <div class="spotlight-card">
+      <div class="spotlight-img"><div class="speaker-sm"></div></div>
+      <div class="spotlight-info">
+        <div class="name">سورة البقرة</div>
+        <div class="sub">Al-Baqarah</div>
+      </div>
+    </div>
+    <div class="spotlight-card">
+      <div class="spotlight-img"><div class="speaker-sm"></div></div>
+      <div class="spotlight-info">
+        <div class="name">سورة آل عمران</div>
+        <div class="sub">Ali 'Imran</div>
+      </div>
+    </div>
+    <div class="spotlight-card">
+      <div class="spotlight-img"><div class="speaker-sm"></div></div>
+      <div class="spotlight-info">
+        <div class="name">سورة النساء</div>
+        <div class="sub">An-Nisa</div>
+      </div>
+    </div>
+    <div class="spotlight-card">
+      <div class="spotlight-img"><div class="speaker-sm"></div></div>
+      <div class="spotlight-info">
+        <div class="name">سورة المائدة</div>
+        <div class="sub">Al-Ma'idah</div>
+      </div>
+    </div>
+    <div class="spotlight-card">
+      <div class="spotlight-img"><div class="speaker-sm"></div></div>
+      <div class="spotlight-info">
+        <div class="name">سورة الأنعام</div>
+        <div class="sub">Al-An'am</div>
+      </div>
+    </div>
+    <div class="spotlight-card">
+      <div class="spotlight-img"><div class="speaker-sm"></div></div>
+      <div class="spotlight-info">
+        <div class="name">سورة الأعراف</div>
+        <div class="sub">Al-A'raf</div>
+      </div>
+    </div>
+  </div>
+</div>
+
+<!-- BOTTOM PLAYER -->
+<div class="bottom-player">
+  <div class="mini-player" style="position: relative;">
+    <div class="quran-tiles-badge">Quran Tiles</div>
+    <div class="album-art">
+      <span class="quran-text">القرآن</span>
+    </div>
+    <div class="track-info">
+      <div class="track-name">سورة الغاشية</div>
+      <div class="track-time">02:45</div>
+      <div class="progress-bar"><div class="fill"></div></div>
+    </div>
+    <div class="mini-controls">
+      <button class="ctrl-btn">
+        <svg width="14" height="14" fill="currentColor" viewBox="0 0 24 24"><path d="M6 18l8.5-6L6 6v12z"/></svg>
+      </button>
+      <button class="ctrl-btn ctrl-play">
+        <svg width="16" height="16" fill="currentColor" viewBox="0 0 24 24"><path d="M6 19h4V5H6v14zm8-14v14h4V5h-4z"/></svg>
+      </button>
+      <button class="ctrl-btn">
+        <svg width="14" height="14" fill="currentColor" viewBox="0 0 24 24"><path d="M6 6h2v12H6zm3.5 6l8.5 6V6z"/></svg>
+      </button>
+    </div>
+  </div>
+
+  <div class="playlist-panel">
+    <h4>
+      Playlist
+      <span class="toggle">⌃</span>
+    </h4>
+    <div class="playlist-item active">Playlist 01</div>
+    <div class="playlist-item">Playlist 02</div>
+    <div class="playlist-item">Playlist 03</div>
+  </div>
+</div>
+
+</body>
+</html>

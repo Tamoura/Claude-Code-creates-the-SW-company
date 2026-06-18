@@ -1,0 +1,565 @@
+// Composable Credit OS — Prisma schema
+//
+// 19 models: the 16 ENT entities (ENT-01..16) + VersionHistory + IdempotencyKey.
+// Storage model: relational columns for identity / references / lifecycle /
+// tenancy / versioning; JSONB for open-ended config payloads (ADR-003).
+//
+// Conventions (ARCHITECTURE.md §4.2):
+//  - `tenantId` on every entity; composite indexes lead with it (ADR-004).
+//  - Versioned entities carry an integer `version` + a `lifecycleStatus`.
+//  - Every mutable row carries an integer `revision` for optimistic concurrency.
+//  - `audit_event` is append-only — no update/delete path through the app
+//    (a raw-SQL migration revokes UPDATE/DELETE for the app role).
+//
+// Full schema documentation lives in docs/data-model.md (Phase 1 deliverable).
+
+generator client {
+  provider = "prisma-client-js"
+}
+
+datasource db {
+  provider = "postgresql"
+  url      = env("DATABASE_URL")
+}
+
+// ─────────────────────────────────────────────────────────────────────────────
+// Enums
+// ─────────────────────────────────────────────────────────────────────────────
+
+/// Lifecycle of a versioned configuration object.
+enum LifecycleStatus {
+  DRAFT
+  PUBLISHED
+  DEPRECATED
+  RETIRED
+}
+
+/// Lifecycle of a Data Element (ENT-03) — distinct from PUBLISHED config.
+enum DataElementStatus {
+  DRAFT
+  ACTIVE
+  DEPRECATED
+  RETIRED
+}
+
+/// Workflow stage classification.
+enum StageType {
+  MANUAL
+  AUTOMATED
+  APPROVAL
+  EXCEPTION
+}
+
+/// Typed document requirement (FR-033).
+enum DocumentType {
+  MANDATORY
+  CONDITIONAL
+  GENERATED
+  UPLOADED
+  SIGNED
+}
+
+/// Connector operating mode — v1 is sandbox-only (addendum Clarifications).
+enum ConnectorMode {
+  SANDBOX
+  LIVE
+}
+
+/// Publication bundle lifecycle state machine (FR-043..046).
+enum BundleStatus {
+  DRAFT
+  VALIDATED
+  APPROVED
+  RELEASED
+  ROLLED_BACK
+}
+
+/// Integrity validation outcome (FR-017).
+enum ValidationResult {
+  PASS
+  PASS_WITH_WARNINGS
+  FAIL
+}
+
+/// Runtime case status (FR-047..051).
+enum RuntimeCaseStatus {
+  OPEN
+  APPROVED
+  REJECTED
+  ESCALATED
+}
+
+// ─────────────────────────────────────────────────────────────────────────────
+// ENT-01 — Product
+// ─────────────────────────────────────────────────────────────────────────────
+
+model Product {
+  id              String          @id @default(uuid()) @db.Uuid
+  tenantId        String          @db.Uuid
+  name            String
+  /// Self-referential template inheritance (FR-022).
+  baseTemplateId  String?         @db.Uuid
+  baseTemplate    Product?        @relation("ProductTemplate", fields: [baseTemplateId], references: [id])
+  derivedProducts Product[]       @relation("ProductTemplate")
+  lifecycleStatus LifecycleStatus @default(DRAFT)
+  revision        Int             @default(0)
+  createdAt       DateTime        @default(now())
+  updatedAt       DateTime        @updatedAt
+
+  versions ProductVersion[]
+
+  @@index([tenantId, name])
+  @@index([tenantId, lifecycleStatus])
+  @@index([baseTemplateId])
+  @@map("product")
+}
+
+// ─────────────────────────────────────────────────────────────────────────────
+// ENT-02 — ProductVersion
+// ─────────────────────────────────────────────────────────────────────────────
+
+model ProductVersion {
+  id                   String          @id @default(uuid()) @db.Uuid
+  tenantId             String          @db.Uuid
+  productId            String          @db.Uuid
+  product              Product         @relation(fields: [productId], references: [id])
+  /// Monotonic version number (LLD-20).
+  version              Int
+  /// Open-ended commercial config — Zod-validated at the service layer.
+  commercialAttributes Json            @default("{}")
+  lifecycleStatus      LifecycleStatus @default(DRAFT)
+  revision             Int             @default(0)
+  createdAt            DateTime        @default(now())
+  updatedAt            DateTime        @updatedAt
+
+  bundles PublicationBundle[]
+
+  @@unique([tenantId, productId, version])
+  @@index([tenantId, lifecycleStatus])
+  @@map("product_version")
+}
+
+// ─────────────────────────────────────────────────────────────────────────────
+// ENT-03 — DataElement
+// ─────────────────────────────────────────────────────────────────────────────
+
+model DataElement {
+  id              String            @id @default(uuid()) @db.Uuid
+  tenantId        String            @db.Uuid
+  name            String
+  definition      String
+  type            String
+  format          String?
+  owner           String
+  lifecycleStatus DataElementStatus @default(DRAFT)
+  version         Int               @default(1)
+  revision        Int               @default(0)
+  createdAt       DateTime          @default(now())
+  updatedAt       DateTime          @updatedAt
+
+  formFields FormField[]
+
+  @@index([tenantId, name])
+  @@index([tenantId, lifecycleStatus])
+  @@map("data_element")
+}
+
+// ─────────────────────────────────────────────────────────────────────────────
+// ENT-04 — RuleSet
+// ─────────────────────────────────────────────────────────────────────────────
+
+model RuleSet {
+  id              String          @id @default(uuid()) @db.Uuid
+  tenantId        String          @db.Uuid
+  name            String
+  version         Int             @default(1)
+  /// RuleSet metadata (json-rules-engine conditions) — Zod-validated.
+  conditions      Json            @default("{}")
+  /// Data Element ids referenced as rule inputs (FR-026, BR-04).
+  inputRefs       Json            @default("[]")
+  lifecycleStatus LifecycleStatus @default(DRAFT)
+  revision        Int             @default(0)
+  createdAt       DateTime        @default(now())
+  updatedAt       DateTime        @updatedAt
+
+  workflowStages       WorkflowStage[]
+  transitions          Transition[]
+  documentRequirements DocumentRequirement[]
+
+  @@index([tenantId, name])
+  @@index([tenantId, lifecycleStatus])
+  @@map("rule_set")
+}
+
+// ─────────────────────────────────────────────────────────────────────────────
+// ENT-05 — WorkflowDefinition
+// ─────────────────────────────────────────────────────────────────────────────
+
+model WorkflowDefinition {
+  id              String          @id @default(uuid()) @db.Uuid
+  tenantId        String          @db.Uuid
+  name            String
+  version         Int             @default(1)
+  lifecycleStatus LifecycleStatus @default(DRAFT)
+  revision        Int             @default(0)
+  createdAt       DateTime        @default(now())
+  updatedAt       DateTime        @updatedAt
+
+  stages WorkflowStage[]
+
+  @@index([tenantId, name])
+  @@index([tenantId, lifecycleStatus])
+  @@map("workflow_definition")
+}
+
+// ─────────────────────────────────────────────────────────────────────────────
+// ENT-06 — WorkflowStage
+// ─────────────────────────────────────────────────────────────────────────────
+
+model WorkflowStage {
+  id         String             @id @default(uuid()) @db.Uuid
+  tenantId   String             @db.Uuid
+  workflowId String             @db.Uuid
+  workflow   WorkflowDefinition @relation(fields: [workflowId], references: [id])
+  name       String
+  type       StageType          @default(MANUAL)
+  /// SLA config (durations, escalation) — open-ended JSONB.
+  sla        Json               @default("{}")
+  ruleSetId  String?            @db.Uuid
+  ruleSet    RuleSet?           @relation(fields: [ruleSetId], references: [id])
+  revision   Int                @default(0)
+  createdAt  DateTime           @default(now())
+  updatedAt  DateTime           @updatedAt
+
+  outgoingTransitions Transition[] @relation("TransitionFrom")
+  incomingTransitions Transition[] @relation("TransitionTo")
+
+  @@index([tenantId, workflowId])
+  @@index([ruleSetId])
+  @@map("workflow_stage")
+}
+
+// ─────────────────────────────────────────────────────────────────────────────
+// ENT-07 — Transition
+// ─────────────────────────────────────────────────────────────────────────────
+
+model Transition {
+  id          String        @id @default(uuid()) @db.Uuid
+  tenantId    String        @db.Uuid
+  fromStageId String        @db.Uuid
+  fromStage   WorkflowStage @relation("TransitionFrom", fields: [fromStageId], references: [id])
+  toStageId   String        @db.Uuid
+  toStage     WorkflowStage @relation("TransitionTo", fields: [toStageId], references: [id])
+  /// Inline transition condition — open-ended JSONB.
+  condition   Json          @default("{}")
+  ruleSetId   String?       @db.Uuid
+  ruleSet     RuleSet?      @relation(fields: [ruleSetId], references: [id])
+  isDefault   Boolean       @default(false)
+  revision    Int           @default(0)
+  createdAt   DateTime      @default(now())
+  updatedAt   DateTime      @updatedAt
+
+  @@index([tenantId, fromStageId])
+  @@index([toStageId])
+  @@index([ruleSetId])
+  @@map("transition")
+}
+
+// ─────────────────────────────────────────────────────────────────────────────
+// ENT-08 — FormDefinition
+// ─────────────────────────────────────────────────────────────────────────────
+
+model FormDefinition {
+  id              String          @id @default(uuid()) @db.Uuid
+  tenantId        String          @db.Uuid
+  name            String
+  version         Int             @default(1)
+  /// Channels this form renders for: web | branch | partner | self-service.
+  channelScope    Json            @default("[]")
+  lifecycleStatus LifecycleStatus @default(DRAFT)
+  revision        Int             @default(0)
+  createdAt       DateTime        @default(now())
+  updatedAt       DateTime        @updatedAt
+
+  sections FormSection[]
+
+  @@index([tenantId, name])
+  @@index([tenantId, lifecycleStatus])
+  @@map("form_definition")
+}
+
+// ─────────────────────────────────────────────────────────────────────────────
+// ENT-09 — FormSection
+// ─────────────────────────────────────────────────────────────────────────────
+
+model FormSection {
+  id        String         @id @default(uuid()) @db.Uuid
+  tenantId  String         @db.Uuid
+  formId    String         @db.Uuid
+  form      FormDefinition @relation(fields: [formId], references: [id])
+  name      String
+  order     Int            @default(0)
+  revision  Int            @default(0)
+  createdAt DateTime       @default(now())
+  updatedAt DateTime       @updatedAt
+
+  fields FormField[]
+
+  @@index([tenantId, formId])
+  @@map("form_section")
+}
+
+// ─────────────────────────────────────────────────────────────────────────────
+// ENT-10 — FormField
+// ─────────────────────────────────────────────────────────────────────────────
+
+model FormField {
+  id            String      @id @default(uuid()) @db.Uuid
+  tenantId      String      @db.Uuid
+  sectionId     String      @db.Uuid
+  section       FormSection @relation(fields: [sectionId], references: [id])
+  /// Every field MUST map to a Data Element (BR-03, NOT NULL).
+  dataElementId String      @db.Uuid
+  dataElement   DataElement @relation(fields: [dataElementId], references: [id])
+  /// Visibility / mandatory / calculated behaviour — open-ended JSONB.
+  behaviour     Json        @default("{}")
+  revision      Int         @default(0)
+  createdAt     DateTime    @default(now())
+  updatedAt     DateTime    @updatedAt
+
+  @@index([tenantId, sectionId])
+  @@index([dataElementId])
+  @@map("form_field")
+}
+
+// ─────────────────────────────────────────────────────────────────────────────
+// ENT-11 — DocumentRequirement
+// ─────────────────────────────────────────────────────────────────────────────
+
+model DocumentRequirement {
+  id              String          @id @default(uuid()) @db.Uuid
+  tenantId        String          @db.Uuid
+  name            String
+  type            DocumentType    @default(MANDATORY)
+  /// Conditioning RuleSet (for CONDITIONAL documents) — nullable.
+  conditionRefId  String?         @db.Uuid
+  conditionRef    RuleSet?        @relation(fields: [conditionRefId], references: [id])
+  /// Template reference for GENERATED documents — nullable.
+  templateRef     String?         @db.Uuid
+  version         Int             @default(1)
+  lifecycleStatus LifecycleStatus @default(DRAFT)
+  revision        Int             @default(0)
+  createdAt       DateTime        @default(now())
+  updatedAt       DateTime        @updatedAt
+
+  @@index([tenantId, type])
+  @@index([tenantId, lifecycleStatus])
+  @@index([conditionRefId])
+  @@map("document_requirement")
+}
+
+// ─────────────────────────────────────────────────────────────────────────────
+// ENT-12 — Connector
+// ─────────────────────────────────────────────────────────────────────────────
+
+model Connector {
+  id              String          @id @default(uuid()) @db.Uuid
+  tenantId        String          @db.Uuid
+  name            String
+  provider        String
+  /// One of the 10 capability types (KYC, AML, sanctions, bureau, registry,
+  /// open-banking, e-sign, DMS, payment, core-banking).
+  capabilityType  String
+  endpoint        String
+  /// Vault reference to credentials — never plaintext, never API-returned.
+  authRef         String
+  /// Request + response mapping — open-ended JSONB.
+  mapping         Json            @default("{}")
+  /// Retry policy — open-ended JSONB.
+  retry           Json            @default("{}")
+  timeoutMs       Int             @default(30000)
+  /// Fallback behaviour on failure — open-ended JSONB.
+  fallback        Json            @default("{}")
+  owner           String
+  mode            ConnectorMode   @default(SANDBOX)
+  version         Int             @default(1)
+  lifecycleStatus LifecycleStatus @default(DRAFT)
+  revision        Int             @default(0)
+  createdAt       DateTime        @default(now())
+  updatedAt       DateTime        @updatedAt
+
+  invocations ConnectorInvocation[]
+
+  @@index([tenantId, capabilityType])
+  @@index([tenantId, lifecycleStatus])
+  @@map("connector")
+}
+
+/// ConnectorInvocation — every connector call is persisted with a correlation
+/// id (NFR-004). Part of the `integration` module (Phase 4); table created now
+/// so the FK from AuditEvent-style correlation is consistent.
+model ConnectorInvocation {
+  id            String    @id @default(uuid()) @db.Uuid
+  tenantId      String    @db.Uuid
+  connectorId   String    @db.Uuid
+  connector     Connector @relation(fields: [connectorId], references: [id])
+  correlationId String
+  request       Json      @default("{}")
+  response      Json      @default("{}")
+  status        String
+  durationMs    Int       @default(0)
+  createdAt     DateTime  @default(now())
+
+  @@index([tenantId, connectorId])
+  @@index([correlationId])
+  @@map("connector_invocation")
+}
+
+// ─────────────────────────────────────────────────────────────────────────────
+// ENT-13 — PublicationBundle
+// ─────────────────────────────────────────────────────────────────────────────
+
+model PublicationBundle {
+  id               String          @id @default(uuid()) @db.Uuid
+  tenantId         String          @db.Uuid
+  productVersionId String          @db.Uuid
+  productVersion   ProductVersion  @relation(fields: [productVersionId], references: [id])
+  /// Pinned versions of every referenced object — makes the bundle reproducible.
+  dependencyPins   Json            @default("{}")
+  integrityRunId   String?         @db.Uuid
+  integrityRun     ValidationRun?  @relation(fields: [integrityRunId], references: [id])
+  status           BundleStatus    @default(DRAFT)
+  releaseNotes     Json            @default("{}")
+  revision         Int             @default(0)
+  createdAt        DateTime        @default(now())
+  updatedAt        DateTime        @updatedAt
+
+  runtimeCases RuntimeCase[]
+
+  @@index([tenantId, status])
+  @@index([productVersionId])
+  @@index([integrityRunId])
+  @@map("publication_bundle")
+}
+
+// ─────────────────────────────────────────────────────────────────────────────
+// ENT-14 — RuntimeCase
+// ─────────────────────────────────────────────────────────────────────────────
+
+model RuntimeCase {
+  id             String            @id @default(uuid()) @db.Uuid
+  tenantId       String            @db.Uuid
+  bundleId       String            @db.Uuid
+  bundle         PublicationBundle @relation(fields: [bundleId], references: [id])
+  /// Current workflow stage — soft reference (stage lives inside an immutable bundle).
+  currentStageId String?           @db.Uuid
+  channel        String
+  status         RuntimeCaseStatus @default(OPEN)
+  /// Captured case data — open-ended JSONB.
+  caseData       Json              @default("{}")
+  revision       Int               @default(0)
+  createdAt      DateTime          @default(now())
+  updatedAt      DateTime          @updatedAt
+
+  auditEvents AuditEvent[]
+
+  @@index([tenantId, status])
+  @@index([bundleId])
+  @@map("runtime_case")
+}
+
+// ─────────────────────────────────────────────────────────────────────────────
+// ENT-15 — ValidationRun
+// ─────────────────────────────────────────────────────────────────────────────
+
+model ValidationRun {
+  id        String           @id @default(uuid()) @db.Uuid
+  tenantId  String           @db.Uuid
+  scope     String
+  result    ValidationResult
+  /// Classified defect list — open-ended JSONB.
+  defects   Json             @default("[]")
+  createdAt DateTime         @default(now())
+
+  bundles     PublicationBundle[]
+  auditEvents AuditEvent[]
+
+  @@index([tenantId, result])
+  @@index([tenantId, createdAt])
+  @@map("validation_run")
+}
+
+// ─────────────────────────────────────────────────────────────────────────────
+// ENT-16 — AuditEvent  (APPEND-ONLY — see migration revoking UPDATE/DELETE)
+// ─────────────────────────────────────────────────────────────────────────────
+
+model AuditEvent {
+  id              String         @id @default(uuid()) @db.Uuid
+  tenantId        String         @db.Uuid
+  actor           String
+  action          String
+  /// Reference to the affected object (e.g. "data_element:<uuid>").
+  objectRef       String
+  beforeState     Json?
+  afterState      Json?
+  correlationId   String
+  /// Optional links to the producing runtime case / validation run.
+  runtimeCaseId   String?        @db.Uuid
+  runtimeCase     RuntimeCase?   @relation(fields: [runtimeCaseId], references: [id])
+  validationRunId String?        @db.Uuid
+  validationRun   ValidationRun? @relation(fields: [validationRunId], references: [id])
+  /// Append-only — no updatedAt; rows are never modified.
+  createdAt       DateTime       @default(now())
+
+  @@index([tenantId, createdAt])
+  @@index([objectRef])
+  @@index([actor])
+  @@index([correlationId])
+  @@map("audit_event")
+}
+
+// ─────────────────────────────────────────────────────────────────────────────
+// VersionHistory — per-version snapshot metadata (FR-003, US-03)
+// ─────────────────────────────────────────────────────────────────────────────
+
+model VersionHistory {
+  id              String          @id @default(uuid()) @db.Uuid
+  tenantId        String          @db.Uuid
+  /// The kind of object this history entry is for (e.g. "DataElement").
+  objectType      String
+  /// The id of the versioned object.
+  objectId        String          @db.Uuid
+  version         Int
+  lifecycleStatus LifecycleStatus
+  /// Who authored this version.
+  author          String
+  /// Immutable snapshot of the object at this version — open-ended JSONB.
+  snapshot        Json            @default("{}")
+  createdAt       DateTime        @default(now())
+
+  @@unique([tenantId, objectType, objectId, version])
+  @@index([tenantId, objectType, objectId])
+  @@map("version_history")
+}
+
+// ─────────────────────────────────────────────────────────────────────────────
+// IdempotencyKey — deduplicates idempotent write requests (ADR-006, FR-042)
+// ─────────────────────────────────────────────────────────────────────────────
+
+model IdempotencyKey {
+  id           String   @id @default(uuid()) @db.Uuid
+  tenantId     String   @db.Uuid
+  /// The client-supplied Idempotency-Key header value.
+  key          String
+  /// The request fingerprint (method + path + body hash) the key was bound to.
+  requestHash  String
+  /// The persisted response to replay on a repeat request.
+  responseBody Json     @default("{}")
+  statusCode   Int
+  createdAt    DateTime @default(now())
+  expiresAt    DateTime
+
+  @@unique([tenantId, key])
+  @@index([expiresAt])
+  @@map("idempotency_keys")
+}
