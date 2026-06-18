@@ -84,3 +84,7 @@ docker-compose.override.yml
 *.code-workspace
 .claude/audit-trail.jsonl
 .gitnexus
+
+# Backup env files and security scan artifacts (never commit)
+*.env.bak
+gitleaks-results.sarif/
