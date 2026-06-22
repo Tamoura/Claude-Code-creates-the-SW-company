@@ -125,6 +125,7 @@ Before writing ANY code on a task, the assigned agent MUST:
 | `ci-preflight.md` | Quality Assurance | Before every push — prevents CI failures |
 | `parallel-execution.md` | Execution | When spawning multiple sub-agents |
 | `i18n.md` | Internationalisation | Products with Arabic/RTL or multi-language |
+| `design-md.md` | Design Systems | Every product needs a DESIGN.md — 9 mandatory sections, design archetypes, Tailwind token mapping |
 | `proof-recording.md` | Testing | Every feature produces proof artifacts |
 | `agent-message.schema.yml` | Agent Communication | Orchestrator + inter-agent messaging |
 | `message-router.ts` | Agent Communication | Infrastructure — orchestrator routing |

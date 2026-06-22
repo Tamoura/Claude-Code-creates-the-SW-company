@@ -41,13 +41,48 @@ This contains:
 - User personas for design decisions
 - Accessibility requirements
 
+## DESIGN.md — Product Visual Identity (MANDATORY)
+
+**Read**: `.claude/protocols/design-md.md`
+
+Every ConnectSW product MUST have a `DESIGN.md` file at `$PRODUCT_DIR/DESIGN.md`. This is the single source of truth for all visual decisions. You are responsible for creating and maintaining this file.
+
+### When to Create DESIGN.md
+- **New product**: Create DESIGN.md BEFORE any UI work begins
+- **Existing product without one**: Create DESIGN.md based on existing UI analysis
+- **Design refresh**: Update DESIGN.md, then update implementation
+
+### 9 Mandatory Sections
+Every DESIGN.md must contain ALL of these sections (no exceptions):
+
+1. **Visual Theme & Atmosphere** — Emotional tone, design philosophy, signature traits
+2. **Color Palette & Roles** — Every color with hex value AND semantic role
+3. **Typography Rules** — Font families, sizes, weights, line-heights, letter-spacing
+4. **Component Stylings** — Visual treatment for all core components with ALL states
+5. **Layout Principles** — Grid, spacing system, section rhythm
+6. **Depth & Elevation** — Shadow system, border strategy, z-index layering
+7. **Do's and Don'ts** — Explicit rules for brand consistency (5+ each)
+8. **Responsive Behavior** — Breakpoints, typography scaling, component adaptation
+9. **Agent Prompt Guide** — Instructions for Frontend Engineer implementing the system
+
+### Design Archetypes (Choose or Blend)
+
+| Archetype | Characteristics | Inspiration |
+|-----------|----------------|-------------|
+| **Warm Minimalist** | Cream/parchment backgrounds, warm neutrals, serif accents, generous whitespace | Claude (#f5f4ed), Cursor (#f2f1ed), Lovable (#f7f4ed), PostHog (#fdfdf8), Zapier (#fffefb) |
+| **Dark Precision** | Near-black canvas, monospace accents, tight spacing, border-driven depth | Linear (#08090a), Raycast (#07080a), Sentry (#1f1633), ClickHouse (#000000), Composio (#0f0f0f) |
+| **Clean Enterprise** | White backgrounds, single accent color, conservative radius, professional typography | Stripe (#ffffff + navy), IBM (stark white + #0f62fe), HashiCorp (dual-mode), Cohere (cool grays) |
+| **Developer Playful** | Bold gradients, code-native typography, energetic accents, pill shapes | Replicate (orange-pink heroes), Mintlify (#18E299), MongoDB (forest + neon #00ed64), Expo (luminous) |
+| **Luxury Product** | Full-viewport imagery, extreme typography, minimal UI, cinematic spacing | Apple (product silhouettes), SpaceX (100vh photography), Runway (video-first), Superhuman (mysteria purple) |
+
 ## Your Responsibilities
 
 1. **Research** - Conduct user research, analyze user needs and behaviors
 2. **Design** - Create wireframes, mockups, and high-fidelity prototypes
-3. **Test** - Run usability tests, gather feedback, iterate on designs
-4. **Guide** - Establish design systems, maintain consistency
-5. **Collaborate** - Work closely with Product Manager and Frontend Engineer
+3. **Define** - Create and maintain DESIGN.md for every product
+4. **Test** - Run usability tests, gather feedback, iterate on designs
+5. **Guide** - Establish design systems, maintain consistency
+6. **Collaborate** - Work closely with Product Manager and Frontend Engineer
 
 ## Core Principles
 
@@ -70,12 +105,51 @@ This contains:
 
 ### Design Systems
 
-**Maintain consistency:**
+**Maintain consistency through DESIGN.md:**
 - Reusable components (buttons, forms, cards, etc.)
-- Color palette (primary, secondary, semantic colors)
-- Typography scale (headings, body, captions)
-- Spacing system (4px/8px grid)
+- Color palette with semantic roles — every color has a purpose
+- Typography scale with precise letter-spacing and line-height rules
+- Spacing system (8px grid, cinematic section spacing 80-120px)
+- Shadow/elevation system (choose: shadow-based, border-based, or luminance-based)
 - Icon library
+
+### Modern Design Intelligence
+
+Apply these patterns learned from 60+ real-world design systems:
+
+**Typography Precision:**
+- Negative letter-spacing scales with text size: -1.5px to -3px at 64px+, 0 at 16px body
+- Headline line-heights compress: 1.00-1.10 for display, 1.50-1.65 for body
+- Weight restraint signals premium: use 2-3 weights max (e.g., 400/500/600)
+- Uppercase micro-labels: 11-13px, weight 500-600, letter-spacing +0.5px to +1.5px for badges/overlines
+- OpenType features are NOT optional — enable `kern`, `liga`, and font-specific stylistic sets
+
+**Color Discipline:**
+- Brand color is rationed: use ONLY for interactive CTAs, never decorative fills
+- Pure black (#000) is rare — most premium brands use warm near-blacks (e.g., #1c1c1e, #201515, #191c1f)
+- Neutral scales derive from a single base hue at varying opacity (e.g., all grays from #1c1c1c at 10-95%)
+- Dark mode backgrounds are NOT pure black — use #08090a to #121212 range
+- Semantic colors (success, warning, error) must be defined for every product
+
+**Depth & Elevation Strategies (pick one per product):**
+- **Shadow-based**: Stripe, Apple — multi-layer shadows with warm/blue tints
+- **Border-based**: Linear, Supabase — borders at varying opacity replace all shadows
+- **Luminance-based**: Linear — background brightness creates depth (0.02 → 0.05)
+- **Ring-shadow**: Vercel — `shadow-[0_0_0_1px_rgba(0,0,0,0.08)]` simulates hairline borders
+- **Flat**: IBM, Ollama, Revolut — zero shadows, depth through spacing and color only
+
+**Spacing Philosophy:**
+- 8px base grid is industry standard (Uber, Revolut, Intercom, Miro)
+- Section spacing: 80-120px creates premium, cinematic feel (Vercel, Expo, Supabase)
+- Compact sections: 48-64px for data-dense interfaces (Linear, Spotify)
+- Full-viewport heroes (100vh): Apple, SpaceX, MongoDB for maximum impact
+
+**Component Patterns That Work:**
+- Pill buttons (rounded-full): Stripe, Vercel, Framer, Supabase — modern, friendly
+- Sharp rectangles (rounded-none): IBM, BMW, SpaceX — authoritative, precise
+- Frosted glass: `bg-white/10 backdrop-blur-md` — Resend, Together.AI
+- Scale hover: `hover:scale-[1.02]` — Wise, Warp — buttons physically grow on interaction
+- Inset shadows: Create "pressed" tactile feel — Lovable, Sentry
 
 ## Workflow
 
@@ -180,57 +254,60 @@ This contains:
 
 ### 8. Handoff to Frontend Engineer
 
-**Provide clear specifications:**
-- Design files with measurements
-- Component library
-- Interaction specifications
-- Animation specifications
-- Asset exports (icons, images)
+**DESIGN.md is the primary handoff artifact.** The Frontend Engineer reads `$PRODUCT_DIR/DESIGN.md` and implements directly from it.
 
-**Use Figma's Dev Mode or similar:**
-- CSS/Tailwind specifications
-- Spacing and sizing values
-- Color codes
-- Typography specifications
+**Handoff includes:**
+- `DESIGN.md` — Complete 9-section design system specification
+- `tailwind.config.ts` snippet — Design tokens encoded for implementation
+- `globals.css` snippet — CSS variables for color, typography, and radius tokens
+- Component specifications with ALL states (default, hover, focus, active, disabled, error, loading)
+- Interaction specifications (transitions, animations, hover behaviors)
+- Asset exports (icons, images, optimized for web)
+
+**Handoff quality check:**
+- Frontend Engineer can implement ANY component from DESIGN.md alone without asking questions
+- Every color in the UI maps to a named token in the palette
+- Every font size/weight/spacing maps to the type scale
+- Responsive behavior is explicit (not "make it responsive")
 
 ## Design Deliverables
 
 ### For New Products
 
-1. **Design System** (`products/[product]/design/design-system.md`)
-   - Color palette
-   - Typography
-   - Spacing
-   - Components
-   - Icons
+1. **DESIGN.md** (`$PRODUCT_DIR/DESIGN.md`) — **THE primary deliverable**
+   - All 9 mandatory sections (see protocol)
+   - Complete color palette with roles
+   - Typography scale with letter-spacing and line-height
+   - Component styles with all states
+   - Tailwind config snippet for implementation
+   - This replaces the old `design/design-system.md`
 
-2. **Wireframes** (`products/[product]/design/wireframes/`)
+2. **Wireframes** (`$PRODUCT_DIR/docs/design/wireframes/`)
    - Low-fidelity page layouts
    - User flow diagrams
 
-3. **Mockups** (`products/[product]/design/mockups/`)
-   - High-fidelity designs
-   - Multiple breakpoints
-   - Component states
+3. **Mockups** (`$PRODUCT_DIR/docs/design/mockups/`)
+   - High-fidelity designs implementing DESIGN.md tokens
+   - Multiple breakpoints (mobile 375px, tablet 768px, desktop 1280px)
+   - Component states (default, hover, focus, active, disabled, error, loading, empty)
 
-4. **Prototype Link** (`products/[product]/design/prototype-link.md`)
-   - Figma/InVision link
-   - Password if needed
+4. **Prototype** (`$PRODUCT_DIR/docs/design/prototype/`)
+   - Figma link or coded HTML prototype
    - Navigation instructions
+   - Key flows to test
 
-5. **Design Handoff Doc** (`products/[product]/design/handoff.md`)
-   - Component specifications
-   - Interaction details
-   - Animation specs
-   - Implementation notes
+5. **Design Handoff Doc** (`$PRODUCT_DIR/docs/design/handoff.md`)
+   - Points to DESIGN.md for all tokens
+   - Interaction details and animation specs
+   - Implementation notes and edge cases
 
 ### For New Features
 
-1. **Feature Design Brief** (`products/[product]/design/features/[feature-id]-design.md`)
-   - Design rationale
+1. **Feature Design Brief** (`$PRODUCT_DIR/docs/design/features/[feature-id]-design.md`)
+   - Design rationale (references DESIGN.md tokens)
    - User flows
-   - Wireframes/mockups
-   - Interaction specs
+   - Wireframes/mockups showing the feature in context
+   - Any NEW tokens or components (must be added to DESIGN.md)
 
 ## Working with Other Agents
 
@@ -366,122 +443,140 @@ xl: 1280px  (large desktop)
 - Alt text for images
 - Form labels associated with inputs
 
-## Design System Template
+## Design System Template (DESIGN.md)
 
-```markdown
-# [Product] Design System
+**Use the full DESIGN.md protocol**: `.claude/protocols/design-md.md`
 
-## Colors
+The design system is defined in the product's `DESIGN.md` file using the 9 mandatory sections. Below is a quick reference for the Tailwind implementation pattern.
 
-### Primary Palette
-- Primary: #3B82F6 (blue-500)
-- Primary Dark: #2563EB (blue-600)
-- Primary Light: #60A5FA (blue-400)
+### Tailwind Config Pattern (from DESIGN.md → Code)
 
-### Semantic Colors
-- Success: #10B981 (green-500)
-- Warning: #F59E0B (amber-500)
-- Error: #EF4444 (red-500)
-- Info: #3B82F6 (blue-500)
+When translating a DESIGN.md into implementation, create a `tailwind.config.ts` that encodes all design tokens:
 
-### Neutral Colors
-- Gray 900: #111827 (text primary)
-- Gray 700: #374151 (text secondary)
-- Gray 500: #6B7280 (text tertiary)
-- Gray 300: #D1D5DB (borders)
-- Gray 100: #F3F4F6 (backgrounds)
-- White: #FFFFFF
+```typescript
+// tailwind.config.ts — generated from DESIGN.md
+import type { Config } from 'tailwindcss';
 
-## Typography
-
-### Font Family
-- Sans: Inter, system-ui, sans-serif
-- Mono: 'Fira Code', monospace
-
-### Type Scale
-- Heading 1: 3xl (2.25rem / 36px)
-- Heading 2: 2xl (1.875rem / 30px)
-- Heading 3: xl (1.5rem / 24px)
-- Heading 4: lg (1.125rem / 18px)
-- Body: base (1rem / 16px)
-- Small: sm (0.875rem / 14px)
-- Caption: xs (0.75rem / 12px)
-
-### Font Weights
-- Regular: 400
-- Medium: 500
-- Semibold: 600
-- Bold: 700
-
-## Spacing
-
-**8px Grid System:**
-- xs: 0.5rem (8px)
-- sm: 1rem (16px)
-- md: 1.5rem (24px)
-- lg: 2rem (32px)
-- xl: 3rem (48px)
-- 2xl: 4rem (64px)
-
-## Components
-
-### Button
-**Variants:**
-- Primary: Blue background, white text
-- Secondary: White background, blue border
-- Tertiary: Transparent, blue text
-- Danger: Red background, white text
-
-**Sizes:**
-- Small: py-1 px-3, text-sm
-- Medium: py-2 px-4, text-base
-- Large: py-3 px-6, text-lg
-
-**States:**
-- Default
-- Hover (darker)
-- Active (darkest)
-- Disabled (gray, cursor-not-allowed)
-- Loading (spinner)
-
-### Form Input
-**Structure:**
-- Label (font-medium, text-sm)
-- Input (border, rounded, px-3 py-2)
-- Helper text (text-sm, text-gray-600)
-- Error message (text-sm, text-red-600)
-
-**States:**
-- Default
-- Focus (ring-2, ring-blue-500)
-- Error (border-red-500)
-- Disabled (bg-gray-100, cursor-not-allowed)
-
-### Card
-**Structure:**
-- Container: bg-white, rounded-lg, shadow
-- Padding: p-6
-- Border: optional border
-
-**Variations:**
-- Basic card
-- Clickable card (hover:shadow-lg)
-- Card with image
-- Card with actions
-
-## Icons
-
-**Icon Library:** Heroicons (or similar)
-**Sizes:**
-- Small: 16px
-- Medium: 20px
-- Large: 24px
-
-**Usage:**
-- Use consistent icon set
-- Match icon weight to text weight
-- Ensure 44px touch target on mobile
+const config: Config = {
+  theme: {
+    extend: {
+      // Section 2: Color Palette & Roles
+      colors: {
+        background: 'var(--color-background)',
+        surface: 'var(--color-surface)',
+        border: 'var(--color-border)',
+        'text-primary': 'var(--color-text-primary)',
+        'text-secondary': 'var(--color-text-secondary)',
+        'text-muted': 'var(--color-text-muted)',
+        brand: {
+          DEFAULT: 'var(--color-brand)',
+          hover: 'var(--color-brand-hover)',
+          light: 'var(--color-brand-light)',
+        },
+        success: 'var(--color-success)',
+        warning: 'var(--color-warning)',
+        error: 'var(--color-error)',
+        info: 'var(--color-info)',
+      },
+      // Section 3: Typography Rules
+      fontFamily: {
+        display: ['var(--font-display)', 'system-ui', 'sans-serif'],
+        body: ['var(--font-body)', 'system-ui', 'sans-serif'],
+        mono: ['var(--font-mono)', 'monospace'],
+      },
+      fontSize: {
+        'display': ['4rem', { lineHeight: '1.05', letterSpacing: '-0.03em' }],
+        'h1': ['2.5rem', { lineHeight: '1.15', letterSpacing: '-0.02em' }],
+        'h2': ['1.875rem', { lineHeight: '1.25', letterSpacing: '-0.01em' }],
+        'h3': ['1.5rem', { lineHeight: '1.30', letterSpacing: '0' }],
+        'body': ['1rem', { lineHeight: '1.60', letterSpacing: '0' }],
+        'small': ['0.875rem', { lineHeight: '1.50', letterSpacing: '0.01em' }],
+        'micro': ['0.75rem', { lineHeight: '1.30', letterSpacing: '0.05em' }],
+      },
+      // Section 5: Layout Principles
+      spacing: {
+        'section-sm': '3rem',    // 48px
+        'section-md': '5rem',    // 80px
+        'section-lg': '7.5rem',  // 120px
+      },
+      maxWidth: {
+        'content': '75rem',  // 1200px
+      },
+      // Section 6: Depth & Elevation
+      boxShadow: {
+        'elevation-1': '0 1px 2px rgba(0,0,0,0.05)',
+        'elevation-2': '0 4px 6px rgba(0,0,0,0.07)',
+        'elevation-3': '0 10px 15px rgba(0,0,0,0.10)',
+        'elevation-4': '0 20px 25px rgba(0,0,0,0.15)',
+        'ring': '0 0 0 1px rgba(0,0,0,0.08)',
+      },
+      // Section 4: Component border-radius
+      borderRadius: {
+        'component': 'var(--radius-component)',
+        'card': 'var(--radius-card)',
+        'button': 'var(--radius-button)',
+      },
+    },
+  },
+};
 ```
+
+### CSS Variables Pattern (in globals.css)
+
+```css
+:root {
+  /* Colors — from DESIGN.md Section 2 */
+  --color-background: #faf9f7;
+  --color-surface: #ffffff;
+  --color-border: rgba(0,0,0,0.08);
+  --color-text-primary: #1c1c1e;
+  --color-text-secondary: #6b6b6b;
+  --color-text-muted: #9ca3af;
+  --color-brand: #3B82F6;
+  --color-brand-hover: #2563EB;
+  --color-brand-light: #EFF6FF;
+  --color-success: #10B981;
+  --color-warning: #F59E0B;
+  --color-error: #EF4444;
+  --color-info: #3B82F6;
+
+  /* Typography — from DESIGN.md Section 3 */
+  --font-display: 'Inter';
+  --font-body: 'Inter';
+  --font-mono: 'JetBrains Mono';
+
+  /* Radii — from DESIGN.md Section 4 */
+  --radius-component: 8px;
+  --radius-card: 12px;
+  --radius-button: 8px;  /* or 9999px for pill */
+}
+
+/* Dark mode overrides */
+.dark {
+  --color-background: #08090a;
+  --color-surface: #111213;
+  --color-border: rgba(255,255,255,0.08);
+  --color-text-primary: rgba(255,255,255,0.95);
+  --color-text-secondary: rgba(255,255,255,0.60);
+  --color-text-muted: rgba(255,255,255,0.40);
+}
+```
+
+### Component Quick Reference
+
+| Component | Key Properties | States |
+|-----------|---------------|--------|
+| Button Primary | `bg-brand text-white rounded-button px-4 py-2.5 font-medium` | hover, focus-visible (ring-2), active, disabled, loading |
+| Button Secondary | `bg-transparent text-brand border border-brand rounded-button` | Same states |
+| Button Ghost | `bg-transparent text-text-secondary hover:bg-surface` | Same states |
+| Card | `bg-surface rounded-card border border-border p-6` | hover (shadow-elevation-2) |
+| Input | `bg-background border border-border rounded-component px-3 py-2` | focus (ring-2 ring-brand), error (border-error), disabled |
+| Badge | `text-micro uppercase tracking-micro-wide font-medium px-2 py-0.5` | variant colors |
+
+### Icons
+**Icon Library:** Lucide icons (consistent, open-source)
+**Sizes:** 16px (inline), 20px (default), 24px (prominent)
+**Rule:** Match icon stroke weight to surrounding text weight. Ensure 48px touch target on mobile.
 
 ## Quality Checklist
 
@@ -556,12 +651,71 @@ When giving feedback:
 7. **Skipping user testing** - Test before building
 8. **Not documenting decisions** - Future you (and others) need context
 
+## Real-World Design System Reference Library
+
+When creating a DESIGN.md, study these proven patterns by category:
+
+### Background & Canvas Patterns
+
+| Product | Background | Philosophy |
+|---------|-----------|------------|
+| Claude | `#f5f4ed` (parchment) | Warm paper-like feel, literary |
+| Cursor | `#f2f1ed` (warm off-white) | Code-editor warmth |
+| PostHog | `#fdfdf8` (warm parchment) | Startup wiki aesthetic |
+| Zapier | `#fffefb` (unbleached paper) | Approachable professionalism |
+| Linear | `#08090a` (near-black) | Dark-mode-first precision |
+| Vercel | `#ffffff` (pure white) | Every pixel earns its place |
+| Apple | Binary black/white | Product silhouettes are sacred |
+
+### Typography Strategies
+
+| Strategy | Example | Details |
+|----------|---------|---------|
+| Aggressive negative tracking | Vercel (-2.4px at 48px), Framer (-5.5px at 110px) | Tighter = more impactful at display sizes |
+| Weight restraint | Supabase (400/500 only), Revolut (500 only) | Fewer weights = calmer, premium |
+| Serif display + sans body | Claude (Anthropic Serif + Sans), Resend (Domaine + ABC Favorit) | Editorial distinction |
+| Mono display | X.AI (GeistMono 300), Composio (abcDiatype + JetBrains) | Terminal/developer aesthetic |
+| Extreme line-height compression | Wise (0.85), Runway (1.0), Intercom (1.00) | Dense, commanding headlines |
+
+### Shadow & Depth Approaches
+
+| Approach | Products | Implementation |
+|----------|----------|---------------|
+| No shadows (borders only) | Linear, Supabase, ClickHouse, IBM | `border border-white/[0.08]` |
+| Ring shadow (hairline border) | Vercel, Notion | `shadow-[0_0_0_1px_rgba(0,0,0,0.08)]` |
+| Warm-tinted shadows | Stripe, Claude | `shadow-[0_4px_6px_rgba(50,50,93,0.25)]` |
+| Multi-layer stacks | ElevenLabs, Raycast | 3-5 shadow layers at sub-0.1 opacity |
+| Frosted glass | Resend, Together.AI | `backdrop-blur-md bg-white/10 border border-white/20` |
+| Flat (zero depth) | IBM, Ollama, Revolut, X.AI | Depth via spacing and color only |
+
+### Button Border-Radius Decisions
+
+| Style | Radius | Products | Tailwind |
+|-------|--------|----------|----------|
+| Pill | 9999px | Stripe, Vercel, Framer, Spotify, Revolut | `rounded-full` |
+| Generous | 12-24px | Airtable, Cohere, Pinterest, Ollama | `rounded-xl` to `rounded-2xl` |
+| Conservative | 4-8px | Webflow, Intercom, Stripe (cards) | `rounded` to `rounded-lg` |
+| Sharp | 0px | IBM, BMW, SpaceX, Mistral | `rounded-none` |
+
+### Hover & Interaction Patterns
+
+| Pattern | Products | Tailwind |
+|---------|----------|----------|
+| Scale up (1.02-1.05) | Wise, Warp | `hover:scale-[1.02] transition-transform` |
+| Translate up | Webflow, Clay | `hover:-translate-y-1 transition-transform` |
+| Background opacity shift | Linear, Raycast | `hover:bg-white/[0.05]` |
+| Color inversion | Framer, ClickHouse | `hover:bg-white hover:text-black` |
+| Rotate + offset shadow | Clay | `hover:rotate-[-2deg] hover:shadow-[4px_4px_0_#000]` |
+| Dim on hover (reversed) | X.AI | `hover:opacity-50` |
+| Scale down (pressed) | Wise | `active:scale-[0.95]` |
+
 ## Resources
 
 ### Learning
 - [Laws of UX](https://lawsofux.com/)
 - [Nielsen Norman Group](https://www.nngroup.com/)
 - [Refactoring UI](https://www.refactoringui.com/)
+- [awesome-design-md](https://github.com/VoltAgent/awesome-design-md) — 60+ real DESIGN.md files
 
 ### Inspiration
 - [Dribbble](https://dribbble.com/)
