@@ -14,7 +14,7 @@
  */
 
 import fp from 'fastify-plugin';
-import { FastifyPluginAsync } from 'fastify';
+import { FastifyPluginAsync, FastifyRequest } from 'fastify';
 import { PrismaClient } from '@prisma/client';
 import { logger } from '../utils/logger.js';
 
@@ -59,17 +59,16 @@ const prismaPlugin: FastifyPluginAsync = async (fastify) => {
 
   fastify.decorate('prisma', prisma);
 
-  // RLS session hook — sets app.current_org_id from JWT payload
-  // so PostgreSQL Row Level Security automatically filters tenant data
+  // RLS session hook — stores org ID on the REQUEST object (not FastifyInstance)
+  // to avoid shared-state race conditions under concurrent requests.
+  fastify.decorateRequest('rlsOrgId', null);
   fastify.addHook('onRequest', async (request) => {
     const orgId = (request as { user?: { orgId?: string } }).user?.orgId;
     if (
       orgId &&
       /^[0-9a-f]{8}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{12}$/i.test(orgId)
     ) {
-      (fastify as { rlsOrgId?: string | null }).rlsOrgId = orgId;
-    } else {
-      (fastify as { rlsOrgId?: string | null }).rlsOrgId = null;
+      (request as FastifyRequest & { rlsOrgId: string | null }).rlsOrgId = orgId;
     }
   });
 
@@ -86,8 +85,6 @@ const prismaPlugin: FastifyPluginAsync = async (fastify) => {
       });
     }
   );
-
-  fastify.decorate('rlsOrgId', null as string | null);
 
   fastify.addHook('onClose', async () => {
     await prisma.$disconnect();

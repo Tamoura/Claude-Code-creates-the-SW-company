@@ -114,13 +114,11 @@ describe('Assessment API', () => {
   });
 
   afterAll(async () => {
-    // Cleanup in FK-safe order
+    // Cleanup in FK-safe order — only delete test-specific data, not global
     await app.prisma.fluencyProfile.deleteMany({ where: { orgId } });
     await app.prisma.response.deleteMany({ where: { orgId } });
     await app.prisma.assessmentSession.deleteMany({ where: { orgId } });
     await app.prisma.assessmentTemplate.deleteMany({ where: { orgId } });
-    await app.prisma.question.deleteMany({});
-    await app.prisma.behavioralIndicator.deleteMany({});
     await app.prisma.userSession.deleteMany({ where: { orgId } });
     await app.prisma.user.deleteMany({ where: { orgId } });
     await app.prisma.organization.deleteMany({ where: { id: orgId } });
