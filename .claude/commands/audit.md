@@ -19,7 +19,7 @@ Example:
 
 ## What This Command Does
 
-This command invokes the **Code Reviewer** agent to perform a full professional audit of the specified product across **11 technical dimensions** (Security, Architecture, Test Coverage, Code Quality, Performance, DevOps, Runability, Accessibility, Privacy, Observability, API Design) against **9 industry frameworks** (OWASP Top 10, OWASP API Top 10, OWASP ASVS, CWE/SANS Top 25, WCAG 2.1 AA, GDPR, ISO 25010, DORA, SRE Golden Signals). The audit produces a **decision-ready** report suitable for:
+This command invokes the **Code Reviewer** agent to perform a full professional audit of the specified product across **11 technical dimensions** (Security, Architecture, Test Coverage, Code Quality, Performance, DevOps, Runability, Accessibility, Privacy, Observability, API Design) against **9 industry frameworks** (OWASP Top 10, OWASP API Top 10, OWASP ASVS, CWE/SANS Top 25, WCAG 2.1 AA, GDPR, ISO 25010, DORA, SRE Golden Signals). The audit includes both **static analysis** (code review) and **dynamic testing** (DAST, load testing, runtime profiling, infrastructure scanning) against the running application. The audit produces a **decision-ready** report suitable for:
 - CEO / Board presentations
 - Investment committee reviews
 - Regulated customer due diligence
@@ -113,6 +113,325 @@ Use parallel exploration agents to analyze the product thoroughly:
 
 6. **Privacy & Observability Agent**: Scan all source files for: PII handling (storage, logging, transmission), consent mechanisms, data deletion capabilities, data export features, retention policies, structured logging configuration, health check endpoints, monitoring setup, error tracking, tracing configuration.
 
+### Step 2b: Dynamic Testing (requires running application)
+
+**PREREQUISITE**: The application must be running. Detect API and frontend ports from `PORT-REGISTRY.md`, `package.json`, or `.env` files. If the application is not running, skip dynamic testing with a clear note in the report: "Dynamic testing skipped — application was not running. Start with `npm run dev` and re-run audit for full coverage."
+
+**Port Detection:**
+```bash
+# Try to detect ports from PORT-REGISTRY.md, .env, or package.json
+API_PORT=$(grep -oE '(PORT|API_PORT)=([0-9]+)' "$PRODUCT_DIR/apps/api/.env" 2>/dev/null | head -1 | cut -d= -f2)
+[ -z "$API_PORT" ] && API_PORT=$(grep -oE '"start.*--port ([0-9]+)"' "$PRODUCT_DIR/apps/api/package.json" 2>/dev/null | grep -oE '[0-9]+' | head -1)
+[ -z "$API_PORT" ] && API_PORT="5000"
+
+WEB_PORT=$(grep -oE '(PORT|WEB_PORT|NEXT_PORT)=([0-9]+)' "$PRODUCT_DIR/apps/web/.env" 2>/dev/null | head -1 | cut -d= -f2)
+[ -z "$WEB_PORT" ] && WEB_PORT="3100"
+
+# Check if services are actually running
+API_UP=$(curl -sf "http://localhost:$API_PORT/health" > /dev/null 2>&1 && echo "true" || echo "false")
+WEB_UP=$(curl -sf "http://localhost:$WEB_PORT" > /dev/null 2>&1 && echo "true" || echo "false")
+
+echo "API: port=$API_PORT up=$API_UP"
+echo "Web: port=$WEB_PORT up=$WEB_UP"
+```
+
+**If API is running, execute these dynamic tests:**
+
+7. **DAST Agent** — Active security probing against the running API:
+
+```bash
+echo "=== DAST: Dynamic Application Security Testing ==="
+API_BASE="http://localhost:$API_PORT"
+
+# 7a. Security Headers Check
+echo "--- Security Headers ---"
+HEADERS=$(curl -sI "$API_BASE/health" 2>/dev/null)
+echo "$HEADERS" | grep -iE "(strict-transport|x-frame|x-content-type|content-security|x-xss|referrer-policy|permissions-policy)" || echo "  FAIL: Missing security headers"
+
+# 7b. CORS Probing (test with malicious origin)
+echo "--- CORS Probe ---"
+CORS_RESP=$(curl -sI -H "Origin: https://evil.com" "$API_BASE/health" 2>/dev/null)
+echo "$CORS_RESP" | grep -i "access-control-allow-origin" | grep -i "evil" && echo "  FAIL: CORS allows arbitrary origins" || echo "  PASS: CORS does not reflect evil origin"
+
+# 7c. Auth Bypass Probes (access protected endpoints without token)
+echo "--- Auth Bypass Probes ---"
+# Find route files to discover endpoints
+ENDPOINTS=$(grep -rhoE "(get|post|put|patch|delete)\(['\"]\/[^'\"]*['\"]" "$PRODUCT_DIR/apps/api/src/routes/" 2>/dev/null | sed "s/.*['\"]//;s/['\"]//g" | sort -u | head -20)
+for endpoint in $ENDPOINTS; do
+  STATUS=$(curl -so /dev/null -w "%{http_code}" "$API_BASE$endpoint" 2>/dev/null)
+  if [ "$STATUS" = "200" ]; then
+    # Check if this should be protected (not health/public/docs)
+    echo "$endpoint" | grep -qiE "(health|ready|public|docs|swagger|openapi)" || \
+      echo "  WARN: $endpoint returns 200 without auth token (status: $STATUS)"
+  fi
+done
+
+# 7d. SQL Injection Probes (safe — parameterized payloads)
+echo "--- Injection Probes ---"
+for endpoint in $ENDPOINTS; do
+  # Test with SQL injection in query params
+  SQLI_STATUS=$(curl -so /dev/null -w "%{http_code}" "$API_BASE${endpoint}?id=1%27%20OR%201%3D1--" 2>/dev/null)
+  [ "$SQLI_STATUS" = "500" ] && echo "  WARN: $endpoint returns 500 on SQL injection payload (may be vulnerable)"
+done
+
+# 7e. Rate Limiting Verification
+echo "--- Rate Limiting ---"
+# Send 50 rapid requests to login/auth endpoint
+AUTH_ENDPOINT=$(echo "$ENDPOINTS" | grep -iE "(login|signin|auth)" | head -1)
+if [ -n "$AUTH_ENDPOINT" ]; then
+  RATE_BLOCKED=false
+  for i in $(seq 1 50); do
+    STATUS=$(curl -so /dev/null -w "%{http_code}" -X POST -H "Content-Type: application/json" -d '{}' "$API_BASE$AUTH_ENDPOINT" 2>/dev/null)
+    [ "$STATUS" = "429" ] && RATE_BLOCKED=true && break
+  done
+  $RATE_BLOCKED && echo "  PASS: Rate limiting active (429 after rapid requests)" || echo "  FAIL: No rate limiting detected on $AUTH_ENDPOINT after 50 rapid requests"
+else
+  echo "  SKIP: No auth endpoint found to test rate limiting"
+fi
+
+# 7f. Error Information Disclosure
+echo "--- Error Disclosure ---"
+ERR_BODY=$(curl -s "$API_BASE/nonexistent-endpoint-404-test" 2>/dev/null)
+echo "$ERR_BODY" | grep -iE "(stack|trace|node_modules|at Object|at Module|\.ts:[0-9])" && \
+  echo "  FAIL: Stack trace exposed in error response" || echo "  PASS: No stack trace in error responses"
+
+# 7g. HTTP Method Override
+echo "--- HTTP Method Override ---"
+for override_header in "X-HTTP-Method-Override" "X-Method-Override" "X-HTTP-Method"; do
+  curl -sI -X POST -H "$override_header: DELETE" "$API_BASE/health" 2>/dev/null | grep -q "200" && \
+    echo "  WARN: $override_header accepted — verify this is intentional"
+done
+```
+
+8. **Load Testing Agent** — Stress test and race condition detection:
+
+```bash
+echo ""
+echo "=== Load Testing ==="
+
+# 8a. API Load Test with autocannon (install if needed)
+if ! command -v autocannon &> /dev/null; then
+  echo "Installing autocannon..."
+  npm install -g autocannon 2>/dev/null || npx autocannon --version > /dev/null 2>&1
+fi
+
+echo "--- API Throughput & Latency (10s, 100 connections) ---"
+npx autocannon -c 100 -d 10 --json "$API_BASE/health" 2>/dev/null | \
+  node -e "const d=JSON.parse(require('fs').readFileSync('/dev/stdin','utf8'));
+    console.log('  Requests/sec: '+d.requests.average);
+    console.log('  Latency p50: '+d.latency.p50+'ms');
+    console.log('  Latency p95: '+d.latency.p95+'ms');
+    console.log('  Latency p99: '+d.latency.p99+'ms');
+    console.log('  Errors: '+d.errors);
+    console.log('  Timeouts: '+d.timeouts);
+    console.log('  Non-2xx: '+(d.non2xx||0));
+    if(d.latency.p99>1000) console.log('  FAIL: p99 latency >1000ms');
+    else if(d.latency.p95>400) console.log('  WARN: p95 latency >400ms');
+    else console.log('  PASS: Latency within thresholds');" 2>/dev/null || echo "  SKIP: autocannon not available"
+
+# 8b. Race Condition Detection
+echo "--- Race Condition Detection ---"
+echo "Sending 20 parallel identical POST requests to state-changing endpoints..."
+# Find POST endpoints that create resources
+POST_ENDPOINTS=$(echo "$ENDPOINTS" | grep -i "post" | head -3)
+if [ -z "$POST_ENDPOINTS" ]; then
+  POST_ENDPOINTS=$(grep -rhoE "post\(['\"]\/[^'\"]*['\"]" "$PRODUCT_DIR/apps/api/src/routes/" 2>/dev/null | sed "s/post(['\"]//;s/['\"]//g" | head -3)
+fi
+
+for endpoint in $POST_ENDPOINTS; do
+  echo "  Testing $endpoint..."
+  # Fire 20 parallel requests
+  RESULTS=""
+  for i in $(seq 1 20); do
+    curl -so /dev/null -w "%{http_code}\n" -X POST \
+      -H "Content-Type: application/json" -d '{}' \
+      "$API_BASE$endpoint" 2>/dev/null &
+  done
+  wait
+  echo "  (Check database for duplicate entries after this test)"
+done
+
+# 8c. Memory Leak Indicator (compare /health response time before and after load)
+echo "--- Memory Leak Indicator ---"
+PRE_LOAD=$(curl -so /dev/null -w "%{time_total}" "$API_BASE/health" 2>/dev/null)
+npx autocannon -c 50 -d 30 "$API_BASE/health" > /dev/null 2>&1
+POST_LOAD=$(curl -so /dev/null -w "%{time_total}" "$API_BASE/health" 2>/dev/null)
+echo "  Health response time before load: ${PRE_LOAD}s"
+echo "  Health response time after 30s load: ${POST_LOAD}s"
+# Compare using node for float comparison
+node -e "const pre=$PRE_LOAD,post=$POST_LOAD;
+  const ratio=post/pre;
+  if(ratio>3) console.log('  WARN: Response time degraded '+ratio.toFixed(1)+'x after load — possible memory leak');
+  else console.log('  PASS: Response time stable after load (ratio: '+ratio.toFixed(1)+'x)');" 2>/dev/null
+```
+
+9. **Lighthouse & Frontend Profiling Agent** (if frontend is running):
+
+```bash
+echo ""
+echo "=== Frontend Runtime Profiling ==="
+
+if [ "$WEB_UP" = "true" ]; then
+  WEB_BASE="http://localhost:$WEB_PORT"
+
+  # 9a. Lighthouse Audit (Performance, Accessibility, Best Practices, SEO)
+  echo "--- Lighthouse Audit ---"
+  if command -v lighthouse &> /dev/null || npx lighthouse --version > /dev/null 2>&1; then
+    npx lighthouse "$WEB_BASE" \
+      --output=json --output-path="$PRODUCT_DIR/docs/quality-reports/lighthouse.json" \
+      --chrome-flags="--headless --no-sandbox" \
+      --only-categories=performance,accessibility,best-practices,seo \
+      2>/dev/null
+
+    if [ -f "$PRODUCT_DIR/docs/quality-reports/lighthouse.json" ]; then
+      node -e "
+        const r=JSON.parse(require('fs').readFileSync('$PRODUCT_DIR/docs/quality-reports/lighthouse.json','utf8'));
+        const c=r.categories;
+        console.log('  Performance:    '+(c.performance.score*100)+'/100');
+        console.log('  Accessibility:  '+(c.accessibility.score*100)+'/100');
+        console.log('  Best Practices: '+(c['best-practices'].score*100)+'/100');
+        console.log('  SEO:            '+(c.seo.score*100)+'/100');
+        const lcp=r.audits['largest-contentful-paint'];
+        const inp=r.audits['total-blocking-time'];
+        const cls=r.audits['cumulative-layout-shift'];
+        if(lcp) console.log('  LCP: '+lcp.displayValue);
+        if(inp) console.log('  TBT (INP proxy): '+inp.displayValue);
+        if(cls) console.log('  CLS: '+cls.displayValue);
+      " 2>/dev/null
+    fi
+  else
+    echo "  SKIP: Lighthouse not available (install: npm i -g lighthouse)"
+  fi
+
+  # 9b. Bundle Size Analysis
+  echo "--- Bundle Size ---"
+  if [ -d "$PRODUCT_DIR/apps/web/.next" ]; then
+    BUNDLE_SIZE=$(du -sk "$PRODUCT_DIR/apps/web/.next/static" 2>/dev/null | cut -f1)
+    echo "  Static bundle: ${BUNDLE_SIZE}KB"
+    [ "$BUNDLE_SIZE" -gt 300 ] 2>/dev/null && echo "  WARN: Bundle exceeds 300KB budget" || echo "  PASS: Bundle within budget"
+  elif [ -d "$PRODUCT_DIR/apps/web/dist" ]; then
+    BUNDLE_SIZE=$(du -sk "$PRODUCT_DIR/apps/web/dist" 2>/dev/null | cut -f1)
+    echo "  Dist size: ${BUNDLE_SIZE}KB"
+  else
+    echo "  SKIP: No build output found (run build first)"
+  fi
+
+  # 9c. Core Web Vitals via browser automation
+  echo "--- Console Errors ---"
+  # Check for JavaScript errors on the main page
+  ERR_COUNT=$(curl -s "$WEB_BASE" 2>/dev/null | grep -ciE "(error|exception|undefined is not)" || echo "0")
+  echo "  Potential client-side errors in HTML: $ERR_COUNT"
+else
+  echo "  SKIP: Frontend not running on port $WEB_PORT"
+fi
+```
+
+10. **Infrastructure Scanning Agent**:
+
+```bash
+echo ""
+echo "=== Infrastructure Security Scanning ==="
+
+# 10a. Dockerfile Linting
+echo "--- Dockerfile Analysis ---"
+DOCKERFILES=$(find "$PRODUCT_DIR" -maxdepth 4 -name "Dockerfile" 2>/dev/null)
+if [ -n "$DOCKERFILES" ]; then
+  for df in $DOCKERFILES; do
+    echo "  Scanning: $df"
+    # Check for common Dockerfile security issues
+    grep -n "^FROM.*:latest" "$df" && echo "    FAIL: Using :latest tag (pin to specific version)"
+    grep -n "^USER" "$df" > /dev/null || echo "    WARN: No USER directive (runs as root by default)"
+    grep -n "COPY \." "$df" && echo "    WARN: COPY . may include secrets — use .dockerignore"
+    grep -in "ENV.*PASSWORD\|ENV.*SECRET\|ENV.*KEY" "$df" && echo "    FAIL: Secrets hardcoded in Dockerfile ENV"
+    grep -n "^RUN.*apt-get.*-y" "$df" | grep -v "no-install-recommends" && echo "    WARN: apt-get without --no-install-recommends bloats image"
+
+    # If hadolint is available, run it
+    if command -v hadolint &> /dev/null; then
+      hadolint "$df" 2>/dev/null | head -10
+    fi
+  done
+else
+  echo "  INFO: No Dockerfiles found"
+fi
+
+# 10b. Docker Compose Security
+echo "--- Docker Compose Analysis ---"
+COMPOSE_FILES=$(find "$PRODUCT_DIR" -maxdepth 3 -name "docker-compose*.yml" -o -name "docker-compose*.yaml" 2>/dev/null)
+if [ -n "$COMPOSE_FILES" ]; then
+  for cf in $COMPOSE_FILES; do
+    echo "  Scanning: $cf"
+    grep -n "privileged: true" "$cf" && echo "    FAIL: Privileged container detected"
+    grep -n "network_mode: host" "$cf" && echo "    WARN: Host network mode — container shares host network"
+    grep -n "cap_add:" "$cf" && echo "    WARN: Additional capabilities granted — review necessity"
+    grep -inE "(PASSWORD|SECRET|KEY)=" "$cf" | grep -v "\${" && echo "    FAIL: Hardcoded secrets in compose file (use env_file or Docker secrets)"
+  done
+else
+  echo "  INFO: No Docker Compose files found"
+fi
+
+# 10c. GitHub Actions Security Audit
+echo "--- GitHub Actions Security ---"
+if [ -d ".github/workflows" ]; then
+  for wf in .github/workflows/*.yml .github/workflows/*.yaml; do
+    [ -f "$wf" ] || continue
+    wf_name=$(basename "$wf")
+    # Check for shell injection via ${{ }} in run blocks
+    grep -n 'run:.*\${{' "$wf" && echo "    FAIL: $wf_name — shell injection risk: \${{ }} in run block (use env: instead)"
+    # Check for unpinned actions
+    grep -n "uses:.*@main\|uses:.*@master" "$wf" && echo "    WARN: $wf_name — unpinned action reference (use @sha or @vX.Y.Z)"
+    # Check for excessive permissions
+    grep -n "permissions: write-all" "$wf" && echo "    WARN: $wf_name — write-all permissions (use least privilege)"
+    # Check for secrets in logs
+    grep -n "echo.*\${{ secrets" "$wf" && echo "    FAIL: $wf_name — secrets may be printed to logs"
+  done
+else
+  echo "  INFO: No GitHub Actions workflows found"
+fi
+
+# 10d. Dependency SBOM and Deep CVE Scan
+echo "--- Dependency Deep Scan ---"
+if [ -f "$PRODUCT_DIR/apps/api/package-lock.json" ]; then
+  echo "  Running npm audit (API)..."
+  cd "$PRODUCT_DIR/apps/api" && npm audit --json 2>/dev/null | node -e "
+    const d=JSON.parse(require('fs').readFileSync('/dev/stdin','utf8'));
+    const v=d.metadata?.vulnerabilities||{};
+    console.log('    Critical: '+(v.critical||0));
+    console.log('    High: '+(v.high||0));
+    console.log('    Moderate: '+(v.moderate||0));
+    console.log('    Low: '+(v.low||0));
+    console.log('    Total: '+(v.total||0));
+    if((v.critical||0)>0) console.log('    FAIL: Critical vulnerabilities found');
+    else if((v.high||0)>0) console.log('    WARN: High vulnerabilities found');
+    else console.log('    PASS: No critical/high vulnerabilities');
+  " 2>/dev/null
+  cd - > /dev/null
+fi
+if [ -f "$PRODUCT_DIR/apps/web/package-lock.json" ]; then
+  echo "  Running npm audit (Web)..."
+  cd "$PRODUCT_DIR/apps/web" && npm audit --json 2>/dev/null | node -e "
+    const d=JSON.parse(require('fs').readFileSync('/dev/stdin','utf8'));
+    const v=d.metadata?.vulnerabilities||{};
+    console.log('    Critical: '+(v.critical||0));
+    console.log('    High: '+(v.high||0));
+    console.log('    Moderate: '+(v.moderate||0));
+    console.log('    Total: '+(v.total||0));
+  " 2>/dev/null
+  cd - > /dev/null
+fi
+
+# 10e. Trivy Container Scan (if available and Docker image exists)
+echo "--- Container Vulnerability Scan ---"
+if command -v trivy &> /dev/null; then
+  for df in $DOCKERFILES; do
+    IMAGE_NAME=$(grep "^FROM" "$df" | tail -1 | awk '{print $2}')
+    echo "  Scanning base image: $IMAGE_NAME"
+    trivy image --severity HIGH,CRITICAL --quiet "$IMAGE_NAME" 2>/dev/null | head -20
+  done
+else
+  echo "  SKIP: Trivy not installed (install: brew install trivy)"
+fi
+```
+
 ### Step 3: Synthesize Findings
 
 Combine all exploration results into **two deliverables** within a single report file:
@@ -158,15 +477,25 @@ This section establishes credibility and sets expectations. It MUST appear befor
 **REQUIRED DIAGRAM — Audit Scope Flowchart:**
 ```mermaid
 flowchart TD
-    A[Audit Start] --> B[Source Code\naps/api/src · apps/web/src]
+    A[Audit Start] --> B[Source Code\napps/api/src · apps/web/src]
     A --> C[Schema & Config\nprisma · .env · docker]
     A --> D[Tests & CI/CD\ntests/ · .github/workflows/]
     A --> E[Dependencies\npackage.json · lock files]
+    A --> J[Running Application\nAPI · Frontend]
     B --> F[Static Analysis]
     C --> F
     D --> F
     E --> F
+    J --> K[Dynamic Testing]
+    K --> K1[DAST Probes\nauth bypass · injection · BOLA]
+    K --> K2[Load Testing\nautocannon · race conditions]
+    K --> K3[Lighthouse\nperformance · a11y · best practices]
+    K --> K4[Infra Scanning\nDockerfile · GH Actions · SBOM]
     F --> G[Synthesis]
+    K1 --> G
+    K2 --> G
+    K3 --> G
+    K4 --> G
     G --> H[Executive Memo\nPart A]
     G --> I[Engineering Appendix\nPart B]
 ```
@@ -178,24 +507,32 @@ flowchart TD
 - Total lines of code analyzed: [count]
 
 **Methodology:**
-- Static analysis: manual code review of all source files
+
+*Static Analysis:*
+- Manual code review of all source files
 - Schema analysis: Prisma schema, database indexes, relations
 - Dependency audit: `package.json` and lock file review for known vulnerabilities
 - Configuration review: environment files, Docker configs, CI/CD pipelines
 - Test analysis: test coverage measurement, test quality assessment, gap identification
 - Architecture review: dependency graph, layering, coupling analysis
 
+*Dynamic Testing (requires running application):*
+- DAST: Active probing of running API endpoints for auth bypass, injection, BOLA/BFLA, CSRF, header security
+- Load testing: Concurrent request stress testing via `autocannon` to measure p95/p99 latency, throughput, error rates under load
+- Race condition detection: Parallel identical requests to state-changing endpoints to detect double-spend, duplicate creation, and concurrency bugs
+- Runtime performance profiling: Lighthouse audit (Performance, Accessibility, Best Practices, SEO) on frontend pages
+- Infrastructure scanning: Dockerfile linting (`hadolint`), Docker Compose security, GitHub Actions audit, dependency SBOM generation
+
 **Out of Scope:**
-- Dynamic penetration testing (no live exploit attempts were made)
-- Runtime performance profiling (no load tests executed)
-- Third-party SaaS integrations (only code-level integration points reviewed)
-- Infrastructure-level security (cloud IAM, network policies, firewall rules)
+- Cloud IAM policies and network firewall rules (only application-level infra is scanned)
+- Third-party SaaS runtime behavior (only code-level integration points and dependency versions reviewed)
 - Generated code (e.g., Prisma client) unless it poses a security risk
-- Third-party library internals (but vulnerable versions are noted)
+- Formal compliance certification (this audit produces evidence artifacts, not formal certificates)
 
 **Limitations:**
-- This audit is based on static code review. Some issues (memory leaks, race conditions under load, intermittent failures) may only manifest at runtime.
-- Compliance assessments are technical gap analyses, not formal certifications.
+- Dynamic tests run against the development environment, not production. Production-specific issues (DNS, load balancer, CDN) are not tested.
+- Load testing uses moderate concurrency (100 connections) to detect architectural issues, not full-scale capacity planning.
+- Compliance assessments are technical gap analyses with evidence artifacts, not formal certifications.
 - Scores reflect the state of the code at the time of audit and may change with subsequent commits.
 
 #### Section 1: Executive Decision Summary (1 page)
@@ -645,6 +982,107 @@ Check and report on:
 | Request/response schema validation | Yes/Partial/No | Middleware used |
 | Deprecated endpoints marked | N/A/Yes/No | Sunset dates |
 
+#### Section 11f: Dynamic Security Testing (DAST) Results
+
+Report all findings from the DAST probes (Step 2b, Agent 7):
+
+| # | Test | Status | Details |
+|---|------|--------|---------|
+| 1 | Security Headers (HSTS, X-Frame, CSP, X-Content-Type) | PASS/FAIL | Missing headers listed |
+| 2 | CORS Origin Reflection | PASS/FAIL | Does API reflect arbitrary origins? |
+| 3 | Unauthenticated Endpoint Access | PASS/WARN/FAIL | List endpoints returning 200 without auth |
+| 4 | SQL Injection Response | PASS/WARN | Endpoints returning 500 on injection payloads |
+| 5 | Rate Limiting (Auth endpoints) | PASS/FAIL | 429 observed after N requests, or never triggered |
+| 6 | Error Information Disclosure | PASS/FAIL | Stack traces in error responses? |
+| 7 | HTTP Method Override | PASS/WARN | Override headers accepted? |
+
+**DAST Verdict**: PASS / WARN / FAIL
+
+If DAST was skipped (application not running), note: "DAST skipped — application was not running during audit."
+
+#### Section 11g: Load Testing & Race Condition Results
+
+Report all findings from the load testing (Step 2b, Agent 8):
+
+**API Performance Under Load (100 concurrent connections, 10 seconds):**
+
+| Metric | Value | Threshold | Status |
+|--------|-------|-----------|--------|
+| Requests/sec | [value] | >= 1000 | PASS/FAIL |
+| Latency p50 | [value]ms | <= 100ms | PASS/WARN/FAIL |
+| Latency p95 | [value]ms | <= 400ms | PASS/WARN/FAIL |
+| Latency p99 | [value]ms | <= 1000ms | PASS/WARN/FAIL |
+| Error count | [value] | 0 | PASS/FAIL |
+| Timeout count | [value] | 0 | PASS/FAIL |
+| Non-2xx responses | [value] | 0 | PASS/WARN |
+
+**Race Condition Tests:**
+
+| Endpoint | Parallel Requests | Duplicates Created | Status |
+|----------|------------------|--------------------|--------|
+| [endpoint] | 20 | [count] | PASS/FAIL |
+
+**Memory Leak Indicator:**
+
+| Metric | Before Load | After 30s Load | Ratio | Status |
+|--------|-------------|----------------|-------|--------|
+| Health response time | [value]s | [value]s | [X]x | PASS/WARN |
+
+#### Section 11h: Lighthouse & Frontend Profile
+
+If frontend was tested, report Lighthouse scores:
+
+| Category | Score | Threshold | Status |
+|----------|-------|-----------|--------|
+| Performance | [X]/100 | >= 90 | PASS/WARN/FAIL |
+| Accessibility | [X]/100 | >= 90 | PASS/WARN/FAIL |
+| Best Practices | [X]/100 | >= 90 | PASS/WARN/FAIL |
+| SEO | [X]/100 | >= 90 | PASS/WARN/FAIL |
+
+**Core Web Vitals:**
+
+| Metric | Value | Good Threshold | Status |
+|--------|-------|---------------|--------|
+| LCP (Largest Contentful Paint) | [value] | <= 2.5s | PASS/WARN/FAIL |
+| TBT/INP (Total Blocking Time) | [value] | <= 200ms | PASS/WARN/FAIL |
+| CLS (Cumulative Layout Shift) | [value] | <= 0.1 | PASS/WARN/FAIL |
+
+**Bundle Size:** [X]KB (budget: 300KB gzip)
+
+Full Lighthouse report saved to: `$PRODUCT_DIR/docs/quality-reports/lighthouse.json`
+
+#### Section 11i: Infrastructure Security Results
+
+Report findings from the infrastructure scan (Step 2b, Agent 10):
+
+**Dockerfile Security:**
+
+| # | File | Issue | Severity | Fix |
+|---|------|-------|----------|-----|
+| 1 | [path] | [issue] | High/Med/Low | [fix] |
+
+**Docker Compose Security:**
+
+| # | File | Issue | Severity | Fix |
+|---|------|-------|----------|-----|
+| 1 | [path] | [issue] | High/Med/Low | [fix] |
+
+**GitHub Actions Security:**
+
+| # | Workflow | Issue | Severity | Fix |
+|---|---------|-------|----------|-----|
+| 1 | [name] | Shell injection risk | Critical | Move `${{ }}` to env: block |
+| 2 | [name] | Unpinned action | Medium | Pin to @sha256 |
+
+**Dependency Vulnerability Summary:**
+
+| Component | Critical | High | Moderate | Low | Total |
+|-----------|----------|------|----------|-----|-------|
+| API | [X] | [X] | [X] | [X] | [X] |
+| Web | [X] | [X] | [X] | [X] | [X] |
+
+**Infrastructure Verdict**: PASS / WARN / FAIL
+
 #### Section 12: Technical Debt Map
 
 **REQUIRED DIAGRAM — Technical Debt Quadrant (effort to fix vs. cost of delay):**
@@ -830,11 +1268,11 @@ MUST be anchored to at least 2 measurable data points. Do NOT assign scores base
 
 | Dimension | Required Measurements | How to Measure |
 |-----------|----------------------|----------------|
-| Security | npm audit HIGH/CRITICAL count; grep for hardcoded secrets | `cd apps/api && npm audit --audit-level=high 2>&1 | grep -c "high\|critical"`; `grep -r "password\|secret\|api_key" --include="*.ts" -l` |
+| Security | npm audit HIGH/CRITICAL count; grep for hardcoded secrets; DAST findings | `cd apps/api && npm audit --audit-level=high`; `grep -r "password\|secret\|api_key" --include="*.ts" -l`; DAST auth bypass count, rate limit test result |
 | Architecture | File count per directory; import depth | `find apps/ -name "*.ts" | wc -l`; check circular deps |
 | Test Coverage | Coverage % from Jest | `npm test -- --coverage` |
 | Code Quality | ESLint error/warning count; `any` type count | `npx eslint . --format json 2>/dev/null | grep -c "error"`; `grep -r ": any" --include="*.ts" | wc -l` |
-| Performance | Lighthouse score (if available); bundle size | Lighthouse CLI; `du -sk .next/static/chunks/` |
+| Performance | Lighthouse score; bundle size; autocannon p95/p99; load test errors | Lighthouse CLI; `du -sk .next/static/chunks/`; autocannon JSON output |
 | DevOps | CI workflow exists; Docker exists; .env.example exists | `ls .github/workflows/`; `ls Dockerfile`; `ls .env.example` |
 | Runability | Server starts; health check responds; frontend loads | `curl -s localhost:{PORT}/health`; `curl -s localhost:{FRONTEND_PORT}` |
 | Accessibility | Lighthouse Accessibility score | Lighthouse CLI `--only-categories=accessibility` |
@@ -848,6 +1286,13 @@ MUST be anchored to at least 2 measurable data points. Do NOT assign scores base
 - If no CI workflow exists: DevOps score CANNOT exceed 3/10
 - If server doesn't start: Runability score CANNOT exceed 2/10
 - If Lighthouse Accessibility < 50: Accessibility score CANNOT exceed 3/10
+- If DAST finds auth bypass on protected endpoints: Security score CANNOT exceed 3/10
+- If rate limiting not detected on auth endpoints: Security score CANNOT exceed 5/10
+- If autocannon p99 > 2000ms: Performance score CANNOT exceed 4/10
+- If Dockerfile uses :latest or runs as root: DevOps score CANNOT exceed 6/10
+- If GitHub Actions has shell injection (${{ }} in run:): DevOps score CANNOT exceed 4/10
+- If load test shows errors > 1%: Performance score CANNOT exceed 5/10
+- If race condition duplicates detected: Architecture score CANNOT exceed 5/10
 - These caps are non-negotiable and ensure score consistency across audit runs
 
 **In the report, for each dimension score, include:**
@@ -1009,9 +1454,25 @@ RISK-004 | [Title] | [Severity] | Owner: [X] | SLA: Phase [N]
 RISK-005 | [Title] | [Severity] | Owner: [X] | SLA: Phase [N]
 (Full register: [N] items in report)
 
+============================================
+DYNAMIC TESTING
+============================================
+DAST:         [PASS/WARN/FAIL/SKIPPED]
+  Auth bypass: [X endpoints exposed]
+  Rate limit:  [Active/Not detected]
+  Headers:     [X/7 present]
+Load Test:    [PASS/WARN/FAIL/SKIPPED]
+  p95: [X]ms  p99: [X]ms  Errors: [X]
+  Race conditions: [None/X detected]
+Lighthouse:   [PASS/WARN/FAIL/SKIPPED]
+  Perf: [X]/100  A11y: [X]/100  BP: [X]/100
+Infrastructure: [PASS/WARN/FAIL]
+  Dockerfile: [X issues]  GH Actions: [X issues]
+  CVEs: [X critical, X high]
+
 SCORE GATE: [PASS - all >= 8] / [FAIL - improvement plan above]
 
-Full report: products/[product]/docs/AUDIT-REPORT.md
+Full report: $PRODUCT_DIR/docs/AUDIT-REPORT.md
 ```
 
 ## Audit Rules
