@@ -134,10 +134,53 @@ Evaluate the codebase against:
 1. **Clean Architecture** (dependency inversion, separation of concerns)
 2. **Domain Driven Design** (bounded contexts, ubiquitous language)
 3. **SOLID Principles** (especially SRP and DIP)
-4. **12-Factor App** (config, backing services, port binding, etc.)
+4. **12-Factor App** — all twelve factors, scored individually (see below)
 5. **Cloud-Native Readiness** (stateless, horizontal scaling, health checks)
 
-**Deliverable**: Architecture scorecard with recommendations
+#### 12-Factor Assessment (https://12factor.net)
+
+Score every factor **Pass / Partial / Fail / N-A** with file:line evidence. Most factors
+are decided in the manifests, entrypoint, CI pipeline and container config — not in
+business logic, so read those first.
+
+| Factor | Requirement | Fail signals |
+|--------|-------------|--------------|
+| **I. Codebase** | One codebase tracked in revision control, many deploys | code copy-pasted between repos; one repo shipping several unrelated apps with no monorepo boundary |
+| **II. Dependencies** | Explicitly declare and isolate dependencies | no lockfile; system-wide packages; undeclared shell-out tools (`curl`, `ffmpeg`) |
+| **III. Config** | Store config in the environment | credentials or hostnames hardcoded; `.env` committed; per-env config files switched on `NODE_ENV` |
+| **IV. Backing services** | Treat backing services as attached resources | connection details baked into code; swapping local Postgres for a managed one needs a code change |
+| **V. Build, release, run** | Strictly separate build and run stages | building on the production host; code mutated after release; no immutable rollback-able artifact |
+| **VI. Processes** | Execute the app as one or more stateless processes | in-memory sessions; sticky sessions; uploads on local disk; state assumed to survive restart |
+| **VII. Port binding** | Export services via port binding | app injected into an external webserver; port hardcoded instead of read from `$PORT` |
+| **VIII. Concurrency** | Scale out via the process model | scaling only by threads in one process; jobs run in-process; no declared process types |
+| **IX. Disposability** | Fast startup and graceful shutdown | no `SIGTERM` handler; slow boot; in-flight jobs not requeued on shutdown; non-idempotent work |
+| **X. Dev/prod parity** | Keep dev, staging and production similar | SQLite in dev / Postgres in prod; version drift; manual deploy steps |
+| **XI. Logs** | Treat logs as event streams | app writes or rotates logfiles; app routes to archival; buffered output; `stdout` redirected to a file |
+| **XII. Admin processes** | Run admin tasks as one-off processes | migrations at app boot; admin scripts with separate dependency setup; "ssh in and edit" runbooks |
+
+**Factor XI sub-controls** — the most-violated factor, so score it in detail:
+**XI.1** unbuffered event stream to `stdout` · **XI.2** no logfile writing or rotation by
+the app · **XI.3** no self-routing to archival destinations · **XI.4** one event per line
+(multi-line only for backtraces) · **XI.5** execution environment captures, collates and
+routes the stream · **XI.6** stream supports search, trend graphing and threshold alerting.
+
+**Score impact** — 12-Factor is not a separate dimension. Each failing factor caps the
+dimension it actually damages:
+
+| Failing factor | Caps | At |
+|----------------|------|----|
+| III. Config | Security | 6/10 |
+| VI. Processes, VIII. Concurrency | Architecture | 6/10 |
+| V. Build/release/run, IX. Disposability | DevOps | 6/10 |
+| XI.1-XI.3 | Observability | 6/10 |
+| X. Dev/prod parity | Runability | 7/10 |
+
+**N/A is a valid verdict.** The twelve factors target deployed services — for a library,
+CLI or static site mark the inapplicable factors N/A with a one-line reason and exclude
+them from the compliance percentage. Do not manufacture a Fail.
+
+**Deliverable**: Architecture scorecard with recommendations, including a
+`12-Factor: X/12 pass, X partial, X fail, X n/a` line naming the failing factors
 
 ---
 

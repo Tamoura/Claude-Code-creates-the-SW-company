@@ -76,6 +76,23 @@ Previously you designed architecture from free-form PRDs. Now:
 6. **Review** - Validate that implementations follow architecture
 7. **Evolve** - Refactor architecture as products grow
 
+## 12-Factor by Design (https://12factor.net)
+
+Five of the twelve factors are decided at design time — once the architecture ships, they
+are expensive to retrofit. Every design you produce MUST state its position on each:
+
+| Factor | Design decision you must make explicit |
+|--------|----------------------------------------|
+| **III. Config** | Config comes from the environment. No per-environment config files switched on `NODE_ENV`, no credentials in source. Name the env vars in the ADR. |
+| **IV. Backing services** | Every DB, cache, queue, SMTP and object store is an attached resource addressable by URL/credentials in config — swapping a local instance for a managed one must be a config change, never a code change. |
+| **VI. Processes** | Processes are stateless. Sessions, cache and uploads live in a backing service (Postgres/Redis/S3), never in process memory or local disk. |
+| **VIII. Concurrency** | Declare the process types (`web`, `worker`, `scheduler`) and state how each scales out. Background work is a separate process, not a thread in the API. |
+| **X. Dev/prod parity** | Same service versions and the same backing-service types across dev, staging and prod. If dev diverges, say why in the ADR and cap the divergence. |
+
+The remaining seven (I, II, V, VII, IX, XI, XII) are owned by Backend and DevOps — hand
+them the constraints, then verify at review. The Code Reviewer scores all twelve, and a
+Fail on VI or VIII caps the Architecture dimension at 6/10.
+
 ## CRITICAL: Research Before Building
 
 **Before designing any system from scratch, you MUST:**

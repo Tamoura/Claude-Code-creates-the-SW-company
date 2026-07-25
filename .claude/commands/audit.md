@@ -19,7 +19,7 @@ Example:
 
 ## What This Command Does
 
-This command invokes the **Code Reviewer** agent to perform a full professional audit of the specified product across **11 technical dimensions** (Security, Architecture, Test Coverage, Code Quality, Performance, DevOps, Runability, Accessibility, Privacy, Observability, API Design) against **9 industry frameworks** (OWASP Top 10, OWASP API Top 10, OWASP ASVS, CWE/SANS Top 25, WCAG 2.1 AA, GDPR, ISO 25010, DORA, SRE Golden Signals). The audit produces a **decision-ready** report suitable for:
+This command invokes the **Code Reviewer** agent to perform a full professional audit of the specified product across **11 technical dimensions** (Security, Architecture, Test Coverage, Code Quality, Performance, DevOps, Runability, Accessibility, Privacy, Observability, API Design) against **10 industry frameworks** (OWASP Top 10, OWASP API Top 10, OWASP ASVS, CWE/SANS Top 25, WCAG 2.1 AA, GDPR, ISO 25010, DORA, SRE Golden Signals, 12-Factor App). The audit produces a **decision-ready** report suitable for:
 - CEO / Board presentations
 - Investment committee reviews
 - Regulated customer due diligence
@@ -568,6 +568,27 @@ Map findings to compliance frameworks with explicit control-by-control assessmen
 | Change Failure Rate | [value] | Elite / High / Medium / Low |
 | Time to Restore Service | [value] | Elite / High / Medium / Low |
 
+**The Twelve-Factor App (https://12factor.net):**
+
+| Factor | Requirement | Pass / Partial / Fail | Evidence (file:line) |
+|--------|-------------|----------------------|----------------------|
+| **I. Codebase** | One codebase tracked in revision control, many deploys | | |
+| **II. Dependencies** | Explicitly declare and isolate dependencies | | |
+| **III. Config** | Store config in the environment | | |
+| **IV. Backing services** | Treat backing services as attached resources | | |
+| **V. Build, release, run** | Strictly separate build and run stages | | |
+| **VI. Processes** | Execute the app as one or more stateless processes | | |
+| **VII. Port binding** | Export services via port binding | | |
+| **VIII. Concurrency** | Scale out via the process model | | |
+| **IX. Disposability** | Maximize robustness with fast startup and graceful shutdown | | |
+| **X. Dev/prod parity** | Keep development, staging, and production as similar as possible | | |
+| **XI. Logs** | Treat logs as event streams | | |
+| **XII. Admin processes** | Run admin/management tasks as one-off processes | | |
+
+Factor XI sub-controls: **XI.1** unbuffered event stream to `stdout` · **XI.2** no logfile writing or rotation by the app · **XI.3** no self-routing to archival destinations · **XI.4** one event per line (multi-line only for backtraces) · **XI.5** execution environment captures, collates and routes the stream · **XI.6** stream supports search, trend graphing and threshold alerting.
+
+Score impact — a failing factor caps the dimension it damages: III → Security 6/10 · VI, VIII → Architecture 6/10 · V, IX → DevOps 6/10 · XI.1-XI.3 → Observability 6/10 · X → Runability 7/10. Mark a factor N/A with a one-line reason where it genuinely does not apply (library, CLI, static site) and exclude it from the compliance percentage.
+
 Note: This is a technical audit assessment, not a formal compliance certification. It identifies technical gaps that would block compliance.
 
 #### Section 11b: Accessibility Assessment
@@ -889,6 +910,7 @@ Every audit must report coverage against these frameworks:
 | ISO 25010 | Map each finding to quality characteristic |
 | DORA Metrics | 4 metrics with Elite/High/Medium/Low tier |
 | SRE Golden Signals | 4 signals: monitored/not-monitored |
+| 12-Factor App | All twelve factors Pass/Partial/Fail/N-A with evidence; failing factors cap the dimension they damage (Section 11) |
 
 ### Step 5: Save Report
 
