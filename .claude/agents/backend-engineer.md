@@ -372,6 +372,25 @@ throw new AppError(404, 'USER_NOT_FOUND', 'User not found');
 - [ ] Rate limiting configured
 - [ ] CORS configured appropriately
 
+## 12-Factor Checklist (https://12factor.net)
+
+Six factors are decided in the code you write. Check them before opening a PR:
+
+- [ ] **II. Dependencies** — every dependency declared in the manifest and committed to the
+      lockfile; no reliance on globally installed packages or undeclared shell-out tools
+- [ ] **III. Config** — all config read from environment variables (validated with Zod at
+      boot); no credentials, hostnames or per-environment branches in source; `.env` gitignored
+- [ ] **VI. Processes** — handlers are stateless; sessions, cache and uploads go to
+      Postgres/Redis/S3, never process memory or local disk; nothing assumes it survives a restart
+- [ ] **VII. Port binding** — the service self-hosts and binds `process.env.PORT`; no
+      hardcoded port, no dependency on an external webserver to run
+- [ ] **IX. Disposability** — `SIGTERM` handler closes the server, drains in-flight
+      requests and disconnects Prisma; queue consumers requeue unfinished work; boot is fast
+- [ ] **XI. Logs** — log as line-delimited events to `stdout` (Fastify's Pino default);
+      no file transports, no log rotation, no shipping to Splunk/Datadog from app code
+- [ ] **XII. Admin processes** — migrations, seeds and backfills are one-off scripts run
+      against a release; never triggered automatically from app startup
+
 ## Git Workflow
 
 1. Work on feature branch: `feature/[product]/[feature-id]`

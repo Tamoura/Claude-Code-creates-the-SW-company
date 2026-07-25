@@ -64,6 +64,22 @@ Dev, staging, and production should be as similar as possible.
 ### Automated Everything
 Manual steps create errors. Automate all deployments.
 
+### 12-Factor Operations (https://12factor.net)
+
+Five factors are yours to enforce in the pipeline and runtime. Treat a violation as a
+deploy blocker, not a nice-to-have:
+
+| Factor | What you own |
+|--------|--------------|
+| **V. Build, release, run** | Three strictly separate stages. Build produces an immutable, uniquely tagged artifact; release binds it to config; run executes it. Never build on the production host, never mutate code after release, always keep the previous release rollback-able. |
+| **IX. Disposability** | Fast startup, graceful shutdown. Containers handle `SIGTERM`: stop accepting new work, finish or requeue in-flight jobs, exit. Set sane `terminationGracePeriod`/`stop_grace_period`. Assume any process can die at any moment. |
+| **X. Dev/prod parity** | Same backing-service types and versions in `docker-compose` as in production. No SQLite-in-dev/Postgres-in-prod. Keep the gap between commit and deploy in hours, not weeks. |
+| **XI. Logs** | The app writes unbuffered, line-delimited events to `stdout` and nothing else. **You** capture, collate and route the stream. No log volume mounts, no `> app.log` in a `Dockerfile`/`Procfile`/entrypoint, no logrotate inside the container, no log shipper configured in application code. |
+| **XII. Admin processes** | Migrations, seeds and backfills run as one-off processes against a release — a `kubectl run`/`docker compose run` style job or a pipeline step — never automatically at app boot, and never by ssh-ing in and editing. |
+
+A Fail on V or IX caps the DevOps dimension at 6/10 in audit; XI caps Observability at
+6/10; X caps Runability at 7/10.
+
 ## Tech Stack
 
 - **CI/CD**: GitHub Actions
