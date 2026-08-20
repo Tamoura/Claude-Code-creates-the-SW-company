@@ -82,12 +82,12 @@ describe('[AC-012][MET-2] TransitionTx is constructible only inside the transiti
     expect(() => assertTransitionTx(escaped as TransitionTx)).toThrow(/closed/i);
   });
 
-  it('[MET-2] refuses to open a transition scope outside a tenant transaction', async () => {
+  it('[AC-012][MET-2] refuses to open a transition scope outside a tenant transaction', async () => {
     const raw = app as unknown as TenantScopedClient;
     await expect(withTransitionTx(raw, async () => null)).rejects.toThrow(/withTenant/);
   });
 
-  it('[MET-2] the transition scope IS the tenant transaction — one rollback, not two', async () => {
+  it('[AC-012][MET-2] the transition scope IS the tenant transaction — one rollback, not two', async () => {
     await expect(
       inTenant(async (db) =>
         withTransitionTx(db, async (tx) => {

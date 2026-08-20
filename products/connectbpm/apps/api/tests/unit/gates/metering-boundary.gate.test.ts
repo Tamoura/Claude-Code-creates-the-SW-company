@@ -11,8 +11,8 @@ import { join } from 'node:path';
 const FIXTURE_BASE = join(__dirname, '..', '..', 'fixtures', 'metering-violations');
 const ALLOWED_BASE = join(__dirname, '..', '..', 'fixtures', 'metering-allowed');
 
-describe('metering-boundary gate (AC-012, AC-013)', () => {
-  it('detects every violation class in the fixture', () => {
+describe('[AC-012][AC-013] metering-boundary gate', () => {
+  it('[AC-012][AC-013] detects every violation class in the fixture', () => {
     const findings = scan(['src'], FIXTURE_BASE);
     const rules = new Set(findings.map((f) => f.rule));
 
@@ -22,7 +22,7 @@ describe('metering-boundary gate (AC-012, AC-013)', () => {
     expect(rules).toContain('NFR-009/dynamic-code-execution');
   });
 
-  it('reports the reason, not just the location', () => {
+  it('[AC-012] reports the reason, not just the location', () => {
     const findings = scan(['src'], FIXTURE_BASE);
     const usageService = findings.find(
       (f) => f.rule === 'AC-013/usage-service-import'
@@ -32,12 +32,12 @@ describe('metering-boundary gate (AC-012, AC-013)', () => {
     expect(usageService?.file).toBe('src/services/bad-metering.ts');
   });
 
-  it('finds no violation in the shipped API source', () => {
+  it('[AC-012][AC-013] finds no violation in the shipped API source', () => {
     const findings = scan(['src']);
     expect(findings).toEqual([]);
   });
 
-  it('permits UsageService under the soft-limit allowlist only', () => {
+  it('[AC-013] permits UsageService under the soft-limit allowlist only', () => {
     const findings = scan(['src'], ALLOWED_BASE);
     const usageService = findings.filter(
       (f) => f.rule === 'AC-013/usage-service-import'
@@ -45,7 +45,7 @@ describe('metering-boundary gate (AC-012, AC-013)', () => {
     expect(usageService).toEqual([]);
   });
 
-  it('permits usageEvent.create in the ledger module only', () => {
+  it('[AC-012] permits usageEvent.create in the ledger module only', () => {
     const findings = scan(['src'], ALLOWED_BASE);
     const writes = findings.filter(
       (f) => f.rule === 'AC-012/usage-event-write-outside-ledger'
@@ -53,12 +53,12 @@ describe('metering-boundary gate (AC-012, AC-013)', () => {
     expect(writes).toEqual([]);
   });
 
-  it('does not flag prose in comments', () => {
+  it('[AC-012] does not flag prose in comments', () => {
     const findings = scan(['src'], ALLOWED_BASE);
     expect(findings.filter((f) => f.file.includes('comments.ts'))).toEqual([]);
   });
 
-  it('returns nothing for a root that does not exist', () => {
+  it('[AC-012] returns nothing for a root that does not exist', () => {
     expect(scan(['does-not-exist'], ALLOWED_BASE)).toEqual([]);
   });
 });

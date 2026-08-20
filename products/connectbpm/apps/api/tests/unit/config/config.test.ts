@@ -1,14 +1,23 @@
+/**
+ * TRACEABILITY NOTE (Article VI, honest version).
+ *
+ * These verify SCAFFOLD CONVENTIONS and non-functional requirements, not
+ * feature acceptance criteria. There is no US-xx / AC-xxx / FR-xxx behind
+ * "the config is memoised" — inventing one would be worse than the gap, so
+ * each carries the NFR or constitutional article it genuinely serves and no
+ * more. Reported to the Orchestrator as such.
+ */
 import { loadConfig, getConfig, resetConfigForTests } from '../../../src/config';
 
 const ORIGINAL = { ...process.env };
 
-describe('environment configuration', () => {
+describe('[NFR-008] environment configuration — bad config crashes at boot, never at first use', () => {
   afterEach(() => {
     process.env = { ...ORIGINAL };
     resetConfigForTests();
   });
 
-  it('applies the registered ConnectBPM ports as defaults', () => {
+  it('[NFR-017] applies the registered ConnectBPM ports as defaults — Article VII', () => {
     resetConfigForTests();
     delete process.env.PORT;
     const config = loadConfig();
@@ -16,7 +25,7 @@ describe('environment configuration', () => {
     expect(config.FRONTEND_URL).toBe('http://localhost:3123');
   });
 
-  it('fails fast and names every offending variable', () => {
+  it('[NFR-008] fails fast and names every offending variable', () => {
     resetConfigForTests();
     delete process.env.DATABASE_URL;
     process.env.JWT_SECRET = 'too-short';
@@ -27,13 +36,13 @@ describe('environment configuration', () => {
     expect(() => loadConfig()).toThrow(/JWT_SECRET/);
   });
 
-  it('rejects a JWT secret shorter than 32 characters', () => {
+  it('[NFR-008] rejects a JWT secret shorter than 32 characters — API2', () => {
     resetConfigForTests();
     process.env.JWT_SECRET = 'short';
     expect(() => loadConfig()).toThrow(/JWT_SECRET/);
   });
 
-  it('coerces the job-runner role from its string env form', () => {
+  it('[NFR-004] coerces the job-runner role from its string env form — ADR-009', () => {
     resetConfigForTests();
     process.env.RUN_JOB_RUNNER = 'true';
     expect(loadConfig().RUN_JOB_RUNNER).toBe(true);
@@ -42,7 +51,7 @@ describe('environment configuration', () => {
     expect(loadConfig().RUN_JOB_RUNNER).toBe(false);
   });
 
-  it('memoises so the env is parsed once per process', () => {
+  it('[NFR-008] memoises so the env is parsed once per process', () => {
     resetConfigForTests();
     expect(getConfig()).toBe(getConfig());
   });

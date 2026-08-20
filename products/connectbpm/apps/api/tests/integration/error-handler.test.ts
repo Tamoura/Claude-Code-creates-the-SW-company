@@ -40,7 +40,7 @@ async function appWithThrowingRoutes(): Promise<FastifyInstance> {
   return app;
 }
 
-describe('error handler', () => {
+describe('[FR-003][AC-052] error handler over the real app', () => {
   let app: FastifyInstance;
 
   beforeAll(async () => {
@@ -50,7 +50,7 @@ describe('error handler', () => {
     await app.close();
   });
 
-  it('maps an AppError to its status, code and details', async () => {
+  it('[FR-003] maps an AppError to its status, code and details', async () => {
     const res = await app.inject({ method: 'GET', url: '/boom/app-error' });
     expect(res.statusCode).toBe(409);
     expect(res.json().error).toMatchObject({
@@ -60,26 +60,26 @@ describe('error handler', () => {
     });
   });
 
-  it('renders a cross-tenant style miss as 404, never 403', async () => {
+  it('[AC-052][FR-003] renders a cross-tenant style miss as 404, never 403', async () => {
     const res = await app.inject({ method: 'GET', url: '/boom/not-found' });
     expect(res.statusCode).toBe(404);
     expect(res.json().error.code).toBe('NOT_FOUND');
   });
 
-  it('maps quota exhaustion to 402 (MET-4)', async () => {
+  it('[AC-014][FR-113] maps quota exhaustion to 402 — MET-4', async () => {
     const res = await app.inject({ method: 'GET', url: '/boom/quota' });
     expect(res.statusCode).toBe(402);
     expect(res.json().error.code).toBe('QUOTA_EXCEEDED');
   });
 
-  it('flattens a ZodError into field-level details', async () => {
+  it('[FR-003] flattens a ZodError into field-level details', async () => {
     const res = await app.inject({ method: 'GET', url: '/boom/zod' });
     expect(res.statusCode).toBe(400);
     expect(res.json().error.code).toBe('VALIDATION_ERROR');
     expect(res.json().error.details[0].field).toBe('name');
   });
 
-  it('attaches the correlation id to every error body', async () => {
+  it('[NFR-017] attaches the correlation id to every error body', async () => {
     const res = await app.inject({
       method: 'GET',
       url: '/boom/not-found',
@@ -88,7 +88,7 @@ describe('error handler', () => {
     expect(res.json().error.requestId).toBe('corr-1');
   });
 
-  it('redacts an unexpected error message in production', async () => {
+  it('[AC-052][NFR-008] redacts an unexpected error message in production', async () => {
     const previous = process.env.NODE_ENV;
     process.env.NODE_ENV = 'production';
     try {
@@ -101,13 +101,13 @@ describe('error handler', () => {
     }
   });
 
-  it('surfaces the real message outside production', async () => {
+  it('[NFR-008] surfaces the real message outside production', async () => {
     const res = await app.inject({ method: 'GET', url: '/boom/unexpected' });
     expect(res.statusCode).toBe(500);
     expect(res.json().error.message).toContain('secret_hash');
   });
 
-  it('renders an unknown route through the same envelope', async () => {
+  it('[AC-052][FR-003] renders an unknown route through the same envelope', async () => {
     const res = await app.inject({ method: 'GET', url: '/api/v1/nope' });
     expect(res.statusCode).toBe(404);
     expect(res.json().error.code).toBe('NOT_FOUND');
@@ -119,7 +119,7 @@ describe('error handler', () => {
  * and must produce the same envelope, or the web client has two error shapes
  * to deal with.
  */
-describe('error handler — framework errors', () => {
+describe('[FR-003][NFR-008] error handler — framework errors are translated, never leaked', () => {
   let app: FastifyInstance;
 
   beforeAll(async () => {
@@ -162,7 +162,7 @@ describe('error handler — framework errors', () => {
     await app.close();
   });
 
-  it('maps any FST_JWT_* code to 401 without echoing the token error', async () => {
+  it('[NFR-008] maps any FST_JWT_* code to 401 without echoing the token error', async () => {
     const res = await app.inject({ method: 'GET', url: '/boom/jwt' });
     expect(res.statusCode).toBe(401);
     expect(res.json().error).toMatchObject({
@@ -171,19 +171,19 @@ describe('error handler — framework errors', () => {
     });
   });
 
-  it('maps an oversized body to 413', async () => {
+  it('[NFR-008] maps an oversized body to 413', async () => {
     const res = await app.inject({ method: 'GET', url: '/boom/too-large' });
     expect(res.statusCode).toBe(413);
     expect(res.json().error.code).toBe('BODY_TOO_LARGE');
   });
 
-  it('maps a 429 into the standard envelope', async () => {
+  it('[NFR-008][FR-003] maps a 429 into the standard envelope', async () => {
     const res = await app.inject({ method: 'GET', url: '/boom/rate-limited' });
     expect(res.statusCode).toBe(429);
     expect(res.json().error.code).toBe('RATE_LIMITED');
   });
 
-  it('flattens a Fastify schema failure to 422 with the field name', async () => {
+  it('[FR-003] flattens a Fastify schema failure to 422 with the field name', async () => {
     const res = await app.inject({
       method: 'POST',
       url: '/boom/schema',

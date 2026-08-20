@@ -5,7 +5,7 @@
 import type { FastifyInstance } from 'fastify';
 import { buildTestApp } from '../helpers';
 
-describe('GET /health', () => {
+describe('[NFR-017] GET /health — the smoke test every other integration test depends on', () => {
   let app: FastifyInstance;
 
   beforeAll(async () => {
@@ -16,7 +16,7 @@ describe('GET /health', () => {
     await app.close();
   });
 
-  it('reports database connectivity', async () => {
+  it('[NFR-017] reports database connectivity, 503 when PostgreSQL is unreachable', async () => {
     const response = await app.inject({ method: 'GET', url: '/health' });
     const body = response.json();
 
@@ -30,7 +30,7 @@ describe('GET /health', () => {
     expect(response.statusCode === 200).toBe(body.database === 'connected');
   });
 
-  it('echoes the correlation id', async () => {
+  it('[NFR-017] echoes the correlation id', async () => {
     const response = await app.inject({
       method: 'GET',
       url: '/health',
@@ -39,7 +39,7 @@ describe('GET /health', () => {
     expect(response.headers['x-request-id']).toBe('test-correlation-id');
   });
 
-  it('answers liveness without touching a dependency', async () => {
+  it('[NFR-017] answers liveness without touching a dependency', async () => {
     const response = await app.inject({ method: 'GET', url: '/health/live' });
     expect(response.statusCode).toBe(200);
     expect(response.json()).toEqual({ status: 'ok' });

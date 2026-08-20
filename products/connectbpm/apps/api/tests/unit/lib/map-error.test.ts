@@ -9,8 +9,8 @@ import { ConflictError, NotFoundError } from '../../../src/lib/errors';
 
 const CTX = { requestId: 'req-1', isProduction: false };
 
-describe('mapError', () => {
-  it('passes an AppError through with its details', () => {
+describe('[FR-003][AC-052] mapError — one envelope, and no disclosure in it', () => {
+  it('[FR-003] passes an AppError through with its details', () => {
     const payload = mapError(
       new ConflictError('taken', [{ field: 'slug', message: 'taken' }]),
       CTX
@@ -24,11 +24,11 @@ describe('mapError', () => {
     });
   });
 
-  it('renders a missing resource as 404 (ADR-004 AC-052)', () => {
+  it('[AC-052][FR-003] renders a missing resource as 404, the same as a cross-tenant miss', () => {
     expect(mapError(new NotFoundError(), CTX).status).toBe(404);
   });
 
-  it('flattens a ZodError to field-level details', () => {
+  it('[FR-003] flattens a ZodError to field-level details', () => {
     let zodError: ZodError | undefined;
     try {
       z.object({ name: z.string() }).parse({ name: 1 });
@@ -40,7 +40,7 @@ describe('mapError', () => {
     expect(payload.details?.[0]?.field).toBe('name');
   });
 
-  it('flattens a Fastify schema failure to 422', () => {
+  it('[FR-003] flattens a Fastify schema failure to 422', () => {
     const payload = mapError(
       { validation: [{ params: { missingProperty: 'name' } }] },
       CTX
@@ -49,31 +49,31 @@ describe('mapError', () => {
     expect(payload.details).toEqual([{ field: 'name', message: 'Invalid value' }]);
   });
 
-  it('defaults an unnamed validation field rather than crashing', () => {
+  it('[FR-003] defaults an unnamed validation field rather than crashing', () => {
     const payload = mapError({ validation: [{ message: 'bad' }] }, CTX);
     expect(payload.details).toEqual([{ field: 'unknown', message: 'bad' }]);
   });
 
-  it('translates any FST_JWT_* code to 401', () => {
+  it('[NFR-008] translates any FST_JWT_* code to 401 without echoing the token error', () => {
     expect(mapError({ code: 'FST_JWT_BAD_COOKIE_REQUEST' }, CTX).status).toBe(401);
     expect(mapError({ code: 'FST_JWT_AUTHORIZATION_TOKEN_EXPIRED' }, CTX).code).toBe(
       'UNAUTHORIZED'
     );
   });
 
-  it('translates an oversized body to 413', () => {
+  it('[NFR-008] translates an oversized body to 413', () => {
     expect(mapError({ code: 'FST_ERR_CTP_BODY_TOO_LARGE' }, CTX).status).toBe(413);
   });
 
-  it('translates a 429 to RATE_LIMITED', () => {
+  it('[NFR-008] translates a 429 to RATE_LIMITED', () => {
     expect(mapError({ statusCode: 429 }, CTX).code).toBe('RATE_LIMITED');
   });
 
-  it('leaves an unrecognised framework code to the fallback', () => {
+  it('[FR-003] leaves an unrecognised framework code to the fallback', () => {
     expect(mapError({ code: 'FST_ERR_SOMETHING_ELSE' }, CTX).status).toBe(500);
   });
 
-  it('redacts an unexpected message in production', () => {
+  it('[AC-052][NFR-008] redacts an unexpected message in production — Prisma errors name columns and values', () => {
     const payload = mapError(
       new Error('column "secret_hash" violates unique constraint'),
       { requestId: 'req-1', isProduction: true }
@@ -82,11 +82,11 @@ describe('mapError', () => {
     expect(payload.message).not.toContain('secret_hash');
   });
 
-  it('surfaces the real message outside production', () => {
+  it('[NFR-008] surfaces the real message outside production', () => {
     expect(mapError(new Error('boom'), CTX).message).toBe('boom');
   });
 
-  it('stringifies a thrown non-Error', () => {
+  it('[FR-003] stringifies a thrown non-Error', () => {
     expect(mapError('just a string', CTX).message).toBe('just a string');
   });
 });

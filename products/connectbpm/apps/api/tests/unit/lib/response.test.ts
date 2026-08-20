@@ -17,21 +17,21 @@ function fakeReply(): FastifyReply & { sent: unknown; code: number } {
   return reply as unknown as FastifyReply & { sent: unknown; code: number };
 }
 
-describe('response envelope', () => {
-  it('sendOk defaults to 200 and passes the payload through', () => {
+describe('[FR-003][AC-049] response envelope — the shape the isolation suite asserts against', () => {
+  it('[FR-003] sendOk defaults to 200 and passes the payload through', () => {
     const reply = fakeReply();
     sendOk(reply, { id: 'abc' });
     expect(reply.code).toBe(200);
     expect(reply.sent).toEqual({ id: 'abc' });
   });
 
-  it('sendOk honours an explicit status', () => {
+  it('[FR-003] sendOk honours an explicit status', () => {
     const reply = fakeReply();
     sendOk(reply, { id: 'abc' }, 201);
     expect(reply.code).toBe(201);
   });
 
-  it('sendError always nests under `error`', () => {
+  it('[FR-003][AC-052] sendError always nests under `error`, so a 404 is byte-identical either way', () => {
     const reply = fakeReply();
     sendError(reply, {
       status: 404,
@@ -50,7 +50,7 @@ describe('response envelope', () => {
     });
   });
 
-  it('sendError carries field-level details', () => {
+  it('[FR-003] sendError carries field-level details', () => {
     const reply = fakeReply();
     sendError(reply, {
       status: 400,
