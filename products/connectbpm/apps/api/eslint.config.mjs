@@ -78,9 +78,52 @@ export default tseslint.config(
         },
       ],
 
+      // ── Tenancy / metering brand forgery (ADR-004 §2, ADR-007) ────────────
+      // TenantScopedClient and TransitionTx are branded with NON-EXPORTED
+      // unique symbols, so they cannot be built structurally and cannot be
+      // reached by a single `as`. The one remaining escape is the double
+      // assertion `raw as unknown as TenantScopedClient`, which TypeScript
+      // permits anywhere. Both brands also carry a runtime grant, so a forged
+      // client throws on first use — but a build failure is better than a
+      // 500, and better still than a leak if a grant check is ever missed.
+      //
+      // Exempted by the overrides below: the modules that own each brand, and
+      // the tests that prove forgery is refused.
+      'no-restricted-syntax': [
+        'error',
+        {
+          selector:
+            'TSAsExpression > TSTypeReference > Identifier[name="TenantScopedClient"]',
+          message:
+            'AC-051: a TenantScopedClient may only come from withTenant(). ' +
+            'Asserting a raw client into the brand reaches every tenant — the ' +
+            'one bug class this product cannot survive (NFR-008, STRAT-01 K6).',
+        },
+        {
+          selector:
+            'TSAsExpression > TSTypeReference > Identifier[name="TransitionTx"]',
+          message:
+            'AC-012 / DEC-002 MET-2: a TransitionTx may only come from the ' +
+            'Transition Coordinator. Asserting one writes the meter outside ' +
+            'the transition transaction, which is unaccounted revenue.',
+        },
+      ],
+
       // ── Secrets Detection ──────────────────────────────────────────────────
       'no-secrets/no-secrets': ['error', { tolerance: 4.2 }],
     },
+  },
+  {
+    // The modules that OWN the brands, and the tests that prove the brands
+    // cannot be forged, are the only places the assertion is legitimate.
+    files: [
+      'src/tenancy/**/*.ts',
+      'src/engine/transition-tx.ts',
+      'tests/type-fixtures/**/*.ts',
+      'tests/integration/tenancy/**/*.ts',
+      'tests/unit/engine/**/*.ts',
+    ],
+    rules: { 'no-restricted-syntax': 'off' },
   },
   {
     files: ['**/*.test.ts', '**/*.spec.ts', 'tests/**/*.ts', 'scripts/**/*.ts'],

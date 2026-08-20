@@ -1,7 +1,24 @@
 {
   "extends": "./tsconfig.json",
   "compilerOptions": {
-    "noEmit": true
+    "noEmit": true,
+    // `rootDir` is "./src" in the emitting config; here the program spans
+    // src/, tests/ and scripts/, and nothing is emitted.
+    "rootDir": "."
   },
+  // `exclude` is INHERITED from tsconfig.json, which excludes tests/ and
+  // scripts/ so that the build emits src/ alone. Overriding `include` here was
+  // not enough — exclude filters include — so `pnpm typecheck` silently checked
+  // src/ only. Verified before the fix by planting `const x: number = "nope"`
+  // in a test file: tsc exited 0.
+  //
+  // This matters beyond hygiene. tests/type-fixtures/brand-forgery.ts asserts,
+  // with @ts-expect-error, that a raw PrismaClient does NOT compile where a
+  // TenantScopedClient is required (AC-051, T015). An unchecked assertion file
+  // is a gate reporting a pass it never evaluated.
+  //
+  // tests/fixtures/ holds deliberately invalid code fed to the metering gate;
+  // it is scanned as text, never compiled.
+  "exclude": ["node_modules", "dist", "coverage", "tests/fixtures"],
   "include": ["src/**/*", "tests/**/*", "scripts/**/*"]
 }
