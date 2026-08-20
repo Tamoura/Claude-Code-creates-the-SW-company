@@ -137,10 +137,16 @@ if [ -n "$TEST_FILES" ]; then
   TRACED_TESTS=0
 
   for file in $TEST_FILES; do
-    FILE_TESTS=$(grep -c "test\(\|it\(\|describe\(" "$file" 2>/dev/null || echo "0")
-    FILE_TRACED=$(grep -c '\[US-[0-9]\+\]\|\[AC-[0-9]\+\]\|\[FR-[0-9]\+\]' "$file" 2>/dev/null || echo "0")
-    TOTAL_TESTS=$((TOTAL_TESTS + FILE_TESTS))
-    TRACED_TESTS=$((TRACED_TESTS + FILE_TRACED))
+    # NOTE: use ERE. The previous BRE pattern "test\(\|it\(\|describe\(" was invalid —
+    # \( opens a group in BRE, so grep exited 2 with "Unmatched ( or \(" on every file
+    # and this check never counted a single test for any product.
+    # Also: `grep -c` already prints 0 and exits 1 when there is no match, so an
+    # `|| echo "0"` appended a SECOND zero, producing "0\n0" and a fatal
+    # "syntax error in expression" in the arithmetic below. Use `|| true`.
+    FILE_TESTS=$(grep -cE '\b(test|it|describe)\(' "$file" 2>/dev/null || true)
+    FILE_TRACED=$(grep -cE '\[(US|AC|FR)-[0-9]+\]' "$file" 2>/dev/null || true)
+    TOTAL_TESTS=$((TOTAL_TESTS + ${FILE_TESTS:-0}))
+    TRACED_TESTS=$((TRACED_TESTS + ${FILE_TRACED:-0}))
   done
 
   if [ "$TOTAL_TESTS" -gt 0 ]; then
