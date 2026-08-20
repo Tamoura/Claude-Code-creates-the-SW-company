@@ -1,0 +1,149 @@
+# ConnectBPM — local development infrastructure.
+#
+# Host ports are unique to this product so it can run alongside every other
+# ConnectSW product simultaneously. Container names are prefixed `connectbpm-`
+# for the same reason.
+#
+#   PostgreSQL  localhost:5438 -> 5432
+#   Redis       localhost:6388 -> 6379
+#   API         localhost:5018
+#   Web         localhost:3123   (see .claude/PORT-REGISTRY.md)
+
+services:
+  db:
+    image: postgres:15-alpine
+    container_name: connectbpm-postgres
+    ports:
+      - '127.0.0.1:5438:5432'
+    environment:
+      POSTGRES_DB: ${POSTGRES_DB:-connectbpm_dev}
+      POSTGRES_USER: ${POSTGRES_USER:-postgres}
+      POSTGRES_PASSWORD: ${POSTGRES_PASSWORD:-postgres}
+    command:
+      # ADR-009: the job runner polls with SELECT FOR UPDATE SKIP LOCKED at up
+      # to 8 workers; the default 100 connections is comfortable but explicit.
+      - postgres
+      - -c
+      - max_connections=200
+    volumes:
+      - connectbpm_pgdata:/var/lib/postgresql/data
+    healthcheck:
+      test: ['CMD-SHELL', 'pg_isready -U ${POSTGRES_USER:-postgres}']
+      interval: 10s
+      timeout: 5s
+      retries: 5
+    deploy:
+      resources:
+        limits:
+          cpus: '2'
+          memory: 1G
+    networks:
+      - connectbpm
+
+  redis:
+    image: redis:7-alpine
+    container_name: connectbpm-redis
+    ports:
+      - '127.0.0.1:6388:6379'
+    # Cache and soft counters only (FR-045) — eviction is safe by design.
+    command: ['redis-server', '--maxmemory', '256mb', '--maxmemory-policy', 'allkeys-lru']
+    volumes:
+      - connectbpm_redisdata:/data
+    healthcheck:
+      test: ['CMD', 'redis-cli', 'ping']
+      interval: 10s
+      timeout: 5s
+      retries: 5
+    deploy:
+      resources:
+        limits:
+          cpus: '1'
+          memory: 384M
+    networks:
+      - connectbpm
+
+  api:
+    build:
+      context: .
+      dockerfile: apps/api/Dockerfile
+    container_name: connectbpm-api
+    ports:
+      - '5018:5018'
+    environment:
+      NODE_ENV: ${NODE_ENV:-development}
+      PORT: 5018
+      HOST: 0.0.0.0
+      DATABASE_URL: postgresql://${POSTGRES_USER:-postgres}:${POSTGRES_PASSWORD:-postgres}@db:5432/${POSTGRES_DB:-connectbpm_dev}
+      REDIS_URL: redis://redis:6379
+      JWT_SECRET: ${JWT_SECRET:-change-this-to-a-secure-random-string-at-least-32-chars}
+      JWT_REFRESH_SECRET: ${JWT_REFRESH_SECRET:-change-this-to-another-secure-random-string-32c}
+      CORS_ORIGIN: ${CORS_ORIGIN:-http://localhost:3123}
+      RUN_JOB_RUNNER: 'false'
+    depends_on:
+      db:
+        condition: service_healthy
+      redis:
+        condition: service_healthy
+    deploy:
+      resources:
+        limits:
+          cpus: '1'
+          memory: 512M
+    networks:
+      - connectbpm
+
+  # ADR-009: same image, different role. The runner drains timers, schedules,
+  # retries and the transactional outbox. NOT a microservice boundary.
+  runner:
+    build:
+      context: .
+      dockerfile: apps/api/Dockerfile
+    container_name: connectbpm-runner
+    environment:
+      NODE_ENV: ${NODE_ENV:-development}
+      DATABASE_URL: postgresql://${POSTGRES_USER:-postgres}:${POSTGRES_PASSWORD:-postgres}@db:5432/${POSTGRES_DB:-connectbpm_dev}
+      REDIS_URL: redis://redis:6379
+      JWT_SECRET: ${JWT_SECRET:-change-this-to-a-secure-random-string-at-least-32-chars}
+      JWT_REFRESH_SECRET: ${JWT_REFRESH_SECRET:-change-this-to-another-secure-random-string-32c}
+      RUN_JOB_RUNNER: 'true'
+      JOB_WORKER_COUNT: ${JOB_WORKER_COUNT:-8}
+      JOB_BATCH_SIZE: ${JOB_BATCH_SIZE:-200}
+    depends_on:
+      db:
+        condition: service_healthy
+    profiles: ['runner']
+    deploy:
+      resources:
+        limits:
+          cpus: '1'
+          memory: 512M
+    networks:
+      - connectbpm
+
+  web:
+    build:
+      context: .
+      dockerfile: apps/web/Dockerfile
+    container_name: connectbpm-web
+    ports:
+      - '3123:3123'
+    environment:
+      NEXT_PUBLIC_API_URL: ${NEXT_PUBLIC_API_URL:-http://localhost:5018}
+      PORT: 3123
+    depends_on:
+      - api
+    deploy:
+      resources:
+        limits:
+          cpus: '1'
+          memory: 512M
+    networks:
+      - connectbpm
+
+networks:
+  connectbpm:
+    driver: bridge
+
+volumes:
+  connectbpm_pgdata:
+  connectbpm_redisdata:

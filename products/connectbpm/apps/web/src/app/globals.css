@@ -1,0 +1,12 @@
+@tailwind base;
+@tailwind components;
+@tailwind utilities;
+
+:root {
+  --font-sans: ui-sans-serif, system-ui, sans-serif;
+  --font-arabic: 'Noto Kufi Arabic', Tahoma, sans-serif;
+}
+
+html[dir='rtl'] body {
+  font-family: var(--font-arabic);
+}

@@ -1,0 +1,1211 @@
+// =============================================================================
+// ConnectBPM — Data Model (DESIGN ARTIFACT, ARCH-01)
+//
+// This file is the binding data-model design. It is NOT yet wired into an
+// application: DEC-003 holds implementation behind the K0 validation gate, and
+// ARCH-01's scope is design artifacts only. It is written as valid Prisma so
+// that it can be moved to apps/api/prisma/schema.prisma unchanged.
+//
+// Governing decisions:
+//   ADR-001  E1..E7 element set, InstanceBatch, ScheduleOccurrence
+//   ADR-002  condition ASTs pinned as JSONB on the immutable version
+//   ADR-004  shared schema + tenantId + PostgreSQL RLS; every index leads with tenantId
+//   ADR-007  transactional usage ledger, quota reservations, secondary counters
+//   ADR-008  hash-chained append-only evidence, erasure-safe
+//   ADR-009  one job table, SELECT FOR UPDATE SKIP LOCKED
+//
+// CONVENTIONS (enforced in review and by CI)
+//   * Every tenant-scoped model carries a NON-NULL `tenantId`, including models
+//     reachable only through a parent (Token, InstanceVariable, FormSchema).
+//     Denormalised on purpose: the RLS predicate and the index prefix are then
+//     uniform and no isolation guarantee depends on a join being written right.
+//   * Every index on a tenant-scoped model LEADS with tenantId.
+//   * Every tenant-scoped table gets: ENABLE + FORCE ROW LEVEL SECURITY and a
+//     policy `USING (tenant_id = current_setting('app.tenant_id', true)::uuid)`.
+//     A CI query compares information_schema.tables against pg_policies and
+//     fails on any tenant-scoped table without one.  (ADR-004)
+//   * GLOBAL, deliberately un-scoped models (enumerated, reviewed, no RLS):
+//     User, Template, TemplateLocale.
+//   * `/// @pii` marks a field that is personal data: never logged, redacted by
+//     the @connectsw/shared logger, and subject to FR-097 erasure.
+//   * JSONB where the shape evolves and is Zod-validated at the boundary;
+//     indexed columns where a query filters or traverses.  (ADR-003 H4)
+// =============================================================================
+
+generator client {
+  provider = "prisma-client-js"
+}
+
+datasource db {
+  provider = "postgresql"
+  url      = env("DATABASE_URL")
+}
+
+// =============================================================================
+// A. TENANCY, IDENTITY, AUTHORISATION            FR-001..FR-010, ADR-004
+// =============================================================================
+
+/// The customer workspace. Owns every tenant-scoped entity. FR-001.
+model Tenant {
+  id             String   @id @default(uuid()) @db.Uuid
+  name           String
+  /// URL/workspace-switch key. Also the routing key for a Dedicated/Sovereign
+  /// deployment, so a tenant can be moved between topologies without renaming.
+  slug           String   @unique
+  defaultLocale  String   @default("en") @map("default_locale") // FR-145: configuration, never structure
+  timezone       String   @default("UTC")                        // IANA id. No default region assumed.
+  status         TenantStatus @default(ACTIVE)
+
+  /// NFR-019 — deployment topology is the sovereignty lever (ADR-004 §6).
+  /// Two columns now; unpleasant to retrofit once tenants exist.
+  residency      String   @default("global")             // e.g. "global" | "qa" | "sa" | "ae"
+  deploymentRef  String?  @map("deployment_ref")         // null = shared deployment
+
+  createdAt      DateTime @default(now()) @map("created_at")
+  updatedAt      DateTime @updatedAt @map("updated_at")
+
+  memberships         Membership[]
+  workingCalendars    WorkingCalendar[]
+  subscription        Subscription?
+  retentionPolicy     RetentionPolicy?
+  definitions         ProcessDefinition[]
+  instances           ProcessInstance[]
+  usageEvents         UsageEvent[]
+  quotaReservations   QuotaReservation[]
+  quotaCounters       QuotaCounter[]
+  usageCounters       UsageCounter[]
+  distinctActors      UsageDistinctActor[]
+  evidenceExports     EvidenceExport[]
+  batches             InstanceBatch[]
+  jobs                Job[]
+  webhookEndpoints    WebhookEndpoint[]
+  auditLogs           AuditLog[]
+
+  @@index([status])
+  @@map("tenant")
+}
+
+enum TenantStatus {
+  ACTIVE
+  SUSPENDED
+  CLOSED
+}
+
+/// GLOBAL identity. One email, many workspaces (FR-006, EC-20). NOT tenant-scoped:
+/// cross-tenant *identity* is a feature; cross-tenant *data* is the failure.
+/// EXTEND of @connectsw/auth's User (which has no tenant dimension — verified).
+model User {
+  id           String  @id @default(uuid()) @db.Uuid
+  /// @pii
+  email        String  @unique
+  /// @pii
+  name         String
+  passwordHash String  @map("password_hash")
+  /// Personal locale, overrides the workspace default. FR-146.
+  locale       String  @default("en")
+  status       UserStatus @default(ACTIVE)
+
+  /// API2 broken-authentication controls (see api-contract.yaml security notes)
+  failedLoginCount Int       @default(0) @map("failed_login_count")
+  lockedUntil      DateTime? @map("locked_until")
+  lastLoginAt      DateTime? @map("last_login_at")
+
+  createdAt DateTime @default(now()) @map("created_at")
+  updatedAt DateTime @updatedAt @map("updated_at")
+
+  memberships   Membership[]
+  refreshTokens RefreshToken[]
+
+  @@index([status])
+  @@map("app_user")
+}
+
+enum UserStatus {
+  ACTIVE
+  DEACTIVATED
+}
+
+/// A user's participation in ONE tenant, carrying roles. FR-004, FR-006, FR-007.
+/// Roles are additive; Participant is the default for invited users.
+/// FR-005 / AC-028: role assignment NEVER affects a billable quantity.
+model Membership {
+  id        String  @id @default(uuid()) @db.Uuid
+  tenantId  String  @map("tenant_id") @db.Uuid
+  userId    String  @map("user_id") @db.Uuid
+  roles     WorkspaceRole[]
+  status    MembershipStatus @default(INVITED)
+  /// @pii — the email the invitation was sent to, before a User exists
+  invitedEmail String? @map("invited_email")
+  invitedById  String? @map("invited_by_id") @db.Uuid
+  invitedAt    DateTime? @map("invited_at")
+  acceptedAt   DateTime? @map("accepted_at")
+  deactivatedAt DateTime? @map("deactivated_at")
+
+  createdAt DateTime @default(now()) @map("created_at")
+  updatedAt DateTime @updatedAt @map("updated_at")
+
+  tenant Tenant @relation(fields: [tenantId], references: [id], onDelete: Cascade)
+  user   User   @relation(fields: [userId], references: [id], onDelete: Cascade)
+
+  assignedTasks Task[] @relation("TaskAssignee")
+
+  @@unique([tenantId, userId])
+  @@index([tenantId, status])
+  @@index([tenantId, userId])
+  @@index([userId])
+  @@map("membership")
+}
+
+enum WorkspaceRole {
+  OWNER
+  ADMIN
+  DESIGNER
+  PUBLISHER
+  PROCESS_OWNER
+  PARTICIPANT
+}
+
+enum MembershipStatus {
+  INVITED
+  ACTIVE
+  DEACTIVATED
+}
+
+/// Session/refresh tokens. EXTEND of @connectsw/auth. Token stored as a HASH,
+/// never plaintext. Rotation with reuse detection: presenting a token whose
+/// `rotatedToId` is set revokes the whole family (API2).
+model RefreshToken {
+  id          String   @id @default(uuid()) @db.Uuid
+  userId      String   @map("user_id") @db.Uuid
+  /// SHA-256 of the token. Never the token itself.
+  tokenHash   String   @unique @map("token_hash")
+  familyId    String   @map("family_id") @db.Uuid
+  rotatedToId String?  @map("rotated_to_id") @db.Uuid
+  expiresAt   DateTime @map("expires_at")
+  revokedAt   DateTime? @map("revoked_at")
+  /// @pii — retained for the session list / revoke surface
+  userAgent   String?  @map("user_agent")
+  /// @pii
+  ipAddress   String?  @map("ip_address")
+  createdAt   DateTime @default(now()) @map("created_at")
+
+  user User @relation(fields: [userId], references: [id], onDelete: Cascade)
+
+  @@index([userId, revokedAt])
+  @@index([familyId])
+  @@index([expiresAt])
+  @@map("refresh_token")
+}
+
+/// Per-tenant weekend days, working hours and holidays.
+/// FR-062, EC-10, DEC-001: THE mechanism by which the product is geography-neutral.
+/// No weekend, workweek or holiday value appears anywhere else in the schema.
+model WorkingCalendar {
+  id           String  @id @default(uuid()) @db.Uuid
+  tenantId     String  @map("tenant_id") @db.Uuid
+  name         String
+  isDefault    Boolean @default(false) @map("is_default")
+  /// ISO-8601 day numbers, 1=Monday .. 7=Sunday. Configuration, not an enum.
+  weekendDays  Int[]   @map("weekend_days")
+  /// { "start": "08:00", "end": "17:00" } in the tenant's timezone
+  workingHours Json    @map("working_hours")
+  /// [{ "date": "2026-12-18", "name": "National Day" }]
+  holidays     Json    @default("[]")
+
+  createdAt DateTime @default(now()) @map("created_at")
+  updatedAt DateTime @updatedAt @map("updated_at")
+
+  tenant Tenant @relation(fields: [tenantId], references: [id], onDelete: Cascade)
+
+  @@index([tenantId, isDefault])
+  @@map("working_calendar")
+}
+
+// =============================================================================
+// B. PROCESS DEFINITIONS AND FORMS               FR-011..FR-040, ADR-001, ADR-002
+// =============================================================================
+
+/// A named process. A container for versions. FR-013, FR-026.
+model ProcessDefinition {
+  id          String @id @default(uuid()) @db.Uuid
+  tenantId    String @map("tenant_id") @db.Uuid
+  /// Stable tenant-scoped key, used by API callers and template installs.
+  key         String
+  name        String
+  description String?
+  status      DefinitionStatus @default(ACTIVE)
+  /// Provenance when installed from the gallery. FR-153: the copy is UNLINKED —
+  /// later gallery changes never affect it. This is a breadcrumb, not a relation.
+  sourceTemplateSlug    String? @map("source_template_slug")
+  sourceTemplateVersion Int?    @map("source_template_version")
+
+  archivedAt DateTime? @map("archived_at")
+  createdAt  DateTime  @default(now()) @map("created_at")
+  updatedAt  DateTime  @updatedAt @map("updated_at")
+
+  tenant   Tenant @relation(fields: [tenantId], references: [id], onDelete: Restrict)
+  versions ProcessDefinitionVersion[]
+  schedules ScheduleSubscription[]
+
+  @@unique([tenantId, key])
+  @@index([tenantId, status])
+  @@index([tenantId, name])
+  @@map("process_definition")
+}
+
+enum DefinitionStatus {
+  ACTIVE
+  ARCHIVED
+}
+
+/// An immutable published (or mutable draft) graph plus its bound form schemas.
+/// FR-014: a PUBLISHED row is immutable — enforced in the repository AND by a
+/// BEFORE UPDATE/DELETE trigger (ADR-003 H2). FR-018: instances pin to it for life.
+model ProcessDefinitionVersion {
+  id           String @id @default(uuid()) @db.Uuid
+  tenantId     String @map("tenant_id") @db.Uuid
+  definitionId String @map("definition_id") @db.Uuid
+  /// Monotonically increasing integer per definition. FR-015.
+  version      Int
+  status       VersionStatus @default(DRAFT)
+
+  /// The element graph: nodes E1..E7 + sequence flows + canvas coordinates.
+  /// Coordinates are canonical and direction-independent; RTL is a projection
+  /// applied by the canvas, never stored (ADR-006 §3).
+  graph        Json
+  /// Pre-parsed, Zod-validated condition ASTs keyed by elementId+flowId, with
+  /// `grammarVersion`. The parser is NOT on the runtime path (ADR-002 §2).
+  conditionAsts Json @default("{}") @map("condition_asts")
+  /// Optional instance-level SLA: { "duration": "P30D" | "absolute": "...",
+  /// "expiryPathFlowId": "..." }. FR-025, template T01. A definition attribute,
+  /// deliberately NOT an element.
+  instanceSla  Json?  @map("instance_sla")
+  /// SHA-256 over JCS(graph + conditionAsts + all bound form schemas). FR-015.
+  /// Computed over OUR model, so a canvas-library upgrade cannot change it.
+  checksum     String
+  /// Optimistic concurrency for draft editing. FR-028, EC-16 -> HTTP 409. (ADR-003 H3)
+  revision     Int    @default(0)
+
+  publishedById String?   @map("published_by_id") @db.Uuid
+  publishedAt   DateTime? @map("published_at")
+  createdAt     DateTime  @default(now()) @map("created_at")
+  updatedAt     DateTime  @updatedAt @map("updated_at")
+
+  definition  ProcessDefinition @relation(fields: [definitionId], references: [id], onDelete: Restrict)
+  formSchemas FormSchema[]
+  instances   ProcessInstance[]
+
+  @@unique([definitionId, version])
+  @@index([tenantId, status])
+  @@index([tenantId, definitionId, version])
+  @@map("process_definition_version")
+}
+
+enum VersionStatus {
+  DRAFT
+  PUBLISHED
+}
+
+/// A versioned typed field set bound to a Start (E1) or a Step (E2).
+/// FR-034: pinned to the instance identically to the graph.
+/// FR-037 / EC-18: a field removed in v2 remains present, with its values, in v1.
+model FormSchema {
+  id                 String @id @default(uuid()) @db.Uuid
+  tenantId           String @map("tenant_id") @db.Uuid
+  definitionVersionId String @map("definition_version_id") @db.Uuid
+  /// The E1 or E2 element this form is bound to.
+  elementId          String @map("element_id")
+  /// [{ key, type, label:{en,ar}, required, validation, help, readOnlyAtSteps[] }]
+  /// `key` is the STABLE MACHINE KEY (FR-032, FR-149) — locale-independent and
+  /// the join between evidence exports in different locales.
+  fields             Json
+
+  createdAt DateTime @default(now()) @map("created_at")
+
+  definitionVersion ProcessDefinitionVersion @relation(fields: [definitionVersionId], references: [id], onDelete: Cascade)
+
+  @@unique([definitionVersionId, elementId])
+  @@index([tenantId, definitionVersionId])
+  @@map("form_schema")
+}
+
+/// E7 Schedule (bpmn:timerStartEvent) runtime materialisation. ADR-001 A2.
+/// The ELEMENT lives in the graph; this row holds recurrence state.
+model ScheduleSubscription {
+  id           String  @id @default(uuid()) @db.Uuid
+  tenantId     String  @map("tenant_id") @db.Uuid
+  definitionId String  @map("definition_id") @db.Uuid
+  /// Structured recurrence. NEVER a customer-authored expression (ADR-001 Neutral):
+  /// { "cron": "0 9 1 * *", "businessDayPolicy": "NEXT_WORKING_DAY" }
+  recurrence   Json
+  timezone     String
+  status       ScheduleStatus @default(ACTIVE)
+  /// Denormalised read convenience ONLY. NEVER the source of idempotency —
+  /// ScheduleOccurrence is (ADR-001 A3).
+  lastOccurrenceAt DateTime? @map("last_occurrence_at")
+  nextOccurrenceAt DateTime? @map("next_occurrence_at")
+
+  createdAt DateTime @default(now()) @map("created_at")
+  updatedAt DateTime @updatedAt @map("updated_at")
+
+  definition  ProcessDefinition    @relation(fields: [definitionId], references: [id], onDelete: Cascade)
+  occurrences ScheduleOccurrence[]
+
+  @@unique([definitionId])
+  @@index([tenantId, status, nextOccurrenceAt])
+  @@map("schedule_subscription")
+}
+
+enum ScheduleStatus {
+  ACTIVE
+  PAUSED
+}
+
+/// ADR-001 amendment A3. FR-060: exactly one instance per occurrence,
+/// idempotently across scheduler ticks AND restarts. The unique constraint —
+/// not a mutable high-water mark — is what delivers that.
+model ScheduleOccurrence {
+  id                     String @id @default(uuid()) @db.Uuid
+  tenantId               String @map("tenant_id") @db.Uuid
+  scheduleSubscriptionId String @map("schedule_subscription_id") @db.Uuid
+  occurrenceAt           DateTime @map("occurrence_at")
+  status                 OccurrenceStatus @default(CLAIMED)
+  instanceId             String? @map("instance_id") @db.Uuid
+  batchId                String? @map("batch_id") @db.Uuid
+  refusalReason          String? @map("refusal_reason")
+
+  createdAt DateTime @default(now()) @map("created_at")
+
+  subscription ScheduleSubscription @relation(fields: [scheduleSubscriptionId], references: [id], onDelete: Cascade)
+
+  @@unique([scheduleSubscriptionId, occurrenceAt])
+  @@index([tenantId, occurrenceAt])
+  @@map("schedule_occurrence")
+}
+
+enum OccurrenceStatus {
+  CLAIMED
+  ADMITTED
+  REFUSED
+}
+
+/// ADR-001 amendment A1. Bulk instantiation (FR-061) and Schedule fan-out.
+/// Exists so that EC-21/AC-017's "0 instances created, ONE refusal event for
+/// the batch" and AC-018's pre-confirmation count have something to name, and
+/// so a crash mid-batch leaves an identifiable, resumable record.
+model InstanceBatch {
+  id                  String @id @default(uuid()) @db.Uuid
+  tenantId            String @map("tenant_id") @db.Uuid
+  definitionVersionId String @map("definition_version_id") @db.Uuid
+  kind                BatchKind
+  /// Hard-capped at MAX_BATCH_SIZE = 5000 (ADR-001 Negative; also API4).
+  requestedCount      Int    @map("requested_count")
+  createdCount        Int    @default(0) @map("created_count")
+  status              BatchStatus @default(PENDING)
+  requestedById       String? @map("requested_by_id") @db.Uuid
+  /// Provenance of the recipient list: { "kind": "CSV", "filename": "...", "rowCount": 400 }
+  sourceRef           Json?  @map("source_ref")
+  refusalReason       String? @map("refusal_reason")
+
+  createdAt DateTime @default(now()) @map("created_at")
+
+  tenant    Tenant            @relation(fields: [tenantId], references: [id], onDelete: Restrict)
+  instances ProcessInstance[]
+
+  @@index([tenantId, status, createdAt])
+  @@map("instance_batch")
+}
+
+enum BatchKind {
+  BULK
+  SCHEDULE
+}
+
+enum BatchStatus {
+  PENDING
+  ADMITTED
+  REFUSED
+  COMPLETED
+}
+
+// =============================================================================
+// C. RUNTIME — INSTANCES, TOKENS, VARIABLES, TASKS   FR-041..FR-085, ADR-005
+// =============================================================================
+
+/// One execution. Pinned to a definition version for life (FR-018, EC-01).
+model ProcessInstance {
+  id                  String @id @default(uuid()) @db.Uuid
+  tenantId            String @map("tenant_id") @db.Uuid
+  definitionVersionId String @map("definition_version_id") @db.Uuid
+  batchId             String? @map("batch_id") @db.Uuid
+  /// Customer-visible correlation key (e.g. a PO number). Not unique — a tenant
+  /// may legitimately start two instances for the same business key.
+  businessKey         String? @map("business_key")
+  status              InstanceStatus @default(RUNNING)
+  /// Set only on a terminal transition. Drives billability (ADR-007).
+  terminalReason      TerminalReason?
+  /// DEC-004: the justification recorded on the usage event. Incremented in the
+  /// same transaction as each Step completion.
+  completedStepCount  Int    @default(0) @map("completed_step_count")
+  /// FR-029/FR-106: a designer test run of a DRAFT. Never billable.
+  isTest              Boolean @default(false) @map("is_test")
+  /// ADR-008 §3: gap-free per-instance evidence sequence. Allocated by
+  /// `UPDATE ... SET evidence_seq = evidence_seq + 1 RETURNING` inside the
+  /// transition transaction, so a rollback returns the number.
+  evidenceSeq         BigInt @default(0) @map("evidence_seq")
+
+  startedById String?   @map("started_by_id") @db.Uuid
+  startedAt   DateTime  @default(now()) @map("started_at")
+  /// Instance-level SLA deadline resolved to a UTC instant at start (FR-025).
+  dueAt       DateTime? @map("due_at")
+  endedAt     DateTime? @map("ended_at")
+  suspendedAt DateTime? @map("suspended_at")
+
+  createdAt DateTime @default(now()) @map("created_at")
+  updatedAt DateTime @updatedAt @map("updated_at")
+
+  tenant            Tenant                   @relation(fields: [tenantId], references: [id], onDelete: Restrict)
+  definitionVersion ProcessDefinitionVersion @relation(fields: [definitionVersionId], references: [id], onDelete: Restrict)
+  batch             InstanceBatch?           @relation(fields: [batchId], references: [id], onDelete: SetNull)
+
+  tokens      Token[]
+  variables   InstanceVariable[]
+  tasks       Task[]
+  evidence    EvidenceEntry[]
+  usageEvents UsageEvent[]
+  reservation QuotaReservation?
+  attachments Attachment[]
+
+  @@index([tenantId, status, startedAt])
+  @@index([tenantId, definitionVersionId, status])
+  @@index([tenantId, businessKey])
+  @@index([tenantId, dueAt])
+  @@index([tenantId, batchId])
+  @@map("process_instance")
+}
+
+/// FR-048 — exactly these six statuses.
+enum InstanceStatus {
+  RUNNING
+  SUSPENDED
+  COMPLETED
+  CANCELLED
+  EXPIRED
+  FAULT_TERMINATED
+}
+
+/// The billability discriminator. ADR-007's exhaustive switch is over THIS union;
+/// adding a member without a billability test fails the build (AC-008).
+enum TerminalReason {
+  COMPLETED           // FR-049 — token reached a Finish, whatever the outcome label. BILLABLE.
+  EXPIRED             // FR-050 — definition-declared expiry path.               BILLABLE.
+  CANCELLED           // FR-051 — billable iff completedStepCount >= 1 (FR-104, DEC-004).
+  FAULT_TERMINATED    // FR-052 — engine fault / invalid-definition error.       NEVER billable. P0.
+}
+
+/// Engine execution position. Several exist concurrently between Split and Join.
+/// `version` is the staleness discriminator for timers (FR-057, EC-02, ADR-009).
+model Token {
+  id         String @id @default(uuid()) @db.Uuid
+  tenantId   String @map("tenant_id") @db.Uuid
+  instanceId String @map("instance_id") @db.Uuid
+  elementId  String @map("element_id")
+  /// Incremented on EVERY movement. A timer job carries the version it was
+  /// scheduled against; a mismatch means stale — decided by version, never by clock.
+  version    Int    @default(0)
+  status     TokenStatus @default(ACTIVE)
+  /// For Join arrival tracking: the Split element that produced this token.
+  branchOfElementId String? @map("branch_of_element_id")
+
+  createdAt DateTime @default(now()) @map("created_at")
+  updatedAt DateTime @updatedAt @map("updated_at")
+
+  instance ProcessInstance @relation(fields: [instanceId], references: [id], onDelete: Cascade)
+  timers   Job[]
+
+  @@index([tenantId, instanceId, status])
+  @@index([tenantId, instanceId, elementId])
+  @@map("token")
+}
+
+enum TokenStatus {
+  ACTIVE
+  CONSUMED
+}
+
+/// Process data, mostly from form submissions. FR-035: addressable by the
+/// restricted grammar. Values are locale-independent (FR-148, EC-12).
+model InstanceVariable {
+  id         String @id @default(uuid()) @db.Uuid
+  tenantId   String @map("tenant_id") @db.Uuid
+  instanceId String @map("instance_id") @db.Uuid
+  /// The STABLE MACHINE KEY from the pinned form schema.
+  key        String
+  type       String
+  /// @pii — form submissions routinely contain personal data. Erased by FR-097.
+  value      Json
+
+  createdAt DateTime @default(now()) @map("created_at")
+  updatedAt DateTime @updatedAt @map("updated_at")
+
+  instance ProcessInstance @relation(fields: [instanceId], references: [id], onDelete: Cascade)
+
+  @@unique([instanceId, key])
+  @@index([tenantId, instanceId])
+  @@map("instance_variable")
+}
+
+/// A human work item created by a Step (E2). FR-066..FR-085.
+model Task {
+  id         String @id @default(uuid()) @db.Uuid
+  tenantId   String @map("tenant_id") @db.Uuid
+  instanceId String @map("instance_id") @db.Uuid
+  tokenId    String? @map("token_id") @db.Uuid
+  elementId  String @map("element_id")
+  /// FR-067: at most one performer at a time. FR-068: claim decided by a
+  /// conditional UPDATE ... WHERE assignee_id IS NULL (EC-04, AC-073).
+  assigneeId String? @map("assignee_id") @db.Uuid
+  /// Claimable-queue role when unassigned. FR-082.
+  candidateRole WorkspaceRole? @map("candidate_role")
+  status     TaskStatus @default(OPEN)
+  dueAt      DateTime? @map("due_at")
+  claimedAt  DateTime? @map("claimed_at")
+  completedAt DateTime? @map("completed_at")
+  /// The Step's outcome action label (Approve / Reject / ...). FR-081.
+  outcome    String?
+  /// @pii
+  comment    String?
+  /// FR-083 / KPI-P9: ms between first render and submission, client-reported.
+  timeToCompleteMs Int? @map("time_to_complete_ms")
+  /// FR-072 / EC-11: client-supplied. Repeated submission returns the first result.
+  idempotencyKey String? @map("idempotency_key")
+
+  createdAt DateTime @default(now()) @map("created_at")
+  updatedAt DateTime @updatedAt @map("updated_at")
+
+  instance ProcessInstance @relation(fields: [instanceId], references: [id], onDelete: Cascade)
+  assignee Membership?     @relation("TaskAssignee", fields: [assigneeId], references: [id], onDelete: Restrict)
+
+  @@unique([tenantId, idempotencyKey])
+  @@index([tenantId, assigneeId, status, dueAt])   // the inbox query (FR-069)
+  @@index([tenantId, candidateRole, status, dueAt]) // the claimable queue (FR-082)
+  @@index([tenantId, instanceId])
+  @@index([tenantId, status, dueAt])
+  @@map("task")
+}
+
+enum TaskStatus {
+  OPEN
+  CLAIMED
+  COMPLETED
+  WITHDRAWN     // FR-058: interrupting timer withdrew it. Never recorded as a completion.
+  REASSIGNED
+}
+
+/// FR-038: tenant-scoped, size-limited per tier, virus-scanned before visible,
+/// counted toward the storage meter. Object key is `t/{tenantId}/{instanceId}/{id}`
+/// and the presented storage credential is scoped to the `t/{tenantId}/` prefix,
+/// so a cross-tenant read is refused AT THE STORAGE LAYER (AC-055, NFR-011).
+model Attachment {
+  id         String @id @default(uuid()) @db.Uuid
+  tenantId   String @map("tenant_id") @db.Uuid
+  instanceId String @map("instance_id") @db.Uuid
+  /// @pii — filenames leak personal data routinely
+  filename   String
+  contentType String @map("content_type")
+  sizeBytes  Int    @map("size_bytes")
+  objectKey  String @unique @map("object_key")
+  scanStatus ScanStatus @default(PENDING) @map("scan_status")
+  uploadedById String? @map("uploaded_by_id") @db.Uuid
+  erasedAt   DateTime? @map("erased_at")
+
+  createdAt DateTime @default(now()) @map("created_at")
+
+  instance ProcessInstance @relation(fields: [instanceId], references: [id], onDelete: Restrict)
+
+  @@index([tenantId, instanceId])
+  @@index([tenantId, scanStatus])
+  @@map("attachment")
+}
+
+enum ScanStatus {
+  PENDING
+  CLEAN
+  INFECTED
+}
+
+// =============================================================================
+// D. EVIDENCE                                    FR-086..FR-100, ADR-008
+// =============================================================================
+
+/// The append-only, hash-chained instance history. THE WEDGE (DEC-001).
+/// Immutability enforced twice: no update/delete method exists in the recorder,
+/// AND a BEFORE UPDATE OR DELETE trigger raises — except the SECURITY DEFINER
+/// erasure path, which may null payload columns only.
+/// Range-partitioned by month on occurredAtUtc from day one (ADR-008 Negative).
+model EvidenceEntry {
+  id                  String @id @default(uuid()) @db.Uuid
+  tenantId            String @map("tenant_id") @db.Uuid
+  instanceId          String @map("instance_id") @db.Uuid
+  /// Gap-free, strictly monotonic per instance (AC-038).
+  seq                 BigInt
+  eventType           String @map("event_type")
+  definitionVersionId String @map("definition_version_id") @db.Uuid
+
+  /// --- Actor. DEC-005/CLR-B: EXTERNAL_PARTY exists from day one and is never
+  /// written in v1. Adding a variant after 100M rows and shipped exports is the
+  /// expensive case the CEO decision warned about.
+  actorKind   ActorKind @map("actor_kind")
+  actorId     String?   @map("actor_id") @db.Uuid
+  /// The actor's role AT THE TIME of the action. Denormalised deliberately —
+  /// roles change and the record must not (FR-088).
+  actorRole   String    @map("actor_role")
+  /// Phase 2: signed-link subject / verified email / identity assertion.
+  actorRef    Json?     @map("actor_ref")
+  actorLocale String    @default("en") @map("actor_locale")
+
+  /// Both timestamps, always (FR-063, AC-038).
+  occurredAtUtc   DateTime @map("occurred_at_utc")
+  occurredAtLocal String   @map("occurred_at_local")
+
+  /// @pii — form deltas, comments, outcomes. NULLED (not deleted) by FR-097 erasure.
+  payload        Json?
+  /// SHA-256(JCS(payload)). SURVIVES ERASURE — this is what the chain commits to,
+  /// which is exactly why AC-046 and AC-041 are compatible (ADR-008 §2).
+  payloadHash    String @map("payload_hash")
+  prevHash       String @map("prev_hash")
+  entryHash      String @map("entry_hash")
+
+  /// FR-029/AC-007: draft test runs produce evidence, never a billable event.
+  isTest         Boolean @default(false) @map("is_test")
+
+  /// --- Erasure tombstone (FR-097, AC-046)
+  payloadErasedAt      DateTime? @map("payload_erased_at")
+  payloadErasedById    String?   @map("payload_erased_by_id") @db.Uuid
+  payloadErasurePolicy String?   @map("payload_erasure_policy")
+  /// Machine keys only. NEVER the removed values.
+  payloadFieldsRemoved String[]  @map("payload_fields_removed")
+
+  createdAt DateTime @default(now()) @map("created_at")
+
+  instance ProcessInstance @relation(fields: [instanceId], references: [id], onDelete: Restrict)
+
+  @@unique([instanceId, seq])
+  @@index([tenantId, instanceId, seq])
+  @@index([tenantId, occurredAtUtc])
+  @@index([tenantId, eventType, occurredAtUtc])
+  @@map("evidence_entry")
+}
+
+enum ActorKind {
+  MEMBER
+  SYSTEM
+  SCHEDULE
+  SUPPORT
+  EXTERNAL_PARTY   // DEC-005: reserved, never written in v1
+}
+
+/// A record that evidence left the system. FR-094, AC-044, STRAT M11.
+model EvidenceExport {
+  id            String @id @default(uuid()) @db.Uuid
+  tenantId      String @map("tenant_id") @db.Uuid
+  requestedById String @map("requested_by_id") @db.Uuid
+  /// EXACTLY the filter parameters used (FR-094).
+  filters       Json
+  format        ExportFormat
+  /// FR-093 / AC-042: every definition version the export covers.
+  versionsCovered Json @map("versions_covered")
+  /// FR-095 / AC-045: sub-periods removed by retention. A silently short export is a defect.
+  retentionGapsNoted Json @default("[]") @map("retention_gaps_noted")
+  artifactHash  String? @map("artifact_hash")
+  status        ExportStatus @default(PENDING)
+  generatedAt   DateTime? @map("generated_at")
+  expiresAt     DateTime? @map("expires_at")
+
+  createdAt DateTime @default(now()) @map("created_at")
+
+  tenant Tenant @relation(fields: [tenantId], references: [id], onDelete: Cascade)
+
+  @@index([tenantId, createdAt])
+  @@index([tenantId, status])
+  @@map("evidence_export")
+}
+
+enum ExportFormat {
+  JSON
+  CSV
+}
+
+enum ExportStatus {
+  PENDING
+  READY
+  FAILED
+  EXPIRED
+}
+
+/// Platform / administrative audit — NOT the evidence chain (ADR-008 §10).
+/// EXTEND of @connectsw/audit's AuditLog with tenantId. Sign-ins, role changes,
+/// plan changes, and FR-009/AC-054 ConnectSW staff access.
+model AuditLog {
+  id           String   @id @default(uuid()) @db.Uuid
+  tenantId     String   @map("tenant_id") @db.Uuid
+  actor        String
+  actorKind    ActorKind @default(MEMBER) @map("actor_kind")
+  action       String
+  resourceType String   @map("resource_type")
+  resourceId   String   @map("resource_id")
+  /// Reason is MANDATORY for SUPPORT access (FR-009, BR-010).
+  reason       String?
+  details      Json?
+  /// @pii
+  ipAddress    String?  @map("ip_address")
+  /// @pii
+  userAgent    String?  @map("user_agent")
+  correlationId String? @map("correlation_id")
+  timestamp    DateTime @default(now())
+
+  tenant Tenant @relation(fields: [tenantId], references: [id], onDelete: Cascade)
+
+  @@index([tenantId, timestamp])
+  @@index([tenantId, actorKind, timestamp])
+  @@index([tenantId, action])
+  @@map("audit_log")
+}
+
+// =============================================================================
+// E. METERING, QUOTA, BILLING                    FR-101..FR-125, ADR-007
+// =============================================================================
+
+/// THE BILLABLE LEDGER. Append-only, immutable (FR-109, AC-021): a BEFORE UPDATE
+/// OR DELETE trigger raises; corrections are compensating rows.
+/// Written ONLY by `recordBillableCompletion(tx: TransitionTx, ...)`, which
+/// cannot be called outside the transition transaction (ADR-007 type-level guard,
+/// AC-012). @connectsw/billing's UsageService is FORBIDDEN here (AC-013).
+model UsageEvent {
+  id         String @id @default(uuid()) @db.Uuid
+  tenantId   String @map("tenant_id") @db.Uuid
+  meter      String
+  quantity   Int    @default(1)
+  /// The billability determination itself, so the ledger is self-describing.
+  billable   Boolean @default(true)
+
+  instanceId String? @map("instance_id") @db.Uuid
+  /// Denormalised so the row stays readable and reconcilable after the instance
+  /// payload is removed by retention (FR-111, AC-024).
+  definitionId        String? @map("definition_id") @db.Uuid
+  definitionVersion   Int?    @map("definition_version")
+  terminalReason      TerminalReason? @map("terminal_reason")
+  /// DEC-004, MANDATORY on every billable event: the justification for the
+  /// billable determination. Preserves the ability to apply a different rule to
+  /// history without re-deriving it.
+  completedStepCountAtEvent Int? @map("completed_step_count_at_event")
+
+  /// sha256(instanceId || tokenId || fromElementId || transitionId || purpose).
+  /// Derived ONLY from immutable identifiers — no clock, no random, no attempt
+  /// counter — so a replay computes the same key and the unique index makes the
+  /// second insert a no-op (MET-3, FR-107, AC-010, AC-011).
+  idempotencyKey String @map("idempotency_key")
+
+  /// FR-123 / EC-19 / AC-025: fixed at write time from the transaction commit
+  /// clock. NEVER recomputed, never derived from the instance start time.
+  billingPeriod  String   @map("billing_period")   // "YYYY-MM"
+  occurredAtUtc  DateTime @map("occurred_at_utc")
+
+  /// Compensating-event linkage (FR-109). Corrections are rows, never edits.
+  compensatesId  String? @map("compensates_id") @db.Uuid
+
+  createdAt DateTime @default(now()) @map("created_at")
+
+  tenant   Tenant           @relation(fields: [tenantId], references: [id], onDelete: Restrict)
+  instance ProcessInstance? @relation(fields: [instanceId], references: [id], onDelete: Restrict)
+
+  @@unique([tenantId, idempotencyKey])
+  @@index([tenantId, billingPeriod, billable])
+  @@index([tenantId, billingPeriod, meter])
+  @@index([tenantId, instanceId])
+  @@index([tenantId, occurredAtUtc])
+  @@map("usage_event")
+}
+
+/// Admission control. HELD from admission until terminal state, then CONVERTED
+/// (billable) or RELEASED (not). FR-113, MET-4. EC-03: quota NEVER terminates,
+/// suspends or degrades a RUNNING instance — it refuses new starts only.
+model QuotaReservation {
+  id            String @id @default(uuid()) @db.Uuid
+  tenantId      String @map("tenant_id") @db.Uuid
+  instanceId    String @unique @map("instance_id") @db.Uuid
+  billingPeriod String @map("billing_period")
+  status        ReservationStatus @default(HELD)
+
+  createdAt  DateTime  @default(now()) @map("created_at")
+  resolvedAt DateTime? @map("resolved_at")
+
+  tenant   Tenant          @relation(fields: [tenantId], references: [id], onDelete: Restrict)
+  instance ProcessInstance @relation(fields: [instanceId], references: [id], onDelete: Restrict)
+
+  @@index([tenantId, billingPeriod, status])
+  @@map("quota_reservation")
+}
+
+enum ReservationStatus {
+  HELD
+  CONVERTED
+  RELEASED
+}
+
+/// The admission serialization point. One row per (tenant, period), taken
+/// `FOR UPDATE` on the start path. This is what makes AC-015 (remaining quota 5,
+/// ten concurrent starts -> exactly 5) deterministic rather than probabilistic.
+model QuotaCounter {
+  id                  String @id @default(uuid()) @db.Uuid
+  tenantId            String @map("tenant_id") @db.Uuid
+  billingPeriod       String @map("billing_period")
+  billableCompletions Int    @default(0) @map("billable_completions")
+  openReservations    Int    @default(0) @map("open_reservations")
+  refusedStarts       Int    @default(0) @map("refused_starts")
+
+  updatedAt DateTime @updatedAt @map("updated_at")
+
+  tenant Tenant @relation(fields: [tenantId], references: [id], onDelete: Cascade)
+
+  @@unique([tenantId, billingPeriod])
+  @@map("quota_counter")
+}
+
+/// MET-7 secondary dimensions, hourly-bucketed. Instrumented DAY ONE even where
+/// not billed in v1 — retroactive metering is impossible (FR-117, AC-027).
+/// Deliberately SEPARATE from usage_event: MET-5 immutability and exact
+/// reconciliation apply to money, not to ten million evaluation samples.
+/// NEVER the source of an invoice (FR-130).
+model UsageCounter {
+  id            String @id @default(uuid()) @db.Uuid
+  tenantId      String @map("tenant_id") @db.Uuid
+  billingPeriod String @map("billing_period")
+  /// instances.started | tasks.created | tasks.completed | timers.fired |
+  /// jobs.retried | webhooks.invoked | storage.bytes.variables |
+  /// storage.bytes.attachments | storage.bytes.evidence | evidence.exports |
+  /// processes.published.active | processes.published.archived |
+  /// expression.eval.steps | expression.eval.micros | environments  (FR-117)
+  meter         String
+  hourBucket    DateTime @map("hour_bucket")
+  value         BigInt   @default(0)
+
+  updatedAt DateTime @updatedAt @map("updated_at")
+
+  tenant Tenant @relation(fields: [tenantId], references: [id], onDelete: Cascade)
+
+  @@unique([tenantId, billingPeriod, meter, hourBucket])
+  @@index([tenantId, billingPeriod, meter])
+  @@map("usage_counter")
+}
+
+/// FR-118 / AC-028: distinct authoring users and distinct participants are
+/// COUNTED AND REPORTED, NEVER billed, capped or gated. Exact, not estimated.
+model UsageDistinctActor {
+  id            String @id @default(uuid()) @db.Uuid
+  tenantId      String @map("tenant_id") @db.Uuid
+  billingPeriod String @map("billing_period")
+  /// "authoring" | "task_completion"
+  dimension     String
+  actorId       String @map("actor_id") @db.Uuid
+
+  firstSeenAt DateTime @default(now()) @map("first_seen_at")
+
+  tenant Tenant @relation(fields: [tenantId], references: [id], onDelete: Cascade)
+
+  @@unique([tenantId, billingPeriod, dimension, actorId])
+  @@index([tenantId, billingPeriod, dimension])
+  @@map("usage_distinct_actor")
+}
+
+/// Tenant tier and period. EXTEND of @connectsw/billing's Subscription,
+/// RE-KEYED from userId to tenantId (verified: billing.prisma keys to userId).
+/// FR-121 / AC-029: NO entitlement may be expressed in seats, users, designers
+/// or participants — the entitlement schema is validated in CI against that rule.
+model Subscription {
+  id            String @id @default(uuid()) @db.Uuid
+  tenantId      String @unique @map("tenant_id") @db.Uuid
+  tier          SubscriptionTier @default(SANDBOX)
+  status        SubscriptionStatus @default(ACTIVE)
+  periodStart   DateTime @map("period_start")
+  periodEnd     DateTime @map("period_end")
+  /// Billable instances per period. FR-115: the SANDBOX hard cap is non-removable.
+  /// [OPEN — CEO] DEC-005 gives allowances for Starter/Growth/Business
+  /// (2,500 / 15,000 / 60,000) but none for Sandbox. Proposed default: 50.
+  hardCap       Int    @map("hard_cap")
+  overageEnabled Boolean @default(false) @map("overage_enabled")
+  /// Entitlements as DATA: publishedProcessLimit, evidenceRetentionDays,
+  /// exportApi, webhooks, analytics. Never seats.
+  entitlements  Json   @default("{}")
+  externalRef   String? @unique @map("external_ref")
+
+  createdAt DateTime @default(now()) @map("created_at")
+  updatedAt DateTime @updatedAt @map("updated_at")
+
+  tenant Tenant @relation(fields: [tenantId], references: [id], onDelete: Cascade)
+
+  @@index([tier, status])
+  @@map("subscription")
+}
+
+enum SubscriptionTier {
+  SANDBOX
+  STARTER
+  GROWTH
+  BUSINESS
+  SOVEREIGN
+}
+
+enum SubscriptionStatus {
+  ACTIVE
+  PAST_DUE
+  CANCELLED
+}
+
+/// Per-tenant evidence retention, tier-bounded. FR-096: enforced by a scheduled
+/// deletion job, NOT by hiding records in the UI.
+model RetentionPolicy {
+  id                     String @id @default(uuid()) @db.Uuid
+  tenantId               String @unique @map("tenant_id") @db.Uuid
+  evidenceRetentionDays  Int    @map("evidence_retention_days")
+  attachmentRetentionDays Int   @map("attachment_retention_days")
+  lastRunAt              DateTime? @map("last_run_at")
+
+  updatedAt DateTime @updatedAt @map("updated_at")
+
+  tenant Tenant @relation(fields: [tenantId], references: [id], onDelete: Cascade)
+
+  @@map("retention_policy")
+}
+
+// =============================================================================
+// F. JOBS AND OUTBOX                             ADR-009
+// =============================================================================
+
+/// One table for timers, schedule ticks, retries and outbound side effects.
+/// Claimed with SELECT ... FOR UPDATE SKIP LOCKED (PATTERN-014).
+/// Enqueued IN THE SAME TRANSACTION as the state change that justifies it, so a
+/// side effect exists iff the state change committed (AC-070).
+model Job {
+  id           String @id @default(uuid()) @db.Uuid
+  tenantId     String @map("tenant_id") @db.Uuid
+  kind         JobKind
+  instanceId   String? @map("instance_id") @db.Uuid
+  tokenId      String? @map("token_id") @db.Uuid
+  /// The staleness discriminator. FR-057/EC-02/AC-072: decided by token version,
+  /// NEVER by wall-clock ordering.
+  tokenVersion Int?   @map("token_version")
+  elementId    String? @map("element_id")
+  /// PATTERN-014 composite idempotency.
+  dedupeKey    String @map("dedupe_key")
+  payload      Json   @default("{}")
+  /// Suspension parks a timer at 'infinity' with its remaining duration on the
+  /// payload; resume recomputes against the working calendar (FR-054, ADR-009).
+  runAt        DateTime @map("run_at")
+  status       JobStatus @default(PENDING)
+  attempts     Int    @default(0)
+  lockedBy     String? @map("locked_by")
+  lockedUntil  DateTime? @map("locked_until")
+  lastError    String? @map("last_error")
+
+  createdAt DateTime @default(now()) @map("created_at")
+  updatedAt DateTime @updatedAt @map("updated_at")
+
+  tenant Tenant @relation(fields: [tenantId], references: [id], onDelete: Cascade)
+  token  Token? @relation(fields: [tokenId], references: [id], onDelete: Cascade)
+
+  @@unique([tenantId, dedupeKey])
+  /// The claim query's index. In SQL this is a PARTIAL index:
+  ///   CREATE INDEX job_due ON job (run_at, id) WHERE status = 'PENDING';
+  /// Prisma cannot express the predicate, so it is added by a raw migration.
+  @@index([runAt, id])
+  @@index([tenantId, status, runAt])
+  @@index([tenantId, instanceId])
+  @@map("job")
+}
+
+enum JobKind {
+  TIMER_DUE
+  TIMER_REMINDER
+  TIMER_ESCALATION
+  INSTANCE_SLA
+  SCHEDULE_TICK
+  OUTBOX_WEBHOOK
+  OUTBOX_NOTIFICATION
+  RETENTION
+  RECONCILE
+  ERASURE
+}
+
+enum JobStatus {
+  PENDING
+  CLAIMED
+  DONE
+  FAILED
+  DISCARDED     // stale by token version (EC-02)
+}
+
+// =============================================================================
+// G. INTEGRATION AND NOTIFICATION (EXTENDED SHARED MODELS)
+// =============================================================================
+
+/// @connectsw/webhooks: code REUSED WHOLE (HMAC signing, SSRF guard, circuit
+/// breaker, retry, delivery idempotency). Schema EXTENDED: the package keys
+/// WebhookEndpoint to userId (verified) — here it is tenant-keyed (AC-056).
+model WebhookEndpoint {
+  id          String @id @default(uuid()) @db.Uuid
+  tenantId    String @map("tenant_id") @db.Uuid
+  url         String
+  /// AES-256-GCM encrypted at rest (NFR-011).
+  secret      String
+  events      String[]
+  enabled     Boolean @default(true)
+  description String?
+
+  createdAt DateTime @default(now()) @map("created_at")
+  updatedAt DateTime @updatedAt @map("updated_at")
+
+  tenant     Tenant            @relation(fields: [tenantId], references: [id], onDelete: Cascade)
+  deliveries WebhookDelivery[]
+
+  @@index([tenantId, enabled])
+  @@map("webhook_endpoint")
+}
+
+/// PATTERN-014 as shipped in @connectsw/webhooks: the composite unique key is
+/// the second layer of delivery deduplication behind the outbox (ADR-009).
+model WebhookDelivery {
+  id         String @id @default(uuid()) @db.Uuid
+  tenantId   String @map("tenant_id") @db.Uuid
+  endpointId String @map("endpoint_id") @db.Uuid
+  eventType  String @map("event_type")
+  payload    Json
+  resourceId String @map("resource_id")
+  attempts   Int    @default(0)
+  status     String @default("PENDING")
+  nextAttemptAt DateTime? @map("next_attempt_at")
+  succeededAt   DateTime? @map("succeeded_at")
+  responseCode  Int?      @map("response_code")
+
+  createdAt DateTime @default(now()) @map("created_at")
+
+  endpoint WebhookEndpoint @relation(fields: [endpointId], references: [id], onDelete: Cascade)
+
+  @@unique([endpointId, eventType, resourceId])
+  @@index([tenantId, status, nextAttemptAt])
+  @@map("webhook_delivery")
+}
+
+/// @connectsw/notifications: code REUSED, schema EXTENDED with tenantId.
+/// FR-142/AC-061: composed in the RECIPIENT's locale, not the author's.
+model Notification {
+  id            String @id @default(uuid()) @db.Uuid
+  tenantId      String @map("tenant_id") @db.Uuid
+  recipientId   String @map("recipient_id") @db.Uuid
+  type          String
+  /// Rendered in `locale` at compose time.
+  locale        String @default("en")
+  /// @pii
+  title         String
+  /// @pii
+  message       String
+  deepLink      String? @map("deep_link")
+  read          Boolean @default(false)
+  emailSentAt   DateTime? @map("email_sent_at")
+
+  createdAt DateTime @default(now()) @map("created_at")
+
+  @@index([tenantId, recipientId, read, createdAt])
+  @@map("notification")
+}
+
+// =============================================================================
+// H. TEMPLATE GALLERY — GLOBAL, NOT TENANT-SCOPED, DATA NOT CODE
+//    FR-150..FR-154. DEC-001: "regulatory templates as data, not code".
+//    NFR-020: no jurisdiction or regulator represented STRUCTURALLY — the
+//    regulatory context is a descriptive TAG, never an enum or a column type.
+// =============================================================================
+
+model Template {
+  id            String @id @default(uuid()) @db.Uuid
+  slug          String
+  version       Int
+  graph         Json
+  formSchemas   Json   @map("form_schemas")
+  conditionAsts Json   @default("{}") @map("condition_asts")
+  /// Descriptive tags only: ["pdpl", "dsar", "privacy"]. NOT an enum, NOT a
+  /// jurisdiction column, NOT a foreign key to a regulator table (NFR-020).
+  contextTags   String[] @map("context_tags")
+  published     Boolean @default(false)
+
+  createdAt DateTime @default(now()) @map("created_at")
+  updatedAt DateTime @updatedAt @map("updated_at")
+
+  locales TemplateLocale[]
+
+  @@unique([slug, version])
+  @@index([published])
+  @@map("template")
+}
+
+/// FR-151/AC-069: every template in BOTH en and ar — element labels, form labels
+/// and instructions. FR-154: a disclaimer that it is a starting point, not legal advice.
+model TemplateLocale {
+  id         String @id @default(uuid()) @db.Uuid
+  templateId String @map("template_id") @db.Uuid
+  locale     String
+  name       String
+  description String
+  /// { elementId|fieldKey -> label } — the localised overlay on the graph.
+  labels     Json
+  disclaimer String
+
+  template Template @relation(fields: [templateId], references: [id], onDelete: Cascade)
+
+  @@unique([templateId, locale])
+  @@map("template_locale")
+}
+
+// =============================================================================
+// MIGRATION AND VERSIONING NOTES (design intent for the implementation task)
+//
+// 1. DEFINITION VERSIONING (FR-013..FR-018)
+//    Published rows are immutable. Editing a published version creates a new
+//    DRAFT at version+1 derived from it. A running instance NEVER moves between
+//    versions — it resolves graph, forms and condition ASTs from the version it
+//    was created against, for its entire life (EC-01, EC-18).
+//
+// 2. RUNNING-INSTANCE MIGRATION (not implemented in v1, designed here)
+//    The story exists because version accumulation is real (FR-129, RSK-010).
+//    The intended v2 shape, requiring NO schema change:
+//      * a `DefinitionMigration` plan maps elementId -> elementId between two
+//        versions of the same definition, plus a variable-key mapping;
+//      * migration is opt-in per instance, executed as an ordinary transition
+//        (same transaction, same evidence entry `instance.migrated`, same token
+//        version bump), so it is crash-safe and auditable by construction;
+//      * an instance's `definitionVersionId` changes ONLY through that path, and
+//        the evidence record therefore shows which version executed which step.
+//    Nothing in v1 forecloses it because the evidence entry already carries
+//    `definitionVersionId` per entry, not per instance.
+//
+// 3. SCHEMA MIGRATION
+//    Prisma Migrate, forward-only, one migration per PR. Raw SQL migrations are
+//    required for: RLS policies, the append-only triggers on evidence_entry and
+//    usage_event, the partial index on job, and evidence_entry monthly partitions.
+//    A CI gate asserts every tenant-scoped table has ENABLE + FORCE RLS + a policy.
+//
+// 4. NUMBERS
+//    32 models. Every tenant-scoped model carries tenantId. 5 models do not,
+//    each deliberately and for a distinct reason — enumerated and reviewed:
+//      - Tenant        — it IS the tenant; isolation is by its own `id`.
+//      - User          — global identity. One human, many tenants via Membership.
+//      - RefreshToken  — scoped to the User, not the tenant: a session
+//                        authenticates the human; tenant context comes from
+//                        Membership. Tenant-scoping it would force re-login per
+//                        workspace and fragment the session-revocation surface.
+//      - Template      — the shared template library, global by design.
+//      - TemplateLocale— locale variants of the above.
+//    Everything else — all 27 remaining models — carries tenantId and is
+//    covered by RLS. The CI gate in note 3 asserts this, and this list is the
+//    allowlist it checks against: adding a model here requires justification.
+// =============================================================================

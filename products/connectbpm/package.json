@@ -1,0 +1,37 @@
+{
+  "name": "connectbpm",
+  "version": "0.1.0",
+  "private": true,
+  "description": "ConnectBPM — evidence-native Business Process Management suite",
+  "scripts": {
+    "dev": "concurrently --names api,web --prefix-colors blue,green \"pnpm run dev:api\" \"pnpm run dev:web\"",
+    "dev:api": "pnpm --filter @connectbpm/api dev",
+    "dev:web": "pnpm --filter @connectbpm/web dev",
+    "build": "pnpm run build:api && pnpm run build:web",
+    "build:api": "pnpm --filter @connectbpm/api build",
+    "build:web": "pnpm --filter @connectbpm/web build",
+    "test": "pnpm run test:api && pnpm run test:web",
+    "test:api": "pnpm --filter @connectbpm/api test",
+    "test:web": "pnpm --filter @connectbpm/web test",
+    "lint": "pnpm run lint:api && pnpm run lint:web",
+    "lint:api": "pnpm --filter @connectbpm/api lint",
+    "lint:web": "pnpm --filter @connectbpm/web lint",
+    "typecheck": "pnpm run typecheck:api && pnpm run typecheck:web",
+    "typecheck:api": "pnpm --filter @connectbpm/api typecheck",
+    "typecheck:web": "pnpm --filter @connectbpm/web typecheck",
+    "gate:rls": "pnpm --filter @connectbpm/api gate:rls",
+    "gate:metering": "pnpm --filter @connectbpm/api gate:metering",
+    "gates": "pnpm run gate:rls && pnpm run gate:metering",
+    "docker:up": "docker compose up -d",
+    "docker:down": "docker compose down",
+    "docker:infra": "docker compose up -d db redis",
+    "docker:logs": "docker compose logs -f",
+    "db:generate": "pnpm --filter @connectbpm/api db:generate",
+    "db:migrate": "pnpm --filter @connectbpm/api db:migrate",
+    "db:studio": "pnpm --filter @connectbpm/api db:studio",
+    "test:e2e": "pnpm --filter @connectbpm/e2e test"
+  },
+  "devDependencies": {
+    "concurrently": "^9.1.2"
+  }
+}
