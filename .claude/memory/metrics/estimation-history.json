@@ -1,6 +1,6 @@
 {
   "version": "1.1.0",
-  "updated_at": "2026-02-24T00:00:00Z",
+  "updated_at": "2026-08-20T10:24:44Z",
   "description": "Per-agent, per-task-type duration statistics. Used by orchestrator Step 3.7. Entries with is_baseline=true are seeded estimates — replace with actuals after first real execution.",
   "agents": {
     "architect": {
@@ -13,7 +13,8 @@
         "p25": 90,
         "p75": 120,
         "p90": 120,
-        "stddev": 21.21
+        "stddev": 21.21,
+        "is_baseline": false
       },
       "DESIGN": {
         "sample_count": 0,
@@ -38,7 +39,8 @@
         "p25": 75,
         "p75": 75,
         "p90": 75,
-        "stddev": 0
+        "stddev": 0,
+        "is_baseline": false
       },
       "PHASE2": {
         "sample_count": 2,
@@ -49,7 +51,8 @@
         "p25": 12,
         "p75": 75,
         "p90": 75,
-        "stddev": 44.55
+        "stddev": 44.55,
+        "is_baseline": false
       },
       "BACKEND": {
         "sample_count": 0,
@@ -66,16 +69,16 @@
     },
     "business-analyst": {
       "BA": {
-        "sample_count": 0,
-        "mean": 60,
-        "min": 60,
-        "max": 60,
-        "median": 60,
-        "p25": 60,
-        "p75": 60,
-        "p90": 60,
+        "sample_count": 1,
+        "mean": 42,
+        "min": 42,
+        "max": 42,
+        "median": 42,
+        "p25": 42,
+        "p75": 42,
+        "p90": 42,
         "stddev": 0,
-        "is_baseline": true
+        "is_baseline": false
       }
     },
     "code-reviewer": {
@@ -116,7 +119,8 @@
         "p25": 10,
         "p75": 10,
         "p90": 10,
-        "stddev": 0
+        "stddev": 0,
+        "is_baseline": false
       },
       "DEVOPS": {
         "sample_count": 0,
@@ -141,7 +145,8 @@
         "p25": 90,
         "p75": 90,
         "p90": 90,
-        "stddev": 0
+        "stddev": 0,
+        "is_baseline": false
       },
       "PHASE2": {
         "sample_count": 1,
@@ -152,7 +157,8 @@
         "p25": 75,
         "p75": 75,
         "p90": 75,
-        "stddev": 0
+        "stddev": 0,
+        "is_baseline": false
       }
     },
     "innovation-specialist": {
@@ -207,7 +213,8 @@
         "p25": 45,
         "p75": 45,
         "p90": 45,
-        "stddev": 0
+        "stddev": 0,
+        "is_baseline": false
       },
       "SPEC": {
         "sample_count": 0,
@@ -246,6 +253,18 @@
         "p90": 45,
         "stddev": 0,
         "is_baseline": true
+      },
+      "STRAT": {
+        "sample_count": 1,
+        "mean": 150,
+        "min": 150,
+        "max": 150,
+        "median": 150,
+        "p25": 150,
+        "p75": 150,
+        "p90": 150,
+        "stddev": 0,
+        "is_baseline": false
       }
     },
     "qa-engineer": {
@@ -296,7 +315,8 @@
         "p25": 85,
         "p75": 85,
         "p90": 85,
-        "stddev": 0
+        "stddev": 0,
+        "is_baseline": false
       },
       "FIX": {
         "sample_count": 1,
@@ -307,7 +327,8 @@
         "p25": 45,
         "p75": 45,
         "p90": 45,
-        "stddev": 0
+        "stddev": 0,
+        "is_baseline": false
       },
       "PHASE2": {
         "sample_count": 1,
@@ -318,7 +339,8 @@
         "p25": 55,
         "p75": 55,
         "p90": 55,
-        "stddev": 0
+        "stddev": 0,
+        "is_baseline": false
       }
     },
     "support-engineer": {

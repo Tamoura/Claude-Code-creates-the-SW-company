@@ -1,8 +1,9 @@
 {
   "version": "1.0.0",
   "period": "2025-01-26 onwards",
-  "updated_at": "2026-02-07T10:53:08Z",
+  "updated_at": "2026-08-20T10:24:44Z",
   "agents": {
+    "ai-ml-engineer": {},
     "architect": {
       "tasks_completed": 4,
       "success_rate": 1.00,
@@ -19,8 +20,21 @@
       "test_coverage_avg": 0,
       "tests_passed_first_run": 0
     },
-    "code-reviewer": {},
-    "data-engineer": {},
+    "business-analyst": {
+      "tasks_completed": 1,
+      "success_rate": 1.00,
+      "avg_time_minutes": 42
+    },
+    "code-reviewer": {
+      "tasks_completed": 3,
+      "success_rate": 1.00,
+      "avg_time_minutes": 0
+    },
+    "data-engineer": {
+      "tasks_completed": 2,
+      "success_rate": 1.00,
+      "avg_time_minutes": 0
+    },
     "devops-engineer": {
       "tasks_completed": 2,
       "success_rate": 1.00,
@@ -38,9 +52,21 @@
       "tests_passed_first_run": 0,
       "common_issues": []
     },
-    "innovation-specialist": {},
-    "mobile-developer": {},
-    "performance-engineer": {},
+    "innovation-specialist": {
+      "tasks_completed": 3,
+      "success_rate": 1.00,
+      "avg_time_minutes": 0
+    },
+    "mobile-developer": {
+      "tasks_completed": 1,
+      "success_rate": 1.00,
+      "avg_time_minutes": 0
+    },
+    "performance-engineer": {
+      "tasks_completed": 2,
+      "success_rate": 1.00,
+      "avg_time_minutes": 0
+    },
     "product-manager": {
       "tasks_completed": 3,
       "success_rate": 1.00,
@@ -49,7 +75,11 @@
       "checkpoints_passed_first_try": 0,
       "ceo_revisions_requested": 0
     },
-    "product-strategist": {},
+    "product-strategist": {
+      "tasks_completed": 3,
+      "success_rate": 1.00,
+      "avg_time_minutes": 150
+    },
     "qa-engineer": {
       "tasks_completed": 5,
       "success_rate": 0.80,
@@ -65,21 +95,25 @@
       "avg_time_minutes": 61.67
     },
     "support-engineer": {
-      "tasks_completed": 0,
-      "success_rate": 0,
+      "tasks_completed": 3,
+      "success_rate": 1.00,
       "avg_time_minutes": 0,
       "bugs_triaged": 0,
       "reproduction_success_rate": 0
     },
     "technical-writer": {
-      "tasks_completed": 0,
-      "success_rate": 0,
+      "tasks_completed": 3,
+      "success_rate": 1.00,
       "avg_time_minutes": 0
     },
-    "ui-ux-designer": {}
+    "ui-ux-designer": {
+      "tasks_completed": 3,
+      "success_rate": 1.00,
+      "avg_time_minutes": 0
+    }
   },
   "insights": [
     "qa-engineer has highest task count (5 tasks)",
-    "24 total tasks completed across all agents"
+    "48 total tasks completed across all agents"
   ]
 }

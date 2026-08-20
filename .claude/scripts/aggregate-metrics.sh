@@ -179,14 +179,29 @@ for agent_file in "$EXPERIENCES_DIR"/*.json; do
 done
 
 # Write estimation history
+# MERGE, do not overwrite: seeded baseline entries (is_baseline=true) have no
+# task_history to recompute from, so a from-scratch rebuild silently deletes them.
+# Newly computed stats win over baselines for the same agent+task-type.
+EXISTING_AGENTS="{}"
+EXISTING_VERSION="1.1.0"
+EXISTING_DESC="Per-agent, per-task-type duration statistics. Used by orchestrator Step 3.7. Entries with is_baseline=true are seeded estimates — replace with actuals after first real execution."
+if [ -f "$ESTIMATION_FILE" ]; then
+  EXISTING_AGENTS=$(jq '.agents // {}' "$ESTIMATION_FILE" 2>/dev/null || echo "{}")
+  EXISTING_VERSION=$(jq -r '.version // "1.1.0"' "$ESTIMATION_FILE" 2>/dev/null || echo "1.1.0")
+  EXISTING_DESC=$(jq -r --arg d "$EXISTING_DESC" '.description // $d' "$ESTIMATION_FILE" 2>/dev/null || echo "$EXISTING_DESC")
+fi
+
 jq -n \
   --arg ts "$TIMESTAMP" \
+  --arg version "$EXISTING_VERSION" \
+  --arg description "$EXISTING_DESC" \
+  --argjson existing "$EXISTING_AGENTS" \
   --argjson agents "$ESTIMATION_AGENTS" \
   '{
-    version: "1.0.0",
+    version: $version,
     updated_at: $ts,
-    description: "Per-agent, per-task-type duration statistics. Used by orchestrator Step 3.7.",
-    agents: $agents
+    description: $description,
+    agents: ($existing * ($agents | map_values(map_values(. + {is_baseline: false}))))
   }' > "$ESTIMATION_FILE"
 
 AGENT_COUNT=$(echo "$ESTIMATION_AGENTS" | jq 'length' 2>/dev/null || echo "0")

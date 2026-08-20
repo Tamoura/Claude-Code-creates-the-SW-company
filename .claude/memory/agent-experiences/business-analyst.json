@@ -1,0 +1,33 @@
+{
+  "agent": "business-analyst",
+  "version": "1.0.0",
+  "updated_at": "2026-08-20T10:21:57Z",
+  "learned_patterns": [
+    {
+      "pattern": "Inspect shared packages directly before writing a gap analysis; the registry describes capability, not tenancy shape. grep for the tenant model found the single most plan-changing fact in the whole analysis.",
+      "learned_from": {
+        "task_id": "BA-01",
+        "product": "connectbpm",
+        "date": "2026-08-20T10:21:57Z"
+      },
+      "confidence": "medium"
+    }
+  ],
+  "task_history": [
+    {
+      "task_id": "BA-01",
+      "product": "connectbpm",
+      "timestamp": "2026-08-20T10:21:57Z",
+      "status": "success",
+      "time_minutes": 42,
+      "summary": "Business analysis for ConnectBPM: audit-grade mid-market wedge, ops-leader buyer, BPMN-semantics-not-BPMN-authoring, instance-metered pricing, 3-pillar MVP. Found zero tenancy in shared packages -> tenancy is a BUILD gating all pillars."
+    }
+  ],
+  "common_mistakes": [],
+  "preferred_approaches": [],
+  "performance_metrics": {
+    "tasks_completed": 1,
+    "success_rate": 1.00,
+    "average_time_minutes": 42
+  }
+}
