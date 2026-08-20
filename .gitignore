@@ -88,3 +88,6 @@ docker-compose.override.yml
 # Backup env files and security scan artifacts (never commit)
 *.env.bak
 gitleaks-results.sarif/
+
+# Agent scratch space (intermediate working notes, not deliverables)
+products/*/.claude/scratch/
