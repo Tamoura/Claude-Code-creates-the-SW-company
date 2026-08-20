@@ -697,6 +697,20 @@ const files = generateProduct({
 - **Description**: Four parallel jobs (test, lint, security, test-frontend) with a final quality-gate job that fails if any predecessor failed. Test job runs against a real PostgreSQL 15 service container. Lint job runs ESLint + TypeScript type checking. Security job runs `npm audit`. Frontend job runs Jest tests. Uses Node 20, npm caching, and path-based triggering (only runs when product files change).
 - **To reuse**: Copy the file. Update: working-directory paths, path triggers, database name, and cache-dependency-path.
 
+#### Multi-Tenant RLS CI Gate
+- **Source**: `products/connectbpm/apps/api/scripts/check-rls.ts` + `scripts/schema-model.ts`
+- **Maturity**: Production (checks A/B/D enforcing; C enforcing and failing until the product's RLS migration lands)
+- **Reuse**: Copy both files; replace the global-model allowlist and the index-exception list
+- **Description**: Turns "every tenant-scoped table is isolated" from a review opinion into a build failure, for any product using the shared-schema + `tenantId` + PostgreSQL RLS pattern. Four checks: (A) every Prisma model carries `tenantId` unless it is on a written, reviewed allowlist -- and flags the allowlist as stale if an allowlisted model gains `tenantId`, or names a model that no longer exists; (B) every `@@index` on a tenant-scoped model leads with `tenantId`, with per-index exceptions that each require a written reason; (C) the migration SQL contains `ENABLE` + `FORCE ROW LEVEL SECURITY` and a policy for every tenant-scoped table; (D) `--live` runs the authoritative form against a real database via `pg_class.relrowsecurity` / `relforcerowsecurity` / `pg_policy`. `schema-model.ts` is a small Prisma block reader that **throws** when it parses zero models or a model with zero fields, so a broken parser cannot report a vacuous pass -- the failure mode that makes schema-shape gates worthless.
+- **To reuse**: Copy `check-rls.ts` and `schema-model.ts` into `apps/api/scripts/`. Replace `GLOBAL_MODELS` with your own reviewed allowlist (each entry needs a reason) and empty `INDEX_EXCEPTIONS`. Add a required CI job running `tsx scripts/check-rls.ts` (add `--live` once migrations exist). Copy `tests/unit/gates/rls-schema.gate.test.ts` and update the model counts.
+
+#### Architectural Boundary CI Gate (import/write-site enforcement)
+- **Source**: `products/connectbpm/apps/api/scripts/check-metering-boundary.ts`
+- **Maturity**: Production
+- **Reuse**: Copy the file; replace the `RULES` array
+- **Description**: A general pattern for making an architectural rule a build failure rather than a review comment, when the rule is "X may only happen in module Y" or "package Z must never be imported here". Each rule is `{ id, pattern, why, allowed(relPath) }`; the `why` string is printed with the violation, so a developer who trips it learns the decision (and its ADR/decision ID) rather than just the rule name. Skips comment lines so the rule can be documented in prose without tripping itself. `scan(roots, base)` is exported so the gate can be run against fixture directories -- ConnectBPM ships fixtures of planted violations and of legal allowlisted uses, and CI runs those tests, because a gate nobody has proven can fail is indistinguishable from a stub.
+- **To reuse**: Copy the file. Replace `RULES` with your product's boundaries and `LEDGER_MODULE`/allowlist constants with your own. Copy `tests/unit/gates/metering-boundary.gate.test.ts` and the two `tests/fixtures/metering-*` directories as the template for proving your gate fires.
+
 ---
 
 ### Playwright (E2E Testing)
