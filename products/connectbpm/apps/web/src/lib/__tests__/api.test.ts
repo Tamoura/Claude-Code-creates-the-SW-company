@@ -45,7 +45,9 @@ describe('apiFetch', () => {
   });
 
   it('sends credentials and JSON content type', async () => {
-    const spy = jest.fn(async () => mockResponse({}, { ok: true, status: 200 }));
+    const spy = jest.fn(async (_url: string, _init?: RequestInit) =>
+      mockResponse({}, { ok: true, status: 200 })
+    );
     global.fetch = spy as unknown as typeof fetch;
 
     await apiFetch('/health');
@@ -60,13 +62,15 @@ describe('apiFetch', () => {
   });
 
   it('lets the caller add headers without losing the defaults', async () => {
-    const spy = jest.fn(async () => mockResponse({}, { ok: true, status: 200 }));
+    const spy = jest.fn(async (_url: string, _init?: RequestInit) =>
+      mockResponse({}, { ok: true, status: 200 })
+    );
     global.fetch = spy as unknown as typeof fetch;
 
     await apiFetch('/health', { headers: { 'X-Request-ID': 'corr-9' } });
 
-    const init = spy.mock.calls[0]?.[1] as RequestInit;
-    expect(init.headers).toMatchObject({
+    const init = spy.mock.calls[0]?.[1];
+    expect(init?.headers).toMatchObject({
       'Content-Type': 'application/json',
       'X-Request-ID': 'corr-9',
     });

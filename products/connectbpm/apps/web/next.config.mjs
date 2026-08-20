@@ -4,6 +4,12 @@ const apiUrl = process.env.NEXT_PUBLIC_API_URL || 'http://localhost:5018';
 const nextConfig = {
   output: 'standalone',
   reactStrictMode: true,
+  // Lint is its own required CI job (`pnpm lint`), not a build side effect.
+  // Next 14's built-in ESLint integration passes removed options to ESLint 9
+  // and errors; the standalone `eslint` run is the gate that counts.
+  eslint: { ignoreDuringBuilds: true },
+  // Type errors DO fail the build. `tsc --noEmit` runs in CI as well.
+  typescript: { ignoreBuildErrors: false },
   headers: async () => [
     {
       source: '/(.*)',
