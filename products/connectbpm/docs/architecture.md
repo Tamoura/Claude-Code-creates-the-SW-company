@@ -176,6 +176,22 @@ graph TB
 | **Redis** | — | — | Cache, rate-limit counters, soft usage display. Nothing correctness depends on. |
 | **Object storage** | S3-compatible | — | Attachments, prefix-partitioned per tenant |
 
+### Integration points
+
+| # | Integration | Direction | Protocol / auth | Failure policy | Traces |
+|---|-------------|-----------|-----------------|----------------|--------|
+| I1 | **Payment provider** | out + inbound callback | HTTPS; callback signature-verified with replay rejection | Subscription changes are idempotent by external reference; a failed callback is retried by the provider and re-applied safely | `FR-132`, `FR-133` |
+| I2 | **Email delivery** | out | SMTP/API via `@connectsw/notifications` | Outbox job; **at-least-once** by deliberate choice; provider idempotency key passed where supported | `FR-078`, `FR-142` |
+| I3 | **Customer downstream systems** | out | HTTPS webhook, HMAC-signed, via `@connectsw/webhooks` | Exponential backoff, circuit breaker, SSRF guard; deduplicated by `(endpointId, eventType, resourceId)`; a dead endpoint never blocks a transition because delivery is outside the transaction | `FR-064`, `AC-056` |
+| I4 | **Object storage** | out | S3-compatible; **prefix-scoped credential** per tenant; signed URLs ≤ 5 min | Upload failure fails the request; a pending virus scan hides the attachment rather than exposing it | `FR-038`, `AC-055`, `NFR-011` |
+| I5 | **Another ConnectSW product** (`FR-065`) | in | The **same** OpenAPI contract on the `internal` server, service-account auth, tenant-scoped | Rate-limited and quota-gated identically to the public surface — an internal caller gets no metering exemption | `FR-065`, ADR-003 |
+| I6 | **Customer identity provider** | in | OIDC / SAML | **Out of v1 scope.** Not foreclosed: `User` is global and `Membership` is the tenant binding, so federation attaches at the `User` boundary without touching tenant-scoped data | SPEC-01 §C4 L1 |
+
+Two integrations that deliberately **do not** exist in v1: **no outbound service tasks** (excluded by
+`FR-011`, which is also why API7 SSRF has exactly one surface), and **no external scheduler** — E7
+recurrence is computed in-process against the tenant's working calendar (`FR-062`), because a third
+party cannot be told what a tenant's weekend is.
+
 ### Deployment topologies — `NFR-019`, DEC-001
 
 ```mermaid
