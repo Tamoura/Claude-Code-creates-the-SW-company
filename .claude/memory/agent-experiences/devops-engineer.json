@@ -1,7 +1,7 @@
 {
   "agent": "devops-engineer",
   "version": "1.0.0",
-  "updated_at": "2026-01-29T06:39:16Z",
+  "updated_at": "2026-08-20T12:40:04Z",
   "learned_patterns": [
     {
       "pattern": "AWS KMS Integration for Blockchain",
@@ -27,6 +27,15 @@
         "Generate helpful suggestions for fixing issues"
       ],
       "code_reference": "products/stablecoin-gateway/apps/api/src/utils/env-validator.ts"
+    },
+    {
+      "pattern": "CI gate proven by planted-violation fixture: a gate nobody has shown can fail is indistinguishable from a stub, so ship the gate together with tests that feed it real violations and assert it finds them.",
+      "learned_from": {
+        "task_id": "DEVOPS-01",
+        "product": "connectbpm",
+        "date": "2026-08-20T12:40:04Z"
+      },
+      "confidence": "medium"
     }
   ],
   "task_history": [
@@ -62,6 +71,14 @@
       "status": "success",
       "time_minutes": 10,
       "summary": "Aligned frontend and backend ports to 5001, resolved connection refused errors"
+    },
+    {
+      "task_id": "DEVOPS-01",
+      "product": "connectbpm",
+      "timestamp": "2026-08-20T12:40:04Z",
+      "status": "success",
+      "time_minutes": 95,
+      "summary": "Scaffolded connectbpm workspace (api :5018 Fastify+Prisma, web :3123 Next.js 14+Tailwind+xyflow, e2e Playwright) and CI with 9 required jobs. Two product gates built as real enforcing checks with fixture-proof tests: RLS/tenant-isolation (ADR-004) and metering-boundary (DEC-002 AC-012/AC-013). saas-kit rejected for this product - its web template is Vite+React Router, not Next.js, and generateProduct() overwrites docs/PRD.md."
     }
   ],
   "common_mistakes": [
@@ -107,9 +124,9 @@
     }
   ],
   "performance_metrics": {
-    "tasks_completed": 2,
+    "tasks_completed": 3,
     "success_rate": 1.00,
-    "average_time_minutes": 5,
+    "average_time_minutes": 35,
     "median_time_minutes": 75,
     "on_time_delivery": 100
   }

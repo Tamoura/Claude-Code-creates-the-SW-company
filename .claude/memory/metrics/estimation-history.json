@@ -1,6 +1,6 @@
 {
   "version": "1.1.0",
-  "updated_at": "2026-08-20T12:27:37Z",
+  "updated_at": "2026-08-20T12:40:04Z",
   "description": "Per-agent, per-task-type duration statistics. Used by orchestrator Step 3.7. Entries with is_baseline=true are seeded estimates — replace with actuals after first real execution.",
   "agents": {
     "architect": {
@@ -135,16 +135,16 @@
         "is_baseline": false
       },
       "DEVOPS": {
-        "sample_count": 0,
-        "mean": 45,
-        "min": 45,
-        "max": 45,
-        "median": 45,
-        "p25": 45,
-        "p75": 45,
-        "p90": 45,
+        "sample_count": 1,
+        "mean": 95,
+        "min": 95,
+        "max": 95,
+        "median": 95,
+        "p25": 95,
+        "p75": 95,
+        "p90": 95,
         "stddev": 0,
-        "is_baseline": true
+        "is_baseline": false
       }
     },
     "frontend-engineer": {
