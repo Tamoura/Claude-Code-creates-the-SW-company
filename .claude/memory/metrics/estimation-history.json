@@ -1,19 +1,19 @@
 {
   "version": "1.1.0",
-  "updated_at": "2026-08-20T11:12:43Z",
+  "updated_at": "2026-08-20T11:59:07Z",
   "description": "Per-agent, per-task-type duration statistics. Used by orchestrator Step 3.7. Entries with is_baseline=true are seeded estimates — replace with actuals after first real execution.",
   "agents": {
     "architect": {
       "ARCH": {
-        "sample_count": 2,
-        "mean": 105,
+        "sample_count": 3,
+        "mean": 125,
         "min": 90,
-        "max": 120,
-        "median": 105,
+        "max": 165,
+        "median": 120,
         "p25": 90,
-        "p75": 120,
-        "p90": 120,
-        "stddev": 21.21,
+        "p75": 165,
+        "p90": 165,
+        "stddev": 37.75,
         "is_baseline": false
       },
       "DESIGN": {

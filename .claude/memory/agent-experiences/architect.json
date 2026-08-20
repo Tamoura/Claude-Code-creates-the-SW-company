@@ -1,7 +1,7 @@
 {
   "agent": "architect",
   "version": "1.2.0",
-  "updated_at": "2026-02-07T10:53:08Z",
+  "updated_at": "2026-08-20T11:59:07Z",
   "learned_patterns": [
     {
       "pattern_id": "PATTERN-006",
@@ -37,6 +37,15 @@
         "task_id": "ARCH-01",
         "product": "pulse",
         "date": "2026-02-07T10:53:08Z"
+      },
+      "confidence": "medium"
+    },
+    {
+      "pattern": "Exactly-once metering by co-transacting the state transition, evidence entry and usage-event insert, with an idempotency key derived only from immutable identifiers and enforced by a branded TransitionTx type",
+      "learned_from": {
+        "task_id": "ARCH-01",
+        "product": "connectbpm",
+        "date": "2026-08-20T11:59:07Z"
       },
       "confidence": "medium"
     }
@@ -113,6 +122,14 @@
       "status": "success",
       "time_minutes": 90,
       "summary": "Designed full system architecture: architecture.md with Mermaid diagrams, OpenAPI 3.0 spec (35 endpoints), PostgreSQL DDL (15 tables, 50+ indexes), 5 ADRs, updated addendum and port registry"
+    },
+    {
+      "task_id": "ARCH-01",
+      "product": "connectbpm",
+      "timestamp": "2026-08-20T11:59:07Z",
+      "status": "success",
+      "time_minutes": 165,
+      "summary": "System architecture for ConnectBPM: 9 ADRs (SCOPE-AMD-001 ratified with 3 amendments; owned restricted-grammar expression evaluation; credit-os pattern-harvest boundary; shared-schema+RLS tenancy; build the engine; React Flow canvas; transactional usage ledger; RFC 8785 evidence hash chain; SKIP LOCKED job substrate), architecture.md with C4 L1/L2/L3, OpenAPI 3.0 contract (87 operations), Prisma data model (28 models), PRD 10.5 filled. 29/29 Mermaid diagrams parse; Prisma and OpenAPI validate. 10 issues raised against PRD/spec/CEO decisions."
     }
   ],
   "common_mistakes": [
@@ -247,9 +264,9 @@
     }
   ],
   "performance_metrics": {
-    "tasks_completed": 4,
+    "tasks_completed": 5,
     "success_rate": 1.00,
-    "average_time_minutes": 52.5,
+    "average_time_minutes": 75,
     "median_time_minutes": 120,
     "on_time_delivery": 1.0,
     "checkpoints_passed_first_try": 2,
