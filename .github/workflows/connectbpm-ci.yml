@@ -1,0 +1,423 @@
+name: ConnectBPM CI
+
+# Constitution Article XIII — lint, test, coverage, security, traceability all
+# run here and all block merge. Two product-specific gates run alongside them:
+#
+#   rls-gate       ADR-004 / NFR-008 — tenant isolation is structural, asserted
+#                  on every build, not left to review.
+#   metering-gate  DEC-002 MET-2/MET-3, AC-012/AC-013 — a meter write outside
+#                  the transition transaction, or a UsageService import in the
+#                  metering path, is a BUILD FAILURE.
+#
+# Neither carries `continue-on-error`. Neither does `security`.
+
+on:
+  push:
+    branches: [main, 'claude/bpm-**', 'foundation/connectbpm', 'feature/connectbpm/**']
+    paths:
+      - 'products/connectbpm/**'
+      - '.github/workflows/connectbpm-ci.yml'
+  pull_request:
+    paths:
+      - 'products/connectbpm/**'
+      - '.github/workflows/connectbpm-ci.yml'
+
+env:
+  NODE_VERSION: '20'
+  API_DIR: products/connectbpm/apps/api
+  WEB_DIR: products/connectbpm/apps/web
+
+concurrency:
+  group: connectbpm-ci-${{ github.ref }}
+  cancel-in-progress: true
+
+jobs:
+  # ───────────────────────────────────────────────────────────────────────────
+  lint-and-typecheck:
+    name: Lint & Typecheck (${{ matrix.app.name }})
+    runs-on: ubuntu-latest
+    strategy:
+      fail-fast: false
+      matrix:
+        app:
+          - { name: api, dir: products/connectbpm/apps/api, prisma: true }
+          - { name: web, dir: products/connectbpm/apps/web, prisma: false }
+    steps:
+      - uses: actions/checkout@v4
+      - uses: pnpm/action-setup@v4
+        with:
+          version: 10
+      - uses: actions/setup-node@v4
+        with:
+          node-version: ${{ env.NODE_VERSION }}
+          cache: pnpm
+
+      - name: Install dependencies
+        run: pnpm install --frozen-lockfile
+
+      - name: Generate Prisma client
+        if: ${{ matrix.app.prisma }}
+        working-directory: ${{ matrix.app.dir }}
+        run: pnpm exec prisma generate
+        env:
+          DATABASE_URL: postgresql://postgres:postgres@localhost:5432/connectbpm_test
+
+      - name: Lint
+        working-directory: ${{ matrix.app.dir }}
+        run: pnpm run lint
+
+      - name: Typecheck
+        working-directory: ${{ matrix.app.dir }}
+        run: pnpm run typecheck
+
+  # ───────────────────────────────────────────────────────────────────────────
+  api-tests:
+    name: API Tests & Coverage
+    runs-on: ubuntu-latest
+    services:
+      postgres:
+        image: postgres:15-alpine
+        env:
+          POSTGRES_USER: postgres
+          POSTGRES_PASSWORD: postgres
+          POSTGRES_DB: connectbpm_test
+        ports: ['5432:5432']
+        options: >-
+          --health-cmd pg_isready
+          --health-interval 10s
+          --health-timeout 5s
+          --health-retries 5
+      redis:
+        image: redis:7-alpine
+        ports: ['6379:6379']
+        options: >-
+          --health-cmd "redis-cli ping"
+          --health-interval 10s
+          --health-timeout 5s
+          --health-retries 5
+    env:
+      # Article III: tests run against REAL PostgreSQL and REAL Redis. No mocks.
+      DATABASE_URL: postgresql://postgres:postgres@localhost:5432/connectbpm_test
+      REDIS_URL: redis://localhost:6379
+      JWT_SECRET: ci-only-jwt-secret-at-least-32-characters-long
+      JWT_REFRESH_SECRET: ci-only-refresh-secret-at-least-32-characters
+      NODE_ENV: test
+    steps:
+      - uses: actions/checkout@v4
+      - uses: pnpm/action-setup@v4
+        with:
+          version: 10
+      - uses: actions/setup-node@v4
+        with:
+          node-version: ${{ env.NODE_VERSION }}
+          cache: pnpm
+
+      - name: Install dependencies
+        run: pnpm install --frozen-lockfile
+
+      - name: Generate Prisma client
+        working-directory: ${{ env.API_DIR }}
+        run: pnpm exec prisma generate
+
+      - name: Apply migrations
+        working-directory: ${{ env.API_DIR }}
+        run: |
+          if [ -d prisma/migrations ]; then
+            pnpm exec prisma migrate deploy
+          else
+            echo "::warning::No prisma/migrations yet — schema not applied. The RLS gate fails until the tenancy task lands it."
+          fi
+
+      # Coverage thresholds live in jest.config.ts (Article XIII floor: 80%
+      # lines/statements). Jest exits non-zero when they are not met, so this
+      # step IS the coverage gate. No --passWithNoTests anywhere.
+      - name: Test with coverage
+        working-directory: ${{ env.API_DIR }}
+        run: pnpm exec jest --coverage --ci --detectOpenHandles --forceExit
+
+      - name: Upload coverage
+        if: always()
+        uses: actions/upload-artifact@v4
+        with:
+          name: connectbpm-api-coverage
+          path: ${{ env.API_DIR }}/coverage
+          retention-days: 7
+
+  # ───────────────────────────────────────────────────────────────────────────
+  web-tests-and-build:
+    name: Web Tests, Coverage & Build
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v4
+      - uses: pnpm/action-setup@v4
+        with:
+          version: 10
+      - uses: actions/setup-node@v4
+        with:
+          node-version: ${{ env.NODE_VERSION }}
+          cache: pnpm
+
+      - name: Install dependencies
+        run: pnpm install --frozen-lockfile
+
+      - name: Test with coverage
+        working-directory: ${{ env.WEB_DIR }}
+        run: pnpm exec jest --coverage --ci
+
+      - name: Build
+        working-directory: ${{ env.WEB_DIR }}
+        run: pnpm run build
+        env:
+          NEXT_PUBLIC_API_URL: http://localhost:5018
+
+  # ───────────────────────────────────────────────────────────────────────────
+  # PRODUCT GATE 1 — tenant isolation (ADR-004, NFR-008, AC-051)
+  #
+  # Static assertions (tenantId presence, index prefix, allowlist) run against
+  # the schema. The live assertion runs the same checks against a real database
+  # once migrations exist: `pg_class.relrowsecurity` / `relforcerowsecurity` and
+  # `pg_policy`, exactly as ADR-004 §3 specifies.
+  rls-gate:
+    name: Gate — Row-Level Security (ADR-004)
+    runs-on: ubuntu-latest
+    services:
+      postgres:
+        image: postgres:15-alpine
+        env:
+          POSTGRES_USER: postgres
+          POSTGRES_PASSWORD: postgres
+          POSTGRES_DB: connectbpm_test
+        ports: ['5432:5432']
+        options: >-
+          --health-cmd pg_isready
+          --health-interval 10s
+          --health-timeout 5s
+          --health-retries 5
+    env:
+      DATABASE_URL: postgresql://postgres:postgres@localhost:5432/connectbpm_test
+    steps:
+      - uses: actions/checkout@v4
+      - uses: pnpm/action-setup@v4
+        with:
+          version: 10
+      - uses: actions/setup-node@v4
+        with:
+          node-version: ${{ env.NODE_VERSION }}
+          cache: pnpm
+
+      - name: Install dependencies
+        run: pnpm install --frozen-lockfile
+
+      - name: Generate Prisma client
+        working-directory: ${{ env.API_DIR }}
+        run: pnpm exec prisma generate
+
+      - name: Apply migrations (if any)
+        working-directory: ${{ env.API_DIR }}
+        run: |
+          if [ -d prisma/migrations ]; then
+            pnpm exec prisma migrate deploy
+            echo "LIVE=--live" >> "$GITHUB_ENV"
+          else
+            echo "::warning::No migrations — the gate will fail on absent RLS, by design."
+            echo "LIVE=" >> "$GITHUB_ENV"
+          fi
+
+      - name: Assert every tenant-scoped table is RLS-protected
+        working-directory: ${{ env.API_DIR }}
+        run: pnpm exec tsx scripts/check-rls.ts $LIVE
+
+  # ───────────────────────────────────────────────────────────────────────────
+  # PRODUCT GATE 2 — metering boundary (DEC-002, ADR-007, AC-012/AC-013)
+  #
+  # DEC-002 is irreversible and retroactive metering is impossible, so a broken
+  # metering path must never reach main. Fast, no services, no excuses.
+  metering-gate:
+    name: Gate — Metering Boundary (DEC-002 MET-2/MET-3)
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v4
+      - uses: pnpm/action-setup@v4
+        with:
+          version: 10
+      - uses: actions/setup-node@v4
+        with:
+          node-version: ${{ env.NODE_VERSION }}
+          cache: pnpm
+
+      - name: Install dependencies
+        run: pnpm install --frozen-lockfile
+
+      - name: Assert no meter write escapes the transition transaction
+        working-directory: ${{ env.API_DIR }}
+        run: pnpm exec tsx scripts/check-metering-boundary.ts
+
+      # The gate is only worth its job if it actually catches a violation. These
+      # tests feed it planted violations and require it to find them.
+      - name: Prove the gate detects a planted violation
+        working-directory: ${{ env.API_DIR }}
+        run: pnpm exec jest tests/unit/gates --ci
+
+  # ───────────────────────────────────────────────────────────────────────────
+  security:
+    name: Security Audit
+    runs-on: ubuntu-latest
+    # NO continue-on-error. A known-vulnerable dependency does not reach main.
+    strategy:
+      fail-fast: false
+      matrix:
+        dir:
+          - products/connectbpm/apps/api
+          - products/connectbpm/apps/web
+    steps:
+      - uses: actions/checkout@v4
+      - uses: pnpm/action-setup@v4
+        with:
+          version: 10
+      - uses: actions/setup-node@v4
+        with:
+          node-version: ${{ env.NODE_VERSION }}
+          cache: pnpm
+
+      - name: Install dependencies
+        run: pnpm install --frozen-lockfile
+
+      - name: Audit production dependencies
+        working-directory: ${{ matrix.dir }}
+        run: pnpm audit --audit-level=high --prod
+
+      - name: Assert no secret is committed
+        run: |
+          if grep -rInE '(BEGIN [A-Z ]*PRIVATE KEY|sk-[A-Za-z0-9]{20,}|AKIA[0-9A-Z]{16})' \
+              --include='*.ts' --include='*.tsx' --include='*.yml' --include='*.json' \
+              products/connectbpm/apps products/connectbpm/e2e; then
+            echo "::error::Possible secret committed under products/connectbpm"
+            exit 1
+          fi
+          echo "No secret patterns found."
+
+  # ───────────────────────────────────────────────────────────────────────────
+  e2e:
+    name: E2E (Playwright)
+    runs-on: ubuntu-latest
+    needs: [api-tests, web-tests-and-build]
+    services:
+      postgres:
+        image: postgres:15-alpine
+        env:
+          POSTGRES_USER: postgres
+          POSTGRES_PASSWORD: postgres
+          POSTGRES_DB: connectbpm_test
+        ports: ['5432:5432']
+        options: >-
+          --health-cmd pg_isready
+          --health-interval 10s
+          --health-timeout 5s
+          --health-retries 5
+      redis:
+        image: redis:7-alpine
+        ports: ['6379:6379']
+        options: >-
+          --health-cmd "redis-cli ping"
+          --health-interval 10s
+          --health-timeout 5s
+          --health-retries 5
+    env:
+      DATABASE_URL: postgresql://postgres:postgres@localhost:5432/connectbpm_test
+      REDIS_URL: redis://localhost:6379
+      JWT_SECRET: ci-only-jwt-secret-at-least-32-characters-long
+      JWT_REFRESH_SECRET: ci-only-refresh-secret-at-least-32-characters
+      NEXT_PUBLIC_API_URL: http://localhost:5018
+    steps:
+      - uses: actions/checkout@v4
+      - uses: pnpm/action-setup@v4
+        with:
+          version: 10
+      - uses: actions/setup-node@v4
+        with:
+          node-version: ${{ env.NODE_VERSION }}
+          cache: pnpm
+
+      - name: Install dependencies
+        run: pnpm install --frozen-lockfile
+
+      - name: Generate Prisma client
+        working-directory: ${{ env.API_DIR }}
+        run: pnpm exec prisma generate
+
+      - name: Apply migrations (if any)
+        working-directory: ${{ env.API_DIR }}
+        run: |
+          if [ -d prisma/migrations ]; then pnpm exec prisma migrate deploy; fi
+
+      - name: Install Playwright browsers
+        working-directory: products/connectbpm/e2e
+        run: pnpm exec playwright install --with-deps chromium
+
+      - name: Run E2E suite
+        working-directory: products/connectbpm/e2e
+        run: pnpm exec playwright test --project=chromium
+
+      - name: Upload Playwright report
+        if: failure()
+        uses: actions/upload-artifact@v4
+        with:
+          name: connectbpm-playwright-report
+          path: products/connectbpm/e2e/playwright-report
+          retention-days: 7
+
+  # ───────────────────────────────────────────────────────────────────────────
+  traceability:
+    name: Traceability (Article VI)
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v4
+        with:
+          fetch-depth: 0
+      - name: Run traceability gate
+        run: |
+          chmod +x .claude/scripts/traceability-gate.sh
+          .claude/scripts/traceability-gate.sh connectbpm
+
+  # ───────────────────────────────────────────────────────────────────────────
+  quality-gate:
+    name: Quality Gate
+    runs-on: ubuntu-latest
+    if: always()
+    needs:
+      - lint-and-typecheck
+      - api-tests
+      - web-tests-and-build
+      - rls-gate
+      - metering-gate
+      - security
+      - e2e
+      - traceability
+    steps:
+      - name: Verify every gate passed
+        run: |
+          declare -A results=(
+            [lint-and-typecheck]="${{ needs.lint-and-typecheck.result }}"
+            [api-tests]="${{ needs.api-tests.result }}"
+            [web-tests-and-build]="${{ needs.web-tests-and-build.result }}"
+            [rls-gate]="${{ needs.rls-gate.result }}"
+            [metering-gate]="${{ needs.metering-gate.result }}"
+            [security]="${{ needs.security.result }}"
+            [e2e]="${{ needs.e2e.result }}"
+            [traceability]="${{ needs.traceability.result }}"
+          )
+
+          failed=0
+          for job in "${!results[@]}"; do
+            printf '  %-22s %s\n' "$job" "${results[$job]}"
+            if [ "${results[$job]}" != "success" ]; then
+              echo "::error::${job} did not succeed (${results[$job]})"
+              failed=1
+            fi
+          done
+
+          if [ "$failed" -ne 0 ]; then
+            echo "Quality gate FAILED for ConnectBPM."
+            exit 1
+          fi
+          echo "All ConnectBPM quality gates passed."
