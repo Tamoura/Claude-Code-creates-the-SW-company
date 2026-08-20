@@ -136,18 +136,30 @@ interface RawCapable {
   $executeRaw(query: TemplateStringsArray, ...values: unknown[]): Promise<number>;
 }
 
-async function openScope(
-  tx: RawCapable,
-  tenantId: string,
-  options: WithTenantOptions
-): Promise<void> {
-  // Order matters: SET TRANSACTION READ ONLY must precede any other statement.
-  if (options.readOnly === true) await tx.$executeRawUnsafe('SET TRANSACTION READ ONLY');
-
+/**
+ * Resolves and validates the statement timeout. Called by `withTenant` BEFORE the
+ * transaction opens: a caller-supplied argument is rejected without touching the
+ * database, so a bad argument reports itself rather than surfacing as a connection
+ * error when the database happens to be unreachable. Same reasoning as the tenantId
+ * check below — validate the bug where the bug is.
+ */
+function resolveStatementTimeout(options: WithTenantOptions): number {
   const timeout = options.statementTimeoutMs ?? DEFAULT_STATEMENT_TIMEOUT_MS;
   if (!Number.isInteger(timeout) || timeout <= 0) {
     throw new Error(`statementTimeoutMs must be a positive integer, got ${String(timeout)}`);
   }
+  return timeout;
+}
+
+async function openScope(
+  tx: RawCapable,
+  tenantId: string,
+  options: WithTenantOptions,
+  timeout: number
+): Promise<void> {
+  // Order matters: SET TRANSACTION READ ONLY must precede any other statement.
+  if (options.readOnly === true) await tx.$executeRawUnsafe('SET TRANSACTION READ ONLY');
+
   await tx.$executeRawUnsafe(`SET LOCAL statement_timeout = ${timeout}`);
 
   // Parameterised, and transaction-scoped like SET LOCAL — so it is safe behind
@@ -173,10 +185,13 @@ export async function withTenant<T>(
     );
   }
 
+  // Validated before any I/O — see resolveStatementTimeout above.
+  const timeout = resolveStatementTimeout(options);
+
   const scoped = resolveClient(options.client).$extends(tenantExtension(ctx.tenantId));
 
   return scoped.$transaction(async (tx) => {
-    await openScope(tx, ctx.tenantId, options);
+    await openScope(tx, ctx.tenantId, options, timeout);
     const db = tx as unknown as TenantScopedClient;
     liveGrants.add(db);
     try {

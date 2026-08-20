@@ -7,11 +7,7 @@
  * id, or with no statement timeout would either fail far from its cause or hold
  * a transaction open indefinitely.
  */
-import {
-  registerTenancyClient,
-  resetTenancyClientForTests,
-  withTenant,
-} from '../../../src/tenancy';
+import { resetTenancyClientForTests, withTenant } from '../../../src/tenancy';
 import { appPrisma } from '../../db';
 
 const TENANT = '11111111-1111-4111-8111-111111111111';
@@ -35,18 +31,6 @@ describe('[AC-051][FR-002] withTenant refuses to open an unsafe scope', () => {
     await expect(withTenant({ tenantId: TENANT }, noop)).rejects.toThrow(
       /No Prisma client registered/
     );
-  });
-
-  it('[AC-051] uses the registered client when no explicit one is given', async () => {
-    const client = appPrisma();
-    try {
-      registerTenancyClient(client);
-      await expect(
-        withTenant({ tenantId: TENANT }, async (db) => db.workingCalendar.count())
-      ).resolves.toBe(0);
-    } finally {
-      await client.$disconnect();
-    }
   });
 
   it('[AC-051] refuses a statement timeout that is not a positive integer', async () => {

@@ -21,6 +21,7 @@ import {
 } from '../../db';
 import {
   assertTenantScoped,
+  registerTenancyClient,
   withTenant,
   type TenantScopedClient,
 } from '../../../src/tenancy';
@@ -215,5 +216,26 @@ describe('[AC-051][FR-002] withTenant is the only door to tenant data', () => {
       });
       expect(() => assertTenantScoped(escaped as TenantScopedClient)).toThrow(/closed/i);
     });
+  });
+});
+
+describe('[AC-051] withTenant resolves the registered client', () => {
+  // Moved here from tests/unit by the Orchestrator: this opens a real Prisma
+  // client and issues a real query, so it is an integration test by definition.
+  // Leaving it under tests/unit made the unit suite require a live database,
+  // contrary to the convention in README.md.
+  it('[AC-051] uses the registered client when no explicit one is given', async () => {
+    const client = appPrisma();
+    try {
+      registerTenancyClient(client);
+      await expect(
+        withTenant(
+          { tenantId: '11111111-1111-4111-8111-111111111111' },
+          async (db) => db.workingCalendar.count()
+        )
+      ).resolves.toBe(0);
+    } finally {
+      await client.$disconnect();
+    }
   });
 });
