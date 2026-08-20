@@ -1,7 +1,7 @@
 {
   "agent": "architect",
   "version": "1.2.0",
-  "updated_at": "2026-08-20T12:27:37Z",
+  "updated_at": "2026-08-20T14:04:29Z",
   "learned_patterns": [
     {
       "pattern_id": "PATTERN-006",
@@ -55,6 +55,15 @@
         "task_id": "TASKS-01",
         "product": "connectbpm",
         "date": "2026-08-20T12:27:37Z"
+      },
+      "confidence": "medium"
+    },
+    {
+      "pattern": "A cross-tenant exception should be bounded by SQL privileges rather than by code review: a NOLOGIN SECURITY DEFINER owner plus column-level GRANTs makes the blast radius a countable set (one table, six columns, two statuses, one direction) that a CI gate can assert against the live database, and makes a hostile rewrite of the function body fail at the privilege layer before RLS is consulted. Corollary learned the hard way: under RLS a background process that reaches nothing returns an empty result and looks healthy, so every background process needs a two-tenant test asserting it reaches BOTH — not merely that it runs without error.",
+      "learned_from": {
+        "task_id": "ARCH-02",
+        "product": "connectbpm",
+        "date": "2026-08-20T14:04:29Z"
       },
       "confidence": "medium"
     }
@@ -147,6 +156,14 @@
       "status": "success",
       "time_minutes": 95,
       "summary": "Generated 214-task, 13-phase dependency-ordered foundation breakdown for connectbpm from architecture.md + 9 ADRs. Sequenced tenancy-first per DEC-008, TransitionTx brand and CI gates before any meter write, evidence chain day-one per DEC-001, job substrate before engine exactly-once. Effort 49.3 SU + 15% = ~57 SU vs BA-01's 32; critical path agrees at 12.1 weeks, disagreement is volume beside it. Reported 9 specification gaps including a Sandbox allowance contradiction (250 vs DEC-007's 50)."
+    },
+    {
+      "task_id": "ARCH-02",
+      "product": "connectbpm",
+      "timestamp": "2026-08-20T14:04:29Z",
+      "status": "success",
+      "time_minutes": 195,
+      "summary": "Resolved the ADR-004 §3 / ADR-009 contradiction that silently stopped the job runner claiming any work. Reproduced the failure on live PostgreSQL first, then proved BACKEND-01's preferred option 3 does not work as stated (FORCE RLS binds the table owner, so a SECURITY DEFINER function owned by the migrator claims zero rows). Shipped option 3 corrected: a NOLOGIN NOBYPASSRLS owner role plus two additive policies on job alone, narrowed by column-level grants to six readable columns in two statuses, EXECUTE granted to a new runner role and refused to the API role. tenant_isolation untouched on all 27 tables. Added ADR-010, amended ADR-004 (type defect, nullif predicate defect, new §3.1), ADR-009 (claim loop, absent partial indexes, sweeper) and ADR-007 (outbox naming). Added check-rls check E, verified against six planted widenings; 39 new tests; 169 pass."
     }
   ],
   "common_mistakes": [
@@ -281,9 +298,9 @@
     }
   ],
   "performance_metrics": {
-    "tasks_completed": 6,
+    "tasks_completed": 7,
     "success_rate": 1.00,
-    "average_time_minutes": 78.33333333333333,
+    "average_time_minutes": 95,
     "median_time_minutes": 120,
     "on_time_delivery": 1.0,
     "checkpoints_passed_first_try": 2,

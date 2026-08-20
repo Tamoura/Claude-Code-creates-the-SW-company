@@ -283,3 +283,28 @@ not subtracted, which corrupts relative geometry — in a worked case a 40px int
 Corrected in place with the reasoning and the verification recorded in the ADR. This mattered because
 implementation task T226 follows the ADR, not the design doc, and would have shipped an Arabic canvas
 whose nodes overlap.
+
+---
+
+## Orchestrator note — ADR-010 verified independently
+
+ARCH-02 resolved the ADR-004 / ADR-009 contradiction that would have shipped a job runner claiming
+nothing, silently. Its pivotal claim — that BACKEND-01's proposed `SECURITY DEFINER` fix **does not
+work**, because `FORCE ROW LEVEL SECURITY` binds the table owner too — was reproduced independently
+by the Orchestrator on a clean PostgreSQL 16 rather than accepted on assertion:
+
+| Configuration | `SECURITY DEFINER` function owned by the table owner |
+|---|---|
+| `FORCE ROW LEVEL SECURITY` | **0 rows** |
+| `NO FORCE` | 2 rows |
+
+The correction stands: the fix required a dedicated `NOLOGIN` claim role, not merely a definer
+function. Had the originally proposed form shipped, it would have reproduced the same silent failure
+behind more machinery — the failure mode being that timers never fire while the engine reports
+healthy.
+
+Unit suite independently confirmed at 94/94 without a database.
+
+**Carried into P2 as an operational contract**: `db:roles` must run before the first migration, and
+`RUN_JOB_RUNNER=true` must be paired with a `DATABASE_URL` pointing at `connectbpm_runner`. A
+mismatch fails loudly with `permission denied`, which is the intended behaviour.
