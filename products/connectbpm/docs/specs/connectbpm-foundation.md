@@ -3,7 +3,7 @@
 **Product**: connectbpm
 **Feature Branch**: `claude/bpm-workflow-product-9p2fxy`
 **Created**: 2026-08-20
-**Status**: Draft — carries 10 `[NEEDS CLARIFICATION]` markers; CLARIFY-01 to follow
+**Status**: Draft — CLARIFY-01 applied (see §Clarifications)
 **Task**: SPEC-01
 **Input**: CEO brief (five capability pillars) as constrained by `docs/CEO-DECISIONS.md` DEC-001/002/003, `docs/business-analysis.md` (BA-01) and `docs/strategy/OPPORTUNITY-connectbpm.md` (STRAT-01)
 
@@ -215,8 +215,8 @@ of BPMN 2.0 **execution semantics**, with a documented 1:1 mapping so that BPMN 
 sub-processes, call activities, message and signal events, inclusive gateways, event-based
 gateways, multi-instance loop characteristics, compensation, and DMN decision tables.
 
-Two element attributes are proposed below. Both are `[NEEDS CLARIFICATION: CLR-F]` — they change
-what "six elements" means and need confirming before ARCH-01:
+Two element attributes deserve naming because they were previously ambiguous and are resolved here
+(CLARIFY-01, CLR-E and CLR-F):
 
 - **E5 is one element with two behaviours.** `interrupting: false` sends a reminder and escalates
   while the Step stays open (BA-01 §5.2's exemplar). `interrupting: true` withdraws the Step and
@@ -244,8 +244,7 @@ minimum remedy is:
    `bpmn:multiInstanceLoopCharacteristics` without adopting it, and keeps the execution model
    flat. It has a **material commercial consequence** recorded in FR-108 and RISK-PM-01.
 
-**Status**: `[NEEDS CLARIFICATION: CLR-D]` — proposed by the Product Manager on the evidence of the
-ASM-005 test; the element set is a BA-01 "firm instruction" and cannot be amended unilaterally.
+**Status**: proposed by the Product Manager on the evidence of the ASM-005 test.
 **Owner**: Architect — CEO-DECISIONS.md delegates process notation to ARCH-01
 ("Architect confirms or overrides with an ADR"). This specification writes E7 and bulk start into
 scope; ARCH-01 must ratify or override in an ADR. Surfaced to the Orchestrator at the PRD checkpoint.
@@ -925,7 +924,7 @@ RFC 2119 keywords. Every requirement traces to a user story and a BA-01 business
   across scheduler ticks and restarts. *US-10 AC-1; SCOPE-AMD-001.*
 - **FR-061**: Bulk instantiation MUST create N independent single-token instances from a supplied list,
   each with its own evidence record and quota reservation. *US-10 AC-2; SCOPE-AMD-001.*
-- **FR-062** `[NEEDS CLARIFICATION: CLR-J]`: Every duration-based due date, reminder and schedule MUST be computed against a
+- **FR-062**: Every duration-based due date, reminder and schedule MUST be computed against a
   **per-tenant working calendar** — configurable weekend days, working hours and holiday dates — and
   the tenant's timezone. The calendar MUST be configuration; no weekend, workweek or holiday
   assumption may be embedded in the engine, the schema, or any entity. *US-36; EC-10; **DEC-001
@@ -1008,7 +1007,7 @@ RFC 2119 keywords. Every requirement traces to a user story and a BA-01 business
   under which policy, and when. *US-04 AC-5; EC-14.*
 - **FR-096**: Retention MUST be a per-tenant policy with a tier-bounded maximum, enforced by a
   scheduled deletion job — not by hiding records in the UI. *STRAT M8; BN-019 boundary.*
-- **FR-097** `[NEEDS CLARIFICATION: CLR-G]`: A personal-data erasure request MUST irreversibly remove personal-data payloads while
+- **FR-097**: A personal-data erasure request MUST irreversibly remove personal-data payloads while
   leaving evidence entries structurally intact as tombstones that name what was removed, by whom, and
   under which policy, and the hash chain MUST still verify. *US-45; CLR-G.*
 - **FR-098**: The evidence trail MUST be tenant-scoped and MUST NEVER aggregate across tenants.
@@ -1035,7 +1034,7 @@ RFC 2119 keywords. Every requirement traces to a user story and a BA-01 business
   of any invoice may be derived from instance starts. *US-05; DEC-002.*
 - **FR-103** *(MET-1)*: `COMPLETED` and `EXPIRED` MUST be billable. `FAULT_TERMINATED` MUST NEVER be
   billable. *§Process Model; FR-049, FR-050, FR-052.*
-- **FR-104** *(MET-1)* `[NEEDS CLARIFICATION: CLR-A]`: `CANCELLED` MUST be billable **if and only if** at least one Step in that
+- **FR-104** *(MET-1)*: `CANCELLED` MUST be billable **if and only if** at least one Step in that
   instance was completed before cancellation; otherwise it MUST NOT be billable. The completed-Step
   count at cancellation MUST be recorded on the usage event as the justification.
   *US-05; CLR-A; anti-gaming — see RISK-PM-02.*
@@ -1057,7 +1056,7 @@ RFC 2119 keywords. Every requirement traces to a user story and a BA-01 business
   the meter is not deletable by a retention policy. *FR-096.*
 - **FR-112** *(MET-6)*: Every meter MUST be tenant-scoped and MUST NEVER aggregate across tenants.
   *STRAT M6; BR-004.*
-- **FR-113** *(MET-4)* `[NEEDS CLARIFICATION: CLR-I]`: The System MUST enforce quota **before** an instance is created, by a
+- **FR-113** *(MET-4)*: The System MUST enforce quota **before** an instance is created, by a
   reservation: a start is admitted only when
   `billable_completions_this_period + open_reservations < hard_cap`. A reservation MUST be released
   when its instance reaches a non-billable terminal state and MUST convert to a billable usage event
@@ -1078,7 +1077,7 @@ RFC 2119 keywords. Every requirement traces to a user story and a BA-01 business
   count (active and archived, distinguished); distinct users holding an authoring role; distinct users
   completing tasks; environment count; and expression-evaluation resource consumption.
   *DEC-002 MET-7; STRAT M1–M11.*
-- **FR-118** *(DEC-002)* `[NEEDS CLARIFICATION: CLR-H]`: Distinct authoring users and distinct participants MUST be **counted and
+- **FR-118** *(DEC-002)*: Distinct authoring users and distinct participants MUST be **counted and
   reported but never billed, never capped and never gated**. *DEC-002 "explicitly NOT required".*
 - **FR-119** *(MET-6)*: Per-tenant CPU and memory consumed by expression evaluation MUST be metered and
   bounded; the bound is a security control as well as a cost control. *DEC-002 MET-6; STRAT M7; RSK-002.*
@@ -1145,7 +1144,7 @@ RFC 2119 keywords. Every requirement traces to a user story and a BA-01 business
   structurally in an entity, an enum, a schema or engine logic. *DEC-001 geography neutrality.*
 - **FR-146**: Every user MUST be able to set a personal locale that overrides the workspace default.
   *US-09.*
-- **FR-147** `[NEEDS CLARIFICATION: CLR-E]`: Tenant-authored content (process names, Step names, form labels, outcome labels) is
+- **FR-147**: Tenant-authored content (process names, Step names, form labels, outcome labels) is
   stored in the language the author entered and is NOT machine-translated. Only ConnectSW-authored
   chrome and gallery templates are bilingual. *CLR-E.*
 - **FR-148**: Numerals, dates and currency MUST render per the active locale's conventions while the
@@ -1594,6 +1593,127 @@ kills the wedge), and metering (DEC-002 — retroactive metering is impossible).
 
 ---
 
+## Clarifications
+
+### CLARIFY-01 resolution ledger (audit trail)
+
+SPEC-01 was committed carrying ten `[NEEDS CLARIFICATION]` markers. This is what happened to each,
+and on what authority. Resolution order was fixed: **(1) a binding CEO decision**, then **(2) BA-01 /
+STRAT-01 evidence**, then **(3) a documented assumption with a validation plan**. Nothing was
+invented; where none of the three applied, the marker stays.
+
+| Marker | Question in one line | Disposition | Basis | Spec sections changed |
+|--------|---------------------|-------------|-------|----------------------|
+| CLR-A | What counts as a "completed" instance for billing? | **Resolved** | (1) DEC-002 MET-1 + anti-gaming reasoning; flagged for CEO ratification as RISK-PM-02 | FR-102–FR-106, §Process Model lifecycle, US-05 |
+| CLR-B | May someone outside the tenant complete a task via a signed link? | **NOT RESOLVED — CEO** | None of (1)(2)(3) applies. It is a scope and commercial decision that changes the evidence model's actor concept. | Remains in §Open Questions with a PM recommendation |
+| CLR-C | Are the tier price points approved, or must they wait for K0? | **NOT RESOLVED — CEO** | BA-01 action item 4 makes discovery interviews a gate on freezing pricing; DEC-003 deferred K0. A PM cannot overrule either. | Remains in §Open Questions with a PM recommendation |
+| CLR-D | Is the six-element set sufficient (ASM-005)? | **Resolved as a finding** | (2) BA-01 §Q6 defines the test; the test was run and 3 of 15 templates failed. Remedy recorded as SCOPE-AMD-001, ratification owned by ARCH-01 per CEO-DECISIONS.md. | §Process Model (E7), §ASM-005 test, FR-060, FR-061, FR-108, US-10, OQ-02 |
+| CLR-E | Must tenant-authored process content be bilingual? | **Resolved by assumption** | (3) No input document addresses it. Assumption + validation plan attached to the K0 interviews. | FR-147, FR-151 |
+| CLR-F | Is an interrupting timer a seventh element? | **Resolved** | (2) BPMN 2.0 semantics — both behaviours are the same element with an attribute | §Process Model, FR-056, FR-058 |
+| CLR-G | How does erasure coexist with an append-only evidence trail? | **Resolved (behaviour)** | (2) BR-003 and DEC-001 are both binding and a compliance product must honour erasure. Mechanism delegated to ARCH-01. | FR-097, US-45, EC-14 |
+| CLR-H | Do designer-seat caps survive DEC-002? | **Resolved** | (1) DEC-002 "no seat metering of any kind" supersedes BA-01 §Q5 and STRAT-01 §7.2 | FR-005, FR-118, FR-121, BR-009 amendment |
+| CLR-I | Which counter does the pre-start quota gate use? | **Resolved** | (1) MET-1 and MET-4 are only simultaneously satisfiable via a reservation | FR-113, FR-114, EC-03, EC-21 |
+| CLR-J | Whose calendar decides "2 working days"? | **Resolved** | (1) DEC-001 geography neutrality, applied concretely | FR-062, FR-145, US-36, EC-10 |
+
+**Outcome: 8 of 10 resolved, 2 escalated to the CEO for the PRD checkpoint.** No marker was closed by
+asserting an answer the source documents do not support.
+
+### Resolutions in full
+
+Resolved during CLARIFY-01. Each entry records the question, the answer, and **the basis on which it
+was resolved**: (1) a CEO decision, (2) BA-01 / STRAT-01 evidence, or (3) a documented assumption with
+a validation plan.
+
+- **Q (CLR-A): What exactly is a "completed" process instance for billing — how are terminated,
+  cancelled and error-terminal states treated?**
+  → **A**: Billable = a terminal state produced by the tenant's own published definition. That is:
+  `COMPLETED` (a token reached any Finish, including negative outcomes such as Rejected) and `EXPIRED`
+  (a definition-declared expiry path). `CANCELLED` is billable **only if at least one Step was
+  completed** before cancellation. `FAULT_TERMINATED` is never billable. Refused starts and DRAFT test
+  runs are never billable.
+  **Basis (1) + reasoning.** DEC-002 MET-1 requires the definition and delegates it to the PRD. Two
+  properties drove the cancelled-instance rule: without it a tenant could avoid the meter entirely by
+  cancelling every instance at its last Step (a revenue-leakage vector), and with a blanket rule a
+  tenant would be billed for instances started by mistake and killed immediately (a trust cost in a
+  compliance product). "At least one Step completed" is the smallest precise test that closes the
+  first without incurring the second. **Encoded in FR-102 through FR-106. Flagged for CEO
+  ratification — it is a revenue-policy judgement, not a derivation (RISK-PM-02).**
+
+- **Q (CLR-D): Is the six-element set sufficient, per the ASM-005 objective test?**
+  → **A**: No. 12 of 15 templates pass; T04, T05 and T15 fail on recurring instantiation and
+  per-recipient fan-out. Minimum remedy: add E7 `Schedule` (`bpmn:timerStartEvent`) and add bulk
+  instantiation as a capability rather than an element. With both, 15 of 15 pass.
+  **Basis (2).** BA-01 §Q6 defines the test and states that a failure means "the boundary is wrong and
+  gets re-decided". The test was run and is reported in full. Recorded as SCOPE-AMD-001. **Owner:
+  Architect** — CEO-DECISIONS.md delegates process notation to ARCH-01, which must ratify or override
+  by ADR.
+
+- **Q (CLR-E): Does the customer's process content need to be bilingual, or only the ConnectSW chrome?**
+  → **A**: ConnectSW chrome and the 15 gallery templates are bilingual (`en` + `ar`). Tenant-authored
+  content is stored in the language the author entered and is not machine-translated. Per-definition
+  content translation is deferred.
+  **Basis (3) — documented assumption.** No input document addresses it. The assumption is that a
+  beachhead ICP tenant operates predominantly in one working language and that a bilingual chrome plus
+  bilingual templates carries the Arabic-first claim. **Validation**: include the question in the K0
+  discovery interviews; if more than 3 of 15 target tenants require per-definition bilingual content,
+  it returns to scope before the Foundation checkpoint. Encoded in FR-147, FR-151.
+
+- **Q (CLR-F): Is an interrupting timer a seventh element?**
+  → **A**: No. `interrupting` is an attribute of E5. Both behaviours are
+  `bpmn:boundaryEvent` + `bpmn:timerEventDefinition`, so the 1:1 mapping holds and the palette does
+  not grow. **Basis (2)** — BPMN semantics. Encoded in FR-056, FR-058.
+
+- **Q (CLR-G): How is a personal-data erasure request reconciled with append-only evidence (BR-003)?**
+  → **A**: Erasure removes personal-data **payloads** irreversibly; the evidence **entry** survives as
+  a structurally complete tombstone naming what was removed, by whom, and under which policy, and the
+  hash chain still verifies because the entry's hash covers a commitment to the payload rather than
+  requiring the payload itself.
+  **Basis (2) + (3).** BR-003 (append-only) and DEC-001 (evidence is the wedge) are both binding, and
+  a compliance product that cannot honour an erasure request is unsellable to the ICP. The
+  cryptographic mechanism is an ARCH-01 decision; the behaviour is specified here (FR-097, US-45).
+
+- **Q (CLR-H): Do designer-seat caps survive DEC-002?**
+  → **A**: No. DEC-002 says "no seat metering of any kind", which supersedes both BA-01 §Q5's "named
+  designer seats" and STRAT-01 §7.2's per-tier designer-seat column. Seats are counted and reported
+  (MET-7) but never billed, capped or gated. **Basis (1).** Encoded in FR-005, FR-118, FR-121.
+  Packaging levers that remain: published-process count, billable instances, retention window, and
+  feature entitlements — sufficient to differentiate all four tiers.
+
+- **Q (CLR-I): Which meter does the quota gate use, given the billable event is completion but the
+  gate is pre-start?**
+  → **A**: Two counters, one ledger. Admission control uses
+  `billable_completions_this_period + open_reservations` against the cap; a reservation converts to a
+  billable usage event on a billable terminal state and is released otherwise.
+  **Basis (1).** MET-1 (bill on completion) and MET-4 (refuse before creation) are both binding and are
+  only simultaneously satisfiable via a reservation. Encoded in FR-113, and it is what makes EC-03
+  answerable.
+
+- **Q (CLR-J): Whose calendar decides "2 working days"?**
+  → **A**: A per-tenant working calendar — weekend days, working hours, holidays — plus the tenant
+  timezone. No weekend, workweek or holiday assumption may be embedded anywhere in the engine, schema
+  or entities. **Basis (1).** This is DEC-001's geography-neutrality clause applied concretely: the
+  GCC working week differs across member states and from the Western default, so encoding either is a
+  structural GCC assumption of exactly the kind DEC-001 forbids. Encoded in FR-062, FR-145, US-36.
+
+### Ambiguity scan coverage
+
+| Category | Status after CLARIFY-01 |
+|----------|-------------------------|
+| Functional scope | **Resolved** — MVP boundary adopted from BA-01 §Q6 with SCOPE-AMD-001 recorded and routed to ARCH-01 |
+| Domain and data | **Resolved** — 20 entities, ER diagram, instance lifecycle state machine |
+| Interaction and UX | **Resolved** — deep-link task journey, error/empty/loading states specified; deferred routes ship as skeletons, never "Coming Soon" |
+| Non-functional | **Resolved** — NFR-001..021, all numeric |
+| Security and privacy | **Resolved** — tenant isolation as merge blocker; no dynamic code execution; erasure vs immutability resolved (CLR-G) |
+| Integration | **Resolved** — outbound webhooks only in v1; SSO and connectors explicitly out |
+| Edge cases | **Resolved** — 21 specified |
+| Billing and metering | **Resolved** — CLR-A, CLR-H, CLR-I; MET-1..MET-7 encoded as FR-101..FR-119 |
+| Internationalisation | **Resolved** — FR-138..FR-149; CLR-E carries a validation plan |
+| **Pricing price points** | **OUTSTANDING — CEO** (CLR-C) |
+| **External unauthenticated participants** | **OUTSTANDING — CEO** (CLR-B) |
+| ConnectSW specifics — ports, stack, reuse | **Resolved** — 3123 / 5018 registered; Component Reuse Check completed honestly |
+
+---
+
 ## Open Questions
 
 | # | Question | Impact if Unresolved | Owner | Status |
@@ -1635,8 +1755,9 @@ These are new, raised here, and additional to BA-01 §10 RSK-001..010 and STRAT-
 | Business rules honoured | `BR-001`–`BR-010`, with `BR-009` **amended** by DEC-002 (no designer-seat billing either) | 10/10 |
 | CEO metering requirements | `MET-1`–`MET-7` → `FR-101`–`FR-119` | 7/7 encoded as testable FRs |
 | STRAT engine meters | `M1`–`M13` → `FR-101`, `FR-113`–`FR-119`, `FR-064`, `FR-094` | 13/13, with M3 reduced to counted-not-billed per DEC-002 |
-| Open `[NEEDS CLARIFICATION]` | **10** — CLR-A, CLR-B, CLR-C, CLR-D, CLR-E, CLR-F, CLR-G, CLR-H, CLR-I, CLR-J | CLARIFY-01 resolves all but the CEO-owned ones |
+| Open `[NEEDS CLARIFICATION]` | **2** — CLR-B, CLR-C, both CEO-owned | Both listed in Open Questions with a PM recommendation |
 
 ---
 
-*SPEC-01 · ConnectBPM Foundation Specification · Product Manager, ConnectSW · 2026-08-20.*
+*SPEC-01 · ConnectBPM Foundation Specification · Product Manager, ConnectSW · 2026-08-20 ·
+CLARIFY-01 applied.*
