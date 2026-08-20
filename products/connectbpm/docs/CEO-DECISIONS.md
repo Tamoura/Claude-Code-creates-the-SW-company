@@ -173,3 +173,52 @@ remedy (a distinct lower-priced campaign meter) is **not required for v1**; MET-
 keeps the option open without losing history. Revisit if K0 interviews surface it as an objection.
 
 **Severity re-rated: 4/9.** Mitigation retained: disclosure via AC-018, AC-031.
+
+---
+
+## DEC-007 — Sandbox tier allowance: 50 completed instances/month
+
+**Date**: 2026-08-20 · **Checkpoint**: ARCH-01 · **Raised by**: Architect (gap in DEC-005)
+**Decision**: **50 completed instances per month.** Ratifies the number the architecture and its
+tests already assume, so no rework.
+
+DEC-005 set allowances for Starter (2,500), Growth (15,000) and Business (60,000) but left Sandbox
+unspecified, making `FR-115` / `AC-020` (a non-removable Sandbox hard cap) untestable as written.
+
+**Binding consequences**:
+- Sandbox: **50 completed instances/month**, hard-capped, non-removable, enforced by the same
+  pre-start quota refusal hook as every paid tier (MET-4).
+- The cap is a product constraint, not a config default. A tenant cannot raise it.
+- Rationale: enough to model and run a real process end-to-end several times; far too little to run
+  a business on. Keeps free-tier evidence-storage COGS negligible and makes the upgrade trigger
+  arrive early.
+
+---
+
+## DEC-008 — Proceed to foundation build; the K0 validation gate is overridden
+
+**Date**: 2026-08-20 · **Checkpoint**: ARCH-01 — **APPROVED**
+**Decision**: **Foundation implementation begins now.**
+
+**This overrides the K0 gate set in DEC-003.** That is recorded plainly here because the audit trail
+must show it was a deliberate CEO choice, not an oversight. The Orchestrator raised the override
+explicitly at the checkpoint and the CEO selected it with the consequence stated.
+
+**What is being built ahead of its validation** — these assumptions are now carried into code:
+
+| ID | Assumption | Still unvalidated |
+|----|-----------|-------------------|
+| ASM-003 | The audit-evidence wedge is what the segment buys on | Yes — no discovery interviews run |
+| A6 | ~40 paying tenants in year 1 with no sales team | Yes |
+| A9 | GCC auditors accept engine-produced evidence | Yes — no auditor conversation held |
+| A4 | In-region hosting feasible within 18 months | Yes — no DevOps costing done |
+
+**Orchestrator's position, stated once and then set aside**: A9 is the assumption whose failure would
+be most expensive, because the evidence architecture is a day-one commitment (DEC-001) rather than a
+feature that can be revised later. The CEO has weighed this and elected to build. Work proceeds at
+full scope; the validation workstream remains available to run alongside the build at any time and
+would de-risk A9 cheaply while the foundation is under construction.
+
+**Build sequencing consequence**: tenancy ships before any pillar. It gates everything (BA gap G-08),
+and retrofitting isolation into a running multi-tenant engine is the one mistake this product cannot
+absorb.
