@@ -1,8 +1,18 @@
 {
   "agent": "backend-engineer",
   "version": "1.0.0",
-  "updated_at": "2026-02-24T00:00:00Z",
-  "learned_patterns": [],
+  "updated_at": "2026-08-20T13:23:36Z",
+  "learned_patterns": [
+    {
+      "pattern": "triple-closed-brand: non-exported unique symbol + module-private WeakSet runtime grant + eslint ban on the double assertion, verified by planting a forgery",
+      "learned_from": {
+        "task_id": "BACKEND-01",
+        "product": "connectbpm",
+        "date": "2026-08-20T13:23:36Z"
+      },
+      "confidence": "medium"
+    }
+  ],
   "task_history": [
     {
       "task_id": "FIX-07",
@@ -27,6 +37,14 @@
       "status": "success",
       "time_minutes": 12,
       "summary": "Strengthened password policy from weak (8 chars, uppercase, number) to industry best practices (12 chars, uppercase, lowercase, number, special char). Created comprehensive test suite with 29 passing tests covering all requirements, error messages, and edge cases. Updated all integration tests and API documentation with new password requirements and examples."
+    },
+    {
+      "task_id": "BACKEND-01",
+      "product": "connectbpm",
+      "timestamp": "2026-08-20T13:23:36Z",
+      "status": "success",
+      "time_minutes": 185,
+      "summary": "Tenancy foundation: FORCE RLS on all 27 tenant-scoped tables, withTenant/TenantScopedClient brand, TransitionTx brand, standing two-tenant isolation gate enumerating the OpenAPI contract, and traceability tagging 0/81 to 123/145 in apps/api. gate:rls checks C and D green; 130/130 tests; coverage 91.07/81.53/95.23/91.53."
     }
   ],
   "common_mistakes": [
@@ -43,9 +61,9 @@
   ],
   "efficiency_improvements": [],
   "performance_metrics": {
-    "tasks_completed": 3,
+    "tasks_completed": 4,
     "success_rate": 1.00,
-    "average_time_minutes": 54,
+    "average_time_minutes": 86.75,
     "median_time_minutes": 75,
     "on_time_delivery": 0
   }
