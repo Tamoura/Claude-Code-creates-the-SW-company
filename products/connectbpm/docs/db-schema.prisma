@@ -1195,6 +1195,17 @@ model TemplateLocale {
 //    A CI gate asserts every tenant-scoped table has ENABLE + FORCE RLS + a policy.
 //
 // 4. NUMBERS
-//    28 models. Every tenant-scoped model carries tenantId. 3 global models
-//    (User, Template, TemplateLocale) — enumerated and reviewed.
+//    32 models. Every tenant-scoped model carries tenantId. 5 models do not,
+//    each deliberately and for a distinct reason — enumerated and reviewed:
+//      - Tenant        — it IS the tenant; isolation is by its own `id`.
+//      - User          — global identity. One human, many tenants via Membership.
+//      - RefreshToken  — scoped to the User, not the tenant: a session
+//                        authenticates the human; tenant context comes from
+//                        Membership. Tenant-scoping it would force re-login per
+//                        workspace and fragment the session-revocation surface.
+//      - Template      — the shared template library, global by design.
+//      - TemplateLocale— locale variants of the above.
+//    Everything else — all 27 remaining models — carries tenantId and is
+//    covered by RLS. The CI gate in note 3 asserts this, and this list is the
+//    allowlist it checks against: adding a model here requires justification.
 // =============================================================================
