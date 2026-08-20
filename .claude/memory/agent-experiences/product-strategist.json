@@ -1,13 +1,16 @@
 {
   "agent": "product-strategist",
   "version": "1.2.0",
-  "updated_at": "2026-02-18T10:00:00Z",
+  "updated_at": "2026-08-20T10:24:39Z",
   "learned_patterns": [
     {
       "pattern_id": "PS-PATTERN-001",
       "description": "Market analysis before spec: always define TAM/SAM/SOM and identify 3 direct competitors before spec begins",
       "first_applied": "2026-01-28",
-      "products_applied": ["stablecoin-gateway", "recomengine"],
+      "products_applied": [
+        "stablecoin-gateway",
+        "recomengine"
+      ],
       "confidence": "high",
       "notes": "stablecoin-gateway TAM research revealed institutional DeFi payments as the primary opportunity — not retail. This changed the entire product direction and API design."
     },
@@ -15,7 +18,10 @@
       "pattern_id": "PS-PATTERN-002",
       "description": "Competitive positioning: identify one clear differentiation pillar — do not try to win on 3 dimensions simultaneously",
       "first_applied": "2026-02-03",
-      "products_applied": ["stablecoin-gateway", "linkedin-agent"],
+      "products_applied": [
+        "stablecoin-gateway",
+        "linkedin-agent"
+      ],
       "confidence": "high",
       "notes": "stablecoin-gateway wins on: developer experience (Stripe-like DX for Web3). linkedin-agent wins on: Arabic-English bilingual content quality. Single clear pillar enables focused messaging."
     },
@@ -23,7 +29,9 @@
       "pattern_id": "PS-PATTERN-003",
       "description": "Go-to-market phasing: Phase 1 (single customer segment) → Phase 2 (adjacent segments) → Phase 3 (platform)",
       "first_applied": "2026-02-08",
-      "products_applied": ["recomengine"],
+      "products_applied": [
+        "recomengine"
+      ],
       "confidence": "medium",
       "notes": "RecomEngine initial strategy tried to target e-commerce, media, and fintech simultaneously. Narrowed to e-commerce first — clearer ICP, faster traction."
     },
@@ -31,9 +39,21 @@
       "pattern_id": "PS-PATTERN-004",
       "description": "Pricing strategy: anchor on value delivered, not cost of delivery — especially for AI-powered products",
       "first_applied": "2026-02-12",
-      "products_applied": ["recomengine", "linkedin-agent"],
+      "products_applied": [
+        "recomengine",
+        "linkedin-agent"
+      ],
       "confidence": "medium",
       "notes": "RecomEngine charges per recommendation served, not per API call. LinkedIn Agent charges per post generated. Value-based pricing aligns with customer success."
+    },
+    {
+      "pattern": "Score any AI-capability wedge against the incumbent's GA date before recommending it — Copilot Studio shipped NL-to-workflow GA in May 2026, which reduced AI process authoring from a candidate wedge to table stakes. A capability a bundled incumbent already ships is a 24-week moat, not a 24-month one; look instead for regulatory or linguistic gates that structurally exclude the substitute.",
+      "learned_from": {
+        "task_id": "STRAT-01",
+        "product": "connectbpm",
+        "date": "2026-08-20T10:24:39Z"
+      },
+      "confidence": "medium"
     }
   ],
   "task_history": [
@@ -46,7 +66,12 @@
       "estimated_minutes": 240,
       "actual_minutes": 300,
       "status": "success",
-      "deliverables": ["Market sizing (TAM: $12B, SAM: $2.4B, SOM: $24M year 1)", "Competitive landscape (Fireblocks, BitPay, Circle API)", "Differentiation strategy", "Pricing recommendations"],
+      "deliverables": [
+        "Market sizing (TAM: $12B, SAM: $2.4B, SOM: $24M year 1)",
+        "Competitive landscape (Fireblocks, BitPay, Circle API)",
+        "Differentiation strategy",
+        "Pricing recommendations"
+      ],
       "impact": "CEO approved product direction. Architecture pivoted to serve institutional API customers."
     },
     {
@@ -58,8 +83,21 @@
       "estimated_minutes": 300,
       "actual_minutes": 360,
       "status": "success",
-      "deliverables": ["ICP definition (e-commerce, 50-500 SKUs, no existing recommendation engine)", "Channel strategy (developer-led growth, docs-first)", "Pricing model (freemium + usage-based)", "Competitive moat (open-source SDK + proprietary cloud API)"],
+      "deliverables": [
+        "ICP definition (e-commerce, 50-500 SKUs, no existing recommendation engine)",
+        "Channel strategy (developer-led growth, docs-first)",
+        "Pricing model (freemium + usage-based)",
+        "Competitive moat (open-source SDK + proprietary cloud API)"
+      ],
       "impact": "Focused product spec on e-commerce integration as primary use case"
+    },
+    {
+      "task_id": "STRAT-01",
+      "product": "connectbpm",
+      "timestamp": "2026-08-20T10:24:39Z",
+      "status": "success",
+      "time_minutes": 150,
+      "summary": "ConnectBPM opportunity assessment: TAM 23B / SAM 400M / SOM 5.5M ARR at M36; Five Forces with Microsoft M365 bundling as the defining substitute; 4 wedges scored, recommended Arabic-first + in-region + audit-evidence-native GCC compliance BPM; instance-based pricing with 13 mandatory engine meters; connectgrc as first internal consumer with a credit-os boundary ADR; Now/Next/Future roadmap traced to 6 strategic objectives; kill criteria K0-K8"
     }
   ],
   "common_mistakes": [
@@ -104,13 +142,17 @@
     }
   ],
   "performance_metrics": {
-    "tasks_completed": 2,
-    "success_rate": 1.0,
-    "average_time_minutes": 330,
+    "tasks_completed": 3,
+    "success_rate": 1.00,
+    "average_time_minutes": 50,
     "median_time_minutes": 330,
     "on_time_delivery": 0.85,
     "strategies_approved": 2,
     "strategies_revised": 0,
-    "products_influenced": ["stablecoin-gateway", "recomengine", "linkedin-agent"]
+    "products_influenced": [
+      "stablecoin-gateway",
+      "recomengine",
+      "linkedin-agent"
+    ]
   }
 }

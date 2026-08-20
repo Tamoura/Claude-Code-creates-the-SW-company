@@ -1,6 +1,6 @@
 {
   "version": "1.1.0",
-  "updated_at": "2026-08-20T10:24:44Z",
+  "updated_at": "2026-08-20T10:25:43Z",
   "description": "Per-agent, per-task-type duration statistics. Used by orchestrator Step 3.7. Entries with is_baseline=true are seeded estimates — replace with actuals after first real execution.",
   "agents": {
     "architect": {
