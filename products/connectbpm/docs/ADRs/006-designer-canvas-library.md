@@ -46,11 +46,34 @@ the choice beyond the obvious ones:
    published checksum.
 3. **RTL by coordinate transform, never by CSS mirroring** (`FR-141`, `AC-060`). This is the trap
    worth naming: `transform: scaleX(-1)` on the pane mirrors the *text* too, producing reversed
-   Arabic labels. Instead, in `ar` the canvas maps `x → (canvasWidth − x)` when projecting our graph
+   Arabic labels. Instead, in `ar` the canvas maps `x → (bboxMinX + bboxMaxX) − x − nodeWidth` when projecting our graph
    into React Flow, swaps source/target handle sides, and re-renders arrowheads from the transformed
    geometry. Node internals render normally with `dir="rtl"` and logical CSS properties. Layout
    direction is a projection concern; stored coordinates stay canonical and direction-independent, so
    the same definition opens correctly in either locale.
+> **CORRECTION (Orchestrator, 2026-08-20).** This ADR originally specified
+> `x → (canvasWidth − x)`. That formula is defective and was corrected above. Raised by
+> DESIGN-01 (`docs/design/rtl-and-i18n.md` §11); verified numerically by the Orchestrator
+> before amending. Three claims were checked; two hold:
+>
+> | Claim | Verdict |
+> |---|---|
+> | Not self-inverse | **Does not hold.** For a fixed `canvasWidth`, `f(f(x)) = x`. |
+> | Not viewport-invariant | **Holds.** With `canvasWidth` as the viewport, every node shifts on resize — a 1000→1400px resize translates the whole graph by 400px. |
+> | `nodeWidth` not subtracted | **Holds, and is the severe one.** React Flow positions are top-left corners, so mirroring the left edge places each node displaced by *its own* width. Because widths differ per node this is not a uniform translation: in a worked case a 40px gap between two nodes became **−80px**, i.e. the nodes overlap. Relative geometry is corrupted, not merely offset. |
+>
+> The corrected transform mirrors about the **graph's own bounding-box centre** and subtracts
+> the node's width, which is viewport-independent and preserves every inter-node gap exactly
+> (verified: gaps of 40px and 120px round-trip unchanged).
+>
+> Two consequences from DESIGN-01 that this ADR did not state and which bind the implementation:
+> - **elkjs auto-layout always runs `direction: RIGHT` in canonical space.** Running it `LEFT`
+>   under `ar` would make *stored* coordinates differ by locale — locale becoming structure, a
+>   direct DEC-001 / `FR-145` violation dressed up as a layout convenience.
+> - **Evidence exports render canonically LTR** with a locale-labelled caption. An auditor handed
+>   two visually different diagrams of the same published version has been given a reason to
+>   doubt the chain.
+
 4. **Validation highlighting** (`FR-017`, `C3`): publish-time validation returns
    `{ elementId, rule, message }[]`; the canvas maps `elementId` to node id and applies an error
    state plus a focusable error list. Because our model owns element ids, this survives library

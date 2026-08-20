@@ -256,3 +256,30 @@ for a mid-market ops team.
 
 Neither the Architect nor the Orchestrator caught this when DEC-007 was ratified; it surfaced only
 when the task breakdown forced the two numbers into the same view.
+
+---
+
+## OPEN-002 — Three design gaps needing a requirement owner
+
+**Raised**: 2026-08-20 by DESIGN-01 · **Status**: OPEN, none build-blocking
+**Detail**: `products/connectbpm/docs/design/` (§ noted per item)
+
+| ID | Gap | Owner | Why it matters |
+|----|-----|-------|----------------|
+| U-1 | `/versions/[version]` requires a "diff against the previous version", but no requirement defines what a graph diff **is**. A coordinate-only move is not a semantic change and should not appear in a Publisher's diff — nothing says so. The pre-publish review sheet computes the same thing, so two divergent diffs would be worse than one imperfect one. | PM + Architect | Publisher trust in the publish flow |
+| U-2 | `FR-021` requires a "named canvas idiom" but does not say whether an idiom may appear in the palette. DESIGN-01 placed it under a separate Patterns affordance creating only E1–E7, read as `FR-011`-compliant — but `AC-088` is an automated palette test, so this needs confirming rather than assuming. | Architect | An automated test may fail on a defensible design |
+| U-3 | An interrupting `Due date` (E5) withdrawing a task from under an open performer has no specified behaviour. DESIGN-01 proposed one (explanation replaces the action bar, entered data stays visible and copyable, link to request status) but it needs a requirement, not a design doc. | PM | Data loss under a timer is a trust event on the retention surface |
+
+---
+
+## Orchestrator note — ADR-006 RTL transform corrected
+
+DESIGN-01 found the RTL coordinate transform in ADR-006 to be defective. The Orchestrator verified
+the claim numerically before amending rather than accepting or rejecting it on assertion. Two of the
+three sub-claims hold; the "not self-inverse" claim does not. The severe one is that `nodeWidth` was
+not subtracted, which corrupts relative geometry — in a worked case a 40px inter-node gap became
+**−80px**, meaning nodes overlap rather than merely shift.
+
+Corrected in place with the reasoning and the verification recorded in the ADR. This mattered because
+implementation task T226 follows the ADR, not the design doc, and would have shipped an Arabic canvas
+whose nodes overlap.
