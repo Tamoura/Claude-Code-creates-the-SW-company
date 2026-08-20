@@ -1,7 +1,7 @@
 {
   "version": "1.0.0",
   "period": "2025-01-26 onwards",
-  "updated_at": "2026-08-20T10:25:43Z",
+  "updated_at": "2026-08-20T11:12:43Z",
   "agents": {
     "ai-ml-engineer": {},
     "architect": {
@@ -68,9 +68,9 @@
       "avg_time_minutes": 0
     },
     "product-manager": {
-      "tasks_completed": 3,
+      "tasks_completed": 6,
       "success_rate": 1.00,
-      "avg_time_minutes": 45,
+      "avg_time_minutes": 57.5,
       "estimated_vs_actual": 0,
       "checkpoints_passed_first_try": 0,
       "ceo_revisions_requested": 0
@@ -113,7 +113,7 @@
     }
   },
   "insights": [
-    "qa-engineer has highest task count (5 tasks)",
-    "48 total tasks completed across all agents"
+    "product-manager has highest task count (6 tasks)",
+    "51 total tasks completed across all agents"
   ]
 }

@@ -1,7 +1,7 @@
 {
   "agent": "product-manager",
   "version": "1.0.0",
-  "updated_at": "2026-02-07T10:32:29Z",
+  "updated_at": "2026-08-20T11:10:36Z",
   "learned_patterns": [
     {
       "pattern": "PRD-STRUCTURE: Use invoiceforge addendum as the most complete template for product addendums",
@@ -9,6 +9,33 @@
         "task_id": "PRD-01",
         "product": "pulse",
         "date": "2026-02-07T10:32:29Z"
+      },
+      "confidence": "medium"
+    },
+    {
+      "pattern": "SPEC-RUN-THE-BOUNDARY-TEST: when a BA sets an objective scope test (ASM-005), run it inside the spec and publish the failures rather than asserting the boundary holds",
+      "learned_from": {
+        "task_id": "SPEC-01",
+        "product": "connectbpm",
+        "date": "2026-08-20T11:10:19Z"
+      },
+      "confidence": "medium"
+    },
+    {
+      "pattern": "CLARIFY-LEDGER: record every ambiguity resolution with its disposition so a later reader can tell a decision from an oversight; leave open items only where the owner is genuinely outside the agent",
+      "learned_from": {
+        "task_id": "CLARIFY-01",
+        "product": "connectbpm",
+        "date": "2026-08-20T11:10:26Z"
+      },
+      "confidence": "medium"
+    },
+    {
+      "pattern": "PRD-NEW-ID-NAMESPACE: when a companion spec owns FR/NFR/SC, give PRD acceptance criteria their own AC-xxx namespace and cite the spec IDs rather than restating or renumbering them; verify every citation exists by script before commit",
+      "learned_from": {
+        "task_id": "PRD-01",
+        "product": "connectbpm",
+        "date": "2026-08-20T11:10:36Z"
       },
       "confidence": "medium"
     }
@@ -37,15 +64,39 @@
       "status": "success",
       "time_minutes": 45,
       "summary": "Created comprehensive PRD and product addendum for Pulse with 4 personas, 6 MVP features, 24 web routes, 35 API endpoints, user flows, risk analysis"
+    },
+    {
+      "task_id": "SPEC-01",
+      "product": "connectbpm",
+      "timestamp": "2026-08-20T11:10:19Z",
+      "status": "success",
+      "time_minutes": 90,
+      "summary": "Authored SPEC-01 foundation specification: 45 user stories, 154 FRs, 21 NFRs, 21 edge cases, 18 success criteria, 20 entities; ran the ASM-005 15-template modelling test and proposed SCOPE-AMD-001 (E7 Schedule + bulk instantiation) on its evidence"
+    },
+    {
+      "task_id": "CLARIFY-01",
+      "product": "connectbpm",
+      "timestamp": "2026-08-20T11:10:26Z",
+      "status": "success",
+      "time_minutes": 45,
+      "summary": "Resolved 10 [NEEDS CLARIFICATION] markers in SPEC-01 down to 2, both CEO-owned (CLR-B external participants, CLR-C price-point publication), each carrying a recorded PM recommendation; produced a resolution ledger and an ambiguity-scan coverage table"
+    },
+    {
+      "task_id": "PRD-01",
+      "product": "connectbpm",
+      "timestamp": "2026-08-20T11:10:36Z",
+      "status": "success",
+      "time_minutes": 75,
+      "summary": "Completed the ConnectBPM PRD: appended §7 Acceptance Criteria (104 Given/When/Then, AC-001..AC-104, metering/evidence/isolation/RTL first), §8 Out of Scope (22 exclusions + 3 unfrozen items), §9 Risks carrying BA-01 RSK-001..010 and RISK-PM-01..05 forward with added leading indicators plus dependencies and evidence-gated milestones, §10 Product Addendum with an explicit Architect placeholder; 12/12 Mermaid diagrams parser-verified, 0 ambiguous-language hits, all cross-document IDs verified to exist"
     }
   ],
   "common_mistakes": [],
   "preferred_approaches": [],
   "efficiency_improvements": [],
   "performance_metrics": {
-    "tasks_completed": 3,
+    "tasks_completed": 6,
     "success_rate": 1.00,
-    "average_time_minutes": 45,
+    "average_time_minutes": 57.5,
     "median_time_minutes": 0,
     "on_time_delivery": 0
   }

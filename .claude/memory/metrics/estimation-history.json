@@ -1,6 +1,6 @@
 {
   "version": "1.1.0",
-  "updated_at": "2026-08-20T10:25:43Z",
+  "updated_at": "2026-08-20T11:12:43Z",
   "description": "Per-agent, per-task-type duration statistics. Used by orchestrator Step 3.7. Entries with is_baseline=true are seeded estimates — replace with actuals after first real execution.",
   "agents": {
     "architect": {
@@ -205,7 +205,31 @@
     },
     "product-manager": {
       "PRD": {
-        "sample_count": 3,
+        "sample_count": 4,
+        "mean": 52.5,
+        "min": 45,
+        "max": 75,
+        "median": 45,
+        "p25": 45,
+        "p75": 75,
+        "p90": 75,
+        "stddev": 15,
+        "is_baseline": false
+      },
+      "SPEC": {
+        "sample_count": 1,
+        "mean": 90,
+        "min": 90,
+        "max": 90,
+        "median": 90,
+        "p25": 90,
+        "p75": 90,
+        "p90": 90,
+        "stddev": 0,
+        "is_baseline": false
+      },
+      "CLARIFY": {
+        "sample_count": 1,
         "mean": 45,
         "min": 45,
         "max": 45,
@@ -215,30 +239,6 @@
         "p90": 45,
         "stddev": 0,
         "is_baseline": false
-      },
-      "SPEC": {
-        "sample_count": 0,
-        "mean": 30,
-        "min": 30,
-        "max": 30,
-        "median": 30,
-        "p25": 30,
-        "p75": 30,
-        "p90": 30,
-        "stddev": 0,
-        "is_baseline": true
-      },
-      "CLARIFY": {
-        "sample_count": 0,
-        "mean": 15,
-        "min": 15,
-        "max": 15,
-        "median": 15,
-        "p25": 15,
-        "p75": 15,
-        "p90": 15,
-        "stddev": 0,
-        "is_baseline": true
       }
     },
     "product-strategist": {

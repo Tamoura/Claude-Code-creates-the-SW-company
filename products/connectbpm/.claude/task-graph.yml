@@ -127,7 +127,7 @@ tasks:
       - "Edge cases table has at least 5 entries"
       - "Component Reuse Check table filled"
       - "Uncertain areas marked with [NEEDS CLARIFICATION]"
-    status: "pending"
+    status: "completed"
 
   - id: "CLARIFY-01"
     name: "Resolve Specification Ambiguities"
@@ -164,7 +164,7 @@ tasks:
       - "Maximum 3 remaining (documented as assumptions with risk-if-wrong)"
       - "Resolved answers written back into the spec file"
       - "Clarification questions had concrete options (not open-ended)"
-    status: "pending"
+    status: "completed"
 
   # ============================================================================
   # PHASE 1: INCEPTION & PLANNING
@@ -221,7 +221,7 @@ tasks:
       - "Product addendum created with tech stack and conventions"
       - "Contains >= 3 Mermaid diagrams (C4, ER, sequence/flowchart)"
       - "Uses >= 3 distinct Mermaid diagram types"
-    status: "pending"
+    status: "completed"
 
   # ============================================================================
   # PHASE 2: ARCHITECTURE
