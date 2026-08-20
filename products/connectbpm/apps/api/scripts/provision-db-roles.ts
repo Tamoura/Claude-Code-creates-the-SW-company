@@ -21,6 +21,24 @@
  *   connectbpm_reconciler the nightly reconciliation (ADR-007). Same posture;
  *                         it iterates tenants through withTenant rather than
  *                         reading across them.
+ *   connectbpm_runner     the job runner (ADR-009). Same posture as the app,
+ *                         and separate from it for ONE reason: it is the only
+ *                         role granted EXECUTE on the cross-tenant job-claim
+ *                         functions (ADR-010). A bug on the HTTP surface must
+ *                         not be able to lease every tenant's timers and
+ *                         suppress the engine globally.
+ *   connectbpm_job_claimer  NOLOGIN. Owns the two SECURITY DEFINER claim
+ *                         functions and nothing else, and is the single role
+ *                         named by the only cross-tenant policy in the schema
+ *                         (ADR-010). NOSUPERUSER, NOBYPASSRLS — the reach comes
+ *                         from a policy on ONE table over SIX readable columns
+ *                         in TWO states, not from an attribute that would
+ *                         exempt it from every policy on every table. `connectbpm_migrator` is made a member so
+ *                         that the migration can transfer ownership of the
+ *                         functions; membership alone is enough to inherit a
+ *                         policy, which is why the policy's first conjunct is
+ *                         `current_user = 'connectbpm_job_claimer'` and not
+ *                         merely `TO connectbpm_job_claimer`.
  *
  * Run as an administrative role, BEFORE the first migration:
  *   ADMIN_DATABASE_URL=postgresql://postgres:...@host/db pnpm db:roles
@@ -35,6 +53,9 @@ import { PrismaClient } from '@prisma/client';
 export const APP_ROLE = 'connectbpm_app';
 export const MIGRATOR_ROLE = 'connectbpm_migrator';
 export const RECONCILER_ROLE = 'connectbpm_reconciler';
+export const RUNNER_ROLE = 'connectbpm_runner';
+/** NOLOGIN. Owns the claim functions; named by the one cross-tenant policy. */
+export const JOB_CLAIMER_ROLE = 'connectbpm_job_claimer';
 
 /**
  * Passwords are interpolated into DDL because PostgreSQL accepts no bind
@@ -60,6 +81,12 @@ export interface RoleSpec {
   password: string;
   /** `prisma migrate dev` provisions a shadow database. */
   createDb: boolean;
+  /**
+   * A role nothing can connect as. The claim functions' owner is NOLOGIN so
+   * that the only way to execute with its identity is to call a function it
+   * owns, whose body only the migrator can replace (ADR-010).
+   */
+  noLogin?: boolean;
 }
 
 /**
@@ -70,8 +97,22 @@ export interface RoleSpec {
  * here would disable it everywhere while every other test still passed.
  */
 export function buildRoleStatements(spec: RoleSpec): string[] {
-  assertSafePassword(spec.role, spec.password);
   const createdb = spec.createDb ? 'CREATEDB' : 'NOCREATEDB';
+
+  if (spec.noLogin === true) {
+    return [
+      `DO $$ BEGIN
+         IF NOT EXISTS (SELECT 1 FROM pg_roles WHERE rolname = '${spec.role}') THEN
+           CREATE ROLE ${spec.role} NOLOGIN;
+         END IF;
+       END $$`,
+      // NOLOGIN is re-asserted with the rest: a role that could be connected to
+      // would make the SECURITY DEFINER boundary decorative.
+      `ALTER ROLE ${spec.role} NOLOGIN NOSUPERUSER NOBYPASSRLS NOCREATEROLE ${createdb}`,
+    ];
+  }
+
+  assertSafePassword(spec.role, spec.password);
   return [
     `DO $$ BEGIN
        IF NOT EXISTS (SELECT 1 FROM pg_roles WHERE rolname = '${spec.role}') THEN
@@ -84,9 +125,9 @@ export function buildRoleStatements(spec: RoleSpec): string[] {
   ];
 }
 
-/** Privileges. The migrator owns; the app and reconciler only ever do DML. */
+/** Privileges. The migrator owns; app, reconciler and runner only ever do DML. */
 export function buildGrantStatements(database: string): string[] {
-  const dml = `${APP_ROLE}, ${RECONCILER_ROLE}`;
+  const dml = `${APP_ROLE}, ${RECONCILER_ROLE}, ${RUNNER_ROLE}`;
   return [
     `GRANT CONNECT ON DATABASE "${database}" TO ${MIGRATOR_ROLE}, ${dml}`,
     `ALTER SCHEMA public OWNER TO ${MIGRATOR_ROLE}`,
@@ -105,6 +146,20 @@ export function buildGrantStatements(database: string): string[] {
     `REVOKE CREATE ON SCHEMA public FROM PUBLIC`,
     `REVOKE CREATE ON SCHEMA public FROM ${APP_ROLE}`,
     `REVOKE CREATE ON SCHEMA public FROM ${RECONCILER_ROLE}`,
+    `REVOKE CREATE ON SCHEMA public FROM ${RUNNER_ROLE}`,
+
+    // ADR-010. The claim functions' owner needs USAGE on the schema to resolve
+    // `public.job`, and NOTHING else. It is granted no table privileges here:
+    // the migration grants it SIX columns of ONE table, which is the entire
+    // cross-tenant surface of this product.
+    `GRANT USAGE ON SCHEMA public TO ${JOB_CLAIMER_ROLE}`,
+    `REVOKE CREATE ON SCHEMA public FROM ${JOB_CLAIMER_ROLE}`,
+
+    // Membership, so that `20260820150000_job_claim_boundary` can transfer the
+    // functions to their owner. Membership alone would inherit the claimer's
+    // policy, which is why that policy also tests `current_user` — verified in
+    // `tests/integration/tenancy/job-claim-boundary.test.ts`.
+    `GRANT ${JOB_CLAIMER_ROLE} TO ${MIGRATOR_ROLE}`,
   ];
 }
 
@@ -119,6 +174,8 @@ export function defaultRoleSpecs(): RoleSpec[] {
     { role: MIGRATOR_ROLE, password: env('DB_MIGRATOR_PASSWORD', 'connectbpm_migrator_dev'), createDb: true },
     { role: APP_ROLE, password: env('DB_APP_PASSWORD', 'connectbpm_app_dev'), createDb: false },
     { role: RECONCILER_ROLE, password: env('DB_RECONCILER_PASSWORD', 'connectbpm_reconciler_dev'), createDb: false },
+    { role: RUNNER_ROLE, password: env('DB_RUNNER_PASSWORD', 'connectbpm_runner_dev'), createDb: false },
+    { role: JOB_CLAIMER_ROLE, password: '', createDb: false, noLogin: true },
   ];
 }
 

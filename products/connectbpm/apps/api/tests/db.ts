@@ -10,6 +10,9 @@
  * is connected, not only about what the SQL says:
  *
  *   appPrisma()      `connectbpm_app`      — what the API is. All assertions.
+ *   runnerPrisma()   `connectbpm_runner`   — what the job runner is. The ONLY
+ *                                            role that may call the ADR-010
+ *                                            claim functions.
  *   migratorPrisma() `connectbpm_migrator` — the table OWNER. Used to prove
  *                                            FORCE RLS binds the owner too.
  *   adminPrisma()    superuser             — used ONLY to plant fixture rows for
@@ -23,7 +26,9 @@
 import { PrismaClient } from '@prisma/client';
 import { randomUUID } from 'node:crypto';
 
-function clientFor(urlVar: 'DATABASE_URL' | 'DATABASE_URL_MIGRATOR' | 'ADMIN_DATABASE_URL'): PrismaClient {
+function clientFor(
+  urlVar: 'DATABASE_URL' | 'DATABASE_URL_RUNNER' | 'DATABASE_URL_MIGRATOR' | 'ADMIN_DATABASE_URL'
+): PrismaClient {
   const url = process.env[urlVar];
   if (url === undefined || url === '') {
     throw new Error(`${urlVar} is not set — tests/setup.ts should have defaulted it`);
@@ -32,6 +37,7 @@ function clientFor(urlVar: 'DATABASE_URL' | 'DATABASE_URL_MIGRATOR' | 'ADMIN_DAT
 }
 
 export const appPrisma = (): PrismaClient => clientFor('DATABASE_URL');
+export const runnerPrisma = (): PrismaClient => clientFor('DATABASE_URL_RUNNER');
 export const migratorPrisma = (): PrismaClient => clientFor('DATABASE_URL_MIGRATOR');
 export const adminPrisma = (): PrismaClient => clientFor('ADMIN_DATABASE_URL');
 
@@ -93,8 +99,34 @@ export async function seedTwoTenants(admin: PrismaClient): Promise<TwoTenantFixt
 /** Removes every fixture row. Runs as admin: teardown must not be filtered. */
 export async function resetTenantData(admin: PrismaClient): Promise<void> {
   await admin.$executeRawUnsafe(
-    'TRUNCATE TABLE process_definition, working_calendar, membership, app_user, tenant CASCADE'
+    'TRUNCATE TABLE job, process_definition, working_calendar, membership, app_user, tenant CASCADE'
   );
+}
+
+/**
+ * Plants one due `job` per tenant, as ADMIN, so the rows exist regardless of
+ * row-level security. The whole ARCH-02 finding is that a runner which claims
+ * nothing looks exactly like a runner with nothing to claim, so a fixture that
+ * could not plant BOTH tenants' rows would make every assertion below vacuous.
+ */
+export async function seedDueJob(
+  admin: PrismaClient,
+  tenantId: string,
+  label: string,
+  dueSecondsAgo = 60
+): Promise<string> {
+  const id = randomUUID();
+  await admin.$executeRawUnsafe(
+    `INSERT INTO job (id, tenant_id, kind, dedupe_key, payload, run_at, status, updated_at)
+     VALUES ($1::uuid, $2::uuid, 'TIMER_DUE', $3, $4::jsonb,
+             now() - make_interval(secs => $5::int), 'PENDING', now())`,
+    id,
+    tenantId,
+    `dedupe-${label}-${id.slice(0, 8)}`,
+    JSON.stringify({ secret: `tenant-${label}-only` }),
+    dueSecondsAgo
+  );
+  return id;
 }
 
 /**

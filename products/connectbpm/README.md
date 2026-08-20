@@ -27,7 +27,7 @@ evidence record emitted by default.
 cp .env.example .env                 # then edit the secrets
 pnpm install                         # from the repo root
 pnpm --filter connectbpm docker:infra   # PostgreSQL + Redis
-pnpm --filter @connectbpm/api db:roles  # ADR-004 §3 — BEFORE the first migration
+pnpm --filter @connectbpm/api db:roles  # ADR-004 §3 + ADR-010 — BEFORE the first migration
 pnpm --filter connectbpm db:migrate
 pnpm --filter connectbpm dev            # api :5018 + web :3123
 ```
@@ -42,12 +42,43 @@ only if the connection the API uses is neither.
 | Role | Used by | Posture |
 |------|---------|---------|
 | `connectbpm_migrator` | `prisma migrate`, owns the schema | NOSUPERUSER, NOBYPASSRLS — RLS applies to the owner too |
-| `connectbpm_app` | the API and the job runner | NOSUPERUSER, NOBYPASSRLS, DML only, no `CREATE` |
+| `connectbpm_app` | the API | NOSUPERUSER, NOBYPASSRLS, DML only, no `CREATE`. **Cannot** call the job-claim functions |
+| `connectbpm_runner` | the job runner (ADR-009) | as `connectbpm_app`, plus `EXECUTE` on the two ADR-010 claim functions — the only role that has it |
 | `connectbpm_reconciler` | the nightly reconciliation (ADR-007) | as `connectbpm_app` |
+| `connectbpm_job_claimer` | **nothing connects as it** — NOLOGIN | Owns the two claim functions. The single principal named by the only cross-tenant policy in the schema (ADR-010) |
 
 `DATABASE_URL` names `connectbpm_app`. Pointing it at `postgres` makes the whole
 isolation suite pass while the isolation does nothing — which is why the suite
 asserts `rolsuper = false` and `rolbypassrls = false` before anything else.
+
+**The runner is a different role from the API on purpose** (ADR-010). It is the
+only principal that may lease jobs across tenants; if the API role could, a bug
+on the HTTP surface could mark every tenant's timers `CLAIMED` and stop the
+engine for everyone. Point the runner process's `DATABASE_URL` at
+`connectbpm_runner`.
+
+### The one cross-tenant reach in this product (ADR-010)
+
+ADR-004 §3 puts `FORCE ROW LEVEL SECURITY` on all 27 tenant-scoped tables,
+including `job`. ADR-009's runner has to claim due jobs **across** tenants in one
+poll. Under `FORCE`, that claim matched zero rows **and reported success** — no
+error, no log, timers silently never firing. The resolution is a bounded
+exception, and this is its entire width:
+
+| Dimension | Width |
+|-----------|-------|
+| Principal | `connectbpm_job_claimer`, NOLOGIN, NOBYPASSRLS |
+| Reachable how | only by calling `app_claim_due_jobs()` or `app_reap_expired_job_leases()` |
+| Tables | `job` only |
+| Rows | `status IN ('PENDING','CLAIMED')` |
+| Columns readable | `id, tenant_id, run_at, status, attempts, locked_until` — **not `payload`** |
+| Columns writable | `status, locked_by, locked_until, attempts, updated_at` — **not `tenant_id`** |
+| What crosses | `(job_id, tenant_id)`. Everything else happens inside `withTenant(tenantId)`. |
+
+`gate:rls` check E asserts every one of those against the live database, and
+`tests/integration/tenancy/job-claim-boundary.test.ts` asserts that a claim
+actually reaches **both** tenants — because a runner that claims nothing looks
+exactly like a runner with nothing to do.
 
 Verify: `curl http://localhost:5018/health`
 
@@ -81,6 +112,7 @@ A cross-tenant leak is the one existential bug here. The gate asserts:
 | B — every `@@index` on a tenant-scoped model leads with `tenantId` | **enforcing, passing** (3 reviewed exceptions, each with a written reason in `scripts/check-rls.ts`) |
 | C — every tenant-scoped table has `ENABLE` + `FORCE` RLS and a policy | **enforcing, passing** since `20260820125500_row_level_security` |
 | D — the same assertion against a live database (`--live`) | **enforcing, passing**. `pnpm gate:rls:live` |
+| E — the ADR-010 job-claim boundary is exactly as narrow as the ADR says | **enforcing, passing**. Static form always; owner, NOLOGIN/NOBYPASSRLS posture, pinned `search_path`, column grants, table reach and `EXECUTE` grants under `--live` |
 
 Checks C and D were red by design until the tenancy task landed the RLS
 migration; they are green now. The isolation guarantee is only real if the
@@ -111,7 +143,9 @@ These propagate. Follow them rather than inventing a second way.
 | Errors | Routes **throw** an `AppError` subclass. They never build a reply. Mapping lives in `src/lib/map-error.ts` — pure, testable without an app. |
 | Isolation | A cross-tenant read is `NotFoundError` (404), never 403. Existence is not disclosed (FR-003, AC-052). |
 | Responses | `sendOk(reply, data)` / `sendError(reply, payload)`. One envelope. |
-| Data access | `withTenant(ctx, fn)` returning a branded `TenantScopedClient` is the only entry point. `fastify.prisma` is raw and is for migrations, health and the runner only. A repository that takes a `PrismaClient` **does not compile** — `tests/type-fixtures/brand-forgery.ts` asserts it with `@ts-expect-error`, and eslint bans `as TenantScopedClient` outside `src/tenancy/`. |
+| Data access | `withTenant(ctx, fn)` returning a branded `TenantScopedClient` is the only entry point. `fastify.prisma` is raw and is for migrations, health and the runner only. A repository that takes a `PrismaClient` **does not compile** — `tests/type-fixtures/brand-forgery.ts` asserts it with `@ts-expect-error`, and eslint bans `as TenantScopedClient` outside `src/tenancy/`. The brand is over `Prisma.TransactionClient`, not `PrismaClient`: inside a transaction `$transaction`, `$connect` and `$extends` do not exist. |
+| Background work | A background process must be tested against **two** tenants, asserting it reaches both — never merely that it runs without error. Under RLS a process that reaches nothing returns an empty result and looks healthy; that is how ARCH-02's bug hid. `tests/db.ts` `seedDueJob` exists for job-shaped processes. |
+| Cross-tenant reach | There is exactly one, and it is `app_claim_due_jobs` / `app_reap_expired_job_leases` (ADR-010). Anything else that needs to see more than one tenant loops over tenant ids and enters `withTenant` per tenant, like the nightly reconciliation. Widening the boundary fails `gate:rls` check E. |
 | Metering | `recordBillableCompletion(tx: TransitionTx, …)` is the only usage-event writer, and `TransitionTx` is constructible only inside the Transition Coordinator. |
 | Transactions | Nothing external is called inside a transaction. Side effects go to the outbox in the same transaction, drained by the runner. |
 | App wiring | `buildApp()` is the only way an app instance exists — tests build the same object the server does. |
@@ -130,7 +164,7 @@ pnpm --filter connectbpm lint
 pnpm --filter connectbpm typecheck
 pnpm --filter connectbpm gates          # both product gates
 pnpm --filter @connectbpm/api gate:rls:live   # check D, against a real database
-pnpm --filter @connectbpm/api db:roles        # (re-)provision the three DB roles
+pnpm --filter @connectbpm/api db:roles        # (re-)provision the five DB roles
 pnpm --filter connectbpm test:e2e
 pnpm --filter connectbpm docker:infra   # PostgreSQL + Redis only
 docker compose --profile runner up -d   # add the job runner (ADR-009)

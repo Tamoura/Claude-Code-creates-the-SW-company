@@ -20,6 +20,13 @@ const PG_HOST = process.env.PGHOST_TEST ?? 'localhost:5438';
 
 /** The application role. Everything the API does runs through this one. */
 process.env.DATABASE_URL ??= `postgresql://connectbpm_app:connectbpm_app_dev@${PG_HOST}/connectbpm_test`;
+/**
+ * The job runner (ADR-009, ADR-010). Same posture as the app role and separate
+ * from it for one reason: it is the only role that may EXECUTE the cross-tenant
+ * claim functions. `job-claim-boundary.test.ts` asserts that the APP role
+ * cannot, which is only a real assertion if the two are different roles.
+ */
+process.env.DATABASE_URL_RUNNER ??= `postgresql://connectbpm_runner:connectbpm_runner_dev@${PG_HOST}/connectbpm_test`;
 /** Owns the tables. Used only to prove FORCE RLS binds the OWNER too. */
 process.env.DATABASE_URL_MIGRATOR ??= `postgresql://connectbpm_migrator:connectbpm_migrator_dev@${PG_HOST}/connectbpm_test`;
 /** Superuser. Used only to prove that RLS is what filters, by removing it. */

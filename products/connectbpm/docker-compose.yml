@@ -73,7 +73,12 @@ services:
       NODE_ENV: ${NODE_ENV:-development}
       PORT: 5018
       HOST: 0.0.0.0
-      DATABASE_URL: postgresql://${POSTGRES_USER:-postgres}:${POSTGRES_PASSWORD:-postgres}@db:5432/${POSTGRES_DB:-connectbpm_dev}
+      # ADR-004 §3: NEVER `postgres` here. A superuser connection makes the
+      # whole isolation suite pass while the isolation does nothing — row-level
+      # security is invisible to a superuser and to any BYPASSRLS role. This
+      # named `${POSTGRES_USER}` until ARCH-02, which is precisely the mistake
+      # the README warns about two paragraphs after the one that made it.
+      DATABASE_URL: postgresql://connectbpm_app:${DB_APP_PASSWORD:-connectbpm_app_dev}@db:5432/${POSTGRES_DB:-connectbpm_dev}
       REDIS_URL: redis://redis:6379
       JWT_SECRET: ${JWT_SECRET:-change-this-to-a-secure-random-string-at-least-32-chars}
       JWT_REFRESH_SECRET: ${JWT_REFRESH_SECRET:-change-this-to-another-secure-random-string-32c}
@@ -94,6 +99,10 @@ services:
 
   # ADR-009: same image, different role. The runner drains timers, schedules,
   # retries and the transactional outbox. NOT a microservice boundary.
+  #
+  # It connects as `connectbpm_runner`, not as the API's role (ADR-010): it is
+  # the only principal granted EXECUTE on the cross-tenant job-claim functions.
+  # `pnpm --filter @connectbpm/api db:roles` must have created that role.
   runner:
     build:
       context: .
@@ -101,7 +110,7 @@ services:
     container_name: connectbpm-runner
     environment:
       NODE_ENV: ${NODE_ENV:-development}
-      DATABASE_URL: postgresql://${POSTGRES_USER:-postgres}:${POSTGRES_PASSWORD:-postgres}@db:5432/${POSTGRES_DB:-connectbpm_dev}
+      DATABASE_URL: postgresql://connectbpm_runner:${DB_RUNNER_PASSWORD:-connectbpm_runner_dev}@db:5432/${POSTGRES_DB:-connectbpm_dev}
       REDIS_URL: redis://redis:6379
       JWT_SECRET: ${JWT_SECRET:-change-this-to-a-secure-random-string-at-least-32-chars}
       JWT_REFRESH_SECRET: ${JWT_REFRESH_SECRET:-change-this-to-another-secure-random-string-32c}
