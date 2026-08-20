@@ -250,7 +250,7 @@ flowchart TD
     I --> J["Real instances run"]
     J --> K{"Activation<br/>1 published process AND<br/>50 real instances in 30 days"}
     K -->|"no"| L["Intervention:<br/>activation nudge sequence"]
-    K -->|"yes"| M{"Approaching the<br/>Sandbox cap of 250?"}
+    K -->|"yes"| M{"Approaching the<br/>Sandbox cap of 50?"}
     M -->|"80 percent"| N["Threshold alert to Tenant Admin"]
     M -->|"100 percent"| O["Start refused<br/>quota page + upgrade CTA<br/>refusal recorded"]
     N --> P["Selects Starter or Growth<br/>pays by card, no sales contact"]

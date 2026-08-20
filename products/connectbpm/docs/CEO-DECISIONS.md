@@ -222,3 +222,37 @@ would de-risk A9 cheaply while the foundation is under construction.
 **Build sequencing consequence**: tenancy ships before any pillar. It gates everything (BA gap G-08),
 and retrofitting isolation into a running multi-tenant engine is the one mistake this product cannot
 absorb.
+
+---
+
+## OPEN-001 — Activation threshold now collides with the Sandbox cap
+
+**Raised**: 2026-08-20 by the Orchestrator, while correcting the DEC-007 inconsistency
+**Status**: **OPEN — needs a CEO decision. Not build-blocking; blocks the analytics phase.**
+
+DEC-007 set the Sandbox cap at **50 completed instances/month**. The activation metric — STRAT-01's
+north star, carried into PRD §1.3 and the §4.1 buyer flow — is **"≥1 published process AND ≥50 real
+instances in 30 days"**.
+
+These are now the same number. A Sandbox tenant can only become *activated* by consuming **100%** of
+their free allowance, so the activation event and the quota-refusal event coincide exactly.
+
+**Consequence**: "activated tenants" degenerates into "tenants who exhausted the free tier". An
+activated-but-not-yet-refused Sandbox tenant becomes unobservable, and the M6 target of 40 activated
+tenants no longer measures what STRAT-01 intended it to measure.
+
+**Options**:
+
+| Option | Effect | Cost |
+|--------|--------|------|
+| Lower activation to ~20 instances in 30 days | Restores headroom between activation and the cap; keeps the cap where DEC-007 put it | Re-baselines the M6 target — 20 instances is a weaker signal of real usage |
+| Raise the Sandbox cap to 100/month | Restores headroom the other way | Reverses part of DEC-007 and doubles free-tier COGS |
+| Accept the collision as intended | Activation *is* the upgrade trigger; hitting the wall is the funnel working | The north-star metric stops distinguishing "got value" from "ran out" |
+
+**Orchestrator recommendation**: lower activation to **20 instances in 30 days**. It keeps DEC-007
+intact, preserves a measurable gap between "this tenant got real value" and "this tenant needs to
+pay", and 20 completed instances across a published process is already a strong activation signal
+for a mid-market ops team.
+
+Neither the Architect nor the Orchestrator caught this when DEC-007 was ratified; it surfaced only
+when the task breakdown forced the two numbers into the same view.
