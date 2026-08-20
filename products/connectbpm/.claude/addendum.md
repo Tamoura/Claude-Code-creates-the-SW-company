@@ -58,6 +58,30 @@ not afterthoughts.
 | Health, metrics, correlation IDs | `@connectsw/observability` |
 | Product scaffold generation | `@connectsw/saas-kit` |
 
+## BINDING CEO DECISIONS (read `docs/CEO-DECISIONS.md` in full before any work)
+
+| ID | Decision | Consequence |
+|----|----------|-------------|
+| DEC-001 | Wedge: **evidence-native core, GCC go-to-market** | Evidence record is a day-one architectural commitment. Arabic/RTL in v1. Product stays geography-neutral — locale/jurisdiction/templates are configuration, never structure. In-region hosting is not v1 but MUST NOT be foreclosed. |
+| DEC-002 | Pricing: **completed process instances only, no seats, unlimited free participants** | IRREVERSIBLE. Seven metering requirements (MET-1..MET-7) on the engine. Billable event is instance *completion*. Meter increments in the same DB transaction as the state transition, idempotent and replay-safe. `@connectsw/billing` UsageService (Redis counters keyed to userId) does NOT satisfy this. |
+| DEC-003 | Sequencing: **PRD + architecture now**, K0 validation gate before implementation | Design proceeds. Four assumptions carried unvalidated (A4, A6, A9, ASM-003). Orchestrator re-raises K0 before foundation build. |
+
+## CRITICAL FINDING — shared packages have NO tenancy (verified)
+
+`packages/` contains zero tenancy. Verified by the Orchestrator, not assumed:
+- `grep -ril "tenantid\|tenant_id" packages/` → **0 files**
+- No `Tenant`, `Organization`, `Workspace`, or `Account` model in any package schema
+- `@connectsw/billing` keys `Subscription` and `UsageRecord` to `userId`
+
+The "Mandatory Reuse" table below is therefore **optimistic**. Correct classification:
+
+| Package | Reality |
+|---------|---------|
+| `@connectsw/auth` | **EXTEND** — no tenant dimension |
+| `@connectsw/billing` | **EXTEND** — user-keyed; Redis usage path cannot meet DEC-002 MET-2/MET-3 |
+| `@connectsw/audit` | **EXTEND** — no tenant dimension |
+| Tenancy itself | **BUILD** (BA gap G-08, ~3 sprints). Gates every pillar. |
+
 ## Open Architecture Questions (resolve in ARCH-01 via ADRs)
 
 1. Process notation: BPMN 2.0 standard vs. simplified proprietary flow model.
