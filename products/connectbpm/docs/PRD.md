@@ -1383,34 +1383,139 @@ The revenue definition is **§5.3** and it is not paraphrased here. The operatin
 8. **Two decisions are open and both are the CEO's**: `CLR-B` (external participants) and `CLR-C`
    (price-point publication). Neither blocks architecture; both change scope if answered late.
 
-### 10.5 Technical Architecture — *placeholder, owned by the Architect (ARCH-01)*
+### 10.5 Technical Architecture — *filled by the Architect (ARCH-01), 2026-08-20*
 
-> 🚧 **NOT WRITTEN BY THE PRODUCT MANAGER. DO NOT FILL THIS IN FROM THE PRD.**
->
-> This subsection is reserved for the Architect and is intentionally empty. It is filled during
-> **ARCH-01**, after which `products/connectbpm/.claude/addendum.md` is refreshed from §10 as a
-> whole.
->
-> **What belongs here** (each item traces to an open question in §9.7):
->
-> | Content | Resolves |
-> |---------|----------|
-> | Confirmed tech stack and any deviation from Constitution Article V, with an ADR | Article V |
-> | Multi-tenancy isolation model — shared schema with `tenantId` or schema-per-tenant — constrained by `NFR-019` | `OQ-04` |
-> | Whether `@connectsw/auth` and `@connectsw/billing` take an additive `tenantId` | `OQ-03` |
-> | Durable execution and timer mechanism; job store and claim strategy | Engine design |
-> | Restricted-grammar evaluation mechanism and its resource bounds | `OQ-01` |
-> | Canvas library for the designer, and its RTL mirroring capability | `FR-141` |
-> | Definition and form storage, versioning and checksum model | `FR-018` |
-> | Evidence hash-chain construction and the external verification format | `FR-090`, `FR-093` |
-> | The billable-completion write path as implemented | `FR-101`, `MET-2` |
-> | Deployment topology, and how it keeps in-region deployment open | `NFR-019` |
-> | The `credit-os` boundary | `OQ-05` |
-> | Ratification or override of SCOPE-AMD-001 (E7 + bulk start) | `OQ-02` |
-> | Data models, entity relationships and migration strategy | SPEC-01 §Data Model |
->
-> **Until this subsection is filled, no implementation task is picked up.** DEC-003 additionally
-> holds implementation behind the K0 gate.
+> **Binding artifacts.** This subsection is a summary with pointers. The normative documents are
+> `docs/architecture.md` (C4 L1/L2/L3, data flows, security, error handling),
+> `docs/api-contract.yaml` (OpenAPI 3.0, 87 operations, the complete API inventory),
+> `docs/db-schema.prisma` (28 models) and `docs/ADRs/001`–`009`. Where this summary and an ADR
+> differ, the ADR governs.
+
+#### Confirmed tech stack — Constitution Article V, no deviation
+
+| Layer | Choice | Note |
+|-------|--------|------|
+| Frontend | Next.js 14 App Router · React 18 · Tailwind · shadcn/ui · **`@xyflow/react` (React Flow, MIT)** for the designer canvas | Port 3123. ADR-006 |
+| Backend | Fastify · TypeScript strict · Prisma · Zod | Port 5018 |
+| Database | PostgreSQL 15+ — **sole source of truth** for state, evidence and meters (`FR-045`) | Row-Level Security enabled and forced |
+| Cache | Redis — cache and soft counters **only**; never a value billing, evidence or execution correctness depends on | |
+| Processes | Two from one image: `api` and `runner`. **Not a microservice boundary** — same repo, same schema, no network protocol between them | ADR-009 |
+| Adopted libraries | `cron-parser` (MIT) · `luxon` (MIT) · `elkjs` (EPL-2.0, template auto-layout only) · `fast-check` (MIT, fuzzing) | We rejected *engines*, not *libraries* |
+
+#### The four decisions delegated to ARCH-01
+
+| `OQ` | Decision | Decisive reason | ADR |
+|------|----------|-----------------|-----|
+| `OQ-02` | **SCOPE-AMD-001 RATIFIED** — E7 `Schedule` + bulk start as a capability, plus three amendments: an `InstanceBatch` entity, E1+E7 coexistence, and a `ScheduleOccurrence` idempotency ledger. `multiInstanceLoopCharacteristics` rejected. ASM-005 now passes 15/15. | Multi-instance fan-out would make 400 attestations **one** billable completion — a different revenue model, not a different notation, and DEC-002 is irreversible. | ADR-001 |
+| `OQ-01` | **An owned restricted grammar.** Parsed at **publish time** to a typed AST stored as JSONB on the immutable version; evaluated at runtime by a total, budgeted tree-walking interpreter. AST depth ≤ 16, nodes ≤ 200, 1,000 steps, 50 ms. Fuzz-tested with `fast-check` as a CI gate. | Every candidate library either compiles to a runtime JS function (`filtrex` — a flat `NFR-009` violation), is unmaintained and explicitly not a sandbox (`expression-eval`), or is a far larger language than `FR-022` permits (CEL). Parsing at publish removes the parser from the runtime path entirely. | ADR-002 |
+| `OQ-05` | **`credit-os` boundary: harvest five patterns, share zero code, zero schema, zero package.** Re-evaluate at month 24 or on three named triggers. `FR-065` keeps convergence cheap. | `credit-os` is a **stage machine**; ConnectBPM is a **token engine**. Its constraint is its value there. | ADR-003 |
+| `OQ-04` | **Shared schema + `tenantId` + mandatory PostgreSQL RLS**, with **deployment topology** as the sovereignty lever. | Schema-per-tenant breaks the durable job substrate — one indexed poll becomes 200, putting `NFR-004` at risk for isolation RLS already provides. | ADR-004 |
+
+#### `OQ-03` — do `@connectsw/auth` and `@connectsw/billing` take an additive `tenantId`?
+
+**Yes, and it is worse than the addendum implied.** Re-verified in ARCH-01:
+`grep -ril "tenantid|tenant_id" packages/` → **0 files**.
+
+| Package | Position | What changes |
+|---------|----------|--------------|
+| `@connectsw/auth` | **EXTEND** | `User` stays **global** — one identity, several workspaces (`FR-006`, `EC-20`). `Membership` is new. `ApiKey` takes `tenantId`. Refresh rotation with reuse detection added. |
+| `@connectsw/billing` | **PARTIAL** | `Subscription` re-keyed `userId → tenantId`. `SubscriptionService`, `requireFeature`, `PricingCard`, `UsageBar` reused. **`UsageService` is forbidden in the instance-metering path — the import is a build failure (`AC-013`).** |
+| `@connectsw/audit` | **EXTEND, substantially** | Becomes tenant-scoped and remains the *administrative* audit. The evidence chain is a separate model with different guarantees. |
+| `@connectsw/webhooks`, `@connectsw/notifications` | **REUSE code / EXTEND schema** | **Correction to SPEC-01's table**, which lists both as REUSE: their schemas are user-keyed too (`WebhookEndpoint.userId`, `Notification.userId`). The code reuses whole; the schemas take `tenantId`. |
+| `@connectsw/shared`, `observability`, `ui`, `saas-kit` | **REUSE as-is** | `ui` must be re-verified in RTL (`NFR-013`) — that is the real cost |
+
+#### The billable-completion write path — `FR-101`, `MET-2`
+
+One transaction, one deterministic key:
+
+1. **Admission** (`MET-4`): `SELECT quota_counter FOR UPDATE` per `(tenant, period)`; admit only when
+   `billableCompletions + openReservations < hardCap`; on refusal **no instance row, no reservation,
+   no evidence**, one `instance.start.refused` usage event, HTTP **402** naming limit, usage, reset
+   date and upgrade action. A bulk batch is admitted or refused **in full** — one refusal event for
+   the batch, not N (`EC-21`, `AC-017`).
+2. **Transition**: token-version guard (`FOR UPDATE`) → apply effects → allocate the gap-free evidence
+   sequence (`UPDATE instance SET evidence_seq+1 RETURNING`) → append the evidence entry → **if
+   terminal and billable**, insert the usage event and convert the reservation → enqueue outbox rows →
+   `COMMIT`. Nothing external is called inside the transaction.
+3. **Crash safety**: a `SIGKILL` between the state transition and the meter **cannot** produce a
+   partial result — they are one transaction. Replay recomputes
+   `idempotencyKey = sha256(instanceId ‖ tokenId ‖ fromElementId ‖ transitionId ‖ purpose)` from
+   immutable identifiers only, so `UNIQUE(tenantId, idempotencyKey)` makes the second insert a no-op
+   and the token-version guard makes the replay an empty transaction (`AC-009`–`AC-011`).
+4. **Enforcement**: `recordBillableCompletion(tx: TransitionTx, …)` is the only writer, and
+   `TransitionTx` is a **branded type constructible only inside the coordinator**. This is what makes
+   `AC-012` real — a lint rule alone cannot decide it.
+5. **Reconciliation**: nightly three-way, exact agreement, P0 on any divergence, detection itself
+   tested in CI (`AC-022`, `AC-023`, `NFR-007`).
+
+#### Durable execution and timers
+
+One `job` table in the same database, claimed with `SELECT … FOR UPDATE SKIP LOCKED` — **PATTERN-014**,
+already running in `@connectsw/webhooks`. Serves timers (E5), instance SLAs, schedule ticks (E7),
+retries and the transactional outbox. Staleness is decided by **token version, never wall clock**
+(`FR-057`, `EC-02`). Per-tenant fairness caps the batch share. Suspension parks timers at `infinity`
+with the remaining duration preserved and recomputed against the working calendar on resume.
+`NFR-004`'s 50,000-timer burst needs ~825 claims/s; batch 200 × 8 workers gives ~3× headroom.
+
+#### Versioning, pinning and migration
+
+Published versions are **immutable** — enforced in the repository *and* by a database trigger. Editing
+publishes a new DRAFT at `version+1`. A running instance resolves its graph, form schemas and
+condition ASTs from the version it started on, for its entire life (`FR-018`, `EC-01`, `EC-18`).
+The checksum is `SHA-256(JCS(graph + condition ASTs + all bound form schemas))`, computed over **our**
+model, so a canvas-library upgrade cannot change a published checksum. Running-instance migration is
+**not in v1** and is not foreclosed: every **evidence entry** carries `definitionVersionId`, so a v2
+migration executed as an ordinary transition needs no schema change.
+
+#### Evidence hash chain and external verification — `FR-090`, `FR-093`
+
+`payloadHash = SHA-256(JCS(payload))`;
+`entryHash = SHA-256(prevHash ‖ tenantId ‖ instanceId ‖ seq ‖ eventType ‖ occurredAtUtc ‖ actorId ‖ actorRole ‖ definitionVersionId ‖ payloadHash)`.
+Canonicalisation is **RFC 8785 (JCS)** — chosen because an independent verifier can implement it in
+any language, which is what `AC-041` actually asks for. A dependency-free reference verifier ships in
+`tools/verify-evidence/` and runs in CI against a generated export.
+
+**The chain commits to `payloadHash`, not the payload.** That single choice is what makes `AC-041`
+(independently verifiable) and `AC-046` (erasure leaves the chain verifying) compatible: erasure nulls
+the payload, keeps the hash, appends a tombstone, and the chain still verifies end to end.
+`ActorKind.EXTERNAL_PARTY` exists in the enum and the export schema from day one and is **never
+written in v1** — DEC-005's cheap half of an expensive retrofit.
+
+#### Deployment topology — `NFR-019`
+
+One image, one schema, one migration set, three topologies: **Shared** (v1, many `tenantId`s),
+**Dedicated** (own database, few tenants), **Sovereign/in-region** (own in-region database, one
+tenant). No schema change, no query change, no code fork — and only because `tenantId` is
+unconditional. `Tenant.residency` and `Tenant.deploymentRef` exist from day one so routing and support
+tooling are data-driven.
+
+#### Security posture
+
+Three independent isolation layers: a **branded-type data-access boundary** (`withTenant` →
+`TenantScopedClient`), **PostgreSQL RLS** (`SET LOCAL app.tenant_id`, `ENABLE` + `FORCE`, application
+role with neither superuser nor `BYPASSRLS`), and a **CI isolation suite that enumerates its targets
+from the OpenAPI document** so a new endpoint is covered automatically (`AC-049`, `AC-050`). All three
+must fail to leak. `NFR-009` is satisfied structurally — the authored expression never reaches the
+runtime. The full OWASP API Top 10 mapping is `docs/architecture.md` §8.2.
+
+#### Ten things ARCH-01 believes are wrong, unachievable or missing
+
+Detailed in `docs/architecture.md` §10. The four that need someone else's decision:
+
+1. **The Sandbox tier has no instance allowance.** DEC-005 gives three numbers for five tiers, yet
+   `FR-115`/`AC-020` require a non-removable Sandbox hard cap — untestable as written. **CEO number
+   needed.** Architect designs against a proposed **50/month** meanwhile.
+2. **`AC-070`'s "no duplicated notification"** is not achievable at the email-provider boundary. We
+   guarantee no duplicate notification *record* and choose at-least-once email deliberately — a
+   duplicate reminder is an annoyance, a lost task assignment is a broken process. **PM reword.**
+3. **`NFR-002`** (median ≤ 60 s over ≥100 untrained real completions) cannot gate the Foundation
+   checkpoint; the gate should assert the instrumentation exists, not the value. **PM/QA reword.**
+4. **`AC-012` / `AC-051`** are satisfiable only with the branded-type mechanism above, not by lint.
+   That makes the mechanism **not optional**. **QA to note at `/speckit.analyze`.**
+
+Also corrected in passing: SPEC-01's `ScheduleSubscription.lastOccurrenceAt` is not crash-safe for
+`FR-060` (ADR-001 A3 replaces it), and SPEC-01's reuse table understates the webhooks/notifications
+schema change.
 
 ---
 
