@@ -96,3 +96,21 @@ export async function resetTenantData(admin: PrismaClient): Promise<void> {
     'TRUNCATE TABLE process_definition, working_calendar, membership, app_user, tenant CASCADE'
   );
 }
+
+/**
+ * An app-role client pinned to ONE connection.
+ *
+ * `SET LOCAL` is transaction-scoped, which is the property that makes it safe
+ * behind PgBouncer in transaction pooling mode (ADR-004 §3). Asserting that it
+ * does not survive into a recycled connection is only deterministic if the next
+ * query is guaranteed to reuse the same physical connection — with a pool it
+ * would pass by luck.
+ */
+export function singleConnectionAppPrisma(): PrismaClient {
+  const url = process.env.DATABASE_URL;
+  if (url === undefined || url === '') throw new Error('DATABASE_URL is not set');
+  const pinned = new URL(url);
+  pinned.searchParams.set('connection_limit', '1');
+  pinned.searchParams.set('pool_timeout', '10');
+  return new PrismaClient({ datasources: { db: { url: pinned.toString() } } });
+}
