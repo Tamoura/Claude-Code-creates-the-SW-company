@@ -2,7 +2,7 @@
 
 **Purpose**: Centralized port allocation to prevent conflicts when running multiple products simultaneously.
 
-**Last Updated**: 2026-05-17
+**Last Updated**: 2026-08-20
 
 ## Port Allocation Rules
 
@@ -33,7 +33,8 @@
 | 3119 | qdb-sme-relief | Active | http://localhost:3119 |
 | 3121 | credit-os | Development | http://localhost:3121 |
 | 3122 | studyflow | Development | http://localhost:3122 |
-| 3120, 3123-3199 | *Available* | Free | - |
+| 3123 | connectbpm | Concept | http://localhost:3123 |
+| 3120, 3124-3199 | *Available* | Free | - |
 
 ### Backend APIs (5000-5099)
 
@@ -52,11 +53,13 @@
 | 5014 | ai-fluency | Active | http://localhost:5014 |
 | 5016 | credit-os | Development | http://localhost:5016 |
 | 5017 | studyflow | Development | http://localhost:5017 |
-| 5015, 5018-5099 | *Available* | Free | - |
+| 5018 | connectbpm | Concept | http://localhost:5018 |
+| 5015, 5019-5099 | *Available* | Free | - |
 
 > **Note**: `qdb-one` (3102) is frontend-only — it proxies QDB's existing APIs, no dedicated backend.
 > **Note**: `qdb-sme-relief` (3119) is frontend-only — it uses a lightweight serverless backend, no dedicated API port.
 > **Note**: `codeguardian` ports are reserved but no code exists yet (Concept tier).
+> **Note**: `connectbpm` ports are reserved during inception (BA/spec/PRD/architecture); no code exists yet.
 
 ### Mobile Development (8081-8099)
 

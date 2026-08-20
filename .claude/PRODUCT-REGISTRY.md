@@ -2,7 +2,7 @@
 
 **Purpose**: Single source of truth for all ConnectSW products — maturity tier, stack, ports, CI, and docs.
 
-**Last Updated**: 2026-03-05
+**Last Updated**: 2026-08-20
 
 ---
 
@@ -305,6 +305,22 @@
 | **Has Backend** | No |
 | **Has Mobile** | No |
 | **Notes** | Pitch deck and showcase exist; ports reserved; CI disabled until scaffolding begins |
+
+#### `connectbpm`
+| Field | Value |
+|-------|-------|
+| **Description** | Commercial multi-tenant BPM suite — customers design, run, and monitor their own business workflows (visual designer, workflow engine, forms, task inbox, analytics) |
+| **Tier** | Concept |
+| **Stack** | Fastify + Next.js + PostgreSQL + Redis (planned) |
+| **Frontend** | 3123 (reserved) |
+| **Backend** | 5018 (reserved) |
+| **Mobile** | — |
+| **CI** | — (not yet scaffolded) |
+| **PRD** | `products/connectbpm/docs/` |
+| **Specs** | `products/connectbpm/docs/specs/` |
+| **Has Backend** | No |
+| **Has Mobile** | No |
+| **Notes** | Inception phase — BA, spec, PRD, and architecture in progress. Sold to external customers; multi-tenancy and per-tenant metering are first-class requirements |
 
 ---
 
