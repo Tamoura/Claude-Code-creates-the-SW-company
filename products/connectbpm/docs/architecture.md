@@ -36,7 +36,9 @@ Companion artifacts: `docs/api-contract.yaml` (OpenAPI 3.0, 87 operations),
 
 Five further ADRs record the decisions that follow from these: **ADR-005** build the engine,
 **ADR-006** React Flow for the canvas, **ADR-007** the transactional usage ledger, **ADR-008** the
-evidence hash chain, **ADR-009** the job substrate.
+evidence hash chain, **ADR-009** the job substrate, **ADR-010** the one bounded cross-tenant
+reach — the job claim, which ADR-004 §3's `FORCE ROW LEVEL SECURITY` would otherwise silently
+block.
 
 ---
 
@@ -340,7 +342,7 @@ sequenceDiagram
     API-->>U: 200
     end
 
-    RUN->>DB: claim outbox jobs — SKIP LOCKED
+    RUN->>DB: app_claim_due_jobs(...) — outbox jobs, SKIP LOCKED
     RUN->>EXT: deliver webhook / email (at-least-once, deduped by key)
 ```
 
@@ -364,8 +366,8 @@ sequenceDiagram
     participant ENG as Transition Coordinator
     participant NOT as Notifications
 
-    RUN->>DB: claim batch — status PENDING AND run_at <= now()<br/>FOR UPDATE SKIP LOCKED · per-tenant fairness cap
-    RUN->>ENG: fire(job)
+    RUN->>DB: app_claim_due_jobs(worker, batch, cap) — SECURITY DEFINER<br/>FOR UPDATE SKIP LOCKED · per-tenant fairness cap<br/>returns (job_id, tenant_id) ONLY — ADR-010
+    RUN->>ENG: withTenant(tenantId) · fire(job)
     ENG->>DB: BEGIN · SELECT token WHERE id AND version FOR UPDATE
     alt token moved, task completed, or instance ended
         ENG->>DB: job → DISCARDED · evidence timer.discarded_stale
@@ -451,7 +453,7 @@ to the payload. Destroy the payload, keep the hash, and the chain still verifies
 | `quota_counter(tenant, period)` | `SELECT … FOR UPDATE` | one tenant, **start path only** | Starts are rare relative to transitions; makes `AC-015` deterministic |
 | `token(id, version)` | `SELECT … FOR UPDATE` | one token | The unit of engine progress |
 | `process_instance.evidence_seq` | row lock via `UPDATE … RETURNING` | one instance | Gap-free sequencing is the requirement (`AC-038`) |
-| `job` rows | `FOR UPDATE SKIP LOCKED` | none — skipping is the point | Workers never collide |
+| `job` rows | `FOR UPDATE SKIP LOCKED`, inside `app_claim_due_jobs` | none — skipping is the point | Workers never collide. The lock sits in the same query level as the `LIMIT`, so the limit counts only rows this worker took (ADR-010) |
 | Draft version | optimistic `revision` | one draft | 409 with what changed and by whom (`EC-16`) |
 
 ---
@@ -662,7 +664,7 @@ written; items 2, 3, 5, 6 and 7 are wording or mechanism corrections for the PM 
 | `FR-001`–`FR-010` tenancy | ADR-004; §8.1; `Tenant`, `Membership`, `WorkingCalendar` |
 | `FR-011`–`FR-030` designer | ADR-001, ADR-006; §5.3; `ProcessDefinition(Version)`, `ProcessGraph` |
 | `FR-031`–`FR-040` forms | `FormSchema` with stable machine keys; §5.3 pinning |
-| `FR-041`–`FR-065` engine | ADR-005, ADR-009; §4, §5.1, §5.2, §6 |
+| `FR-041`–`FR-065` engine | ADR-005, ADR-009, ADR-010; §4, §5.1, §5.2, §6 |
 | `FR-066`–`FR-085` tasks | §6 claim/complete; `Task`; contract `/v1/tasks/*` |
 | `FR-086`–`FR-100` evidence | ADR-008; §5.4 |
 | `FR-101`–`FR-125` metering | ADR-007; §5.1 |

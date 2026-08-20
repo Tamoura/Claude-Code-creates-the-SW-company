@@ -126,7 +126,7 @@ sequenceDiagram
     else still running
         ENG->>DB: (no usage event)
     end
-    ENG->>DB: INSERT outbox_event (webhooks, notifications) — never sent inside the txn
+    ENG->>DB: INSERT job(kind=OUTBOX_WEBHOOK/OUTBOX_NOTIFICATION) — never sent inside the txn
     ENG->>DB: COMMIT
     ENG-->>API: result
     API-->>P: 200 confirmation
@@ -257,4 +257,12 @@ events reference them; payload deletion nulls payload columns instead.
 - CEO-DECISIONS.md DEC-002 (`MET-1`..`MET-7`), DEC-004; PRD §5.2, §5.3, §7.2 `AC-001`–`AC-034`
 - `FR-042`, `FR-043`, `FR-101`–`FR-125`; `NFR-006`, `NFR-007`; `EC-03`, `EC-05`, `EC-13`, `EC-19`, `EC-21`
 - PATTERN-014 (`packages/webhooks/src/backend/services/delivery.service.ts`), verified in this task
+- ARCH-02 correction: the outbox is the `job` table with `OUTBOX_*` kinds (ADR-009). There is no
+  `outbox_event` table and there must not be one — the point of the outbox is that the side
+  effect is enqueued in the SAME transaction on the SAME substrate as the state change.
+- ARCH-02 review: `MET-2`/`MET-3` are **unaffected** by ADR-010's job-claim boundary. The claim is
+  a lease, not a state transition; the claim function is column-privilege-forbidden from writing
+  `usage_event`, `quota_counter` or `quota_reservation`, and holds no privilege on those tables at
+  all. The idempotency key is derived from immutable identifiers only — not from the job id, the
+  lease, the worker or `attempts` — so a reaped-and-re-executed job recomputes the same key.
 - `packages/billing/src/backend/services/usage.service.ts` (the excluded path), verified in this task
