@@ -27,9 +27,27 @@ evidence record emitted by default.
 cp .env.example .env                 # then edit the secrets
 pnpm install                         # from the repo root
 pnpm --filter connectbpm docker:infra   # PostgreSQL + Redis
+pnpm --filter @connectbpm/api db:roles  # ADR-004 §3 — BEFORE the first migration
 pnpm --filter connectbpm db:migrate
 pnpm --filter connectbpm dev            # api :5018 + web :3123
 ```
+
+### Database roles — do not skip `db:roles` (ADR-004 §3)
+
+Row-level security is invisible to a privileged role. `FORCE ROW LEVEL
+SECURITY` extends the policy to the table OWNER, but nothing extends it to a
+superuser or to a role holding `BYPASSRLS`, so the second isolation layer exists
+only if the connection the API uses is neither.
+
+| Role | Used by | Posture |
+|------|---------|---------|
+| `connectbpm_migrator` | `prisma migrate`, owns the schema | NOSUPERUSER, NOBYPASSRLS — RLS applies to the owner too |
+| `connectbpm_app` | the API and the job runner | NOSUPERUSER, NOBYPASSRLS, DML only, no `CREATE` |
+| `connectbpm_reconciler` | the nightly reconciliation (ADR-007) | as `connectbpm_app` |
+
+`DATABASE_URL` names `connectbpm_app`. Pointing it at `postgres` makes the whole
+isolation suite pass while the isolation does nothing — which is why the suite
+asserts `rolsuper = false` and `rolbypassrls = false` before anything else.
 
 Verify: `curl http://localhost:5018/health`
 
@@ -61,13 +79,14 @@ A cross-tenant leak is the one existential bug here. The gate asserts:
 |-------|-------|
 | A — every model carries `tenantId` unless on the reviewed 5-model global allowlist | **enforcing, passing** |
 | B — every `@@index` on a tenant-scoped model leads with `tenantId` | **enforcing, passing** (3 reviewed exceptions, each with a written reason in `scripts/check-rls.ts`) |
-| C — every tenant-scoped table has `ENABLE` + `FORCE` RLS and a policy | **FAILS TODAY — by design.** `prisma/migrations/` does not exist. |
-| D — the same assertion against a live database (`--live`) | ready; runs once migrations exist |
+| C — every tenant-scoped table has `ENABLE` + `FORCE` RLS and a policy | **enforcing, passing** since `20260820125500_row_level_security` |
+| D — the same assertion against a live database (`--live`) | **enforcing, passing**. `pnpm gate:rls:live` |
 
-**Check C is expected to fail until the tenancy task writes the RLS migration.**
-That is deliberate. A gate that passed here would report protection that is not
-present, which is worse than no gate. Do not add `continue-on-error` to it — land
-the migration instead. The gate turns green the moment the migration does.
+Checks C and D were red by design until the tenancy task landed the RLS
+migration; they are green now. The isolation guarantee is only real if the
+connection also lacks `BYPASSRLS` and superuser — see the roles below, and
+`tests/integration/tenancy/rls-enforcement.test.ts`, which asserts the role
+posture before it asserts anything about policies.
 
 ### `pnpm gate:metering` — metering boundary · DEC-002 MET-2/MET-3, AC-012/AC-013
 
@@ -92,7 +111,7 @@ These propagate. Follow them rather than inventing a second way.
 | Errors | Routes **throw** an `AppError` subclass. They never build a reply. Mapping lives in `src/lib/map-error.ts` — pure, testable without an app. |
 | Isolation | A cross-tenant read is `NotFoundError` (404), never 403. Existence is not disclosed (FR-003, AC-052). |
 | Responses | `sendOk(reply, data)` / `sendError(reply, payload)`. One envelope. |
-| Data access | `withTenant(ctx, fn)` returning a branded `TenantScopedClient` is the only entry point. `fastify.prisma` is raw and is for migrations, health and the runner only. |
+| Data access | `withTenant(ctx, fn)` returning a branded `TenantScopedClient` is the only entry point. `fastify.prisma` is raw and is for migrations, health and the runner only. A repository that takes a `PrismaClient` **does not compile** — `tests/type-fixtures/brand-forgery.ts` asserts it with `@ts-expect-error`, and eslint bans `as TenantScopedClient` outside `src/tenancy/`. |
 | Metering | `recordBillableCompletion(tx: TransitionTx, …)` is the only usage-event writer, and `TransitionTx` is constructible only inside the Transition Coordinator. |
 | Transactions | Nothing external is called inside a transaction. Side effects go to the outbox in the same transaction, drained by the runner. |
 | App wiring | `buildApp()` is the only way an app instance exists — tests build the same object the server does. |
@@ -110,6 +129,8 @@ pnpm --filter connectbpm test           # unit + integration, both apps
 pnpm --filter connectbpm lint
 pnpm --filter connectbpm typecheck
 pnpm --filter connectbpm gates          # both product gates
+pnpm --filter @connectbpm/api gate:rls:live   # check D, against a real database
+pnpm --filter @connectbpm/api db:roles        # (re-)provision the three DB roles
 pnpm --filter connectbpm test:e2e
 pnpm --filter connectbpm docker:infra   # PostgreSQL + Redis only
 docker compose --profile runner up -d   # add the job runner (ADR-009)
