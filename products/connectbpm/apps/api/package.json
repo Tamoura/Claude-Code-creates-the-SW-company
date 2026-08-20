@@ -11,6 +11,7 @@
     "test:watch": "jest --watch",
     "test:coverage": "jest --coverage",
     "db:generate": "prisma generate",
+    "db:roles": "tsx scripts/provision-db-roles.ts",
     "db:migrate": "prisma migrate dev",
     "db:migrate:deploy": "prisma migrate deploy",
     "db:validate": "prisma validate",
@@ -18,6 +19,7 @@
     "lint": "eslint src/ tests/ scripts/",
     "typecheck": "tsc --noEmit -p tsconfig.check.json",
     "gate:rls": "tsx scripts/check-rls.ts",
+    "gate:rls:live": "tsx scripts/check-rls.ts --live",
     "gate:metering": "tsx scripts/check-metering-boundary.ts"
   },
   "dependencies": {
