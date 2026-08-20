@@ -1,13 +1,16 @@
 {
   "agent": "ui-ux-designer",
   "version": "1.2.0",
-  "updated_at": "2026-02-18T10:00:00Z",
+  "updated_at": "2026-08-20T12:53:36Z",
   "learned_patterns": [
     {
       "pattern_id": "UX-PATTERN-001",
       "description": "Design system tokens first: define color, spacing, typography scales before any component design",
       "first_applied": "2026-01-28",
-      "products_applied": ["stablecoin-gateway", "muaththir"],
+      "products_applied": [
+        "stablecoin-gateway",
+        "muaththir"
+      ],
       "confidence": "high",
       "notes": "Products without design tokens end up with inconsistent spacing and color — 15px here, 16px there. Establish CSS custom properties or Tailwind theme extension before any component work."
     },
@@ -15,7 +18,11 @@
       "pattern_id": "UX-PATTERN-002",
       "description": "Accessibility as baseline: WCAG 2.1 AA is not optional — every component must pass contrast ratio and keyboard navigation requirements",
       "first_applied": "2026-01-30",
-      "products_applied": ["stablecoin-gateway", "muaththir", "taskflow"],
+      "products_applied": [
+        "stablecoin-gateway",
+        "muaththir",
+        "taskflow"
+      ],
       "confidence": "high",
       "notes": "Found 4 components with insufficient color contrast (ratio < 4.5:1 for normal text). Accessibility retrofitting is 10x more expensive than designing it in from the start."
     },
@@ -23,7 +30,10 @@
       "pattern_id": "UX-PATTERN-003",
       "description": "Empty state and loading state are first-class design considerations — not afterthoughts",
       "first_applied": "2026-02-05",
-      "products_applied": ["recomengine", "muaththir"],
+      "products_applied": [
+        "recomengine",
+        "muaththir"
+      ],
       "confidence": "high",
       "notes": "RecomEngine dashboard showed blank white space on first load before recommendations populated. Added skeleton loaders and empty state with call-to-action. Engagement improved significantly."
     },
@@ -31,7 +41,10 @@
       "pattern_id": "UX-PATTERN-004",
       "description": "RTL support for Arabic UI: all layouts must support both LTR and RTL from day one, not retrofitted",
       "first_applied": "2026-02-07",
-      "products_applied": ["linkedin-agent", "muaththir"],
+      "products_applied": [
+        "linkedin-agent",
+        "muaththir"
+      ],
       "confidence": "high",
       "notes": "linkedin-agent targets Arabic speakers. Tailwind RTL plugin + CSS logical properties (margin-inline-start instead of margin-left) enable RTL support without duplication."
     },
@@ -39,9 +52,22 @@
       "pattern_id": "UX-PATTERN-005",
       "description": "Mobile-first Tailwind: always start with base (mobile) styles, add md: and lg: breakpoints — never the reverse",
       "first_applied": "2026-01-28",
-      "products_applied": ["stablecoin-gateway", "muaththir", "taskflow"],
+      "products_applied": [
+        "stablecoin-gateway",
+        "muaththir",
+        "taskflow"
+      ],
       "confidence": "high",
       "notes": "Desktop-first styles with mobile overrides consistently produce more CSS bloat and layout bugs. Mobile-first is enforced in all ConnectSW products."
+    },
+    {
+      "pattern": "Validate every design token's contrast with a real calculator before writing it into the system, not after: three habitual values (slate-400 borders 2.34:1, amber-600 on canvas 2.91:1, single-contour focus ring on a coloured button 1.26:1) failed the 3:1 non-text floor and would each have shipped. Pair this with a dual-contour focus ring, which is the only ring geometry that passes against both a white page and a saturated button.",
+      "learned_from": {
+        "task_id": "DESIGN-01",
+        "product": "connectbpm",
+        "date": "2026-08-20T12:53:36Z"
+      },
+      "confidence": "medium"
     }
   ],
   "task_history": [
@@ -54,7 +80,12 @@
       "estimated_minutes": 300,
       "actual_minutes": 360,
       "status": "success",
-      "deliverables": ["Tailwind theme extension with color tokens", "Typography scale", "Spacing scale", "Component library: Button, Input, Card, StatCard, Badge, Skeleton"],
+      "deliverables": [
+        "Tailwind theme extension with color tokens",
+        "Typography scale",
+        "Spacing scale",
+        "Component library: Button, Input, Card, StatCard, Badge, Skeleton"
+      ],
       "components_designed": 8,
       "accessibility_issues_resolved": 4
     },
@@ -67,7 +98,11 @@
       "estimated_minutes": 240,
       "actual_minutes": 300,
       "status": "success",
-      "deliverables": ["User journey map for observation recording flow", "Wireframes for dashboard, observation form, milestone tracking", "Accessibility audit report"],
+      "deliverables": [
+        "User journey map for observation recording flow",
+        "Wireframes for dashboard, observation form, milestone tracking",
+        "Accessibility audit report"
+      ],
       "flows_designed": 4,
       "accessibility_issues_resolved": 6
     },
@@ -80,9 +115,21 @@
       "estimated_minutes": 180,
       "actual_minutes": 240,
       "status": "success",
-      "deliverables": ["RTL stylesheet using CSS logical properties", "Arabic typography selection (Cairo font)", "Bilingual content preview component"],
+      "deliverables": [
+        "RTL stylesheet using CSS logical properties",
+        "Arabic typography selection (Cairo font)",
+        "Bilingual content preview component"
+      ],
       "components_designed": 3,
       "accessibility_issues_resolved": 2
+    },
+    {
+      "task_id": "DESIGN-01",
+      "product": "connectbpm",
+      "timestamp": "2026-08-20T12:53:36Z",
+      "status": "success",
+      "time_minutes": 210,
+      "summary": "Five design specifications for connectbpm: design system on @connectsw/ui with measured WCAG contrast, RTL/i18n with the canvas coordinate-projection decision, designer canvas UX for the non-technical ops buyer, the 60-second task inbox budget, and WCAG 2.1 AA accessibility with an Element List keyboard peer surface. 17 Mermaid diagrams parser-verified, 17 pass 0 fail. Three contrast failures caught and corrected; one ADR-006 reflection-axis correction raised."
     }
   ],
   "common_mistakes": [
@@ -127,9 +174,9 @@
     }
   ],
   "performance_metrics": {
-    "tasks_completed": 3,
-    "success_rate": 1.0,
-    "average_time_minutes": 300,
+    "tasks_completed": 4,
+    "success_rate": 1.00,
+    "average_time_minutes": 52.5,
     "median_time_minutes": 300,
     "on_time_delivery": 0.85,
     "components_designed": 19,
