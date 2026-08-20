@@ -90,3 +90,86 @@ team), A9 (GCC auditors accept engine-produced evidence), and BA ASM-003 (the we
 | Expression evaluation | BA-01 BR-005: no customer script execution at all in v1, using a restricted non-Turing-complete grammar (removes the sandbox from the critical path). STRAT-01 Now horizon lists "expression sandboxing". These are reconcilable — a restricted grammar still needs safe evaluation — but the Architect MUST decide the mechanism and record it as an ADR. Note DEC-002 MET-6 still requires per-tenant resource metering regardless. | Architect |
 | `credit-os` overlap | ConnectBPM owns the generic engine; `credit-os` keeps credit domain semantics. Harvest patterns, do not fork code. No migration before month 24. Requires an ADR. | Architect |
 | Process notation | BA-01 Q3: no BPMN authoring in MVP; build the engine on a strict subset of BPMN execution semantics (6 elements, each with a documented 1:1 BPMN mapping). STRAT did not contest this. Architect confirms or overrides with an ADR. | Architect |
+
+---
+
+## DEC-004 — Revenue policy: cancelled instances billable when ≥1 Step completed
+
+**Date**: 2026-08-20 · **Checkpoint**: PRD-01 · **Raised by**: Product Manager (RISK-PM-02)
+**Decision**: **RATIFIED.** The PM's rule stands as written in PRD §5.3 and `FR-104`.
+
+An administratively cancelled instance is billable if and only if at least one `Step` had already
+been completed. Instances cancelled before any Step completed are never billable.
+
+**Why this needed CEO ratification**: MET-1 asked the PM to define "completed" unambiguously, but
+the cancellation case is a **pricing policy** question, not a definitional one — it has no
+technically correct answer. The PM correctly declined to make it silently.
+
+**Rationale accepted**: it is the smallest precise test that closes the invoice-avoidance hole
+(cancel every instance at its last Step to zero the invoice) without opening the
+charged-for-a-mistake hole.
+
+**Binding consequences**:
+- Every usage event MUST record `completedStepCountAtEvent` as the justification for its billable
+  determination. This preserves the ability to apply a different rule to historical data without
+  re-deriving it. This is not optional instrumentation.
+- The pricing page MUST state in plain language that negative outcomes (Rejected, Denied,
+  Withdrawn) are completions and are billable. A customer discovering this on an invoice is a
+  billing dispute in a product sold on trustworthiness.
+- Changing this rule after launch means re-billing history. Treat it as frozen.
+
+---
+
+## DEC-005 — Open clarifications resolved: CLR-B deferred, CLR-C provisional
+
+**Date**: 2026-08-20 · **Checkpoint**: PRD-01
+**Decision**: **Both PM recommendations accepted.**
+
+### CLR-B — external (non-tenant) participants: DEFERRED TO PHASE 2
+v1 ships **tenant-members-only**. No signed-link completion by parties outside the tenant.
+
+- **Accepted cost**: template T02 (vendor onboarding / KYC) ships degraded — a staff member
+  transcribes the external party's submission.
+- **Why deferred rather than dropped**: adding an unauthenticated actor to the evidence model later
+  is expensive, so the Architect MUST NOT foreclose it. The evidence model needs a place for a
+  non-member actor identity even though v1 never populates it.
+
+### CLR-C — tier price points: PROVISIONAL UNTIL K0
+The **tier structure** (Sandbox / Starter / Growth / Business / Sovereign) is **normative now** and
+the Architect designs against it. The **price points** (USD 299 / 899 / 2,499) are **provisional and
+stay unpublished** until the K0 discovery interviews validate them.
+
+- Instance allowances per tier (2,500 / 15,000 / 60,000 per month) ARE normative — the engine's
+  quota enforcement is designed against them.
+
+---
+
+## DEC-006 — Proceed to ARCH-01
+
+**Date**: 2026-08-20 · **Checkpoint**: PRD-01 — **APPROVED**
+The PRD and specification are approved. Architecture proceeds.
+
+The K0 validation gate remains deferred to **before foundation implementation** (DEC-003), not
+before architecture.
+
+---
+
+## Orchestrator note on RISK-PM-01 severity
+
+The PM scored RISK-PM-01 (the "unlimited free participants" promise versus per-instance billing on
+fan-out templates) at **9/9 — the highest in the register**. The Orchestrator checked the magnitude
+against the published tier allowances rather than accepting the rating:
+
+| Scenario | Instances | Against Starter's 2,500/month (30,000/year) |
+|----------|-----------|---------------------------------------------|
+| 400-person annual attestation (T04) | 400/yr | ~1.3% of annual allowance |
+| 400-person quarterly attestation | 1,600/yr | ~5% of annual allowance |
+| 2,000-person monthly attestation | 24,000/yr | ~80% — but a 2,000-employee tenant sits on Growth (180,000/yr) |
+
+**Assessment**: the *perception* problem is real and worth solving on the pricing page — "unlimited
+free participants" alongside one billable instance per participant reads as a contradiction. The
+*economic* problem is materially smaller than 9/9 implies at current allowances. The PM's proposed
+remedy (a distinct lower-priced campaign meter) is **not required for v1**; MET-7 instrumentation
+keeps the option open without losing history. Revisit if K0 interviews surface it as an objection.
+
+**Severity re-rated: 4/9.** Mitigation retained: disclosure via AC-018, AC-031.
