@@ -94,7 +94,10 @@ if [ "$COMMIT_COUNT" -gt 0 ]; then
     MSG=$(echo "$line" | cut -d' ' -f2-)
 
     # Check for US-XX, FR-XXX, NFR-XXX, or #issue_number
-    if echo "$MSG" | grep -qE '\[US-[0-9]+\]|\[FR-[0-9]+\]|\[NFR-[0-9]+\]|#[0-9]+'; then
+    # Accept the full requirement-ID namespace. Check 2 previously omitted AC and
+    # Check 3 omitted NFR — arbitrary, asymmetric, and in opposite directions, so a
+    # commit tagged [AC-012] or a test tagged [NFR-008] read as untraced.
+    if echo "$MSG" | grep -qE '\[(US|AC|FR|NFR)-[0-9]+\]|#[0-9]+'; then
       TRACED_COMMITS=$((TRACED_COMMITS + 1))
     else
       # Allow docs/chore/ci commits without traceability
@@ -144,7 +147,7 @@ if [ -n "$TEST_FILES" ]; then
     # `|| echo "0"` appended a SECOND zero, producing "0\n0" and a fatal
     # "syntax error in expression" in the arithmetic below. Use `|| true`.
     FILE_TESTS=$(grep -cE '\b(test|it|describe)\(' "$file" 2>/dev/null || true)
-    FILE_TRACED=$(grep -cE '\[(US|AC|FR)-[0-9]+\]' "$file" 2>/dev/null || true)
+    FILE_TRACED=$(grep -cE '\[(US|AC|FR|NFR)-[0-9]+\]' "$file" 2>/dev/null || true)
     TOTAL_TESTS=$((TOTAL_TESTS + ${FILE_TESTS:-0}))
     TRACED_TESTS=$((TRACED_TESTS + ${FILE_TRACED:-0}))
   done
