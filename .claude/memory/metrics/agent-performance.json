@@ -1,13 +1,13 @@
 {
   "version": "1.0.0",
   "period": "2025-01-26 onwards",
-  "updated_at": "2026-08-20T12:02:54Z",
+  "updated_at": "2026-08-20T12:27:37Z",
   "agents": {
     "ai-ml-engineer": {},
     "architect": {
-      "tasks_completed": 5,
+      "tasks_completed": 6,
       "success_rate": 1.00,
-      "avg_time_minutes": 125,
+      "avg_time_minutes": 117.5,
       "estimated_vs_actual": 0,
       "checkpoints_passed_first_try": 0,
       "ceo_revisions_requested": 0
@@ -113,7 +113,7 @@
     }
   },
   "insights": [
-    "product-manager has highest task count (6 tasks)",
-    "52 total tasks completed across all agents"
+    "architect has highest task count (6 tasks)",
+    "53 total tasks completed across all agents"
   ]
 }

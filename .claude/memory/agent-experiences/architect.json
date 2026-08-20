@@ -1,7 +1,7 @@
 {
   "agent": "architect",
   "version": "1.2.0",
-  "updated_at": "2026-08-20T11:59:07Z",
+  "updated_at": "2026-08-20T12:27:37Z",
   "learned_patterns": [
     {
       "pattern_id": "PATTERN-006",
@@ -46,6 +46,15 @@
         "task_id": "ARCH-01",
         "product": "connectbpm",
         "date": "2026-08-20T11:59:07Z"
+      },
+      "confidence": "medium"
+    },
+    {
+      "pattern": "Decompose to task granularity before trusting a capability-level estimate: a 24-row capability table cannot show merge-blocking gates, validation rules or per-element executors, so it under-costs by ~40% while getting the critical path right. State the disagreement as resource-bound vs path-bound and price the release valve honestly.",
+      "learned_from": {
+        "task_id": "TASKS-01",
+        "product": "connectbpm",
+        "date": "2026-08-20T12:27:37Z"
       },
       "confidence": "medium"
     }
@@ -130,6 +139,14 @@
       "status": "success",
       "time_minutes": 165,
       "summary": "System architecture for ConnectBPM: 9 ADRs (SCOPE-AMD-001 ratified with 3 amendments; owned restricted-grammar expression evaluation; credit-os pattern-harvest boundary; shared-schema+RLS tenancy; build the engine; React Flow canvas; transactional usage ledger; RFC 8785 evidence hash chain; SKIP LOCKED job substrate), architecture.md with C4 L1/L2/L3, OpenAPI 3.0 contract (87 operations), Prisma data model (28 models), PRD 10.5 filled. 29/29 Mermaid diagrams parse; Prisma and OpenAPI validate. 10 issues raised against PRD/spec/CEO decisions."
+    },
+    {
+      "task_id": "TASKS-01",
+      "product": "connectbpm",
+      "timestamp": "2026-08-20T12:27:37Z",
+      "status": "success",
+      "time_minutes": 95,
+      "summary": "Generated 214-task, 13-phase dependency-ordered foundation breakdown for connectbpm from architecture.md + 9 ADRs. Sequenced tenancy-first per DEC-008, TransitionTx brand and CI gates before any meter write, evidence chain day-one per DEC-001, job substrate before engine exactly-once. Effort 49.3 SU + 15% = ~57 SU vs BA-01's 32; critical path agrees at 12.1 weeks, disagreement is volume beside it. Reported 9 specification gaps including a Sandbox allowance contradiction (250 vs DEC-007's 50)."
     }
   ],
   "common_mistakes": [
@@ -264,9 +281,9 @@
     }
   ],
   "performance_metrics": {
-    "tasks_completed": 5,
+    "tasks_completed": 6,
     "success_rate": 1.00,
-    "average_time_minutes": 75,
+    "average_time_minutes": 78.33333333333333,
     "median_time_minutes": 120,
     "on_time_delivery": 1.0,
     "checkpoints_passed_first_try": 2,
