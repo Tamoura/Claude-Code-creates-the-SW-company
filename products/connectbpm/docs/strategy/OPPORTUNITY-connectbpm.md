@@ -91,7 +91,7 @@ We deliberately scope SAM to the segment the recommended wedge (§5) can actuall
 | A | Active commercial registrations, Saudi Arabia | 1,700,000 | [Monsha'at, Q3 2025](https://saudigazette.com.sa/article/655282) |
 | B | UAE + Qatar + Kuwait + Bahrain + Oman registered businesses | ~1,300,000 | Assumption A1 — extrapolated from UAE's stated target of 1M SMEs by 2030/31 ([UAE Ministry of Economy](https://www.moet.gov.ae/en/entrepreneurs-and-smes)) plus smaller-state estimates |
 | C | GCC registered businesses (A + B) | ~3,000,000 | Derived |
-| D | Share with ≥50 employees and a discretionary software budget | 2% | Assumption A2 — see §11 |
+| D | Share with ≥50 employees and a discretionary software budget | 2% | Assumption A2 — see §9.4 |
 | E | **Addressable organisations** | **~60,000** | C × D |
 | F | Realistic serviceable share (sectors + language + residency fit) | 60% | Assumption A3 |
 | G | **Serviceable organisations** | **~36,000** | E × F |
@@ -104,11 +104,13 @@ Sanity anchor: the Middle East digital transformation market is USD 71.64B in 20
 
 SOM is what ConnectSW can realistically win given **no brand, no field sales in year 1, and self-serve plus founder-led GCC relationships as the only channel.**
 
-| Horizon | Paying SaaS tenants | Enterprise / Sovereign contracts | Blended ACV | ARR | % of SAM |
-|---------|--------------------|---------------------------------|-------------|-----|----------|
-| Month 12 | 40 | 0 | USD 7,200 | **USD 288K** | 0.07% |
-| Month 24 | 180 | 3 | USD 9,600 | **USD 1.9M** | 0.48% |
-| Month 36 | 450 | 12 | USD 12,000 | **USD 5.5M** | 1.4% |
+| Horizon | Paying SaaS tenants | SaaS ACV | Enterprise / Sovereign contracts | Enterprise ACV | ARR | % of SAM |
+|---------|--------------------|----------|---------------------------------|----------------|-----|----------|
+| Month 12 | 40 | USD 7,200 | 0 | — | **USD 0.29M** | 0.07% |
+| Month 24 | 180 | USD 9,000 | 3 | USD 70,000 | **USD 1.8M** | 0.45% |
+| Month 36 | 450 | USD 9,900 | 12 | USD 85,000 | **USD 5.5M** | 1.4% |
+
+*(Blended ACV across all customers rises USD 7,200 → USD 11,900 over three years — the figure used as input H in §2.3 is the conservative USD 11,000.)*
 
 **SOM = USD 5.5M ARR at month 36 (~1.4% of SAM).**
 
@@ -219,16 +221,16 @@ This section is grounded in `.claude/PRODUCT-REGISTRY.md` and `products/connectb
 | W2 | **No security certifications** — no SOC 2, no ISO 27001, no CSA STAR, no penetration test reports | In regulated GCC procurement this is not a disadvantage, it is a **disqualification**. It blocks the exact buyers the recommended wedge targets. Certification is a 9–15 month path and must start in the Now horizon. |
 | W3 | **No enterprise sales motion, no solution engineers, no implementation partners** | BPM deals above USD 30K ACV do not close self-serve. The Sovereign tier in §7 has no delivery capability behind it today. |
 | W4 | **Portfolio is broad and thin** | 18 products; only **2 at Active tier** (`stablecoin-gateway`, `connectin`), 14 in Development. Adding a 19th that requires deep distributed-systems work is a real capacity risk, not a theoretical one. |
-| W5 | **No in-region hosting footprint** | The residency wedge depends on being able to run in KSA/UAE/Qatar. We cannot do that today, and the cost and operational burden are unquantified. Assumption A4, §11. |
+| W5 | **No in-region hosting footprint** | The residency wedge depends on being able to run in KSA/UAE/Qatar. We cannot do that today, and the cost and operational burden are unquantified. Assumption A4, §9.4. |
 | W6 | **No production experience operating a multi-tenant execution engine** | `credit-os`'s workflow module is explicitly *single-tenant, multi-tenant-ready*. Exactly-once state transitions, durable timers, definition versioning with running-instance pinning, and untrusted-expression sandboxing are hard problems we have not solved at scale. The addendum names tenant isolation as "existential". |
-| W7 | **No customer evidence — the market thesis is desk research** | Every claim in §2 and §5 is secondary research. We have not interviewed a single GCC process owner. §11 exists because of this. |
+| W7 | **No customer evidence — the market thesis is desk research** | Every claim in §2 and §5 is secondary research. We have not interviewed a single GCC process owner. The validation plan in §9.4 exists because of this. |
 
 ### 4.3 Opportunities
 
 | # | Opportunity | Basis |
 |---|-------------|-------|
 | O1 | **Data residency as a procurement gate** — Saudi PDPL in full enforcement (grace period ended); SDAIA requires government data in-Kingdom and localisation of sensitive personal data by default; 48 violation decisions issued 2025–26 | [SDAIA/PDPL compliance guidance](https://www.sgc.consulting/sdaia-saudi-personal-data-protection-law-pdpl-compliance-guide/), [US trade.gov market intelligence on enforcement](https://www.trade.gov/market-intelligence/saudi-arabia-ict-cross-border-data-transfer-rules-now-under-enforcement) |
-| O2 | **Arabic-first process design is an unoccupied position** | No BPM/workflow suite found marketing native Arabic/RTL process authoring. Treated as unvalidated — see A5, §11. |
+| O2 | **Arabic-first process design is an unoccupied position** | No BPM/workflow suite found marketing native Arabic/RTL process authoring. Treated as unvalidated — see A5, §9.4. |
 | O3 | **Regional digitisation spend** — ME DX market USD 71.64B (2026) → USD 146.09B (2031), 15.32% CAGR; Saudi 34.11% of it | [Mordor Intelligence](https://www.mordorintelligence.com/industry-reports/middle-east-digital-transformation-market) |
 | O4 | **Spreadsheet/paper replacement is the top job to be done** — 42% of organisations cite it as a primary low-code use case; forms & data collection 58%; workflow automation 49% | [Gartner low-code forecast coverage](https://kissflow.com/low-code/gartner-forecasts-on-low-code-development-market/) |
 | O5 | **Pricing model shift creates room to differentiate commercially** — seat-based pricing fell 21%→15% of SaaS companies in 12 months; hybrid rose 27%→43%, projected 61% by end-2026 | [State of B2B SaaS & AI Monetization 2026](https://www.growthunhinged.com/p/the-state-of-b2b-monetization-in-2026) |
@@ -262,23 +264,23 @@ The strengths are **build-side** (we can ship it fast, cheaply, in Arabic, with 
 
 ```mermaid
 quadrantChart
-    title Workflow platform positioning — procurement weight vs regional/regulatory fit
-    x-axis "Low procurement friction (self-serve)" --> "High procurement friction (enterprise sales)"
-    y-axis "Global-generic fit" --> "GCC regulated / Arabic-native fit"
-    quadrant-1 "Regional enterprise (SIs, bespoke)"
-    quadrant-2 "OPEN: self-serve + regionally native"
-    quadrant-3 "Commodity automation (price floor $0)"
-    quadrant-4 "Global enterprise BPM"
-    "Power Automate": [0.15, 0.22]
-    "Zapier / Make": [0.10, 0.12]
-    "n8n (self-host)": [0.20, 0.28]
-    "Pipefy": [0.28, 0.18]
-    "Kissflow": [0.45, 0.25]
-    "Camunda": [0.80, 0.30]
-    "Appian": [0.92, 0.35]
-    "Pega": [0.95, 0.32]
-    "Regional SI bespoke": [0.88, 0.80]
-    "ConnectBPM (target)": [0.32, 0.82]
+    title Workflow platform positioning
+    x-axis Low procurement friction --> High procurement friction
+    y-axis Global generic fit --> GCC regulated and Arabic native fit
+    quadrant-1 Regional enterprise via SIs
+    quadrant-2 OPEN self-serve and regionally native
+    quadrant-3 Commodity automation at the price floor
+    quadrant-4 Global enterprise BPM
+    Power Automate: [0.15, 0.22]
+    Zapier and Make: [0.10, 0.12]
+    n8n self-hosted: [0.20, 0.28]
+    Pipefy: [0.28, 0.18]
+    Kissflow: [0.45, 0.25]
+    Camunda: [0.80, 0.30]
+    Appian: [0.92, 0.35]
+    Pega: [0.95, 0.32]
+    Regional SI bespoke: [0.88, 0.80]
+    ConnectBPM target: [0.32, 0.82]
 ```
 
 The upper-left quadrant — **self-serve purchasable *and* regionally native** — is empty. Global vendors sit low on regional fit; regional fit today is delivered only by SIs at high procurement friction. That gap is the wedge.
@@ -305,7 +307,7 @@ Scale 1–5. Weights reflect what actually determines survival for a company wit
 
 | Wedge | Market size | Strategic fit | Defensibility | Time-to-credibility | **Weighted** |
 |-------|-------------|---------------|---------------|---------------------|--------------|
-| WD-1 AI-native authoring | 5 | 4 | **1** | 4 | **2.95** |
+| WD-1 AI-native authoring | 5 | 4 | **1** | 4 | **3.15** |
 | WD-2 GCC / Arabic-first sovereign | 3 | 5 | **4** | 4 | **4.05** |
 | WD-3 Compliance / GRC-adjacent | 3 | 5 | **4** | 3 | **3.85** |
 | WD-4 Embeddable / OEM engine | 4 | 4 | 3 | **2** | **3.25** |
@@ -440,7 +442,7 @@ Why the instance is the right metric:
 
 **Benchmark check:** Sovereign entry at USD 60K/yr sits just above Camunda's reported ~USD 50K+ entry and far below Appian's USD 280–450K, while Starter/Growth occupy the USD 299–899/mo band that Camunda abandoned when it discontinued its Starter plan and that Kissflow's ~USD 2,500/mo floor prices out. That band is the commercial opening.
 
-**Free tier purpose** — it is not charity, it has three jobs: (1) prove activation is possible without sales touch, (2) seed the localised template gallery with real usage, (3) generate the win/loss interview pool the validation plan in §11 depends on. It is deliberately capped at 1 published process so it demonstrates value without substituting for Starter.
+**Free tier purpose** — it is not charity, it has three jobs: (1) prove activation is possible without sales touch, (2) seed the localised template gallery with real usage, (3) generate the win/loss interview pool the validation plan in §9.4 depends on. It is deliberately capped at 1 published process so it demonstrates value without substituting for Starter.
 
 ### 7.3 Required engine-level metering — HARD PRODUCT REQUIREMENT
 
@@ -645,7 +647,7 @@ timeline
 | | Gross margin excluding AI COGS | ≥70% | SO-3 |
 | **Next — month 18** | Paying SaaS tenants | 90 | SO-2 |
 | | Sovereign / Enterprise contracts | 3 | SO-2 |
-| | ARR | USD 1.5M | SO-2 |
+| | ARR | USD 1.1M | SO-2 |
 | | Net revenue retention | ≥110% | SO-2 |
 | | Logo churn (monthly) | <2.5% | SO-2 |
 | | CAC payback | <12 months | SO-3 |
@@ -695,13 +697,13 @@ The targets above are only as good as these assumptions. Each is labelled and ca
 ```mermaid
 flowchart TD
     START["ConnectBPM investment"] --> M3{"Month 3<br/>Validation gate"}
-    M3 -->|"No design partner<br/>OR discovery invalidates<br/>Arabic + evidence thesis"| STOP1["<b>K0 · STOP before build</b><br/>Wedge unvalidated"]
+    M3 -->|"No design partner<br/>OR discovery invalidates<br/>Arabic and evidence thesis"| STOP1["<b>K0 · STOP before build</b><br/>Wedge unvalidated"]
     M3 -->|"Validated"| M6{"Month 6<br/>MVP + activation gate"}
-    M6 -->|"<5 paying OR <20 activated<br/>OR activation <15%<br/>OR any cross-tenant leak"| STOP2["<b>K1 K2 K6 · STOP or RETREAT</b>"]
+    M6 -->|"under 5 paying OR under 20 activated<br/>OR activation under 15 pct<br/>OR any cross-tenant leak"| STOP2["<b>K1 K2 K6 · STOP or RETREAT</b>"]
     M6 -->|"Pass"| M12{"Month 12<br/>Economics gate"}
-    M12 -->|"ARR <$150K OR CAC payback >24mo<br/>OR wedge not cited in win/loss<br/>OR wedge closed by incumbent"| STOP3["<b>K3 K4 K5 · RETREAT</b><br/>to internal platform role"]
+    M12 -->|"ARR under 150K USD OR CAC payback over 24mo<br/>OR wedge not cited in win-loss<br/>OR wedge closed by incumbent"| STOP3["<b>K3 K4 K5 · RETREAT</b><br/>to internal platform role"]
     M12 -->|"Pass"| M18{"Month 18<br/>Scale + portfolio gate"}
-    M18 -->|"Correctness incidents >2/qtr<br/>OR >35% eng capacity for <10% ARR<br/>OR connectgrc integration not shipped"| STOP4["<b>K7 K8 · DOWNGRADE</b><br/>to internal component"]
+    M18 -->|"Correctness incidents over 2 per qtr<br/>OR over 35 pct eng capacity for under 10 pct ARR<br/>OR connectgrc integration not shipped"| STOP4["<b>K7 K8 · DOWNGRADE</b><br/>to internal component"]
     M18 -->|"Pass"| SCALE["Scale — Future horizon"]
 ```
 
