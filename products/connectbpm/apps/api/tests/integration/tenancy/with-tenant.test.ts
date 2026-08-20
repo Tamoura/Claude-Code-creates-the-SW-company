@@ -11,7 +11,6 @@
  *   3. the brand — a client that did not come from `withTenant` is refused at
  *      runtime as well as at compile time.
  */
-import type { PrismaClient } from '@prisma/client';
 import {
   adminPrisma,
   appPrisma,
@@ -20,7 +19,11 @@ import {
   singleConnectionAppPrisma,
   type TwoTenantFixture,
 } from '../../db';
-import { assertTenantScoped, withTenant } from '../../../src/tenancy';
+import {
+  assertTenantScoped,
+  withTenant,
+  type TenantScopedClient,
+} from '../../../src/tenancy';
 
 describe('[AC-051][FR-002] withTenant is the only door to tenant data', () => {
   const admin = adminPrisma();
@@ -185,8 +188,16 @@ describe('[AC-051][FR-002] withTenant is the only door to tenant data', () => {
 
   describe('[AC-051] the brand cannot be forged', () => {
     it('[AC-051] refuses a client that did not come from withTenant', () => {
-      expect(() => assertTenantScoped(app)).toThrow(/withTenant/);
-      expect(() => assertTenantScoped({} as never)).toThrow(/withTenant/);
+      // A DOUBLE assertion is the only way to get a raw client past the type
+      // checker at all: `assertTenantScoped(app)` on its own does not compile,
+      // and neither does `app as TenantScopedClient` — both are proved in
+      // tests/type-fixtures/brand-forgery.ts. Written out here to show that the
+      // runtime grant closes the one hole the type system cannot (AC-051).
+      const forged = app as unknown as TenantScopedClient;
+      expect(() => assertTenantScoped(forged)).toThrow(/withTenant/);
+      expect(() => assertTenantScoped({} as unknown as TenantScopedClient)).toThrow(
+        /withTenant/
+      );
     });
 
     it('[AC-051] accepts the client withTenant produced', async () => {
@@ -202,7 +213,7 @@ describe('[AC-051][FR-002] withTenant is the only door to tenant data', () => {
         escaped = db;
         return null;
       });
-      expect(() => assertTenantScoped(escaped as PrismaClient)).toThrow(/closed/i);
+      expect(() => assertTenantScoped(escaped as TenantScopedClient)).toThrow(/closed/i);
     });
   });
 });

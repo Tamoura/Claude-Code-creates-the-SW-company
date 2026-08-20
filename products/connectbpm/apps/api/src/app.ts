@@ -18,6 +18,7 @@ import securityHeadersPlugin from './plugins/security-headers';
 import corsPlugin from './plugins/cors';
 import prismaPlugin from './plugins/prisma';
 import redisPlugin from './plugins/redis';
+import tenancyPlugin from './plugins/tenancy';
 
 import healthRoutes from './routes/health';
 
@@ -48,6 +49,10 @@ export async function buildApp(
 
   if (!options.skipInfrastructure) {
     await app.register(prismaPlugin);
+    // ADR-004 §2 — binds withTenant() to the raw client. After prisma, and
+    // before any route: a route that reached tenant data without it would be
+    // reaching a client that does not exist.
+    await app.register(tenancyPlugin);
     await app.register(redisPlugin);
   }
 
