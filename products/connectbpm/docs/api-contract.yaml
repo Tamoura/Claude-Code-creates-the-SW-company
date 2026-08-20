@@ -1,0 +1,3015 @@
+openapi: 3.0.3
+
+# =============================================================================
+# ConnectBPM API — binding contract (DESIGN ARTIFACT, ARCH-01)
+#
+# API9 (Improper Inventory Management): this document is the COMPLETE inventory.
+# CI asserts router <-> document parity in both directions; an endpoint present in
+# one and absent from the other fails the build. The two-tenant isolation suite
+# (AC-049, AC-050) ENUMERATES ITS TARGETS FROM THIS DOCUMENT, which is what makes
+# "a new endpoint is covered automatically" true rather than aspirational.
+#
+# There is no second, undocumented surface. FR-065's internal engine API is the
+# SAME contract served on the `internal` server with service-account auth.
+# =============================================================================
+
+info:
+  title: ConnectBPM API
+  version: 1.0.0
+  description: |
+    Multi-tenant process designer, durable workflow engine, forms, task inbox,
+    evidence trail and completed-instance metering.
+
+    ## Tenancy (ADR-004)
+    Every authenticated request resolves to exactly one `(tenant, membership)`.
+    The tenant is taken from the access token, never from a request parameter, so
+    a tenant identifier cannot be supplied by a caller.
+
+    **A request for an entity belonging to another tenant returns `404`, never
+    `403` and never `200`** (FR-003, AC-052). Existence is never disclosed across
+    a tenant boundary; the response body is byte-identical to a genuinely absent
+    resource. `403` means "your role does not permit this action on YOUR tenant's
+    resource" and is used only in that sense (FR-084, AC-087).
+
+    ## Errors
+    Every error response is `application/problem+json` (RFC 7807) and carries a
+    `type` URI under `https://api.connectbpm.com/errors/`. Every response —
+    success or error — carries `X-Request-ID`.
+
+    ## Pagination (API4)
+    All collections are cursor-paginated. `limit` defaults to 20 and is capped at
+    100 server-side; a larger value is clamped, never honoured.
+
+    ## Request limits (API4)
+    JSON bodies 1 MiB. Attachment uploads are tier-bounded, 25 MiB absolute.
+    Bulk start is capped at 5,000 rows per batch (ADR-001).
+
+    ## Rate limiting (API2)
+    `POST /v1/auth/login`: 5 attempts per minute per IP and per account; 10
+    consecutive failures lock the account for 15 minutes. `POST /v1/auth/signup`
+    and `POST /v1/auth/password-reset`: 3 per minute per IP. Authenticated
+    endpoints: 600 requests per minute per tenant, 120 per membership. Exceeding
+    any limit returns `429` with `Retry-After`.
+
+    ## CORS / CSP (API8)
+    The API sets `Access-Control-Allow-Origin` to the configured web origin only —
+    never `*` — with `Vary: Origin` and `Access-Control-Allow-Credentials: true`.
+    The web app sets a nonce-based CSP with `frame-ancestors 'none'`,
+    `object-src 'none'`, `base-uri 'self'`. HSTS is enabled with preload.
+
+    ## Responses that apply everywhere
+    Every authenticated operation may additionally return `401` (missing or expired
+    credentials), `403` (role not permitted — see API5 below), `404` (absent, or
+    belonging to another tenant — the two are indistinguishable by design) and `429`
+    (rate limited). These are omitted from individual operations only where they add
+    no information; they are never optional.
+
+    ## Locale
+    `Accept-Language: en | ar` selects the locale of ConnectSW-authored strings.
+    Tenant-authored content is returned in the language it was authored in and is
+    never machine-translated (FR-147, AC-065).
+
+  contact:
+    name: ConnectSW
+  license:
+    name: Proprietary
+
+servers:
+  - url: https://api.connectbpm.com
+    description: Production
+  - url: http://localhost:5018
+    description: Local development (PORT-REGISTRY)
+  - url: https://internal.connectbpm.local
+    description: |
+      FR-065 internal engine surface. Same contract, same schemas, service-account
+      auth, tenant-scoped. Not a separate API — deliberately, so API9 holds.
+
+tags:
+  - name: Auth
+  - name: Sessions
+  - name: Tenants
+  - name: Members
+  - name: Calendars
+  - name: Definitions
+  - name: Versions
+  - name: Forms
+  - name: Instances
+  - name: Batches
+  - name: Schedules
+  - name: Tasks
+  - name: Evidence
+  - name: Usage
+  - name: Billing
+  - name: Analytics
+  - name: Templates
+  - name: Webhooks
+  - name: Notifications
+  - name: Privacy
+  - name: System
+
+security:
+  - bearerAuth: []
+
+# =============================================================================
+paths:
+
+  # --------------------------------------------------------------- Auth (API2)
+  /v1/auth/signup:
+    post:
+      operationId: postV1AuthSignup
+      tags: [Auth]
+      summary: Self-serve signup — creates a user, a tenant and a Sandbox subscription
+      description: FR-010, US-01. No human intervention. Rate limited 3/min/IP.
+      security: []
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema: { $ref: '#/components/schemas/SignupRequest' }
+      responses:
+        '201':
+          description: Created
+          content:
+            application/json:
+              schema: { $ref: '#/components/schemas/AuthTokens' }
+        '400': { $ref: '#/components/responses/BadRequest' }
+        '409': { $ref: '#/components/responses/Conflict' }
+        '429': { $ref: '#/components/responses/TooManyRequests' }
+
+  /v1/auth/login:
+    post:
+      operationId: postV1AuthLogin
+      tags: [Auth]
+      summary: Authenticate
+      description: |
+        API2. 5 attempts/min per IP and per account. 10 consecutive failures lock
+        the account for 15 minutes. The response is identical for an unknown
+        account and a wrong password — user enumeration is not possible here.
+      security: []
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema: { $ref: '#/components/schemas/LoginRequest' }
+      responses:
+        '200':
+          description: Authenticated
+          content:
+            application/json:
+              schema: { $ref: '#/components/schemas/AuthTokens' }
+        '401': { $ref: '#/components/responses/Unauthorized' }
+        '423':
+          description: Account locked by the failed-attempt policy
+          content:
+            application/problem+json:
+              schema: { $ref: '#/components/schemas/Problem' }
+        '429': { $ref: '#/components/responses/TooManyRequests' }
+
+  /v1/auth/refresh:
+    post:
+      operationId: postV1AuthRefresh
+      tags: [Auth]
+      summary: Rotate the refresh token
+      description: |
+        API2. Refresh tokens are stored as SHA-256 hashes and rotate on every use.
+        Presenting a token that has already been rotated is treated as theft and
+        revokes the entire token family.
+      security: []
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              type: object
+              required: [refreshToken]
+              properties:
+                refreshToken: { type: string }
+      responses:
+        '200':
+          description: Rotated
+          content:
+            application/json:
+              schema: { $ref: '#/components/schemas/AuthTokens' }
+        '401': { $ref: '#/components/responses/Unauthorized' }
+
+  /v1/auth/logout:
+    post:
+      operationId: postV1AuthLogout
+      tags: [Auth]
+      summary: Revoke the current session
+      responses:
+        '204': { description: Revoked }
+        '401': { $ref: '#/components/responses/Unauthorized' }
+
+  /v1/auth/password-reset:
+    post:
+      operationId: postV1AuthPasswordReset
+      tags: [Auth]
+      summary: Request a password reset
+      description: |
+        Always returns 202 whether or not the address exists — the response does
+        not disclose account existence. Reset tokens are stored hashed, are
+        single-use and expire in 30 minutes. Rate limited 3/min/IP.
+      security: []
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              type: object
+              required: [email]
+              properties:
+                email: { type: string, format: email }
+      responses:
+        '202': { description: Accepted (no existence disclosure) }
+        '429': { $ref: '#/components/responses/TooManyRequests' }
+
+  /v1/auth/password-reset/confirm:
+    post:
+      operationId: postV1AuthPasswordResetConfirm
+      tags: [Auth]
+      summary: Complete a password reset
+      security: []
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              type: object
+              required: [token, newPassword]
+              properties:
+                token: { type: string }
+                newPassword: { type: string, minLength: 12 }
+      responses:
+        '204': { description: Password changed; all sessions revoked }
+        '400': { $ref: '#/components/responses/BadRequest' }
+
+  # ------------------------------------------------------------------ Sessions
+  /v1/me:
+    get:
+      operationId: getV1Me
+      tags: [Sessions]
+      summary: The authenticated user, their memberships and active tenant
+      responses:
+        '200':
+          description: OK
+          content:
+            application/json:
+              schema: { $ref: '#/components/schemas/Me' }
+        '401': { $ref: '#/components/responses/Unauthorized' }
+    patch:
+      operationId: patchV1Me
+      tags: [Sessions]
+      summary: Update personal name and locale
+      description: FR-146 — a personal locale overrides the workspace default.
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              type: object
+              properties:
+                name: { type: string }
+                locale: { type: string, enum: [en, ar] }
+      responses:
+        '200':
+          description: OK
+          content:
+            application/json:
+              schema: { $ref: '#/components/schemas/Me' }
+
+  /v1/me/sessions:
+    get:
+      operationId: getV1MeSessions
+      tags: [Sessions]
+      summary: List the user's active sessions
+      responses:
+        '200':
+          description: OK
+          content:
+            application/json:
+              schema:
+                type: object
+                properties:
+                  data:
+                    type: array
+                    items: { $ref: '#/components/schemas/Session' }
+
+  /v1/me/sessions/{sessionId}:
+    delete:
+      operationId: deleteV1MeSessionsBySessionId
+      tags: [Sessions]
+      summary: Revoke one session
+      parameters: [{ $ref: '#/components/parameters/SessionId' }]
+      responses:
+        '204': { description: Revoked }
+        '404': { $ref: '#/components/responses/NotFound' }
+
+  /v1/me/tenants/{tenantId}/switch:
+    post:
+      operationId: postV1MeTenantsByTenantIdSwitch
+      tags: [Sessions]
+      summary: Switch active workspace
+      description: |
+        FR-006, EC-20, AC-053. Switching is an EXPLICIT action. The new token
+        carries the new tenant; nothing from the previous workspace is reachable
+        with it. A tenant in which the user holds no ACTIVE membership returns 404.
+      parameters: [{ $ref: '#/components/parameters/TenantId' }]
+      responses:
+        '200':
+          description: OK
+          content:
+            application/json:
+              schema: { $ref: '#/components/schemas/AuthTokens' }
+        '404': { $ref: '#/components/responses/NotFound' }
+
+  # ------------------------------------------------------------------- Tenants
+  /v1/tenant:
+    get:
+      operationId: getV1Tenant
+      tags: [Tenants]
+      summary: The active workspace
+      responses:
+        '200':
+          description: OK
+          content:
+            application/json:
+              schema: { $ref: '#/components/schemas/Tenant' }
+    patch:
+      operationId: patchV1Tenant
+      tags: [Tenants]
+      summary: Update workspace settings
+      description: |
+        FR-136, FR-145. Locale, timezone, working calendar, retention window and
+        hard cap are CONFIGURATION. No geography, jurisdiction or regulator is
+        represented structurally anywhere in this payload (NFR-020).
+      security: [{ bearerAuth: [OWNER, ADMIN] }]
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema: { $ref: '#/components/schemas/TenantUpdate' }
+      responses:
+        '200':
+          description: OK
+          content:
+            application/json:
+              schema: { $ref: '#/components/schemas/Tenant' }
+        '403': { $ref: '#/components/responses/Forbidden' }
+
+  /v1/tenant/audit:
+    get:
+      operationId: getV1TenantAudit
+      tags: [Tenants]
+      summary: The workspace administrative audit log, including ConnectSW staff access
+      description: |
+        FR-009, AC-054. Staff access appears here WITHOUT any ConnectSW action,
+        naming actor, timestamp, scope and the stated reason.
+      security: [{ bearerAuth: [OWNER, ADMIN] }]
+      parameters:
+        - $ref: '#/components/parameters/Cursor'
+        - $ref: '#/components/parameters/Limit'
+        - name: actorKind
+          in: query
+          schema: { type: string, enum: [MEMBER, SYSTEM, SCHEDULE, SUPPORT] }
+      responses:
+        '200':
+          description: OK
+          content:
+            application/json:
+              schema: { $ref: '#/components/schemas/AuditLogPage' }
+        '403': { $ref: '#/components/responses/Forbidden' }
+
+  # ------------------------------------------------------------------- Members
+  /v1/members:
+    get:
+      operationId: getV1Members
+      tags: [Members]
+      summary: List workspace members
+      description: |
+        DEC-002 / FR-118: distinct authoring users and distinct participants are
+        counted and reported here, and are NEVER billed, capped or gated.
+      security: [{ bearerAuth: [OWNER, ADMIN] }]
+      parameters:
+        - $ref: '#/components/parameters/Cursor'
+        - $ref: '#/components/parameters/Limit'
+        - name: status
+          in: query
+          schema: { type: string, enum: [INVITED, ACTIVE, DEACTIVATED] }
+      responses:
+        '200':
+          description: OK
+          content:
+            application/json:
+              schema: { $ref: '#/components/schemas/MemberPage' }
+        '403': { $ref: '#/components/responses/Forbidden' }
+    post:
+      operationId: postV1Members
+      tags: [Members]
+      summary: Invite a member
+      description: FR-007. There is no seat check — participants are unlimited on every tier (FR-080).
+      security: [{ bearerAuth: [OWNER, ADMIN] }]
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              type: object
+              required: [email, roles]
+              properties:
+                email: { type: string, format: email }
+                roles:
+                  type: array
+                  items: { $ref: '#/components/schemas/WorkspaceRole' }
+      responses:
+        '201':
+          description: Invited
+          content:
+            application/json:
+              schema: { $ref: '#/components/schemas/Member' }
+        '403': { $ref: '#/components/responses/Forbidden' }
+        '409': { $ref: '#/components/responses/Conflict' }
+
+  /v1/members/{memberId}:
+    parameters: [{ $ref: '#/components/parameters/MemberId' }]
+    get:
+      operationId: getV1MembersByMemberId
+      tags: [Members]
+      summary: Read a member
+      security: [{ bearerAuth: [OWNER, ADMIN] }]
+      responses:
+        '200':
+          description: OK
+          content:
+            application/json:
+              schema: { $ref: '#/components/schemas/Member' }
+        '404': { $ref: '#/components/responses/NotFound' }
+    patch:
+      operationId: patchV1MembersByMemberId
+      tags: [Members]
+      summary: Change a member's roles
+      description: FR-005, AC-028 — role assignment never affects any billable quantity.
+      security: [{ bearerAuth: [OWNER, ADMIN] }]
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              type: object
+              required: [roles]
+              properties:
+                roles:
+                  type: array
+                  items: { $ref: '#/components/schemas/WorkspaceRole' }
+      responses:
+        '200':
+          description: OK
+          content:
+            application/json:
+              schema: { $ref: '#/components/schemas/Member' }
+        '404': { $ref: '#/components/responses/NotFound' }
+    delete:
+      operationId: deleteV1MembersByMemberId
+      tags: [Members]
+      summary: Deactivate a member
+      description: |
+        FR-008, EC-07, AC-085. Deactivation does NOT complete while the member
+        holds open tasks. The 409 body lists every open task and the caller must
+        reassign or requeue each one. No task is ever silently orphaned.
+      security: [{ bearerAuth: [OWNER, ADMIN] }]
+      responses:
+        '204': { description: Deactivated }
+        '409':
+          description: Open tasks block deactivation
+          content:
+            application/problem+json:
+              schema: { $ref: '#/components/schemas/OpenTasksProblem' }
+        '404': { $ref: '#/components/responses/NotFound' }
+
+  # ----------------------------------------------------------------- Calendars
+  /v1/calendars:
+    get:
+      operationId: getV1Calendars
+      tags: [Calendars]
+      summary: List working calendars
+      description: |
+        FR-062, DEC-001. THE mechanism of geography neutrality: weekend days,
+        working hours and holidays are per-tenant configuration and appear nowhere
+        in engine logic, schema or enums.
+      responses:
+        '200':
+          description: OK
+          content:
+            application/json:
+              schema:
+                type: object
+                properties:
+                  data:
+                    type: array
+                    items: { $ref: '#/components/schemas/WorkingCalendar' }
+    post:
+      operationId: postV1Calendars
+      tags: [Calendars]
+      summary: Create a working calendar
+      security: [{ bearerAuth: [OWNER, ADMIN] }]
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema: { $ref: '#/components/schemas/WorkingCalendarInput' }
+      responses:
+        '201':
+          description: Created
+          content:
+            application/json:
+              schema: { $ref: '#/components/schemas/WorkingCalendar' }
+        '403': { $ref: '#/components/responses/Forbidden' }
+
+  /v1/calendars/{calendarId}:
+    parameters: [{ $ref: '#/components/parameters/CalendarId' }]
+    patch:
+      operationId: patchV1CalendarsByCalendarId
+      tags: [Calendars]
+      summary: Update a working calendar
+      security: [{ bearerAuth: [OWNER, ADMIN] }]
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema: { $ref: '#/components/schemas/WorkingCalendarInput' }
+      responses:
+        '200':
+          description: OK
+          content:
+            application/json:
+              schema: { $ref: '#/components/schemas/WorkingCalendar' }
+        '404': { $ref: '#/components/responses/NotFound' }
+    delete:
+      operationId: deleteV1CalendarsByCalendarId
+      tags: [Calendars]
+      summary: Delete a working calendar
+      security: [{ bearerAuth: [OWNER, ADMIN] }]
+      responses:
+        '204': { description: Deleted }
+        '409': { $ref: '#/components/responses/Conflict' }
+        '404': { $ref: '#/components/responses/NotFound' }
+
+  # --------------------------------------------------------------- Definitions
+  /v1/definitions:
+    get:
+      operationId: getV1Definitions
+      tags: [Definitions]
+      summary: List process definitions
+      parameters:
+        - $ref: '#/components/parameters/Cursor'
+        - $ref: '#/components/parameters/Limit'
+        - name: status
+          in: query
+          schema: { type: string, enum: [ACTIVE, ARCHIVED] }
+      responses:
+        '200':
+          description: OK
+          content:
+            application/json:
+              schema: { $ref: '#/components/schemas/DefinitionPage' }
+    post:
+      operationId: postV1Definitions
+      tags: [Definitions]
+      summary: Create a process definition with an empty draft version
+      security: [{ bearerAuth: [OWNER, ADMIN, DESIGNER] }]
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              type: object
+              required: [key, name]
+              properties:
+                key: { type: string, pattern: '^[a-z0-9][a-z0-9-]{1,62}$' }
+                name: { type: string, maxLength: 200 }
+                description: { type: string, maxLength: 2000 }
+      responses:
+        '201':
+          description: Created
+          content:
+            application/json:
+              schema: { $ref: '#/components/schemas/Definition' }
+        '403': { $ref: '#/components/responses/Forbidden' }
+        '409': { $ref: '#/components/responses/Conflict' }
+
+  /v1/definitions/{definitionId}:
+    parameters: [{ $ref: '#/components/parameters/DefinitionId' }]
+    get:
+      operationId: getV1DefinitionsByDefinitionId
+      tags: [Definitions]
+      summary: Read a definition with its versions
+      description: FR-129 — includes the count of versions with live instances.
+      responses:
+        '200':
+          description: OK
+          content:
+            application/json:
+              schema: { $ref: '#/components/schemas/DefinitionDetail' }
+        '404': { $ref: '#/components/responses/NotFound' }
+    patch:
+      operationId: patchV1DefinitionsByDefinitionId
+      tags: [Definitions]
+      summary: Rename or archive a definition
+      description: |
+        FR-026, EC-15. Archiving prevents NEW instances; running instances complete
+        normally on their pinned version.
+      security: [{ bearerAuth: [OWNER, ADMIN, DESIGNER] }]
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              type: object
+              properties:
+                name: { type: string }
+                description: { type: string }
+                status: { type: string, enum: [ACTIVE, ARCHIVED] }
+      responses:
+        '200':
+          description: OK
+          content:
+            application/json:
+              schema: { $ref: '#/components/schemas/Definition' }
+        '404': { $ref: '#/components/responses/NotFound' }
+    delete:
+      operationId: deleteV1DefinitionsByDefinitionId
+      tags: [Definitions]
+      summary: Delete a definition
+      description: |
+        FR-027, EC-15. Refused with 409 while ANY instance or evidence record
+        references it. Evidence outlives convenience.
+      security: [{ bearerAuth: [OWNER, ADMIN] }]
+      responses:
+        '204': { description: Deleted }
+        '409': { $ref: '#/components/responses/Conflict' }
+        '404': { $ref: '#/components/responses/NotFound' }
+
+  # ------------------------------------------------------------------ Versions
+  /v1/definitions/{definitionId}/versions:
+    parameters: [{ $ref: '#/components/parameters/DefinitionId' }]
+    get:
+      operationId: getV1DefinitionsByDefinitionIdVersions
+      tags: [Versions]
+      summary: List versions
+      responses:
+        '200':
+          description: OK
+          content:
+            application/json:
+              schema:
+                type: object
+                properties:
+                  data:
+                    type: array
+                    items: { $ref: '#/components/schemas/DefinitionVersion' }
+    post:
+      operationId: postV1DefinitionsByDefinitionIdVersions
+      tags: [Versions]
+      summary: Create a new DRAFT from the current published version
+      description: FR-013 — editing a published version creates a new draft at version+1.
+      security: [{ bearerAuth: [OWNER, ADMIN, DESIGNER] }]
+      responses:
+        '201':
+          description: Created
+          content:
+            application/json:
+              schema: { $ref: '#/components/schemas/DefinitionVersion' }
+        '403': { $ref: '#/components/responses/Forbidden' }
+
+  /v1/versions/{versionId}:
+    parameters: [{ $ref: '#/components/parameters/VersionId' }]
+    get:
+      operationId: getV1VersionsByVersionId
+      tags: [Versions]
+      summary: Read a version — graph, condition ASTs and bound form schemas
+      responses:
+        '200':
+          description: OK
+          content:
+            application/json:
+              schema: { $ref: '#/components/schemas/DefinitionVersionDetail' }
+        '404': { $ref: '#/components/responses/NotFound' }
+    put:
+      operationId: putV1VersionsByVersionId
+      tags: [Versions]
+      summary: Save a DRAFT graph
+      description: |
+        FR-028, EC-16, AC-…409. Optimistic concurrency on `revision`. A save against
+        a changed baseline is refused with 409 describing WHAT changed and BY WHOM —
+        last-write-wins is unacceptable on an artefact that becomes immutable.
+        FR-014: a PUBLISHED version is immutable and any write returns 409 and is
+        recorded in the evidence trail.
+        FR-011: the graph is rejected if it contains any element type outside E1..E7.
+      security: [{ bearerAuth: [OWNER, ADMIN, DESIGNER] }]
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema: { $ref: '#/components/schemas/DraftSave' }
+      responses:
+        '200':
+          description: Saved
+          content:
+            application/json:
+              schema: { $ref: '#/components/schemas/DefinitionVersion' }
+        '409':
+          description: Concurrent edit, or the version is PUBLISHED and immutable
+          content:
+            application/problem+json:
+              schema: { $ref: '#/components/schemas/ConflictProblem' }
+        '422': { $ref: '#/components/responses/ValidationFailed' }
+        '404': { $ref: '#/components/responses/NotFound' }
+
+  /v1/versions/{versionId}/validate:
+    parameters: [{ $ref: '#/components/parameters/VersionId' }]
+    post:
+      operationId: postV1VersionsByVersionIdValidate
+      tags: [Versions]
+      summary: Run structural validation without publishing
+      description: |
+        FR-016, FR-017, AC-075, AC-077. Checks: at most one Start of each kind and
+        at least one; at least one reachable Finish; every element reachable; every
+        Split matched by a Join reachable from ALL its branches, including via
+        boundary paths that bypass it (EC-06); every Decision carrying a default
+        path; every Step carrying an assignment rule; every condition parsing within
+        the restricted grammar and within its static budget (ADR-002).
+        Every failure NAMES the offending element and the rule violated — a generic
+        message is non-compliant.
+      security: [{ bearerAuth: [OWNER, ADMIN, DESIGNER, PUBLISHER] }]
+      responses:
+        '200':
+          description: Validation result (may contain failures; still 200)
+          content:
+            application/json:
+              schema: { $ref: '#/components/schemas/ValidationResult' }
+        '404': { $ref: '#/components/responses/NotFound' }
+
+  /v1/versions/{versionId}/publish:
+    parameters: [{ $ref: '#/components/parameters/VersionId' }]
+    post:
+      operationId: postV1VersionsByVersionIdPublish
+      tags: [Versions]
+      summary: Publish a DRAFT
+      description: |
+        FR-015, FR-016. Assigns a monotonically increasing integer version, computes
+        the content checksum over the graph, condition ASTs and all bound form
+        schemas, and makes the row immutable. Refused with 422 if validation fails.
+      security: [{ bearerAuth: [OWNER, ADMIN, PUBLISHER] }]
+      responses:
+        '200':
+          description: Published
+          content:
+            application/json:
+              schema: { $ref: '#/components/schemas/DefinitionVersion' }
+        '403': { $ref: '#/components/responses/Forbidden' }
+        '422': { $ref: '#/components/responses/ValidationFailed' }
+        '404': { $ref: '#/components/responses/NotFound' }
+
+  /v1/versions/{versionId}/test-run:
+    parameters: [{ $ref: '#/components/parameters/VersionId' }]
+    post:
+      operationId: postV1VersionsByVersionIdTestRun
+      tags: [Versions]
+      summary: Test-run a DRAFT
+      description: |
+        FR-029, FR-106, AC-007. Produces evidence entries marked `isTest=true` and
+        NEVER a billable usage event and NEVER a quota reservation.
+      security: [{ bearerAuth: [OWNER, ADMIN, DESIGNER] }]
+      requestBody:
+        content:
+          application/json:
+            schema:
+              type: object
+              properties:
+                startFormData: { type: object, additionalProperties: true }
+      responses:
+        '201':
+          description: Test instance started
+          content:
+            application/json:
+              schema: { $ref: '#/components/schemas/Instance' }
+        '404': { $ref: '#/components/responses/NotFound' }
+
+  # --------------------------------------------------------------------- Forms
+  /v1/versions/{versionId}/forms:
+    parameters: [{ $ref: '#/components/parameters/VersionId' }]
+    get:
+      operationId: getV1VersionsByVersionIdForms
+      tags: [Forms]
+      summary: List the form schemas bound to a version
+      responses:
+        '200':
+          description: OK
+          content:
+            application/json:
+              schema:
+                type: object
+                properties:
+                  data:
+                    type: array
+                    items: { $ref: '#/components/schemas/FormSchema' }
+    put:
+      operationId: putV1VersionsByVersionIdForms
+      tags: [Forms]
+      summary: Bind or replace the form schema for an element in a DRAFT
+      description: |
+        FR-032 — every field carries a STABLE MACHINE KEY that survives form
+        versions and is the join between evidence exports in different locales
+        (FR-149, EC-12).
+      security: [{ bearerAuth: [OWNER, ADMIN, DESIGNER] }]
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema: { $ref: '#/components/schemas/FormSchemaInput' }
+      responses:
+        '200':
+          description: OK
+          content:
+            application/json:
+              schema: { $ref: '#/components/schemas/FormSchema' }
+        '409': { $ref: '#/components/responses/Conflict' }
+        '422': { $ref: '#/components/responses/ValidationFailed' }
+
+  # ----------------------------------------------------------------- Instances
+  /v1/instances:
+    get:
+      operationId: getV1Instances
+      tags: [Instances]
+      summary: List process instances
+      parameters:
+        - $ref: '#/components/parameters/Cursor'
+        - $ref: '#/components/parameters/Limit'
+        - name: status
+          in: query
+          schema: { $ref: '#/components/schemas/InstanceStatus' }
+        - name: definitionId
+          in: query
+          schema: { type: string, format: uuid }
+        - name: businessKey
+          in: query
+          schema: { type: string }
+      responses:
+        '200':
+          description: OK
+          content:
+            application/json:
+              schema: { $ref: '#/components/schemas/InstancePage' }
+    post:
+      operationId: postV1Instances
+      tags: [Instances]
+      summary: Start one instance
+      description: |
+        MET-4 / FR-113 / AC-014. Quota is enforced BEFORE the instance exists: a
+        start is admitted only when
+        `billableCompletions + openReservations < hardCap`. On refusal NO instance
+        row, NO evidence record and NO reservation is created, and one
+        `instance.start.refused` usage event is written (FR-114, AC-006).
+        `FR-030` — only principals the Start element permits may start.
+      parameters:
+        - $ref: '#/components/parameters/IdempotencyKey'
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema: { $ref: '#/components/schemas/StartInstanceRequest' }
+      responses:
+        '201':
+          description: Started
+          content:
+            application/json:
+              schema: { $ref: '#/components/schemas/Instance' }
+        '402': { $ref: '#/components/responses/QuotaExhausted' }
+        '403': { $ref: '#/components/responses/Forbidden' }
+        '404': { $ref: '#/components/responses/NotFound' }
+        '422': { $ref: '#/components/responses/ValidationFailed' }
+
+  /v1/instances/{instanceId}:
+    parameters: [{ $ref: '#/components/parameters/InstanceId' }]
+    get:
+      operationId: getV1InstancesByInstanceId
+      tags: [Instances]
+      summary: Read an instance
+      description: |
+        FR-019 — the response names the definition version this instance is
+        EXECUTING, never the currently published one.
+      responses:
+        '200':
+          description: OK
+          content:
+            application/json:
+              schema: { $ref: '#/components/schemas/InstanceDetail' }
+        '404': { $ref: '#/components/responses/NotFound' }
+
+  /v1/instances/{instanceId}/cancel:
+    parameters: [{ $ref: '#/components/parameters/InstanceId' }]
+    post:
+      operationId: postV1InstancesByInstanceIdCancel
+      tags: [Instances]
+      summary: Cancel an instance
+      description: |
+        FR-051, FR-104, DEC-004. A reason is REQUIRED and is recorded in evidence.
+        Billable if and only if at least one Step had completed; the response states
+        the billable determination and `completedStepCountAtEvent` explicitly, so the
+        customer learns it here rather than on an invoice.
+      security: [{ bearerAuth: [OWNER, ADMIN, PROCESS_OWNER] }]
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              type: object
+              required: [reason]
+              properties:
+                reason: { type: string, minLength: 1, maxLength: 1000 }
+      responses:
+        '200':
+          description: Cancelled
+          content:
+            application/json:
+              schema: { $ref: '#/components/schemas/CancelResult' }
+        '403': { $ref: '#/components/responses/Forbidden' }
+        '404': { $ref: '#/components/responses/NotFound' }
+        '409': { $ref: '#/components/responses/Conflict' }
+
+  /v1/instances/{instanceId}/suspend:
+    parameters: [{ $ref: '#/components/parameters/InstanceId' }]
+    post:
+      operationId: postV1InstancesByInstanceIdSuspend
+      tags: [Instances]
+      summary: Suspend an instance and pause its timers
+      description: FR-054. Remaining timer durations are preserved and recomputed on resume.
+      security: [{ bearerAuth: [OWNER, ADMIN, PROCESS_OWNER] }]
+      responses:
+        '200':
+          description: Suspended
+          content:
+            application/json:
+              schema: { $ref: '#/components/schemas/Instance' }
+        '404': { $ref: '#/components/responses/NotFound' }
+
+  /v1/instances/{instanceId}/resume:
+    parameters: [{ $ref: '#/components/parameters/InstanceId' }]
+    post:
+      operationId: postV1InstancesByInstanceIdResume
+      tags: [Instances]
+      summary: Resume a suspended instance
+      security: [{ bearerAuth: [OWNER, ADMIN, PROCESS_OWNER] }]
+      responses:
+        '200':
+          description: Resumed
+          content:
+            application/json:
+              schema: { $ref: '#/components/schemas/Instance' }
+        '404': { $ref: '#/components/responses/NotFound' }
+
+  /v1/instances/{instanceId}/attachments:
+    parameters: [{ $ref: '#/components/parameters/InstanceId' }]
+    post:
+      operationId: postV1InstancesByInstanceIdAttachments
+      tags: [Instances]
+      summary: Upload an attachment
+      description: |
+        FR-038, NFR-011, AC-055. Stored under `t/{tenantId}/{instanceId}/{id}`; the
+        storage credential is scoped to the tenant prefix, so a cross-tenant read is
+        refused AT THE STORAGE LAYER, not only here. Virus-scanned before it becomes
+        visible. Size is tier-bounded, 25 MiB absolute.
+      requestBody:
+        required: true
+        content:
+          multipart/form-data:
+            schema:
+              type: object
+              properties:
+                file: { type: string, format: binary }
+      responses:
+        '201':
+          description: Uploaded, pending scan
+          content:
+            application/json:
+              schema: { $ref: '#/components/schemas/Attachment' }
+        '413': { $ref: '#/components/responses/PayloadTooLarge' }
+        '404': { $ref: '#/components/responses/NotFound' }
+
+  /v1/attachments/{attachmentId}:
+    parameters: [{ $ref: '#/components/parameters/AttachmentId' }]
+    get:
+      operationId: getV1AttachmentsByAttachmentId
+      tags: [Instances]
+      summary: Download an attachment via a short-lived signed URL
+      description: |
+        AC-055. Returns a 302 to a single-object signed URL valid for 5 minutes and
+        bound to the tenant prefix. A guessed key from another tenant returns 404.
+      responses:
+        '302': { description: Redirect to the signed URL }
+        '404': { $ref: '#/components/responses/NotFound' }
+        '409':
+          description: Scan not yet clean
+          content:
+            application/problem+json:
+              schema: { $ref: '#/components/schemas/Problem' }
+
+  # ------------------------------------------------------------------- Batches
+  /v1/batches/preflight:
+    post:
+      operationId: postV1BatchesPreflight
+      tags: [Batches]
+      summary: Price a bulk start before it runs
+      description: |
+        FR-108, AC-018, RISK-PM-01. Returns the EXACT number of billable instances
+        the operation will create and the resulting quota position BEFORE anything
+        happens. The confirmation screen backed by this call cannot be bypassed —
+        `POST /v1/batches` requires the `preflightToken` this returns.
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema: { $ref: '#/components/schemas/BatchPreflightRequest' }
+      responses:
+        '200':
+          description: OK
+          content:
+            application/json:
+              schema: { $ref: '#/components/schemas/BatchPreflight' }
+        '404': { $ref: '#/components/responses/NotFound' }
+        '422': { $ref: '#/components/responses/ValidationFailed' }
+
+  /v1/batches:
+    post:
+      operationId: postV1Batches
+      tags: [Batches]
+      summary: Start N instances from a list
+      description: |
+        FR-061, EC-21, AC-017. ADR-001 amendment A1. All-or-nothing: if the batch
+        exceeds remaining quota, ZERO instances are created and exactly ONE refusal
+        event is recorded for the batch — not N — with the shortfall stated as a
+        number. Capped at 5,000 rows (API4).
+      parameters:
+        - $ref: '#/components/parameters/IdempotencyKey'
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema: { $ref: '#/components/schemas/BatchCreateRequest' }
+      responses:
+        '201':
+          description: Admitted
+          content:
+            application/json:
+              schema: { $ref: '#/components/schemas/Batch' }
+        '402': { $ref: '#/components/responses/QuotaExhausted' }
+        '409': { $ref: '#/components/responses/Conflict' }
+        '422': { $ref: '#/components/responses/ValidationFailed' }
+
+  /v1/batches/{batchId}:
+    parameters: [{ $ref: '#/components/parameters/BatchId' }]
+    get:
+      operationId: getV1BatchesByBatchId
+      tags: [Batches]
+      summary: Read a batch and its progress
+      responses:
+        '200':
+          description: OK
+          content:
+            application/json:
+              schema: { $ref: '#/components/schemas/Batch' }
+        '404': { $ref: '#/components/responses/NotFound' }
+
+  # ----------------------------------------------------------------- Schedules
+  /v1/definitions/{definitionId}/schedule:
+    parameters: [{ $ref: '#/components/parameters/DefinitionId' }]
+    get:
+      operationId: getV1DefinitionsByDefinitionIdSchedule
+      tags: [Schedules]
+      summary: Read the E7 Schedule subscription
+      responses:
+        '200':
+          description: OK
+          content:
+            application/json:
+              schema: { $ref: '#/components/schemas/Schedule' }
+        '404': { $ref: '#/components/responses/NotFound' }
+    put:
+      operationId: putV1DefinitionsByDefinitionIdSchedule
+      tags: [Schedules]
+      summary: Set or update the recurrence for an E7 Schedule start
+      description: |
+        ADR-001 (SCOPE-AMD-001 ratified). Recurrence is a STRUCTURED object, never a
+        customer-authored expression. Evaluated in the tenant's timezone against the
+        tenant's working calendar (FR-062). FR-060: exactly one instance per
+        occurrence, idempotent across ticks and restarts. AC-019: a refused scheduled
+        start records a refusal event and notifies the Tenant Admin rather than
+        failing silently.
+      security: [{ bearerAuth: [OWNER, ADMIN, DESIGNER, PUBLISHER] }]
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema: { $ref: '#/components/schemas/ScheduleInput' }
+      responses:
+        '200':
+          description: OK
+          content:
+            application/json:
+              schema: { $ref: '#/components/schemas/Schedule' }
+        '404': { $ref: '#/components/responses/NotFound' }
+        '422': { $ref: '#/components/responses/ValidationFailed' }
+    delete:
+      operationId: deleteV1DefinitionsByDefinitionIdSchedule
+      tags: [Schedules]
+      summary: Remove the recurrence
+      security: [{ bearerAuth: [OWNER, ADMIN, DESIGNER, PUBLISHER] }]
+      responses:
+        '204': { description: Removed }
+        '404': { $ref: '#/components/responses/NotFound' }
+
+  /v1/schedules/{scheduleId}/occurrences:
+    parameters: [{ $ref: '#/components/parameters/ScheduleId' }]
+    get:
+      operationId: getV1SchedulesByScheduleIdOccurrences
+      tags: [Schedules]
+      summary: List fired occurrences and their admission outcome
+      parameters:
+        - $ref: '#/components/parameters/Cursor'
+        - $ref: '#/components/parameters/Limit'
+      responses:
+        '200':
+          description: OK
+          content:
+            application/json:
+              schema: { $ref: '#/components/schemas/OccurrencePage' }
+        '404': { $ref: '#/components/responses/NotFound' }
+
+  # --------------------------------------------------------------------- Tasks
+  /v1/tasks:
+    get:
+      operationId: getV1Tasks
+      tags: [Tasks]
+      summary: The task inbox
+      description: |
+        FR-069, FR-079. Every member may call this, on every tier, with no
+        entitlement check that depends on a seat count. Sorted by due time by
+        default. Returns only tasks assigned to the caller or claimable by a role
+        the caller holds.
+      parameters:
+        - $ref: '#/components/parameters/Cursor'
+        - $ref: '#/components/parameters/Limit'
+        - name: filter
+          in: query
+          schema: { type: string, enum: [assigned, claimable, overdue, completed] }
+        - name: definitionId
+          in: query
+          schema: { type: string, format: uuid }
+      responses:
+        '200':
+          description: OK
+          content:
+            application/json:
+              schema: { $ref: '#/components/schemas/TaskPage' }
+
+  /v1/tasks/{taskId}:
+    parameters: [{ $ref: '#/components/parameters/TaskId' }]
+    get:
+      operationId: getV1TasksByTaskId
+      tags: [Tasks]
+      summary: The single-task view — the deep-link target
+      description: |
+        FR-070, FR-071, FR-073, FR-076, AC-080, AC-083, AC-086.
+        A GET NEVER mutates state (email clients pre-fetch links — EC-11).
+        A task belonging to another user or another tenant returns 404 and the
+        attempt is recorded. A completed task renders read-only with its recorded
+        outcome. The payload is the request summary, the VERSION-PINNED form and the
+        outcome actions — nothing else.
+      responses:
+        '200':
+          description: OK
+          content:
+            application/json:
+              schema: { $ref: '#/components/schemas/TaskDetail' }
+        '404': { $ref: '#/components/responses/NotFound' }
+
+  /v1/tasks/{taskId}/claim:
+    parameters: [{ $ref: '#/components/parameters/TaskId' }]
+    post:
+      operationId: postV1TasksByTaskIdClaim
+      tags: [Tasks]
+      summary: Claim an unassigned task
+      description: |
+        FR-068, EC-04, AC-073. Decided by a conditional update. Exactly one
+        concurrent claim succeeds; the loser receives 409 NAMING THE CLAIMANT, not a
+        generic error.
+      responses:
+        '200':
+          description: Claimed
+          content:
+            application/json:
+              schema: { $ref: '#/components/schemas/TaskDetail' }
+        '409':
+          description: Already claimed
+          content:
+            application/problem+json:
+              schema: { $ref: '#/components/schemas/AlreadyClaimedProblem' }
+        '404': { $ref: '#/components/responses/NotFound' }
+
+  /v1/tasks/{taskId}/complete:
+    parameters: [{ $ref: '#/components/parameters/TaskId' }]
+    post:
+      operationId: postV1TasksByTaskIdComplete
+      tags: [Tasks]
+      summary: Complete a task
+      description: |
+        FR-072, FR-081, EC-11, AC-074. Requires an `Idempotency-Key`; a repeated
+        submission returns the FIRST result and performs no second transition.
+        An outcome action configured to require a comment is refused without one,
+        naming the required field (AC-084).
+
+        **This is the transition that can make an instance billable.** When the
+        resulting token reaches a Finish, the token move, the evidence entry and the
+        usage event commit in ONE database transaction (MET-2, AC-009), and a replay
+        is a no-op on the unique idempotency key (MET-3, AC-010, AC-011).
+      parameters:
+        - $ref: '#/components/parameters/IdempotencyKey'
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema: { $ref: '#/components/schemas/CompleteTaskRequest' }
+      responses:
+        '200':
+          description: Completed
+          content:
+            application/json:
+              schema: { $ref: '#/components/schemas/TransitionResult' }
+        '404': { $ref: '#/components/responses/NotFound' }
+        '409': { $ref: '#/components/responses/Conflict' }
+        '422': { $ref: '#/components/responses/ValidationFailed' }
+
+  /v1/tasks/{taskId}/reassign:
+    parameters: [{ $ref: '#/components/parameters/TaskId' }]
+    post:
+      operationId: postV1TasksByTaskIdReassign
+      tags: [Tasks]
+      summary: Reassign a task
+      description: |
+        FR-074, FR-075. By its assignee or an Admin, to another member OF THE SAME
+        TENANT. A principal outside the tenant returns 404. Recorded as a distinct
+        evidence entry naming BOTH actors.
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              type: object
+              properties:
+                assigneeId: { type: string, format: uuid, nullable: true }
+                toClaimableQueue: { type: boolean, default: false }
+      responses:
+        '200':
+          description: Reassigned
+          content:
+            application/json:
+              schema: { $ref: '#/components/schemas/TaskDetail' }
+        '404': { $ref: '#/components/responses/NotFound' }
+
+  /v1/startable:
+    get:
+      operationId: getV1Startable
+      tags: [Tasks]
+      summary: Processes this member may start
+      description: FR-085, FR-030 — the "Start a request" surface.
+      responses:
+        '200':
+          description: OK
+          content:
+            application/json:
+              schema:
+                type: object
+                properties:
+                  data:
+                    type: array
+                    items: { $ref: '#/components/schemas/StartableProcess' }
+
+  /v1/my-requests:
+    get:
+      operationId: getV1MyRequests
+      tags: [Tasks]
+      summary: Instances this member started
+      description: FR-077 — current Step, current holder, due time.
+      parameters:
+        - $ref: '#/components/parameters/Cursor'
+        - $ref: '#/components/parameters/Limit'
+      responses:
+        '200':
+          description: OK
+          content:
+            application/json:
+              schema: { $ref: '#/components/schemas/InstancePage' }
+
+  # ------------------------------------------------------------------ Evidence
+  /v1/instances/{instanceId}/evidence:
+    parameters: [{ $ref: '#/components/parameters/InstanceId' }]
+    get:
+      operationId: getV1InstancesByInstanceIdEvidence
+      tags: [Evidence]
+      summary: Read an instance's evidence record
+      description: |
+        FR-086..FR-090, AC-035, AC-038. Present on EVERY tier including Sandbox —
+        evidence is not a tier entitlement. Each entry carries actor identity, the
+        actor's role AT THE TIME, both timestamps, tenant, instance, definition
+        version, and a gap-free per-instance sequence number.
+        There is no endpoint to disable, edit or delete evidence, on purpose (FR-100,
+        AC-036, AC-039).
+      parameters:
+        - $ref: '#/components/parameters/Cursor'
+        - $ref: '#/components/parameters/Limit'
+      responses:
+        '200':
+          description: OK
+          content:
+            application/json:
+              schema: { $ref: '#/components/schemas/EvidencePage' }
+        '404': { $ref: '#/components/responses/NotFound' }
+
+  /v1/instances/{instanceId}/evidence/verify:
+    parameters: [{ $ref: '#/components/parameters/InstanceId' }]
+    post:
+      operationId: postV1InstancesByInstanceIdEvidenceVerify
+      tags: [Evidence]
+      summary: Recompute and verify the hash chain
+      description: |
+        FR-091, AC-040. Reports the FIRST divergent entry by sequence number, if any.
+      responses:
+        '200':
+          description: Verification result
+          content:
+            application/json:
+              schema: { $ref: '#/components/schemas/VerificationResult' }
+        '404': { $ref: '#/components/responses/NotFound' }
+
+  /v1/evidence/exports:
+    get:
+      operationId: getV1EvidenceExports
+      tags: [Evidence]
+      summary: List evidence exports
+      description: FR-094, AC-044 — every export is itself recorded.
+      security: [{ bearerAuth: [OWNER, ADMIN, PROCESS_OWNER] }]
+      parameters:
+        - $ref: '#/components/parameters/Cursor'
+        - $ref: '#/components/parameters/Limit'
+      responses:
+        '200':
+          description: OK
+          content:
+            application/json:
+              schema: { $ref: '#/components/schemas/ExportPage' }
+    post:
+      operationId: postV1EvidenceExports
+      tags: [Evidence]
+      summary: Request an evidence export
+      description: |
+        FR-092..FR-095, AC-041..AC-045. The JSON artifact is self-describing: it
+        carries the hash algorithm, the RFC 8785 canonicalisation rule, the genesis
+        and preimage formulas, every definition version covered, and any retention
+        gap — so an INDEPENDENT script importing no application code can recompute
+        the chain. A silently short export is a defect.
+      security: [{ bearerAuth: [OWNER, ADMIN, PROCESS_OWNER] }]
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema: { $ref: '#/components/schemas/ExportRequest' }
+      responses:
+        '202':
+          description: Accepted; generated asynchronously
+          content:
+            application/json:
+              schema: { $ref: '#/components/schemas/EvidenceExport' }
+        '403': { $ref: '#/components/responses/Forbidden' }
+        '422': { $ref: '#/components/responses/ValidationFailed' }
+
+  /v1/evidence/exports/{exportId}:
+    parameters: [{ $ref: '#/components/parameters/ExportId' }]
+    get:
+      operationId: getV1EvidenceExportsByExportId
+      tags: [Evidence]
+      summary: Read an export's status and download link
+      security: [{ bearerAuth: [OWNER, ADMIN, PROCESS_OWNER] }]
+      responses:
+        '200':
+          description: OK
+          content:
+            application/json:
+              schema: { $ref: '#/components/schemas/EvidenceExport' }
+        '404': { $ref: '#/components/responses/NotFound' }
+
+  # --------------------------------------------------------------------- Usage
+  /v1/usage:
+    get:
+      operationId: getV1Usage
+      tags: [Usage]
+      summary: The tenant usage view
+      description: |
+        FR-125, AC-033. Billable completions this period, quota, overage incurred and
+        a per-process breakdown, reconciling to the invoice with ZERO difference.
+        FR-118 — distinct authoring users and distinct participants are reported here
+        and are never billed, capped or gated.
+      security: [{ bearerAuth: [OWNER, ADMIN, PROCESS_OWNER] }]
+      parameters:
+        - name: billingPeriod
+          in: query
+          schema: { type: string, pattern: '^\d{4}-\d{2}$' }
+      responses:
+        '200':
+          description: OK
+          content:
+            application/json:
+              schema: { $ref: '#/components/schemas/UsageSummary' }
+        '403': { $ref: '#/components/responses/Forbidden' }
+
+  /v1/usage/events:
+    get:
+      operationId: getV1UsageEvents
+      tags: [Usage]
+      summary: The append-only usage ledger for a period
+      description: |
+        FR-109, AC-021. Read-only by construction. There is no PATCH and no DELETE
+        on this collection anywhere in this document; corrections exist only as
+        compensating events.
+      security: [{ bearerAuth: [OWNER, ADMIN]}]
+      parameters:
+        - $ref: '#/components/parameters/Cursor'
+        - $ref: '#/components/parameters/Limit'
+        - name: billingPeriod
+          in: query
+          schema: { type: string, pattern: '^\d{4}-\d{2}$' }
+        - name: billable
+          in: query
+          schema: { type: boolean }
+      responses:
+        '200':
+          description: OK
+          content:
+            application/json:
+              schema: { $ref: '#/components/schemas/UsageEventPage' }
+        '403': { $ref: '#/components/responses/Forbidden' }
+
+  /v1/usage/reconciliation:
+    get:
+      operationId: getV1UsageReconciliation
+      tags: [Usage]
+      summary: The latest three-way reconciliation statement
+      description: |
+        FR-110, AC-022, NFR-007. Instance terminal states, terminal evidence entries
+        and usage events must agree EXACTLY — not within a tolerance. Any divergence
+        names the instance and raises a P0 alert.
+      security: [{ bearerAuth: [OWNER, ADMIN] }]
+      responses:
+        '200':
+          description: OK
+          content:
+            application/json:
+              schema: { $ref: '#/components/schemas/ReconciliationStatement' }
+        '403': { $ref: '#/components/responses/Forbidden' }
+
+  # ------------------------------------------------------------------- Billing
+  /v1/subscription:
+    get:
+      operationId: getV1Subscription
+      tags: [Billing]
+      summary: The tenant's tier, period, quota and entitlements
+      description: |
+        FR-121, AC-029 — no entitlement is expressed in seats, users, designers or
+        participants. The entitlement schema is validated against that rule in CI.
+      security: [{ bearerAuth: [OWNER, ADMIN] }]
+      responses:
+        '200':
+          description: OK
+          content:
+            application/json:
+              schema: { $ref: '#/components/schemas/Subscription' }
+        '403': { $ref: '#/components/responses/Forbidden' }
+    patch:
+      operationId: patchV1Subscription
+      tags: [Billing]
+      summary: Change tier, or set the overage policy
+      description: |
+        FR-115, FR-122, FR-133, EC-13, AC-020, AC-034. Upgrades apply immediately;
+        downgrades at the next period boundary. A downgrade below current usage is
+        REFUSED with the exact overage as a number and the processes exceeding the
+        new limit listed. Already-billed usage is never repriced. The SANDBOX hard
+        cap cannot be disabled.
+      security: [{ bearerAuth: [OWNER] }]
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              type: object
+              properties:
+                tier: { $ref: '#/components/schemas/SubscriptionTier' }
+                overageEnabled: { type: boolean }
+      responses:
+        '200':
+          description: OK
+          content:
+            application/json:
+              schema: { $ref: '#/components/schemas/Subscription' }
+        '403': { $ref: '#/components/responses/Forbidden' }
+        '409':
+          description: Downgrade refused — current usage exceeds the target cap
+          content:
+            application/problem+json:
+              schema: { $ref: '#/components/schemas/DowngradeRefusedProblem' }
+
+  /v1/subscription/checkout:
+    post:
+      operationId: postV1SubscriptionCheckout
+      tags: [Billing]
+      summary: Begin in-product card payment
+      description: FR-132 — self-serve, no human contact.
+      security: [{ bearerAuth: [OWNER] }]
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              type: object
+              required: [tier]
+              properties:
+                tier: { $ref: '#/components/schemas/SubscriptionTier' }
+      responses:
+        '200':
+          description: Checkout session
+          content:
+            application/json:
+              schema:
+                type: object
+                properties:
+                  checkoutUrl: { type: string, format: uri }
+        '403': { $ref: '#/components/responses/Forbidden' }
+
+  /v1/webhooks/payment-provider:
+    post:
+      operationId: postV1WebhooksPaymentProvider
+      tags: [Billing]
+      summary: Inbound payment-provider callback
+      description: |
+        Signature-verified against the provider's scheme; unsigned or replayed
+        callbacks are rejected. Not authenticated by bearer token, which is why it
+        is listed here explicitly rather than left undocumented (API9).
+      security: []
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema: { type: object, additionalProperties: true }
+      responses:
+        '204': { description: Processed }
+        '400': { $ref: '#/components/responses/BadRequest' }
+
+  # ----------------------------------------------------------------- Analytics
+  /v1/analytics/processes/{definitionId}:
+    parameters: [{ $ref: '#/components/parameters/DefinitionId' }]
+    get:
+      operationId: getV1AnalyticsProcessesByDefinitionId
+      tags: [Analytics]
+      summary: The four process metrics for a period
+      description: |
+        FR-126..FR-130. Exactly four metrics: instances started, instances completed,
+        median cycle time, SLA breach count — grouped by definition version as well
+        as by process (FR-127), because instances on different versions executed
+        different processes. A process with no instances returns an explicit empty
+        state, never zeros presented as measurements (FR-128).
+        FR-130: analytics is NEVER the source of a billed quantity; the usage ledger is.
+      security: [{ bearerAuth: [OWNER, ADMIN, PROCESS_OWNER] }]
+      parameters:
+        - name: from
+          in: query
+          required: true
+          schema: { type: string, format: date }
+        - name: to
+          in: query
+          required: true
+          schema: { type: string, format: date }
+      responses:
+        '200':
+          description: OK
+          content:
+            application/json:
+              schema: { $ref: '#/components/schemas/ProcessAnalytics' }
+        '403': { $ref: '#/components/responses/Forbidden' }
+        '404': { $ref: '#/components/responses/NotFound' }
+
+  # ----------------------------------------------------------------- Templates
+  /v1/templates:
+    get:
+      operationId: getV1Templates
+      tags: [Templates]
+      summary: The template gallery
+      description: |
+        FR-150..FR-154. Fifteen templates, each modellable within E1..E7, each
+        supplied in both `en` and `ar`, each carrying a descriptive regulatory
+        context TAG and a disclaimer. Stored as DATA, versioned independently of
+        application code; no jurisdiction or regulator is encoded structurally.
+      parameters:
+        - name: contextTag
+          in: query
+          schema: { type: string }
+      responses:
+        '200':
+          description: OK
+          content:
+            application/json:
+              schema:
+                type: object
+                properties:
+                  data:
+                    type: array
+                    items: { $ref: '#/components/schemas/Template' }
+
+  /v1/templates/{slug}/install:
+    parameters:
+      - name: slug
+        in: path
+        required: true
+        schema: { type: string }
+    post:
+      operationId: postV1TemplatesBySlugInstall
+      tags: [Templates]
+      summary: Install a template as an editable DRAFT
+      description: |
+        FR-153, US-28. The installed copy is UNLINKED — later gallery changes never
+        affect it.
+      security: [{ bearerAuth: [OWNER, ADMIN, DESIGNER] }]
+      responses:
+        '201':
+          description: Installed
+          content:
+            application/json:
+              schema: { $ref: '#/components/schemas/DefinitionDetail' }
+        '403': { $ref: '#/components/responses/Forbidden' }
+        '404': { $ref: '#/components/responses/NotFound' }
+
+  # ------------------------------------------------------------------ Webhooks
+  /v1/webhook-endpoints:
+    get:
+      operationId: getV1WebhookEndpoints
+      tags: [Webhooks]
+      summary: List outbound webhook endpoints
+      security: [{ bearerAuth: [OWNER, ADMIN] }]
+      responses:
+        '200':
+          description: OK
+          content:
+            application/json:
+              schema:
+                type: object
+                properties:
+                  data:
+                    type: array
+                    items: { $ref: '#/components/schemas/WebhookEndpoint' }
+    post:
+      operationId: postV1WebhookEndpoints
+      tags: [Webhooks]
+      summary: Register an outbound webhook endpoint
+      description: |
+        FR-064, AC-056. Deliveries are HMAC-signed, idempotent and retried by
+        `@connectsw/webhooks`. Endpoints are tenant-scoped: an event for another
+        tenant is not merely undelivered, it is unqueryable. SSRF guard rejects
+        private, loopback and link-local destinations.
+      security: [{ bearerAuth: [OWNER, ADMIN] }]
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema: { $ref: '#/components/schemas/WebhookEndpointInput' }
+      responses:
+        '201':
+          description: Created — the signing secret is returned ONCE and never again
+          content:
+            application/json:
+              schema: { $ref: '#/components/schemas/WebhookEndpointCreated' }
+        '403': { $ref: '#/components/responses/Forbidden' }
+        '422': { $ref: '#/components/responses/ValidationFailed' }
+
+  /v1/webhook-endpoints/{endpointId}:
+    parameters: [{ $ref: '#/components/parameters/EndpointId' }]
+    delete:
+      operationId: deleteV1WebhookEndpointsByEndpointId
+      tags: [Webhooks]
+      summary: Remove a webhook endpoint
+      security: [{ bearerAuth: [OWNER, ADMIN] }]
+      responses:
+        '204': { description: Removed }
+        '404': { $ref: '#/components/responses/NotFound' }
+
+  /v1/webhook-endpoints/{endpointId}/deliveries:
+    parameters: [{ $ref: '#/components/parameters/EndpointId' }]
+    get:
+      operationId: getV1WebhookEndpointsByEndpointIdDeliveries
+      tags: [Webhooks]
+      summary: Delivery log for an endpoint
+      description: AC-056 — this log contains no reference to any other tenant.
+      security: [{ bearerAuth: [OWNER, ADMIN] }]
+      parameters:
+        - $ref: '#/components/parameters/Cursor'
+        - $ref: '#/components/parameters/Limit'
+      responses:
+        '200':
+          description: OK
+          content:
+            application/json:
+              schema: { $ref: '#/components/schemas/DeliveryPage' }
+        '404': { $ref: '#/components/responses/NotFound' }
+
+  # ------------------------------------------------------------- Notifications
+  /v1/notifications:
+    get:
+      operationId: getV1Notifications
+      tags: [Notifications]
+      summary: In-app notifications for the caller
+      description: FR-142, AC-061 — composed in the RECIPIENT's locale.
+      parameters:
+        - $ref: '#/components/parameters/Cursor'
+        - $ref: '#/components/parameters/Limit'
+        - name: unreadOnly
+          in: query
+          schema: { type: boolean }
+      responses:
+        '200':
+          description: OK
+          content:
+            application/json:
+              schema: { $ref: '#/components/schemas/NotificationPage' }
+
+  /v1/notifications/{notificationId}/read:
+    parameters:
+      - name: notificationId
+        in: path
+        required: true
+        schema: { type: string, format: uuid }
+    post:
+      operationId: postV1NotificationsByNotificationIdRead
+      tags: [Notifications]
+      summary: Mark a notification read
+      responses:
+        '204': { description: Marked }
+        '404': { $ref: '#/components/responses/NotFound' }
+
+  # ------------------------------------------------------------------- Privacy
+  /v1/privacy/tenant-export:
+    post:
+      operationId: postV1PrivacyTenantExport
+      tags: [Privacy]
+      summary: Export all data held for this workspace
+      description: |
+        Data-portability. Produces a machine-readable archive of definitions,
+        instances, variables, tasks, evidence, usage and members. Recorded in the
+        audit log and in the evidence trail.
+      security: [{ bearerAuth: [OWNER] }]
+      responses:
+        '202':
+          description: Accepted
+          content:
+            application/json:
+              schema: { $ref: '#/components/schemas/EvidenceExport' }
+        '403': { $ref: '#/components/responses/Forbidden' }
+
+  /v1/privacy/erasure:
+    post:
+      operationId: postV1PrivacyErasure
+      tags: [Privacy]
+      summary: Erase personal data from an instance or for a data subject
+      description: |
+        FR-097, CLR-G, AC-046. Personal-data payloads are IRREVERSIBLY removed;
+        evidence entries remain as tombstones naming what was removed, by whom and
+        under which policy; and **the hash chain still verifies end to end**, because
+        the chain commits to `payloadHash` rather than to the payload (ADR-008 §2).
+        The usage ledger is untouched — the meter is not deletable by a privacy
+        request any more than by a retention policy (FR-111).
+      security: [{ bearerAuth: [OWNER, ADMIN] }]
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema: { $ref: '#/components/schemas/ErasureRequest' }
+      responses:
+        '202':
+          description: Accepted
+          content:
+            application/json:
+              schema: { $ref: '#/components/schemas/ErasureResult' }
+        '403': { $ref: '#/components/responses/Forbidden' }
+        '404': { $ref: '#/components/responses/NotFound' }
+
+  /v1/privacy/retention:
+    get:
+      operationId: getV1PrivacyRetention
+      tags: [Privacy]
+      summary: Read the retention policy
+      security: [{ bearerAuth: [OWNER, ADMIN] }]
+      responses:
+        '200':
+          description: OK
+          content:
+            application/json:
+              schema: { $ref: '#/components/schemas/RetentionPolicy' }
+    put:
+      operationId: putV1PrivacyRetention
+      tags: [Privacy]
+      summary: Set the retention policy
+      description: |
+        FR-096. Tier-bounded and enforced by a scheduled deletion job — NOT by
+        hiding records in the UI. Usage events survive retention (FR-111, AC-024).
+      security: [{ bearerAuth: [OWNER, ADMIN] }]
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema: { $ref: '#/components/schemas/RetentionPolicyInput' }
+      responses:
+        '200':
+          description: OK
+          content:
+            application/json:
+              schema: { $ref: '#/components/schemas/RetentionPolicy' }
+        '403': { $ref: '#/components/responses/Forbidden' }
+        '422': { $ref: '#/components/responses/ValidationFailed' }
+
+  # -------------------------------------------------------------------- System
+  /health:
+    get:
+      operationId: getHealth
+      tags: [System]
+      summary: Liveness — the process is up
+      description: Always 200 while the process can answer. Never touches a dependency.
+      security: []
+      responses:
+        '200':
+          description: Alive
+          content:
+            application/json:
+              schema: { $ref: '#/components/schemas/Health' }
+
+  /ready:
+    get:
+      operationId: getReady
+      tags: [System]
+      summary: Readiness — dependencies are healthy
+      description: |
+        Returns **503**, not 200, when PostgreSQL or Redis is unhealthy. A readiness
+        probe that returns 200 while the database is down is worse than no probe.
+      security: []
+      responses:
+        '200':
+          description: Ready
+          content:
+            application/json:
+              schema: { $ref: '#/components/schemas/Health' }
+        '503':
+          description: A dependency is unhealthy — do not route traffic here
+          content:
+            application/json:
+              schema: { $ref: '#/components/schemas/Health' }
+
+  /metrics:
+    get:
+      operationId: getMetrics
+      tags: [System]
+      summary: Prometheus metrics
+      description: |
+        NFR-017. Engine transition latency (p50/p95/p99), timer lag, job queue depth,
+        meter writes, reconciliation divergences. Not publicly exposed; served on the
+        internal listener only.
+      security: []
+      responses:
+        '200':
+          description: Prometheus exposition format
+          content:
+            text/plain: { schema: { type: string } }
+
+# =============================================================================
+components:
+
+  securitySchemes:
+    bearerAuth:
+      type: http
+      scheme: bearer
+      bearerFormat: JWT
+      description: |
+        Short-lived access token (15 min) carrying `sub` (user), `tid` (tenant) and
+        `roles`. **The tenant is taken from the token and never from a parameter**,
+        so a caller cannot address another tenant at all.
+
+        API5 (BFLA): the `security` list on an operation names the roles it requires.
+        An operation with no explicit role list is available to every ACTIVE member,
+        including PARTICIPANT. Every route in site-map surfaces B, C and E returns
+        403 to a PARTICIPANT and is absent from their navigation (FR-084, AC-087).
+
+  parameters:
+    Cursor:
+      name: cursor
+      in: query
+      description: Opaque cursor from a previous page's `nextCursor`.
+      schema: { type: string }
+    Limit:
+      name: limit
+      in: query
+      description: API4 — default 20, maximum 100. A larger value is clamped, never honoured.
+      schema: { type: integer, minimum: 1, maximum: 100, default: 20 }
+    IdempotencyKey:
+      name: Idempotency-Key
+      in: header
+      required: true
+      description: Client-supplied. A repeated request returns the first result and performs no second effect.
+      schema: { type: string, minLength: 8, maxLength: 128 }
+    TenantId:    { name: tenantId,     in: path, required: true, schema: { type: string, format: uuid } }
+    MemberId:    { name: memberId,     in: path, required: true, schema: { type: string, format: uuid } }
+    SessionId:   { name: sessionId,    in: path, required: true, schema: { type: string, format: uuid } }
+    CalendarId:  { name: calendarId,   in: path, required: true, schema: { type: string, format: uuid } }
+    DefinitionId: { name: definitionId, in: path, required: true, schema: { type: string, format: uuid } }
+    VersionId:   { name: versionId,    in: path, required: true, schema: { type: string, format: uuid } }
+    InstanceId:  { name: instanceId,   in: path, required: true, schema: { type: string, format: uuid } }
+    BatchId:     { name: batchId,      in: path, required: true, schema: { type: string, format: uuid } }
+    ScheduleId:  { name: scheduleId,   in: path, required: true, schema: { type: string, format: uuid } }
+    TaskId:      { name: taskId,       in: path, required: true, schema: { type: string, format: uuid } }
+    ExportId:    { name: exportId,     in: path, required: true, schema: { type: string, format: uuid } }
+    EndpointId:  { name: endpointId,   in: path, required: true, schema: { type: string, format: uuid } }
+    AttachmentId: { name: attachmentId, in: path, required: true, schema: { type: string, format: uuid } }
+
+  responses:
+    BadRequest:
+      description: Malformed request
+      content:
+        application/problem+json:
+          schema: { $ref: '#/components/schemas/Problem' }
+    Unauthorized:
+      description: Missing, expired or invalid credentials
+      content:
+        application/problem+json:
+          schema: { $ref: '#/components/schemas/Problem' }
+    Forbidden:
+      description: |
+        The caller's ROLE does not permit this action on their OWN tenant's
+        resource (FR-084, AC-087). Never used for a cross-tenant reference — that
+        is 404 (FR-003, AC-052).
+      content:
+        application/problem+json:
+          schema: { $ref: '#/components/schemas/Problem' }
+    NotFound:
+      description: |
+        The resource does not exist, **or belongs to another tenant**. The two cases
+        are byte-identical (FR-003, AC-052). Existence is never disclosed across a
+        tenant boundary.
+      content:
+        application/problem+json:
+          schema: { $ref: '#/components/schemas/Problem' }
+    Conflict:
+      description: State conflict — optimistic concurrency, immutability, or a blocking relationship
+      content:
+        application/problem+json:
+          schema: { $ref: '#/components/schemas/ConflictProblem' }
+    ValidationFailed:
+      description: |
+        Semantic validation failed. Every issue NAMES the offending element or field
+        and the rule violated (FR-017).
+      content:
+        application/problem+json:
+          schema: { $ref: '#/components/schemas/ValidationProblem' }
+    QuotaExhausted:
+      description: |
+        MET-4 / FR-113 / FR-114 / AC-006. The start was refused BEFORE any instance
+        row existed. The body names the limit, current usage, reset date and upgrade
+        action.
+      content:
+        application/problem+json:
+          schema: { $ref: '#/components/schemas/QuotaProblem' }
+    PayloadTooLarge:
+      description: API4 — body or upload exceeds the configured limit
+      content:
+        application/problem+json:
+          schema: { $ref: '#/components/schemas/Problem' }
+    TooManyRequests:
+      description: API2/API4 rate limit exceeded
+      headers:
+        Retry-After:
+          schema: { type: integer }
+      content:
+        application/problem+json:
+          schema: { $ref: '#/components/schemas/Problem' }
+
+  schemas:
+
+    # ---- Errors (RFC 7807)
+    Problem:
+      type: object
+      required: [type, title, status]
+      properties:
+        type:    { type: string, format: uri, example: 'https://api.connectbpm.com/errors/not-found' }
+        title:   { type: string }
+        status:  { type: integer }
+        detail:  { type: string }
+        instance: { type: string }
+        requestId: { type: string, description: Mirrors the X-Request-ID response header }
+
+    ValidationProblem:
+      allOf:
+        - $ref: '#/components/schemas/Problem'
+        - type: object
+          properties:
+            issues:
+              type: array
+              items:
+                type: object
+                required: [rule, message]
+                properties:
+                  elementId: { type: string, description: 'The E1..E7 element at fault, when applicable' }
+                  field:     { type: string }
+                  rule:      { type: string }
+                  message:   { type: string }
+
+    ConflictProblem:
+      allOf:
+        - $ref: '#/components/schemas/Problem'
+        - type: object
+          properties:
+            expectedRevision: { type: integer }
+            actualRevision:   { type: integer }
+            changedBy:        { type: string }
+            changedAt:        { type: string, format: date-time }
+            changeSummary:    { type: string }
+
+    QuotaProblem:
+      allOf:
+        - $ref: '#/components/schemas/Problem'
+        - type: object
+          required: [limit, used, openReservations, resetAt]
+          properties:
+            limit:            { type: integer }
+            used:             { type: integer }
+            openReservations: { type: integer }
+            shortfall:        { type: integer, description: For a bulk start — how many more the batch needed }
+            resetAt:          { type: string, format: date-time }
+            upgradeUrl:       { type: string, format: uri }
+
+    DowngradeRefusedProblem:
+      allOf:
+        - $ref: '#/components/schemas/Problem'
+        - type: object
+          properties:
+            currentUsage:  { type: integer }
+            targetCap:     { type: integer }
+            overage:       { type: integer }
+            exceedingProcesses:
+              type: array
+              items:
+                type: object
+                properties:
+                  definitionId: { type: string, format: uuid }
+                  name:         { type: string }
+
+    AlreadyClaimedProblem:
+      allOf:
+        - $ref: '#/components/schemas/Problem'
+        - type: object
+          properties:
+            claimedByName: { type: string }
+            claimedAt:     { type: string, format: date-time }
+
+    OpenTasksProblem:
+      allOf:
+        - $ref: '#/components/schemas/Problem'
+        - type: object
+          properties:
+            openTasks:
+              type: array
+              items: { $ref: '#/components/schemas/TaskSummary' }
+
+    # ---- Pagination
+    PageMeta:
+      type: object
+      properties:
+        nextCursor: { type: string, nullable: true }
+        hasMore:    { type: boolean }
+
+    # ---- Auth
+    SignupRequest:
+      type: object
+      required: [email, password, name, workspaceName]
+      properties:
+        email:         { type: string, format: email }
+        password:      { type: string, minLength: 12 }
+        name:          { type: string }
+        workspaceName: { type: string }
+        locale:        { type: string, enum: [en, ar], default: en }
+        timezone:      { type: string, default: UTC }
+
+    LoginRequest:
+      type: object
+      required: [email, password]
+      properties:
+        email:    { type: string, format: email }
+        password: { type: string }
+
+    AuthTokens:
+      type: object
+      properties:
+        accessToken:  { type: string }
+        refreshToken: { type: string }
+        expiresIn:    { type: integer, example: 900 }
+        tenant:       { $ref: '#/components/schemas/Tenant' }
+
+    Session:
+      type: object
+      properties:
+        id:         { type: string, format: uuid }
+        createdAt:  { type: string, format: date-time }
+        lastUsedAt: { type: string, format: date-time, nullable: true }
+        userAgent:  { type: string, nullable: true }
+        current:    { type: boolean }
+
+    Me:
+      type: object
+      properties:
+        userId: { type: string, format: uuid }
+        email:  { type: string, format: email }
+        name:   { type: string }
+        locale: { type: string, enum: [en, ar] }
+        activeTenantId: { type: string, format: uuid }
+        memberships:
+          type: array
+          items:
+            type: object
+            properties:
+              tenantId:   { type: string, format: uuid }
+              tenantName: { type: string }
+              tenantSlug: { type: string }
+              roles:
+                type: array
+                items: { $ref: '#/components/schemas/WorkspaceRole' }
+
+    WorkspaceRole:
+      type: string
+      enum: [OWNER, ADMIN, DESIGNER, PUBLISHER, PROCESS_OWNER, PARTICIPANT]
+
+    # ---- Tenancy
+    Tenant:
+      type: object
+      properties:
+        id:            { type: string, format: uuid }
+        name:          { type: string }
+        slug:          { type: string }
+        defaultLocale: { type: string, enum: [en, ar] }
+        timezone:      { type: string }
+        residency:     { type: string, description: 'NFR-019 — the deployment topology lever' }
+        status:        { type: string, enum: [ACTIVE, SUSPENDED, CLOSED] }
+
+    TenantUpdate:
+      type: object
+      properties:
+        name:              { type: string }
+        defaultLocale:     { type: string, enum: [en, ar] }
+        timezone:          { type: string }
+        defaultCalendarId: { type: string, format: uuid }
+
+    Member:
+      type: object
+      properties:
+        id:     { type: string, format: uuid }
+        userId: { type: string, format: uuid, nullable: true }
+        email:  { type: string, format: email }
+        name:   { type: string, nullable: true }
+        roles:
+          type: array
+          items: { $ref: '#/components/schemas/WorkspaceRole' }
+        status: { type: string, enum: [INVITED, ACTIVE, DEACTIVATED] }
+        openTaskCount: { type: integer }
+
+    MemberPage:
+      type: object
+      properties:
+        data: { type: array, items: { $ref: '#/components/schemas/Member' } }
+        meta: { $ref: '#/components/schemas/PageMeta' }
+
+    AuditLogPage:
+      type: object
+      properties:
+        data:
+          type: array
+          items:
+            type: object
+            properties:
+              id:           { type: string, format: uuid }
+              actor:        { type: string }
+              actorKind:    { type: string, enum: [MEMBER, SYSTEM, SCHEDULE, SUPPORT] }
+              action:       { type: string }
+              resourceType: { type: string }
+              resourceId:   { type: string }
+              reason:       { type: string, nullable: true, description: 'Mandatory for SUPPORT access (FR-009)' }
+              timestamp:    { type: string, format: date-time }
+        meta: { $ref: '#/components/schemas/PageMeta' }
+
+    WorkingCalendar:
+      type: object
+      properties:
+        id:        { type: string, format: uuid }
+        name:      { type: string }
+        isDefault: { type: boolean }
+        weekendDays:
+          type: array
+          description: 'ISO day numbers 1=Mon..7=Sun. Configuration — no default region is assumed anywhere.'
+          items: { type: integer, minimum: 1, maximum: 7 }
+        workingHours:
+          type: object
+          properties:
+            start: { type: string, example: '08:00' }
+            end:   { type: string, example: '17:00' }
+        holidays:
+          type: array
+          items:
+            type: object
+            properties:
+              date: { type: string, format: date }
+              name: { type: string }
+
+    WorkingCalendarInput:
+      allOf: [{ $ref: '#/components/schemas/WorkingCalendar' }]
+
+    # ---- Definitions
+    Definition:
+      type: object
+      properties:
+        id:          { type: string, format: uuid }
+        key:         { type: string }
+        name:        { type: string }
+        description: { type: string, nullable: true }
+        status:      { type: string, enum: [ACTIVE, ARCHIVED] }
+        publishedVersion: { type: integer, nullable: true }
+        draftVersion:     { type: integer, nullable: true }
+
+    DefinitionDetail:
+      allOf:
+        - $ref: '#/components/schemas/Definition'
+        - type: object
+          properties:
+            versions:
+              type: array
+              items: { $ref: '#/components/schemas/DefinitionVersion' }
+            versionsWithLiveInstances:
+              type: integer
+              description: FR-129 — version accumulation, made visible
+
+    DefinitionPage:
+      type: object
+      properties:
+        data: { type: array, items: { $ref: '#/components/schemas/Definition' } }
+        meta: { $ref: '#/components/schemas/PageMeta' }
+
+    DefinitionVersion:
+      type: object
+      properties:
+        id:          { type: string, format: uuid }
+        version:     { type: integer }
+        status:      { type: string, enum: [DRAFT, PUBLISHED] }
+        checksum:    { type: string }
+        revision:    { type: integer }
+        publishedAt: { type: string, format: date-time, nullable: true }
+        publishedBy: { type: string, nullable: true }
+
+    DefinitionVersionDetail:
+      allOf:
+        - $ref: '#/components/schemas/DefinitionVersion'
+        - type: object
+          properties:
+            graph:       { $ref: '#/components/schemas/ProcessGraph' }
+            instanceSla: { $ref: '#/components/schemas/InstanceSla' }
+            formSchemas:
+              type: array
+              items: { $ref: '#/components/schemas/FormSchema' }
+
+    ProcessGraph:
+      type: object
+      description: |
+        ADR-001 — the ratified element set. `elements[].type` is closed to E1..E7:
+        START, STEP, DECISION, SPLIT, JOIN, TIMER_BOUNDARY, FINISH, SCHEDULE.
+        No other value is accepted through any interface, including this one (FR-011).
+      required: [elements, flows]
+      properties:
+        elements:
+          type: array
+          items:
+            type: object
+            required: [id, type]
+            properties:
+              id:   { type: string }
+              type:
+                type: string
+                enum: [START, STEP, DECISION, SPLIT, JOIN, TIMER_BOUNDARY, FINISH, SCHEDULE]
+              name: { type: string }
+              position:
+                type: object
+                description: Canonical, direction-independent. RTL is a canvas projection, never stored (ADR-006).
+                properties: { x: { type: number }, y: { type: number } }
+              config:
+                type: object
+                description: |
+                  Per-type. STEP - assignmentRule, formElementId, outcomeActions[].
+                  DECISION - defaultFlowId (MANDATORY, FR-020).
+                  TIMER_BOUNDARY - attachedToElementId, duration|absolute, interrupting,
+                  reminderOffsets[], escalationTo.
+                  FINISH - outcomeLabel. SCHEDULE - see the schedule endpoints.
+                additionalProperties: true
+        flows:
+          type: array
+          items:
+            type: object
+            required: [id, from, to]
+            properties:
+              id:        { type: string }
+              from:      { type: string }
+              to:        { type: string }
+              condition: { type: string, nullable: true, description: 'Restricted grammar source text; the pinned AST is compiled at publish (ADR-002)' }
+              isDefault: { type: boolean, default: false }
+
+    InstanceSla:
+      type: object
+      nullable: true
+      description: FR-025 — a definition ATTRIBUTE, deliberately not an element.
+      properties:
+        duration:         { type: string, example: P30D }
+        absolute:         { type: string, format: date-time }
+        expiryPathFlowId: { type: string }
+
+    DraftSave:
+      type: object
+      required: [revision, graph]
+      properties:
+        revision:    { type: integer, description: Optimistic concurrency baseline (FR-028) }
+        graph:       { $ref: '#/components/schemas/ProcessGraph' }
+        instanceSla: { $ref: '#/components/schemas/InstanceSla' }
+
+    ValidationResult:
+      type: object
+      properties:
+        valid:  { type: boolean }
+        issues:
+          type: array
+          items:
+            type: object
+            properties:
+              elementId: { type: string }
+              rule:      { type: string, example: DECISION_MISSING_DEFAULT_PATH }
+              severity:  { type: string, enum: [ERROR, WARNING] }
+              message:   { type: string }
+
+    FormSchema:
+      type: object
+      properties:
+        id:        { type: string, format: uuid }
+        elementId: { type: string }
+        fields:
+          type: array
+          items:
+            type: object
+            required: [key, type]
+            properties:
+              key:
+                type: string
+                description: |
+                  FR-032, FR-149 — the STABLE MACHINE KEY. Locale-independent, stable
+                  across form versions, and the join between exports in different locales.
+              type:
+                type: string
+                enum: [SHORT_TEXT, LONG_TEXT, NUMBER, CURRENCY, DATE, DATETIME, SINGLE_SELECT, MULTI_SELECT, CHECKBOX, FILE, DISPLAY]
+              label:
+                type: object
+                properties: { en: { type: string }, ar: { type: string } }
+              required:   { type: boolean }
+              validation: { type: object, additionalProperties: true }
+              help:       { type: string }
+
+    FormSchemaInput:
+      allOf: [{ $ref: '#/components/schemas/FormSchema' }]
+
+    # ---- Instances
+    InstanceStatus:
+      type: string
+      enum: [RUNNING, SUSPENDED, COMPLETED, CANCELLED, EXPIRED, FAULT_TERMINATED]
+
+    TerminalReason:
+      type: string
+      enum: [COMPLETED, EXPIRED, CANCELLED, FAULT_TERMINATED]
+
+    StartInstanceRequest:
+      type: object
+      required: [definitionId]
+      properties:
+        definitionId: { type: string, format: uuid }
+        businessKey:  { type: string, maxLength: 128 }
+        startFormData:
+          type: object
+          additionalProperties: true
+
+    Instance:
+      type: object
+      properties:
+        id:           { type: string, format: uuid }
+        definitionId: { type: string, format: uuid }
+        definitionVersionId: { type: string, format: uuid }
+        definitionVersion:
+          type: integer
+          description: FR-019 — the version EXECUTING, never the currently published one
+        businessKey:  { type: string, nullable: true }
+        status:       { $ref: '#/components/schemas/InstanceStatus' }
+        terminalReason: { $ref: '#/components/schemas/TerminalReason' }
+        completedStepCount: { type: integer }
+        isTest:       { type: boolean }
+        startedAt:    { type: string, format: date-time }
+        dueAt:        { type: string, format: date-time, nullable: true }
+        endedAt:      { type: string, format: date-time, nullable: true }
+
+    InstanceDetail:
+      allOf:
+        - $ref: '#/components/schemas/Instance'
+        - type: object
+          properties:
+            currentElements:
+              type: array
+              items:
+                type: object
+                properties:
+                  elementId:   { type: string }
+                  elementName: { type: string }
+                  tokenId:     { type: string, format: uuid }
+            openTasks: { type: array, items: { $ref: '#/components/schemas/TaskSummary' } }
+            variables: { type: object, additionalProperties: true }
+
+    InstancePage:
+      type: object
+      properties:
+        data: { type: array, items: { $ref: '#/components/schemas/Instance' } }
+        meta: { $ref: '#/components/schemas/PageMeta' }
+
+    CancelResult:
+      type: object
+      properties:
+        instance: { $ref: '#/components/schemas/Instance' }
+        billable:
+          type: boolean
+          description: DEC-004 — true iff at least one Step had completed
+        completedStepCountAtEvent:
+          type: integer
+          description: The recorded justification for the billable determination
+
+    TransitionResult:
+      type: object
+      properties:
+        instance: { $ref: '#/components/schemas/Instance' }
+        task:     { $ref: '#/components/schemas/TaskDetail' }
+        billableCompletion:
+          type: boolean
+          description: True when this transition produced a billable usage event
+        evidenceSeq:
+          type: integer
+          format: int64
+          description: The evidence entry written in the SAME transaction as this transition
+
+    Attachment:
+      type: object
+      properties:
+        id:          { type: string, format: uuid }
+        filename:    { type: string }
+        contentType: { type: string }
+        sizeBytes:   { type: integer }
+        scanStatus:  { type: string, enum: [PENDING, CLEAN, INFECTED] }
+
+    # ---- Batches and schedules
+    BatchPreflightRequest:
+      type: object
+      required: [definitionId, rowCount]
+      properties:
+        definitionId: { type: string, format: uuid }
+        rowCount:     { type: integer, minimum: 1, maximum: 5000 }
+
+    BatchPreflight:
+      type: object
+      properties:
+        billableInstances:
+          type: integer
+          description: |
+            FR-108, AC-018 — stated as a number BEFORE the operation runs. A
+            400-person attestation campaign is presented as 400 billable instances.
+        quotaBefore: { type: integer }
+        quotaAfter:  { type: integer }
+        hardCap:     { type: integer }
+        wouldBeRefused: { type: boolean }
+        shortfall:   { type: integer, nullable: true }
+        preflightToken:
+          type: string
+          description: Required by POST /v1/batches — the confirmation screen cannot be bypassed
+
+    BatchCreateRequest:
+      type: object
+      required: [definitionId, rows, preflightToken]
+      properties:
+        definitionId:   { type: string, format: uuid }
+        preflightToken: { type: string }
+        rows:
+          type: array
+          maxItems: 5000
+          items:
+            type: object
+            properties:
+              businessKey:   { type: string }
+              startFormData: { type: object, additionalProperties: true }
+
+    Batch:
+      type: object
+      properties:
+        id:             { type: string, format: uuid }
+        kind:           { type: string, enum: [BULK, SCHEDULE] }
+        requestedCount: { type: integer }
+        createdCount:   { type: integer }
+        status:         { type: string, enum: [PENDING, ADMITTED, REFUSED, COMPLETED] }
+        refusalReason:  { type: string, nullable: true }
+        createdAt:      { type: string, format: date-time }
+
+    ScheduleInput:
+      type: object
+      required: [recurrence, timezone]
+      properties:
+        recurrence:
+          type: object
+          description: |
+            STRUCTURED, never a customer-authored expression (ADR-001). Resolved
+            against the tenant's working calendar.
+          required: [cron]
+          properties:
+            cron: { type: string, example: '0 9 1 * *' }
+            businessDayPolicy:
+              type: string
+              enum: [EXACT, NEXT_WORKING_DAY, PREVIOUS_WORKING_DAY]
+              default: EXACT
+        timezone: { type: string }
+        status:   { type: string, enum: [ACTIVE, PAUSED], default: ACTIVE }
+
+    Schedule:
+      allOf:
+        - $ref: '#/components/schemas/ScheduleInput'
+        - type: object
+          properties:
+            id:               { type: string, format: uuid }
+            lastOccurrenceAt: { type: string, format: date-time, nullable: true }
+            nextOccurrenceAt: { type: string, format: date-time, nullable: true }
+
+    OccurrencePage:
+      type: object
+      properties:
+        data:
+          type: array
+          items:
+            type: object
+            properties:
+              id:            { type: string, format: uuid }
+              occurrenceAt:  { type: string, format: date-time }
+              status:        { type: string, enum: [CLAIMED, ADMITTED, REFUSED] }
+              instanceId:    { type: string, format: uuid, nullable: true }
+              batchId:       { type: string, format: uuid, nullable: true }
+              refusalReason: { type: string, nullable: true }
+        meta: { $ref: '#/components/schemas/PageMeta' }
+
+    # ---- Tasks
+    TaskSummary:
+      type: object
+      properties:
+        id:           { type: string, format: uuid }
+        instanceId:   { type: string, format: uuid }
+        processName:  { type: string }
+        stepName:     { type: string }
+        status:       { type: string, enum: [OPEN, CLAIMED, COMPLETED, WITHDRAWN, REASSIGNED] }
+        dueAt:        { type: string, format: date-time, nullable: true }
+        assigneeName: { type: string, nullable: true }
+        overdue:      { type: boolean }
+
+    TaskDetail:
+      allOf:
+        - $ref: '#/components/schemas/TaskSummary'
+        - type: object
+          properties:
+            instructions: { type: string, nullable: true }
+            requestSummary:
+              type: object
+              additionalProperties: true
+            form:
+              allOf: [{ $ref: '#/components/schemas/FormSchema' }]
+              description: The VERSION-PINNED form schema, resolved from the instance's version (FR-034)
+            formData: { type: object, additionalProperties: true }
+            fieldPermissions:
+              type: object
+              description: FR-039 — per-Step readonly/editable/hidden
+              additionalProperties: { type: string, enum: [EDITABLE, READ_ONLY, HIDDEN] }
+            outcomeActions:
+              type: array
+              items:
+                type: object
+                properties:
+                  key:             { type: string }
+                  label:           { type: string }
+                  requiresComment: { type: boolean }
+            readOnly:
+              type: boolean
+              description: AC-083 — true when already completed; no second submission is possible
+            completedBy:  { type: string, nullable: true }
+            completedAt:  { type: string, format: date-time, nullable: true }
+            outcome:      { type: string, nullable: true }
+
+    TaskPage:
+      type: object
+      properties:
+        data: { type: array, items: { $ref: '#/components/schemas/TaskSummary' } }
+        meta: { $ref: '#/components/schemas/PageMeta' }
+
+    CompleteTaskRequest:
+      type: object
+      required: [outcome]
+      properties:
+        outcome:  { type: string }
+        formData: { type: object, additionalProperties: true }
+        comment:  { type: string, maxLength: 4000 }
+        clientRenderToSubmitMs:
+          type: integer
+          description: FR-083 / KPI-P9 — client-measured, instrumentation only
+
+    StartableProcess:
+      type: object
+      properties:
+        definitionId: { type: string, format: uuid }
+        name:         { type: string }
+        description:  { type: string, nullable: true }
+        hasStartForm: { type: boolean }
+
+    # ---- Evidence
+    EvidenceEntry:
+      type: object
+      properties:
+        seq:       { type: integer, format: int64, description: 'Gap-free, strictly monotonic per instance (AC-038)' }
+        eventType: { type: string }
+        actorKind: { type: string, enum: [MEMBER, SYSTEM, SCHEDULE, SUPPORT, EXTERNAL_PARTY] }
+        actorId:   { type: string, format: uuid, nullable: true }
+        actorName: { type: string, nullable: true }
+        actorRole: { type: string, description: 'The role AT THE TIME of the action (FR-088)' }
+        actorLocale: { type: string }
+        occurredAtUtc:   { type: string, format: date-time }
+        occurredAtLocal: { type: string }
+        definitionVersionId: { type: string, format: uuid }
+        payload:     { type: object, nullable: true, additionalProperties: true }
+        payloadHash: { type: string, description: 'SHA-256(JCS(payload)). SURVIVES ERASURE — the chain commits to this (ADR-008).' }
+        prevHash:    { type: string }
+        entryHash:   { type: string }
+        isTest:      { type: boolean }
+        erased:      { type: boolean }
+        erasureNote:
+          type: object
+          nullable: true
+          properties:
+            erasedAt:      { type: string, format: date-time }
+            erasedBy:      { type: string }
+            policy:        { type: string }
+            fieldsRemoved: { type: array, items: { type: string }, description: Machine keys only — never values }
+
+    EvidencePage:
+      type: object
+      properties:
+        data: { type: array, items: { $ref: '#/components/schemas/EvidenceEntry' } }
+        meta: { $ref: '#/components/schemas/PageMeta' }
+        chain:
+          type: object
+          properties:
+            algorithm:        { type: string, example: 'SHA-256' }
+            canonicalisation: { type: string, example: 'RFC 8785 (JCS)' }
+            genesis:          { type: string }
+            entryPreimage:    { type: string }
+
+    VerificationResult:
+      type: object
+      properties:
+        verified:       { type: boolean }
+        entriesChecked: { type: integer }
+        firstDivergentSeq:
+          type: integer
+          format: int64
+          nullable: true
+          description: AC-040 — names the FIRST divergent entry
+
+    ExportRequest:
+      type: object
+      required: [format]
+      properties:
+        format:       { type: string, enum: [JSON, CSV] }
+        instanceId:   { type: string, format: uuid, nullable: true }
+        definitionId: { type: string, format: uuid, nullable: true }
+        from:         { type: string, format: date, nullable: true }
+        to:           { type: string, format: date, nullable: true }
+        locale:       { type: string, enum: [en, ar], default: en }
+
+    EvidenceExport:
+      type: object
+      properties:
+        id:      { type: string, format: uuid }
+        status:  { type: string, enum: [PENDING, READY, FAILED, EXPIRED] }
+        format:  { type: string, enum: [JSON, CSV] }
+        filters: { type: object, additionalProperties: true }
+        versionsCovered:
+          type: array
+          description: FR-093, AC-042 — every definition version the export spans
+          items:
+            type: object
+            properties:
+              definitionId: { type: string, format: uuid }
+              version:      { type: integer }
+              checksum:     { type: string }
+        retentionGapsNoted:
+          type: array
+          description: FR-095, AC-045 — a silently short export is a defect
+          items:
+            type: object
+            properties:
+              from:      { type: string, format: date }
+              to:        { type: string, format: date }
+              policy:    { type: string }
+              deletedAt: { type: string, format: date-time }
+        artifactHash: { type: string, nullable: true }
+        downloadUrl:  { type: string, format: uri, nullable: true }
+        generatedAt:  { type: string, format: date-time, nullable: true }
+
+    ExportPage:
+      type: object
+      properties:
+        data: { type: array, items: { $ref: '#/components/schemas/EvidenceExport' } }
+        meta: { $ref: '#/components/schemas/PageMeta' }
+
+    # ---- Usage and billing
+    UsageSummary:
+      type: object
+      properties:
+        billingPeriod:       { type: string, example: '2026-08' }
+        billableCompletions: { type: integer }
+        openReservations:    { type: integer }
+        hardCap:             { type: integer }
+        overageIncurred:     { type: integer }
+        refusedStarts:       { type: integer }
+        perProcess:
+          type: array
+          items:
+            type: object
+            properties:
+              definitionId:        { type: string, format: uuid }
+              name:                { type: string }
+              billableCompletions: { type: integer }
+        reportedNotBilled:
+          type: object
+          description: |
+            FR-118, AC-028 — counted and reported, NEVER billed, capped or gated.
+            Two tenants with identical completions and 3 vs 300 members receive
+            identical invoices.
+          properties:
+            distinctAuthoringUsers:  { type: integer }
+            distinctTaskCompleters:  { type: integer }
+            tasksCompleted:          { type: integer }
+            timersFired:             { type: integer }
+            webhooksInvoked:         { type: integer }
+            storageBytes:            { type: integer, format: int64 }
+            expressionEvalSteps:     { type: integer, format: int64 }
+
+    UsageEventPage:
+      type: object
+      properties:
+        data:
+          type: array
+          items:
+            type: object
+            properties:
+              id:            { type: string, format: uuid }
+              meter:         { type: string }
+              quantity:      { type: integer }
+              billable:      { type: boolean }
+              instanceId:    { type: string, format: uuid, nullable: true }
+              terminalReason: { $ref: '#/components/schemas/TerminalReason' }
+              completedStepCountAtEvent:
+                type: integer
+                nullable: true
+                description: DEC-004 — the recorded justification for the billable determination
+              billingPeriod: { type: string }
+              occurredAtUtc: { type: string, format: date-time }
+              compensatesId: { type: string, format: uuid, nullable: true }
+        meta: { $ref: '#/components/schemas/PageMeta' }
+
+    ReconciliationStatement:
+      type: object
+      properties:
+        runAt:         { type: string, format: date-time }
+        billingPeriod: { type: string }
+        instanceTerminalCount: { type: integer }
+        evidenceTerminalCount: { type: integer }
+        usageEventCount:       { type: integer }
+        agrees:
+          type: boolean
+          description: NFR-007 — must be exact, not within a tolerance
+        divergences:
+          type: array
+          items:
+            type: object
+            properties:
+              instanceId: { type: string, format: uuid }
+              detail:     { type: string }
+
+    SubscriptionTier:
+      type: string
+      enum: [SANDBOX, STARTER, GROWTH, BUSINESS, SOVEREIGN]
+
+    Subscription:
+      type: object
+      properties:
+        tier:        { $ref: '#/components/schemas/SubscriptionTier' }
+        status:      { type: string, enum: [ACTIVE, PAST_DUE, CANCELLED] }
+        periodStart: { type: string, format: date-time }
+        periodEnd:   { type: string, format: date-time }
+        hardCap:     { type: integer, description: 'Billable instances per period. FR-115 — non-removable on SANDBOX.' }
+        overageEnabled: { type: boolean }
+        entitlements:
+          type: object
+          description: |
+            FR-121, AC-029 — NO entitlement may be expressed in seats, users,
+            designers or participants. CI validates this schema against that rule.
+          properties:
+            publishedProcessLimit: { type: integer }
+            evidenceRetentionDays: { type: integer }
+            exportApi:  { type: boolean }
+            webhooks:   { type: boolean }
+            analytics:  { type: boolean }
+
+    RetentionPolicy:
+      type: object
+      properties:
+        evidenceRetentionDays:   { type: integer }
+        attachmentRetentionDays: { type: integer }
+        maxAllowedByTier:        { type: integer }
+        lastRunAt: { type: string, format: date-time, nullable: true }
+
+    RetentionPolicyInput:
+      type: object
+      properties:
+        evidenceRetentionDays:   { type: integer, minimum: 30 }
+        attachmentRetentionDays: { type: integer, minimum: 30 }
+
+    ErasureRequest:
+      type: object
+      properties:
+        instanceId:  { type: string, format: uuid, nullable: true }
+        subjectEmail: { type: string, format: email, nullable: true }
+        policy:      { type: string, description: The policy under which erasure is performed — recorded in the tombstone }
+        reason:      { type: string }
+
+    ErasureResult:
+      type: object
+      properties:
+        instancesAffected: { type: integer }
+        entriesTombstoned: { type: integer }
+        chainStillVerifies:
+          type: boolean
+          description: AC-046 — asserted after erasure, not assumed
+
+    # ---- Analytics
+    ProcessAnalytics:
+      type: object
+      properties:
+        definitionId: { type: string, format: uuid }
+        from:         { type: string, format: date }
+        to:           { type: string, format: date }
+        empty:
+          type: boolean
+          description: FR-128 — an explicit empty state, never zeros presented as measurements
+        byVersion:
+          type: array
+          description: FR-127 — instances on different versions executed different processes
+          items:
+            type: object
+            properties:
+              version:            { type: integer }
+              instancesStarted:   { type: integer }
+              instancesCompleted: { type: integer }
+              medianCycleTimeMs:  { type: integer, format: int64, nullable: true }
+              slaBreachCount:     { type: integer }
+
+    # ---- Templates
+    Template:
+      type: object
+      properties:
+        slug:    { type: string }
+        version: { type: integer }
+        name:    { type: string }
+        description: { type: string }
+        contextTags:
+          type: array
+          description: |
+            NFR-020 — a DESCRIPTIVE tag, never a jurisdiction enum, a regulator
+            column or a structural relationship.
+          items: { type: string }
+        disclaimer:
+          type: string
+          description: FR-154 — a starting point, not legal advice
+        localesAvailable:
+          type: array
+          items: { type: string, enum: [en, ar] }
+
+    # ---- Webhooks and notifications
+    WebhookEndpointInput:
+      type: object
+      required: [url, events]
+      properties:
+        url: { type: string, format: uri }
+        events:
+          type: array
+          items:
+            type: string
+            enum:
+              - process.instance.started
+              - process.instance.completed
+              - process.instance.cancelled
+              - process.instance.expired
+              - task.assigned
+              - task.completed
+              - task.escalated
+              - task.sla_breached
+        description: { type: string }
+
+    WebhookEndpoint:
+      type: object
+      properties:
+        id:      { type: string, format: uuid }
+        url:     { type: string, format: uri }
+        events:  { type: array, items: { type: string } }
+        enabled: { type: boolean }
+
+    WebhookEndpointCreated:
+      allOf:
+        - $ref: '#/components/schemas/WebhookEndpoint'
+        - type: object
+          properties:
+            secret:
+              type: string
+              description: Returned ONCE. Stored AES-256-GCM encrypted; never retrievable again.
+
+    DeliveryPage:
+      type: object
+      properties:
+        data:
+          type: array
+          items:
+            type: object
+            properties:
+              id:           { type: string, format: uuid }
+              eventType:    { type: string }
+              resourceId:   { type: string }
+              status:       { type: string, enum: [PENDING, DELIVERING, SUCCEEDED, FAILED] }
+              attempts:     { type: integer }
+              responseCode: { type: integer, nullable: true }
+              createdAt:    { type: string, format: date-time }
+        meta: { $ref: '#/components/schemas/PageMeta' }
+
+    NotificationPage:
+      type: object
+      properties:
+        data:
+          type: array
+          items:
+            type: object
+            properties:
+              id:       { type: string, format: uuid }
+              type:     { type: string }
+              locale:   { type: string }
+              title:    { type: string }
+              message:  { type: string }
+              deepLink: { type: string, nullable: true }
+              read:     { type: boolean }
+              createdAt: { type: string, format: date-time }
+        meta: { $ref: '#/components/schemas/PageMeta' }
+
+    # ---- System
+    Health:
+      type: object
+      properties:
+        status: { type: string, enum: [ok, degraded, unhealthy] }
+        checks:
+          type: object
+          additionalProperties:
+            type: object
+            properties:
+              status:    { type: string, enum: [ok, fail] }
+              latencyMs: { type: number }
+        version: { type: string }
