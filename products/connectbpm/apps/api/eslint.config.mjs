@@ -121,9 +121,37 @@ export default tseslint.config(
       'src/engine/transition-tx.ts',
       'tests/type-fixtures/**/*.ts',
       'tests/integration/tenancy/**/*.ts',
-      'tests/unit/engine/**/*.ts',
+      'tests/integration/engine/**/*.ts',
     ],
     rules: { 'no-restricted-syntax': 'off' },
+  },
+  {
+    // ADR-007 — `withTransitionTx` is the Transition Coordinator's constructor
+    // for the TransitionTx brand. Importing the VALUE anywhere outside
+    // src/engine/ would mint the key to recordBillableCompletion outside the
+    // transition transaction (DEC-002 MET-2). The TYPE is public: repositories
+    // and the ledger must be able to name it in a signature.
+    files: ['src/**/*.ts', 'tests/**/*.ts'],
+    ignores: ['src/engine/**/*.ts', 'tests/integration/engine/**/*.ts'],
+    rules: {
+      '@typescript-eslint/no-restricted-imports': [
+        'error',
+        {
+          patterns: [
+            {
+              group: ['**/engine/transition-tx', '**/engine/transition-tx.js'],
+              importNames: ['withTransitionTx'],
+              allowTypeImports: true,
+              message:
+                'AC-012 / DEC-002 MET-2: only the Transition Coordinator ' +
+                '(src/engine/) may open a transition scope. Write the meter ' +
+                'through recordBillableCompletion(tx, ...) with the TransitionTx ' +
+                'the coordinator hands you. `import type { TransitionTx }` is fine.',
+            },
+          ],
+        },
+      ],
+    },
   },
   {
     files: ['**/*.test.ts', '**/*.spec.ts', 'tests/**/*.ts', 'scripts/**/*.ts'],

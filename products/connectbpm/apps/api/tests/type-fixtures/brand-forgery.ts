@@ -38,3 +38,26 @@ void listDefinitions({ ...raw, __brand: true } as TenantScopedClient);
 
 // The genuine article, from withTenant, is accepted.
 void listDefinitions(scoped);
+
+// ── The metering brand, closed the same way (ADR-007, DEC-002 MET-2, AC-012) ──
+import type { TransitionTx } from '../../src/engine/transition-tx';
+
+declare const tenantTx: TenantScopedClient;
+declare const transitionTx: TransitionTx;
+
+/** The ledger signature. `recordBillableCompletion` lands in P2 with this shape. */
+declare function recordBillableCompletion(tx: TransitionTx): Promise<void>;
+
+// The tenant transaction is NOT a transition transaction. Without this, any
+// repository holding a scoped client could write the meter.
+// @ts-expect-error AC-012: TenantScopedClient is not assignable to TransitionTx
+void recordBillableCompletion(tenantTx);
+
+// @ts-expect-error AC-012: the raw client is not assignable to TransitionTx
+void recordBillableCompletion(raw);
+
+// @ts-expect-error AC-012: TransitionTx cannot be reached by a single assertion
+void recordBillableCompletion(raw as TransitionTx);
+
+// The genuine article, from the coordinator, is accepted.
+void recordBillableCompletion(transitionTx);
