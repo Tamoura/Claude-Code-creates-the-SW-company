@@ -1,0 +1,22 @@
+{
+  "name": "@connectsw/observability",
+  "version": "1.0.0",
+  "description": "Cross-product observability utilities — structured logging, request tracing, performance metrics, and health checks",
+  "main": "./src/index.ts",
+  "exports": {
+    ".": "./src/index.ts",
+    "./backend": "./src/backend/index.ts",
+    "./frontend": "./src/frontend/index.ts"
+  },
+  "scripts": {
+    "build": "tsc",
+    "typecheck": "tsc --noEmit"
+  },
+  "peerDependencies": {
+    "fastify": "^4.0.0",
+    "pino": "^8.0.0"
+  },
+  "devDependencies": {
+    "typescript": "^5.0.0"
+  }
+}

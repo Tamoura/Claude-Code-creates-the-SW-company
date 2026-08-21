@@ -1,0 +1,67 @@
+# Dependencies
+node_modules/
+.pnp/
+.pnp.js
+
+# Build outputs
+dist/
+build/
+.next/
+out/
+*.tsbuildinfo
+
+# Environment files
+.env
+.env.local
+.env*.local
+
+# Logs
+logs/
+*.log
+
+# IDE
+.idea/
+.vscode/
+*.swp
+*~
+
+# OS
+.DS_Store
+Thumbs.db
+
+# Testing
+coverage/
+.nyc_output/
+playwright-report/
+test-results/
+
+# Database
+*.sqlite
+*.sqlite3
+prisma/*.db
+
+# Worktrees (agent parallel work)
+*-worktrees/
+.trees/
+
+# Temporary files
+tmp/
+temp/
+*.tmp
+
+# Secrets — never commit these
+*.pem
+*.key
+credentials.json
+secrets.json
+service-account.json
+*.env.bak
+
+# Package manager locks — pnpm is the source of truth
+package-lock.json
+yarn.lock
+
+# Agent runtime state (local to each clone)
+.claude/audit-trail.jsonl
+.claude/approval-queue.json
+.claude/dashboard/latest-report.md

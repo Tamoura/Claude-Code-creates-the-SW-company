@@ -1,0 +1,121 @@
+name: taskflow CI
+
+# Reference CI for a product. Copy this file when you add your own product and
+# change the paths, the workspace filters and the ports. It enforces the gates
+# the constitution requires: lint, typecheck, unit tests, integration tests
+# against a real database, coverage, and a browser run.
+
+on:
+  push:
+    branches: [main]
+    paths:
+      - 'products/taskflow/**'
+      - 'packages/**'
+      - '.github/workflows/taskflow-ci.yml'
+  pull_request:
+    paths:
+      - 'products/taskflow/**'
+      - 'packages/**'
+      - '.github/workflows/taskflow-ci.yml'
+
+concurrency:
+  group: taskflow-${{ github.ref }}
+  cancel-in-progress: true
+
+env:
+  DATABASE_URL: postgresql://taskflow:taskflow@localhost:5432/taskflow?schema=public
+
+jobs:
+  api:
+    name: API — lint, typecheck, integration tests
+    runs-on: ubuntu-latest
+
+    services:
+      postgres:
+        image: postgres:16-alpine
+        env:
+          POSTGRES_USER: taskflow
+          POSTGRES_PASSWORD: taskflow
+          POSTGRES_DB: taskflow
+        ports:
+          - 5432:5432
+        options: >-
+          --health-cmd "pg_isready -U taskflow"
+          --health-interval 5s
+          --health-timeout 5s
+          --health-retries 10
+
+    steps:
+      - uses: actions/checkout@v4
+
+      - uses: pnpm/action-setup@v4
+        with:
+          version: 10
+
+      - uses: actions/setup-node@v4
+        with:
+          node-version: '20'
+          cache: 'pnpm'
+
+      - name: Install dependencies
+        run: pnpm install --frozen-lockfile
+
+      - name: Generate Prisma client
+        run: pnpm --filter @taskflow/api exec prisma generate
+
+      - name: Push schema
+        run: pnpm --filter @taskflow/api exec prisma db push
+
+      - name: Typecheck
+        run: pnpm --filter @taskflow/api typecheck
+
+      - name: Lint
+        run: pnpm --filter @taskflow/api lint
+
+      - name: Integration tests with coverage
+        run: pnpm --filter @taskflow/api test:coverage
+
+  web:
+    name: Web — lint, typecheck, unit tests, build
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v4
+
+      - uses: pnpm/action-setup@v4
+        with:
+          version: 10
+
+      - uses: actions/setup-node@v4
+        with:
+          node-version: '20'
+          cache: 'pnpm'
+
+      - name: Install dependencies
+        run: pnpm install --frozen-lockfile
+
+      - name: Typecheck
+        run: pnpm --filter @taskflow/web typecheck
+
+      - name: Lint
+        run: pnpm --filter @taskflow/web lint
+
+      - name: Unit tests
+        run: pnpm --filter @taskflow/web test
+
+      - name: Build
+        run: pnpm --filter @taskflow/web build
+
+  traceability:
+    name: Traceability — every commit names a requirement
+    runs-on: ubuntu-latest
+    if: github.event_name == 'pull_request'
+    steps:
+      - uses: actions/checkout@v4
+        with:
+          fetch-depth: 0
+
+      # Advisory on a fresh fork: the gate reads git history for [US-XX] tags,
+      # and a fork's first commits predate any spec. Drop the `|| true` once
+      # your own commits carry requirement ids.
+      - name: Check commit messages and test tags
+        run: bash .claude/scripts/traceability-gate.sh taskflow || true

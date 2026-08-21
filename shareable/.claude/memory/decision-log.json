@@ -1,0 +1,18 @@
+{
+  "version": "1.0.0",
+  "updated_at": "2026-01-15T00:00:00Z",
+  "_comment": "Seed file. Every architectural decision an agent makes is appended here with its rationale, so later agents can see why the codebase looks the way it does. Long-form decisions also get an ADR in the product's docs/ADRs/.",
+  "decisions": [
+    {
+      "id": "DEC-001",
+      "date": "2026-01-15",
+      "product": "taskflow",
+      "agent": "architect",
+      "decision": "Layer the API as routes, services and repositories",
+      "rationale": "Business rules must be testable without HTTP; persistence must be replaceable without touching routes.",
+      "alternatives_considered": ["Fat route handlers calling Prisma directly"],
+      "adr": "products/taskflow/docs/ADRs/ADR-001-layered-api.md",
+      "status": "accepted"
+    }
+  ]
+}

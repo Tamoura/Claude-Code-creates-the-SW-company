@@ -1,0 +1,42 @@
+// TaskFlow data model — see docs/specs/001-task-crud/spec.md
+// Data Engineer owns this file (Article V: PostgreSQL + Prisma).
+
+generator client {
+  provider = "prisma-client-js"
+}
+
+datasource db {
+  provider = "postgresql"
+  url      = env("DATABASE_URL")
+}
+
+enum TaskStatus {
+  TODO
+  IN_PROGRESS
+  DONE
+}
+
+/// A single unit of work owned by one project. [US-01][FR-001]
+model Task {
+  id          String     @id @default(uuid())
+  title       String     @db.VarChar(200)
+  description String?    @db.VarChar(2000)
+  status      TaskStatus @default(TODO)
+  dueDate     DateTime?
+  projectId   String
+  project     Project    @relation(fields: [projectId], references: [id], onDelete: Cascade)
+  createdAt   DateTime   @default(now())
+  updatedAt   DateTime   @updatedAt
+
+  @@index([projectId, status])
+  @@index([dueDate])
+}
+
+/// Tasks are always grouped under a project. [US-03][FR-008]
+model Project {
+  id        String   @id @default(uuid())
+  name      String   @unique @db.VarChar(120)
+  tasks     Task[]
+  createdAt DateTime @default(now())
+  updatedAt DateTime @updatedAt
+}

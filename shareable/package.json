@@ -1,0 +1,27 @@
+{
+  "name": "connectsw",
+  "version": "1.0.0",
+  "private": true,
+  "description": "An AI-native software company in a git repository",
+  "scripts": {
+    "setup": "git config core.hooksPath .githooks && echo \"git hooks installed\"",
+    "test:e2e": "playwright test",
+    "format": "prettier --write \"**/*.{ts,tsx,js,jsx,json,md}\"",
+    "lint": "eslint .",
+    "check": "bash .claude/scripts/ci-preflight.sh",
+    "dashboard": "bash .claude/scripts/generate-dashboard.sh"
+  },
+  "devDependencies": {
+    "@playwright/test": "^1.48.0",
+    "@typescript-eslint/eslint-plugin": "^7.18.0",
+    "@typescript-eslint/parser": "^7.18.0",
+    "eslint": "^8.57.1",
+    "prettier": "^3.3.0",
+    "tsx": "^4.19.0",
+    "typescript": "^5.6.0"
+  },
+  "engines": {
+    "node": ">=20.0.0"
+  },
+  "packageManager": "pnpm@10.0.0"
+}

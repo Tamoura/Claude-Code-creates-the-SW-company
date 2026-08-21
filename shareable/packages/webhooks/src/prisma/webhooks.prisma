@@ -1,0 +1,60 @@
+// =============================================================
+// @connectsw/webhooks — Prisma partial schema
+//
+// Copy these models into your product's schema.prisma.
+// Add a relation from your User model: webhookEndpoints WebhookEndpoint[]
+// =============================================================
+
+model WebhookEndpoint {
+  id     String @id @default(cuid())
+  userId String @map("user_id")
+
+  url         String
+  secret      String   // AES-256-GCM encrypted at rest
+  events      String[]
+  enabled     Boolean  @default(true)
+  description String?
+
+  createdAt DateTime @default(now()) @map("created_at")
+  updatedAt DateTime @updatedAt @map("updated_at")
+
+  user       User              @relation(fields: [userId], references: [id], onDelete: Cascade)
+  deliveries WebhookDelivery[]
+
+  @@index([userId])
+  @@map("webhook_endpoints")
+}
+
+model WebhookDelivery {
+  id         String @id @default(cuid())
+  endpointId String @map("endpoint_id")
+
+  eventType  String @map("event_type")
+  payload    Json
+  resourceId String @map("resource_id")
+
+  attempts Int           @default(0)
+  status   WebhookStatus @default(PENDING)
+
+  lastAttemptAt DateTime? @map("last_attempt_at")
+  nextAttemptAt DateTime? @map("next_attempt_at")
+  succeededAt   DateTime? @map("succeeded_at")
+
+  responseCode Int?    @map("response_code")
+  responseBody String? @map("response_body") @db.Text
+  errorMessage String? @map("error_message") @db.Text
+
+  endpoint WebhookEndpoint @relation(fields: [endpointId], references: [id], onDelete: Cascade)
+
+  @@unique([endpointId, eventType, resourceId], name: "webhook_delivery_idempotency")
+  @@index([endpointId, status])
+  @@index([status, nextAttemptAt])
+  @@map("webhook_deliveries")
+}
+
+enum WebhookStatus {
+  PENDING
+  DELIVERING
+  SUCCEEDED
+  FAILED
+}

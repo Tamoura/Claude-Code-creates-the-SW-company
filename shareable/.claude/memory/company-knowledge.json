@@ -1,0 +1,33 @@
+{
+  "version": "1.0.0",
+  "updated_at": "2026-01-15T00:00:00Z",
+  "_comment": "Seed file. Agents append patterns here as they learn them; see memory-system.md for the schema and .claude/scripts/extract-patterns.sh for the extraction job.",
+  "patterns": [
+    {
+      "id": "PATTERN-001",
+      "name": "Layered API: routes -> services -> repositories",
+      "category": "backend",
+      "description": "Keep HTTP shaping, business rules and persistence in separate layers so rules can be tested without HTTP and storage can change without touching routes.",
+      "learned_from": {
+        "product": "taskflow",
+        "task": "T016",
+        "date": "2026-01-15"
+      },
+      "problem": "Business rules written inside route handlers can only be tested through HTTP, and every storage change rewrites the routes.",
+      "solution": "Routes validate and delegate; services own rules and throw typed errors; repositories are the only code that touches Prisma.",
+      "when_to_use": "Any API with more than trivial CRUD.",
+      "confidence": "high",
+      "times_applied": 1,
+      "success_rate": 1.0
+    }
+  ],
+  "anti_patterns": [
+    {
+      "id": "ANTI-001",
+      "name": "Mocking the database in integration tests",
+      "why_it_fails": "A mocked database agrees with whatever the code believes, so schema drift, constraint violations and cascade behaviour all pass in CI and fail in production.",
+      "instead": "Run PostgreSQL in Docker and truncate between tests (Article III).",
+      "learned_from": { "product": "taskflow", "date": "2026-01-15" }
+    }
+  ]
+}

@@ -1,0 +1,35 @@
+{
+  "name": "@connectsw/saas-kit",
+  "version": "0.1.0",
+  "description": "ConnectSW SaaS product scaffold generator — creates a full-stack product from templates",
+  "type": "module",
+  "bin": {
+    "connectsw-create": "./dist/cli.js"
+  },
+  "exports": {
+    ".": {
+      "import": "./dist/generator.js",
+      "types": "./dist/generator.d.ts"
+    }
+  },
+  "files": [
+    "dist",
+    "templates"
+  ],
+  "scripts": {
+    "build": "tsc",
+    "dev": "tsc --watch"
+  },
+  "dependencies": {},
+  "devDependencies": {
+    "typescript": "^5.3.0",
+    "@types/node": "^20.0.0"
+  },
+  "keywords": [
+    "connectsw",
+    "saas",
+    "scaffold",
+    "generator"
+  ],
+  "license": "MIT"
+}

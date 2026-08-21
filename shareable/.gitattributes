@@ -1,0 +1,22 @@
+# Merge strategies for parallel product development
+#
+# Problem: When two Claude sessions work on different products simultaneously,
+# PRs can conflict on shared root config files that neither session changed
+# intentionally.
+#
+# merge=ours:  On conflict, keeps the version on the target branch (main).
+#              Safe because root config changes are rare and deliberate.
+#              If a PR intentionally modifies these, re-apply after merge.
+#
+# merge=union: On conflict, keeps lines from both sides.
+#              Works for append-only files with independent entries.
+
+# Root configs - keep main's version on conflict
+package.json           merge=ours
+package-lock.json      merge=ours
+tsconfig.json          merge=ours
+.eslintrc.js           merge=ours
+.prettierrc            merge=ours
+
+# Append-only registries - keep both sides' additions
+.claude/PORT-REGISTRY.md  merge=union

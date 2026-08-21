@@ -1,0 +1,565 @@
+# New Feature Workflow Task Graph Template
+# Placeholders: {PRODUCT}, {FEATURE}, {FEATURE_ID}, {DESCRIPTION}, {TIMESTAMP}
+# Traceability Placeholders: {STORY_IDS}, {REQUIREMENT_IDS}, {EPIC_ID}, {SPRINT}
+#
+# TRACEABILITY RULES (Constitution Article VI):
+#   - Every task MUST populate story_ids and requirement_ids
+#   - Orchestrator fills these from the spec/PRD when instantiating
+#   - Commits MUST include [US-XX] or [FR-XXX] in the message
+#   - Tests MUST reference acceptance criteria IDs in test names
+#   - E2E tests organized by story: e2e/tests/stories/{story-id}/
+#   - PR description MUST list implemented story/requirement IDs
+
+# ─────────────────────────────────────────────────────────────────
+# PROTOCOL ENFORCEMENT (ConnectSW Constitution Articles XI & XII)
+# ─────────────────────────────────────────────────────────────────
+# ALL AGENTS must follow BEFORE starting any task:
+#   - Read .claude/protocols/quality-verification.md (Part 3) (Article XI)
+#   - Apply the 1% Rule: if a quality step might apply, invoke it
+#
+# ALL AGENTS must follow BEFORE marking any task done:
+#   - Verification-Before-Completion 5-Step Gate (Article XI):
+#     1. Identify what "done" looks like (specific, testable)
+#     2. Execute the actual verification command
+#     3. Read the actual output (do NOT assume success)
+#     4. Compare output to acceptance criteria literally
+#     5. Claim done only when evidence matches
+#
+# FOR DELIVERABLES (Article XII):
+#   - Write all outputs to files (direct-delivery.md)
+#   - Compress context if >60% full (context-compression.md)
+# ─────────────────────────────────────────────────────────────────
+
+metadata:
+  product: "{PRODUCT}"
+  feature: "{FEATURE}"
+  feature_id: "{FEATURE_ID}"
+  version: "3.0.0"
+  workflow_type: "new-feature"
+  created_at: "{TIMESTAMP}"
+  updated_at: "{TIMESTAMP}"
+  traceability:
+    brd_ref: "products/{PRODUCT}/docs/PRD.md"
+    spec_ref: "products/{PRODUCT}/docs/specs/{FEATURE_ID}.md"
+    story_ids: ["{STORY_IDS}"]
+    requirement_ids: ["{REQUIREMENT_IDS}"]
+    epic: "{EPIC_ID}"
+    sprint: "{SPRINT}"
+
+tasks:
+  # ============================================================================
+  # PHASE 0: SPECIFICATION
+  # ============================================================================
+
+  - id: "SPEC-{FEATURE_ID}"
+    name: "Create Feature Specification for {FEATURE}"
+    description: |
+      Create a structured feature specification for: {DESCRIPTION}
+
+      Using /speckit.specify methodology:
+      - Follow the spec template at .specify/templates/spec-template.md
+      - Define user stories (US-XX) with Given/When/Then acceptance criteria
+      - Include relevant diagrams (C4, ER, sequence as applicable)
+      - Include edge cases table
+      - Fill Component Reuse Check table from .claude/COMPONENT-REGISTRY.md
+      - Mark uncertain areas with [NEEDS CLARIFICATION] tags
+
+      Read and follow: .specify/templates/commands/specify.md
+      Read constitution: .specify/memory/constitution.md
+    agent: "product-manager"
+    depends_on: []
+    story_ids: ["{STORY_IDS}"]
+    requirement_ids: ["{REQUIREMENT_IDS}"]
+    epic: "{EPIC_ID}"
+    produces:
+      - name: "Feature Specification"
+        type: "document"
+        path: "products/{PRODUCT}/docs/specs/{FEATURE_ID}.md"
+    context_output: ""
+    parallel_ok: false
+    checkpoint: false
+    priority: "high"
+    estimated_time_minutes: 45
+    acceptance_criteria:
+      - "Follows spec-template.md structure"
+      - "User stories with Given/When/Then acceptance criteria"
+      - "Data model documented (if applicable)"
+      - "Edge cases identified"
+      - "Component Reuse Check filled"
+    status: "pending"
+
+  # ============================================================================
+  # PHASE 1: DESIGN
+  # ============================================================================
+
+  - id: "DESIGN-{FEATURE_ID}"
+    name: "Design {FEATURE}"
+    description: |
+      Review the feature request: {DESCRIPTION}
+
+      Tasks:
+      - Review feature specification from SPEC-{FEATURE_ID}
+      - Review existing PRD and architecture
+      - Design API changes (if any)
+      - Design UI changes (if any)
+      - Identify affected components
+      - Create feature design document
+      - Map new/changed endpoints to requirement IDs
+
+      SPECKIT PLAN: After completing the design doc, generate the implementation
+      plan using /speckit.plan methodology:
+      Read and follow: .specify/templates/commands/plan.md
+      Read constitution: .specify/memory/constitution.md
+      Output plan to: products/{PRODUCT}/docs/features/{FEATURE_ID}-plan.md
+    agent: "architect"
+    depends_on: ["SPEC-{FEATURE_ID}"]
+    story_ids: ["{STORY_IDS}"]
+    requirement_ids: ["{REQUIREMENT_IDS}"]
+    epic: "{EPIC_ID}"
+    consumes:
+      - name: "Feature Specification"
+        required_from_task: "SPEC-{FEATURE_ID}"
+    produces:
+      - name: "Feature Design"
+        type: "document"
+        path: "products/{PRODUCT}/docs/features/{FEATURE_ID}-{FEATURE}.md"
+      - name: "Feature Implementation Plan"
+        type: "document"
+        path: "products/{PRODUCT}/docs/features/{FEATURE_ID}-plan.md"
+    context_output: ""
+    parallel_ok: false
+    checkpoint: true
+    priority: "high"
+    estimated_time_minutes: 60
+    acceptance_criteria:
+      - "Feature specification document created"
+      - "API changes documented with FR-XXX / US-XX linkage"
+      - "UI changes documented (if applicable)"
+      - "Affected components identified"
+      - "No conflicts with existing architecture"
+      - "Traceability: every change mapped to a story/requirement"
+      - "plan.md generated via speckit.plan methodology"
+      - "plan.md maps every US-XX and FR-XXX to implementation sections"
+    status: "pending"
+
+  - id: "TASKS-{FEATURE_ID}"
+    name: "Generate Task List for {FEATURE}"
+    description: |
+      Generate a dependency-ordered, agent-assignable task list from the
+      feature implementation plan using /speckit.tasks methodology:
+      Read and follow: .specify/templates/commands/tasks.md
+      Read constitution: .specify/memory/constitution.md
+      Input: products/{PRODUCT}/docs/features/{FEATURE_ID}-plan.md
+      Input: products/{PRODUCT}/docs/specs/{FEATURE_ID}.md
+      Output: products/{PRODUCT}/docs/features/{FEATURE_ID}-tasks.md
+
+      Break the plan into tasks with TDD ordering enforced.
+    agent: "orchestrator"
+    depends_on: ["DESIGN-{FEATURE_ID}"]
+    story_ids: ["{STORY_IDS}"]
+    requirement_ids: ["{REQUIREMENT_IDS}"]
+    epic: "{EPIC_ID}"
+    consumes:
+      - name: "Feature Implementation Plan"
+        required_from_task: "DESIGN-{FEATURE_ID}"
+      - name: "Feature Specification"
+        required_from_task: "SPEC-{FEATURE_ID}"
+    produces:
+      - name: "Feature Task List"
+        type: "document"
+        path: "products/{PRODUCT}/docs/features/{FEATURE_ID}-tasks.md"
+    context_output: ""
+    parallel_ok: false
+    checkpoint: false
+    priority: "critical"
+    estimated_time_minutes: 20
+    acceptance_criteria:
+      - "Every plan section maps to at least one task"
+      - "All tasks have assigned agent roles"
+      - "TDD ordering: test tasks precede implementation tasks"
+      - "Dependencies correctly reflect execution order"
+      - "Story IDs and requirement IDs populated per task"
+      - "Output written to products/{PRODUCT}/docs/features/{FEATURE_ID}-tasks.md"
+    status: "pending"
+
+  # ============================================================================
+  # PHASE 2: IMPLEMENTATION (Parallel)
+  # ============================================================================
+
+  # --- Backend TDD Split ---
+
+  - id: "BACKEND-TESTS-{FEATURE_ID}"
+    name: "Write Failing Backend Tests for {FEATURE}"
+    description: |
+      TDD RED phase — write failing tests for backend changes:
+      - Read feature design and acceptance criteria
+      - Write unit tests for new API endpoints
+      - Write integration tests for request/response flows
+      - Write database state verification tests
+      - Test names include [US-XX][AC-X] IDs
+      - Run tests — they MUST FAIL (no implementation yet)
+      - Commit: test(scope): add failing tests for {FEATURE} [US-XX]
+      DO NOT write any implementation code!
+    agent: "backend-engineer"
+    depends_on: ["TASKS-{FEATURE_ID}"]
+    story_ids: ["{STORY_IDS}"]
+    requirement_ids: ["{REQUIREMENT_IDS}"]
+    epic: "{EPIC_ID}"
+    consumes:
+      - name: "Feature Design"
+        required_from_task: "DESIGN-{FEATURE_ID}"
+    produces:
+      - name: "Backend Tests"
+        type: "directory"
+        path: "products/{PRODUCT}/apps/api/tests"
+    shared_files: ["products/{PRODUCT}/apps/api/package.json"]
+    context_output: ""
+    parallel_ok: true
+    checkpoint: false
+    priority: "high"
+    estimated_time_minutes: 60
+    acceptance_criteria:
+      - "Unit tests written for all new endpoints"
+      - "Integration tests written for request/response flows"
+      - "All new tests FAIL when run (no implementation yet)"
+      - "Test names include [US-XX][AC-X] IDs"
+      - "Tests committed to branch"
+    status: "pending"
+
+  - id: "BACKEND-IMPL-{FEATURE_ID}"
+    name: "Implement Backend for {FEATURE}"
+    description: |
+      TDD GREEN phase — make failing tests pass:
+      - Write the simplest code to make all tests pass
+      - Implement API endpoints, database schema changes, services
+      - Run ALL tests — they MUST all pass
+      - Commits include [US-XX][FR-XXX] IDs
+      - Do NOT modify test files
+      After green: REFACTOR if needed (keep tests passing)
+    agent: "backend-engineer"
+    depends_on: ["BACKEND-TESTS-{FEATURE_ID}"]
+    story_ids: ["{STORY_IDS}"]
+    requirement_ids: ["{REQUIREMENT_IDS}"]
+    epic: "{EPIC_ID}"
+    consumes:
+      - name: "Backend Tests"
+        required_from_task: "BACKEND-TESTS-{FEATURE_ID}"
+      - name: "Feature Design"
+        required_from_task: "DESIGN-{FEATURE_ID}"
+    produces:
+      - name: "Backend Implementation"
+        type: "directory"
+        path: "products/{PRODUCT}/apps/api/src"
+    shared_files: ["products/{PRODUCT}/apps/api/prisma/schema.prisma", "products/{PRODUCT}/apps/api/package.json"]
+    context_output: ""
+    parallel_ok: true
+    checkpoint: false
+    priority: "high"
+    estimated_time_minutes: 90
+    acceptance_criteria:
+      - "All new tests now pass"
+      - "All existing tests still pass (no regressions)"
+      - "Database migrations created (if needed)"
+      - "Test coverage >= 80%"
+    status: "pending"
+
+  # --- Frontend TDD Split ---
+
+  - id: "FRONTEND-TESTS-{FEATURE_ID}"
+    name: "Write Failing Frontend Tests for {FEATURE}"
+    description: |
+      TDD RED phase — write failing tests for frontend changes:
+      - Read feature design and acceptance criteria
+      - Write component tests for new UI elements
+      - Write integration tests for API connections
+      - Test names include [US-XX][AC-X] IDs
+      - Run tests — they MUST FAIL (no implementation yet)
+      - Commit: test(scope): add failing tests for {FEATURE} [US-XX]
+      DO NOT write any implementation code!
+    agent: "frontend-engineer"
+    depends_on: ["TASKS-{FEATURE_ID}"]
+    story_ids: ["{STORY_IDS}"]
+    requirement_ids: ["{REQUIREMENT_IDS}"]
+    epic: "{EPIC_ID}"
+    consumes:
+      - name: "Feature Design"
+        required_from_task: "DESIGN-{FEATURE_ID}"
+    produces:
+      - name: "Frontend Tests"
+        type: "directory"
+        path: "products/{PRODUCT}/apps/web/tests"
+    shared_files: ["products/{PRODUCT}/apps/web/package.json"]
+    context_output: ""
+    parallel_ok: true
+    checkpoint: false
+    priority: "high"
+    estimated_time_minutes: 45
+    acceptance_criteria:
+      - "Component tests written for new UI elements"
+      - "All new tests FAIL when run (no implementation yet)"
+      - "Test names include [US-XX][AC-X] IDs"
+      - "Tests committed to branch"
+    status: "pending"
+
+  - id: "FRONTEND-IMPL-{FEATURE_ID}"
+    name: "Implement Frontend for {FEATURE}"
+    description: |
+      TDD GREEN phase — make failing tests pass:
+      - Implement UI components, pages, API integration
+      - Ensure responsive design
+      - Run ALL tests — they MUST all pass
+      - Commits include [US-XX][FR-XXX] IDs
+      - Do NOT modify test files
+      After green: REFACTOR if needed (keep tests passing)
+    agent: "frontend-engineer"
+    depends_on: ["FRONTEND-TESTS-{FEATURE_ID}"]
+    story_ids: ["{STORY_IDS}"]
+    requirement_ids: ["{REQUIREMENT_IDS}"]
+    epic: "{EPIC_ID}"
+    consumes:
+      - name: "Frontend Tests"
+        required_from_task: "FRONTEND-TESTS-{FEATURE_ID}"
+      - name: "Feature Design"
+        required_from_task: "DESIGN-{FEATURE_ID}"
+    produces:
+      - name: "Frontend Implementation"
+        type: "directory"
+        path: "products/{PRODUCT}/apps/web/src"
+    shared_files: ["products/{PRODUCT}/apps/web/package.json"]
+    context_output: ""
+    parallel_ok: true
+    checkpoint: false
+    priority: "high"
+    estimated_time_minutes: 90
+    acceptance_criteria:
+      - "UI components implemented"
+      - "API integration complete"
+      - "Responsive design verified"
+      - "All tests passing"
+      - "No console errors"
+    status: "pending"
+
+  # ============================================================================
+  # PHASE 3: TESTING & QUALITY
+  # ============================================================================
+
+  - id: "QA-{FEATURE_ID}"
+    name: "Test {FEATURE}"
+    description: |
+      Comprehensive testing for {FEATURE}:
+      - Write E2E tests for new functionality
+      - Organize E2E tests by story: e2e/tests/stories/{story-id}/
+      - Test descriptions include [US-XX][AC-X] IDs
+      - Run full test suite
+      - Verify visual appearance
+      - Check for regressions
+      - Run Testing Gate checklist
+      - Generate requirement coverage report
+    agent: "qa-engineer"
+    depends_on: ["BACKEND-IMPL-{FEATURE_ID}", "FRONTEND-IMPL-{FEATURE_ID}"]
+    story_ids: ["{STORY_IDS}"]
+    requirement_ids: ["{REQUIREMENT_IDS}"]
+    epic: "{EPIC_ID}"
+    consumes:
+      - name: "Backend Implementation"
+        required_from_task: "BACKEND-IMPL-{FEATURE_ID}"
+      - name: "Frontend Implementation"
+        required_from_task: "FRONTEND-IMPL-{FEATURE_ID}"
+    produces:
+      - name: "E2E Tests"
+        type: "directory"
+        path: "products/{PRODUCT}/e2e/tests/{FEATURE_ID}"
+      - name: "Test Report"
+        type: "document"
+        path: "products/{PRODUCT}/docs/test-reports/{FEATURE_ID}-{FEATURE}.md"
+    context_output: ""
+    parallel_ok: false
+    checkpoint: false
+    priority: "critical"
+    estimated_time_minutes: 60
+    acceptance_criteria:
+      - "E2E tests written for new functionality"
+      - "All unit tests passing"
+      - "All E2E tests passing"
+      - "No visual regressions"
+      - "No console errors"
+      - "Coverage >= 80%"
+    status: "pending"
+
+  - id: "DOCS-{FEATURE_ID}"
+    name: "Update Documentation for {FEATURE}"
+    description: |
+      Update documentation:
+      - Update API documentation
+      - Update user guide (if applicable)
+      - Update README if needed
+    agent: "technical-writer"
+    depends_on: ["BACKEND-IMPL-{FEATURE_ID}", "FRONTEND-IMPL-{FEATURE_ID}"]
+    produces:
+      - name: "Updated Docs"
+        type: "document"
+        path: "products/{PRODUCT}/docs/API.md"
+    context_output: ""
+    parallel_ok: true
+    checkpoint: false
+    priority: "normal"
+    estimated_time_minutes: 30
+    acceptance_criteria:
+      - "API documentation updated"
+      - "User-facing changes documented"
+    status: "pending"
+
+  # ============================================================================
+  # PHASE 4: REVIEW
+  # ============================================================================
+
+  - id: "GATE-TESTING-{FEATURE_ID}"
+    name: "Run Testing Gate for {FEATURE}"
+    description: |
+      Execute Testing Gate before CEO review:
+      - Run: .claude/scripts/testing-gate-checklist.sh {PRODUCT}
+      - Verify all checks pass
+      - Generate test report
+    agent: "qa-engineer"
+    depends_on: ["QA-{FEATURE_ID}", "DOCS-{FEATURE_ID}"]
+    produces:
+      - name: "Testing Gate Report"
+        type: "document"
+        path: "products/{PRODUCT}/docs/quality-reports/testing-gate-{FEATURE_ID}.md"
+    context_output: ""
+    parallel_ok: false
+    checkpoint: false
+    priority: "critical"
+    estimated_time_minutes: 30
+    acceptance_criteria:
+      - "Testing Gate PASS"
+      - "All checks green"
+    status: "pending"
+
+  - id: "GATE-SECURITY-{FEATURE_ID}"
+    name: "Run Security Gate for {FEATURE}"
+    description: |
+      Run security checks on feature implementation:
+      - npm audit (no new HIGH/CRITICAL vulnerabilities)
+      - Secret scanning on changed files
+      - OWASP review of new/changed endpoints
+      - Input validation coverage
+
+      Command: .claude/quality-gates/executor.sh security {PRODUCT}
+    agent: "security-engineer"
+    depends_on: ["BACKEND-IMPL-{FEATURE_ID}", "FRONTEND-IMPL-{FEATURE_ID}"]
+    story_ids: ["{STORY_IDS}"]
+    requirement_ids: ["{REQUIREMENT_IDS}"]
+    epic: "{EPIC_ID}"
+    produces:
+      - name: "Security Report"
+        type: "document"
+        path: "products/{PRODUCT}/docs/quality-reports/security-{FEATURE_ID}.md"
+    context_output: ""
+    parallel_ok: true
+    checkpoint: false
+    priority: "critical"
+    estimated_time_minutes: 20
+    acceptance_criteria:
+      - "No new HIGH/CRITICAL vulnerabilities"
+      - "No hardcoded secrets in changed files"
+      - "New endpoints have input validation"
+    status: "pending"
+
+  - id: "CODE-REVIEW-{FEATURE_ID}"
+    name: "Code Review for {FEATURE}"
+    description: |
+      Review feature implementation:
+      - Architecture compliance with design
+      - Code quality and TypeScript strictness
+      - Security patterns (OWASP)
+      - Test quality (real DB, no mocks)
+      - Performance considerations
+    agent: "code-reviewer"
+    depends_on: ["BACKEND-IMPL-{FEATURE_ID}", "FRONTEND-IMPL-{FEATURE_ID}"]
+    story_ids: ["{STORY_IDS}"]
+    requirement_ids: ["{REQUIREMENT_IDS}"]
+    epic: "{EPIC_ID}"
+    consumes:
+      - name: "Feature Design"
+        required_from_task: "DESIGN-{FEATURE_ID}"
+    produces:
+      - name: "Code Review Report"
+        type: "document"
+        path: "products/{PRODUCT}/docs/quality-reports/code-review-{FEATURE_ID}.md"
+    context_output: ""
+    parallel_ok: true
+    checkpoint: false
+    priority: "high"
+    estimated_time_minutes: 30
+    acceptance_criteria:
+      - "No critical code quality issues"
+      - "Architecture compliance verified"
+      - "Security patterns followed"
+    status: "pending"
+
+  - id: "ANALYZE-{FEATURE_ID}"
+    name: "Run Spec Consistency Gate for {FEATURE}"
+    description: |
+      Validate consistency across specification, design, and implementation:
+      - Spec-to-Design alignment: every US-XX and FR-XXX addressed in design
+      - Requirement coverage: every acceptance criterion has tests (>= 90%)
+      - Traceability chain: US-XX → FR-XXX → Tasks → Tests
+      - No orphaned requirements
+
+      Read and follow: .specify/templates/commands/analyze.md
+      Read constitution: .specify/memory/constitution.md
+    agent: "qa-engineer"
+    depends_on: ["GATE-TESTING-{FEATURE_ID}", "GATE-SECURITY-{FEATURE_ID}", "CODE-REVIEW-{FEATURE_ID}"]
+    story_ids: ["{STORY_IDS}"]
+    requirement_ids: ["{REQUIREMENT_IDS}"]
+    epic: "{EPIC_ID}"
+    consumes:
+      - name: "Feature Specification"
+        required_from_task: "SPEC-{FEATURE_ID}"
+      - name: "Feature Design"
+        required_from_task: "DESIGN-{FEATURE_ID}"
+      - name: "Testing Gate Report"
+        required_from_task: "GATE-TESTING-{FEATURE_ID}"
+    produces:
+      - name: "Spec Consistency Report"
+        type: "document"
+        path: "products/{PRODUCT}/docs/quality-reports/spec-consistency-{FEATURE_ID}.md"
+    context_output: ""
+    parallel_ok: false
+    checkpoint: false
+    priority: "critical"
+    estimated_time_minutes: 20
+    acceptance_criteria:
+      - "Spec/design/implementation alignment verified: PASS"
+      - "Requirement coverage >= 90%"
+      - "No orphaned requirements"
+      - "Traceability matrix complete"
+    status: "pending"
+
+  - id: "CHECKPOINT-{FEATURE_ID}"
+    name: "Feature Complete - CEO Review"
+    description: |
+      {FEATURE} is complete, tested, and spec-consistency verified. Ready for CEO review:
+
+      - Feature specification created
+      - Backend implementation complete
+      - Frontend implementation complete
+      - All tests passing
+      - Documentation updated
+      - Testing Gate PASSED
+      - Spec Consistency Gate PASSED
+
+      CEO can now review and approve the feature.
+    agent: "orchestrator"
+    depends_on: ["ANALYZE-{FEATURE_ID}"]
+    parallel_ok: false
+    checkpoint: true
+    priority: "critical"
+    estimated_time_minutes: 0
+    status: "pending"
+
+# Execution estimates:
+# - Sequential time: ~420 minutes (~7 hours)
+# - Parallel optimized: ~270 minutes (~4.5 hours)
+# - Savings from parallelization: ~36%

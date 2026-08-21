@@ -1,0 +1,18 @@
+{
+  "name": "taskflow",
+  "version": "1.0.0",
+  "private": true,
+  "description": "TaskFlow — demo product built by the agent system",
+  "scripts": {
+    "dev": "concurrently -n api,web -c cyan,magenta \"pnpm --filter @taskflow/api dev\" \"pnpm --filter @taskflow/web dev\"",
+    "build": "pnpm --filter @taskflow/api build && pnpm --filter @taskflow/web build",
+    "test": "pnpm --filter @taskflow/api test && pnpm --filter @taskflow/web test",
+    "test:e2e": "pnpm --filter @taskflow/e2e test",
+    "db:up": "docker compose up -d",
+    "db:down": "docker compose down",
+    "setup": "docker compose up -d && pnpm --filter @taskflow/api db:push && pnpm --filter @taskflow/api db:seed"
+  },
+  "devDependencies": {
+    "concurrently": "^9.0.0"
+  }
+}

@@ -1,0 +1,42 @@
+{
+  "name": "@connectsw/shared",
+  "version": "1.0.0",
+  "description": "Shared utilities and Fastify plugins for ConnectSW products",
+  "main": "dist/index.js",
+  "types": "dist/index.d.ts",
+  "type": "module",
+  "scripts": {
+    "build": "tsc",
+    "dev": "tsc --watch",
+    "test": "jest --passWithNoTests",
+    "lint": "eslint src/"
+  },
+  "exports": {
+    ".": "./dist/index.js",
+    "./plugins/prisma": "./dist/plugins/prisma.js",
+    "./plugins/redis": "./dist/plugins/redis.js",
+    "./utils/logger": "./dist/utils/logger.js",
+    "./utils/crypto": "./dist/utils/crypto.js"
+  },
+  "files": [
+    "dist"
+  ],
+  "dependencies": {
+    "@prisma/client": "^5.0.0",
+    "bcrypt": "^5.1.1",
+    "fastify": "^4.24.0",
+    "fastify-plugin": "^4.5.0",
+    "ioredis": "^5.3.0"
+  },
+  "devDependencies": {
+    "@types/bcrypt": "^5.0.2",
+    "@types/node": "^20.0.0",
+    "typescript": "^5.3.3"
+  },
+  "peerDependencies": {
+    "fastify": "^4.0.0"
+  },
+  "engines": {
+    "node": ">=20.0.0"
+  }
+}

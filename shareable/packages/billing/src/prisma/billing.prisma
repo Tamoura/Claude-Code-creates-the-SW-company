@@ -1,0 +1,64 @@
+// =============================================================
+// @connectsw/billing — Prisma partial schema
+//
+// Copy these models into your product's schema.prisma.
+// Customize SubscriptionTier enum for your product.
+// Add relation from User: subscription Subscription?
+// =============================================================
+
+enum SubscriptionTier {
+  FREE
+  STARTER
+  PROFESSIONAL
+  ENTERPRISE
+}
+
+enum SubscriptionStatus {
+  ACTIVE
+  CANCELLED
+  PAST_DUE
+  TRIALING
+}
+
+model Subscription {
+  id     String @id @default(cuid())
+  userId String @unique @map("user_id")
+
+  planId         String             @map("plan_id")
+  tier           SubscriptionTier   @default(FREE)
+  status         SubscriptionStatus @default(ACTIVE)
+  previousPlanId String?            @map("previous_plan_id")
+
+  // Billing details (optional — for payment provider integration)
+  externalId     String?   @unique @map("external_id") // Stripe subscription ID
+  currentPeriodStart DateTime? @map("current_period_start")
+  currentPeriodEnd   DateTime? @map("current_period_end")
+
+  changedAt   DateTime? @map("changed_at")
+  cancelledAt DateTime? @map("cancelled_at")
+  createdAt   DateTime  @default(now()) @map("created_at")
+  updatedAt   DateTime  @updatedAt @map("updated_at")
+
+  user User @relation(fields: [userId], references: [id], onDelete: Cascade)
+
+  @@index([tier])
+  @@index([status])
+  @@map("subscriptions")
+}
+
+model UsageRecord {
+  id     String @id @default(cuid())
+  userId String @map("user_id")
+
+  feature     String
+  count       Int      @default(0)
+  periodStart DateTime @map("period_start")
+
+  createdAt DateTime @default(now()) @map("created_at")
+  updatedAt DateTime @updatedAt @map("updated_at")
+
+  @@unique([userId, feature, periodStart], name: "userId_feature_periodStart")
+  @@index([userId])
+  @@index([periodStart])
+  @@map("usage_records")
+}

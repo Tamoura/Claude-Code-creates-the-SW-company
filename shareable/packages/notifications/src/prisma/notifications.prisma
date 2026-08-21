@@ -1,0 +1,52 @@
+// =============================================================
+// @connectsw/notifications — Prisma partial schema
+//
+// Copy these models into your product's schema.prisma.
+// Customize the NotificationType enum for your product's events.
+// Add relations from your User model:
+//   notifications         Notification[]
+//   notificationPreference NotificationPreference?
+// =============================================================
+
+// Customize this enum for your product
+enum NotificationType {
+  SYSTEM
+  INFO
+  WARNING
+  SUCCESS
+  ERROR
+}
+
+model Notification {
+  id        String           @id @default(cuid())
+  userId    String           @map("user_id")
+  type      NotificationType @default(INFO)
+  title     String
+  message   String
+  read      Boolean          @default(false)
+  data      Json?
+  createdAt DateTime         @default(now()) @map("created_at")
+
+  user User @relation(fields: [userId], references: [id], onDelete: Cascade)
+
+  @@index([userId])
+  @@index([read])
+  @@index([createdAt])
+  @@map("notifications")
+}
+
+model NotificationPreference {
+  id     String @id @default(cuid())
+  userId String @unique @map("user_id")
+
+  // Common preferences — add product-specific ones as needed
+  emailEnabled  Boolean @default(true) @map("email_enabled")
+  pushEnabled   Boolean @default(false) @map("push_enabled")
+
+  createdAt DateTime @default(now()) @map("created_at")
+  updatedAt DateTime @updatedAt @map("updated_at")
+
+  user User @relation(fields: [userId], references: [id], onDelete: Cascade)
+
+  @@map("notification_preferences")
+}

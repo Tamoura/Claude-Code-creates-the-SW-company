@@ -1,0 +1,27 @@
+{
+  "name": "@connectsw/billing",
+  "version": "1.0.0",
+  "description": "Reusable subscription, billing, and tier enforcement for ConnectSW SaaS products",
+  "type": "module",
+  "exports": {
+    "./backend": "./src/backend/index.ts",
+    "./frontend": "./src/frontend/index.ts",
+    "./prisma": "./src/prisma/billing.prisma"
+  },
+  "files": ["src"],
+  "dependencies": {
+    "@connectsw/shared": "workspace:*"
+  },
+  "peerDependencies": {
+    "@prisma/client": ">=5.0.0",
+    "fastify": ">=4.0.0",
+    "fastify-plugin": ">=4.0.0",
+    "ioredis": ">=5.0.0",
+    "react": ">=18.0.0",
+    "zod": ">=3.0.0"
+  },
+  "peerDependenciesMeta": {
+    "react": { "optional": true },
+    "ioredis": { "optional": true }
+  }
+}

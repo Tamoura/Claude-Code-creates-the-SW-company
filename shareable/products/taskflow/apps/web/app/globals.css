@@ -1,0 +1,20 @@
+@tailwind base;
+@tailwind components;
+@tailwind utilities;
+
+:root {
+  --surface: 255 255 255;
+  --ink: 17 24 39;
+}
+
+@media (prefers-color-scheme: dark) {
+  :root {
+    --surface: 17 24 39;
+    --ink: 243 244 246;
+  }
+}
+
+body {
+  background-color: rgb(var(--surface));
+  color: rgb(var(--ink));
+}

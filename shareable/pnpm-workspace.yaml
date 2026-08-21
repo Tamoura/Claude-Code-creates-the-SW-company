@@ -1,0 +1,11 @@
+packages:
+  # Product roots (concurrently, playwright, etc.)
+  - 'products/*'
+  # All apps within each product
+  - 'products/*/apps/*'
+  # E2E test suites
+  - 'products/*/e2e'
+  # Product-local shared packages
+  - 'products/*/packages/*'
+  # Company-wide shared packages
+  - 'packages/*'
