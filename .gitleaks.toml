@@ -68,6 +68,7 @@ paths = [
   '''docs/.*''',
   '''notes/.*''',
   '''.claude/.*''',
+  '''shareable/.*''',      # generated public copy — scanned at its own repo
   '''.*test.*''',
   '''.*spec.*''',
   '''.*seed.*''',

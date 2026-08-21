@@ -1,0 +1,42 @@
+# rsync exclude patterns applied to every path in copy-manifest.txt.
+# These are the files that carry live company state, real customer names,
+# or machine-local junk. Nothing here ever reaches the shareable tree.
+
+# --- Live company state (regenerated per fork, seeded from overlay/) ---------
+audit-trail.jsonl
+approval-queue.json
+monetization.json
+state.yml
+known-issues.yml
+company-knowledge.json
+decision-log.json
+/.claude/memory/agent-experiences/**
+/.claude/memory/metrics/**
+latest-report.md
+*-checkpoint-report.md
+
+# --- Project-specific tooling that does not travel --------------------------
+rollback-gitnexus.sh
+/.claude/skills/gitnexus/**
+/.claude/skills/presentation/**
+/.claude/worktrees/**
+/.claude/audit/**
+
+# --- Build + dependency artefacts -------------------------------------------
+node_modules/**
+dist/**
+build/**
+.next/**
+coverage/**
+*.tsbuildinfo
+*.log
+.DS_Store
+
+# --- Secrets (belt and braces — these should never be tracked anyway) -------
+.env
+.env.*
+*.pem
+*.key
+credentials.json
+secrets.json
+service-account.json

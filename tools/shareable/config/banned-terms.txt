@@ -1,0 +1,27 @@
+# Case-insensitive extended regexes. If any of these appear anywhere in the
+# generated tree, make-shareable.sh fails. This is the last line of defence
+# before the tree is pushed to a public remote.
+qdb
+qatar
+muaththir
+connectgrc
+connectin
+stablecoin
+recomengine
+codeguardian
+archforge
+archiforge
+humanid
+ai-fluency
+studyflow
+credit-os
+ctoaas
+command-center
+quantum-computing
+way2quran
+linkedin-agent
+tamoura
+@gmail\.com
+cs:/Users/
+Desktop/Projects
+\btamer\b

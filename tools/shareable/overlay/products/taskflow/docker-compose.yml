@@ -1,0 +1,23 @@
+# Local PostgreSQL for TaskFlow. Port 5433 keeps it clear of a system
+# PostgreSQL on 5432.
+services:
+  postgres:
+    image: postgres:16-alpine
+    container_name: taskflow-postgres
+    restart: unless-stopped
+    environment:
+      POSTGRES_USER: taskflow
+      POSTGRES_PASSWORD: taskflow
+      POSTGRES_DB: taskflow
+    ports:
+      - '5433:5432'
+    volumes:
+      - taskflow-pgdata:/var/lib/postgresql/data
+    healthcheck:
+      test: ['CMD-SHELL', 'pg_isready -U taskflow']
+      interval: 5s
+      timeout: 5s
+      retries: 10
+
+volumes:
+  taskflow-pgdata:

@@ -1,0 +1,65 @@
+# Paths copied verbatim (then scrubbed) from the private repo root into the
+# shareable tree. One path per line, relative to the repo root.
+# Lines starting with # and blank lines are ignored.
+# Anything not listed here is NEVER copied — this is an allow-list, so new
+# company-specific directories cannot leak by default.
+
+# --- Agent operating system -------------------------------------------------
+.claude/agents
+.claude/commands
+.claude/protocols
+.claude/scripts
+.claude/workflows
+.claude/quality-gates
+.claude/standards
+.claude/templates
+.claude/engine
+.claude/architecture
+.claude/checklists
+.claude/mcp-tools
+.claude/security
+.claude/tests
+.claude/dashboard
+.claude/orchestrator
+.claude/skills
+.claude/memory
+.claude/CLAUDE.md
+.claude/COMPONENT-REGISTRY.md
+.claude/README-UTILITIES.md
+.claude/task-graph.yml
+
+# --- Spec-kit ---------------------------------------------------------------
+.specify
+
+# --- Git + CI enforcement ---------------------------------------------------
+.githooks
+.github/ISSUE_TEMPLATE
+.github/templates
+.github/PULL_REQUEST_TEMPLATE.md
+.github/dependabot.yml
+.github/workflows/claude.yml
+.github/workflows/claude-code-review.yml
+.github/workflows/claude-auto-fix.yml
+.github/workflows/claude-ci-fix.yml
+.github/workflows/code-review-gate.yml
+.github/workflows/security-sast.yml
+
+# --- Shared packages --------------------------------------------------------
+packages
+
+# --- Repo-level config ------------------------------------------------------
+.eslintrc.js
+.prettierrc
+.gitattributes
+.gitleaks.toml
+.semgrep.yml
+.npmrc
+.dockerignore
+tsconfig.json
+jest.config.js
+
+# --- Documentation ----------------------------------------------------------
+docs/CLAUDE-CODE-100X-PLAYBOOK.md
+docs/PARALLEL-DEVELOPMENT.md
+docs/OPENROUTER-GUIDE.md
+docs/ADRs
