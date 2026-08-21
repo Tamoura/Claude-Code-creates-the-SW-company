@@ -62,20 +62,21 @@ add it to `copy-manifest.txt` deliberately, and check what it contains first.
 
 ## Publishing
 
-`shareable/` is a complete repository tree. To publish it the first time:
+`shareable/` is a complete repository tree. Create an empty repository on GitHub
+— no README, no .gitignore, no licence, since this tree brings its own — then:
 
 ```bash
-cd shareable
-git init -b main
-git add -A
-git commit -m "Initial commit"
-git remote add origin git@github.com:<you>/<repo>.git
-git push -u origin main
+tools/shareable/publish.sh git@github.com:<you>/<repo>.git
 ```
 
-For later updates, keep a clone of the public repo and rsync the regenerated
-tree over it, or push `shareable/` as a subtree. Whichever you choose, run
-`--verify` first: the public repo has no second line of defence.
+`publish.sh` rebuilds, verifies, initialises `shareable/` as its own git
+repository on first run, commits and pushes. Run it again after any change to
+the private repo to refresh the public one; it commits only what actually
+differs.
+
+Doing it by hand is four commands (`git init -b main`, `add`, `commit`,
+`remote add` + `push`) — but run `make-shareable.sh --verify` first either way.
+The public repo has no second line of defence.
 
 ## Name mapping
 
